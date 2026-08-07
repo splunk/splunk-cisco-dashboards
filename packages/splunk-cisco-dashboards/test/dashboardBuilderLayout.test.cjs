@@ -34,6 +34,14 @@ assert.match(declarations, /width:\s*100%\s*;/);
 assert.match(declarations, /max-width:\s*100%\s*;/);
 assert.doesNotMatch(declarations, /^\s*width:\s*0(?:px)?\s*;/m);
 
+assert.match(editor, /const DASHBOARD_STUDIO_HEIGHT = 1200;/);
+assert.match(
+  editor,
+  /const embeddedDashboardHeight = embededMode \? '100%' : DASHBOARD_STUDIO_HEIGHT;/,
+);
+assert.match(editor, /height=\{DASHBOARD_STUDIO_HEIGHT\}/);
+assert.doesNotMatch(editor, /height=["']1200["']/);
+
 assert.match(editor, /\bZoom\b/);
 assert.match(editor, /dashboardbuilder-display-button/);
 assert.match(editor, /dashboardbuilder-actions-button/);

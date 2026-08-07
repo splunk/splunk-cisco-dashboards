@@ -126,6 +126,23 @@ _AGGREGATION_COMMANDS = {
 }
 
 
+def _has_prohibited_sort_language(value: str) -> bool:
+    """Distinguish an SPL ordering claim from explicit table-UI guidance."""
+
+    for match in re.finditer(r"\bsort(?:ed|ing)?\b", value, re.I):
+        before = value[max(0, match.start() - 240) : match.start()].lower()
+        after = value[match.end() : match.end() + 160].lower()
+        if "there is no " in before[-40:] and " stage" in after[:40]:
+            continue
+        if (
+            "row order is not defined by the search" in before
+            and "in the table" in after
+        ):
+            continue
+        return True
+    return False
+
+
 @dataclass
 class Violation:
     stanza: str
@@ -357,7 +374,7 @@ def lint_text(text: str) -> list[Violation]:
             if (
                 key in {"description", "explanation", "solution", "related_info"}
                 and re.search(r"(?:^|\|)\s*(?:stats|tstats)\b", search, re.I)
-                and re.search(r"\bsort(?:ed|ing)?\b", value, re.I)
+                and _has_prohibited_sort_language(value)
             ):
                 out.append(
                     Violation(

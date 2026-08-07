@@ -33,28 +33,38 @@ const barBreakdown = fs.readFileSync(barBreakdownPath, "utf8");
 
 assert.match(
   pieTile,
-  /import StudioPie from '@splunk\/visualizations\/Pie'/,
-  "Pie tiles must use the Dashboard Studio pie renderer",
+  /React\.lazy\(\(\) => import\('@splunk\/visualizations\/Bar'\)\)/,
+  "Legacy pie catalogue entries must lazy-load the Dashboard Studio bar renderer",
+);
+assert.match(
+  pieTile,
+  /<React\.Suspense fallback=\{<ChartLoadingState \/>\}>/,
+  "The optional native chart bundle must have a deterministic loading state",
 );
 assert.doesNotMatch(
   pieTile,
   /from 'recharts'/,
-  "Pie tiles must not fall back to the compact Recharts renderer",
+  "Composition tiles must not fall back to the compact Recharts renderer",
 );
 assert.match(
   pieTile,
-  /labelDisplay:\s*'valuesAndPercentage'/,
-  "Pie slices must show values and percentages",
+  /dataValuesDisplay:\s*'all'/,
+  "Composition bars must show their values",
 );
 assert.match(
   pieTile,
-  /percentagePrecision:\s*1/,
-  "Pie percentages must use a readable precision",
+  /x:\s*'> primary \| seriesByIndex\(0\)'/,
+  "Composition bars must bind the category series explicitly",
+);
+assert.match(
+  pieTile,
+  /y:\s*'> primary \| seriesByIndex\(1\)'/,
+  "Composition bars must bind the numeric series explicitly",
 );
 assert.match(
   pieTile,
   /title=\{`Expand \$\{label\}`\}/,
-  "Pie charts must use an explicit expand action",
+  "Composition charts must use an explicit expand action",
 );
 assert.match(
   barBreakdown,
@@ -74,7 +84,7 @@ assert.match(
 assert.doesNotMatch(
   pieTile,
   /HoverZoomFrame|onPointerEnter|Hover to enlarge/,
-  "Pie charts must not enlarge automatically on hover",
+  "Composition charts must not enlarge automatically on hover",
 );
 assert.doesNotMatch(
   barBreakdown,
@@ -88,5 +98,5 @@ assert.match(
 );
 
 console.log(
-  "✓ Native pie, chart labels, theme, and explicit expansion regression tests passed",
+  "✓ Native ranked bars, labels, theme, and explicit expansion regression tests passed",
 );

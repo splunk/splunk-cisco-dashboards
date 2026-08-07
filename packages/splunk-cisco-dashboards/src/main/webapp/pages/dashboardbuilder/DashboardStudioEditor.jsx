@@ -98,6 +98,7 @@ import {
 import { repairSearchbaseTimeQueryParameters } from './dashboardTimeUtils';
 
 const ENABLE_EXPERIMENTAL_SPACE_MANAGER = false;
+const DASHBOARD_STUDIO_HEIGHT = 1200;
 
 const StyledCardContent = styled.div`
     height: 160px;
@@ -1678,14 +1679,17 @@ const DashboardStudioEditor = ({
         };
     }, [apiRef, embededMode, isDashboardMounted, onSearchStatusChange, readOnly]);
 
-    const embeddedDashboardHeight = embededMode ? '100%' : '1200';
+    // Dashboard Framework 29.8 only adds a px unit for numeric dimensions.
+    // A unitless string is left as an invalid CSS height and collapses the
+    // managed dashboard canvas to the framework's 600px fallback.
+    const embeddedDashboardHeight = embededMode ? '100%' : DASHBOARD_STUDIO_HEIGHT;
 
     const sourceEditorPanel = useMemo(() => {
         return isCodeEditable ? (
             <DashboardSourceEditor
                 key="DashboardStudioEditor"
                 title={editedDefinition.title}
-                height="1200" //{`calc(100vh - ${dashboardHeightDifference}px)`}
+                height={DASHBOARD_STUDIO_HEIGHT}
                 width="100%"
                 onSourceChange={setSource}
                 onExit={handleExitSourceMode}

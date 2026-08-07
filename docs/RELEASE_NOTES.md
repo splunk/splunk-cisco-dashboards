@@ -2,6 +2,34 @@
 
 ## 1.0.36
 
+- Topology Editor site roles now use the SUI 5.13 Select component with a
+  persistent color swatch for every option and selected value. All 12 factory
+  roles have unique colors shared by the editor, map beacons, and role legend.
+- Dashboard Manager now passes numeric canvas dimensions to Dashboard
+  Framework 29.8, preventing managed Studio dashboards from falling back to a
+  600-pixel canvas with a premature scrollbar and empty page area below it.
+- The five Secure Networking pillar dashboards now use the Insights Workspace
+  dark palette: slate canvas and panel surfaces, slate text, sky accents, and
+  matching semantic status colors keep Dashboard Studio visually aligned with
+  `secure_networking_profile`.
+- Insights Workspace headers now present time-range and auto-refresh selectors
+  without box borders. Signal Rail pause, style, and configuration controls
+  reveal on desktop hover or keyboard focus while remaining visible on compact
+  layouts, and metric help uses a larger filled Splunk React information icon.
+- Secure Networking factory KPIs now use explicit time-series contracts wherever
+  the metric has a meaningful temporal grain. Window-level headline values are
+  broadcast alongside bounded per-bucket spark fields for anomaly, TrustSec,
+  firewall, ThousandEyes, AI Defense, and authentication signals. The five
+  categorical breakdowns and all entity-detail drill-down tables deliberately
+  retain their non-timechart schemas.
+- Added a documented SUI 5.13 / Themes 1.10 / Cisco Cloud Control alignment
+  matrix, including the deliberate boundary between Splunk global chrome and
+  the application content surface.
+- Insights Workspace signal rails now default to comfortable density, support
+  small, standard, and large KPI text, and use the full rail width instead of
+  reserving a fixed label block. Tile drag and remove actions appear only from
+  the top-left action corner, and the theme control uses compact icon-only
+  spacing.
 - Signal Rail style choices are usable again: the compact rail keeps its KPI
   marquee clipped without clipping the style picker, so users can switch among
   all five visual treatments.
@@ -11,21 +39,55 @@
   shield icon on narrow screens. The map action uses Splunk's globe icon, while
   the workspace switcher uses the SUI layers metaphor and no longer duplicates
   Splunk Web's signed-in user control.
+- The time-range and auto-refresh controls now use SUI 5.13 `Select`
+  components with an explicit high-contrast dark-toolbar treatment so their
+  labels and carets remain visible regardless of Splunk's outer theme. H1 is a
+  real compact section layout with tighter headline, chart, and wrapped-row
+  floors rather than a cosmetic height label.
+- Customer connectivity now opens on the geographic topology by default. The
+  animated Command view remains available for quickly scanning sites, paths,
+  health, and critical relationships, while Geo also opens automatically when
+  editing coordinates.
+- The Secure Networking factory layout is now an exact five-by-nine contract:
+  45 unique active tiles, 45 uniquely resolved drill-down links, explicit
+  headline fields on every tile, explicit spark fields on time-series tiles,
+  and numeric or documented qualitative threshold guidance throughout. Shared
+  detail searches use one bounded empty-result contract without changing their
+  populated schemas.
 - Insights Workspace metric, chart, and detail drill-down dialogs now share a
   responsive translucent Cisco dark-mode shell with content-specific
   footprints, compact headers, consistent Search/Details/Close actions,
   keyboard focus trapping, focus restoration, and mobile bottom-sheet
-  behavior. Detail tables auto-size to the viewport and add accessible width,
-  height, and corner resize controls with double-click reset.
-- Executive Insights pie tiles now use Splunk's native Dashboard Studio pie
-  renderer with larger charts, visible values and percentages, and matching
-  dark theme colors. Pie and categorical bar charts use the same deliberate
+  behavior. A lighter, softer backdrop keeps the workspace recognizable behind
+  the exact SUI 5.13 high-glass tint. Detail tables auto-size to the
+  viewport and add accessible width, height, and corner resize controls with
+  double-click reset. Loading, empty, and failure states now use one accessible
+  treatment across every detail drill-down, including a consistent recovery
+  path for empty and failed searches.
+- Insights Workspace accessibility now uses a continuous `h1`/`h2` page and
+  section hierarchy. Pointer-only modal backdrops are excluded from the
+  accessibility tree so screen readers announce one Close control while the
+  visible Close button, Escape handling, focus trapping, and focus restoration
+  remain available to keyboard users. Sparkline gradients now use unique SVG
+  identifiers so repeated tile colors cannot create duplicate DOM references.
+- Executive Insights composition tiles now use Splunk's native Dashboard
+  Studio ranked-bar renderer with explicit category/value bindings, visible
+  values, matching dark-theme colors, and lazy loading so the optional native
+  visualization bundle does not inflate the initial workspace entrypoint.
+  Composition and categorical bar charts use the same deliberate
   expand-dialog interaction as time-series tiles instead of enlarging on hover.
+- Webpack performance warnings now use measured JavaScript budgets appropriate
+  for self-contained, unminified Splunk watch bundles. `yarn bundle:report`
+  reports every entry and async chunk against its regression budget; lazy
+  loading the native composition renderer reduced the initial Executive
+  Insights and Searchbase Canvas entrypoints by roughly 8 MB each.
 - Executive Insights tile actions are slightly larger, and drilldowns now use
   an open-details-panel icon with explicit drilldown tooltips instead of an
   ambiguous table glyph.
 - Every built-in Insights Workspace now ships a distinct named topology and
-  audience-specific six-KPI signal rail preset. Secure Network Command Map,
+  audience-specific header and six-KPI signal rail preset. The Executive
+  Briefing now opens as Global Operations Command with decision-oriented copy.
+  Secure Network Command Map,
   Identity Trust Journey, Resilience Path Atlas, Threat Response Theater, and
   Global Operations Pulse pair with rails focused on secure networking, zero
   trust, resilience, SOC, and executive outcomes. The Secure Networking rail
@@ -45,7 +107,9 @@
 - Hybrid Mesh Firewalling now includes bounded Palo Alto policy-outcome and
   per-SGT traffic timecharts in its shared workspace layout. Each trend drills
   into its corresponding effectiveness rollup or correlated flow table, and
-  policy actions normalize both PAN and CIM allow/block variants.
+  policy actions normalize both PAN and CIM allow/block variants. The section
+  remains capped at nine distinct factory tiles by replacing redundant HMF
+  summaries instead of appending beyond the workspace contract.
 - Secure Networking Searchbase metadata now uses the five exact app-menu
   section names, keeping workspace discovery and filtering aligned with Zero
   Trust Access, Secure Infrastructure, Scalable Network Segmentation, Hybrid

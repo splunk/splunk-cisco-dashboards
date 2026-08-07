@@ -96,6 +96,44 @@ assert.equal(
   PACKAGED_WORKSPACE_FALLBACKS.find(({ id }) => id === "executive").label,
   "Executive Briefing",
 );
+assert.deepEqual(
+  PACKAGED_WORKSPACE_FALLBACKS.map(({ id, headerTitle, headerSubtitle }) => ({
+    id,
+    headerTitle,
+    headerSubtitle,
+  })),
+  [
+    {
+      id: "secure_networking",
+      headerTitle: "Splunk for Secure Networking",
+      headerSubtitle: "Secure Networking Executive Insights",
+    },
+    {
+      id: "zero_trust_access_demo",
+      headerTitle: "Zero Trust Access Demo",
+      headerSubtitle: "Identity, authentication, and access-policy enforcement",
+    },
+    {
+      id: "network_resilience_demo",
+      headerTitle: "Network Resilience Demo",
+      headerSubtitle:
+        "Infrastructure health, segmentation, and threat containment",
+    },
+    {
+      id: "security_operations_demo",
+      headerTitle: "Security Operations Demo",
+      headerSubtitle:
+        "Operational risk, service health, and executive security signals",
+    },
+    {
+      id: "executive",
+      headerTitle: "Global Operations Command",
+      headerSubtitle:
+        "Enterprise health, risk, and experience at decision speed",
+    },
+  ],
+  "Every packaged workspace must have deliberate factory header copy",
+);
 assert.equal(
   PACKAGED_WORKSPACE_FALLBACKS.find(
     ({ id }) => id === "zero_trust_access_demo",
@@ -162,11 +200,47 @@ const workspaceStanzas = stanzaNames
   .map((name) => name.slice("workspace.".length));
 assert.deepEqual(workspaceStanzas, expectedWorkspaceIds);
 for (const workspaceId of expectedWorkspaceIds) {
+  const workspaceBlock = conf
+    .split(/(?=^\[)/m)
+    .find((block) => block.startsWith(`[workspace.${workspaceId}]`));
+  assert.ok(workspaceBlock, `expected workspace stanza for ${workspaceId}`);
+  assert.match(
+    workspaceBlock,
+    /^header_title = .+$/m,
+    `${workspaceId} must declare a factory header title`,
+  );
+  assert.match(
+    workspaceBlock,
+    /^header_subtitle = .+$/m,
+    `${workspaceId} must declare a factory header subtitle`,
+  );
   assert.ok(
     stanzaNames.some((name) => name.startsWith(`layout.${workspaceId}.`)),
     `expected at least one layout stanza for ${workspaceId}`,
   );
 }
+const secureNetworkingLayoutBlocks = conf
+  .split(/(?=^\[)/m)
+  .filter((block) => block.startsWith("[layout.secure_networking."));
+const secureNetworkingLayoutTileIds = secureNetworkingLayoutBlocks.flatMap(
+  (block) => block.match(/^tiles = (.+)$/m)?.[1].split(",") ?? [],
+);
+assert.equal(
+  secureNetworkingLayoutBlocks.length,
+  5,
+  "Secure Networking must keep its five canonical sections",
+);
+assert.ok(
+  secureNetworkingLayoutBlocks.every(
+    (block) => (block.match(/^tiles = (.+)$/m)?.[1].split(",").length ?? 0) === 9,
+  ),
+  "Every Secure Networking section must expose exactly nine factory tiles",
+);
+assert.equal(
+  new Set(secureNetworkingLayoutTileIds).size,
+  45,
+  "The five Secure Networking sections must expose 45 unique factory tiles",
+);
 assert.match(conf, /^source_workspace = /m);
 assert.match(conf, /^default_visible_sections = /m);
 assert.doesNotMatch(conf, /^profile\s*=/m);
@@ -261,6 +335,118 @@ const searchbaseStanza = (stanzaId) =>
   searchbaseConf
     .split(/(?=^\[)/m)
     .find((block) => block.startsWith(`[${stanzaId}]`));
+
+const secureOverviewMappings = [];
+for (const block of searchbaseConf.split(/(?=^\[)/m)) {
+  const stanzaId = block.match(/^\[([^\]]+)\]/)?.[1];
+  const rawVizOptions = block.match(/^viz_options = (.+)$/m)?.[1];
+  if (!stanzaId || !rawVizOptions) continue;
+  let vizOptions;
+  assert.doesNotThrow(() => {
+    vizOptions = JSON.parse(rawVizOptions);
+  }, `${stanzaId} must contain valid single-line viz_options JSON`);
+  for (const overview of Array.isArray(vizOptions.overview)
+    ? vizOptions.overview
+    : []) {
+    if (overview.workspace !== "secure_networking") continue;
+    secureOverviewMappings.push({ block, overview, stanzaId, vizOptions });
+  }
+}
+
+const intentionallyCategoricalSecureOverviewStanzas = new Set([
+  "secure_networking_sdwan_apps_health_breakdown",
+  "secure_networking_ip_sgt_bindings_by_group",
+  "secure_networking_sgt_fmc_blocks_by_sgt",
+  "secure_networking_fmc_top_rules_hit",
+  "secure_networking_fmc_top_url_categories_blocked",
+]);
+
+for (const tileId of secureNetworkingLayoutTileIds) {
+  const mappings = secureOverviewMappings.filter(
+    ({ overview }) => overview.tileId === tileId,
+  );
+  assert.equal(
+    mappings.length,
+    1,
+    `${tileId} must resolve to exactly one Secure Networking overview search`,
+  );
+
+  const { block, overview, stanzaId, vizOptions } = mappings[0];
+  const thresholds = overview.thresholds ?? vizOptions.thresholds;
+  const hasNumericThresholds =
+    Number.isFinite(thresholds?.warning) &&
+    Number.isFinite(thresholds?.critical) &&
+    ["higher_is_better", "lower_is_better"].includes(thresholds?.direction);
+  const hasQualitativeThreshold =
+    typeof overview.thresholdNote === "string" &&
+    overview.thresholdNote.trim().length > 0;
+  assert.ok(
+    hasNumericThresholds || hasQualitativeThreshold,
+    `${tileId} must define numeric thresholds or deliberate qualitative threshold guidance`,
+  );
+
+  const defaultViz = block.match(/^default_viz = (.+)$/m)?.[1] ?? "";
+  if (defaultViz === "splunk.table") continue;
+  const valueField = overview.valueField ?? vizOptions.valueField;
+  assert.ok(
+    typeof valueField === "string" && valueField.trim().length > 0,
+    `${tileId} (${stanzaId}) must bind an explicit headline valueField`,
+  );
+
+  const searchPrefix = "\nsearch = ";
+  const searchStart = block.indexOf(searchPrefix);
+  const search =
+    searchStart === -1
+      ? ""
+      : block.slice(searchStart + searchPrefix.length).trimEnd();
+  if (!intentionallyCategoricalSecureOverviewStanzas.has(stanzaId)) {
+    assert.match(
+      search,
+      /\| timechart /i,
+      tileId + " (" + stanzaId + ") must expose a timechart trend",
+    );
+  }
+  const isTimeSeries =
+    /^splunk\.(line|area|column)$/.test(defaultViz) &&
+    /\| timechart /i.test(search);
+  if (isTimeSeries) {
+    const sparkDataField = overview.sparkDataField ?? vizOptions.sparkDataField;
+    assert.ok(
+      typeof sparkDataField === "string" && sparkDataField.trim().length > 0,
+      `${tileId} (${stanzaId}) must bind an explicit sparkDataField`,
+    );
+  }
+
+  const drilldownSearchName = block.match(
+    /^drilldown_search_name = (.+)$/m,
+  )?.[1];
+  assert.ok(
+    drilldownSearchName,
+    `${tileId} (${stanzaId}) must declare its detail drilldown search`,
+  );
+  const drilldownMatches = searchbaseConf
+    .split(/(?=^\[)/m)
+    .filter(
+      (candidate) =>
+        candidate.match(/^search_name = (.+)$/m)?.[1] === drilldownSearchName,
+    );
+  assert.equal(
+    drilldownMatches.length,
+    1,
+    `${tileId} must resolve ${drilldownSearchName} to exactly one Searchbase stanza`,
+  );
+  assert.match(
+    drilldownMatches[0],
+    /^default_viz = splunk\.table$/m,
+    `${tileId} drilldown must use a detail-table visualization`,
+  );
+  assert.match(
+    drilldownMatches[0],
+    /^search = .+$/m,
+    `${tileId} drilldown must contain executable SPL`,
+  );
+}
+
 const paloTrendDrilldownPairs = [
   [
     "secure_networking_sgt_palo_alto_policy_effectiveness_trend",

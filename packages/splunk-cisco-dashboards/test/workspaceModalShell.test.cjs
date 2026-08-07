@@ -32,8 +32,18 @@ for (const expectedClass of [
 
 assert.match(
   shell,
-  /bg-slate-950\/\[0\.42\][\s\S]*backdrop-blur-md/,
-  "Shared modal shell must use a translucent blurred backdrop",
+  /bg-slate-950\/\[0\.16\][\s\S]*backdrop-blur-\[2px\]/,
+  "Shared modal shell must keep the workspace clearly recognizable behind the dialog",
+);
+assert.match(
+  shell,
+  /rounded-\[4px\][\s\S]*border-white\/\[0\.18\][\s\S]*rgba\(255,255,255,0\.01\)[\s\S]*rgba\(90,101,111,0\.45\)[\s\S]*rgba\(62,73,83,0\.25\)[\s\S]*backdrop-blur-\[75px\]/,
+  "Shared modal shell must follow the SUI glass radius, border, tint, and blur treatment",
+);
+assert.match(
+  shell,
+  /0_50px_200px[\s\S]*0_29px_66px[\s\S]*inset_0_1px_4px/,
+  "Shared modal shell must preserve the SUI layered modal shadow stack",
 );
 for (const accessibleResizeLabel of [
   "Resize dialog width",
@@ -62,6 +72,11 @@ assert.match(
 );
 assert.match(
   shell,
+  /tabIndex=\{-1\}[\s\S]*aria-hidden="true"[\s\S]*absolute inset-0/,
+  "The pointer-only modal backdrop must stay out of the accessibility tree",
+);
+assert.match(
+  shell,
   /previouslyFocused\?\.isConnected[\s\S]*previouslyFocused\.focus/,
   "Shared modal shell must restore focus after closing",
 );
@@ -79,6 +94,25 @@ assert.match(
   profile,
   /<WorkspaceModalShell[\s\S]*?variant="detail"[\s\S]*?wide=\{displayColumns\.length > 5\}/,
   "Detail drilldowns must auto-widen further for dense tables",
+);
+for (const stateTitle of [
+  "Loading details",
+  "Details unavailable",
+  "No results in this time range",
+]) {
+  assert.ok(
+    profile.includes(`title="${stateTitle}"`),
+    `Every detail drilldown must use the shared ${stateTitle.toLowerCase()} state`,
+  );
+}
+assert.match(
+  profile,
+  /kind === "error" \? "alert" : "status"[\s\S]*aria-live=/,
+  "Detail drilldown states must announce loading, empty, and failure changes accessibly",
+);
+assert.ok(
+  profile.includes("Try a wider range or open the query in Search."),
+  "Empty drilldowns must offer a consistent recovery action",
 );
 
 console.log("✓ Workspace modal shell design and accessibility tests passed");

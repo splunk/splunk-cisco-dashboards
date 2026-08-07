@@ -325,13 +325,13 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
 
     return createPortal(
         <div
-            className="fixed inset-0 z-[1900] flex items-center justify-center bg-slate-950/[0.42] p-4 backdrop-blur-md max-[719px]:items-end max-[719px]:p-0 max-[719px]:pt-4"
+            className="fixed inset-0 z-[1900] flex items-center justify-center bg-slate-950/[0.16] p-4 backdrop-blur-[2px] max-[719px]:items-end max-[719px]:p-0 max-[719px]:pt-4"
             style={{ zIndex: 1900 }}
         >
             <button
                 type="button"
                 tabIndex={-1}
-                aria-label={`Close ${title}`}
+                aria-hidden="true"
                 className="absolute inset-0 cursor-default border-0 bg-transparent p-0"
                 onClick={() => onCloseRef.current()}
             />
@@ -353,13 +353,13 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                         : undefined
                 }
                 className={cn(
-                    'relative z-10 flex w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border border-white/[0.16] bg-[linear-gradient(145deg,rgba(17,31,49,0.88),rgba(4,10,20,0.78))] text-slate-100 shadow-[0_28px_80px_rgba(0,0,0,0.58),0_0_0_1px_rgba(56,189,248,0.08)] backdrop-blur-2xl outline-none',
+                    'relative z-10 flex w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[4px] border border-white/[0.18] bg-[linear-gradient(123deg,rgba(255,255,255,0.01)_0.5%,rgba(255,255,255,0)_49.75%,rgba(0,0,0,0.04)_100%),linear-gradient(123deg,rgba(90,101,111,0.45)_1.82%,rgba(62,73,83,0.25)_100%)] text-slate-100 shadow-[0_50px_200px_rgba(0,0,0,0.5),0_29px_66px_rgba(0,0,0,0.41),0_14px_47px_rgba(0,0,0,0.17),0_5px_10px_rgba(0,0,0,0.15),inset_0_1px_4px_rgba(255,255,255,0.14)] backdrop-blur-[75px] outline-none',
                     VARIANT_CLASS[variant],
                     variant === 'detail' && wide && 'max-w-[1320px]',
                     'max-[719px]:h-[calc(100vh-1rem)] max-[719px]:max-h-[calc(100vh-1rem)] max-[719px]:w-full max-[719px]:max-w-none max-[719px]:rounded-b-none max-[719px]:rounded-t-2xl'
                 )}
             >
-                <div className="flex min-h-16 flex-shrink-0 items-center justify-between gap-4 border-b border-white/[0.1] bg-slate-950/[0.36] py-2.5 pl-5 pr-4 backdrop-blur-xl">
+                <div className="flex min-h-16 flex-shrink-0 items-center justify-between gap-4 border-b border-white/[0.1] bg-slate-950/[0.24] py-2.5 pl-5 pr-4 backdrop-blur-xl">
                     <div className="min-w-0">
                         <h2
                             id={titleId}

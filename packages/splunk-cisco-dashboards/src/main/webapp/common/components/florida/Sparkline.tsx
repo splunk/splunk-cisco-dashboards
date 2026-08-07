@@ -433,6 +433,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
     title,
     dataValuesDisplay = 'minmax',
 }) => {
+    const gradientId = `sparkline-gradient-${React.useId().replace(/:/g, '')}`;
     if (vizType === 'singlevalue') return null;
     const hasPrevious = Array.isArray(previousData) && previousData.length > 0;
     const previousAligned = hasPrevious
@@ -595,7 +596,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
     }
     const gradientDefs = (
         <defs>
-            <linearGradient id={`gradient-${color}`} x1="0" y1="0" x2="0" y2="1">
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={color} stopOpacity={0.3} />
                 <stop offset="95%" stopColor={color} stopOpacity={0} />
             </linearGradient>
@@ -818,7 +819,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
                     stroke={color}
                     strokeWidth={2}
                     fillOpacity={1}
-                    fill={`url(#gradient-${color})`}
+                    fill={`url(#${gradientId})`}
                     isAnimationActive={false}
                     activeDot={{ r: 3, stroke: color, strokeWidth: 1, fill: '#fff' }}
                 />
@@ -837,7 +838,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
                     stroke={color}
                     strokeWidth={2}
                     fillOpacity={1}
-                    fill={`url(#gradient-${color})`}
+                    fill={`url(#${gradientId})`}
                     isAnimationActive={false}
                     activeDot={{ r: 3, stroke: color, strokeWidth: 1, fill: '#fff' }}
                 />

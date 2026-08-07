@@ -2,7 +2,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Check, ExternalLink, Palette, Pause, Play, Settings2 } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 import type { MetricStatus } from '@/common/hooks/useMetric';
-import type { SignalTickerDensity, SignalTickerRows } from '@/common/hooks/usePersistedSignalTicker';
+import type {
+    SignalTickerDensity,
+    SignalTickerFontSize,
+    SignalTickerRows,
+} from '@/common/hooks/usePersistedSignalTicker';
 
 export type SignalRailStatus = MetricStatus;
 export type SignalRailDeltaDirection = 'up' | 'down' | 'flat';
@@ -30,10 +34,9 @@ interface SignalRailTickerProps {
     kpis: SignalRailKpi[];
     className?: string;
     density?: SignalTickerDensity;
+    fontSize?: SignalTickerFontSize;
     rows?: SignalTickerRows;
     durationSeconds?: number;
-    title?: string;
-    subtitle?: string;
     onOpenEditor?: () => void;
 }
 
@@ -316,10 +319,22 @@ const itemSizeClass = (
         : 'h-[82px] min-w-[265px] px-4 py-3';
 };
 
+const fontSizeClass = (
+    fontSize: SignalTickerFontSize,
+    small: string,
+    standard: string,
+    large: string
+): string => {
+    if (fontSize === 'small') return small;
+    if (fontSize === 'large') return large;
+    return standard;
+};
+
 interface KpiItemProps {
     kpi: SignalRailKpi;
     variant: SignalRailVariant;
     density: SignalTickerDensity;
+    fontSize: SignalTickerFontSize;
     duplicate?: boolean;
 }
 
@@ -327,6 +342,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
     kpi,
     variant,
     density,
+    fontSize,
     duplicate = false,
 }) => {
     const status = STATUS_COLOR[kpi.status];
@@ -361,14 +377,30 @@ const KpiItem: React.FC<KpiItemProps> = ({
             >
                 <span className={cn('mr-4 h-2.5 w-2.5 shrink-0 rounded-full', status.glow)} />
                 <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[13px] font-bold uppercase tracking-[0.18em] text-blue-300/70">
+                    <span
+                        className={cn(
+                            'block truncate font-bold uppercase tracking-[0.18em] text-blue-300/70',
+                            fontSizeClass(fontSize, 'text-[11px]', 'text-[13px]', 'text-[15px]')
+                        )}
+                    >
                         {label}
                     </span>
                     <span className="mt-1 flex items-baseline gap-3">
-                        <span className="text-[28px] font-black leading-none text-emerald-400">
+                        <span
+                            className={cn(
+                                'font-black leading-none text-emerald-400',
+                                fontSizeClass(fontSize, 'text-[24px]', 'text-[28px]', 'text-[32px]')
+                            )}
+                        >
                             {valueText(kpi)}
                         </span>
-                        <span className={cn('text-[12px] font-black', deltaClass(kpi.deltaDir))}>
+                        <span
+                            className={cn(
+                                'font-black',
+                                fontSizeClass(fontSize, 'text-[10px]', 'text-[12px]', 'text-[13px]'),
+                                deltaClass(kpi.deltaDir)
+                            )}
+                        >
                             {deltaArrow(kpi.deltaDir)} {deltaText(kpi)}
                         </span>
                     </span>
@@ -388,19 +420,35 @@ const KpiItem: React.FC<KpiItemProps> = ({
                 data-status={kpi.status}
             >
                 <div className="min-w-0 flex-1">
-                    <span className="block truncate text-xs font-black uppercase tracking-[0.2em] text-white/60">
+                    <span
+                        className={cn(
+                            'block truncate font-black uppercase tracking-[0.2em] text-white/60',
+                            fontSizeClass(fontSize, 'text-[10px]', 'text-xs', 'text-[13px]')
+                        )}
+                    >
                         {category}
                     </span>
                     <span className="mt-1 flex min-w-0 items-center gap-4">
-                        <span className="truncate text-[15px] font-black uppercase tracking-[0.08em] text-white/90">
+                        <span
+                            className={cn(
+                                'truncate font-black uppercase tracking-[0.08em] text-white/90',
+                                fontSizeClass(fontSize, 'text-[12px]', 'text-[15px]', 'text-[17px]')
+                            )}
+                        >
                             {label}
                         </span>
-                        <span className="shrink-0 text-[28px] font-black leading-none text-white">
+                        <span
+                            className={cn(
+                                'shrink-0 font-black leading-none text-white',
+                                fontSizeClass(fontSize, 'text-[24px]', 'text-[28px]', 'text-[32px]')
+                            )}
+                        >
                             {valueText(kpi)}
                         </span>
                         <span
                             className={cn(
-                                'shrink-0 rounded-full border px-3 py-1 text-xs font-black uppercase tracking-[0.12em] shadow-[0_0_16px_rgba(255,255,255,0.12)]',
+                                'shrink-0 rounded-full border px-3 py-1 font-black uppercase tracking-[0.12em] shadow-[0_0_16px_rgba(255,255,255,0.12)]',
+                                fontSizeClass(fontSize, 'text-[10px]', 'text-xs', 'text-[13px]'),
                                 status.softOnDark
                             )}
                         >
@@ -424,20 +472,41 @@ const KpiItem: React.FC<KpiItemProps> = ({
             >
                 <span className={cn('absolute inset-y-0 left-0 w-1', status.accent)} />
                 <div className="min-w-0 flex-1 pl-2">
-                    <span className="block truncate text-xs font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-300">
+                    <span
+                        className={cn(
+                            'block truncate font-black uppercase tracking-[0.12em] text-slate-400 dark:text-slate-300',
+                            fontSizeClass(fontSize, 'text-[10px]', 'text-xs', 'text-sm')
+                        )}
+                    >
                         {label}
                     </span>
-                    <span className="mt-0.5 block truncate text-xs font-semibold text-slate-400 dark:text-slate-500">
+                    <span
+                        className={cn(
+                            'mt-0.5 block truncate font-semibold text-slate-400 dark:text-slate-500',
+                            fontSizeClass(fontSize, 'text-[10px]', 'text-xs', 'text-[13px]')
+                        )}
+                    >
                         {kpi.category}
                     </span>
                 </div>
                 <span className="mx-4 h-8 w-px bg-slate-200 dark:bg-slate-700" />
-                <span className="shrink-0 text-[26px] font-black leading-none text-slate-900 dark:text-white">
+                <span
+                    className={cn(
+                        'shrink-0 font-black leading-none text-slate-900 dark:text-white',
+                        fontSizeClass(fontSize, 'text-[22px]', 'text-[26px]', 'text-[30px]')
+                    )}
+                >
                     {valueText(kpi)}
                 </span>
                 <span className="ml-4 flex shrink-0 items-center gap-1.5">
                     <span className={cn('h-2.5 w-2.5 rounded-full', status.glow)} />
-                    <span className={cn('text-xs font-black uppercase tracking-[0.08em]', status.text)}>
+                    <span
+                        className={cn(
+                            'font-black uppercase tracking-[0.08em]',
+                            fontSizeClass(fontSize, 'text-[10px]', 'text-xs', 'text-[13px]'),
+                            status.text
+                        )}
+                    >
                         {STATUS_LABEL[kpi.status]}
                     </span>
                 </span>
@@ -457,20 +526,41 @@ const KpiItem: React.FC<KpiItemProps> = ({
             >
                 <span className={cn('relative z-10 mr-4 h-3 w-3 shrink-0 rounded-full ring-4 ring-cyan-300/10', status.glow)} />
                 <span className="relative z-10 min-w-0 flex-1">
-                    <span className="block truncate text-xs font-black uppercase tracking-[0.22em] text-cyan-200/60">
+                    <span
+                        className={cn(
+                            'block truncate font-black uppercase tracking-[0.22em] text-cyan-200/60',
+                            fontSizeClass(fontSize, 'text-[10px]', 'text-xs', 'text-[13px]')
+                        )}
+                    >
                         {category}
                     </span>
                     <span className="mt-1 flex min-w-0 items-baseline gap-3">
-                        <span className="truncate text-[13px] font-black uppercase tracking-[0.12em] text-cyan-50">
+                        <span
+                            className={cn(
+                                'truncate font-black uppercase tracking-[0.12em] text-cyan-50',
+                                fontSizeClass(fontSize, 'text-[11px]', 'text-[13px]', 'text-[15px]')
+                            )}
+                        >
                             {label}
                         </span>
-                        <span className="shrink-0 font-mono text-[27px] font-black leading-none text-white drop-shadow-[0_0_12px_rgba(103,232,249,0.55)]">
+                        <span
+                            className={cn(
+                                'shrink-0 font-mono font-black leading-none text-white drop-shadow-[0_0_12px_rgba(103,232,249,0.55)]',
+                                fontSizeClass(fontSize, 'text-[23px]', 'text-[27px]', 'text-[31px]')
+                            )}
+                        >
                             {valueText(kpi)}
                         </span>
                     </span>
                 </span>
                 <span className="relative z-10 ml-4 flex shrink-0 items-center gap-2 pr-1">
-                    <span className={cn('text-xs font-black uppercase tracking-[0.16em]', status.textOnDark)}>
+                    <span
+                        className={cn(
+                            'font-black uppercase tracking-[0.16em]',
+                            fontSizeClass(fontSize, 'text-[10px]', 'text-xs', 'text-[13px]'),
+                            status.textOnDark
+                        )}
+                    >
                         {STATUS_LABEL[kpi.status]}
                     </span>
                     {openLink}
@@ -495,17 +585,28 @@ const KpiItem: React.FC<KpiItemProps> = ({
             />
             <span className="flex items-start justify-between gap-3">
                 <span className="min-w-0">
-                    <span className="block truncate text-[22px] font-black leading-none tracking-normal text-slate-900 dark:text-white">
+                    <span
+                        className={cn(
+                            'block truncate font-black leading-none tracking-normal text-slate-900 dark:text-white',
+                            fontSizeClass(fontSize, 'text-[18px]', 'text-[22px]', 'text-[26px]')
+                        )}
+                    >
                         {valueText(kpi)}
                     </span>
-                    <span className="mt-1.5 block line-clamp-2 text-xs font-black uppercase leading-tight tracking-[0.08em] text-slate-600 dark:text-slate-300">
+                    <span
+                        className={cn(
+                            'mt-1.5 block line-clamp-2 font-black uppercase leading-tight tracking-[0.08em] text-slate-600 dark:text-slate-300',
+                            fontSizeClass(fontSize, 'text-[10px]', 'text-xs', 'text-sm')
+                        )}
+                    >
                         {label}
                     </span>
                 </span>
                 <span className="flex shrink-0 items-center gap-0.5">
                     <span
                         className={cn(
-                            'rounded-full px-1.5 py-0.5 text-xs font-black uppercase tracking-[0.12em]',
+                            'rounded-full px-1.5 py-0.5 font-black uppercase tracking-[0.12em]',
+                            fontSizeClass(fontSize, 'text-[10px]', 'text-xs', 'text-[13px]'),
                             status.soft
                         )}
                     >
@@ -514,7 +615,12 @@ const KpiItem: React.FC<KpiItemProps> = ({
                     {openLink}
                 </span>
             </span>
-            <span className="mt-0.5 block truncate text-xs font-semibold text-slate-400 dark:text-slate-500">
+            <span
+                className={cn(
+                    'mt-0.5 block truncate font-semibold text-slate-400 dark:text-slate-500',
+                    fontSizeClass(fontSize, 'text-[10px]', 'text-xs', 'text-[13px]')
+                )}
+            >
                 {kpi.category}
             </span>
         </div>
@@ -524,11 +630,10 @@ const KpiItem: React.FC<KpiItemProps> = ({
 export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
     kpis,
     className,
-    density = 'compact',
+    density = 'comfortable',
+    fontSize = 'standard',
     rows = 1,
     durationSeconds = 60,
-    title = 'Signal Rail',
-    subtitle,
     onOpenEditor,
 }) => {
     const [variant, setVariant] = useState<SignalRailVariant>(() => readStoredVariant());
@@ -579,6 +684,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                     kpi={kpi}
                     variant={variant}
                     density={density}
+                    fontSize={fontSize}
                     duplicate={pass === 1}
                 />
             ))}
@@ -604,6 +710,8 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                 className
             )}
             data-variant={variant}
+            data-font-size={fontSize}
+            aria-label={`Signal Rail with ${kpis.length} KPIs`}
             onMouseEnter={() => setInteractionPaused(true)}
             onMouseLeave={() => setInteractionPaused(false)}
             onFocusCapture={() => setInteractionPaused(true)}
@@ -625,33 +733,6 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                     density === 'compact' ? 'gap-2' : 'gap-3'
                 )}
             >
-                <div
-                    className={cn(
-                        'relative z-[80] hidden shrink-0 items-center gap-2 rounded-lg border shadow-sm lg:flex',
-                        density === 'compact' ? 'px-2.5 py-1.5' : 'px-3 py-2',
-                        variant === 'original' &&
-                            'border-sky-100 bg-white/90 text-sky-700 dark:border-sky-900/70 dark:bg-slate-900/95 dark:text-sky-300',
-                        variant === 'bloomberg' &&
-                            'border-[#1e2d4a] bg-[#070b14] font-mono text-blue-300',
-                        variant === 'cisco-blue-gradient' &&
-                            'border-white/20 bg-white/10 text-white backdrop-blur-sm',
-                        variant === 'minimal-enterprise' &&
-                            'border-slate-200 bg-white text-sky-700 dark:border-slate-800 dark:bg-slate-900/95 dark:text-sky-300',
-                        variant === 'telemetry-constellation' &&
-                            'border-cyan-300/20 bg-slate-950/70 text-cyan-100 shadow-[0_0_28px_rgba(34,211,238,0.16)] backdrop-blur-md'
-                    )}
-                >
-                    <span className="h-2.5 w-2.5 rounded-full bg-sky-500 shadow-[0_0_12px_rgba(14,165,233,0.7)]" />
-                    <div className="leading-tight">
-                        <p className="text-xs font-black uppercase tracking-[0.2em]">
-                            {title}
-                        </p>
-                        <p className="text-xs font-semibold opacity-65">
-                            {subtitle ?? `${kpis.length} KPIs`}
-                        </p>
-                    </div>
-                </div>
-
                 <div
                     className={cn(
                         'w-full min-w-0 max-w-full flex-1 overflow-hidden select-none',
@@ -678,7 +759,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
 
                 <div
                     className={cn(
-                        'relative z-[90] flex shrink-0 items-center gap-1'
+                        'relative z-[90] flex shrink-0 items-center gap-1 transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none lg:pointer-events-none lg:translate-x-1 lg:opacity-0 lg:group-hover/signal-rail:pointer-events-auto lg:group-hover/signal-rail:translate-x-0 lg:group-hover/signal-rail:opacity-100 lg:group-focus-within/signal-rail:pointer-events-auto lg:group-focus-within/signal-rail:translate-x-0 lg:group-focus-within/signal-rail:opacity-100'
                     )}
                     ref={pickerRef}
                 >

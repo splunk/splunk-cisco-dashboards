@@ -27,8 +27,8 @@
 		"viz_header_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#16283c",
-				"strokeColor": "rgba(53,207,245,0.42)"
+				"fillColor": "#1e293b",
+				"strokeColor": "rgba(14,165,233,0.42)"
 			}
 		},
 		"viz_header_icon": {
@@ -46,7 +46,7 @@
 			"showProgressBar": false,
 			"options": {
 				"backgroundColor": "transparent",
-				"fontColor": "#e8f1fb",
+				"fontColor": "#f1f5f9",
 				"markdown": "# Secure Infrastructure\nUnify infrastructure assurance, exposure, and operational control signals."
 			}
 		},
@@ -57,13 +57,13 @@
 				"primary": "ds_infra_sdwan_edge_count"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('sdwan_site_count') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#53bfff"
+				"majorColor": "#0ea5e9"
 			},
 			"description": "Total count of unique Cisco Catalyst SD-WAN sites actively reporting health telemetry, providing the WAN edge infrastructure footprint KPI."
 		},
@@ -74,13 +74,13 @@
 				"primary": "ds_infra_dc_anomalies"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('anomaly_count') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#ff9a4a"
+				"majorColor": "#f59e0b"
 			},
 			"description": "Total count of fabric anomalies detected by Cisco Nexus Dashboard , with unique fabric count and count of critical/high severity entities, providing the primary DC network health KPI."
 		},
@@ -91,13 +91,13 @@
 				"primary": "ds_infra_dc_advisories"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('advisory_count') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#ff7169"
+				"majorColor": "#dc2626"
 			},
 			"description": "Count of active security advisories from Cisco Nexus Dashboard , including unique advisory IDs and critical-severity advisory count, providing the DC vulnerability posture KPI."
 		},
@@ -108,13 +108,13 @@
 				"primary": "ds_infra_rogue_ap_count"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('rogue_ap_count') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#ff7169"
+				"majorColor": "#dc2626"
 			},
 			"description": "Total count of unique rogue access points detected by Cisco Meraki Air Marshal , providing the wireless threat detection KPI for the Secure Infrastructure pillar."
 		},
@@ -125,14 +125,14 @@
 				"primary": "ds_infra_dc_trend"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#ff9a4a",
-					"#ff7169"
+					"#f59e0b",
+					"#dc2626"
 				],
 				"stackMode": "stacked",
 				"lineWidth": 2,
@@ -147,15 +147,15 @@
 				"primary": "ds_infra_sdwan_apps_health"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#8bd45b",
-					"#ff9a4a",
-					"#ff7169",
+					"#16a34a",
+					"#f59e0b",
+					"#dc2626",
 					"#64748b"
 				]
 			},
@@ -168,7 +168,7 @@
 				"primary": "ds_infra_status_rollup"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -182,7 +182,7 @@
 				"primary": "ds_infra_psirt_exposure"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -196,13 +196,13 @@
 				"primary": "ds_infra_software_versions"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "off",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#53bfff"
+					"#0ea5e9"
 				]
 			},
 			"description": "Groups managed devices by device family and software version from Catalyst Center inventory, providing the version-distribution baseline needed to flag devices approaching End of Life/End of Support (LDOS)."
@@ -214,14 +214,14 @@
 				"primary": "ds_infra_rogue_containment"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#8bd45b",
-					"#ff7169"
+					"#16a34a",
+					"#dc2626"
 				],
 				"stackMode": "stacked"
 			},
@@ -234,7 +234,7 @@
 				"primary": "ds_infra_secure_endpoint_incidents"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -248,7 +248,7 @@
 				"primary": "ds_infra_duo_blocked_posture"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -262,7 +262,7 @@
 				"primary": "ds_infra_duo_application_access"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"count": 25,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -275,8 +275,8 @@
 			"showLastUpdated": false,
 			"showProgressBar": false,
 			"options": {
-				"backgroundColor": "#111f31",
-				"fontColor": "#e8f1fb",
+				"backgroundColor": "#1e293b",
+				"fontColor": "#f1f5f9",
 				"markdown": "**Audience:** Infrastructure, NetOps, and network-security teams  •  **Sources:** Catalyst Center, Catalyst SD-WAN, Nexus Dashboard, and Meraki  •  **Reading guide:** Use footprint and anomaly KPIs to orient, then review trends and detailed rollups.  •  **Freshness:** Uses the dashboard time range"
 			}
 		},
@@ -286,8 +286,8 @@
 			"showLastUpdated": false,
 			"showProgressBar": false,
 			"options": {
-				"backgroundColor": "#111f31",
-				"fontColor": "#e8f1fb",
+				"backgroundColor": "#1e293b",
+				"fontColor": "#f1f5f9",
 				"markdown": "### Infrastructure assurance\nUse footprint and anomaly KPIs to orient, then review trends and detailed rollups."
 			}
 		}
@@ -444,7 +444,7 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#07101d",
+					"backgroundColor": "#020617",
 					"display": "auto-scale",
 					"height": 2002,
 					"width": 1440

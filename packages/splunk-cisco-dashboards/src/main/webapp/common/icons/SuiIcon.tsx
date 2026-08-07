@@ -113,6 +113,7 @@ export interface SuiIconProps extends React.SVGProps<SVGSVGElement> {
     absoluteStrokeWidth?: boolean;
     size?: string | number;
     strokeWidth?: string | number;
+    variant?: 'default' | 'outlined' | 'filled';
 }
 
 export type SuiIcon = React.ForwardRefExoticComponent<

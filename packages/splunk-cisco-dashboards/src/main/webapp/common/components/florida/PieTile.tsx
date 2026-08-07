@@ -1,13 +1,15 @@
 /**
- * PieTile — categorical pie chart for `[label, value]` table rows.
+ * PieTile — compatibility renderer for categorical composition rows.
  *
  * Sibling of {@link BarBreakdownTile}; used when a canvas tile selects
- * `splunk.pie`. Accepts the same `useTableData` row shape (first column
- * = slice label, second = numeric value).
+ * `splunk.pie`. The catalogue value is preserved for backwards compatibility,
+ * but the UI intentionally renders Splunk's current horizontal Bar
+ * visualization: ranked bars make category magnitude and long labels much
+ * easier to compare than pie angles. Accepts the same `useTableData` row shape
+ * (first column = category label, second = numeric value).
  */
 
 import React, { useMemo, useState } from 'react';
-import StudioPie from '@splunk/visualizations/Pie';
 import { ExternalLink, Maximize2, PanelRightOpen, Settings2 } from '@/common/icons/SuiIcon';
 import { ChartFocusDialog } from './ChartFocusDialog';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
@@ -23,7 +25,7 @@ interface PieTileProps {
     infoAnchor?: InfoTooltipAnchor;
     rows: ReadonlyArray<Record<string, unknown>>;
     columns: ReadonlyArray<string>;
-    /** Optional slice colours from `viz_options.seriesColors`. */
+    /** Optional bar colours from `viz_options.seriesColors`. */
     seriesColors?: ReadonlyArray<string>;
     source?: DataSource;
     onOpenInSearch?: () => void;
@@ -41,7 +43,18 @@ interface PieTileProps {
 
 const DEFAULT_SLICE_CAP = 8;
 
-const PIE_FALLBACK_COLORS = [
+// The Studio charting bundle is substantial. Load it only when a legacy
+// composition tile is actually visible instead of charging every Insights
+// Workspace visit for a renderer that most workspaces never use.
+const StudioBar = React.lazy(() => import('@splunk/visualizations/Bar'));
+
+const ChartLoadingState: React.FC = () => (
+    <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-400 dark:text-slate-500">
+        Loading chart…
+    </div>
+);
+
+const COMPOSITION_FALLBACK_COLORS = [
     '#0ea5e9',
     '#8b5cf6',
     '#f59e0b',
@@ -153,13 +166,13 @@ export const PieTile: React.FC<PieTileProps> = ({
             (c) => typeof c === 'string' && /^#[0-9a-f]{3,8}$/i.test(c.trim())
         );
         if (fromOptions.length > 0) return fromOptions.map((c) => c.trim());
-        return PIE_FALLBACK_COLORS;
+        return COMPOSITION_FALLBACK_COLORS;
     }, [seriesColors]);
 
     // Dashboard Studio visualizations consume columnar search results rather
-    // than Recharts' row objects. Keeping this adapter here lets the profile,
-    // Searchbase Canvas, and any future overview reuse the same native
-    // `splunk.pie` renderer that Studio itself ships.
+    // than row objects. Keeping this adapter here lets the profile and
+    // Searchbase Canvas reuse the native Splunk renderer while older catalogue
+    // entries continue to declare `splunk.pie`.
     const studioDataSources = useMemo(
         () => ({
             primary: {
@@ -186,19 +199,18 @@ export const PieTile: React.FC<PieTileProps> = ({
 
     const studioOptions = useMemo(
         () => ({
-            // Dashboard Studio resolves visualization fields through its
-            // dynamic-options evaluator. Supplying a bare field name causes
-            // the native component to show its placeholder icon instead of
-            // the chart, even when the datasource contains valid values.
-            label: '> primary | seriesByIndex(0)',
-            value: '> primary | seriesByIndex(1)',
-            showDonutHole: false,
-            labelDisplay: 'valuesAndPercentage',
-            percentagePrecision: 1,
-            collapseThreshold: 0,
-            collapseExcludeZero: true,
-            collapseLabel: 'Other',
-            legendDisplay: 'right',
+            // Native Bar uses Dashboard Studio's dynamic-options expressions.
+            x: '> primary | seriesByIndex(0)',
+            y: '> primary | seriesByIndex(1)',
+            stackMode: 'auto',
+            dataValuesDisplay: 'all',
+            legendDisplay: 'off',
+            xAxisTitleVisibility: 'hide',
+            yAxisTitleVisibility: 'hide',
+            xAxisLabelVisibility: 'show',
+            yAxisLabelVisibility: 'show',
+            showXMajorGridLines: false,
+            showYMajorGridLines: false,
             seriesColors: colors,
             backgroundColor: isDark ? '#0f172a' : '#ffffff',
         }),
@@ -320,18 +332,20 @@ export const PieTile: React.FC<PieTileProps> = ({
             {hasData ? (
                 <div
                     role="img"
-                    aria-label={`${label} pie chart. Total ${formatCount(total)}.`}
-                    title="Values and percentages are shown on the chart"
+                    aria-label={`${label} ranked horizontal bar chart. Total ${formatCount(total)}.`}
+                    title="Ranked category values are shown on the chart"
                     data-tile-control="true"
                     className="relative mt-0.5 flex min-h-[118px] flex-1"
                 >
-                    <StudioPie
-                        width="100%"
-                        height="100%"
-                        themeKey={isDark ? 'enterpriseDark' : 'enterpriseLight'}
-                        options={studioOptions}
-                        dataSources={studioDataSources}
-                    />
+                    <React.Suspense fallback={<ChartLoadingState />}>
+                        <StudioBar
+                            width="100%"
+                            height="100%"
+                            themeKey={isDark ? 'enterpriseDark' : 'enterpriseLight'}
+                            options={studioOptions}
+                            dataSources={studioDataSources}
+                        />
+                    </React.Suspense>
                     <span className="pointer-events-none absolute left-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-xs font-bold tabular-nums text-slate-600 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-950/90 dark:text-slate-200 dark:ring-slate-700/80">
                         Total {formatCount(total)}
                     </span>
@@ -360,16 +374,18 @@ export const PieTile: React.FC<PieTileProps> = ({
             >
                 <div
                     role="img"
-                    aria-label={`Expanded ${label} pie chart. Total ${formatCount(total)}.`}
+                    aria-label={`Expanded ${label} ranked horizontal bar chart. Total ${formatCount(total)}.`}
                     className="relative h-full min-h-[320px] rounded-[10px] border border-[#1e3449] bg-[#0e1a2b] p-3"
                 >
-                    <StudioPie
-                        width="100%"
-                        height="100%"
-                        themeKey="enterpriseDark"
-                        options={focusStudioOptions}
-                        dataSources={studioDataSources}
-                    />
+                    <React.Suspense fallback={<ChartLoadingState />}>
+                        <StudioBar
+                            width="100%"
+                            height="100%"
+                            themeKey="enterpriseDark"
+                            options={focusStudioOptions}
+                            dataSources={studioDataSources}
+                        />
+                    </React.Suspense>
                     <span className="pointer-events-none absolute left-4 top-4 rounded bg-slate-950/90 px-2 py-1 text-xs font-bold tabular-nums text-slate-200 shadow-sm ring-1 ring-slate-700/80">
                         Total {formatCount(total)}
                     </span>

@@ -87,6 +87,15 @@ description = <string>
 dispatch_context = <string>
 * Default: searchbase
 
+# Provenance only: records the app a search was originally harvested from.
+dispatch_context_origin = <string>
+* Snapshot of the `dispatch_context` value at the time the search was
+  imported into this catalogue. It exists so the original source app stays
+  recoverable after `dispatch_context` is retargeted.
+* Has NO effect on dispatch, search execution, or the app a search runs in.
+  Nothing reads it at runtime; it is metadata for catalogue maintainers.
+* No default.
+
 execution_plan = <string>
 * No default.
 

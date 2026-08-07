@@ -45,6 +45,23 @@
 }
 
 /* SUI compact icon-only buttons use a 28px interaction footprint. */
+
+/* H1 is a real compact section mode, not just a smaller number in the
+ * height pill. Preserve every tile and interaction while tightening the
+ * headline/chart floors; H2-H4 retain the full analytical presentation. */
+#scan-root [data-section-density='compact'] .text-4xl {
+    font-size: 1.75rem;
+    line-height: 1;
+}
+
+#scan-root [data-section-density='compact'] .min-h-\[72px\] {
+    min-height: 54px;
+}
+
+#scan-root [data-section-density='compact'] .min-h-\[116px\],
+#scan-root [data-section-density='compact'] .min-h-\[118px\] {
+    min-height: 92px;
+}
 #scan-root button:has(> svg:only-child) {
     min-height: 28px;
     min-width: 28px;
@@ -52,6 +69,33 @@
 
 #scan-root :where(button, input, select, textarea):disabled {
     cursor: not-allowed;
+}
+
+/*
+ * The workspace command bar is deliberately dark even when Splunk Web is
+ * using its light theme. SUI Select correctly follows the surrounding Splunk
+ * theme, so without a local surface override its dark text and transparent
+ * toggle disappear against this bar. Keep the actual SUI control and its
+ * interaction states while making this dark-surface exception explicit.
+ */
+#scan-root .scd-toolbar-select[data-test='select'] {
+    border-color: transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: rgb(241 245 249) !important;
+}
+
+#scan-root .scd-toolbar-select[data-test='select']:hover {
+    border-color: transparent !important;
+    background: rgb(255 255 255 / 8%) !important;
+}
+
+#scan-root .scd-toolbar-select[data-test='select'] [data-test='label'] {
+    color: inherit !important;
+}
+
+#scan-root .scd-toolbar-select[data-test='select'] svg {
+    fill: currentColor !important;
 }
 
 /*

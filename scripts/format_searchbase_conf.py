@@ -37,6 +37,7 @@ FIELD_ORDER_BEFORE_VIZ = [
     "sub_category",
     "tags",
     "dispatch_context",
+    "dispatch_context_origin",
     "dispatch_context_force",
     "search_hidden",
 ]

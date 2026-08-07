@@ -108,6 +108,8 @@ for (const workspaceId of workspaceIds) {
 }
 
 const base = getDefaultSignalTickerConfig("secure_networking");
+assert.equal(base.density, "comfortable");
+assert.equal(base.fontSize, "standard");
 const customized = {
   ...base,
   rows: 2,
@@ -123,6 +125,11 @@ assert.deepEqual(
 );
 assert.deepEqual(applySignalTickerPreferencePatch(base, patch), customized);
 assert.equal(createSignalTickerPreferencePatch(base, base), null);
+assert.deepEqual(
+  createSignalTickerPreferencePatch(base, { ...base, fontSize: "small" }),
+  { fontSize: "small" },
+  "font size must persist as a sparse workspace preference",
+);
 
 const updatedCentral = {
   ...base,
@@ -146,6 +153,11 @@ assert.equal(bounded.items.length, MAX_SIGNAL_TICKER_ITEMS);
 assert.deepEqual(
   sanitizeSignalTickerPreferencePatch({ rows: 3, speed: 999, enabled: false }),
   { speed: 10, enabled: false },
+);
+assert.equal(
+  sanitizeSignalTickerConfig({ ...base, density: undefined }).density,
+  "comfortable",
+  "missing density must retain the comfortable factory default",
 );
 
 const conf = fs.readFileSync(
@@ -192,6 +204,35 @@ for (const item of DEFAULT_SIGNAL_TICKER_CONFIG.items) {
   );
 }
 const searchbaseBlocks = searchbase.split(/(?=^\[)/m);
+const deliberateNonTimechartSignalSearches = new Set([
+  "Executive - Security Domain Score",
+  "Executive - Network Health Score Trend",
+  "Executive - IT Domain Score",
+  "Executive - User Experience Score",
+  "Executive - Building Domain Score",
+  "Executive - Issue Summary KPIs",
+  "Feed Monitor - ThousandEyes - Stream Staleness (Signal Rail KPI)",
+  "Feed Monitor - FTD Firewall - Stream Staleness (Signal Rail KPI)",
+  "Feed Monitor - FMC eStreamer - IPS Feed Staleness (Signal Rail KPI)",
+  "Feed Monitor - ISE - RADIUS Syslog Staleness (Signal Rail KPI)",
+  "Feed Monitor - Catalyst Center - API Feed Staleness (Signal Rail KPI)",
+  "Feed Monitor - Cisco Spaces - Firehose Staleness (Signal Rail KPI)",
+]);
+for (const searchName of new Set(
+  DEFAULT_SIGNAL_TICKER_CONFIG.items.map(({ searchName }) => searchName),
+)) {
+  const block = searchbaseBlocks.find(
+    (candidate) =>
+      candidate.match(/^search_name = (.+)$/m)?.[1] === searchName,
+  );
+  assert.ok(block, "missing Signal Rail search " + searchName);
+  if (deliberateNonTimechartSignalSearches.has(searchName)) continue;
+  assert.match(
+    block,
+    /\| timechart /i,
+    searchName + " must expose a Signal Rail timechart",
+  );
+}
 const paloAltoRailSearch = searchbaseBlocks.find((block) =>
   block.startsWith("[secure_networking_palo_alto_policy_enforcement_signal]"),
 );
@@ -209,6 +250,8 @@ for (const workspaceId of workspaceIds) {
     candidate.startsWith(`[signal_rail.${workspaceId}]`),
   );
   assert.ok(block, `missing central Signal Rail preset for ${workspaceId}`);
+  assert.match(block, /^density = comfortable$/m);
+  assert.match(block, /^font_size = standard$/m);
   const itemIds = block.match(/^items = (.*)$/m)?.[1].split(",") ?? [];
   assert.ok(itemIds.length > 0 && itemIds.length <= MAX_SIGNAL_TICKER_ITEMS);
   assert.deepEqual(

@@ -30,6 +30,7 @@ import React, {
   useState,
 } from "react";
 import { createURL } from "@splunk/splunk-utils/url";
+import Select from "@splunk/react-ui/Select";
 import {
     Activity,
     RefreshCw,
@@ -254,11 +255,13 @@ const MIN_DASHBOARD_HEIGHT_PX = 520;
 const COMPACT_HEIGHT_THRESHOLD_PX = 720;
 const SECTION_HEIGHT_BASE_PX = 180;
 const SECTION_HEIGHT_COMPACT_BASE_PX = 174;
+const SECTION_HEIGHT_H1_BASE_PX = 152;
 const SECTION_HEIGHT_STEP_PX = 120;
 // Wrapped sections need to budget for the full card floor plus the
 // inter-row gap. 152px matched the bare tile min-height too closely and
 // caused the third row to be clipped at H1 when a section showed 9 tiles.
 const SECTION_WRAPPED_TILE_ROW_STEP_PX = 176;
+const SECTION_WRAPPED_H1_TILE_ROW_STEP_PX = 148;
 const SECTION_WRAP_TILE_COUNT = 5;
 const SECTION_WRAPPED_TILE_COLUMNS = 3;
 const VERTICAL_MAP_MIN_HEIGHT_PX = 420;
@@ -666,6 +669,13 @@ const buildOverviewMetricConfig = (
         record,
         definition,
         profile,
+        {
+          // Factory workspaces must never disguise an empty live search as
+          // synthetic telemetry.  Added tiles already use this contract;
+          // applying it here keeps every workspace tile honest and makes the
+          // existing no-data reason visible to the operator.
+          suppressMockOnEmpty: true,
+        },
       );
       if (!metric || discovered.has(metric.id)) continue;
       discovered.set(metric.id, metric);
@@ -2997,14 +3007,20 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         : 1;
     const heightLevel =
       sectionHeights[section] ?? sectionHeightBounds.defaultLevel;
-    const baseMinHeight = compactDensity
-      ? SECTION_HEIGHT_COMPACT_BASE_PX
-      : SECTION_HEIGHT_BASE_PX;
+    const isCompactHeight = heightLevel === sectionHeightBounds.minLevel;
+    const baseMinHeight = isCompactHeight
+      ? SECTION_HEIGHT_H1_BASE_PX
+      : compactDensity
+        ? SECTION_HEIGHT_COMPACT_BASE_PX
+        : SECTION_HEIGHT_BASE_PX;
+    const wrappedRowStep = isCompactHeight
+      ? SECTION_WRAPPED_H1_TILE_ROW_STEP_PX
+      : SECTION_WRAPPED_TILE_ROW_STEP_PX;
     return Math.max(
       verticalMetricsMinHeight,
       baseMinHeight +
         (heightLevel - sectionHeightBounds.minLevel) * SECTION_HEIGHT_STEP_PX +
-        (estimatedTileRows - 1) * SECTION_WRAPPED_TILE_ROW_STEP_PX,
+        (estimatedTileRows - 1) * wrappedRowStep,
     );
   }, [
     compactDensity,
@@ -4117,11 +4133,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   }, [closeHelp, helpOpen]);
 
   // ------------------------------ Render ------------------------------
-  const inputClass =
-    "text-xs font-semibold bg-slate-100 dark:bg-slate-800 border border-slate-200 " +
-    "dark:border-slate-700 rounded-md m-0 h-8 px-2 py-0 text-slate-700 dark:text-slate-200 " +
-    "hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 " +
-    "focus:ring-sky-500 cursor-pointer";
   const iconBtnClass =
     "p-1.5 rounded transition-colors text-slate-500 dark:text-slate-400 " +
     "hover:text-sky-600 dark:hover:text-sky-300 hover:bg-slate-50 dark:hover:bg-slate-800";
@@ -4213,46 +4224,54 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             className="inline-flex flex-shrink-0 items-center"
             aria-live="polite"
           />
-          <label className="m-0 flex h-8 items-center gap-1.5">
+          <div className="m-0 flex h-8 items-center gap-1.5">
             <span className="hidden text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 2xl:inline">
               Range
             </span>
-            <select
+            <Select
+              className="scd-toolbar-select"
               data-shortcut-search
               value={timeRange.label}
-              onChange={(e) => {
+              onChange={(_event, { value }) => {
                 const next = TIME_RANGE_OPTIONS.find(
-                  (o) => o.label === e.target.value,
+                  (o) => o.label === String(value),
                 );
                 if (next) setTimeRange(next);
               }}
-              className={cn(inputClass, "w-[124px]")}
+              inline
+              labelText="Dashboard time range"
+              style={{ width: 124 }}
               title="Dashboard time range"
             >
               {TIME_RANGE_OPTIONS.map((o) => (
-                <option key={o.label} value={o.label}>
-                  {o.label}
-                </option>
+                <Select.Option key={o.label} label={o.label} value={o.label} />
               ))}
-            </select>
-          </label>
-          <label className="m-0 flex h-8 items-center gap-1.5">
+            </Select>
+          </div>
+          <div className="m-0 flex h-8 items-center gap-1.5">
             <span className="hidden text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 2xl:inline">
               Auto
             </span>
-            <select
+            <Select
+              className="scd-toolbar-select"
               value={autoRefreshSeconds}
-              onChange={(e) => setAutoRefreshSeconds(Number(e.target.value))}
-              className={cn(inputClass, "w-[72px]")}
+              onChange={(_event, { value }) =>
+                setAutoRefreshSeconds(Number(value))
+              }
+              inline
+              labelText="Auto-refresh interval"
+              style={{ width: 72 }}
               title="Auto-refresh interval"
             >
               {AUTO_REFRESH_OPTIONS.map((o) => (
-                <option key={o.seconds} value={o.seconds}>
-                  {o.label}
-                </option>
+                <Select.Option
+                  key={o.seconds}
+                  label={o.label}
+                  value={o.seconds}
+                />
               ))}
-            </select>
-          </label>
+            </Select>
+          </div>
           <button
             type="button"
             onClick={refreshNow}
@@ -4350,7 +4369,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           >
             <Sparkles className="w-4 h-4" />
           </button>
-          <ThemeToggle theme={theme} onCycle={cycleTheme} />
+          <ThemeToggle theme={theme} onCycle={cycleTheme} iconOnly />
           <button
             type="button"
             onClick={toggleMapVisibility}
@@ -4656,14 +4675,21 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 : 1;
               const heightLevel =
                 sectionHeights[section] ?? sectionHeightBounds.defaultLevel;
-              const baseMinHeight = compactDensity
-                ? SECTION_HEIGHT_COMPACT_BASE_PX
-                : SECTION_HEIGHT_BASE_PX;
+              const isCompactHeight =
+                heightLevel === sectionHeightBounds.minLevel;
+              const baseMinHeight = isCompactHeight
+                ? SECTION_HEIGHT_H1_BASE_PX
+                : compactDensity
+                  ? SECTION_HEIGHT_COMPACT_BASE_PX
+                  : SECTION_HEIGHT_BASE_PX;
+              const wrappedRowStep = isCompactHeight
+                ? SECTION_WRAPPED_H1_TILE_ROW_STEP_PX
+                : SECTION_WRAPPED_TILE_ROW_STEP_PX;
               const sectionMinHeight =
                 baseMinHeight +
                 (heightLevel - sectionHeightBounds.minLevel) *
                   SECTION_HEIGHT_STEP_PX +
-                (estimatedTileRows - 1) * SECTION_WRAPPED_TILE_ROW_STEP_PX;
+                (estimatedTileRows - 1) * wrappedRowStep;
 
               // Apply the user's drag-reorder
               // preference (if any) to the canonical
@@ -4723,6 +4749,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                     label: `${meta.title} height`,
                   }}
                   wrapTiles={wrapTiles}
+                  compactHeight={isCompactHeight}
                   tileCount={
                     sectionMaxAvailable > 0
                       ? {
@@ -4794,7 +4821,12 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                             }}
                             className={
                               wrapTiles
-                                ? "min-w-[240px] md:min-w-[250px] min-h-[148px]"
+                                ? cn(
+                                    "min-w-[240px] md:min-w-[250px]",
+                                    isCompactHeight
+                                      ? "min-h-[124px]"
+                                      : "min-h-[148px]",
+                                  )
                                 : undefined
                             }
                           >
@@ -4814,7 +4846,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                               searchbaseByName={searchbaseByName}
                               searchbaseById={searchbaseById}
                               searchbaseDrilldowns={searchbaseDrilldowns}
-                              compactDensity={compactDensity}
+                              compactDensity={
+                                compactDensity || isCompactHeight
+                              }
                               isDark={resolvedTheme === "dark"}
                               onOpenDetailTable={setActiveDetailTable}
                               onConfigure={() =>
@@ -4939,9 +4973,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-col overflow-hidden">
                 <div className="flex items-center justify-between mb-2 flex-shrink-0">
                   <div>
-                    <h3 className="text-base font-bold text-sky-900 dark:text-sky-200 uppercase tracking-wide leading-none">
+                    <h2 className="text-base font-bold text-sky-900 dark:text-sky-200 uppercase tracking-wide leading-none">
                       {topologyHeaderName}
-                    </h3>
+                    </h2>
                     <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-0.5">
                       {topologyHeaderSubtitle}
                     </p>
@@ -6689,6 +6723,57 @@ interface MetricDetailSortState {
   direction: MetricDetailSortDirection;
 }
 
+type MetricDetailTableStateKind = "loading" | "empty" | "error";
+
+interface MetricDetailTableStateRowProps {
+  columnCount: number;
+  kind: MetricDetailTableStateKind;
+  message: string;
+  title: string;
+}
+
+const MetricDetailTableStateRow: React.FC<MetricDetailTableStateRowProps> = ({
+  columnCount,
+  kind,
+  message,
+  title,
+}) => {
+  const Icon =
+    kind === "loading" ? RefreshCw : kind === "error" ? AlertCircle : Search;
+  const iconClasses =
+    kind === "error"
+      ? "border-rose-400/25 bg-rose-500/10 text-rose-300"
+      : "border-sky-400/20 bg-sky-500/10 text-sky-300";
+
+  return (
+    <tr>
+      <td colSpan={columnCount} className="px-5 py-14 text-center">
+        <div
+          className="mx-auto flex max-w-md flex-col items-center gap-2"
+          role={kind === "error" ? "alert" : "status"}
+          aria-live={kind === "error" ? "assertive" : "polite"}
+        >
+          <span
+            className={cn(
+              "inline-flex h-10 w-10 items-center justify-center rounded-full border",
+              iconClasses,
+            )}
+          >
+            <Icon
+              className={cn("h-4 w-4", kind === "loading" && "animate-spin")}
+              aria-hidden="true"
+            />
+          </span>
+          <strong className="text-sm font-semibold text-slate-100">
+            {title}
+          </strong>
+          <span className="text-xs leading-5 text-slate-400">{message}</span>
+        </div>
+      </td>
+    </tr>
+  );
+};
+
 const readRowString = (
   row: Record<string, unknown>,
   field: string,
@@ -6980,32 +7065,26 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
             </thead>
             <tbody className="divide-y divide-[#1e293b]">
               {loading ? (
-                <tr>
-                  <td
-                    colSpan={columnCount}
-                    className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
-                  >
-                    Loading {config.title.toLowerCase()}...
-                  </td>
-                </tr>
+                <MetricDetailTableStateRow
+                  columnCount={columnCount}
+                  kind="loading"
+                  title="Loading details"
+                  message={`Running ${config.title.toLowerCase()} for the selected time range.`}
+                />
               ) : errorMessage ? (
-                <tr>
-                  <td
-                    colSpan={columnCount}
-                    className="px-5 py-10 text-center text-sm text-rose-600 dark:text-rose-300"
-                  >
-                    {errorMessage}
-                  </td>
-                </tr>
+                <MetricDetailTableStateRow
+                  columnCount={columnCount}
+                  kind="error"
+                  title="Details unavailable"
+                  message={`${errorMessage} Open the query in Search to inspect the failure.`}
+                />
               ) : rows.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={columnCount}
-                    className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
-                  >
-                    {config.emptyMessage}
-                  </td>
-                </tr>
+                <MetricDetailTableStateRow
+                  columnCount={columnCount}
+                  kind="empty"
+                  title="No results in this time range"
+                  message={`${config.emptyMessage} Try a wider range or open the query in Search.`}
+                />
               ) : (
                 sortedRows.map((row, rowIndex) => {
                   const rowStatus = statusField ? row[statusField] : "";
