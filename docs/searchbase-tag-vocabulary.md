@@ -1,0 +1,837 @@
+# Searchbase Canonical Tag Vocabulary
+
+Reference for the `tags` field in
+`packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf`.
+
+- **Canonical vocabulary: 138 tags** (target band was 120-150).
+- **Legacy vocabulary collapsed: 588 distinct values** across 1082 stanzas.
+- Every stanza carries **3-6 tags**, all drawn from this vocabulary.
+- Last full retag: **2026-08-07**.
+
+## Why the vocabulary is shaped this way
+
+Tags on this catalog exist to answer one question: *given a thing I care about, which searches are about it?* A flat list of 588 free-text labels cannot answer that, because two people describing the same search reach for different words and neither knows what the other used.
+
+So the vocabulary is **faceted**. Every tag belongs to exactly one of five facets, and each facet answers a different question about a search:
+
+| Facet | Question it answers | Tags | Evidence it is derived from |
+| --- | --- | --- | --- |
+| Product | Which Cisco (or third-party) product the telemetry comes from | 31 | the `index_*` macro, the `sourcetype`, the data model, or a product-specific lookup |
+| Solution | Which business narrative or dashboard family the search belongs to | 14 | the stanza's locked `category` / `sub_category` |
+| Subject | The entity the search counts, groups by, or lists | 26 | the fields the SPL actually groups by (`BY`), renames (`AS`), evaluates, or tables |
+| Topic | The operational or security concern | 51 | output fields plus base-search predicates |
+| Shape | What kind of answer the search returns | 14 | the SPL command signature (`timechart`, `top`, `predict`, `fit`, `iplocation`, ...) and `default_viz` |
+| Provenance | Content that came from an upstream content pack rather than from this app | 2 | the locked `sub_category` and the stanza's existing tags |
+
+A stanza is capped at 2 product, 2 solution, 2 subject, 3 topic, 2 shape and 1 provenance tag. That cap is what keeps a single stanza from being tagged with six near-identical product names, and it is why the per-stanza count lands at 3-6 rather than at whatever the evidence happens to produce.
+
+### Naming conventions
+
+The format skill fixes two of these; the rest are choices made here and applied uniformly.
+
+| Rule | Example | Source |
+| --- | --- | --- |
+| Subject nouns are plural | `Interfaces`, not `Interface` | format skill |
+| Intent / topic tags are singular | `Authentication`, not `Authentications` | format skill |
+| Acronyms keep their vendor casing | `SGT`, `BGP`, `SD-WAN`, `MSO`, `HTTP` | convention chosen here |
+| Product tags use the current marketing name | `Catalyst Center`, not `DNAC` | convention chosen here |
+| Title Case throughout | `Capacity Planning` | convention chosen here |
+| No tooling or build-process tags | `Dashboard Studio`, `Harvested`, `Migrated_From_SavedSearch` are dropped | convention chosen here |
+| Upstream-content provenance is kept | `ESCU`, `TA Stock Dashboard` survive | format skill, which names these explicitly |
+| No pure-sentiment tags | `Healthy`, `Warning`, `Critical` are dropped or folded into `Severity` | convention chosen here |
+
+## The vocabulary
+
+`Stanzas` is the number of the 1082 stanzas carrying that tag as of 2026-08-07.
+
+### Product (31)
+
+Which Cisco (or third-party) product the telemetry comes from. Derived from the `index_*` macro, the `sourcetype`, the data model, or a product-specific lookup.
+
+| Tag | Stanzas |
+| --- | ---: |
+| `AI Defense` | 6 |
+| `ASA` | 8 |
+| `Active Directory` | 19 |
+| `Catalyst Center` | 292 |
+| `Cisco ACI` | 111 |
+| `Cisco Spaces` | 130 |
+| `Cyber Vision` | 8 |
+| `Duo` | 16 |
+| `Email Security` | 7 |
+| `Email Threat Defense` | 3 |
+| `FTD` | 36 |
+| `IOS` | 34 |
+| `ISE` | 66 |
+| `Isovalent` | 3 |
+| `MSO` | 24 |
+| `Meraki` | 58 |
+| `Multicloud Defense` | 8 |
+| `Nexus 9000` | 12 |
+| `Nexus Dashboard` | 77 |
+| `Palo Alto Networks` | 5 |
+| `SD-WAN` | 45 |
+| `Secure Access` | 33 |
+| `Secure Client` | 9 |
+| `Secure Network Analytics` | 4 |
+| `Secure Workload` | 4 |
+| `Splunk Attack Analyzer` | 24 |
+| `ThousandEyes` | 108 |
+| `Web Security` | 3 |
+| `Webex` | 7 |
+| `XDR` | 25 |
+| `Zeek` | 15 |
+
+### Solution (14)
+
+Which business narrative or dashboard family the search belongs to. Derived from the stanza's locked `category` / `sub_category`.
+
+| Tag | Stanzas |
+| --- | ---: |
+| `Agentic Ops` | 19 |
+| `Building Intelligence` | 51 |
+| `Cisco DC Networking` | 176 |
+| `Executive` | 51 |
+| `Hybrid Mesh Firewalling` | 40 |
+| `IT Health` | 115 |
+| `NetOps Readiness` | 27 |
+| `Network Intelligence` | 48 |
+| `Scalable Network Segmentation` | 25 |
+| `Secure Infrastructure` | 71 |
+| `Secure Networking` | 185 |
+| `Security` | 168 |
+| `Workplace SPOG` | 10 |
+| `Zero Trust Access` | 45 |
+
+### Subject (26)
+
+The entity the search counts, groups by, or lists. Derived from the fields the SPL actually groups by (`BY`), renames (`AS`), evaluates, or tables.
+
+| Tag | Stanzas |
+| --- | ---: |
+| `Access Points` | 15 |
+| `Advisories` | 20 |
+| `Alerts` | 35 |
+| `Applications` | 42 |
+| `Assets` | 11 |
+| `Clients` | 110 |
+| `Devices` | 171 |
+| `Endpoints` | 60 |
+| `Events` | 63 |
+| `Faults` | 18 |
+| `Files` | 7 |
+| `Flows` | 18 |
+| `Hosts` | 6 |
+| `Incidents` | 24 |
+| `Interfaces` | 36 |
+| `Issues` | 39 |
+| `Policies` | 87 |
+| `Rooms` | 28 |
+| `Sensors` | 26 |
+| `Sessions` | 24 |
+| `Sites` | 171 |
+| `Tenants` | 37 |
+| `Threats` | 32 |
+| `Tunnels` | 10 |
+| `Users` | 35 |
+| `Vulnerabilities` | 7 |
+
+### Topic (51)
+
+The operational or security concern. Derived from output fields plus base-search predicates.
+
+| Tag | Stanzas |
+| --- | ---: |
+| `Audit` | 29 |
+| `Authentication` | 47 |
+| `Availability` | 40 |
+| `BGP` | 12 |
+| `Bandwidth` | 16 |
+| `Capacity Planning` | 47 |
+| `Cloud Security` | 20 |
+| `Collaboration` | 14 |
+| `Compliance` | 29 |
+| `Configuration` | 16 |
+| `DHCP` | 13 |
+| `DNS` | 25 |
+| `Data Loss Prevention` | 4 |
+| `Encryption` | 11 |
+| `Environmental` | 20 |
+| `Errors` | 15 |
+| `Fabric` | 42 |
+| `Feed Health` | 34 |
+| `Firewall` | 92 |
+| `Forensics` | 30 |
+| `HTTP` | 18 |
+| `Identity` | 90 |
+| `Intrusion Prevention` | 22 |
+| `Inventory` | 95 |
+| `Jitter` | 5 |
+| `Latency` | 60 |
+| `Lifecycle` | 7 |
+| `Machine Learning` | 23 |
+| `Malware` | 7 |
+| `Occupancy` | 44 |
+| `Onboarding` | 18 |
+| `Packet Loss` | 15 |
+| `Posture` | 11 |
+| `Power` | 9 |
+| `Presence` | 16 |
+| `Reachability` | 29 |
+| `Risk` | 11 |
+| `Rogue AP` | 14 |
+| `Routing` | 11 |
+| `SGT` | 15 |
+| `SSID` | 17 |
+| `Switching` | 12 |
+| `Syslog` | 37 |
+| `Traffic` | 56 |
+| `User Experience` | 34 |
+| `Utilization` | 55 |
+| `VPN` | 5 |
+| `Voice` | 17 |
+| `Web Filtering` | 11 |
+| `Wired` | 19 |
+| `Wireless` | 61 |
+
+### Shape (14)
+
+What kind of answer the search returns. Derived from the SPL command signature (`timechart`, `top`, `predict`, `fit`, `iplocation`, ...) and `default_viz`.
+
+| Tag | Stanzas |
+| --- | ---: |
+| `Anomaly` | 42 |
+| `Comparison` | 8 |
+| `Detail` | 25 |
+| `Distribution` | 267 |
+| `Drilldown` | 114 |
+| `Forecast` | 21 |
+| `Health Score` | 173 |
+| `KPI` | 151 |
+| `Leaderboard` | 36 |
+| `Map` | 16 |
+| `Severity` | 38 |
+| `Table` | 331 |
+| `Topology` | 17 |
+| `Trend` | 237 |
+
+### Provenance (2)
+
+Content that came from an upstream content pack rather than from this app. Derived from the locked `sub_category` and the stanza's existing tags.
+
+| Tag | Stanzas |
+| --- | ---: |
+| `ESCU` | 8 |
+| `TA Stock Dashboard` | 4 |
+
+## Alias mapping
+
+Every one of the 588 legacy tag values maps to exactly one canonical tag or is dropped. Nothing was silently discarded: a legacy tag that carried no filtering value was dropped deliberately, and the reason is in the Dropped table below.
+
+- 487 legacy values remap to a canonical tag.
+- 32 legacy values are dropped as noise.
+
+### Remapped
+
+| Legacy tag | Canonical tag |
+| --- | --- |
+| `802.1X` | `Authentication` |
+| `A2A` | `Agentic Ops` |
+| `AAA` | `Authentication` |
+| `ACI` | `Cisco ACI` |
+| `AMP` | `Malware` |
+| `AP` | `Access Points` |
+| `AP Load` | `Utilization` |
+| `AP Usage` | `Utilization` |
+| `APIC` | `Cisco ACI` |
+| `AV` | `Malware` |
+| `AWS` | `Cloud Security` |
+| `Abuse` | `Threats` |
+| `Access Control` | `Policies` |
+| `Access Control Policy` | `Policies` |
+| `Action Distribution` | `Distribution` |
+| `Active Calls` | `Sessions` |
+| `Active Devices` | `Devices` |
+| `Activities` | `Events` |
+| `Activity Logs` | `Audit` |
+| `Admin Activity` | `Audit` |
+| `Administrators` | `Users` |
+| `Advanced Logging` | `Feed Health` |
+| `Advisory` | `Advisories` |
+| `Agent` | `Agentic Ops` |
+| `Agent Location Match` | `Topology` |
+| `Agent to Agent` | `Agentic Ops` |
+| `Air Marshal` | `Meraki` |
+| `Air Quality` | `Environmental` |
+| `Alarms` | `Alerts` |
+| `Alert Triage` | `Alerts` |
+| `Anomalies` | `Anomaly` |
+| `Application` | `Applications` |
+| `Application Access` | `Applications` |
+| `Application Health` | `Health Score` |
+| `Area` | `Rooms` |
+| `Asset Management` | `Inventory` |
+| `Asset Visibility` | `Cyber Vision` |
+| `Assignment` | `Configuration` |
+| `Association` | `Wireless` |
+| `Assurance Alerts` | `Alerts` |
+| `AttackAnalyzer` | `Splunk Attack Analyzer` |
+| `Audit Logs` | `Audit` |
+| `Authorization` | `Authentication` |
+| `Azure` | `Cloud Security` |
+| `BSSID` | `Wireless` |
+| `Band` | `Wireless` |
+| `Baseline` | `Anomaly` |
+| `Beacon` | `Threats` |
+| `Behavior` | `Trend` |
+| `Binding` | `Topology` |
+| `Block` | `Policies` |
+| `Blocked` | `Policies` |
+| `Blocked Access` | `Web Filtering` |
+| `Booking` | `Rooms` |
+| `Branch` | `Sites` |
+| `Break Room` | `Rooms` |
+| `Breakdown` | `Distribution` |
+| `Bridge Domain` | `Fabric` |
+| `Brute Force` | `Threats` |
+| `Building` | `Building Intelligence` |
+| `Burst` | `Anomaly` |
+| `CO2` | `Environmental` |
+| `CPU` | `Utilization` |
+| `CVE` | `Vulnerabilities` |
+| `CVI` | `Cyber Vision` |
+| `CVSS` | `Vulnerabilities` |
+| `Cadence` | `Threats` |
+| `Cafe` | `Rooms` |
+| `Camera` | `Sensors` |
+| `Capacity` | `Utilization` |
+| `Certificates` | `Encryption` |
+| `Change Detection` | `Anomaly` |
+| `Change Management` | `Configuration` |
+| `Change Tracking` | `Configuration` |
+| `Circuits` | `Interfaces` |
+| `Cisco Catalyst Center` | `Catalyst Center` |
+| `Cisco Duo` | `Duo` |
+| `Cisco Firewall` | `Firewall` |
+| `Cisco IOS` | `IOS` |
+| `Cisco Intersight` | `Secure Infrastructure` |
+| `Cisco Meraki` | `Meraki` |
+| `Cisco Nexus 9000` | `Nexus 9000` |
+| `Cisco Nexus Dashboard` | `Nexus Dashboard` |
+| `Cisco Secure Access` | `Secure Access` |
+| `Cisco Secure Client` | `Secure Client` |
+| `Cisco Secure Workload` | `Secure Workload` |
+| `Cisco Security Cloud` | `Secure Networking` |
+| `Cisco Spaces Intelligence` | `Cisco Spaces` |
+| `Classification` | `Policies` |
+| `Client` | `Clients` |
+| `Client Connectivity` | `Reachability` |
+| `Client Count` | `Clients` |
+| `Client Distribution` | `Distribution` |
+| `Client Health` | `Health Score` |
+| `Client Investigation` | `Forensics` |
+| `Client Onboarding` | `Onboarding` |
+| `Client Summary` | `Clients` |
+| `Cloud Firewall` | `Firewall` |
+| `Cloud Native Security` | `Cloud Security` |
+| `Codes` | `Errors` |
+| `Collection Gap` | `Feed Health` |
+| `Completion` | `Availability` |
+| `Composite KPI` | `KPI` |
+| `Config Change` | `Configuration` |
+| `Configuration Management` | `Configuration` |
+| `Configuration Status` | `Configuration` |
+| `Connection` | `Sessions` |
+| `Connection Rate` | `Sessions` |
+| `Connection Status` | `Sessions` |
+| `Connectivity` | `Reachability` |
+| `Container` | `Cloud Security` |
+| `Containment` | `Policies` |
+| `Contracts` | `Policies` |
+| `Control Plane` | `Routing` |
+| `Correlation` | `Comparison` |
+| `Coverage` | `Inventory` |
+| `Crashes` | `Errors` |
+| `Critical` | `Severity` |
+| `Critical Sites` | `Sites` |
+| `Cross-Source` | `Comparison` |
+| `Cross-Source Correlation` | `Comparison` |
+| `Crypto` | `Encryption` |
+| `Cyber Vision TA` | `Cyber Vision` |
+| `DLP` | `Data Loss Prevention` |
+| `DNAC` | `Catalyst Center` |
+| `DNS Security` | `DNS` |
+| `DNSSEC` | `DNS` |
+| `Data Center` | `Cisco DC Networking` |
+| `DataQuality` | `Feed Health` |
+| `Dead Zone` | `Availability` |
+| `Delegation` | `Configuration` |
+| `Denial` | `Policies` |
+| `DensityFunction` | `Machine Learning` |
+| `Deny` | `Policies` |
+| `Desk` | `Rooms` |
+| `Destinations` | `Traffic` |
+| `Detections` | `Threats` |
+| `Device` | `Devices` |
+| `Device Availability` | `Availability` |
+| `Device Family` | `Inventory` |
+| `Device Health` | `Health Score` |
+| `Device Inventory` | `Inventory` |
+| `Device Posture` | `Posture` |
+| `Disconnect` | `Availability` |
+| `Domain Score` | `DNS` |
+| `Domains` | `DNS` |
+| `Doors` | `Environmental` |
+| `Down` | `Availability` |
+| `Duration` | `Latency` |
+| `EIGRP` | `Routing` |
+| `EOL` | `Lifecycle` |
+| `EPG` | `Policies` |
+| `ESA` | `Email Security` |
+| `ETD` | `Email Threat Defense` |
+| `East-West` | `Traffic` |
+| `Efficiency` | `Capacity Planning` |
+| `Egress` | `Traffic` |
+| `Eliminate` | `Capacity Planning` |
+| `Email` | `Email Security` |
+| `Encrypted` | `Encryption` |
+| `Endace` | `Secure Network Analytics` |
+| `Endpoint` | `Endpoints` |
+| `Enforcement` | `Policies` |
+| `Error Disable` | `Errors` |
+| `Event` | `Events` |
+| `Executive Summary` | `Executive` |
+| `Exfiltration` | `Data Loss Prevention` |
+| `Exploits` | `Vulnerabilities` |
+| `Exposure` | `Risk` |
+| `External IP` | `Traffic` |
+| `FEX` | `Nexus 9000` |
+| `FMC` | `FTD` |
+| `FQDNs` | `DNS` |
+| `FTP` | `Applications` |
+| `Fabric Adoption` | `Fabric` |
+| `Fabric Health` | `Health Score` |
+| `Factors` | `Authentication` |
+| `Failure` | `Errors` |
+| `Failure Rate` | `Errors` |
+| `Failures` | `Errors` |
+| `Feed Monitor` | `Feed Health` |
+| `File Hash` | `Files` |
+| `File Inspection` | `Files` |
+| `Findings` | `Threats` |
+| `Fingerprint` | `Trend` |
+| `Firehose` | `Cisco Spaces` |
+| `Firepower` | `FTD` |
+| `Firewall Count` | `Firewall` |
+| `Firmware Lifecycle` | `Lifecycle` |
+| `Flap Detection` | `Interfaces` |
+| `Flapping` | `Interfaces` |
+| `Footprint` | `Inventory` |
+| `GCP` | `Cloud Security` |
+| `Gateways` | `Devices` |
+| `Gathering` | `Rooms` |
+| `GenAI` | `AI Defense` |
+| `Geo Enriched` | `Map` |
+| `Ghost Booking` | `Rooms` |
+| `Guest` | `Authentication` |
+| `Guest Access` | `Authentication` |
+| `HVAC` | `Environmental` |
+| `Hardware` | `Inventory` |
+| `Headcount` | `Occupancy` |
+| `Health Distribution` | `Distribution` |
+| `Health Threshold` | `Health Score` |
+| `Heatmap` | `Distribution` |
+| `History` | `Trend` |
+| `Hotspot` | `Rooms` |
+| `Humidity` | `Environmental` |
+| `Hybrid Firewall` | `Hybrid Mesh Firewalling` |
+| `IDS` | `Intrusion Prevention` |
+| `IOC` | `Threats` |
+| `IP-SGT Bindings` | `SGT` |
+| `IPS` | `Intrusion Prevention` |
+| `IPSEC` | `VPN` |
+| `ISE TA` | `ISE` |
+| `ISP` | `Reachability` |
+| `ISP Uplink` | `Reachability` |
+| `Identity Provider` | `Identity` |
+| `Idle` | `Utilization` |
+| `Impact Scoring` | `Risk` |
+| `Incident` | `Incidents` |
+| `Informal` | `Rooms` |
+| `Infrastructure` | `Secure Infrastructure` |
+| `Ingest Volume` | `Feed Health` |
+| `Interference` | `Wireless` |
+| `Internet` | `Reachability` |
+| `Internet Insights` | `Reachability` |
+| `Intersight` | `Secure Infrastructure` |
+| `Intrusion Events - Alert Message` | `Intrusion Prevention` |
+| `Intrusions` | `Intrusion Prevention` |
+| `Investigation` | `Forensics` |
+| `IoT` | `Sensors` |
+| `Issue Management` | `Issues` |
+| `Jobs` | `Splunk Attack Analyzer` |
+| `L2 Segmentation` | `Switching` |
+| `L3Out` | `Fabric` |
+| `LDOS` | `Lifecycle` |
+| `LLP5` | `Machine Learning` |
+| `LOLBins` | `Forensics` |
+| `Lease` | `DHCP` |
+| `Lease Rate` | `DHCP` |
+| `Legacy KPI` | `KPI` |
+| `License Usage` | `Inventory` |
+| `Licensing` | `Inventory` |
+| `Lineage` | `Forensics` |
+| `Link` | `Topology` |
+| `Link Availability` | `Availability` |
+| `Linkgraph` | `Topology` |
+| `Location` | `Sites` |
+| `Lockout` | `Authentication` |
+| `Logs` | `Events` |
+| `Loss` | `Packet Loss` |
+| `MAC` | `Switching` |
+| `MAC Flap` | `Switching` |
+| `MAC Steal` | `Switching` |
+| `MFA` | `Authentication` |
+| `MITRE` | `Forensics` |
+| `MITRE ATT&CK` | `Forensics` |
+| `MOS` | `Voice` |
+| `MR` | `Meraki` |
+| `MX Appliance` | `Meraki` |
+| `MX Security Appliance` | `Meraki` |
+| `Major` | `Severity` |
+| `Matrix` | `Distribution` |
+| `Memory` | `Utilization` |
+| `Meraki TA` | `Meraki` |
+| `Messages` | `Events` |
+| `Metric` | `KPI` |
+| `Micro-Segmentation` | `Scalable Network Segmentation` |
+| `Models` | `Machine Learning` |
+| `Monday` | `Trend` |
+| `Multivariate` | `Machine Learning` |
+| `NAC` | `Authentication` |
+| `NACK` | `DHCP` |
+| `NAD` | `Devices` |
+| `NDFC` | `Nexus Dashboard` |
+| `NDR` | `Secure Network Analytics` |
+| `NGFW` | `FTD` |
+| `NOC` | `IT Health` |
+| `NOC Triage` | `IT Health` |
+| `NTP` | `Configuration` |
+| `NVM` | `Secure Client` |
+| `Namespaces` | `Cloud Security` |
+| `Network Access` | `Authentication` |
+| `Network Compliance` | `Compliance` |
+| `Network Device` | `Devices` |
+| `Network Health` | `Health Score` |
+| `Network Insights` | `Network Intelligence` |
+| `Network Performance` | `Latency` |
+| `Network Visibility` | `Secure Client` |
+| `No-Show` | `Rooms` |
+| `Nodes` | `Devices` |
+| `Non Compliant` | `Compliance` |
+| `North-South` | `Traffic` |
+| `Notice` | `Events` |
+| `Notices` | `Events` |
+| `OSPF` | `Routing` |
+| `OT` | `Cyber Vision` |
+| `Organizations Security` | `Meraki` |
+| `Outcome` | `Distribution` |
+| `Outlier` | `Anomaly` |
+| `Overlay` | `SD-WAN` |
+| `PSIRT` | `Advisories` |
+| `Packets` | `Traffic` |
+| `Page Load` | `User Experience` |
+| `Path Change` | `Routing` |
+| `Physical Security` | `Environmental` |
+| `Platform` | `Inventory` |
+| `PoE` | `Power` |
+| `Policy` | `Policies` |
+| `Policy Alert` | `Policies` |
+| `Policy Hit Count` | `Policies` |
+| `Policy Outcome` | `Policies` |
+| `Policy Set` | `Policies` |
+| `Pool Exhaustion` | `DHCP` |
+| `Port` | `Interfaces` |
+| `Port Configuration` | `Interfaces` |
+| `Port Diagnostics` | `Interfaces` |
+| `Port Flapping` | `Interfaces` |
+| `Power Budget` | `Power` |
+| `Prediction` | `Forecast` |
+| `Processes` | `Forensics` |
+| `Profile` | `Inventory` |
+| `Protocol` | `Traffic` |
+| `Protocol Anomaly` | `Anomaly` |
+| `Provider Comparison` | `Comparison` |
+| `Proxy` | `Web Security` |
+| `QUIC` | `Encryption` |
+| `QoS` | `Traffic` |
+| `Quality` | `User Experience` |
+| `Quality Score` | `Health Score` |
+| `Queries` | `DNS` |
+| `RADIUS` | `Authentication` |
+| `RF` | `Wireless` |
+| `ROI` | `Capacity Planning` |
+| `RSSI` | `Wireless` |
+| `RTP` | `Voice` |
+| `RaVPN` | `VPN` |
+| `RadSec` | `Authentication` |
+| `RandomForest` | `Machine Learning` |
+| `Raw Events` | `Events` |
+| `Readiness` | `NetOps Readiness` |
+| `Recommendation` | `Capacity Planning` |
+| `Recurring` | `Trend` |
+| `Regional` | `Sites` |
+| `Remediation` | `Policies` |
+| `Remote` | `VPN` |
+| `Remote Access` | `VPN` |
+| `Remote Access VPN` | `VPN` |
+| `Repurpose` | `Capacity Planning` |
+| `Resolvers` | `DNS` |
+| `Resources` | `Utilization` |
+| `Response Time` | `Latency` |
+| `Right-Sizing` | `Capacity Planning` |
+| `Rogue` | `Rogue AP` |
+| `Rogue Peer` | `Rogue AP` |
+| `Role` | `Inventory` |
+| `Rollup` | `Feed Health` |
+| `Room` | `Rooms` |
+| `Root Cause Analysis` | `Forensics` |
+| `Router` | `Devices` |
+| `Rules` | `Policies` |
+| `SD-Access` | `Fabric` |
+| `SGACL` | `SGT` |
+| `SIG` | `Secure Access` |
+| `SIP` | `Voice` |
+| `SLA` | `Availability` |
+| `SMA` | `Email Security` |
+| `SMS` | `Voice` |
+| `SNA` | `Secure Network Analytics` |
+| `SNR` | `Wireless` |
+| `SOC` | `Security` |
+| `SSE` | `Secure Access` |
+| `SSH` | `Encryption` |
+| `STP` | `Switching` |
+| `SXP` | `SGT` |
+| `SaaS` | `Applications` |
+| `Scanning` | `Threats` |
+| `Scope` | `DHCP` |
+| `Score` | `Health Score` |
+| `Secure Endpoint` | `Malware` |
+| `Security Insights` | `Security` |
+| `Security Issues` | `Issues` |
+| `Security Zones` | `Policies` |
+| `Services` | `Applications` |
+| `Session` | `Sessions` |
+| `Signatures` | `Intrusion Prevention` |
+| `Site` | `Sites` |
+| `Site Health` | `Health Score` |
+| `Site Leaderboard` | `Leaderboard` |
+| `Snooping` | `Switching` |
+| `Spanning Tree` | `Switching` |
+| `Spectrum` | `Wireless` |
+| `Spontaneous` | `Rooms` |
+| `Stability` | `Availability` |
+| `Staleness` | `Feed Health` |
+| `Statistical Baseline` | `Anomaly` |
+| `Status` | `Availability` |
+| `Stealthwatch` | `Secure Network Analytics` |
+| `Strings` | `Forensics` |
+| `Submissions` | `Email Security` |
+| `Surge` | `Anomaly` |
+| `Switches` | `Switching` |
+| `T1190` | `Forensics` |
+| `TACACS` | `Authentication` |
+| `TCAM` | `Utilization` |
+| `TLS` | `Encryption` |
+| `Tasks` | `Splunk Attack Analyzer` |
+| `Telemetry` | `Feed Health` |
+| `Telephony` | `Voice` |
+| `Temperature` | `Environmental` |
+| `Tenant` | `Tenants` |
+| `Test` | `ThousandEyes` |
+| `Tetragon` | `Isovalent` |
+| `Tetration` | `Secure Workload` |
+| `Threat` | `Threats` |
+| `Threat Attribution` | `Threats` |
+| `Threat Categories` | `Threats` |
+| `Threat Hunting` | `Forensics` |
+| `Threat Indicators` | `Threats` |
+| `Threat Intel` | `Threats` |
+| `Threat Score` | `Threats` |
+| `Threat Trend` | `Threats` |
+| `Threshold` | `Anomaly` |
+| `Throughput` | `Bandwidth` |
+| `Time Drift` | `Configuration` |
+| `Timeline` | `Trend` |
+| `Top Talkers` | `Traffic` |
+| `Topology Link` | `Topology` |
+| `Topology Site` | `Sites` |
+| `Trace` | `ThousandEyes` |
+| `Tracebacks` | `Errors` |
+| `Traffic Action` | `Traffic` |
+| `Traffic Direction` | `Traffic` |
+| `Traffic Flow` | `Flows` |
+| `Transport` | `Interfaces` |
+| `Trend Analysis` | `Trend` |
+| `Triage` | `Forensics` |
+| `Trust` | `Zero Trust Access` |
+| `Trust Monitor` | `Duo` |
+| `TrustSec` | `SGT` |
+| `Tuning` | `Configuration` |
+| `Tunnel` | `Tunnels` |
+| `URL Filter` | `Web Filtering` |
+| `URL Filtering` | `Web Filtering` |
+| `URLs` | `Web Filtering` |
+| `UTD` | `Intrusion Prevention` |
+| `Umbrella` | `Secure Access` |
+| `Underlay` | `SD-WAN` |
+| `Underutilized` | `Utilization` |
+| `Unencrypted` | `Encryption` |
+| `Uptime` | `Availability` |
+| `Usage` | `Utilization` |
+| `User` | `Users` |
+| `User Activity` | `Users` |
+| `Users And Applications` | `Applications` |
+| `VLAN` | `Switching` |
+| `VNID` | `Fabric` |
+| `VRF` | `Routing` |
+| `VXLAN` | `Fabric` |
+| `Vendors` | `Inventory` |
+| `Verdict` | `Distribution` |
+| `Video` | `Collaboration` |
+| `Voice Quality` | `Voice` |
+| `Volume` | `Utilization` |
+| `WAF` | `Intrusion Prevention` |
+| `WAN` | `Bandwidth` |
+| `WAN Edge` | `SD-WAN` |
+| `WLAN` | `Wireless` |
+| `WLAN Security` | `Wireless` |
+| `WSA` | `Web Security` |
+| `Waste` | `Capacity Planning` |
+| `Watchlist` | `Threats` |
+| `Water Detection` | `Environmental` |
+| `Web Transaction` | `User Experience` |
+| `Weekly` | `Trend` |
+| `Windows DHCP` | `DHCP` |
+| `Wireless Security` | `Wireless` |
+| `Workforce` | `Users` |
+| `Workloads` | `Secure Workload` |
+| `Workplace` | `Workplace SPOG` |
+| `Z Score` | `Anomaly` |
+| `Z-Score` | `Anomaly` |
+| `ZTNA` | `Zero Trust Access` |
+| `eStreamer` | `FTD` |
+| `vManage` | `SD-WAN` |
+
+### Dropped as noise
+
+These carried no filtering value: they described the build pipeline, the rendering framework, the demo dataset, or a sentiment already expressed by `Severity`.
+
+| Legacy tag | Why dropped |
+| --- | --- |
+| `API` | Transport mechanism, not subject matter. |
+| `Administrator Users Search` | Restates one stanza's name. |
+| `BEC query` | Restates one stanza's name. |
+| `Bar` | Chart type, already covered by `Distribution`. |
+| `Cisco` | True of nearly the whole catalog. |
+| `Cisco Catalyst App Security Insights` | Restates one stanza's name. |
+| `Dashboard Studio` | Rendering framework, not subject matter. Was on ~40% of the catalog. |
+| `Data Model` | Implementation detail. |
+| `Description Search` | Implementation detail. |
+| `Dormant` | Ambiguous; meaning not recoverable from the SPL. |
+| `Events And Incident Viewer` | UI placement, not subject matter. |
+| `Harvested` | Build provenance. |
+| `Health` | Too broad; replaced by `Health Score` where the SPL computes one. |
+| `Healthy` | Sentiment; the searches are already tagged `Health Score`. |
+| `ITSI` | Content-pack provenance. |
+| `Index Management` | Implementation detail. |
+| `Lookup` | Implementation detail. |
+| `Lookup Enriched` | Implementation detail. |
+| `Lookup Join` | Implementation detail. |
+| `Macros` | Implementation detail. |
+| `Network` | True of nearly the whole catalog. |
+| `Observability` | True of nearly the whole catalog. |
+| `Operations` | True of nearly the whole catalog. |
+| `Operations Pressure` | Ambiguous; meaning not recoverable from the SPL. |
+| `Overview` | Describes every aggregate search. |
+| `Performance` | Too broad to filter on; replaced by `Latency` / `Utilization` where the SPL supports it. |
+| `Signal Rail` | UI placement, not subject matter. |
+| `Summary` | Describes every aggregate search. |
+| `TStats` | Implementation detail. |
+| `Third Party` | Ambiguous and already implied by the product tag. |
+| `Unique` | Describes a `dc()` call, not subject matter. |
+| `Warning` | Sentiment; folded into `Severity` where the SPL actually ranks severity. |
+
+## Near-synonyms deliberately kept separate
+
+A previous mechanical pass over-merged and had to be walked back, so each pair below was checked against the stanzas actually using it before the decision was made.
+
+| Kept apart | Why |
+| --- | --- |
+| `Bandwidth` vs `Utilization` | `Bandwidth` is an absolute rate (Mbps on a WAN link). `Utilization` is a percentage of a ceiling (CPU %, TCAM %, AP client load). A search answering "how fast" and one answering "how close to full" are different questions. |
+| `Availability` vs `Reachability` | `Availability` is a device or service being administratively up (`uptime`, `SLA`). `Reachability` is a path working end-to-end (ThousandEyes probes, ISP uplink, ping). A device can be up and unreachable. |
+| `Latency` vs `Packet Loss` vs `Jitter` | Three separate measurements that appear independently in ThousandEyes and SD-WAN searches. Merging them into a single `Performance` tag is what made the old vocabulary unfilterable. |
+| `Anomaly` vs `Machine Learning` vs `Forecast` | `Anomaly` is any deviation detection including plain stdev thresholds. `Machine Learning` requires an actual `fit`/`apply` MLTK call. `Forecast` requires `predict` or a forecasting algorithm. Many stanzas are anomaly detection with no ML at all. |
+| `Health Score` vs `Severity` vs `Risk` | `Health Score` is a vendor-computed 0-10 or 0-100 score. `Severity` is an ordinal event class (syslog severity, fault severity). `Risk` is a security exposure rating (CVSS, Cyber Vision risk score). They come from different fields. |
+| `Firewall` vs `Hybrid Mesh Firewalling` | `Firewall` is the capability (ACLs, deny/permit). `Hybrid Mesh Firewalling` is the Cisco solution narrative and matches a locked `sub_category`. Some firewall searches sit outside that narrative; some HMF searches are about identity, not filtering. |
+| `Wireless` vs `SSID` vs `Access Points` vs `Rogue AP` | `Wireless` is the medium. `SSID` partitions by network name. `Access Points` are the infrastructure entity. `Rogue AP` is a security concern. Merging them would make it impossible to find rogue-AP searches specifically. |
+| `Wired` vs `Switching` | `Wired` distinguishes wired clients from wireless ones (`client_type="WIRED"`). `Switching` is L2 infrastructure behaviour (STP, VLAN, MAC moves). A wired-client health search has nothing to do with spanning tree. |
+| `Identity` vs `Authentication` vs `Posture` | `Identity` is who a principal is (ISE, AD, IdP). `Authentication` is a specific auth event with a pass/fail outcome. `Posture` is device trust state. ISE searches commonly cover one without the others. |
+| `Traffic` vs `Flows` | `Traffic` is byte and packet volume. `Flows` is per-conversation records (NetFlow, connection events, zone pairs). A top-talkers byte chart is not a flow record table. |
+| `Inventory` vs `Lifecycle` vs `Assets` | `Inventory` is what exists and how much. `Lifecycle` is EOL/EOS/LDOS and firmware version currency. `Assets` specifically means the `asset_inventory` lookup join, which is a different data source from device telemetry. |
+| `Occupancy` vs `Presence` vs `Rooms` | `Occupancy` is how full a space is against capacity. `Presence` is whether people or devices are detected at all. `Rooms` is the space entity itself. Cisco Spaces searches use these independently. |
+| `DNS` vs `Web Filtering` | Umbrella and Secure Access do both, but Zeek DNS analytics and Windows DHCP/DNS searches have nothing to do with URL categorisation, and FTD URL-category searches never touch DNS. |
+| `Feed Health` vs `Availability` | `Feed Health` is about the ingest pipeline (staleness, collection gaps, ingest volume). `Availability` is about the monitored estate. A stale feed and a down device look the same on a dashboard and must be filterable apart. |
+| `Distribution` vs `Leaderboard` vs `Comparison` | `Distribution` is a full breakdown across a dimension. `Leaderboard` is a truncated ranking (`top`, `head N`). `Comparison` is two populations set against each other (`appendcols`, `multisearch`, explicit delta fields). |
+| `Map` vs `Topology` | `Map` is geographic (`iplocation`, `geostats`, lat/lon). `Topology` is graph structure (links, neighbours, site hierarchy). Both render as diagrams; they answer different questions. |
+
+## Notable merges
+
+| Collapsed into | From |
+| --- | --- |
+| `Catalyst Center` | `DNAC`, `Cisco Catalyst Center` |
+| `Secure Access` | `Umbrella`, `SSE`, `SIG`, `Cisco Secure Access` |
+| `FTD` | `Firepower`, `FMC`, `eStreamer`, `NGFW`, `Sourcefire` |
+| `Cyber Vision` | `Cyber Vision TA`, `CVI`, `OT`, `Asset Visibility` |
+| `SGT` | `TrustSec`, `SGACL`, `SXP`, `IP-SGT Bindings` |
+| `Anomaly` | `Outlier`, `Baseline`, `Statistical Baseline`, `Z-Score`, `Z Score`, `Change Detection`, `Surge`, `Burst`, `Threshold`, `Protocol Anomaly` |
+| `Health Score` | `Client Health`, `Device Health`, `Network Health`, `Site Health`, `Fabric Health`, `Application Health`, `Quality Score`, `Score`, `Health Threshold` |
+| `Feed Health` | `Feed Monitor`, `Staleness`, `Collection Gap`, `Data Quality`, `DataQuality`, `Telemetry`, `Streaming Telemetry`, `Ingest Volume`, `Rollup`, `Advanced Logging` |
+| `Utilization` | `Capacity`, `Usage`, `Volume`, `CPU`, `Memory`, `TCAM`, `Resources`, `AP Load`, `AP Usage`, `Underutilized`, `Idle` |
+| `Environmental` | `Temperature`, `Humidity`, `CO2`, `Air Quality`, `HVAC`, `Water Detection`, `Doors`, `Physical Security` |
+| `Interfaces` | `Port`, `Ports`, `Port Configuration`, `Port Diagnostics`, `Port Flapping`, `Flapping`, `Flap Detection`, `Circuits`, `Transport` |
+| `Forensics` | `MITRE`, `MITRE ATT&CK`, `Threat Hunting`, `Investigation`, `Triage`, `Root Cause Analysis`, `Processes`, `Lineage`, `LOLBins`, `Strings` |
+| `Threats` | `IOC`, `Watchlist`, `Botnet`, `Abuse`, `Scanning`, `Brute Force`, `Beacon`, `Threat Intel`, `Threat Score`, `Detections`, `Findings` |
+| `Policies` | `Rules`, `Policy Set`, `Access Control`, `Access Control Policy`, `Contracts`, `EPG`, `Enforcement`, `Deny`, `Block`, `Blocked`, `Containment`, `Remediation`, `Classification` |
+| `Sites` | `Site`, `Location`, `Regional`, `Branch`, `Critical Sites`, `Topology Site` |
+| `Authentication` | `AAA`, `RADIUS`, `TACACS`, `RadSec`, `802.1X`, `NAC`, `Authorization`, `Lockout`, `MFA`, `Factors`, `Guest`, `Guest Access` |
+
+## How tags are assigned
+
+Tags are evidence-scored, never inferred from the stanza name. Several stanzas in this catalog have names that disagree with their SPL, and the SPL wins.
+
+| Evidence | Score | Example |
+| --- | ---: | --- |
+| `index_*` macro, `sourcetype`, data model | 100 | `sourcetype="cisco:dc:aci:health"` -> `Cisco ACI` |
+| Locked `category` / `sub_category` | 80 | `sub_category="Zero Trust Access"` -> `Zero Trust Access` |
+| Existing tag, resolved through the alias map | 55 | `DNAC` -> `Catalyst Center` |
+| SPL command signature and `default_viz` | 30-48 | `\| predict` -> `Forecast` |
+| Product-specific lookup join | 45 | `cisco_dc_nexus_hostname_lookup` -> `Nexus 9000` |
+| Narrow full-text predicate | 34 | `client_type="WIRED"` -> `Wired` |
+| Output-schema fields (`BY`, `AS`, `eval`, `table`) | 22-30 | `BY ssid` -> `SSID` |
+| Base-search predicates | 16-22 | `eventType="SPACE_OCCUPANCY"` -> `Occupancy` |
+
+Two guards matter:
+
+- A stanza that enumerates more than six sourcetypes (or more than eight index macros) gets **no** product tags. Naming two products out of fifty is worse than naming none, so those cross-source admin and feed-monitor searches are described by what they are instead — `Feed Health`, `Configuration`.
+- A single-value tile never receives `Distribution` or `Table`, regardless of the intermediate `stats ... by` stages its SPL uses to get to one number.
+
+## Maintaining this
+
+When adding a stanza:
+
+1. Pick 3-6 tags from the tables above. Nothing outside them.
+2. At least one Product or Solution tag, and at least one Subject or Topic tag.
+3. Every tag must be justifiable from the `search` field or the locked `category`/`sub_category`. If you cannot point at the evidence, drop the tag.
+4. Prefer an existing tag over proposing a new one. A new tag needs to partition the catalog meaningfully, and the vocabulary is already at 138 of the agreed 150 ceiling.
+5. Bump `date_updated`.
