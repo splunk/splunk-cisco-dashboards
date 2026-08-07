@@ -2,6 +2,12 @@
 
 ## 1.0.36
 
+- Insights Workspace headers now reserve more room for the workspace title by
+  using compact time-range and auto-refresh selectors, quieter manual-refresh
+  styling, tighter action spacing, and a status badge that collapses to its
+  shield icon on narrow screens. The map action uses Splunk's globe icon, while
+  the workspace switcher uses the SUI layers metaphor and no longer duplicates
+  Splunk Web's signed-in user control.
 - Insights Workspace metric, chart, and detail drill-down dialogs now share a
   responsive translucent Cisco dark-mode shell with content-specific
   footprints, compact headers, consistent Search/Details/Close actions,

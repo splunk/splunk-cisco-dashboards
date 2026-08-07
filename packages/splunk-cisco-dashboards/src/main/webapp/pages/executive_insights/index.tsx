@@ -32,7 +32,6 @@ import React, {
 import { createURL } from "@splunk/splunk-utils/url";
 import {
     Activity,
-    User,
     RefreshCw,
     Pause,
     Download,
@@ -40,7 +39,7 @@ import {
     RotateCcw,
     Settings2,
     ExternalLink,
-    Map as MapIcon,
+    Globe2,
     Edit3,
     Upload,
     X,
@@ -2186,7 +2185,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       ? ""
       : insightsWorkspace.defaultLogoSrc || DEFAULT_LOGO_DATA_URI,
   );
-  const [splunkUsername, setSplunkUsername] = useState<string>("");
   const [appVersionLabel, setAppVersionLabel] =
     useState<string>(APP_VERSION_LABEL);
   const appCatalogUrl = createURL("/manager/launcher/appsremote", {
@@ -3120,59 +3118,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       })
       .catch(() => {
         // Keep the compile-time label when app metadata is unavailable.
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // ------------------------------ Splunk user fetch ------------------------------
-  useEffect(() => {
-    if (typeof window === "undefined") return undefined;
-    let cancelled = false;
-    const bootstrap = (
-      window as unknown as {
-        $C?: {
-          USERNAME?: string;
-          username?: string;
-          USER?: { name?: string; username?: string };
-          user?: { name?: string; username?: string };
-        };
-      }
-    ).$C;
-    const bootstrapName =
-      bootstrap?.USERNAME ??
-      bootstrap?.username ??
-      bootstrap?.USER?.username ??
-      bootstrap?.USER?.name ??
-      bootstrap?.user?.username ??
-      bootstrap?.user?.name ??
-      "";
-
-    fetch(
-      `${splunkLocalePrefix()}/splunkd/__raw/services/authentication/current-context?output_mode=json`,
-      {
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      },
-    )
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<{
-          entry?: Array<{ content?: Record<string, unknown> }>;
-        }>;
-      })
-      .then((json) => {
-        if (cancelled) return;
-        const content = json.entry?.[0]?.content ?? {};
-        const raw =
-          content.username ?? content.user ?? content.name ?? bootstrapName;
-        const username = typeof raw === "string" ? raw.trim() : "";
-        setSplunkUsername(username);
-      })
-      .catch(() => {
-        if (!cancelled) setSplunkUsername(bootstrapName.trim());
       });
 
     return () => {
@@ -4212,7 +4157,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
          */}
         <div
           className={cn(
-            "flex items-center min-w-0 group/branding",
+            "flex min-w-0 flex-1 items-center pr-3 group/branding",
             effectiveLogoSrc ? "gap-3" : "gap-0",
           )}
         >
@@ -4258,15 +4203,18 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           </button>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-shrink-0">
-          <HealthBadge statuses={statusList} />
+        <div className="flex flex-shrink-0 items-center gap-1">
+          <HealthBadge
+            statuses={statusList}
+            className="max-[1399px]:w-8 max-[1399px]:justify-center max-[1399px]:px-0 max-[1399px]:[&>span]:hidden"
+          />
           <span
             data-scd-app-update-host
             className="inline-flex flex-shrink-0 items-center"
             aria-live="polite"
           />
           <label className="m-0 flex h-8 items-center gap-1.5">
-            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden lg:inline">
+            <span className="hidden text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 2xl:inline">
               Range
             </span>
             <select
@@ -4278,7 +4226,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 );
                 if (next) setTimeRange(next);
               }}
-              className={inputClass}
+              className={cn(inputClass, "w-[124px]")}
+              title="Dashboard time range"
             >
               {TIME_RANGE_OPTIONS.map((o) => (
                 <option key={o.label} value={o.label}>
@@ -4288,13 +4237,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             </select>
           </label>
           <label className="m-0 flex h-8 items-center gap-1.5">
-            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest hidden lg:inline">
+            <span className="hidden text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 2xl:inline">
               Auto
             </span>
             <select
               value={autoRefreshSeconds}
               onChange={(e) => setAutoRefreshSeconds(Number(e.target.value))}
-              className={inputClass}
+              className={cn(inputClass, "w-[72px]")}
               title="Auto-refresh interval"
             >
               {AUTO_REFRESH_OPTIONS.map((o) => (
@@ -4311,7 +4260,11 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               hour: "2-digit",
               minute: "2-digit",
             })})`}
-            className={iconBtnClass}
+            aria-label="Refresh dashboard data now"
+            className={cn(
+              iconBtnClass,
+              "text-slate-400 dark:text-slate-500",
+            )}
           >
             <RefreshCw
               className={
@@ -4418,7 +4371,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 "text-sky-600 dark:text-sky-300 bg-sky-50 dark:bg-slate-800",
             )}
           >
-            <MapIcon className="w-4 h-4" />
+            <Globe2 className="w-4 h-4" />
           </button>
           <button
             type="button"
@@ -4436,7 +4389,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           >
             <Keyboard className="w-4 h-4" />
           </button>
-          <div className="flex items-center gap-2">
+          <div className="ml-0.5 flex items-center gap-1 border-l border-slate-200 pl-2 dark:border-slate-700">
             <div className="flex flex-col items-end">
               <label
                 className="relative m-0 inline-flex h-7 max-w-[180px] cursor-pointer items-center gap-1 rounded-md px-1.5 text-slate-600 transition-colors hover:bg-slate-50 hover:text-sky-700 focus-within:ring-2 focus-within:ring-sky-500 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-sky-200"
@@ -4490,14 +4443,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               >
                 <Settings2 className="h-4 w-4" />
               </button>
-            )}
-            {splunkUsername && (
-              <div
-                className="w-8 h-8 rounded-full bg-sky-100 dark:bg-sky-900/40 border border-sky-200 dark:border-sky-800 flex items-center justify-center text-sky-600 dark:text-sky-300"
-                title={`Signed in as ${splunkUsername}`}
-              >
-                <User className="w-4 h-4" />
-              </div>
             )}
           </div>
         </div>

@@ -97,6 +97,41 @@ assert.match(
   "The profile must select topology from the active workspace",
 );
 assert.match(
+  profile,
+  /cn\(inputClass, "w-\[124px\]"\)/,
+  "The time-range selector must preserve title space with a compact width",
+);
+assert.match(
+  profile,
+  /max-\[1399px\]:\[&>span\]:hidden/,
+  "The health badge must collapse to its status icon before truncating the title",
+);
+assert.match(
+  profile,
+  /cn\(inputClass, "w-\[72px\]"\)/,
+  "The auto-refresh selector must preserve title space with a compact width",
+);
+assert.match(
+  profile,
+  /aria-label="Refresh dashboard data now"/,
+  "Manual refresh must remain discoverable while auto-refresh is off",
+);
+assert.match(
+  profile,
+  /<Globe2 className="w-4 h-4"/,
+  "Map visibility must use the SUI globe metaphor",
+);
+assert.match(
+  profile,
+  /<Layers3 className="h-4 w-4 flex-shrink-0"/,
+  "Workspace switching must use the SUI layers metaphor",
+);
+assert.doesNotMatch(
+  profile,
+  /<User className=/,
+  "The app header must not duplicate Splunk's global signed-in user control",
+);
+assert.match(
   metricItem,
   /PanelRightOpen className="w-3\.5 h-3\.5/,
   "Tile drilldowns must use a larger open-details-panel icon",

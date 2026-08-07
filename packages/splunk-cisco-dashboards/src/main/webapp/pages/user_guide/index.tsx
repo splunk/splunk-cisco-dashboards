@@ -1584,8 +1584,12 @@ iseval = 0`}</CodeBlock>
                   including sections, tiles, signal rail, map configuration,
                   and theme. Signal Rail defaults are centrally managed, with
                   private account-and-workspace overrides for each signed-in
-                  user. A template helps create the initial workspace but does
-                  not constrain future customization.
+                  user. Headers prioritize the workspace title with compact
+                  range and refresh controls, responsive health status, and
+                  clear globe and layers iconography without duplicating
+                  Splunk Web&apos;s account control. A template helps create the
+                  initial workspace but does not constrain future
+                  customization.
                 </InfoCard>
                 <InfoCard title="Dashboard Studio editing">
                   Dashboard Manager confirmation dialogs now use the edited
