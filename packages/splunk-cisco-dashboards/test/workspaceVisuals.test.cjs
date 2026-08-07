@@ -140,6 +140,24 @@ assert.match(
   /name: 'Secure Network Command Map',[\s\S]*subtitle: 'Live sites, trust paths, and policy-enforcement health'/,
   "Secure Networking must ship its own command-map title and decision-oriented subtitle",
 );
+const roleChromeBlock = topologyMap.match(
+  /const TOPOLOGY_ROLE_CHROME:[\s\S]*?= \{([\s\S]*?)\n\};\n\nconst CUSTOM_ROLE_SWATCHES/,
+);
+assert.ok(roleChromeBlock, "Topology roles must have a central color contract");
+const roleColors = [
+  ...roleChromeBlock[1].matchAll(/fill: '(#[0-9a-f]{6})'/gi),
+].map((match) => match[1].toLowerCase());
+assert.equal(roleColors.length, 12, "Every built-in topology role must define a color");
+assert.equal(
+  new Set(roleColors).size,
+  roleColors.length,
+  "Every built-in topology role must use a unique color",
+);
+assert.match(
+  topologyMap,
+  /<Select[\s\S]*?className="scd-topology-role-select"[\s\S]*?labelText="Site role"[\s\S]*?<Select\.Option[\s\S]*?icon=\{[\s\S]*?<TopologyRoleSwatch role=\{role\} \/>/,
+  "The topology role picker must expose every role color through SUI Select",
+);
 assert.match(
   persistence,
   /topology\.name === LEGACY_FACTORY_TOPOLOGY_NAME[\s\S]*FACTORY_TOPOLOGY_NAME/,
