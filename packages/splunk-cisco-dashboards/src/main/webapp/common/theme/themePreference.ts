@@ -21,7 +21,6 @@ export const readThemePreference = (): ThemePreference => {
         return 'system';
     }
 };
-
 export const getSplunkColorScheme = async (): Promise<ResolvedTheme> => {
     try {
         return (await getUserTheme()) === 'dark' ? 'dark' : 'light';
@@ -50,4 +49,3 @@ export const writeThemePreference = (preference: ThemePreference): void => {
         new CustomEvent<ThemePreference>(THEME_CHANGE_EVENT, { detail: preference })
     );
 };
-
