@@ -27,8 +27,8 @@
 		"viz_header_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#16283c",
-				"strokeColor": "rgba(53,207,245,0.42)"
+				"fillColor": "#1e293b",
+				"strokeColor": "rgba(14,165,233,0.42)"
 			}
 		},
 		"viz_header_icon": {
@@ -46,7 +46,7 @@
 			"showProgressBar": false,
 			"options": {
 				"backgroundColor": "transparent",
-				"fontColor": "#e8f1fb",
+				"fontColor": "#f1f5f9",
 				"markdown": "# Agentic Ops\nCoordinate telemetry readiness, path health, routing instability, and AI Defense signals."
 			}
 		},
@@ -57,7 +57,7 @@
 				"primary": "ds_agentic_ai_defense"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('block_pct') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -70,16 +70,16 @@
 				"lowerBetter": [
 					{
 						"to": 20,
-						"value": "#8bd45b"
+						"value": "#16a34a"
 					},
 					{
 						"from": 20,
 						"to": 50,
-						"value": "#ff9a4a"
+						"value": "#f59e0b"
 					},
 					{
 						"from": 50,
-						"value": "#ff7169"
+						"value": "#dc2626"
 					}
 				]
 			},
@@ -92,7 +92,7 @@
 				"primary": "ds_agentic_te_feed_health"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('age_minutes') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -105,16 +105,16 @@
 				"staleness": [
 					{
 						"to": 30,
-						"value": "#8bd45b"
+						"value": "#16a34a"
 					},
 					{
 						"from": 30,
 						"to": 90,
-						"value": "#ff9a4a"
+						"value": "#f59e0b"
 					},
 					{
 						"from": 90,
-						"value": "#ff7169"
+						"value": "#dc2626"
 					}
 				]
 			},
@@ -127,7 +127,7 @@
 				"primary": "ds_agentic_latency"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('avg_latency_ms') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -140,16 +140,16 @@
 				"latencyRange": [
 					{
 						"to": 100,
-						"value": "#8bd45b"
+						"value": "#16a34a"
 					},
 					{
 						"from": 100,
 						"to": 200,
-						"value": "#ff9a4a"
+						"value": "#f59e0b"
 					},
 					{
 						"from": 200,
-						"value": "#ff7169"
+						"value": "#dc2626"
 					}
 				]
 			},
@@ -162,7 +162,7 @@
 				"primary": "ds_agentic_loss"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('avg_loss_pct') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -175,16 +175,16 @@
 				"lowerBetter": [
 					{
 						"to": 1,
-						"value": "#8bd45b"
+						"value": "#16a34a"
 					},
 					{
 						"from": 1,
 						"to": 5,
-						"value": "#ff9a4a"
+						"value": "#f59e0b"
 					},
 					{
 						"from": 5,
-						"value": "#ff7169"
+						"value": "#dc2626"
 					}
 				]
 			},
@@ -197,14 +197,14 @@
 				"primary": "ds_agentic_loss_trend"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#ff7169",
-					"#ff9a4a"
+					"#dc2626",
+					"#f59e0b"
 				],
 				"lineWidth": 2,
 				"nullValueDisplay": "gaps"
@@ -218,15 +218,15 @@
 				"primary": "ds_agentic_bgp_changes"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#7c3aed",
-					"#53bfff",
-					"#ff9a4a"
+					"#8b5cf6",
+					"#0ea5e9",
+					"#f59e0b"
 				],
 				"lineWidth": 2,
 				"nullValueDisplay": "gaps"
@@ -240,14 +240,14 @@
 				"primary": "ds_agentic_test_health"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#8bd45b",
-					"#ff7169"
+					"#16a34a",
+					"#dc2626"
 				]
 			},
 			"description": "Summary of Cisco ThousandEyes test health — total tests monitored, healthy tests, and degraded tests — derived from network loss and HTTP availability metrics to provide the Agentic Ops visibility KPI."
@@ -259,14 +259,14 @@
 				"primary": "ds_agentic_http_availability"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#8bd45b",
-					"#ff9a4a"
+					"#16a34a",
+					"#f59e0b"
 				]
 			},
 			"description": "Per-test HTTP server availability from Cisco ThousandEyes, showing average and minimum availability percentages with health status for each monitored application or service endpoint."
@@ -278,13 +278,13 @@
 				"primary": "ds_agentic_web_errors"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('total_errors') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#ff7169"
+				"majorColor": "#dc2626"
 			},
 			"description": "Total count of web transaction errors detected by Cisco ThousandEyes across all monitored web transaction tests, indicating failed steps or HTTP errors encountered during synthetic transaction execution."
 		},
@@ -295,7 +295,7 @@
 				"primary": "ds_agentic_feed_matrix"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"count": 25,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -308,8 +308,8 @@
 			"showLastUpdated": false,
 			"showProgressBar": false,
 			"options": {
-				"backgroundColor": "#111f31",
-				"fontColor": "#e8f1fb",
+				"backgroundColor": "#1e293b",
+				"fontColor": "#f1f5f9",
 				"markdown": "**Audience:** Security and network operations  •  **Sources:** AI Defense, ThousandEyes, routing, and feed-health telemetry  •  **Reading guide:** Confirm feed health first, then investigate path quality, routing, and enforcement exceptions.  •  **Freshness:** Uses the dashboard time range"
 			}
 		},
@@ -319,8 +319,8 @@
 			"showLastUpdated": false,
 			"showProgressBar": false,
 			"options": {
-				"backgroundColor": "#111f31",
-				"fontColor": "#e8f1fb",
+				"backgroundColor": "#1e293b",
+				"fontColor": "#f1f5f9",
 				"markdown": "### Operational posture\nConfirm feed health first, then investigate path quality, routing, and enforcement exceptions."
 			}
 		}
@@ -444,7 +444,7 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#07101d",
+					"backgroundColor": "#020617",
 					"display": "auto-scale",
 					"height": 1370,
 					"width": 1440

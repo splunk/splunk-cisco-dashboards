@@ -1561,6 +1561,9 @@ iseval = 0`}</CodeBlock>
                   section guidance, and visible Searchbase-derived
                   descriptions on all 131 data panels. Existing searches,
                   tokens, drilldowns, and data-source references are preserved.
+                  The five pillar dashboards share the Insights Workspace dark
+                  palette, including slate surfaces and text, sky accents, and
+                  the same semantic status colors used by the home dashboard.
                   Panel rows are now compact, and Dashboard Manager view mode
                   provides Studio-style Display, zoom, JSON export, and clone
                   controls without giving up Searchbase-backed rendering.

@@ -3,10 +3,10 @@
 Reference for the `tags` field in
 `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf`.
 
-- **Canonical vocabulary: 138 tags** (target band was 120-150).
+- **Canonical vocabulary: 139 tags** (target band was 120-150).
 - **Legacy vocabulary collapsed: 588 distinct values** across 1082 stanzas.
 - Every stanza carries **3-6 tags**, all drawn from this vocabulary.
-- Last full retag: **2026-08-07**. Corrected the same day by an evidence audit that removed 302 tags whose only support was the locked `sub_category` — see [Amendments](#amendments).
+- Last full retag: **2026-08-07**. Corrected the same day by an evidence audit that removed 317 tags whose only support was the locked `sub_category` — see [Amendments](#amendments).
 
 ## Why the vocabulary is shaped this way
 
@@ -18,7 +18,7 @@ So the vocabulary is **faceted**. Every tag belongs to exactly one of five facet
 | --- | --- | --- | --- |
 | Product | Which Cisco (or third-party) product the telemetry comes from | 31 | the `index_*` macro, the `sourcetype`, the data model, or a product-specific lookup |
 | Solution | Which business narrative or dashboard family the search belongs to | 14 | the stanza's locked `category` / `sub_category` |
-| Subject | The entity the search counts, groups by, or lists | 26 | the fields the SPL actually groups by (`BY`), renames (`AS`), evaluates, or tables |
+| Subject | The entity the search counts, groups by, or lists | 27 | the fields the SPL actually groups by (`BY`), renames (`AS`), evaluates, or tables |
 | Topic | The operational or security concern | 51 | output fields plus base-search predicates |
 | Shape | What kind of answer the search returns | 14 | the SPL command signature (`timechart`, `top`, `predict`, `fit`, `iplocation`, ...) and `default_viz` |
 | Provenance | Content that came from an upstream content pack rather than from this app | 2 | the locked `sub_category` and the stanza's existing tags |
@@ -103,7 +103,7 @@ Which business narrative or dashboard family the search belongs to. Derived from
 | `Workplace SPOG` | 10 |
 | `Zero Trust Access` | 45 |
 
-### Subject (26)
+### Subject (27)
 
 The entity the search counts, groups by, or lists. Derived from the fields the SPL actually groups by (`BY`), renames (`AS`), evaluates, or tables.
 
@@ -112,26 +112,27 @@ The entity the search counts, groups by, or lists. Derived from the fields the S
 | `Access Points` | 15 |
 | `Advisories` | 13 |
 | `Alerts` | 22 |
+| `Anomaly Records` | 11 |
 | `Applications` | 42 |
 | `Assets` | 10 |
 | `Clients` | 110 |
-| `Devices` | 174 |
+| `Devices` | 178 |
 | `Endpoints` | 60 |
 | `Events` | 56 |
-| `Faults` | 18 |
+| `Faults` | 19 |
 | `Files` | 7 |
 | `Flows` | 16 |
 | `Hosts` | 5 |
 | `Incidents` | 14 |
 | `Interfaces` | 24 |
-| `Issues` | 43 |
+| `Issues` | 38 |
 | `Policies` | 61 |
 | `Rooms` | 27 |
 | `Sensors` | 26 |
 | `Sessions` | 23 |
-| `Sites` | 145 |
+| `Sites` | 134 |
 | `Tenants` | 36 |
-| `Threats` | 35 |
+| `Threats` | 34 |
 | `Tunnels` | 9 |
 | `Users` | 34 |
 | `Vulnerabilities` | 7 |
@@ -143,7 +144,7 @@ The operational or security concern. Derived from output fields plus base-search
 | Tag | Stanzas |
 | --- | ---: |
 | `Audit` | 29 |
-| `Authentication` | 47 |
+| `Authentication` | 46 |
 | `Availability` | 36 |
 | `BGP` | 12 |
 | `Bandwidth` | 11 |
@@ -163,8 +164,8 @@ The operational or security concern. Derived from output fields plus base-search
 | `Firewall` | 79 |
 | `Forensics` | 18 |
 | `HTTP` | 18 |
-| `Identity` | 83 |
-| `Intrusion Prevention` | 21 |
+| `Identity` | 82 |
+| `Intrusion Prevention` | 20 |
 | `Inventory` | 92 |
 | `Jitter` | 5 |
 | `Latency` | 50 |
@@ -185,7 +186,7 @@ The operational or security concern. Derived from output fields plus base-search
 | `SSID` | 16 |
 | `Switching` | 12 |
 | `Syslog` | 28 |
-| `Traffic` | 47 |
+| `Traffic` | 48 |
 | `User Experience` | 25 |
 | `Utilization` | 37 |
 | `VPN` | 3 |
@@ -200,7 +201,7 @@ What kind of answer the search returns. Derived from the SPL command signature (
 
 | Tag | Stanzas |
 | --- | ---: |
-| `Anomaly` | 43 |
+| `Anomaly` | 37 |
 | `Comparison` | 8 |
 | `Detail` | 25 |
 | `Distribution` | 267 |
@@ -812,7 +813,7 @@ Changes to this document after the first full retag. Each entry records what cha
 
 The first retag scored the locked `category`/`sub_category` at 80, above output-schema fields and base-search predicates, for **all** facets. That was wrong for Subject and Topic. Those two fields record which dashboard family a stanza was written for; they do not describe what the SPL measures, and in this catalog they diverge constantly — a Cisco Spaces room-optimisation search sat under a `sub_category` that produced a `DHCP` tag, and eleven `dc_networking_*` stanzas carried `Compliance` with zero compliance evidence in their SPL.
 
-A token-footprint audit over all 1082 stanzas surfaced 418 tag/stanza pairs where a Subject or Topic tag had no matching token anywhere in the `search` field. Reading the SPL of each pair individually confirmed **294 unsupported tags**, plus 6 more the audit had missed and 2 removed by the alias amendments below — **302 tags dropped from 257 stanzas**, with 35 substitute tags added where a removal would otherwise have left a stanza with no Subject or Topic. The remaining 124 were audit false positives — real evidence the regex could not see, mostly product-specific field names (`merakiVpnPeers{}` for `VPN`, `%PLATFORM-2-PEM_NOINPUT` for `Power`, `activeCalls` for `Sessions`) and evidence hidden behind upstream macros such as `` `apic-fabric-overview` ``.
+A token-footprint audit over all 1082 stanzas surfaced 418 tag/stanza pairs where a Subject or Topic tag had no matching token anywhere in the `search` field. Reading the SPL of each pair individually confirmed **294 unsupported tags**, plus 6 more the audit had missed and 2 removed by the alias amendments below. A second, independent pass by five per-family reviewers agreed with 148 of those verdicts and found 15 more, most of them `Sites` on ACI stanzas whose only location-like field is `apic_host` — a controller identity, not a site. The combined result is **317 tags dropped from 268 stanzas**, with 41 substitute tags added where a removal would otherwise have left a stanza with no Subject or Topic. The remaining 124 pairs were audit false positives — real evidence the regex could not see, mostly product-specific field names (`merakiVpnPeers{}` for `VPN`, `%PLATFORM-2-PEM_NOINPUT` for `Power`, `activeCalls` for `Sessions`) and evidence hidden behind upstream macros such as `` `apic-fabric-overview` ``.
 
 The evidence table, the guard list and maintenance rule 3 are amended accordingly. `sub_category` remains the definitional source for Solution and Provenance tags, where it is correct by construction.
 
@@ -828,9 +829,39 @@ Same class of defect. `Blocked Access` is a generic phrase that any deny decisio
 
 The related aliases `URL Filter`, `URL Filtering` and `URLs` are **kept**: they are genuinely about URL categorisation on FTD and Secure Access. One stanza misused `URLs` (`xdr_aa_forensic_urls_context_posture`, where the URLs are detonation artifacts rather than filtered categories); that was corrected as a tagging error, not an alias defect.
 
+### 2026-08-07 — Subject term `Anomaly Records` added
+
+`Anomaly` is a **Shape** term: it says the search *detects* a deviation, and it is earned by a `stdev`, `DensityFunction`, `IsOutlier` or equivalent step in the SPL. It says nothing about what the search is *about*. That left no way to describe a search whose subject **is** an anomaly record — a row emitted by Nexus Dashboard Insights (`sourcetype="cisco:dc:nd:anomalies"`, `anomalyId`, `anomalyScore`, `anomalyStr`) or by a Zeek/FTD `weird` protocol-anomaly feed. Those searches list, count and group by anomaly records the way other searches list `Faults`, `Advisories` or `Incidents`, and they were being tagged `Issues` as a workaround. `Issues` is the Catalyst Center issue object; borrowing it for Nexus Dashboard anomalies made both terms unreliable filters.
+
+The new Subject term is **`Anomaly Records`**, not `Anomalies`. `Anomalies` would follow the plural-noun convention but differs from the Shape term `Anomaly` by one character, and the two would sit next to each other in every tag list — precisely the confusion the Shape/Subject split exists to prevent. `Anomaly Findings` was rejected because `Findings` is already an alias of `Threats` in the *Notable merges* table. `Anomaly Records` names the artefact, is unambiguous at a glance, and matches the existing two-word Subject term `Access Points`.
+
+Eleven stanzas are retagged, all of them by substitution, so no stanza changes its tag count:
+
+| Stanza | Tag replaced | Why |
+| --- | --- | --- |
+| `dc_networking_anomalies` | `Issues` | the `Issues` workaround named in the brief |
+| `dc_networking_anomalies_anomalies_details` | `Issues` | same |
+| `dc_networking_anomalies_anomalies_by_category` | `Issues` | same |
+| `dc_networking_anomalies_anomalies_by_severity` | `Issues` | same |
+| `dc_networking_anomalies_top_10_nodes_contributing_to_anomalies` | `Issues` | same |
+| `network_dc_nd_active_anomalies_by_fabric` | `Anomaly` | `stats ... by anomalyId` then `chart count over fabric`; no detection step, so the Shape tag was unsupported |
+| `network_dc_nd_top_active_anomaly_types` | `Anomaly` | same |
+| `secure_networking_dc_anomaly_count` | `Anomaly` | `dc(anomalyId)` over a timechart; counts records, detects nothing |
+| `secure_networking_dc_anomalies_by_severity` | `Anomaly` | `stats count ... by severity` over anomaly records |
+| `secure_networking_dc_health_signals_trend` | `Anomaly` | `dc(signal_id) by signal_type`; pairs with the `Advisories` Subject already on the stanza |
+| `network_intelligence_ftd_protocol_anomalies` | `Anomaly` | `cisco:ftd:adv:weird` records grouped `by anomaly_signature, anomaly_category` |
+
+`Anomaly` drops from 43 stanzas to 37 and `Issues` from 43 to 38; neither is orphaned. Six other stanzas that surface anomaly data were examined and deliberately **not** retagged, because their subject is a different entity that anomaly score merely describes: `dc_networking_anomalies_sites_anomaly_score_over_time` (groups by `fabricName`), `dc_networking_interface_stats_number_of_interfaces_with_anomalies` and `dc_networking_interface_stats_top_10_anomalous_nodes` (count interfaces and nodes), `dc_networking_endpoints_average_anomaly_score_by_endpoint` (endpoints), `feed_monitor_aci_nd_staleness` and `feed_monitor_all_feeds_health_matrix` (ingest pipelines).
+
+### 2026-08-07 — `sub_category` corrected where it contradicted its own searches
+
+The retag left `category`/`sub_category` locked, which meant Solution and Provenance tags were still being derived from names that several groups' SPL did not support — `Compliance & Advisories` over eleven stanzas with no compliance evidence, `TE Application` over twelve synthetic-test searches, `Hybrid Firewall` over four SD-WAN site-health searches. 134 stanzas moved to a `sub_category` that describes what they measure; `category` was not touched. The full mapping is recorded in the change that made it.
+
+Only one move affected the Solution facet. `Monitoring / Hybrid Firewall` is the legacy spelling of the `Hybrid Mesh Firewalling` pillar — the *Alias mapping* table already remaps the tag that way — so it was normalised to `Monitoring / Hybrid Mesh Firewalling` rather than merged into `Monitoring / SD-WAN`. Merging would have described the SPL better but removed the only `sub_category` evidence for the `Hybrid Mesh Firewalling` and `Secure Networking` Solution tags those four stanzas carry, and for the `secure_networking_hmf_sdwan_network_health_monitoring` dashboard they back. Every other move stayed inside its `category`, so no Solution or Provenance tag changed.
+
 ### Vocabulary size
 
-No canonical terms were added or removed. The vocabulary stays at **138 terms**, within the agreed 120-150 band. Only two alias rows were deleted.
+One canonical term was added: the Subject term `Anomaly Records`. The vocabulary moves from 138 to **139 terms**, within the agreed 120-150 band. Two alias rows were deleted by the amendments above; no alias row was added.
 
 ## How tags are assigned
 
@@ -860,5 +891,5 @@ When adding a stanza:
 1. Pick 3-6 tags from the tables above. Nothing outside them.
 2. At least one Product or Solution tag, and at least one Subject or Topic tag.
 3. Every Subject and Topic tag must be justifiable from the `search` field alone. Solution and Provenance tags may come from the locked `category`/`sub_category`. If you cannot point at the evidence, drop the tag.
-4. Prefer an existing tag over proposing a new one. A new tag needs to partition the catalog meaningfully, and the vocabulary is already at 138 of the agreed 150 ceiling.
+4. Prefer an existing tag over proposing a new one. A new tag needs to partition the catalog meaningfully, and the vocabulary is already at 139 of the agreed 150 ceiling.
 5. Bump `date_updated`.

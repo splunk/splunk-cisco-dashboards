@@ -27,8 +27,8 @@
 		"viz_header_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#16283c",
-				"strokeColor": "rgba(53,207,245,0.42)"
+				"fillColor": "#1e293b",
+				"strokeColor": "rgba(14,165,233,0.42)"
 			}
 		},
 		"viz_header_icon": {
@@ -46,7 +46,7 @@
 			"showProgressBar": false,
 			"options": {
 				"backgroundColor": "transparent",
-				"fontColor": "#e8f1fb",
+				"fontColor": "#f1f5f9",
 				"markdown": "# Hybrid Mesh Firewalling\nUnify firewall posture, enforcement, and workload protection across the hybrid mesh."
 			}
 		},
@@ -57,13 +57,13 @@
 				"primary": "ds_hmf_fw_blocked"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('blocked') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#ff9a4a"
+				"majorColor": "#f59e0b"
 			},
 			"description": "Counts how many unique connection attempts were blocked by the firewall, treating repeated blocks of the same connection as one."
 		},
@@ -74,7 +74,7 @@
 				"primary": "ds_hmf_ftd_feed"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('age_minutes') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -87,16 +87,16 @@
 				"staleness": [
 					{
 						"to": 30,
-						"value": "#8bd45b"
+						"value": "#16a34a"
 					},
 					{
 						"from": 30,
 						"to": 90,
-						"value": "#ff9a4a"
+						"value": "#f59e0b"
 					},
 					{
 						"from": 90,
-						"value": "#ff7169"
+						"value": "#dc2626"
 					}
 				]
 			},
@@ -109,13 +109,13 @@
 				"primary": "ds_hmf_fmc_count"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('firewall_count') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#53bfff"
+				"majorColor": "#0ea5e9"
 			},
 			"description": "Total count of unique Cisco Firepower/FTD firewalls actively reporting to Cisco FMC, based on distinct Device UUIDs seen in FMC syslog, providing the on-premises firewall infrastructure footprint KPI."
 		},
@@ -126,13 +126,13 @@
 				"primary": "ds_hmf_sse_total"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('total_events') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#14b8a6"
+				"majorColor": "#0d9488"
 			},
 			"description": "Total count of all security events across Cisco Secure Service Edge (SSE) , combining cloud firewall, DNS security, and web proxy telemetry into a single top-level KPI."
 		},
@@ -143,16 +143,16 @@
 				"primary": "ds_hmf_unified_blocks"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#ff7169",
-					"#ff9a4a",
-					"#53bfff",
-					"#7c3aed"
+					"#dc2626",
+					"#f59e0b",
+					"#0ea5e9",
+					"#8b5cf6"
 				],
 				"lineWidth": 2,
 				"nullValueDisplay": "gaps"
@@ -166,15 +166,15 @@
 				"primary": "ds_hmf_fmc_activity"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#8bd45b",
-					"#ff7169",
-					"#53bfff",
+					"#16a34a",
+					"#dc2626",
+					"#0ea5e9",
 					"#64748b"
 				],
 				"stackMode": "stacked",
@@ -190,15 +190,15 @@
 				"primary": "ds_hmf_dns_categories"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#ff7169",
-					"#ff9a4a",
-					"#7c3aed"
+					"#dc2626",
+					"#f59e0b",
+					"#8b5cf6"
 				]
 			},
 			"description": "Top DNS content categories responsible for blocked queries in Cisco Umbrella/SSE, showing which threat categories and policy-driven classifications are generating the most DNS enforcement activity."
@@ -210,7 +210,7 @@
 				"primary": "ds_hmf_enforcement_coverage"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -224,14 +224,14 @@
 				"primary": "ds_hmf_fmc_top_rules"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#ff9a4a",
-					"#53bfff"
+					"#f59e0b",
+					"#0ea5e9"
 				]
 			},
 			"description": "Top Cisco FMC access control rules by hit count , exposing which rules are handling the highest traffic volumes and whether those rules are permitting or denying connections."
@@ -243,7 +243,7 @@
 				"primary": "ds_hmf_dlp_findings"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -256,8 +256,8 @@
 			"showLastUpdated": false,
 			"showProgressBar": false,
 			"options": {
-				"backgroundColor": "#111f31",
-				"fontColor": "#e8f1fb",
+				"backgroundColor": "#1e293b",
+				"fontColor": "#f1f5f9",
 				"markdown": "**Audience:** Firewall, network-security, and SOC teams  •  **Sources:** Secure Firewall, Meraki, SD-WAN UTD, Secure Access, and ASA telemetry  •  **Reading guide:** Start with block volume and feed freshness, then compare trends and site coverage.  •  **Freshness:** Uses the dashboard time range"
 			}
 		},
@@ -267,8 +267,8 @@
 			"showLastUpdated": false,
 			"showProgressBar": false,
 			"options": {
-				"backgroundColor": "#111f31",
-				"fontColor": "#e8f1fb",
+				"backgroundColor": "#1e293b",
+				"fontColor": "#f1f5f9",
 				"markdown": "### Enforcement posture\nStart with block volume and feed freshness, then compare trends and site coverage."
 			}
 		}
@@ -392,7 +392,7 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#07101d",
+					"backgroundColor": "#020617",
 					"display": "auto-scale",
 					"height": 1390,
 					"width": 1440

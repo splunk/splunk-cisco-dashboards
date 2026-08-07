@@ -27,8 +27,8 @@
 		"viz_header_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#16283c",
-				"strokeColor": "rgba(53,207,245,0.42)"
+				"fillColor": "#1e293b",
+				"strokeColor": "rgba(14,165,233,0.42)"
 			}
 		},
 		"viz_header_icon": {
@@ -46,7 +46,7 @@
 			"showProgressBar": false,
 			"options": {
 				"backgroundColor": "transparent",
-				"fontColor": "#e8f1fb",
+				"fontColor": "#f1f5f9",
 				"markdown": "# Scalable Network Segmentation\nConnect segmentation posture, trust boundaries, and enforcement coverage at scale."
 			}
 		},
@@ -57,13 +57,13 @@
 				"primary": "ds_seg_total_assignments"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('total_assignments') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#53bfff"
+				"majorColor": "#0ea5e9"
 			},
 			"description": "Count of active SGT assignments observed in the selected time window from Cisco ISE authentication syslog, reflecting the number of distinct user/device classifications where a non-default Security Group Tag was…"
 		},
@@ -74,13 +74,13 @@
 				"primary": "ds_seg_unique_sgts"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('unique_sgts') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#14b8a6"
+				"majorColor": "#0d9488"
 			},
 			"description": "Count of unique Security Group Tags actively in use across ISE authentication events, reflecting the breadth of TrustSec segmentation classification deployed in the environment."
 		},
@@ -91,13 +91,13 @@
 				"primary": "ds_seg_sgt_blocks_total"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('sgt_enforced_blocks') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"sparklineDisplay": "off",
 				"trendDisplay": "off",
-				"majorColor": "#ff7169"
+				"majorColor": "#dc2626"
 			},
 			"description": "Total count of FMC block decisions where the source carried an active TrustSec SGT , serving as the primary Scalable Network Segmentation enforcement KPI for the Hybrid Mesh Firewalling overview."
 		},
@@ -108,14 +108,14 @@
 				"primary": "ds_seg_ip_sgt_bindings"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"seriesColors": [
-					"#53bfff",
-					"#8bd45b",
-					"#ff9a4a",
-					"#ff7169",
-					"#7c3aed"
+					"#0ea5e9",
+					"#16a34a",
+					"#f59e0b",
+					"#dc2626",
+					"#8b5cf6"
 				]
 			},
 			"description": "Shows the distribution of IP-to-SGT bindings across Security Group Tags, reporting how many bound IPs fall under each Security Group — the core \"SGT by Site/Device\" view for the Segmentation pillar."
@@ -127,7 +127,7 @@
 				"primary": "ds_seg_status_rollup"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -141,7 +141,7 @@
 				"primary": "ds_seg_sgt_distribution"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -155,13 +155,13 @@
 				"primary": "ds_seg_policy_hits"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "off",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#7c3aed"
+					"#8b5cf6"
 				]
 			},
 			"description": "Ranks ISE policy-set hits by the network device (site/branch identity, e.g. wireless controller or firewall hostname) that triggered them — the closest real, validated proxy for \"Policy Hits by Site\" available today."
@@ -173,13 +173,13 @@
 				"primary": "ds_seg_trustsec_readiness"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "off",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#14b8a6"
+					"#0d9488"
 				]
 			},
 			"description": "Rolls up managed devices by Device Family and exact Device Type (model) from Catalyst Center inventory — the baseline needed to determine TrustSec/SGT hardware readiness across the fleet."
@@ -191,7 +191,7 @@
 				"primary": "ds_seg_excessive_mac"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -205,7 +205,7 @@
 				"primary": "ds_seg_ot_iot"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -219,7 +219,7 @@
 				"primary": "ds_seg_router_feature_trend"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"legendDisplay": "right",
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -227,9 +227,9 @@
 				"seriesColors": [
 					"#0d9488",
 					"#2563eb",
-					"#ff9a4a",
-					"#ff7169",
-					"#7c3aed"
+					"#f59e0b",
+					"#dc2626",
+					"#8b5cf6"
 				],
 				"lineWidth": 2,
 				"nullValueDisplay": "gaps"
@@ -243,7 +243,7 @@
 				"primary": "ds_seg_router_feature_evidence"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
+				"backgroundColor": "#0f172a",
 				"count": 20,
 				"fontSize": "small",
 				"showInternalFields": false
@@ -256,8 +256,8 @@
 			"showLastUpdated": false,
 			"showProgressBar": false,
 			"options": {
-				"backgroundColor": "#111f31",
-				"fontColor": "#e8f1fb",
+				"backgroundColor": "#1e293b",
+				"fontColor": "#f1f5f9",
 				"markdown": "**Audience:** Network security, identity, and TrustSec operations  •  **Sources:** Cisco ISE authentication, SGT, and IP-SGT binding telemetry  •  **Reading guide:** Read adoption breadth first, then investigate binding mix and site-level gaps.  •  **Freshness:** Uses the dashboard time range"
 			}
 		},
@@ -267,8 +267,8 @@
 			"showLastUpdated": false,
 			"showProgressBar": false,
 			"options": {
-				"backgroundColor": "#111f31",
-				"fontColor": "#e8f1fb",
+				"backgroundColor": "#1e293b",
+				"fontColor": "#f1f5f9",
 				"markdown": "### TrustSec posture\nRead adoption breadth first, then investigate binding mix and site-level gaps."
 			}
 		}
@@ -414,7 +414,7 @@
 		"layoutDefinitions": {
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#07101d",
+					"backgroundColor": "#020617",
 					"display": "auto-scale",
 					"height": 1706,
 					"width": 1440

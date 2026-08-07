@@ -8,6 +8,10 @@
 - Dashboard Manager now passes numeric canvas dimensions to Dashboard
   Framework 29.8, preventing managed Studio dashboards from falling back to a
   600-pixel canvas with a premature scrollbar and empty page area below it.
+- The five Secure Networking pillar dashboards now use the Insights Workspace
+  dark palette: slate canvas and panel surfaces, slate text, sky accents, and
+  matching semantic status colors keep Dashboard Studio visually aligned with
+  `secure_networking_profile`.
 - Insights Workspace headers now present time-range and auto-refresh selectors
   without box borders. Signal Rail pause, style, and configuration controls
   reveal on desktop hover or keyboard focus while remaining visible on compact
