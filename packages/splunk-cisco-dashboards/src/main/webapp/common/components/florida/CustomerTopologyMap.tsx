@@ -16,6 +16,7 @@ import React, {
     useState,
     useSyncExternalStore,
 } from 'react';
+import Select from '@splunk/react-ui/Select';
 import {
     Circle,
     MapContainer,
@@ -309,22 +310,83 @@ const STATUS_STROKE: Record<TopologyStatus, string> = {
     unknown: '#94a3b8',
 };
 
-const ROLE_DOT_CLASS: Record<KnownTopologyRole, string> = {
-    state_hq: 'bg-sky-600',
-    regional_hub: 'bg-blue-600',
-    logistics: 'bg-indigo-600',
-    branch: 'bg-violet-600',
-    datacenter: 'bg-purple-600',
-    internet_edge: 'bg-slate-600',
-    campus: 'bg-cyan-600',
-    office: 'bg-sky-400',
-    event_venue: 'bg-fuchsia-600',
-    cisco_live: 'bg-violet-400',
-    lab: 'bg-indigo-400',
-    cloud_region: 'bg-zinc-700',
-};
-
 type RoleBeaconChrome = { fill: string; halo: string; label: string };
+type TopologyRoleChrome = RoleBeaconChrome & { dotClass: string };
+
+const TOPOLOGY_ROLE_CHROME: Record<KnownTopologyRole, TopologyRoleChrome> = {
+    state_hq: {
+        dotClass: 'bg-sky-500',
+        fill: '#0ea5e9',
+        halo: 'rgba(14, 165, 233, 0.25)',
+        label: 'border-sky-200',
+    },
+    regional_hub: {
+        dotClass: 'bg-blue-600',
+        fill: '#2563eb',
+        halo: 'rgba(37, 99, 235, 0.23)',
+        label: 'border-blue-200',
+    },
+    logistics: {
+        dotClass: 'bg-indigo-600',
+        fill: '#4f46e5',
+        halo: 'rgba(79, 70, 229, 0.23)',
+        label: 'border-indigo-200',
+    },
+    branch: {
+        dotClass: 'bg-violet-600',
+        fill: '#7c3aed',
+        halo: 'rgba(124, 58, 237, 0.23)',
+        label: 'border-violet-200',
+    },
+    datacenter: {
+        dotClass: 'bg-fuchsia-600',
+        fill: '#c026d3',
+        halo: 'rgba(192, 38, 211, 0.23)',
+        label: 'border-fuchsia-200',
+    },
+    internet_edge: {
+        dotClass: 'bg-slate-600',
+        fill: '#475569',
+        halo: 'rgba(71, 85, 105, 0.22)',
+        label: 'border-slate-200',
+    },
+    campus: {
+        dotClass: 'bg-teal-600',
+        fill: '#0d9488',
+        halo: 'rgba(13, 148, 136, 0.23)',
+        label: 'border-teal-200',
+    },
+    office: {
+        dotClass: 'bg-green-600',
+        fill: '#16a34a',
+        halo: 'rgba(22, 163, 74, 0.23)',
+        label: 'border-green-200',
+    },
+    event_venue: {
+        dotClass: 'bg-orange-600',
+        fill: '#ea580c',
+        halo: 'rgba(234, 88, 12, 0.23)',
+        label: 'border-orange-200',
+    },
+    cisco_live: {
+        dotClass: 'bg-red-600',
+        fill: '#dc2626',
+        halo: 'rgba(220, 38, 38, 0.23)',
+        label: 'border-red-200',
+    },
+    lab: {
+        dotClass: 'bg-yellow-600',
+        fill: '#ca8a04',
+        halo: 'rgba(202, 138, 4, 0.24)',
+        label: 'border-yellow-200',
+    },
+    cloud_region: {
+        dotClass: 'bg-pink-600',
+        fill: '#db2777',
+        halo: 'rgba(219, 39, 119, 0.23)',
+        label: 'border-pink-200',
+    },
+};
 
 const CUSTOM_ROLE_SWATCHES: Array<{
     dotClass: string;
@@ -418,78 +480,28 @@ const customRoleSwatch = (role: TopologyRole) =>
     CUSTOM_ROLE_SWATCHES[customRoleSwatchIndex(role)] ?? CUSTOM_ROLE_SWATCHES[0];
 
 const topologyRoleDotClass = (role: TopologyRole): string =>
-    isKnownTopologyRole(role) ? ROLE_DOT_CLASS[role] : customRoleSwatch(role).dotClass;
-
-const ROLE_BEACON_CHROME: Record<
-    KnownTopologyRole,
-    RoleBeaconChrome
-> = {
-    state_hq: {
-        fill: '#0284c7',
-        halo: 'rgba(2, 132, 199, 0.26)',
-        label: 'border-sky-200',
-    },
-    regional_hub: {
-        fill: '#2563eb',
-        halo: 'rgba(37, 99, 235, 0.23)',
-        label: 'border-blue-200',
-    },
-    logistics: {
-        fill: '#4f46e5',
-        halo: 'rgba(79, 70, 229, 0.23)',
-        label: 'border-indigo-200',
-    },
-    branch: {
-        fill: '#7c3aed',
-        halo: 'rgba(124, 58, 237, 0.23)',
-        label: 'border-violet-200',
-    },
-    datacenter: {
-        fill: '#9333ea',
-        halo: 'rgba(147, 51, 234, 0.23)',
-        label: 'border-purple-200',
-    },
-    internet_edge: {
-        fill: '#475569',
-        halo: 'rgba(71, 85, 105, 0.22)',
-        label: 'border-slate-200',
-    },
-    campus: {
-        fill: '#0891b2',
-        halo: 'rgba(8, 145, 178, 0.23)',
-        label: 'border-cyan-200',
-    },
-    office: {
-        fill: '#38bdf8',
-        halo: 'rgba(56, 189, 248, 0.23)',
-        label: 'border-sky-200',
-    },
-    event_venue: {
-        fill: '#c026d3',
-        halo: 'rgba(192, 38, 211, 0.23)',
-        label: 'border-fuchsia-200',
-    },
-    cisco_live: {
-        fill: '#a78bfa',
-        halo: 'rgba(167, 139, 250, 0.24)',
-        label: 'border-violet-200',
-    },
-    lab: {
-        fill: '#818cf8',
-        halo: 'rgba(129, 140, 248, 0.23)',
-        label: 'border-indigo-200',
-    },
-    cloud_region: {
-        fill: '#3f3f46',
-        halo: 'rgba(63, 63, 70, 0.23)',
-        label: 'border-zinc-200',
-    },
-};
+    isKnownTopologyRole(role)
+        ? TOPOLOGY_ROLE_CHROME[role].dotClass
+        : customRoleSwatch(role).dotClass;
 
 const topologyRoleBeaconChrome = (role: TopologyRole) =>
     isKnownTopologyRole(role)
-        ? ROLE_BEACON_CHROME[role]
+        ? TOPOLOGY_ROLE_CHROME[role]
         : customRoleSwatch(role).chrome;
+
+const TopologyRoleSwatch: React.FC<{ role: TopologyRole }> = ({ role }) => {
+    const chrome = topologyRoleBeaconChrome(role);
+    return (
+        <span
+            aria-hidden="true"
+            className="inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full ring-1 ring-white/35"
+            style={{
+                backgroundColor: chrome.fill,
+                boxShadow: `0 0 0 3px ${chrome.halo}`,
+            }}
+        />
+    );
+};
 
 const LEGACY_TOPOLOGY_STORAGE_KEY = 'splunk-cisco-dashboards.customerTopology.v4';
 const TOPOLOGY_CONFIG_EVENT = 'splunk-cisco-dashboards:customer-topology-config';
@@ -8628,32 +8640,58 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                                 >
                                                     Role
                                                 </span>
-                                                <select
-                                                    className={editorInputClass(isDark)}
+                                                <Select
+                                                    inline={false}
+                                                    className="scd-topology-role-select"
+                                                    labelText="Site role"
                                                     value={String(site.role)}
-                                                    onChange={(event) =>
+                                                    menuStyle={{ minWidth: 190 }}
+                                                    style={{
+                                                        width: '100%',
+                                                        minHeight: 28,
+                                                        borderColor: isDark
+                                                            ? '#334155'
+                                                            : '#e2e8f0',
+                                                        backgroundColor: isDark
+                                                            ? '#020617'
+                                                            : '#ffffff',
+                                                        color: isDark
+                                                            ? '#f1f5f9'
+                                                            : '#1e293b',
+                                                        fontSize: 12,
+                                                        fontWeight: 600,
+                                                    }}
+                                                    onChange={(_event, { value }) =>
                                                         updateSite(site.id, {
                                                             role: normalizeTopologyRoleInput(
-                                                                event.target.value,
+                                                                value,
                                                                 'branch'
                                                             ),
                                                         })
                                                     }
                                                 >
                                                     {TOPOLOGY_ROLES.map((role) => (
-                                                        <option
+                                                        <Select.Option
                                                             key={role}
                                                             value={role}
-                                                        >
-                                                            {ROLE_LABEL[role]}
-                                                        </option>
+                                                            label={ROLE_LABEL[role]}
+                                                            icon={
+                                                                <TopologyRoleSwatch role={role} />
+                                                            }
+                                                        />
                                                     ))}
                                                     {!isKnownTopologyRole(site.role) && (
-                                                        <option value={String(site.role)}>
-                                                            {topologyRoleLabel(site.role)}
-                                                        </option>
+                                                        <Select.Option
+                                                            value={String(site.role)}
+                                                            label={topologyRoleLabel(site.role)}
+                                                            icon={
+                                                                <TopologyRoleSwatch
+                                                                    role={site.role}
+                                                                />
+                                                            }
+                                                        />
                                                     )}
-                                                </select>
+                                                </Select>
                                             </label>
                                             <label className="space-y-1">
                                                 <span
