@@ -39,6 +39,9 @@ const metricItem = read(
 const sortableMetricCard = read(
   "../src/main/webapp/common/components/florida/SortableMetricCard.tsx",
 );
+const dashboardSection = read(
+  "../src/main/webapp/common/components/florida/DashboardSection.tsx",
+);
 
 for (const workspaceId of [
   "secure_networking",
@@ -92,6 +95,21 @@ assert.match(
 );
 assert.match(
   topologyMap,
+  /useState<TopologySurfaceMode>\('command'\)/,
+  "The abstract command topology must be the factory connectivity view",
+);
+assert.match(
+  topologyMap,
+  /surfaceMode === 'command' \? \([\s\S]*?<TopologyCommandView/,
+  "The connectivity surface must retain a command-view rendering path",
+);
+assert.match(
+  topologyMap,
+  /\['geo', 'Geo'\]/,
+  "The geographic topology must remain available as an explicit secondary view",
+);
+assert.match(
+  topologyMap,
   /name: 'Secure Network Command Map',[\s\S]*subtitle: 'Live sites, trust paths, and policy-enforcement health'/,
   "Secure Networking must ship its own command-map title and decision-oriented subtitle",
 );
@@ -107,8 +125,8 @@ assert.match(
 );
 assert.match(
   profile,
-  /cn\(inputClass, "w-\[124px\]"\)/,
-  "The time-range selector must preserve title space with a compact width",
+  /<Select[\s\S]*?labelText="Dashboard time range"[\s\S]*?style=\{\{ width: 124 \}\}/,
+  "The time-range selector must use SUI Select at a compact width",
 );
 assert.match(
   profile,
@@ -117,8 +135,8 @@ assert.match(
 );
 assert.match(
   profile,
-  /cn\(inputClass, "w-\[72px\]"\)/,
-  "The auto-refresh selector must preserve title space with a compact width",
+  /<Select[\s\S]*?labelText="Auto-refresh interval"[\s\S]*?style=\{\{ width: 72 \}\}/,
+  "The auto-refresh selector must use SUI Select at a compact width",
 );
 assert.match(
   profile,
@@ -214,6 +232,16 @@ assert.doesNotMatch(
   sortableMetricCard,
   /group-hover\/sortable:opacity-100/,
   "Hovering the full tile must not reveal reorder or hide controls",
+);
+assert.match(
+  dashboardSection,
+  /data-section-density=\{compactHeight \? 'compact' : 'standard'\}/,
+  "H1 must expose a real compact section density",
+);
+assert.match(
+  profile,
+  /compactHeight=\{isCompactHeight\}/,
+  "The H1 height control must activate compact section rendering",
 );
 
 console.log("✓ Workspace topology, signal rail, and drilldown affordance tests passed");

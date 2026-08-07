@@ -20,11 +20,15 @@
   responsive translucent Cisco dark-mode shell with content-specific
   footprints, compact headers, consistent Search/Details/Close actions,
   keyboard focus trapping, focus restoration, and mobile bottom-sheet
-  behavior. Detail tables auto-size to the viewport and add accessible width,
-  height, and corner resize controls with double-click reset.
-- Executive Insights pie tiles now use Splunk's native Dashboard Studio pie
-  renderer with larger charts, visible values and percentages, and matching
-  dark theme colors. Pie and categorical bar charts use the same deliberate
+  behavior. A lighter, softer backdrop keeps the workspace recognizable behind
+  the high-contrast layered-glass surface. Detail tables auto-size to the
+  viewport and add accessible width, height, and corner resize controls with
+  double-click reset.
+- Executive Insights composition tiles now use Splunk's native Dashboard
+  Studio ranked-bar renderer with explicit category/value bindings, visible
+  values, matching dark-theme colors, and lazy loading so the optional native
+  visualization bundle does not inflate the initial workspace entrypoint.
+  Composition and categorical bar charts use the same deliberate
   expand-dialog interaction as time-series tiles instead of enlarging on hover.
 - Executive Insights tile actions are slightly larger, and drilldowns now use
   an open-details-panel icon with explicit drilldown tooltips instead of an

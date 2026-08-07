@@ -32,8 +32,18 @@ for (const expectedClass of [
 
 assert.match(
   shell,
-  /bg-slate-950\/\[0\.42\][\s\S]*backdrop-blur-md/,
-  "Shared modal shell must use a translucent blurred backdrop",
+  /bg-slate-950\/\[0\.16\][\s\S]*backdrop-blur-\[2px\]/,
+  "Shared modal shell must keep the workspace clearly recognizable behind the dialog",
+);
+assert.match(
+  shell,
+  /rounded-\[4px\][\s\S]*border-white\/\[0\.18\][\s\S]*rgba\(42,56,70,0\.72\)[\s\S]*rgba\(10,18,29,0\.58\)[\s\S]*backdrop-blur-\[75px\]/,
+  "Shared modal shell must follow the SUI glass radius, border, tint, and blur treatment",
+);
+assert.match(
+  shell,
+  /0_50px_200px[\s\S]*0_29px_66px[\s\S]*inset_0_1px_4px/,
+  "Shared modal shell must preserve the SUI layered modal shadow stack",
 );
 for (const accessibleResizeLabel of [
   "Resize dialog width",

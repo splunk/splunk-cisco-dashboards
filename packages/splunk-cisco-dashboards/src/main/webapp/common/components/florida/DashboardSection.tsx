@@ -65,6 +65,8 @@ interface DashboardSectionProps {
     height?: HeightControlConfig;
     /** True when a dense tile section should flow into multiple rows. */
     wrapTiles?: boolean;
+    /** True when the section is at H1 and should use the compact chart floor. */
+    compactHeight?: boolean;
     /** Optional section-level action rendered as a compact icon button. */
     addTileAction?: HeaderActionConfig;
     onEditTitle?: () => void;
@@ -216,6 +218,7 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
     tileCount,
     height,
     wrapTiles = false,
+    compactHeight = false,
     addTileAction,
     onEditTitle,
 }) => {
@@ -313,9 +316,11 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
             // uses, just with a tighter floor since this layout has
             // less per-section chrome to amortise.
             className={cn(
-                'bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 px-4 py-2.5 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_20px_-10px_rgba(0,0,0,0.45)] relative overflow-hidden group flex flex-col flex-shrink-0 min-h-[180px]',
+                'bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 px-4 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_20px_-10px_rgba(0,0,0,0.45)] relative overflow-hidden group flex flex-col flex-shrink-0',
+                compactHeight ? 'min-h-[152px] py-2' : 'min-h-[180px] py-2.5',
                 className
             )}
+            data-section-density={compactHeight ? 'compact' : 'standard'}
             style={style}
         >
             <div className="absolute top-0 left-0 w-1.5 h-full bg-sky-100 dark:bg-sky-900/40 group-hover:bg-sky-600 dark:group-hover:bg-sky-500 transition-colors" />

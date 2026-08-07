@@ -30,6 +30,7 @@ import React, {
   useState,
 } from "react";
 import { createURL } from "@splunk/splunk-utils/url";
+import Select from "@splunk/react-ui/Select";
 import {
     Activity,
     RefreshCw,
@@ -254,11 +255,13 @@ const MIN_DASHBOARD_HEIGHT_PX = 520;
 const COMPACT_HEIGHT_THRESHOLD_PX = 720;
 const SECTION_HEIGHT_BASE_PX = 180;
 const SECTION_HEIGHT_COMPACT_BASE_PX = 174;
+const SECTION_HEIGHT_H1_BASE_PX = 152;
 const SECTION_HEIGHT_STEP_PX = 120;
 // Wrapped sections need to budget for the full card floor plus the
 // inter-row gap. 152px matched the bare tile min-height too closely and
 // caused the third row to be clipped at H1 when a section showed 9 tiles.
 const SECTION_WRAPPED_TILE_ROW_STEP_PX = 176;
+const SECTION_WRAPPED_H1_TILE_ROW_STEP_PX = 148;
 const SECTION_WRAP_TILE_COUNT = 5;
 const SECTION_WRAPPED_TILE_COLUMNS = 3;
 const VERTICAL_MAP_MIN_HEIGHT_PX = 420;
@@ -3004,14 +3007,20 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         : 1;
     const heightLevel =
       sectionHeights[section] ?? sectionHeightBounds.defaultLevel;
-    const baseMinHeight = compactDensity
-      ? SECTION_HEIGHT_COMPACT_BASE_PX
-      : SECTION_HEIGHT_BASE_PX;
+    const isCompactHeight = heightLevel === sectionHeightBounds.minLevel;
+    const baseMinHeight = isCompactHeight
+      ? SECTION_HEIGHT_H1_BASE_PX
+      : compactDensity
+        ? SECTION_HEIGHT_COMPACT_BASE_PX
+        : SECTION_HEIGHT_BASE_PX;
+    const wrappedRowStep = isCompactHeight
+      ? SECTION_WRAPPED_H1_TILE_ROW_STEP_PX
+      : SECTION_WRAPPED_TILE_ROW_STEP_PX;
     return Math.max(
       verticalMetricsMinHeight,
       baseMinHeight +
         (heightLevel - sectionHeightBounds.minLevel) * SECTION_HEIGHT_STEP_PX +
-        (estimatedTileRows - 1) * SECTION_WRAPPED_TILE_ROW_STEP_PX,
+        (estimatedTileRows - 1) * wrappedRowStep,
     );
   }, [
     compactDensity,
@@ -4124,11 +4133,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   }, [closeHelp, helpOpen]);
 
   // ------------------------------ Render ------------------------------
-  const inputClass =
-    "text-xs font-semibold bg-slate-100 dark:bg-slate-800 border border-slate-200 " +
-    "dark:border-slate-700 rounded-md m-0 h-8 px-2 py-0 text-slate-700 dark:text-slate-200 " +
-    "hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 " +
-    "focus:ring-sky-500 cursor-pointer";
   const iconBtnClass =
     "p-1.5 rounded transition-colors text-slate-500 dark:text-slate-400 " +
     "hover:text-sky-600 dark:hover:text-sky-300 hover:bg-slate-50 dark:hover:bg-slate-800";
@@ -4220,46 +4224,52 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             className="inline-flex flex-shrink-0 items-center"
             aria-live="polite"
           />
-          <label className="m-0 flex h-8 items-center gap-1.5">
+          <div className="m-0 flex h-8 items-center gap-1.5">
             <span className="hidden text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 2xl:inline">
               Range
             </span>
-            <select
+            <Select
               data-shortcut-search
               value={timeRange.label}
-              onChange={(e) => {
+              onChange={(_event, { value }) => {
                 const next = TIME_RANGE_OPTIONS.find(
-                  (o) => o.label === e.target.value,
+                  (o) => o.label === String(value),
                 );
                 if (next) setTimeRange(next);
               }}
-              className={cn(inputClass, "w-[124px]")}
+              inline
+              labelText="Dashboard time range"
+              style={{ width: 124 }}
               title="Dashboard time range"
             >
               {TIME_RANGE_OPTIONS.map((o) => (
-                <option key={o.label} value={o.label}>
-                  {o.label}
-                </option>
+                <Select.Option key={o.label} label={o.label} value={o.label} />
               ))}
-            </select>
-          </label>
-          <label className="m-0 flex h-8 items-center gap-1.5">
+            </Select>
+          </div>
+          <div className="m-0 flex h-8 items-center gap-1.5">
             <span className="hidden text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 2xl:inline">
               Auto
             </span>
-            <select
+            <Select
               value={autoRefreshSeconds}
-              onChange={(e) => setAutoRefreshSeconds(Number(e.target.value))}
-              className={cn(inputClass, "w-[72px]")}
+              onChange={(_event, { value }) =>
+                setAutoRefreshSeconds(Number(value))
+              }
+              inline
+              labelText="Auto-refresh interval"
+              style={{ width: 72 }}
               title="Auto-refresh interval"
             >
               {AUTO_REFRESH_OPTIONS.map((o) => (
-                <option key={o.seconds} value={o.seconds}>
-                  {o.label}
-                </option>
+                <Select.Option
+                  key={o.seconds}
+                  label={o.label}
+                  value={o.seconds}
+                />
               ))}
-            </select>
-          </label>
+            </Select>
+          </div>
           <button
             type="button"
             onClick={refreshNow}
@@ -4663,14 +4673,21 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 : 1;
               const heightLevel =
                 sectionHeights[section] ?? sectionHeightBounds.defaultLevel;
-              const baseMinHeight = compactDensity
-                ? SECTION_HEIGHT_COMPACT_BASE_PX
-                : SECTION_HEIGHT_BASE_PX;
+              const isCompactHeight =
+                heightLevel === sectionHeightBounds.minLevel;
+              const baseMinHeight = isCompactHeight
+                ? SECTION_HEIGHT_H1_BASE_PX
+                : compactDensity
+                  ? SECTION_HEIGHT_COMPACT_BASE_PX
+                  : SECTION_HEIGHT_BASE_PX;
+              const wrappedRowStep = isCompactHeight
+                ? SECTION_WRAPPED_H1_TILE_ROW_STEP_PX
+                : SECTION_WRAPPED_TILE_ROW_STEP_PX;
               const sectionMinHeight =
                 baseMinHeight +
                 (heightLevel - sectionHeightBounds.minLevel) *
                   SECTION_HEIGHT_STEP_PX +
-                (estimatedTileRows - 1) * SECTION_WRAPPED_TILE_ROW_STEP_PX;
+                (estimatedTileRows - 1) * wrappedRowStep;
 
               // Apply the user's drag-reorder
               // preference (if any) to the canonical
@@ -4730,6 +4747,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                     label: `${meta.title} height`,
                   }}
                   wrapTiles={wrapTiles}
+                  compactHeight={isCompactHeight}
                   tileCount={
                     sectionMaxAvailable > 0
                       ? {
@@ -4801,7 +4819,12 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                             }}
                             className={
                               wrapTiles
-                                ? "min-w-[240px] md:min-w-[250px] min-h-[148px]"
+                                ? cn(
+                                    "min-w-[240px] md:min-w-[250px]",
+                                    isCompactHeight
+                                      ? "min-h-[124px]"
+                                      : "min-h-[148px]",
+                                  )
                                 : undefined
                             }
                           >
@@ -4821,7 +4844,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                               searchbaseByName={searchbaseByName}
                               searchbaseById={searchbaseById}
                               searchbaseDrilldowns={searchbaseDrilldowns}
-                              compactDensity={compactDensity}
+                              compactDensity={
+                                compactDensity || isCompactHeight
+                              }
                               isDark={resolvedTheme === "dark"}
                               onOpenDetailTable={setActiveDetailTable}
                               onConfigure={() =>

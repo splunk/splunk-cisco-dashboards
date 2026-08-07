@@ -62,6 +62,8 @@ const readBuildVersion = () => {
 };
 const APP_BUILD = readAppConfField('build') || 'unknown';
 const APP_VERSION = readBuildVersion();
+const MEBIBYTE = 1024 * 1024;
+const FAST_UNMINIFIED_BUILD = process.argv.includes('--no-optimization-minimize');
 
 /**
  * Multi-entry config: each Splunk dashboard ("view") has its own React
@@ -127,6 +129,18 @@ const commonConfig = webpackMerge(baseConfig, {
         filename: '[name].js',
     },
     stats: 'errors-warnings',
+    // Webpack's default 244 KiB budget targets small public web pages. These
+    // are intentionally self-contained Splunk application entrypoints, and
+    // watch mode is deliberately unminified for fast rebuilds. Keep warnings
+    // meaningful by applying explicit JavaScript-only budgets with modest
+    // headroom over the measured baseline instead of warning on every build
+    // (or disabling performance hints altogether).
+    performance: {
+        hints: 'warning',
+        maxAssetSize: (FAST_UNMINIFIED_BUILD ? 42 : 12) * MEBIBYTE,
+        maxEntrypointSize: (FAST_UNMINIFIED_BUILD ? 42 : 12) * MEBIBYTE,
+        assetFilter: (assetFilename) => assetFilename.endsWith('.js'),
+    },
     module: {
         rules: [
             {

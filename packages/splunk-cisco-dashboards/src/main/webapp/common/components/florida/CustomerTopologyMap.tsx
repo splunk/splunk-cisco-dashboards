@@ -4834,6 +4834,240 @@ type SelectedTarget =
     | { kind: 'site'; site: TopologySite }
     | { kind: 'link'; link: TopologyLink };
 
+type TopologySurfaceMode = 'command' | 'geo';
+
+interface CommandPoint {
+    x: number;
+    y: number;
+}
+
+interface TopologyCommandViewProps {
+    topology: CustomerTopology;
+    selected: SelectedTarget | null;
+    spotlightSiteId?: string;
+    animationLevel: TopologyAnimationLevel;
+    isDark: boolean;
+    onSelectSite: (site: TopologySite) => void;
+    onSelectLink: (link: TopologyLink) => void;
+}
+
+/**
+ * Abstract operations view for the same live topology that powers the
+ * geographic map. The highest-degree site becomes the command hub and the
+ * remaining sites orbit it, which keeps global workspaces legible without
+ * implying that latitude is the most important relationship.
+ */
+const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
+    topology,
+    selected,
+    spotlightSiteId,
+    animationLevel,
+    isDark,
+    onSelectSite,
+    onSelectLink,
+}) => {
+    const points = useMemo(() => {
+        const degree = new Map(topology.sites.map((site) => [site.id, 0]));
+        for (const link of topology.links) {
+            degree.set(link.sourceSiteId, (degree.get(link.sourceSiteId) ?? 0) + 1);
+            degree.set(link.targetSiteId, (degree.get(link.targetSiteId) ?? 0) + 1);
+        }
+        const ordered = [...topology.sites].sort(
+            (a, b) =>
+                (degree.get(b.id) ?? 0) - (degree.get(a.id) ?? 0) ||
+                STATUS_RANK[b.status] - STATUS_RANK[a.status] ||
+                a.name.localeCompare(b.name)
+        );
+        const next = new Map<string, CommandPoint>();
+        if (ordered.length === 0) return next;
+        next.set(ordered[0].id, { x: 500, y: 310 });
+        const satellites = ordered.slice(1);
+        satellites.forEach((site, index) => {
+            const angle = -Math.PI / 2 + (index * Math.PI * 2) / Math.max(1, satellites.length);
+            const radiusX = satellites.length <= 3 ? 330 : 390;
+            const radiusY = satellites.length <= 3 ? 205 : 230;
+            next.set(site.id, {
+                x: 500 + Math.cos(angle) * radiusX,
+                y: 310 + Math.sin(angle) * radiusY,
+            });
+        });
+        return next;
+    }, [topology.links, topology.sites]);
+
+    const healthySites = topology.sites.filter((site) => site.status === 'stable').length;
+    const healthyLinks = topology.links.filter((link) => link.status === 'stable').length;
+    const criticalCount =
+        topology.sites.filter((site) => site.status === 'critical').length +
+        topology.links.filter((link) => link.status === 'critical').length;
+
+    return (
+        <div
+            className={cn(
+                'absolute inset-0 overflow-hidden',
+                isDark
+                    ? 'bg-[radial-gradient(circle_at_50%_45%,#102845_0%,#071321_46%,#030914_100%)]'
+                    : 'bg-[radial-gradient(circle_at_50%_45%,#ffffff_0%,#eff8ff_48%,#dbeafe_100%)]'
+            )}
+            role="region"
+            aria-label={`Live command topology with ${topology.sites.length} sites and ${topology.links.length} paths`}
+        >
+            <style>{`
+                @keyframes scd-command-flow { to { stroke-dashoffset: -38; } }
+                @keyframes scd-command-pulse { 0%, 100% { opacity: .24; transform: scale(1); } 50% { opacity: .58; transform: scale(1.14); } }
+                .scd-command-flow--on { animation: scd-command-flow 1.8s linear infinite; }
+                .scd-command-flow--subtle { animation: scd-command-flow 4.6s linear infinite; }
+                .scd-command-pulse { transform-box: fill-box; transform-origin: center; animation: scd-command-pulse 2.4s ease-in-out infinite; }
+            `}</style>
+            <svg
+                viewBox="0 0 1000 620"
+                preserveAspectRatio="xMidYMid meet"
+                className="h-full w-full"
+                role="group"
+                aria-label="Interactive site and path topology"
+            >
+                <defs>
+                    <pattern id="scd-command-grid" width="32" height="32" patternUnits="userSpaceOnUse">
+                        <path
+                            d="M 32 0 L 0 0 0 32"
+                            fill="none"
+                            stroke={isDark ? '#29435d' : '#a9c8e8'}
+                            strokeWidth="0.8"
+                            opacity="0.2"
+                        />
+                    </pattern>
+                    <filter id="scd-command-glow" x="-100%" y="-100%" width="300%" height="300%">
+                        <feGaussianBlur stdDeviation="6" result="blur" />
+                        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                    </filter>
+                </defs>
+                <rect width="1000" height="620" fill="url(#scd-command-grid)" />
+                <circle cx="500" cy="310" r="116" fill="none" stroke={isDark ? '#38bdf8' : '#0284c7'} strokeOpacity="0.12" />
+                <circle cx="500" cy="310" r="214" fill="none" stroke={isDark ? '#38bdf8' : '#0284c7'} strokeOpacity="0.08" strokeDasharray="4 10" />
+
+                {topology.links.map((link, index) => {
+                    const source = points.get(link.sourceSiteId);
+                    const target = points.get(link.targetSiteId);
+                    if (!source || !target) return null;
+                    const dx = target.x - source.x;
+                    const dy = target.y - source.y;
+                    const curve = (index % 2 === 0 ? 1 : -1) * Math.min(54, Math.hypot(dx, dy) * 0.1);
+                    const controlX = (source.x + target.x) / 2 - (dy / Math.max(1, Math.hypot(dx, dy))) * curve;
+                    const controlY = (source.y + target.y) / 2 + (dx / Math.max(1, Math.hypot(dx, dy))) * curve;
+                    const path = `M ${source.x} ${source.y} Q ${controlX} ${controlY} ${target.x} ${target.y}`;
+                    const selectedLink = selected?.kind === 'link' && selected.link.id === link.id;
+                    const color = STATUS_STROKE[link.status];
+                    return (
+                        <g key={link.id}>
+                            <path d={path} fill="none" stroke={color} strokeWidth={selectedLink ? 18 : 12} opacity={selectedLink ? 0.2 : 0.08} />
+                            <path
+                                d={path}
+                                fill="none"
+                                stroke={color}
+                                strokeWidth={selectedLink ? 4.5 : 3}
+                                strokeDasharray="10 9"
+                                strokeLinecap="round"
+                                className={
+                                    animationLevel === 'off'
+                                        ? undefined
+                                        : `scd-command-flow--${animationLevel}`
+                                }
+                                filter={selectedLink ? 'url(#scd-command-glow)' : undefined}
+                            />
+                            <path
+                                d={path}
+                                fill="none"
+                                stroke="transparent"
+                                strokeWidth="24"
+                                className="cursor-pointer focus:outline-none"
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`${link.name}, ${link.status} path`}
+                                onClick={() => onSelectLink(link)}
+                                onKeyDown={(event) => {
+                                    if (event.key === 'Enter' || event.key === ' ') {
+                                        event.preventDefault();
+                                        onSelectLink(link);
+                                    }
+                                }}
+                            />
+                        </g>
+                    );
+                })}
+
+                {topology.sites.map((site) => {
+                    const point = points.get(site.id);
+                    if (!point) return null;
+                    const selectedSite = selected?.kind === 'site' && selected.site.id === site.id;
+                    const spotlighted = spotlightSiteId === site.id;
+                    const roleColor = topologyRoleBeaconChrome(site.role).fill;
+                    const statusColor = STATUS_STROKE[site.status];
+                    const health = site.metrics.healthPct;
+                    return (
+                        <g
+                            key={site.id}
+                            transform={`translate(${point.x} ${point.y})`}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`${site.name}, ${topologyRoleLabel(site.role)}, ${site.status}`}
+                            className="cursor-pointer focus:outline-none"
+                            onClick={() => onSelectSite(site)}
+                            onKeyDown={(event) => {
+                                if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault();
+                                    onSelectSite(site);
+                                }
+                            }}
+                        >
+                            {(selectedSite || spotlighted) && (
+                                <circle
+                                    r="50"
+                                    fill={statusColor}
+                                    opacity="0.2"
+                                    className={animationLevel === 'off' ? undefined : 'scd-command-pulse'}
+                                />
+                            )}
+                            <circle r="37" fill={isDark ? '#071827' : '#ffffff'} stroke={statusColor} strokeWidth={selectedSite ? 5 : 3} filter={selectedSite ? 'url(#scd-command-glow)' : undefined} />
+                            <circle r="27" fill={roleColor} opacity="0.92" />
+                            <text y="5" textAnchor="middle" fill="#ffffff" fontSize="15" fontWeight="900" letterSpacing="1">
+                                {site.shortName.slice(0, 5).toUpperCase()}
+                            </text>
+                            <rect x="-70" y="47" width="140" height="37" rx="8" fill={isDark ? '#07111fe8' : '#fffffff0'} stroke={isDark ? '#29435d' : '#bfdbfe'} />
+                            <text y="63" textAnchor="middle" fill={isDark ? '#e2edf7' : '#0f2942'} fontSize="12" fontWeight="800">
+                                {site.name.length > 20 ? `${site.name.slice(0, 18)}…` : site.name}
+                            </text>
+                            <text y="77" textAnchor="middle" fill={statusColor} fontSize="9" fontWeight="800" letterSpacing="1.1">
+                                {typeof health === 'number' ? `${health}% HEALTH` : site.status.toUpperCase()}
+                            </text>
+                        </g>
+                    );
+                })}
+            </svg>
+
+            <div className={cn(
+                'pointer-events-none absolute bottom-3 right-3 grid grid-cols-3 gap-1 rounded-lg border p-1.5 shadow-xl backdrop-blur-xl',
+                isDark ? 'border-slate-700/80 bg-slate-950/65' : 'border-sky-200/80 bg-white/78'
+            )}>
+                {[
+                    ['Sites', `${healthySites}/${topology.sites.length}`],
+                    ['Paths', `${healthyLinks}/${topology.links.length}`],
+                    ['Critical', String(criticalCount)],
+                ].map(([label, value]) => (
+                    <div key={label} className="min-w-[62px] rounded-md px-2 py-1 text-center">
+                        <div className={cn('text-[9px] font-black uppercase tracking-[0.15em]', isDark ? 'text-slate-500' : 'text-slate-500')}>{label}</div>
+                        <div className={cn('text-sm font-black tabular-nums', label === 'Critical' && criticalCount > 0 ? 'text-red-400' : isDark ? 'text-sky-200' : 'text-sky-800')}>{value}</div>
+                    </div>
+                ))}
+            </div>
+
+            {topology.sites.length === 0 && (
+                <div className="absolute inset-0 flex items-center justify-center text-sm font-semibold text-slate-500">
+                    No topology sites configured.
+                </div>
+            )}
+        </div>
+    );
+};
+
 interface CustomerTopologyMapProps {
     topology?: CustomerTopology;
     isDark?: boolean;
@@ -4858,6 +5092,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     onSummaryMetricsChange,
 }) => {
     const [selected, setSelected] = useState<SelectedTarget | null>(null);
+    const [surfaceMode, setSurfaceMode] = useState<TopologySurfaceMode>('command');
     const [spotlightSite, setSpotlightSite] = useState<TopologySite | null>(null);
     const [paused, setPaused] = useState(false);
     const { topology: storedTopology, saveTopology, resetTopology } =
@@ -5894,6 +6129,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         // suppress the cycle while the editor is open.
         pauseUntilRef.current = 0;
         setSelected(null);
+        setSurfaceMode('geo');
         setDraftTopology(cloneTopology(storedTopology));
         setEditorPersistenceError(null);
         setIsEditorOpen(true);
@@ -5985,6 +6221,17 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 </div>
                 )}
 
+            {surfaceMode === 'command' ? (
+                <TopologyCommandView
+                    topology={resolvedTopology}
+                    selected={resolvedSelected}
+                    spotlightSiteId={spotlightSite?.id}
+                    animationLevel={visualAnimationLevel}
+                    isDark={isDark}
+                    onSelectSite={selectSite}
+                    onSelectLink={selectLink}
+                />
+            ) : (
             <MapContainer
                 center={resolvedTopology.map.center}
                 zoom={resolvedTopology.map.zoom}
@@ -6081,6 +6328,41 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     />
                 ))}
             </MapContainer>
+            )}
+
+            <div
+                className={cn(
+                    'absolute right-3 top-3 z-[1100] inline-flex rounded-lg border p-1 shadow-lg backdrop-blur-xl',
+                    isDark
+                        ? 'border-slate-700/80 bg-slate-950/70'
+                        : 'border-sky-200/80 bg-white/80'
+                )}
+                role="tablist"
+                aria-label="Connectivity presentation"
+            >
+                {([
+                    ['command', 'Command'],
+                    ['geo', 'Geo'],
+                ] as const).map(([mode, label]) => (
+                    <button
+                        key={mode}
+                        type="button"
+                        role="tab"
+                        aria-selected={surfaceMode === mode}
+                        onClick={() => setSurfaceMode(mode)}
+                        className={cn(
+                            'rounded-md px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-400',
+                            surfaceMode === mode
+                                ? 'bg-sky-500 text-white shadow-sm'
+                                : isDark
+                                ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                                : 'text-slate-500 hover:bg-sky-50 hover:text-sky-800'
+                        )}
+                    >
+                        {label}
+                    </button>
+                ))}
+            </div>
 
             <SelectionCard
                 selected={resolvedSelected}
@@ -6196,6 +6478,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     </button>
                 )}
 
+                {surfaceMode === 'geo' && (
                 <button
                     type="button"
                     onClick={cycleTilePreset}
@@ -6211,6 +6494,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                         {tilePreset.badge}
                     </span>
                 </button>
+                )}
 
                 <button
                     type="button"
