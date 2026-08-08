@@ -316,7 +316,7 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
             // uses, just with a tighter floor since this layout has
             // less per-section chrome to amortise.
             className={cn(
-                'bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 px-4 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_20px_-10px_rgba(0,0,0,0.45)] relative overflow-hidden group flex flex-col flex-shrink-0',
+                'scd-c3-panel bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 px-4 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_20px_-10px_rgba(0,0,0,0.45)] relative overflow-hidden group flex flex-col flex-shrink-0',
                 compactHeight ? 'min-h-[152px] py-2' : 'min-h-[180px] py-2.5',
                 className
             )}

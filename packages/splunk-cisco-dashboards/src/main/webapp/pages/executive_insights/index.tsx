@@ -4157,7 +4157,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       ref={exportRef}
       style={dashboardShellStyle}
       className={cn(
-        "scd-overview-page flex w-full min-w-0 max-w-full flex-col overflow-hidden font-sans",
+        "scd-overview-page scd-c3-surface flex w-full min-w-0 max-w-full flex-col overflow-hidden font-sans",
         compactDensity && "scd-overview-compact",
         "bg-slate-50 text-slate-900",
         "dark:bg-slate-950 dark:text-slate-100",
@@ -4165,7 +4165,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       )}
     >
       {/* Header */}
-      <header className="h-14 flex-shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 flex items-center justify-between shadow-sm">
+      <header className="scd-c3-toolbar h-14 flex-shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 flex items-center justify-between shadow-sm">
         {/*
          * The branding cluster (logo + title/subtitle + edit
          * pencil) is the hover-trigger group. The pencil sits
@@ -4509,7 +4509,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       {signalTickerConfig.showPriorityDrilldown ? (
         <div
           data-testid="priority-drilldown-row"
-          className="group flex-shrink-0 relative block border-b border-sky-200 dark:border-sky-800/60 bg-white hover:bg-sky-50/80 dark:bg-slate-900 dark:hover:bg-sky-950/30 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-inset"
+          className="scd-c3-toolbar group flex-shrink-0 relative block border-b border-sky-200 dark:border-sky-800/60 bg-white hover:bg-sky-50/80 dark:bg-slate-900 dark:hover:bg-sky-950/30 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-inset"
         >
           <div
             aria-hidden="true"
@@ -4990,7 +4990,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               data-map-position={mapPosition}
               style={verticalMapStyle}
             >
-              <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-col overflow-hidden">
+              <div className="scd-c3-panel flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-col overflow-hidden">
                 <div className="flex items-center justify-between mb-2 flex-shrink-0">
                   <div>
                     <h2 className="text-base font-bold text-sky-900 dark:text-sky-200 uppercase tracking-wide leading-none">
@@ -5130,7 +5130,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         </div>
       </main>
 
-      <footer className="flex-shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-1 text-center text-[8.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] leading-none">
+      <footer className="scd-c3-footer flex-shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-1 text-center text-[8.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] leading-none">
         Splunk Field Solutions · Insights Workspace
       </footer>
 

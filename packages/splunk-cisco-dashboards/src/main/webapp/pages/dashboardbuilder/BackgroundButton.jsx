@@ -11,6 +11,10 @@ import CardLayout from '@splunk/react-ui/CardLayout';
 import Card from '@splunk/react-ui/Card';
 import { cloneDeep, isEqual } from 'lodash-es';
 
+export const C3_DEFAULT_BACKGROUND_NAME = 'background://c3-atmosphere';
+export const C3_DEFAULT_BACKGROUND_DATA =
+    'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzExMWQyZiIvPjxzdG9wIG9mZnNldD0iLjMwIiBzdG9wLWNvbG9yPSIjMGIxMjFkIi8+PHN0b3Agb2Zmc2V0PSIuNjIiIHN0b3AtY29sb3I9IiMwODBkMTUiLz48c3RvcCBvZmZzZXQ9Ii44MiIgc3RvcC1jb2xvcj0iIzBjMGQxOCIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzE3MTAyNyIvPjwvbGluZWFyR3JhZGllbnQ+PHJhZGlhbEdyYWRpZW50IGlkPSJibHVlIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjcwIC03MCkgcm90YXRlKDMxKSBzY2FsZSgxMjUwIDY2MCkiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjMzQ3NWM0IiBzdG9wLW9wYWNpdHk9Ii40OCIvPjxzdG9wIG9mZnNldD0iLjQyIiBzdG9wLWNvbG9yPSIjMjE0YjgyIiBzdG9wLW9wYWNpdHk9Ii4yNCIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzEwMjEzYSIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDEwNTAgMTE1MCkgcm90YXRlKC04KSBzY2FsZSgxNDIwIDYwMCkiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNmUzMTlmIiBzdG9wLW9wYWNpdHk9Ii41MiIvPjxzdG9wIG9mZnNldD0iLjQyIiBzdG9wLWNvbG9yPSIjNDMyMDY0IiBzdG9wLW9wYWNpdHk9Ii4zMCIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzFmMTMzMyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9InNoZWVuIiB4MT0iMCIgeTE9IjAiIHgyPSIxOTIwIiB5Mj0iMTA4MCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiM2ZmI5ZmYiIHN0b3Atb3BhY2l0eT0iLjA2Ii8+PHN0b3Agb2Zmc2V0PSIuNDQiIHN0b3AtY29sb3I9IiM2ZmI5ZmYiIHN0b3Atb3BhY2l0eT0iMCIvPjxzdG9wIG9mZnNldD0iLjcyIiBzdG9wLWNvbG9yPSIjYjQ3YWZmIiBzdG9wLW9wYWNpdHk9Ii4wNDUiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNiNDdhZmYiIHN0b3Atb3BhY2l0eT0iMCIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIGZpbGw9InVybCgjYmFzZSkiLz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2JsdWUpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCNzaGVlbikiLz48L3N2Zz4=';
+
 export function ImageBase64Encoder({ setNewBG }) {
     const [base64, setBase64] = useState(undefined);
     const [dragActive, setDragActive] = useState(false);
@@ -88,7 +92,7 @@ const BackgroundButton = (props) => {
     const [newBG, setNewBG] = useState(undefined);
     const [displayError, setDisplayError] = useState(false);
     const [backgrounds, setBackgrounds] = useState([]);
-    const [selectedBG, setSelectedBG] = useState();
+    const [selectedBG, setSelectedBG] = useState(C3_DEFAULT_BACKGROUND_NAME);
 
     const refreshBackgrounds = () => {
         getBackgrounds().then((response) => {
@@ -129,10 +133,14 @@ const BackgroundButton = (props) => {
     const applyNewBG = () => {
         const { dashboardApi } = props;
         let def = cloneDeep(dashboardApi.getDefinition());
+        const selectedBackground = backgrounds.find((bg) => bg.name === selectedBG);
+        if (!selectedBackground) {
+            return;
+        }
         const bgConf = {
             backgroundImage: {
                 sizeType: 'cover',
-                src: backgrounds.find((bg) => bg.name == selectedBG)?.content.data,
+                src: selectedBackground.content.data,
                 x: 0,
                 y: 0,
             },
@@ -175,12 +183,22 @@ const BackgroundButton = (props) => {
                     >
                         {backgrounds
                             .filter((bg) => bg.name.includes('background://'))
+                            .sort(
+                                (left, right) =>
+                                    Number(right.name === C3_DEFAULT_BACKGROUND_NAME) -
+                                    Number(left.name === C3_DEFAULT_BACKGROUND_NAME),
+                            )
                             .map((bg) => (
                                 <Card
                                     key={bg.name}
                                     style={{
                                         cursor: 'pointer',
+                                        outline:
+                                            selectedBG === bg.name ? '2px solid #0ea5e9' : undefined,
+                                        outlineOffset: selectedBG === bg.name ? 2 : undefined,
                                     }}
+                                    aria-label={`Select ${bg.content.name}`}
+                                    aria-pressed={selectedBG === bg.name}
                                     onClick={() => {
                                         setSelectedBG(bg.name);
                                     }}
@@ -188,6 +206,7 @@ const BackgroundButton = (props) => {
                                     <Card.Body style={{ padding: 5 }}>
                                         <img
                                             title={bg.content.name}
+                                            alt={`${bg.content.name} dashboard background`}
                                             src={bg.content.data}
                                             style={{ display: 'block', width: 240 }}
                                         ></img>
@@ -220,7 +239,7 @@ const BackgroundButton = (props) => {
                                     applyNewBG();
                                 }}
                                 appearance="primary"
-                                disabled={selectedBG == undefined}
+                                disabled={!backgrounds.some((bg) => bg.name === selectedBG)}
                             ></Button>
                             <Button
                                 label="Cancel"
@@ -277,6 +296,7 @@ const BackgroundButton = (props) => {
                 <Button
                     style={{ maxWidth: 32 }}
                     appearance="subtle"
+                    aria-label="Choose dashboard background or theme"
                     icon={
                         <Palette
                             width={20}

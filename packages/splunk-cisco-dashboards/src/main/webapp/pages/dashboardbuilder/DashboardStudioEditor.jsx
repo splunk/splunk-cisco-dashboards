@@ -87,7 +87,7 @@ import { unstable_splunk1cdThemeCustomizer } from '@splunk/themes';
 import useSplunkTheme from '@splunk/themes/useSplunkTheme';
 import { isVersionLower, getServerInfo } from '../../common/lib/splunk';
 import Paintbrush from '@splunk/react-icons/Paintbrush';
-import BackgroundButton from './BackgroundButton';
+import BackgroundButton, { C3_DEFAULT_BACKGROUND_DATA } from './BackgroundButton';
 import SpaceManagerButton from './SpaceManager/SpaceManagerButton';
 import useDashboardStore from '../../common/state/dashboardStore';
 import createSEIIconRegistry from '../../common/udf/IconProviders/createSEIIconRegistry';
@@ -265,6 +265,13 @@ export const initialDefinition = {
             width: 2000,
             height: 960,
             display: 'auto',
+            backgroundColor: '#080d15',
+            backgroundImage: {
+                sizeType: 'cover',
+                src: C3_DEFAULT_BACKGROUND_DATA,
+                x: 0,
+                y: 0,
+            },
         },
         structure: [],
         globalInputs: ['input_global_trp'],
@@ -1917,39 +1924,41 @@ const DashboardStudioEditor = ({
             jsonDefinition.title = dashboardTitle;
             jsonDefinition.layout.type = gridLayout;
 
-            addDash(dashid, JSON.stringify(jsonDefinition), dashboardTitle).then((response) => {
-                if (response.status >= 200 && response.status <= 299) {
-                    console.log(response);
-                    syncDashboardManagerNavigation([
-                        ...dashboards,
-                        {
-                            title: dashid,
-                            label: dashboardTitle,
-                            definition: {
-                                title: dashboardTitle,
+            addDash(dashid, JSON.stringify(jsonDefinition), dashboardTitle, '', '', 'dark').then(
+                (response) => {
+                    if (response.status >= 200 && response.status <= 299) {
+                        console.log(response);
+                        syncDashboardManagerNavigation([
+                            ...dashboards,
+                            {
+                                title: dashid,
+                                label: dashboardTitle,
+                                definition: {
+                                    title: dashboardTitle,
+                                },
                             },
-                        },
-                    ]).catch((error) => {
-                        console.warn('Unable to sync Dashboard Manager navigation.', error);
-                    });
-                    setOpenDashboardModal(false);
-                    setTimeout(() => {
-                        //navigate(`/${dashid}/edit`, { replace: true });
-                        window.open(
-                            `/app/splunk-cisco-dashboards/dashboardbuilder#/${dashid}/edit`,
-                            '_self',
-                        );
-                    }, 500);
-                } else {
-                    console.log(response);
-                    makeCreateToast(Toaster)({
-                        message: `An error occurred while creating the new dashboard. ${getSplunkResponseErrorMessage(
-                            response,
-                        )}`,
-                        type: TOAST_TYPES.ERROR,
-                    });
-                }
-            });
+                        ]).catch((error) => {
+                            console.warn('Unable to sync Dashboard Manager navigation.', error);
+                        });
+                        setOpenDashboardModal(false);
+                        setTimeout(() => {
+                            //navigate(`/${dashid}/edit`, { replace: true });
+                            window.open(
+                                `/app/splunk-cisco-dashboards/dashboardbuilder#/${dashid}/edit`,
+                                '_self',
+                            );
+                        }, 500);
+                    } else {
+                        console.log(response);
+                        makeCreateToast(Toaster)({
+                            message: `An error occurred while creating the new dashboard. ${getSplunkResponseErrorMessage(
+                                response,
+                            )}`,
+                            type: TOAST_TYPES.ERROR,
+                        });
+                    }
+                },
+            );
         } else {
             // open existing dashboard
             setOpenDashboardModal(false);

@@ -212,6 +212,26 @@ assert.match(
   "Dark command-bar SUI selectors must keep their labels and carets visible in either Splunk theme",
 );
 assert.match(
+  profile,
+  /scd-overview-page scd-c3-surface/,
+  "The overview must opt into the C3-inspired content surface",
+);
+assert.match(
+  dashboardSection,
+  /scd-c3-panel bg-white dark:bg-slate-900/,
+  "Dashboard sections must use the shared C3 panel treatment",
+);
+assert.match(
+  tailwindStyles,
+  /\.scd-overview-page\.scd-c3-surface\.dark[\s\S]*?radial-gradient\([\s\S]*?linear-gradient\(/,
+  "The dark workspace must use a layered atmospheric background instead of a flat fill",
+);
+assert.match(
+  tailwindStyles,
+  /\.scd-c3-surface\.dark \.scd-c3-panel[\s\S]*?backdrop-filter: blur\(12px\)/,
+  "C3 panels must remain readable, mostly opaque surfaces above the atmospheric canvas",
+);
+assert.match(
   tailwindStyles,
   /\.scd-toolbar-select\[data-test='select'\] \{[\s\S]*?border-color: transparent !important;[\s\S]*?background: transparent !important;[\s\S]*?box-shadow: none !important;/,
   "Command-bar selectors must remain borderless on the dark dashboard header",

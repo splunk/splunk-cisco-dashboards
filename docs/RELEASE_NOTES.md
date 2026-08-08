@@ -2,6 +2,16 @@
 
 ## 1.0.36
 
+- Insights Workspace dark profiles now use a Cisco Cloud Control-inspired
+  atmospheric canvas with layered navy, near-black, and violet depth instead
+  of a flat page fill. Mostly opaque charcoal toolbars, Signal Rail chrome,
+  metric sections, topology panels, and footer surfaces preserve dense-data
+  contrast while softer borders and sentence-case structural headings bring
+  the content surface closer to the shared Cisco visual language.
+- Dashboard Manager now lists the matching Cisco Cloud Control Atmosphere
+  artwork first in its background selector and uses it for newly created
+  dashboards. All 16 factory Secure Networking Dashboard Studio stories ship
+  with the same cover-scaled background and near-black fallback canvas.
 - The Insights Workspace theme toggle now inherits the same explicit
   high-contrast light, dark, and hover colors as adjacent toolbar controls, so
   its sun, moon, and automatic-theme icons remain visible in every mode.

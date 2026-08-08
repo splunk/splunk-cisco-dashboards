@@ -39,9 +39,21 @@ const APPLICATION_CSS_PATH = path.resolve(
   __dirname,
   "../src/main/resources/splunk/appserver/static/application.css",
 );
+const TEMPLATES_CONF_PATH = path.resolve(
+  __dirname,
+  "../src/main/resources/splunk/default/templates.conf",
+);
+const BACKGROUND_BUTTON_PATH = path.resolve(
+  __dirname,
+  "../src/main/webapp/pages/dashboardbuilder/BackgroundButton.jsx",
+);
+const DASHBOARD_EDITOR_PATH = path.resolve(
+  __dirname,
+  "../src/main/webapp/pages/dashboardbuilder/DashboardStudioEditor.jsx",
+);
 
 const HOME_DARK_PALETTE = {
-  canvas: "#020617", // slate-950
+  canvas: "#080d15", // C3 atmospheric foundation
   panel: "#0f172a", // slate-900
   secondary: "#1e293b", // slate-800
   text: "#f1f5f9", // slate-100
@@ -99,6 +111,33 @@ const readDashboard = (fileName) => {
   return { fileName, xml, definition: JSON.parse(definitionMatch[1]) };
 };
 
+const templatesSource = fs.readFileSync(TEMPLATES_CONF_PATH, "utf8");
+const c3BackgroundMatch = templatesSource.match(
+  /\[background:\/\/c3-atmosphere\]\ndata = ([^\n]+)\nname = Cisco Cloud Control Atmosphere/,
+);
+assert.ok(c3BackgroundMatch, "templates.conf must provide the factory C3 atmosphere background");
+const c3BackgroundData = c3BackgroundMatch[1];
+assert.match(c3BackgroundData, /^data:image\/svg\+xml;base64,/);
+
+const backgroundButtonSource = fs.readFileSync(BACKGROUND_BUTTON_PATH, "utf8");
+assert.match(
+  backgroundButtonSource,
+  /useState\(C3_DEFAULT_BACKGROUND_NAME\)/,
+  "Dashboard Manager must select the C3 atmosphere background by default",
+);
+assert.match(
+  backgroundButtonSource,
+  /aria-label="Choose dashboard background or theme"/,
+  "Dashboard Manager must expose an accessible name for the background selector",
+);
+
+const dashboardEditorSource = fs.readFileSync(DASHBOARD_EDITOR_PATH, "utf8");
+assert.match(
+  dashboardEditorSource,
+  /src: C3_DEFAULT_BACKGROUND_DATA/,
+  "new Dashboard Manager dashboards must use the C3 atmosphere background",
+);
+
 const actualStudioFiles = fs
   .readdirSync(VIEWS_DIR)
   .filter((fileName) => fileName.startsWith("secure_networking_") && fileName.endsWith(".xml"))
@@ -142,6 +181,11 @@ for (const { fileName, xml, definition } of dashboardViews) {
     layout.options.backgroundColor,
     HOME_DARK_PALETTE.canvas,
     `${fileName} must use the Insights Workspace canvas color`,
+  );
+  assert.deepEqual(
+    layout.options.backgroundImage,
+    { sizeType: "cover", src: c3BackgroundData, x: 0, y: 0 },
+    `${fileName} must use the factory C3 atmosphere background`,
   );
   assert.equal(
     header?.fillColor,

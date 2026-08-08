@@ -413,6 +413,8 @@ export default function DBHomePage() {
       JSON.stringify(jsonDefinition),
       dashboardTitle,
       dashboardDescription,
+      "",
+      "dark",
     ).then((response) => {
       if (response.status >= 200 && response.status <= 299) {
         console.log(response);

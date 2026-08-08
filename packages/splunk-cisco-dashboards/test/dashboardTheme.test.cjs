@@ -91,6 +91,16 @@ assert.match(
   "Metadata saves must preserve the saved dashboard theme",
 );
 assert.match(
+  manager,
+  /dashboardDescription,\s*["']{2},\s*["']dark["']/,
+  "new Dashboard Manager dashboards must pair the factory C3 background with the dark theme",
+);
+assert.match(
+  editor,
+  /addDash\(dashid, JSON\.stringify\(jsonDefinition\), dashboardTitle, ["']{2}, ["']{2}, ["']dark["']\)/,
+  "the Dashboard Manager editor fallback must create new dashboards with the dark theme",
+);
+assert.match(
   splunk,
   /theme="\$\{dashboardTheme\}"/,
   "Dashboard XML writes must use the requested normalized theme",
