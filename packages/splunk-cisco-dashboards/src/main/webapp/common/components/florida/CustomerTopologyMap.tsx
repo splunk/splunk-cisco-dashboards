@@ -43,6 +43,7 @@ import {
     Link2,
     Loader2,
     MapPin,
+    Maximize2,
     MousePointer2,
     Pencil,
     Plus,
@@ -55,6 +56,8 @@ import {
     Terminal,
     Upload,
     X,
+    ZoomIn,
+    ZoomOut,
 } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 import {
@@ -4853,6 +4856,31 @@ interface CommandPoint {
     y: number;
 }
 
+interface CommandViewport extends CommandPoint {
+    scale: number;
+}
+
+const COMMAND_VIEWBOX_WIDTH = 1000;
+const COMMAND_VIEWBOX_HEIGHT = 620;
+const COMMAND_MIN_SCALE = 1;
+const COMMAND_MAX_SCALE = 4;
+const COMMAND_ZOOM_STEP = 1.32;
+const COMMAND_PAN_STEP = 54;
+const COMMAND_FIT_VIEWPORT: CommandViewport = Object.freeze({
+    x: 0,
+    y: 0,
+    scale: COMMAND_MIN_SCALE,
+});
+
+const clampCommandViewport = ({ x, y, scale }: CommandViewport): CommandViewport => {
+    const boundedScale = Math.min(COMMAND_MAX_SCALE, Math.max(COMMAND_MIN_SCALE, scale));
+    return {
+        scale: boundedScale,
+        x: Math.min(0, Math.max(COMMAND_VIEWBOX_WIDTH * (1 - boundedScale), x)),
+        y: Math.min(0, Math.max(COMMAND_VIEWBOX_HEIGHT * (1 - boundedScale), y)),
+    };
+};
+
 interface TopologyCommandViewProps {
     topology: CustomerTopology;
     selected: SelectedTarget | null;
@@ -4878,6 +4906,228 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
     onSelectSite,
     onSelectLink,
 }) => {
+    const svgRef = useRef<SVGSVGElement | null>(null);
+    const viewportGroupRef = useRef<SVGGElement | null>(null);
+    const viewportRef = useRef<CommandViewport>(COMMAND_FIT_VIEWPORT);
+    const pendingViewportRef = useRef<CommandViewport>(COMMAND_FIT_VIEWPORT);
+    const viewportFrameRef = useRef<number | null>(null);
+    const zoomLabelRef = useRef<HTMLSpanElement | null>(null);
+    const zoomInButtonRef = useRef<HTMLButtonElement | null>(null);
+    const zoomOutButtonRef = useRef<HTMLButtonElement | null>(null);
+    const panRef = useRef<{
+        pointerId: number;
+        point: CommandPoint;
+    } | null>(null);
+
+    const scheduleViewport = useCallback((candidate: CommandViewport) => {
+        const bounded = clampCommandViewport(candidate);
+        viewportRef.current = bounded;
+        pendingViewportRef.current = bounded;
+
+        if (viewportFrameRef.current !== null) {
+            return;
+        }
+        viewportFrameRef.current = window.requestAnimationFrame(() => {
+            viewportFrameRef.current = null;
+            const next = pendingViewportRef.current;
+            viewportGroupRef.current?.setAttribute(
+                'transform',
+                `translate(${next.x} ${next.y}) scale(${next.scale})`
+            );
+            if (zoomLabelRef.current) {
+                zoomLabelRef.current.textContent = `${Math.round(next.scale * 100)}%`;
+            }
+            if (zoomInButtonRef.current) {
+                zoomInButtonRef.current.disabled = next.scale >= COMMAND_MAX_SCALE - 0.001;
+            }
+            if (zoomOutButtonRef.current) {
+                zoomOutButtonRef.current.disabled = next.scale <= COMMAND_MIN_SCALE + 0.001;
+            }
+            if (svgRef.current) {
+                let cursor = 'zoom-in';
+                if (panRef.current !== null) {
+                    cursor = 'grabbing';
+                } else if (next.scale > COMMAND_MIN_SCALE + 0.001) {
+                    cursor = 'grab';
+                }
+                svgRef.current.style.cursor = cursor;
+            }
+        });
+    }, []);
+
+    const commandPointFromClient = useCallback((clientX: number, clientY: number) => {
+        const { current: svg } = svgRef;
+        if (!svg) {
+            return { x: COMMAND_VIEWBOX_WIDTH / 2, y: COMMAND_VIEWBOX_HEIGHT / 2 };
+        }
+
+        const matrix = svg.getScreenCTM();
+        if (matrix) {
+            const point = svg.createSVGPoint();
+            point.x = clientX;
+            point.y = clientY;
+            const local = point.matrixTransform(matrix.inverse());
+            return { x: local.x, y: local.y };
+        }
+
+        const bounds = svg.getBoundingClientRect();
+        return {
+            x: ((clientX - bounds.left) / Math.max(1, bounds.width)) * COMMAND_VIEWBOX_WIDTH,
+            y: ((clientY - bounds.top) / Math.max(1, bounds.height)) * COMMAND_VIEWBOX_HEIGHT,
+        };
+    }, []);
+
+    const zoomAtPoint = useCallback(
+        (factor: number, anchor: CommandPoint) => {
+            const { current } = viewportRef;
+            const nextScale = Math.min(
+                COMMAND_MAX_SCALE,
+                Math.max(COMMAND_MIN_SCALE, current.scale * factor)
+            );
+            if (Math.abs(nextScale - current.scale) < 0.001) {
+                return;
+            }
+            scheduleViewport({
+                scale: nextScale,
+                x: anchor.x - ((anchor.x - current.x) / current.scale) * nextScale,
+                y: anchor.y - ((anchor.y - current.y) / current.scale) * nextScale,
+            });
+        },
+        [scheduleViewport]
+    );
+
+    const zoomAtCenter = useCallback(
+        (factor: number) =>
+            zoomAtPoint(factor, {
+                x: COMMAND_VIEWBOX_WIDTH / 2,
+                y: COMMAND_VIEWBOX_HEIGHT / 2,
+            }),
+        [zoomAtPoint]
+    );
+
+    useEffect(() => {
+        const { current: svg } = svgRef;
+        if (!svg) {
+            return undefined;
+        }
+
+        const handleWheel = (event: WheelEvent) => {
+            event.preventDefault();
+            const factor = Math.min(1.22, Math.max(0.82, Math.exp(-event.deltaY * 0.0016)));
+            zoomAtPoint(factor, commandPointFromClient(event.clientX, event.clientY));
+        };
+        svg.addEventListener('wheel', handleWheel, { passive: false });
+        return () => svg.removeEventListener('wheel', handleWheel);
+    }, [commandPointFromClient, zoomAtPoint]);
+
+    useEffect(() => {
+        scheduleViewport(COMMAND_FIT_VIEWPORT);
+        return () => {
+            if (viewportFrameRef.current !== null) {
+                window.cancelAnimationFrame(viewportFrameRef.current);
+                viewportFrameRef.current = null;
+            }
+        };
+    }, [scheduleViewport]);
+
+    const beginPan = useCallback(
+        (event: React.PointerEvent<SVGSVGElement>) => {
+            if (
+                event.button !== 0 ||
+                viewportRef.current.scale <= COMMAND_MIN_SCALE + 0.001 ||
+                (event.target as Element).closest('[data-command-interactive="true"]')
+            ) {
+                return;
+            }
+            event.preventDefault();
+            event.currentTarget.focus({ preventScroll: true });
+            event.currentTarget.setPointerCapture(event.pointerId);
+            panRef.current = {
+                pointerId: event.pointerId,
+                point: commandPointFromClient(event.clientX, event.clientY),
+            };
+            const svg = event.currentTarget;
+            svg.style.cursor = 'grabbing';
+        },
+        [commandPointFromClient]
+    );
+
+    const continuePan = useCallback(
+        (event: React.PointerEvent<SVGSVGElement>) => {
+            const pan = panRef.current;
+            if (!pan || pan.pointerId !== event.pointerId) {
+                return;
+            }
+            event.preventDefault();
+            const point = commandPointFromClient(event.clientX, event.clientY);
+            const { current } = viewportRef;
+            scheduleViewport({
+                ...current,
+                x: current.x + point.x - pan.point.x,
+                y: current.y + point.y - pan.point.y,
+            });
+            panRef.current = { ...pan, point };
+        },
+        [commandPointFromClient, scheduleViewport]
+    );
+
+    const endPan = useCallback((event: React.PointerEvent<SVGSVGElement>) => {
+        if (panRef.current?.pointerId !== event.pointerId) {
+            return;
+        }
+        panRef.current = null;
+        const svg = event.currentTarget;
+        if (svg.hasPointerCapture(event.pointerId)) {
+            svg.releasePointerCapture(event.pointerId);
+        }
+        svg.style.cursor =
+            viewportRef.current.scale > COMMAND_MIN_SCALE + 0.001 ? 'grab' : 'zoom-in';
+    }, []);
+
+    const handleCommandKeyDown = useCallback(
+        (event: React.KeyboardEvent<SVGSVGElement>) => {
+            if (event.target !== event.currentTarget) {
+                return;
+            }
+            const { current } = viewportRef;
+            switch (event.key) {
+                case '+':
+                case '=':
+                    event.preventDefault();
+                    zoomAtCenter(COMMAND_ZOOM_STEP);
+                    break;
+                case '-':
+                case '_':
+                    event.preventDefault();
+                    zoomAtCenter(1 / COMMAND_ZOOM_STEP);
+                    break;
+                case '0':
+                    event.preventDefault();
+                    scheduleViewport(COMMAND_FIT_VIEWPORT);
+                    break;
+                case 'ArrowLeft':
+                    event.preventDefault();
+                    scheduleViewport({ ...current, x: current.x + COMMAND_PAN_STEP });
+                    break;
+                case 'ArrowRight':
+                    event.preventDefault();
+                    scheduleViewport({ ...current, x: current.x - COMMAND_PAN_STEP });
+                    break;
+                case 'ArrowUp':
+                    event.preventDefault();
+                    scheduleViewport({ ...current, y: current.y + COMMAND_PAN_STEP });
+                    break;
+                case 'ArrowDown':
+                    event.preventDefault();
+                    scheduleViewport({ ...current, y: current.y - COMMAND_PAN_STEP });
+                    break;
+                default:
+                    break;
+            }
+        },
+        [scheduleViewport, zoomAtCenter]
+    );
+
     const points = useMemo(() => {
         const degree = new Map(topology.sites.map((site) => [site.id, 0]));
         for (const link of topology.links) {
@@ -4931,12 +5181,27 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
                 .scd-command-pulse { transform-box: fill-box; transform-origin: center; animation: scd-command-pulse 2.4s ease-in-out infinite; }
             `}</style>
             <svg
+                ref={svgRef}
                 viewBox="0 0 1000 620"
                 preserveAspectRatio="xMidYMid meet"
-                className="h-full w-full"
+                className="h-full w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-400"
                 role="group"
-                aria-label="Interactive site and path topology"
+                tabIndex={0}
+                aria-label="Interactive site and path topology. Scroll or use plus and minus to zoom, drag to pan, and press zero to fit."
+                style={{ touchAction: 'none', cursor: 'zoom-in' }}
+                onPointerDown={beginPan}
+                onPointerMove={continuePan}
+                onPointerUp={endPan}
+                onPointerCancel={endPan}
+                onDoubleClick={(event) =>
+                    zoomAtPoint(
+                        COMMAND_ZOOM_STEP,
+                        commandPointFromClient(event.clientX, event.clientY)
+                    )
+                }
+                onKeyDown={handleCommandKeyDown}
             >
+                <title>Scroll to zoom, drag to pan, or use the map controls.</title>
                 <defs>
                     <pattern id="scd-command-grid" width="32" height="32" patternUnits="userSpaceOnUse">
                         <path
@@ -4952,6 +5217,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
                         <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
                     </filter>
                 </defs>
+                <g ref={viewportGroupRef}>
                 <rect width="1000" height="620" fill="url(#scd-command-grid)" />
                 <circle cx="500" cy="310" r="116" fill="none" stroke={isDark ? '#38bdf8' : '#0284c7'} strokeOpacity="0.12" />
                 <circle cx="500" cy="310" r="214" fill="none" stroke={isDark ? '#38bdf8' : '#0284c7'} strokeOpacity="0.08" strokeDasharray="4 10" />
@@ -4993,6 +5259,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
                                 className="cursor-pointer focus:outline-none"
                                 role="button"
                                 tabIndex={0}
+                                data-command-interactive="true"
                                 aria-label={`${link.name}, ${link.status} path`}
                                 onClick={() => onSelectLink(link)}
                                 onKeyDown={(event) => {
@@ -5021,6 +5288,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
                             role="button"
                             tabIndex={0}
                             aria-label={`${site.name}, ${topologyRoleLabel(site.role)}, ${site.status}`}
+                            data-command-interactive="true"
                             className="cursor-pointer focus:outline-none"
                             onClick={() => onSelectSite(site)}
                             onKeyDown={(event) => {
@@ -5053,7 +5321,59 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
                         </g>
                     );
                 })}
+                </g>
             </svg>
+
+            <div
+                className={cn(
+                    'absolute right-3 top-14 z-[1050] inline-flex items-center rounded-lg border p-1 shadow-xl backdrop-blur-xl',
+                    isDark
+                        ? 'border-slate-700/80 bg-slate-950/72 text-slate-200'
+                        : 'border-sky-200/80 bg-white/82 text-slate-700'
+                )}
+                role="group"
+                aria-label="Command topology zoom controls"
+            >
+                <button
+                    ref={zoomOutButtonRef}
+                    type="button"
+                    onClick={() => zoomAtCenter(1 / COMMAND_ZOOM_STEP)}
+                    title="Zoom out"
+                    aria-label="Zoom out command topology"
+                    className="rounded-md p-1.5 transition-colors hover:bg-sky-500/15 focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                    <ZoomOut className="h-4 w-4" />
+                </button>
+                <span
+                    ref={zoomLabelRef}
+                    className="min-w-[48px] px-1 text-center text-[10px] font-black tabular-nums tracking-wide"
+                    aria-live="polite"
+                >
+                    100%
+                </span>
+                <button
+                    ref={zoomInButtonRef}
+                    type="button"
+                    onClick={() => zoomAtCenter(COMMAND_ZOOM_STEP)}
+                    title="Zoom in"
+                    aria-label="Zoom in command topology"
+                    className="rounded-md p-1.5 transition-colors hover:bg-sky-500/15 focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                    <ZoomIn className="h-4 w-4" />
+                </button>
+                <span
+                    className={cn('mx-1 h-5 w-px', isDark ? 'bg-slate-700' : 'bg-sky-200')}
+                />
+                <button
+                    type="button"
+                    onClick={() => scheduleViewport(COMMAND_FIT_VIEWPORT)}
+                    title="Fit topology"
+                    aria-label="Fit command topology to view"
+                    className="rounded-md p-1.5 transition-colors hover:bg-sky-500/15 focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-400"
+                >
+                    <Maximize2 className="h-4 w-4" />
+                </button>
+            </div>
 
             <div className={cn(
                 'pointer-events-none absolute bottom-3 right-3 grid grid-cols-3 gap-1 rounded-lg border p-1.5 shadow-xl backdrop-blur-xl',

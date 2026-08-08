@@ -32,8 +32,33 @@ for (const expectedClass of [
 
 assert.match(
   shell,
-  /bg-slate-950\/\[0\.16\][\s\S]*backdrop-blur-\[2px\]/,
+  /DEFAULT_BACKDROP_OPACITY = 16;[\s\S]*backdrop-blur-\[2px\][\s\S]*backgroundColor: `rgba\(2, 6, 23, \$\{backdropOpacity \/ 100\}\)`/,
   "Shared modal shell must keep the workspace clearly recognizable behind the dialog",
+);
+assert.match(
+  shell,
+  /aria-label="Backdrop opacity"[\s\S]*aria-valuetext=\{`\$\{backdropOpacity\}% opaque`\}/,
+  "Shared modal shell must expose an accessible backdrop-opacity control",
+);
+assert.match(
+  shell,
+  /min=\{MIN_BACKDROP_OPACITY\}[\s\S]*max=\{MAX_BACKDROP_OPACITY\}[\s\S]*step=\{1\}/,
+  "Backdrop opacity must support the full zero-to-100 percent range",
+);
+assert.match(
+  shell,
+  /onInput=\{updateBackdropOpacity\}/,
+  "Backdrop opacity must update continuously while the range is dragged",
+);
+assert.match(
+  shell,
+  /localStorage\.getItem\(BACKDROP_OPACITY_STORAGE_KEY\)[\s\S]*localStorage\.setItem\(BACKDROP_OPACITY_STORAGE_KEY, String\(value\)\)/,
+  "Backdrop opacity must persist across workspace dialogs",
+);
+assert.match(
+  shell,
+  /data-workspace-modal-backdrop="true"[\s\S]*data-backdrop-opacity=\{backdropOpacity\}/,
+  "The live backdrop must expose its configured opacity for verification",
 );
 assert.match(
   shell,

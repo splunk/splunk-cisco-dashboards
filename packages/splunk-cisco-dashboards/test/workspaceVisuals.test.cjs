@@ -135,6 +135,36 @@ assert.match(
 );
 assert.match(
   topologyMap,
+  /const COMMAND_MIN_SCALE = 1;[\s\S]*?const COMMAND_MAX_SCALE = 4;/,
+  "Command topology zoom must stay bounded between fit and four times magnification",
+);
+assert.match(
+  topologyMap,
+  /requestAnimationFrame[\s\S]*?viewportGroupRef\.current\?\.setAttribute\([\s\S]*?'transform'/,
+  "Command topology navigation must animate one SVG viewport transform instead of rerendering every node",
+);
+assert.match(
+  topologyMap,
+  /addEventListener\('wheel', handleWheel, \{ passive: false \}\)/,
+  "Command topology must support cursor-anchored wheel and trackpad zoom",
+);
+assert.match(
+  topologyMap,
+  /onPointerDown=\{beginPan\}[\s\S]*?onPointerMove=\{continuePan\}[\s\S]*?onPointerUp=\{endPan\}/,
+  "Command topology must support pointer panning",
+);
+assert.match(
+  topologyMap,
+  /aria-label="Zoom out command topology"[\s\S]*?aria-live="polite"[\s\S]*?aria-label="Zoom in command topology"[\s\S]*?aria-label="Fit command topology to view"/,
+  "Command topology must expose accessible zoom, percentage, and fit controls",
+);
+assert.match(
+  topologyMap,
+  /case '0':[\s\S]*?scheduleViewport\(COMMAND_FIT_VIEWPORT\)/,
+  "Command topology keyboard navigation must include a fit shortcut",
+);
+assert.match(
+  topologyMap,
   /\['geo', 'Geo'\]/,
   "The geographic topology must remain available as an explicit presentation",
 );
@@ -243,18 +273,38 @@ assert.match(
 );
 assert.match(
   signalRail,
-  /relative z-\[90\] flex shrink-0 items-center gap-1[\s\S]*?lg:opacity-0[\s\S]*?lg:group-hover\/signal-rail:opacity-100[\s\S]*?lg:group-focus-within\/signal-rail:opacity-100/,
-  "Signal Rail controls must reveal on desktop hover or keyboard focus",
+  /#scan-root \.scd-signal-rail-ticker:hover \.scd-signal-rail-controls,[\s\S]*?#scan-root \.scd-signal-rail-ticker:focus-within \.scd-signal-rail-controls,[\s\S]*?opacity: 1 !important;[\s\S]*?pointer-events: auto;/,
+  "Signal Rail controls must reveal only on rail hover or keyboard focus",
 );
 assert.match(
   signalRail,
-  /relative z-\[90\] flex shrink-0 items-center gap-1/,
-  "Signal Rail controls must reserve layout space instead of covering KPI content",
+  /scd-signal-rail-controls absolute right-2 top-1\/2 z-\[90\]/,
+  "Signal Rail controls must float outside the marquee's flex layout",
 );
 assert.doesNotMatch(
   signalRail,
-  /absolute right-1\.5 top-1\/2 z-\[90\]/,
-  "Signal Rail controls must not be absolutely positioned over the marquee",
+  /relative z-\[90\] flex shrink-0 items-center/,
+  "Hidden Signal Rail controls must not reserve space or cover signal tiles",
+);
+assert.match(
+  signalRail,
+  /#scan-root \.scd-signal-rail-controls\[data-open='true'\][\s\S]*?opacity: 1 !important;[\s\S]*?pointer-events: auto;/,
+  "Signal Rail controls must remain available while the style picker is open",
+);
+assert.match(
+  signalRail,
+  /data-open=\{pickerOpen\}/,
+  "Signal Rail controls must expose the style picker's open state to the scoped CSS",
+);
+assert.match(
+  signalRail,
+  /border border-transparent bg-transparent shadow-none/,
+  "Signal Rail control buttons must use transparent chrome over signal tiles",
+);
+assert.match(
+  signalRail,
+  /data-signal-rail-controls="true"/,
+  "Signal Rail controls must expose a stable live-verification hook",
 );
 assert.match(
   signalRail,

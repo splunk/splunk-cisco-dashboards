@@ -97,6 +97,18 @@ const signalRailTickerCss = `
 .scd-signal-rail-marquee-track[data-paused='true'] {
     animation-play-state: paused;
 }
+#scan-root .scd-signal-rail-controls {
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(0.25rem, -50%);
+}
+#scan-root .scd-signal-rail-ticker:hover .scd-signal-rail-controls,
+#scan-root .scd-signal-rail-ticker:focus-within .scd-signal-rail-controls,
+#scan-root .scd-signal-rail-controls[data-open='true'] {
+    opacity: 1 !important;
+    pointer-events: auto;
+    transform: translate(0, -50%) !important;
+}
 .scd-signal-rail-cisco {
     background: linear-gradient(135deg, #0d2b5e 0%, #1749a0 52%, #0d4f8a 100%);
 }
@@ -672,6 +684,18 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
         return map;
     }, [kpis]);
 
+    const controlButtonClassName = cn(
+        'flex items-center justify-center rounded-md border border-transparent bg-transparent shadow-none transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
+        density === 'compact' ? 'h-8 w-8' : 'h-9 w-9',
+        variant === 'bloomberg'
+            ? 'text-blue-300 hover:bg-blue-400/15 hover:text-white'
+            : variant === 'telemetry-constellation'
+            ? 'text-cyan-200 hover:bg-cyan-300/15 hover:text-white'
+            : variant === 'cisco-blue-gradient'
+            ? 'text-white/85 hover:bg-white/15 hover:text-white'
+            : 'text-slate-500 hover:bg-sky-500/10 hover:text-sky-700 dark:text-slate-300 dark:hover:bg-sky-300/10 dark:hover:text-sky-200'
+    );
+
     const renderPass = (row: SignalRailKpi[], pass: number) => (
         <div
             key={`pass-${pass}`}
@@ -759,8 +783,17 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
 
                 <div
                     className={cn(
-                        'relative z-[90] flex shrink-0 items-center gap-1 transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none lg:pointer-events-none lg:translate-x-1 lg:opacity-0 lg:group-hover/signal-rail:pointer-events-auto lg:group-hover/signal-rail:translate-x-0 lg:group-hover/signal-rail:opacity-100 lg:group-focus-within/signal-rail:pointer-events-auto lg:group-focus-within/signal-rail:translate-x-0 lg:group-focus-within/signal-rail:opacity-100'
+                        'scd-signal-rail-controls absolute right-2 top-1/2 z-[90] flex items-center gap-0.5 rounded-xl border p-1 shadow-lg transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none',
+                        variant === 'bloomberg'
+                            ? 'border-blue-300/15 bg-[#070b14]/35'
+                            : variant === 'telemetry-constellation'
+                            ? 'border-cyan-300/20 bg-slate-950/30 shadow-[0_0_18px_rgba(34,211,238,0.1)]'
+                            : variant === 'cisco-blue-gradient'
+                            ? 'border-white/15 bg-slate-950/20'
+                            : 'border-slate-300/30 bg-white/35 dark:border-slate-600/30 dark:bg-slate-950/30'
                     )}
+                    data-signal-rail-controls="true"
+                    data-open={pickerOpen}
                     ref={pickerRef}
                 >
                     <button
@@ -769,17 +802,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                         aria-pressed={manualPaused}
                         aria-label={manualPaused ? 'Resume signal rail' : 'Pause signal rail'}
                         title={manualPaused ? 'Resume signal rail' : 'Pause signal rail'}
-                        className={cn(
-                            'flex items-center justify-center rounded-lg border shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
-                            density === 'compact' ? 'h-9 w-9' : 'h-10 w-10',
-                            variant === 'bloomberg'
-                                ? 'border-[#1e2d4a] bg-[#070b14] text-blue-300 hover:text-white'
-                                : variant === 'telemetry-constellation'
-                                ? 'border-cyan-300/25 bg-slate-950/80 text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.14)] hover:bg-cyan-950/70 hover:text-white'
-                                : variant === 'cisco-blue-gradient'
-                                ? 'border-white/20 bg-white/10 text-white hover:bg-white/[0.18]'
-                                : 'border-slate-200 bg-white text-slate-500 hover:bg-sky-50 hover:text-sky-700 dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-sky-200'
-                        )}
+                        className={controlButtonClassName}
                     >
                         {manualPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
                     </button>
@@ -790,17 +813,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                         aria-expanded={pickerOpen}
                         aria-label={`Ticker style: ${activeOption?.label ?? 'Original'}`}
                         title={`Ticker style: ${activeOption?.label ?? 'Original'}`}
-                        className={cn(
-                            'flex items-center justify-center rounded-lg border shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
-                            density === 'compact' ? 'h-9 w-9' : 'h-10 w-10',
-                            variant === 'bloomberg'
-                                ? 'border-[#1e2d4a] bg-[#070b14] text-blue-300 hover:text-white'
-                                : variant === 'telemetry-constellation'
-                                ? 'border-cyan-300/25 bg-slate-950/80 text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.14)] hover:bg-cyan-950/70 hover:text-white'
-                                : variant === 'cisco-blue-gradient'
-                                ? 'border-white/20 bg-white/10 text-white hover:bg-white/[0.18]'
-                                : 'border-slate-200 bg-white text-slate-500 hover:bg-sky-50 hover:text-sky-700 dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-sky-200'
-                        )}
+                        className={controlButtonClassName}
                     >
                         <Palette className="h-4 w-4" />
                     </button>
@@ -810,17 +823,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                             onClick={onOpenEditor}
                             aria-label="Configure signal rail"
                             title="Configure signal rail"
-                            className={cn(
-                                'flex items-center justify-center rounded-lg border shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
-                                density === 'compact' ? 'h-9 w-9' : 'h-10 w-10',
-                                variant === 'bloomberg'
-                                    ? 'border-[#1e2d4a] bg-[#070b14] text-blue-300 hover:text-white'
-                                    : variant === 'telemetry-constellation'
-                                    ? 'border-cyan-300/25 bg-slate-950/80 text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.14)] hover:bg-cyan-950/70 hover:text-white'
-                                    : variant === 'cisco-blue-gradient'
-                                    ? 'border-white/20 bg-white/10 text-white hover:bg-white/[0.18]'
-                                    : 'border-slate-200 bg-white text-slate-500 hover:bg-sky-50 hover:text-sky-700 dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-sky-200'
-                            )}
+                            className={controlButtonClassName}
                         >
                             <Settings2 className="h-4 w-4" />
                         </button>

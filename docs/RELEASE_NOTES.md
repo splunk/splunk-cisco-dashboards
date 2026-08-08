@@ -2,6 +2,17 @@
 
 ## 1.0.36
 
+- Insights Workspace dialogs now include a persistent Backdrop opacity slider
+  in the desktop header. Operators can tune workspace dimming from 0–100%
+  without changing the dialog, table, or chart content.
+- Signal Rail pause, style, and configuration controls now stay hidden and
+  non-interactive until the rail is hovered or keyboard-focused. The controls
+  float outside the ticker layout and use translucent, transparent chrome so
+  all available width remains dedicated to the signal tiles.
+- The Secure Networking command topology now supports cursor-anchored wheel
+  and trackpad zoom, drag-to-pan, keyboard navigation, visible zoom controls,
+  and one-click fit-to-view. Navigation stays bounded and updates one SVG
+  viewport transform per animation frame for smooth interaction as maps grow.
 - Dashboard Manager now starts its view-mode toolbar folded so dashboards get
   the maximum available canvas width by default; the existing edge control can
   still expand it on demand.
