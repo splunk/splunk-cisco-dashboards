@@ -1605,7 +1605,10 @@ iseval = 0`}</CodeBlock>
                   Searchbase searches inside Dashboard Manager with the active
                   dashboard time range. Their triggers use the same
                   open-details-panel icon as the home dashboard, and
-                  multi-target links dispatch only the selected search.
+                  multi-target links use Back/Forward navigation while
+                  dispatching only the visible search. Each detail includes
+                  the Searchbase description, explanation, solution, related
+                  information, and available actions.
                   Segmentation Overview renders IP-SGT binding results as a
                   paginated table, and the Searchbase catalogue action now
                   describes adding reusable searches instead of

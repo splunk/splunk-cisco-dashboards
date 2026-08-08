@@ -175,6 +175,15 @@ export const resolveDashboardDrilldownSearches = (entries = [], targetIds = []) 
     return { resolvedSearches, missingTargetIds };
 };
 
+export const getDashboardDrilldownMetadata = (entry) => ({
+    title: normalizeText(entry?.content?.search_name) || normalizeText(entry?.name),
+    description: normalizeText(entry?.content?.description),
+    explanation: normalizeText(entry?.content?.explanation),
+    solution: normalizeText(entry?.content?.solution),
+    relatedInfo: normalizeText(entry?.content?.related_info),
+    executionPlan: normalizeText(entry?.content?.execution_plan),
+});
+
 export const parseDashboardDrilldownTimeRange = (
     value,
     fallback = DEFAULT_DASHBOARD_DRILLDOWN_TIME_RANGE,

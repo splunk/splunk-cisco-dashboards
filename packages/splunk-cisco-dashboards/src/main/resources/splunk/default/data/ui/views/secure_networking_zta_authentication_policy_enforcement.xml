@@ -100,6 +100,25 @@
 			},
 			"description": "Total count of unique network access devices (NADs) enforcing ISE policy , based on distinct device names seen in ISE syslog, providing the Zero Trust enforcement infrastructure footprint KPI."
 		},
+		"viz_drilldown_secure_networking_infra_ise_device_count": {
+			"type": "splunk.rectangle",
+			"eventHandlers": [
+				{
+					"type": "drilldown.customUrl",
+					"options": {
+						"url": "/drilldown?origin=Infrastructure ISE Network Device Count&target=Secure Networking - ZTA RADIUS Node Health by Site,Secure Networking - ZTA ISE Auth Failure Rate by Network Device"
+					}
+				}
+			],
+			"options": {
+				"fillColor": "transparent",
+				"strokeColor": "transparent"
+			},
+			"context": {},
+			"containerOptions": {},
+			"showProgressBar": false,
+			"showLastUpdated": false
+		},
 		"viz_secure_networking_ise_policy_family_overview": {
 			"type": "splunk.table",
 			"title": "ISE Policy Family Overview",
@@ -361,6 +380,16 @@
 							"y": 558,
 							"w": 690,
 							"h": 190
+						},
+						"type": "block"
+					},
+					{
+						"item": "viz_drilldown_secure_networking_infra_ise_device_count",
+						"position": {
+							"x": 670,
+							"y": 566,
+							"w": 28,
+							"h": 28
 						},
 						"type": "block"
 					},

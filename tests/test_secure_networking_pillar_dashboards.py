@@ -275,6 +275,54 @@ class SecureNetworkingPillarDashboardTest(unittest.TestCase):
         self.assertIn("limit=6 useother=false", latency_search)
         self.assertIn("latency_ms>0", latency_search)
 
+    def test_infrastructure_ise_device_count_has_dashboard_manager_drilldown(self):
+        definition = json.loads(
+            ET.parse(
+                VIEWS / "secure_networking_zta_authentication_policy_enforcement.xml"
+            )
+            .getroot()
+            .findtext("definition")
+        )
+        trigger_id = "viz_drilldown_secure_networking_infra_ise_device_count"
+        target_names = [
+            "Secure Networking - ZTA RADIUS Node Health by Site",
+            "Secure Networking - ZTA ISE Auth Failure Rate by Network Device",
+        ]
+        trigger = definition["visualizations"][trigger_id]
+
+        self.assertEqual(trigger["type"], "splunk.rectangle")
+        self.assertEqual(
+            trigger["eventHandlers"],
+            [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": (
+                            "/drilldown?origin=Infrastructure ISE Network Device Count"
+                            f"&target={','.join(target_names)}"
+                        )
+                    },
+                }
+            ],
+        )
+        self.assertEqual(
+            trigger["options"],
+            {"fillColor": "transparent", "strokeColor": "transparent"},
+        )
+        for target_name in target_names:
+            self.assertIn(f"search_name = {target_name}", self.searchbase_text)
+
+        layout_entries = {
+            entry["item"]: entry
+            for entry in definition["layout"]["layoutDefinitions"]["layout_overview"][
+                "structure"
+            ]
+        }
+        self.assertEqual(
+            layout_entries[trigger_id]["position"],
+            {"x": 670, "y": 566, "w": 28, "h": 28},
+        )
+
     def test_all_secure_networking_layouts_use_compact_panel_heights(self):
         self.assertEqual(len(ALL_SECURE_NETWORKING_DASHBOARDS), 16)
         reserved_items = {

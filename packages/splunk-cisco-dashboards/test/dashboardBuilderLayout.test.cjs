@@ -19,6 +19,11 @@ const managerPath = path.resolve(
   "../src/main/webapp/pages/dashboardbuilder/DBHomePage.jsx",
 );
 const manager = fs.readFileSync(managerPath, "utf8");
+const drilldownModalPath = path.resolve(
+  __dirname,
+  "../src/main/webapp/pages/dashboardbuilder/DashboardStudioDrilldownModal.jsx",
+);
+const drilldownModal = fs.readFileSync(drilldownModalPath, "utf8");
 const insightKpiButtonPath = path.resolve(
   __dirname,
   "../src/main/webapp/pages/dashboardbuilder/InsightKpiButton.jsx",
@@ -69,6 +74,21 @@ assert.match(manager, /initialDashboard=\{selectedDash\}/);
 assert.match(editor, /dashboard-builder-drilldown-open/);
 assert.match(styles, /dashboard-builder-drilldown-open[\s\S]*?z-index:\s*100003/);
 assert.match(editor, /initialDefinition=\{runtimeDashboardDefinition\}/);
+assert.match(drilldownModal, /getDashboardDrilldownMetadata/);
+assert.match(drilldownModal, />\s*Back\s*</);
+assert.match(drilldownModal, />\s*Forward\s*</);
+assert.match(drilldownModal, /title="Description"/);
+assert.match(drilldownModal, /title="Explanation"/);
+assert.match(drilldownModal, /title="Solution"/);
+assert.match(drilldownModal, /title="Related information"/);
+assert.match(drilldownModal, /Open in Search/);
+assert.match(drilldownModal, /Generate a Dashboard/);
+assert.match(drilldownModal, /DOMPurify\.sanitize/);
+assert.equal(
+  (drilldownModal.match(/<DashboardCore/g) || []).length,
+  1,
+  "Only the active drilldown search may be mounted and dispatched",
+);
 assert.match(
   editor,
   /dashMode === 'edit' && dashboardUsesSearchbase && showEditContextNotice/,

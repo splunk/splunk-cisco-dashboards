@@ -24,6 +24,7 @@ new Function(
     createDashboardDrilldownIconVisualization,
     normalizeDashboardDrilldownIcons,
     resolveDashboardDrilldownSearches,
+    getDashboardDrilldownMetadata,
     parseDashboardDrilldownTimeRange,
     getDashboardDrilldownInitialTimeRange,
     buildDashboardDrilldownDefinition,
@@ -38,6 +39,7 @@ const {
   createDashboardDrilldownIconVisualization,
   normalizeDashboardDrilldownIcons,
   resolveDashboardDrilldownSearches,
+  getDashboardDrilldownMetadata,
   parseDashboardDrilldownTimeRange,
   getDashboardDrilldownInitialTimeRange,
   buildDashboardDrilldownDefinition,
@@ -114,6 +116,11 @@ const entries = [
       search_name: "App Details",
       default_viz: "splunk.table",
       viz_options: '{"count":25}',
+      description: "<p>Device detail.</p>",
+      explanation: "<p>How it works.</p>",
+      solution: "<p>Suggested actions.</p>",
+      related_info: "<p>Related links.</p>",
+      execution_plan: "<p>Runbook.</p>",
     },
   },
   {
@@ -132,6 +139,14 @@ assert.deepEqual(
   "display names and stanza IDs must resolve in requested order",
 );
 assert.deepEqual(resolved.missingTargetIds, ["not-installed"]);
+assert.deepEqual(getDashboardDrilldownMetadata(entries[0]), {
+  title: "App Details",
+  description: "<p>Device detail.</p>",
+  explanation: "<p>How it works.</p>",
+  solution: "<p>Suggested actions.</p>",
+  relatedInfo: "<p>Related links.</p>",
+  executionPlan: "<p>Runbook.</p>",
+});
 
 assert.deepEqual(parseDashboardDrilldownTimeRange("-14d@d,now,1w"), {
   earliest: "-14d@d",

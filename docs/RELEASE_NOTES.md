@@ -2,6 +2,11 @@
 
 ## 1.0.36
 
+- Infrastructure ISE Network Device Count now opens two in-dashboard details:
+  ZTA RADIUS Node Health by Site and ZTA ISE Auth Failure Rate by Network
+  Device. Dashboard Manager presents the ordered searches with Back/Forward
+  navigation, Searchbase visualization metadata and actions, and the active
+  dashboard time range while dispatching only the visible search.
 - Dashboard Manager now handles internal Dashboard Studio `/drilldown` links
   in place, resolves their Searchbase targets, and opens the selected detail
   search with the dashboard's active time range. Drilldown triggers use the
