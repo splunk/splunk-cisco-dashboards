@@ -2,6 +2,11 @@
 
 ## 1.0.36
 
+- Dashboard Manager now handles internal Dashboard Studio `/drilldown` links
+  in place, resolves their Searchbase targets, and opens the selected detail
+  search with the dashboard's active time range. Drilldown triggers use the
+  same open-details-panel icon as the home dashboard, and multiple targets load
+  one at a time instead of dispatching in parallel.
 - Secure Networking Dashboard Studio trends now use 27 true area charts with
   brighter sky, cyan, emerald, amber, orange, rose, violet, teal, and slate
   series colors plus thicker outlines for dark-mode visibility. Thirteen faint

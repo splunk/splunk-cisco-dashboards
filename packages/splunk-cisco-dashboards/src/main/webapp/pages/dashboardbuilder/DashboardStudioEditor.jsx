@@ -97,6 +97,14 @@ import {
 } from './searchbaseDefinitionUtils';
 import { repairSearchbaseTimeQueryParameters } from './dashboardTimeUtils';
 import { syncSplunkShellTheme } from '../../common/theme/splunkShellTheme';
+import DashboardStudioDrilldownModal from './DashboardStudioDrilldownModal';
+import {
+    DEFAULT_DASHBOARD_DRILLDOWN_TIME_RANGE,
+    getDashboardDrilldownInitialTimeRange,
+    normalizeDashboardDrilldownIcons,
+    parseDashboardDrilldownTimeRange,
+    parseDashboardDrilldownUrl,
+} from '../../common/lib/dashboardDrilldown';
 
 const ENABLE_EXPERIMENTAL_SPACE_MANAGER = false;
 const DASHBOARD_STUDIO_HEIGHT = 1200;
@@ -870,6 +878,10 @@ const DashboardStudioEditor = ({
     const [openDashboardModal, setOpenDashboardModal] = useState(false);
     const [openConvertModal, setOpenConvertModal] = useState(false);
     const [openBackToManagerModal, setOpenBackToManagerModal] = useState(false);
+    const [dashboardDrilldown, setDashboardDrilldown] = useState(null);
+    const [dashboardDrilldownTimeRange, setDashboardDrilldownTimeRange] = useState(
+        DEFAULT_DASHBOARD_DRILLDOWN_TIME_RANGE,
+    );
     const [activeModeId, setActiveModeId] = useState('create');
     const [gridLayout, setGridLayout] = useState('absolute');
     const [dashboardTitle, setDashboardTitle] = useState('');
@@ -884,7 +896,23 @@ const DashboardStudioEditor = ({
         dashboardBuilderColorScheme,
     );
     const hasThemedPortalModal =
-        openConvertModal || openBackToManagerModal || openDashboardModal;
+        openConvertModal || openBackToManagerModal || openDashboardModal || Boolean(dashboardDrilldown);
+    const runtimeDashboardDefinition = useMemo(() => {
+        if (!currentDashboard?.data) {
+            return undefined;
+        }
+
+        return normalizeDashboardDrilldownIcons(JSON.parse(currentDashboard.data));
+    }, [currentDashboard?.data]);
+
+    useEffect(() => {
+        if (runtimeDashboardDefinition) {
+            setDashboardDrilldownTimeRange(
+                getDashboardDrilldownInitialTimeRange(runtimeDashboardDefinition),
+            );
+        }
+        setDashboardDrilldown(null);
+    }, [runtimeDashboardDefinition]);
 
     useEffect(
         () => syncSplunkShellTheme(dashboardColorScheme),
@@ -909,6 +937,14 @@ const DashboardStudioEditor = ({
         document.body.classList.add(activePortalThemeClass);
         return () => document.body.classList.remove(activePortalThemeClass);
     }, [dashboardColorScheme, hasThemedPortalModal]);
+
+    useEffect(() => {
+        document.body.classList.toggle(
+            'dashboard-builder-drilldown-open',
+            Boolean(dashboardDrilldown),
+        );
+        return () => document.body.classList.remove('dashboard-builder-drilldown-open');
+    }, [dashboardDrilldown]);
 
     const editorTheme =
         dashboardColorScheme === 'dark' ? prismaDarkTheme : prismaLightTheme;
@@ -1090,7 +1126,9 @@ const DashboardStudioEditor = ({
                                 ),
                             ),
                             author: response.entry[0].content['eai:userName'],
-                            app: response.entry[0].content['eai:appName'],
+                            app:
+                                response.entry[0].acl?.app ||
+                                response.entry[0].content['eai:appName'],
                             title: response.entry[0].name,
                             label: response.entry[0].content['label'],
                             description: response.entry[0].content['description'],
@@ -1551,15 +1589,47 @@ const DashboardStudioEditor = ({
 
     const handleDashboardEvent = useCallback(
         (lifecycleEvent) => {
+            if (
+                lifecycleEvent.type === 'input.change' &&
+                typeof lifecycleEvent.payload?.value === 'string' &&
+                lifecycleEvent.payload.value.includes(',')
+            ) {
+                setDashboardDrilldownTimeRange((currentTimeRange) =>
+                    parseDashboardDrilldownTimeRange(
+                        lifecycleEvent.payload.value,
+                        currentTimeRange,
+                    ),
+                );
+            }
             onDashboardEvent(lifecycleEvent, true);
         },
         [onDashboardEvent],
     );
 
-    const dashboardCorePlugin = {
-        onInitialize: handleDashboardInitialization,
-        onEventTrigger: handleDashboardEvent,
-    };
+    const handleDashboardLinkToUrl = useCallback(
+        (event) => {
+            const parsedDrilldown = parseDashboardDrilldownUrl(event?.url);
+            if (!parsedDrilldown) {
+                return;
+            }
+
+            event.preventDefault?.();
+            setDashboardDrilldown({
+                ...parsedDrilldown,
+                timeRange: dashboardDrilldownTimeRange,
+            });
+        },
+        [dashboardDrilldownTimeRange],
+    );
+
+    const dashboardCorePlugin = useMemo(
+        () => ({
+            onInitialize: handleDashboardInitialization,
+            onEventTrigger: handleDashboardEvent,
+            onLinkToUrl: handleDashboardLinkToUrl,
+        }),
+        [handleDashboardInitialization, handleDashboardEvent, handleDashboardLinkToUrl],
+    );
 
     useEffect(() => {
         if (
@@ -2221,6 +2291,22 @@ const DashboardStudioEditor = ({
                     <Button appearance="secondary" label="Cancel" onClick={goBackOrClose} />
                 </Modal.Footer>
             </Modal>
+            <DashboardStudioDrilldownModal
+                open={Boolean(dashboardDrilldown)}
+                origin={dashboardDrilldown?.origin || ''}
+                targetIds={dashboardDrilldown?.targetIds || []}
+                ownerApp={currentDashboard?.app}
+                timeRange={
+                    dashboardDrilldown?.timeRange || DEFAULT_DASHBOARD_DRILLDOWN_TIME_RANGE
+                }
+                preset={preset}
+                featureFlags={featureFlags}
+                iconRegistry={iconRegistry}
+                timezone={timezone}
+                colorScheme={dashboardColorScheme}
+                modalThemeStyle={dashboardBuilderModalThemeStyle}
+                onRequestClose={() => setDashboardDrilldown(null)}
+            />
             </SplunkThemeProvider>
             {currentDashboard == undefined ? (
                 <></>
@@ -2249,7 +2335,7 @@ const DashboardStudioEditor = ({
                             timezone={timezone}
                             preset={preset}
                             mapTileConfig={mapTileConfig}
-                            initialDefinition={JSON.parse(currentDashboard.data)} // definition with attached handler
+                            initialDefinition={runtimeDashboardDefinition}
                             onDefinitionChange={handleDefinitionChange}
                             initialMode={dashMode ? dashMode : 'view'}
                             initialTokenBinding={tokens} // takes initial token

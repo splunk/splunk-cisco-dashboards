@@ -14,6 +14,11 @@ const editorPath = path.resolve(
   "../src/main/webapp/pages/dashboardbuilder/DashboardStudioEditor.jsx",
 );
 const editor = fs.readFileSync(editorPath, "utf8");
+const managerPath = path.resolve(
+  __dirname,
+  "../src/main/webapp/pages/dashboardbuilder/DBHomePage.jsx",
+);
+const manager = fs.readFileSync(managerPath, "utf8");
 const insightKpiButtonPath = path.resolve(
   __dirname,
   "../src/main/webapp/pages/dashboardbuilder/InsightKpiButton.jsx",
@@ -53,6 +58,14 @@ assert.match(insightKpiButton, /label="Add Searchbase"/);
 assert.match(insightKpiButton, /ariaLabel="Add visualizations from Searchbase"/);
 assert.match(insightKpiButton, /dashboardbuilder-searchbase-toolbar-control/);
 assert.match(styles, /\.dashboardbuilder-searchbase-toolbar-control \[data-test='button'\]/);
+assert.match(editor, /onLinkToUrl: handleDashboardLinkToUrl/);
+assert.match(editor, /<DashboardStudioDrilldownModal/);
+assert.match(editor, /ownerApp=\{currentDashboard\?\.app\}/);
+assert.match(editor, /response\.entry\[0\]\.acl\?\.app/);
+assert.match(manager, /initialDashboard=\{selectedDash\}/);
+assert.match(editor, /dashboard-builder-drilldown-open/);
+assert.match(styles, /dashboard-builder-drilldown-open[\s\S]*?z-index:\s*100003/);
+assert.match(editor, /initialDefinition=\{runtimeDashboardDefinition\}/);
 assert.match(editor, /Editing a Searchbase-wired dashboard/);
 assert.match(
   editor,

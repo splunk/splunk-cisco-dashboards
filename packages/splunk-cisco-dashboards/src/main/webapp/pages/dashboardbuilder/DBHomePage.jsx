@@ -1040,6 +1040,7 @@ export default function DBHomePage() {
           >
             <DashboardStudioEditor
               openID={selectedDash.title}
+              initialDashboard={selectedDash}
               actionMenus={actionMenus}
               preset={customPresets}
               embededMode={true}

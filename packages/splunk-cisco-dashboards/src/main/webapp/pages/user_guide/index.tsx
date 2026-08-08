@@ -1601,6 +1601,11 @@ iseval = 0`}</CodeBlock>
                   Dashboard Manager confirmation dialogs now use the edited
                   dashboard&apos;s saved light or dark theme, even when it differs
                   from the signed-in user&apos;s Splunk appearance preference.
+                  Internal Dashboard Studio drilldown links now open supporting
+                  Searchbase searches inside Dashboard Manager with the active
+                  dashboard time range. Their triggers use the same
+                  open-details-panel icon as the home dashboard, and
+                  multi-target links dispatch only the selected search.
                 </InfoCard>
                 <InfoCard title="Searchbase and tile selection">
                   Searchbase Canvas distinguishes failed searches from other

@@ -17,6 +17,7 @@
         "test:catalogue-search": "node test/catalogueSearch.test.cjs",
         "test:searchbase-dispatch": "node test/searchbaseDispatch.test.cjs",
         "test:dashboard-builder-layout": "node test/dashboardBuilderLayout.test.cjs",
+        "test:dashboard-drilldown": "node test/dashboardDrilldown.test.cjs",
         "test:dashboard-searchbase-time": "node test/dashboardSearchbaseTime.test.cjs",
         "test:dashboard-theme": "node test/dashboardTheme.test.cjs",
         "test:secure-networking-studio-palette": "node test/secureNetworkingStudioPalette.test.cjs",
