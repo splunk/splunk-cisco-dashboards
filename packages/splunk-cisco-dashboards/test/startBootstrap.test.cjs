@@ -431,6 +431,11 @@ for (const viewName of [
   assert.match(viewSource, /<dashboard\b/);
   assert.match(
     viewSource,
+    /<dashboard\b[^>]*\btheme="dark"/,
+    `${viewName} must keep the Splunk page shell aligned with the shipped dark workspace theme`,
+  );
+  assert.match(
+    viewSource,
     /script="application\.js,executive_insights_bootstrap\.js"/,
   );
   assert.match(viewSource, /id="scan-root"/);

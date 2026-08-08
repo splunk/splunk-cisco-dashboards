@@ -2,6 +2,9 @@
 
 ## 1.0.36
 
+- Insights Workspace profile pages now opt into Splunk's dark Classic XML
+  shell, so the side navigation matches the shipped dark workspace theme
+  instead of remaining light beside a dark dashboard.
 - Dashboard Studio visualization descriptions now wrap to a bounded three-line
   header across all five Secure Networking pillars and their detail dashboards.
   Native panels resize into the remaining space, avoiding one-line truncation
