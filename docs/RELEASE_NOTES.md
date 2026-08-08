@@ -2,6 +2,12 @@
 
 ## 1.0.36
 
+- Insights Workspace detail drilldowns now share Dashboard Manager's
+  Searchbase guidance contract while retaining their compact, resizable glass
+  shell. The modal identifies the active supporting search and classification,
+  adds expandable Description, Explanation, Solution, Related information, and
+  Execution plan content, and keeps dispatch bounded to one cancellable,
+  1,000-row search with no additional catalogue request.
 - Insights Workspace dialogs now include a persistent Backdrop opacity slider
   in the desktop header. Operators can tune workspace dimming from 0–100%
   without changing the dialog, table, or chart content.

@@ -109,6 +109,8 @@ export interface SearchbaseRecord {
     solution: string;
     /** HTML references/context from the conf's `related_info` field. */
     relatedInfo: string;
+    /** HTML implementation steps from the conf's `execution_plan` field. */
+    executionPlan: string;
     /** SPL body — useful for the picker's preview pane. */
     search: string;
     /**
@@ -152,6 +154,7 @@ interface SearchbaseEntry {
         explanation?: string;
         solution?: string;
         related_info?: string;
+        execution_plan?: string;
         search?: string;
         drilldown_search_name?: string;
         drilldown_button_title?: string;
@@ -407,6 +410,8 @@ const fetchSearchbase = async (
             solution: typeof content.solution === 'string' ? content.solution : '',
             relatedInfo:
                 typeof content.related_info === 'string' ? content.related_info : '',
+            executionPlan:
+                typeof content.execution_plan === 'string' ? content.execution_plan : '',
             search:
                 typeof content.search === 'string'
                     ? collapseExpandedIndexMacro(content.search)

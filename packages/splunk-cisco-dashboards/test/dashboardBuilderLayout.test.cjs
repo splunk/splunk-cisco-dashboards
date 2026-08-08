@@ -24,6 +24,11 @@ const drilldownModalPath = path.resolve(
   "../src/main/webapp/pages/dashboardbuilder/DashboardStudioDrilldownModal.jsx",
 );
 const drilldownModal = fs.readFileSync(drilldownModalPath, "utf8");
+const drilldownGuidancePath = path.resolve(
+  __dirname,
+  "../src/main/webapp/common/components/florida/SearchbaseDrilldownGuidance.tsx",
+);
+const drilldownGuidance = fs.readFileSync(drilldownGuidancePath, "utf8");
 const insightKpiButtonPath = path.resolve(
   __dirname,
   "../src/main/webapp/pages/dashboardbuilder/InsightKpiButton.jsx",
@@ -89,10 +94,14 @@ assert.match(
 );
 assert.match(drilldownModal, />\s*Back\s*</);
 assert.match(drilldownModal, />\s*Forward\s*</);
-assert.match(drilldownModal, /title="Description"/);
-assert.match(drilldownModal, /title="Explanation"/);
-assert.match(drilldownModal, /title="Solution"/);
-assert.match(drilldownModal, /title="Related information"/);
+assert.match(
+  drilldownModal,
+  /<SearchbaseDrilldownGuidance[\s\S]*appearance="manager"/,
+);
+assert.match(drilldownGuidance, /title="Description"/);
+assert.match(drilldownGuidance, /title="Explanation"/);
+assert.match(drilldownGuidance, /title="Solution"/);
+assert.match(drilldownGuidance, /title="Related information"/);
 assert.match(drilldownModal, /Open in Search/);
 assert.match(drilldownModal, /Generate a Dashboard/);
 assert.match(drilldownModal, /DOMPurify\.sanitize/);

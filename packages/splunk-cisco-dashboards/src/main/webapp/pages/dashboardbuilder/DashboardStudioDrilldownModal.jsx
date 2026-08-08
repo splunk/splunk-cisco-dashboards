@@ -8,6 +8,7 @@ import WaitSpinner from '@splunk/react-ui/WaitSpinner';
 import { DashboardContextProvider } from '@splunk/dashboard-context';
 import { DashboardCore } from '@splunk/dashboard-core';
 import DOMPurify from 'dompurify';
+import SearchbaseDrilldownGuidance from '../../common/components/florida/SearchbaseDrilldownGuidance';
 import {
     ChevronLeft,
     ChevronRight,
@@ -24,12 +25,6 @@ import {
     resolveDashboardDrilldownSearches,
 } from '../../common/lib/dashboardDrilldown';
 
-const sanitizeMetadataHtml = (value) =>
-    DOMPurify.sanitize(value || '', {
-        USE_PROFILES: { html: true },
-        ADD_ATTR: ['target'],
-    });
-
 const metadataHtmlToText = (value) =>
     DOMPurify.sanitize(value || '', { ALLOWED_TAGS: [], ALLOWED_ATTR: [] })
         .replace(/\s+/g, ' ')
@@ -44,21 +39,6 @@ const getSearchApp = (entry, fallbackApp) => {
         return content.dispatch_context;
     }
     return entry?.acl?.app || fallbackApp;
-};
-
-const MetadataBlock = ({ title, html }) => {
-    if (!html) {
-        return null;
-    }
-
-    return (
-        <section className="dashboard-builder-drilldown-metadata-block">
-            <h3>{title}</h3>
-            {/* Searchbase metadata is sanitized with DOMPurify before this component renders. */}
-            {/* eslint-disable-next-line react/no-danger */}
-            <div dangerouslySetInnerHTML={{ __html: html }} />
-        </section>
-    );
 };
 
 const DashboardStudioDrilldownModal = ({
@@ -150,16 +130,6 @@ const DashboardStudioDrilldownModal = ({
     );
     const activeClassification = [activeMetadata.category, activeMetadata.subCategory].filter(
         Boolean,
-    );
-    const sanitizedMetadata = useMemo(
-        () => ({
-            description: sanitizeMetadataHtml(activeMetadata.description),
-            explanation: sanitizeMetadataHtml(activeMetadata.explanation),
-            solution: sanitizeMetadataHtml(activeMetadata.solution),
-            relatedInfo: sanitizeMetadataHtml(activeMetadata.relatedInfo),
-            executionPlan: sanitizeMetadataHtml(activeMetadata.executionPlan),
-        }),
-        [activeMetadata],
     );
     const dashboardKey = activeSearch
         ? `${activeSearch.name}:${timeRange.earliest}:${timeRange.latest}`
@@ -397,29 +367,10 @@ const DashboardStudioDrilldownModal = ({
                             </div>
                         )}
 
-                        <div className="dashboard-builder-drilldown-metadata">
-                            <div>
-                                <MetadataBlock
-                                    title="Description"
-                                    html={sanitizedMetadata.description}
-                                />
-                                <MetadataBlock
-                                    title="Explanation"
-                                    html={sanitizedMetadata.explanation}
-                                />
-                                <MetadataBlock
-                                    title="Related information"
-                                    html={sanitizedMetadata.relatedInfo}
-                                />
-                            </div>
-                            <div>
-                                <MetadataBlock title="Solution" html={sanitizedMetadata.solution} />
-                                <MetadataBlock
-                                    title="Execution plan"
-                                    html={sanitizedMetadata.executionPlan}
-                                />
-                            </div>
-                        </div>
+                        <SearchbaseDrilldownGuidance
+                            metadata={activeMetadata}
+                            appearance="manager"
+                        />
                     </article>
                 )}
             </Modal.Body>

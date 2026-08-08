@@ -16,6 +16,15 @@ const metricItem = read(
 const chartFocus = read(
   "../src/main/webapp/common/components/florida/ChartFocusDialog.tsx",
 );
+const searchbaseGuidance = read(
+  "../src/main/webapp/common/components/florida/SearchbaseDrilldownGuidance.tsx",
+);
+const dashboardManagerDrilldown = read(
+  "../src/main/webapp/pages/dashboardbuilder/DashboardStudioDrilldownModal.jsx",
+);
+const searchbaseCatalogue = read(
+  "../src/main/webapp/common/services/searchbaseCatalogue.ts",
+);
 const profile = read("../src/main/webapp/pages/executive_insights/index.tsx");
 
 for (const expectedClass of [
@@ -138,6 +147,68 @@ assert.match(
 assert.ok(
   profile.includes("Try a wider range or open the query in Search."),
   "Empty drilldowns must offer a consistent recovery action",
+);
+
+assert.match(
+  dashboardManagerDrilldown,
+  /<SearchbaseDrilldownGuidance[\s\S]*metadata=\{activeMetadata\}[\s\S]*appearance="manager"/,
+  "Dashboard Manager must use the shared Searchbase guidance contract",
+);
+assert.match(
+  profile,
+  /<SearchbaseDrilldownGuidance[\s\S]*metadata=\{config\.metadata\}[\s\S]*appearance="workspace"/,
+  "Insights Workspace must use the same Searchbase guidance contract",
+);
+assert.match(
+  profile,
+  /\{config\.metadata\.title\}[\s\S]*activeClassification\.join\(" • "\)/,
+  "Workspace drilldowns must identify the active target and its category metadata",
+);
+for (const metadataField of [
+  "description",
+  "explanation",
+  "solution",
+  "relatedInfo",
+  "executionPlan",
+]) {
+  assert.ok(
+    searchbaseGuidance.includes(metadataField),
+    `Shared guidance must render bounded ${metadataField} metadata`,
+  );
+}
+assert.match(
+  searchbaseGuidance,
+  /DOMPurify\.sanitize[\s\S]*aria-expanded=\{expanded\}[\s\S]*max-h-\[220px\]/,
+  "Workspace guidance must sanitize Searchbase HTML and remain collapsible and bounded",
+);
+assert.doesNotMatch(
+  searchbaseGuidance,
+  /\b(?:fetch|runSearch|getSearchbaseCatalogue)\s*\(/,
+  "Shared guidance must never fetch metadata or dispatch a second search",
+);
+assert.match(
+  searchbaseCatalogue,
+  /execution_plan\?: string;[\s\S]*executionPlan:[\s\S]*content\.execution_plan/,
+  "The Searchbase catalogue must expose execution-plan guidance",
+);
+
+const detailModalStart = profile.indexOf(
+  "const MetricDetailTableModal: React.FC<MetricDetailTableModalProps>",
+);
+const detailModalEnd = profile.indexOf(
+  "// Section title editor",
+  detailModalStart,
+);
+const detailModal = profile.slice(detailModalStart, detailModalEnd);
+assert.equal(
+  (detailModal.match(/runSearch\(\{/g) ?? []).length,
+  1,
+  "A visible Workspace drilldown must dispatch exactly one supporting search",
+);
+assert.match(
+  detailModal,
+  /const controller = new AbortController\(\)[\s\S]*count: 1000,[\s\S]*signal: controller\.signal[\s\S]*controller\.abort\(\)/,
+  "Workspace drilldowns must cap results and cancel obsolete dispatches",
 );
 
 console.log("✓ Workspace modal shell design and accessibility tests passed");

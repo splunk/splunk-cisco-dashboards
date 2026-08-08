@@ -77,6 +77,9 @@ import {
 import { DashboardSection } from "@/common/components/florida/DashboardSection";
 import { MetricItem } from "@/common/components/florida/MetricItem";
 import { WorkspaceModalShell } from "@/common/components/florida/WorkspaceModalShell";
+import SearchbaseDrilldownGuidance, {
+  type SearchbaseDrilldownMetadata,
+} from "@/common/components/florida/SearchbaseDrilldownGuidance";
 import { TableTile } from "@/common/components/florida/TableTile";
 import { BarBreakdownTile } from "@/common/components/florida/BarBreakdownTile";
 import { PieTile } from "@/common/components/florida/PieTile";
@@ -1037,6 +1040,7 @@ interface MetricDetailTableColumn {
 
 interface MetricDetailTableConfig {
   title: string;
+  metadata: SearchbaseDrilldownMetadata;
   buttonTitle: string;
   subtitle: (range: TimeRange) => string;
   spl: string;
@@ -1190,7 +1194,7 @@ const buildMetricDetailTableConfig = (
   const columns = parseDetailTableColumns(options?.columns);
   const subtitleTemplate =
     readDetailStringOption(options, "modalSubtitle") ??
-    "Detail table for {searchName} over {rangeLabel}.";
+    "Supporting Searchbase results and guidance for {rangeLabel}.";
   const tag = `detail_table_${detail.id || detail.searchName}`.replace(
     /[^A-Za-z0-9_]+/g,
     "_",
@@ -1198,7 +1202,17 @@ const buildMetricDetailTableConfig = (
   return {
     title:
       readDetailStringOption(options, "modalTitle") ??
-      `${source.searchName} Details`,
+      `Drill down: ${source.searchName}`,
+    metadata: {
+      title: detail.searchName,
+      category: detail.category,
+      subCategory: detail.subCategory,
+      description: detail.description,
+      explanation: detail.explanation,
+      solution: detail.solution,
+      relatedInfo: detail.relatedInfo,
+      executionPlan: detail.executionPlan,
+    },
     buttonTitle:
       source.drilldownButtonTitle ??
       readDetailStringOption(options, "buttonTitle") ??
@@ -6890,6 +6904,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
 
   useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
     setLoading(true);
     setRows([]);
     setTableColumns(config.columns);
@@ -6901,6 +6916,8 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
       latestTime: range.latest,
       tag: config.tag,
       appContext: config.dispatchContext,
+      count: 1000,
+      signal: controller.signal,
     })
       .then((res) => {
         if (cancelled) return;
@@ -6923,7 +6940,13 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
         setTableColumns(columns);
         setRows(nextRows);
       })
-      .catch(() => {
+      .catch((error: unknown) => {
+        if (
+          cancelled ||
+          (error instanceof Error && error.name === "AbortError")
+        ) {
+          return;
+        }
         if (!cancelled) {
           setRows([]);
           setTableColumns(config.columns);
@@ -6936,6 +6959,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [config, range.earliest, range.latest, refreshToken]);
 
@@ -6984,6 +7008,10 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
     range,
     config.dispatchContext,
   );
+  const activeClassification = [
+    config.metadata.category,
+    config.metadata.subCategory,
+  ].filter(Boolean);
 
   return (
     <WorkspaceModalShell
@@ -6994,7 +7022,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
       onClose={onClose}
       openInSearchHref={searchUrl}
       wide={displayColumns.length > 5}
-      contentClassName="overflow-auto bg-slate-950/[0.28]"
+      contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950/[0.28]"
       headerMeta={
         statusField ? (
           <>
@@ -7010,7 +7038,23 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
         ) : undefined
       }
     >
-          <table className="w-full min-w-[860px] bg-transparent text-sm">
+      <div className="flex shrink-0 items-center gap-3 border-b border-white/[0.1] bg-slate-950/[0.28] px-4 py-2.5">
+        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-sky-300/15 bg-sky-400/[0.08] text-sky-300">
+          <Search className="h-4 w-4" aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <div className="truncate text-sm font-bold text-[#edf5fb]">
+            {config.metadata.title}
+          </div>
+          {activeClassification.length > 0 && (
+            <div className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#7890a6]">
+              {activeClassification.join(" • ")}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="min-h-0 flex-1 overflow-auto overscroll-contain">
+        <table className="w-full min-w-[860px] bg-transparent text-sm">
             <thead className="sticky top-0 z-10 border-b border-white/[0.1] bg-slate-950/[0.72] backdrop-blur-xl">
               <tr className="text-left text-xs font-bold text-[#8ea3b8]">
                 {displayColumns.map((column, index) => {
@@ -7154,7 +7198,12 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
                 })
               )}
             </tbody>
-          </table>
+        </table>
+      </div>
+      <SearchbaseDrilldownGuidance
+        metadata={config.metadata}
+        appearance="workspace"
+      />
     </WorkspaceModalShell>
   );
 };
