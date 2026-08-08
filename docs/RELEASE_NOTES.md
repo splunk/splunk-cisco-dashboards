@@ -2,6 +2,10 @@
 
 ## 1.0.36
 
+- Dashboard Studio visualization descriptions now wrap to a bounded three-line
+  header across all five Secure Networking pillars and their detail dashboards.
+  Native panels resize into the remaining space, avoiding one-line truncation
+  without requiring separate markup visualizations.
 - Topology Editor site roles now use the SUI 5.13 Select component with a
   persistent color swatch for every option and selected value. All 12 factory
   roles have unique colors shared by the editor, map beacons, and role legend.

@@ -81,3 +81,38 @@
 #root-nav-menu [title='Agentic Ops'] {
     --scd-pillar-icon: url('images/overview/secure-networking/agentic-ops.svg');
 }
+
+/*
+ * Dashboard Studio renders visualization descriptions as a single, clipped
+ * line by default. Keep the native title/description contract, but allow up
+ * to three readable lines and let the visualization resize into the remaining
+ * panel height. This applies to the five pillar dashboards and their detail
+ * dashboards without introducing separate markup visualizations.
+ */
+[data-test='DashboardLayoutContainer'] [data-test='corner-radius-container'] > .styled-fullscreen {
+    display: flex;
+    flex-direction: column;
+}
+
+[data-test='DashboardLayoutContainer'] [data-test='viz-title-description-container'] {
+    flex: 0 0 auto;
+    height: auto;
+    min-height: 40px;
+    max-height: 80px;
+    overflow: hidden;
+}
+
+[data-test='DashboardLayoutContainer'] [data-test='viz-description'] {
+    display: -webkit-box;
+    overflow: hidden;
+    white-space: normal;
+    text-overflow: clip;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+
+[data-test='DashboardLayoutContainer'] [data-test='viz-size-wrapper'] {
+    flex: 1 1 0;
+    min-height: 0;
+    height: auto !important;
+}

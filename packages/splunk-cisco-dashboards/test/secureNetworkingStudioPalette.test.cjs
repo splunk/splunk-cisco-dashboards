@@ -12,6 +12,15 @@ const DASHBOARD_NAMES = [
   "secure_networking_agentic_ops",
 ];
 
+const VIEWS_DIR = path.resolve(
+  __dirname,
+  "../src/main/resources/splunk/default/data/ui/views",
+);
+const APPLICATION_CSS_PATH = path.resolve(
+  __dirname,
+  "../src/main/resources/splunk/appserver/static/application.css",
+);
+
 const HOME_DARK_PALETTE = {
   canvas: "#020617", // slate-950
   panel: "#0f172a", // slate-900
@@ -116,6 +125,39 @@ for (const dashboardName of DASHBOARD_NAMES) {
   assert.ok(
     colors.includes(HOME_DARK_PALETTE.accent),
     `${dashboardName} must use the Insights Workspace primary accent`,
+  );
+}
+
+const applicationCss = fs.readFileSync(APPLICATION_CSS_PATH, "utf8");
+assert.match(
+  applicationCss,
+  /\[data-test='viz-description'\][\s\S]*?white-space:\s*normal;[\s\S]*?-webkit-line-clamp:\s*3;/,
+  "Dashboard Studio descriptions must wrap to the shared three-line limit",
+);
+assert.match(
+  applicationCss,
+  /\[data-test='viz-size-wrapper'\][\s\S]*?flex:\s*1 1 0;[\s\S]*?height:\s*auto !important;/,
+  "Dashboard Studio visualizations must resize below wrapped descriptions",
+);
+
+const secureNetworkingStudioViews = fs
+  .readdirSync(VIEWS_DIR)
+  .filter((fileName) => fileName.startsWith("secure_networking_") && fileName.endsWith(".xml"))
+  .map((fileName) => ({
+    fileName,
+    xml: fs.readFileSync(path.join(VIEWS_DIR, fileName), "utf8"),
+  }))
+  .filter(({ xml }) => /<dashboard\s+version="2"/.test(xml) && /"description"\s*:/.test(xml));
+
+assert.ok(
+  secureNetworkingStudioViews.length > DASHBOARD_NAMES.length,
+  "The stylesheet regression must cover pillar detail dashboards as well as the five landing dashboards",
+);
+for (const { fileName, xml } of secureNetworkingStudioViews) {
+  assert.match(
+    xml,
+    /<dashboard\s+version="2"[^>]*stylesheet="application\.css"/,
+    `${fileName} must load the shared description treatment`,
   );
 }
 
