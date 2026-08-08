@@ -51,6 +51,9 @@ const sparkline = read(
 const dashboardSection = read(
   "../src/main/webapp/common/components/florida/DashboardSection.tsx",
 );
+const c3VisualizationPalette = read(
+  "../src/main/webapp/common/theme/c3VisualizationPalette.ts",
+);
 
 assert.match(
   dashboardSection,
@@ -173,6 +176,11 @@ assert.match(
   /name: 'Secure Network Command Map',[\s\S]*subtitle: 'Live sites, trust paths, and policy-enforcement health'/,
   "Secure Networking must ship its own command-map title and decision-oriented subtitle",
 );
+assert.match(
+  topologyMap,
+  /const STATUS_STROKE:[\s\S]*?critical: '#fa5762',[\s\S]*?warning: '#f0c243',[\s\S]*?stable: '#4cbf7f',[\s\S]*?unknown: '#a6adb6'/,
+  "Topology status links and beacons must use the shared C3 operational palette",
+);
 const roleChromeBlock = topologyMap.match(
   /const TOPOLOGY_ROLE_CHROME:[\s\S]*?= \{([\s\S]*?)\n\};\n\nconst CUSTOM_ROLE_SWATCHES/,
 );
@@ -228,8 +236,34 @@ assert.match(
 );
 assert.match(
   tailwindStyles,
-  /\.scd-c3-surface\.dark \.scd-c3-panel[\s\S]*?backdrop-filter: blur\(12px\)/,
+  /\.scd-c3-surface\.dark \.scd-c3-panel[\s\S]*?rgb\(19 26 35 \/ 98%\)[\s\S]*?backdrop-filter: blur\(8px\)/,
   "C3 panels must remain readable, mostly opaque surfaces above the atmospheric canvas",
+);
+for (const color of [
+  "#649ef5",
+  "#4cbf7f",
+  "#f0c243",
+  "#fa5762",
+  "#9ca6ff",
+  "#9b5ff5",
+  "#049fd9",
+  "#00bceb",
+  "#f7782f",
+]) {
+  assert.ok(
+    c3VisualizationPalette.includes(color),
+    `The shared C3 visualization palette must include ${color}`,
+  );
+}
+assert.match(
+  metricItem,
+  /healthy: C3_VISUALIZATION_COLORS\.positive,[\s\S]*?warning: C3_VISUALIZATION_COLORS\.caution,[\s\S]*?critical: C3_VISUALIZATION_COLORS\.critical/,
+  "Metric status charts must use the shared C3 operational palette",
+);
+assert.match(
+  sparkline,
+  /offset="0%"[\s\S]*?stopOpacity=\{0\.24\}[\s\S]*?offset="55%"[\s\S]*?stopOpacity=\{0\.08\}[\s\S]*?offset="100%"[\s\S]*?stopOpacity=\{0\}/,
+  "Area sparklines must use the restrained C3 graduated fill",
 );
 assert.match(
   tailwindStyles,

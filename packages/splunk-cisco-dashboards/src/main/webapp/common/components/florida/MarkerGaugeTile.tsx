@@ -16,6 +16,7 @@ import {
     type GaugeRange,
 } from './canvasVizOptions';
 import type { DataSource, NoDataReason } from '@/common/hooks/useMetric';
+import { C3_VISUALIZATION_COLORS } from '@/common/theme/c3VisualizationPalette';
 
 export interface MarkerGaugeTileProps {
     label: string;
@@ -118,7 +119,7 @@ export const MarkerGaugeTile: React.FC<MarkerGaugeTileProps> = ({
     thresholdNote,
     value,
     unit = '',
-    accentColor = '#0ea5e9',
+    accentColor = C3_VISUALIZATION_COLORS.info,
     vizOptions,
     source,
     onOpenInSearch,

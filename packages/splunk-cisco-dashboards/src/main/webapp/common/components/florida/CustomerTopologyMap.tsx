@@ -307,10 +307,10 @@ const STATUS_DOT_CLASS: Record<TopologyStatus, string> = {
 };
 
 const STATUS_STROKE: Record<TopologyStatus, string> = {
-    critical: '#ef4444',
-    warning: '#f59e0b',
-    stable: '#22c55e',
-    unknown: '#94a3b8',
+    critical: '#fa5762',
+    warning: '#f0c243',
+    stable: '#4cbf7f',
+    unknown: '#a6adb6',
 };
 
 type RoleBeaconChrome = { fill: string; halo: string; label: string };
@@ -2711,10 +2711,10 @@ const topologyAnimationCss = `
             drop-shadow(0 0 4px currentColor)
             drop-shadow(0 0 12px currentColor);
     }
-    .customer-topology-link--critical { color: #ef4444; }
-    .customer-topology-link--warning  { color: #f59e0b; }
-    .customer-topology-link--stable   { color: #22c55e; }
-    .customer-topology-link--unknown  { color: #94a3b8; }
+    .customer-topology-link--critical { color: #fa5762; }
+    .customer-topology-link--warning  { color: #f0c243; }
+    .customer-topology-link--stable   { color: #4cbf7f; }
+    .customer-topology-link--unknown  { color: #a6adb6; }
     .customer-topology-alert-ring {
         animation: customer-topology-pulse 2.6s ease-in-out infinite;
     }
@@ -2947,10 +2947,10 @@ const topologyAnimationCss = `
     .customer-topology-packet {
         animation: customer-topology-packet-glow 1.6s ease-in-out infinite;
     }
-    .customer-topology-packet--critical { color: #ef4444; }
-    .customer-topology-packet--warning  { color: #f59e0b; }
-    .customer-topology-packet--stable   { color: #22c55e; }
-    .customer-topology-packet--unknown  { color: #94a3b8; }
+    .customer-topology-packet--critical { color: #fa5762; }
+    .customer-topology-packet--warning  { color: #f0c243; }
+    .customer-topology-packet--stable   { color: #4cbf7f; }
+    .customer-topology-packet--unknown  { color: #a6adb6; }
     /* Subtle level: slow the packet glow but keep packets visible */
     .customer-topology-anim--subtle .customer-topology-packet {
         animation-duration: 2.6s;
@@ -3960,17 +3960,17 @@ const linkFlowProfile = (link: TopologyLink): LinkFlowProfile => {
  * being mistaken for healthy, warning, or critical search results.
  */
 const STATUS_RING_COLOR: Record<TopologyStatus, string> = {
-    critical: '#ef4444',
-    warning: '#f59e0b',
-    stable: '#10b981',
-    unknown: '#94a3b8',
+    critical: '#fa5762',
+    warning: '#f0c243',
+    stable: '#4cbf7f',
+    unknown: '#a6adb6',
 };
 
 const STATUS_HALO_RGBA: Record<TopologyStatus, string> = {
-    critical: 'rgba(239, 68, 68, 0.45)',
-    warning: 'rgba(245, 158, 11, 0.40)',
-    stable: 'rgba(16, 185, 129, 0.32)',
-    unknown: 'rgba(148, 163, 184, 0.28)',
+    critical: 'rgba(250, 87, 98, 0.45)',
+    warning: 'rgba(240, 194, 67, 0.40)',
+    stable: 'rgba(76, 191, 127, 0.32)',
+    unknown: 'rgba(166, 173, 182, 0.28)',
 };
 
 const STATUS_MARKER_SPEED: Record<TopologyStatus, string> = {
@@ -4358,7 +4358,7 @@ const packetProfile = (
             count: subtle ? 1 : 2,
             durationSeconds: subtle ? 8.0 : 6.5,
             radius: subtle ? 2.2 : 2.4,
-            fill: '#94a3b8',
+            fill: '#a6adb6',
             statusClass: 'customer-topology-packet--unknown',
             opacity: subtle ? 0.35 : 0.45,
         };
@@ -4369,7 +4369,7 @@ const packetProfile = (
                 count: subtle ? 2 : 3,
                 durationSeconds: subtle ? 2.4 : 1.6,
                 radius: subtle ? 3.2 : 3.6,
-                fill: '#ef4444',
+                fill: '#fa5762',
                 statusClass: 'customer-topology-packet--critical',
                 opacity: 0.95,
             };
@@ -4378,7 +4378,7 @@ const packetProfile = (
                 count: subtle ? 2 : 4,
                 durationSeconds: subtle ? 4.4 : 3.2,
                 radius: subtle ? 2.8 : 3.0,
-                fill: '#f59e0b',
+                fill: '#f0c243',
                 statusClass: 'customer-topology-packet--warning',
                 opacity: 0.92,
             };
@@ -4391,7 +4391,7 @@ const packetProfile = (
                 count: subtle ? 3 : 5,
                 durationSeconds: subtle ? 5.5 : 4.5,
                 radius: subtle ? 2.8 : 3.2,
-                fill: '#22c55e',
+                fill: '#4cbf7f',
                 statusClass: 'customer-topology-packet--stable',
                 opacity: subtle ? 0.85 : 0.95,
             };

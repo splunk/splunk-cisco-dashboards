@@ -1579,7 +1579,11 @@ iseval = 0`}</CodeBlock>
                 <InfoCard title="Insights Workspaces">
                   Workspaces now own their layout and presentation choices,
                   including sections, tiles, signal rail, map configuration,
-                  and theme. Signal Rail defaults are centrally managed, with
+                  and theme. Secure Networking visualizations use the same
+                  restrained operational palette and layered dark atmosphere
+                  observed in Cisco Cloud Control, while Splunk&apos;s 1CD theme
+                  customizer remains the component foundation. Signal Rail
+                  defaults are centrally managed, with
                   private account-and-workspace overrides for each signed-in
                   user. Headers prioritize the workspace title with compact
                   range and refresh controls, responsive health status, and

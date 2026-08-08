@@ -353,6 +353,33 @@ for (const block of searchbaseConf.split(/(?=^\[)/m)) {
   }
 }
 
+const assertNumericThresholds = (thresholds, label) => {
+  assert.ok(thresholds, `${label} must define numeric thresholds`);
+  assert.ok(
+    Number.isFinite(thresholds.warning),
+    `${label} must define a finite warning threshold`,
+  );
+  assert.ok(
+    Number.isFinite(thresholds.critical),
+    `${label} must define a finite critical threshold`,
+  );
+  assert.ok(
+    ["higher_is_better", "lower_is_better"].includes(thresholds.direction),
+    `${label} must define a supported threshold direction`,
+  );
+  if (thresholds.direction === "higher_is_better") {
+    assert.ok(
+      thresholds.critical < thresholds.warning,
+      `${label} higher-is-better critical must be below warning`,
+    );
+  } else {
+    assert.ok(
+      thresholds.warning < thresholds.critical,
+      `${label} lower-is-better warning must be below critical`,
+    );
+  }
+};
+
 for (const tileId of secureNetworkingLayoutTileIds) {
   const mappings = secureOverviewMappings.filter(
     ({ overview }) => overview.tileId === tileId,
@@ -365,16 +392,11 @@ for (const tileId of secureNetworkingLayoutTileIds) {
 
   const { block, overview, stanzaId, vizOptions } = mappings[0];
   const thresholds = overview.thresholds ?? vizOptions.thresholds;
-  const hasNumericThresholds =
-    Number.isFinite(thresholds?.warning) &&
-    Number.isFinite(thresholds?.critical) &&
-    ["higher_is_better", "lower_is_better"].includes(thresholds?.direction);
-  const hasQualitativeThreshold =
-    typeof overview.thresholdNote === "string" &&
-    overview.thresholdNote.trim().length > 0;
+  assertNumericThresholds(thresholds, `${tileId} (${stanzaId})`);
   assert.ok(
-    hasNumericThresholds || hasQualitativeThreshold,
-    `${tileId} must define numeric thresholds or deliberate qualitative threshold guidance`,
+    typeof overview.thresholdNote === "string" &&
+      overview.thresholdNote.trim().length > 0,
+    `${tileId} must retain explanatory threshold guidance`,
   );
 
   const defaultViz = block.match(/^default_viz = (.+)$/m)?.[1] ?? "";
@@ -438,6 +460,57 @@ for (const tileId of secureNetworkingLayoutTileIds) {
     drilldownMatches[0],
     /^search = .+$/m,
     `${tileId} drilldown must contain executable SPL`,
+  );
+}
+
+const secureMapFooters = [];
+for (const block of searchbaseConf.split(/(?=^\[)/m)) {
+  const stanzaId = block.match(/^\[([^\]]+)\]/)?.[1];
+  const rawVizOptions = block.match(/^viz_options = (.+)$/m)?.[1];
+  if (!stanzaId || !rawVizOptions) continue;
+  const vizOptions = JSON.parse(rawVizOptions);
+  if (vizOptions.mapFooter?.id) {
+    secureMapFooters.push({ stanzaId, mapFooter: vizOptions.mapFooter });
+  }
+}
+assert.deepEqual(
+  secureMapFooters.map(({ mapFooter }) => mapFooter.id).sort(),
+  ["map_inter_site_latency", "map_site_link_availability"],
+  "The Secure Networking command map must expose exactly two footer KPIs",
+);
+for (const { stanzaId, mapFooter } of secureMapFooters) {
+  assertNumericThresholds(mapFooter.thresholds, `${mapFooter.id} (${stanzaId})`);
+  assert.ok(
+    typeof mapFooter.thresholdNote === "string" &&
+      mapFooter.thresholdNote.trim().length > 0,
+    `${mapFooter.id} must retain explanatory threshold guidance`,
+  );
+}
+
+const secureSignalRailBlock = conf
+  .split(/(?=^\[)/m)
+  .find((block) => block.startsWith("[signal_rail.secure_networking]"));
+assert.ok(secureSignalRailBlock, "expected Secure Networking Signal Rail");
+const secureSignalItemIds = secureSignalRailBlock
+  .match(/^items = (.+)$/m)?.[1]
+  .split(",");
+assert.equal(
+  secureSignalItemIds?.length,
+  6,
+  "Secure Networking Signal Rail must expose six thresholded KPIs",
+);
+for (const itemId of secureSignalItemIds ?? []) {
+  const block = conf
+    .split(/(?=^\[)/m)
+    .find((candidate) => candidate.startsWith(`[signal_item.${itemId}]`));
+  assert.ok(block, `expected signal item ${itemId}`);
+  assertNumericThresholds(
+    {
+      warning: Number(block.match(/^threshold_warning = (.+)$/m)?.[1]),
+      critical: Number(block.match(/^threshold_critical = (.+)$/m)?.[1]),
+      direction: block.match(/^threshold_direction = (.+)$/m)?.[1],
+    },
+    `signal_item.${itemId}`,
   );
 }
 

@@ -27,8 +27,8 @@
         "viz_header_bg": {
             "type": "splunk.rectangle",
             "options": {
-                "fillColor": "#1e293b",
-                "strokeColor": "rgba(14,165,233,0.42)",
+                "fillColor": "#1c2738",
+                "strokeColor": "rgba(100,158,245,0.28)",
                 "rx": 10
             }
         },
@@ -47,15 +47,15 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#f1f5f9",
+                "fontColor": "#ecf0f5",
                 "markdown": "# SD\\-WAN and Network Health Monitoring\nCorrelate WAN health, reachability, and service\\-impact signals across the mesh\\."
             }
         },
         "viz_card_01_background": {
             "type": "splunk.rectangle",
             "options": {
-                "fillColor": "#0f172a",
-                "strokeColor": "rgba(14,165,233,0.42)",
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
                 "rx": 12
             }
         },
@@ -66,7 +66,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#f1f5f9",
+                "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
                 "markdown": "**Site Health**"
@@ -79,7 +79,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#7dd3fc",
+                "fontColor": "#649ef5",
                 "fontSize": "custom",
                 "customFontSize": 11,
                 "markdown": "Monitoring  •  Hybrid Mesh Firewalling"
@@ -92,7 +92,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#cbd5e1",
+                "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 12,
                 "markdown": "Counts of SD\\-WAN sites by overall health bucket \\(good / fair / poor / no\\_data\\) using the most recent poll per site\\. Mirrors the Overview tile that summarises Sites Up/Down on Monitor → Overview\\."
@@ -108,7 +108,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "majorColor": "#f1f5f9",
+                "majorColor": "#ecf0f5",
                 "majorFontSize": 38,
                 "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
@@ -128,10 +128,10 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "right",
                 "seriesColors": [
-                    "#7dd3fc",
-                    "#6ee7b7",
-                    "#fdba74",
-                    "#fda4af"
+                    "#649ef5",
+                    "#4cbf7f",
+                    "#f7782f",
+                    "#fa5762"
                 ],
                 "label": "> primary | seriesByName(\"State\")",
                 "value": "> primary | seriesByName(\"Sites\")"
@@ -159,8 +159,8 @@
         "viz_card_02_background": {
             "type": "splunk.rectangle",
             "options": {
-                "fillColor": "#0f172a",
-                "strokeColor": "rgba(14,165,233,0.42)",
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
                 "rx": 12
             }
         },
@@ -171,7 +171,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#f1f5f9",
+                "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
                 "markdown": "**Circuit Availability**"
@@ -184,7 +184,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#7dd3fc",
+                "fontColor": "#649ef5",
                 "fontSize": "custom",
                 "customFontSize": 11,
                 "markdown": "Monitoring  •  Hybrid Mesh Firewalling"
@@ -197,7 +197,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#cbd5e1",
+                "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 12,
                 "markdown": "Counts of SD\\-WAN WAN\\-transport circuits \\(physical/virtual interfaces carrying a TLOC color\\) that are currently Up vs Down\\. Mirrors the Circuits tile on Monitor → Overview\\."
@@ -213,7 +213,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "majorColor": "#f1f5f9",
+                "majorColor": "#ecf0f5",
                 "majorFontSize": 38,
                 "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
@@ -233,10 +233,10 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "right",
                 "seriesColors": [
-                    "#7dd3fc",
-                    "#6ee7b7",
-                    "#fdba74",
-                    "#fda4af"
+                    "#649ef5",
+                    "#4cbf7f",
+                    "#f7782f",
+                    "#fa5762"
                 ],
                 "label": "> primary | seriesByName(\"State\")",
                 "value": "> primary | seriesByName(\"Circuits\")"
@@ -264,8 +264,8 @@
         "viz_card_03_background": {
             "type": "splunk.rectangle",
             "options": {
-                "fillColor": "#0f172a",
-                "strokeColor": "rgba(14,165,233,0.42)",
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
                 "rx": 12
             }
         },
@@ -276,7 +276,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#f1f5f9",
+                "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
                 "markdown": "**Degraded Tunnels**"
@@ -289,7 +289,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#7dd3fc",
+                "fontColor": "#649ef5",
                 "fontSize": "custom",
                 "customFontSize": 11,
                 "markdown": "Monitoring  •  SD\\-WAN"
@@ -302,7 +302,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#cbd5e1",
+                "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 12,
                 "markdown": "Time series of the count of poor\\-latency SD\\-WAN tunnels per 15\\-minute bucket\\. Mirrors the Overview → Tunnel Health \\(Latency, Poor Tunnels\\) tile\\."
@@ -318,7 +318,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "majorColor": "#f1f5f9",
+                "majorColor": "#ecf0f5",
                 "majorFontSize": 38,
                 "majorValue": "> primary | seriesByName(\"WindowPoorTunnels\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
@@ -338,10 +338,10 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#7dd3fc",
-                    "#6ee7b7",
-                    "#fdba74",
-                    "#fda4af"
+                    "#649ef5",
+                    "#4cbf7f",
+                    "#f7782f",
+                    "#fa5762"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -376,8 +376,8 @@
         "viz_card_04_background": {
             "type": "splunk.rectangle",
             "options": {
-                "fillColor": "#0f172a",
-                "strokeColor": "rgba(14,165,233,0.42)",
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
                 "rx": 12
             }
         },
@@ -388,7 +388,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#f1f5f9",
+                "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
                 "markdown": "**Application Health**"
@@ -401,7 +401,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#7dd3fc",
+                "fontColor": "#649ef5",
                 "fontSize": "custom",
                 "customFontSize": 11,
                 "markdown": "Network  •  Secure Infrastructure"
@@ -414,7 +414,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#cbd5e1",
+                "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 12,
                 "markdown": "Trend of Cisco Catalyst SD\\-WAN sites with poor or fair application health, compared with healthy sites across the selected time window\\."
@@ -430,7 +430,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "majorColor": "#f1f5f9",
+                "majorColor": "#ecf0f5",
                 "majorFontSize": 38,
                 "majorValue": "> primary | seriesByName(\"degraded_sites\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
@@ -450,10 +450,10 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "right",
                 "seriesColors": [
-                    "#7dd3fc",
-                    "#6ee7b7",
-                    "#fdba74",
-                    "#fda4af"
+                    "#649ef5",
+                    "#4cbf7f",
+                    "#f7782f",
+                    "#fa5762"
                 ],
                 "showYMajorGridLines": true,
                 "stackMode": "unstacked",
@@ -485,8 +485,8 @@
         "viz_card_05_background": {
             "type": "splunk.rectangle",
             "options": {
-                "fillColor": "#0f172a",
-                "strokeColor": "rgba(14,165,233,0.42)",
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
                 "rx": 12
             }
         },
@@ -497,7 +497,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#f1f5f9",
+                "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
                 "markdown": "**Path Loss**"
@@ -510,7 +510,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#7dd3fc",
+                "fontColor": "#649ef5",
                 "fontSize": "custom",
                 "customFontSize": 11,
                 "markdown": "Network  •  Agentic Ops"
@@ -523,7 +523,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#cbd5e1",
+                "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 12,
                 "markdown": "Hourly trend of average and maximum network packet loss from Cisco ThousandEyes, enabling detection of transient vs sustained path quality degradation over time\\."
@@ -539,7 +539,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "majorColor": "#f1f5f9",
+                "majorColor": "#ecf0f5",
                 "majorFontSize": 38,
                 "majorValue": "> primary | seriesByName(\"WindowAvgLossPct\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
@@ -559,10 +559,10 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#7dd3fc",
-                    "#6ee7b7",
-                    "#fdba74",
-                    "#fda4af"
+                    "#649ef5",
+                    "#4cbf7f",
+                    "#f7782f",
+                    "#fa5762"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -597,8 +597,8 @@
         "viz_card_06_background": {
             "type": "splunk.rectangle",
             "options": {
-                "fillColor": "#0f172a",
-                "strokeColor": "rgba(14,165,233,0.42)",
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
                 "rx": 12
             }
         },
@@ -609,7 +609,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#f1f5f9",
+                "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
                 "markdown": "**Routing Stability**"
@@ -622,7 +622,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#7dd3fc",
+                "fontColor": "#649ef5",
                 "fontSize": "custom",
                 "customFontSize": 11,
                 "markdown": "Network  •  Agentic Ops"
@@ -635,7 +635,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#cbd5e1",
+                "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 12,
                 "markdown": "Hourly trend of BGP path changes detected by Cisco ThousandEyes per monitored test, surfacing internet routing instability that can degrade application reachability and performance before users report issues\\."
@@ -651,7 +651,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "majorColor": "#f1f5f9",
+                "majorColor": "#ecf0f5",
                 "majorFontSize": 38,
                 "majorValue": "> primary | seriesByName(\"WindowPathChanges\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
@@ -671,10 +671,10 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#7dd3fc",
-                    "#6ee7b7",
-                    "#fdba74",
-                    "#fda4af"
+                    "#649ef5",
+                    "#4cbf7f",
+                    "#f7782f",
+                    "#fa5762"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -782,10 +782,10 @@
         "layoutDefinitions": {
             "layout_overview": {
                 "options": {
-                    "backgroundColor": "#080d15",
+                    "backgroundColor": "#0f1117",
                     "backgroundImage": {
                         "sizeType": "cover",
-                        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzExMWQyZiIvPjxzdG9wIG9mZnNldD0iLjMwIiBzdG9wLWNvbG9yPSIjMGIxMjFkIi8+PHN0b3Agb2Zmc2V0PSIuNjIiIHN0b3AtY29sb3I9IiMwODBkMTUiLz48c3RvcCBvZmZzZXQ9Ii44MiIgc3RvcC1jb2xvcj0iIzBjMGQxOCIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzE3MTAyNyIvPjwvbGluZWFyR3JhZGllbnQ+PHJhZGlhbEdyYWRpZW50IGlkPSJibHVlIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjcwIC03MCkgcm90YXRlKDMxKSBzY2FsZSgxMjUwIDY2MCkiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjMzQ3NWM0IiBzdG9wLW9wYWNpdHk9Ii40OCIvPjxzdG9wIG9mZnNldD0iLjQyIiBzdG9wLWNvbG9yPSIjMjE0YjgyIiBzdG9wLW9wYWNpdHk9Ii4yNCIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzEwMjEzYSIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDEwNTAgMTE1MCkgcm90YXRlKC04KSBzY2FsZSgxNDIwIDYwMCkiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNmUzMTlmIiBzdG9wLW9wYWNpdHk9Ii41MiIvPjxzdG9wIG9mZnNldD0iLjQyIiBzdG9wLWNvbG9yPSIjNDMyMDY0IiBzdG9wLW9wYWNpdHk9Ii4zMCIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzFmMTMzMyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48bGluZWFyR3JhZGllbnQgaWQ9InNoZWVuIiB4MT0iMCIgeTE9IjAiIHgyPSIxOTIwIiB5Mj0iMTA4MCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiM2ZmI5ZmYiIHN0b3Atb3BhY2l0eT0iLjA2Ii8+PHN0b3Agb2Zmc2V0PSIuNDQiIHN0b3AtY29sb3I9IiM2ZmI5ZmYiIHN0b3Atb3BhY2l0eT0iMCIvPjxzdG9wIG9mZnNldD0iLjcyIiBzdG9wLWNvbG9yPSIjYjQ3YWZmIiBzdG9wLW9wYWNpdHk9Ii4wNDUiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiNiNDdhZmYiIHN0b3Atb3BhY2l0eT0iMCIvPjwvbGluZWFyR3JhZGllbnQ+PC9kZWZzPjxyZWN0IHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIGZpbGw9InVybCgjYmFzZSkiLz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2JsdWUpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCNzaGVlbikiLz48L3N2Zz4=",
+                        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
                         "x": 0,
                         "y": 0
                     },

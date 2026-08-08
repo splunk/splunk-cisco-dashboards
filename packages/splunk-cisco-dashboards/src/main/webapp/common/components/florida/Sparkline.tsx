@@ -597,8 +597,9 @@ export const Sparkline: React.FC<SparklineProps> = ({
     const gradientDefs = (
         <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-                <stop offset="95%" stopColor={color} stopOpacity={0} />
+                <stop offset="0%" stopColor={color} stopOpacity={0.24} />
+                <stop offset="55%" stopColor={color} stopOpacity={0.08} />
+                <stop offset="100%" stopColor={color} stopOpacity={0} />
             </linearGradient>
         </defs>
     );
@@ -630,7 +631,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
                             <Cell
                                 key={`cell-${point.index}`}
                                 fill={point.index === peakPoint.index ? color : color}
-                                fillOpacity={point.index === peakPoint.index ? 1 : 0.55}
+                                fillOpacity={point.index === peakPoint.index ? 1 : 0.7}
                             />
                         ))}
                 </Bar>
@@ -749,7 +750,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
                             <Cell
                                 key={`cell-${point.index}`}
                                 fill={point.index === peakPoint.index ? color : color}
-                                fillOpacity={point.index === peakPoint.index ? 1 : 0.55}
+                                fillOpacity={point.index === peakPoint.index ? 1 : 0.7}
                             />
                         ))}
                 </Bar>

@@ -33,6 +33,7 @@ import {
     type GaugeRange,
 } from './canvasVizOptions';
 import type { DataSource, NoDataReason } from '@/common/hooks/useMetric';
+import { C3_VISUALIZATION_COLORS } from '@/common/theme/c3VisualizationPalette';
 
 export interface SingleValueRadialTileProps {
     label: string;
@@ -130,9 +131,9 @@ const formatNumber = (n: number, decimals: number): string =>
 // the caller's `accentColor` is the default sky-blue (i.e. the stanza
 // did not override `seriesColors`) and we should drop to a DS-style
 // near-black fill instead.
-const DEFAULT_ACCENT_FALLBACK = '#0ea5e9';
+const DEFAULT_ACCENT_FALLBACK = C3_VISUALIZATION_COLORS.info;
 // DS scoreboard fill: dark slate, near-black, theme primary.
-const RADIAL_DEFAULT_FILL = '#0f172a';
+const RADIAL_DEFAULT_FILL = '#131a23';
 // DS-style neutral track. Hex-equivalent of Tailwind slate-200 so the
 // custom override and the default render at the same lightness.
 const RADIAL_DEFAULT_TRACK = '#e2e8f0';

@@ -53,24 +53,25 @@ const DASHBOARD_EDITOR_PATH = path.resolve(
 );
 
 const HOME_DARK_PALETTE = {
-  canvas: "#080d15", // C3 atmospheric foundation
-  panel: "#0f172a", // slate-900
-  secondary: "#1e293b", // slate-800
-  text: "#f1f5f9", // slate-100
-  accent: "#0ea5e9", // sky-500
-  accentStroke: "rgba(14,165,233,0.42)",
+  canvas: "#0f1117",
+  panel: "#131a23",
+  secondary: "#1c2738",
+  text: "#ecf0f5",
+  accent: "#649ef5",
+  accentStroke: "rgba(100,158,245,0.28)",
 };
 
-const BRIGHT_GRAPH_COLORS = new Set([
-  "#5eead4", // teal-300
-  "#67e8f9", // cyan-300
-  "#6ee7b7", // emerald-300
-  "#7dd3fc", // sky-300
-  "#c4b5fd", // violet-300
-  "#cbd5e1", // slate-300
-  "#fcd34d", // amber-300
-  "#fda4af", // rose-300
-  "#fdba74", // orange-300
+const C3_GRAPH_COLORS = new Set([
+  "#649ef5", // information blue
+  "#4cbf7f", // healthy green
+  "#f0c243", // caution yellow
+  "#fa5762", // critical red
+  "#9ca6ff", // comparison lavender
+  "#9b5ff5", // comparison purple
+  "#049fd9", // chart cyan
+  "#00bceb", // bright cyan
+  "#f7782f", // orange
+  "#a6adb6", // neutral
 ]);
 
 const ALLOWED_COLORS = new Set([
@@ -84,7 +85,7 @@ const ALLOWED_COLORS = new Set([
   "#dc2626", // red-600
   "#8b5cf6", // violet-500
   "#0d9488", // teal-600
-  ...BRIGHT_GRAPH_COLORS,
+  ...C3_GRAPH_COLORS,
 ]);
 
 const RETIRED_STUDIO_COLORS = [
@@ -99,6 +100,20 @@ const RETIRED_STUDIO_COLORS = [
   "#7c3aed",
   "#14b8a6",
   "rgba(53,207,245,0.42)",
+  "#0f172a",
+  "#1e293b",
+  "#f1f5f9",
+  "#0ea5e9",
+  "rgba(14,165,233,0.42)",
+  "#5eead4",
+  "#67e8f9",
+  "#6ee7b7",
+  "#7dd3fc",
+  "#c4b5fd",
+  "#cbd5e1",
+  "#fcd34d",
+  "#fda4af",
+  "#fdba74",
 ];
 
 const readDashboard = (fileName) => {
@@ -195,7 +210,7 @@ for (const { fileName, xml, definition } of dashboardViews) {
   assert.equal(
     header?.strokeColor,
     HOME_DARK_PALETTE.accentStroke,
-    `${fileName} must use the current sky accent for its header border`,
+    `${fileName} must use the C3 information accent for its header border`,
   );
 
   assert.equal(
@@ -344,12 +359,12 @@ for (const { fileName, xml, definition } of dashboardViews) {
     );
     assert.ok(
       graph.options?.seriesColors?.length > 0,
-      `${fileName}:${visualizationId} must define an explicit bright series palette`,
+      `${fileName}:${visualizationId} must define an explicit C3 series palette`,
     );
     for (const color of graph.options.seriesColors) {
       assert.ok(
-        BRIGHT_GRAPH_COLORS.has(color.toLowerCase()),
-        `${fileName}:${visualizationId} uses low-contrast graph color ${color}`,
+        C3_GRAPH_COLORS.has(color.toLowerCase()),
+        `${fileName}:${visualizationId} uses a graph color outside the C3 palette: ${color}`,
       );
     }
     if (graph.type === "splunk.area") {
@@ -411,8 +426,8 @@ for (const { fileName, xml, definition } of dashboardViews) {
     `${fileName} must use the primary dark-mode text color`,
   );
   assert.ok(
-    colors.includes(HOME_DARK_PALETTE.accent) || colors.includes("#7dd3fc"),
-    `${fileName} must use the sky accent or its bright graph counterpart`,
+    colors.includes(HOME_DARK_PALETTE.accent) || colors.includes("#049fd9"),
+    `${fileName} must use the C3 information blue or chart cyan`,
   );
 }
 

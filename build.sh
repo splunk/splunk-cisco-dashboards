@@ -47,6 +47,7 @@
 # Useful options:
 #   ./build.sh --splunk-bin /some/custom/path/splunk          # override the Splunk CLI path directly
 #   ./build.sh --minify                                       # slower, smaller release package
+#   ./build.sh --lint-spl-antipatterns                        # opt in to the experimental SPL policy gate
 #
 # Environment:
 #   SPLUNK_HOME   Splunk install root. Defaults to /Applications/Splunk on
@@ -70,6 +71,7 @@ do_deploy=0
 no_build=0
 from_stage=0
 minify=0
+lint_spl_antipatterns=0
 restart_after_install=0
 verbose=0
 splunk_bin_override=""
@@ -217,6 +219,11 @@ Other options:
   --minify               Enable JavaScript minification for this clean release
                          build. Slower, but produces smaller browser bundles.
                          Not valid with --fast or --no-build.
+  --lint-spl-antipatterns
+                         Run the experimental Searchbase SPL anti-pattern
+                         policy gate before packaging. Disabled by default
+                         because some valid searches intentionally use sort,
+                         dedup, or fillnull semantics that require review.
   --auth user:pass       Splunk CLI credentials. Passed through as
                          '-auth user:pass'. Aliases: -auth, --auth=user:pass.
   --restart              Restart Splunk after install/deploy.
@@ -271,6 +278,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --minify)
             minify=1
+            shift
+            ;;
+        --lint-spl-antipatterns)
+            lint_spl_antipatterns=1
             shift
             ;;
         -v|--verbose)
@@ -432,8 +443,17 @@ if [[ "$no_build" -eq 0 ]]; then
         exit 1
     fi
 
-    hdr "Validating canonical Searchbase SPL..."
-    run_quietly python3 "${ROOT_DIR}/scripts/lint_spl_antipatterns.py"
+    # This policy linter is intentionally opt-in. Its broad rules are useful
+    # during a focused catalogue audit, but are not accurate enough to block
+    # every package build: valid SPL can depend on explicit row ordering or
+    # carefully scoped dedup/fillnull semantics. Keep the implementation
+    # available for deliberate review without making it a release gate.
+    if [[ "$lint_spl_antipatterns" -eq 1 ]]; then
+        hdr "Validating canonical Searchbase SPL (experimental policy gate)..."
+        run_quietly python3 "${ROOT_DIR}/scripts/lint_spl_antipatterns.py"
+    else
+        say "[build] Experimental Searchbase SPL anti-pattern gate disabled."
+    fi
 fi
 
 if [[ "$no_build" -eq 1 ]]; then

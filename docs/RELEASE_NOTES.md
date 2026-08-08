@@ -2,6 +2,25 @@
 
 ## 1.0.36
 
+- Secure Networking visualizations now use a C3-observed operational palette
+  across Insights Workspace trends, ranked bars, gauges, topology status, and
+  all 16 Dashboard Studio stories. Information blue, healthy green, caution
+  yellow, critical red, orange, and supporting lavender/cyan tones replace
+  saturated framework defaults; area fills, dark card surfaces, borders,
+  elevation, and the factory atmospheric background are also quieter and
+  closer to Cisco Cloud Control. The app continues to use Splunk's 1CD theme
+  customizer as its component foundation.
+- Secure Networking Insights Workspace searches now replace unsupported
+  Unknown dimensions with real site, NAD, ISE-node, source-layer, telemetry
+  coverage, or per-test context; bound high-volume drilldowns to deterministic
+  top results; correct ThousandEyes latency units; and reduce firewall trend
+  cardinality. All 45 profile cards, six Signal Rail items, and two map KPIs
+  now carry ordered numeric warning and critical thresholds plus guidance.
+- The experimental Searchbase SPL anti-pattern linter no longer blocks normal
+  app packaging by default. Focused catalogue reviews can still opt in with
+  `./build.sh --lint-spl-antipatterns`, while valid searches that intentionally
+  depend on ordering or carefully scoped `dedup` and `fillnull` semantics are
+  left for human review.
 - Insights Workspace dark profiles now use a Cisco Cloud Control-inspired
   atmospheric canvas with layered navy, near-black, and violet depth instead
   of a flat page fill. Mostly opaque charcoal toolbars, Signal Rail chrome,
