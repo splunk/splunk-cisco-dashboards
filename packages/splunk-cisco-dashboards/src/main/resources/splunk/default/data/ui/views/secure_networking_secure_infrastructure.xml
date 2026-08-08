@@ -131,11 +131,11 @@
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#f59e0b",
-					"#dc2626"
+					"#fcd34d",
+					"#fda4af"
 				],
 				"stackMode": "stacked",
-				"lineWidth": 2,
+				"lineWidth": 3,
 				"nullValueDisplay": "gaps"
 			},
 			"description": "Hourly trend combining Cisco Nexus Dashboard anomalies and security advisories as a unified DC health signal, enabling operators to correlate infrastructure health degradation with specific time windows."

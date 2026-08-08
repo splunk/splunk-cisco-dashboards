@@ -203,10 +203,10 @@
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#dc2626",
-					"#f59e0b"
+					"#fda4af",
+					"#fcd34d"
 				],
-				"lineWidth": 2,
+				"lineWidth": 3,
 				"nullValueDisplay": "gaps"
 			},
 			"description": "Hourly trend of average and maximum network packet loss from Cisco ThousandEyes, enabling detection of transient vs sustained path quality degradation over time."
@@ -224,11 +224,11 @@
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#8b5cf6",
-					"#0ea5e9",
-					"#f59e0b"
+					"#c4b5fd",
+					"#7dd3fc",
+					"#fcd34d"
 				],
-				"lineWidth": 2,
+				"lineWidth": 3,
 				"nullValueDisplay": "gaps"
 			},
 			"description": "Hourly trend of BGP path changes detected by Cisco ThousandEyes per monitored test, surfacing internet routing instability that can degrade application reachability and performance before users report issues."

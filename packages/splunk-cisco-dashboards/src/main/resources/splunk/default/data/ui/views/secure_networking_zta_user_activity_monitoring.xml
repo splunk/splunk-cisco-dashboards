@@ -109,15 +109,15 @@
 				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "bottom",
 				"seriesColors": [
-					"#53bfff",
-					"#8bd45b",
-					"#ff9a4a",
-					"#ff7169"
+					"#7dd3fc",
+					"#6ee7b7",
+					"#fdba74",
+					"#fda4af"
 				],
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
-				"lineWidth": 2,
+				"lineWidth": 3,
 				"nullValueDisplay": "gaps",
 				"dataValuesDisplay": "minmax"
 			},
@@ -660,4 +660,3 @@
 }
     ]]></definition>
 </dashboard>
-

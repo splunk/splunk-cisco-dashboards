@@ -70,24 +70,24 @@
 			"description": "Summarizes perimeter decisions into Blocked versus Allowed volumes using both normalized action fields and raw syslog cues so mixed Cisco firewall feeds still aggregate cleanly."
 		},
 		"viz_security_resilience_cloud_fw_blocked": {
-			"type": "splunk.singlevalue",
+			"type": "splunk.area",
 			"title": "Cloud Firewall Blocked Connections",
 			"dataSources": {
 				"primary": "ds_security_resilience_cloud_fw_blocked"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
-				"majorFontSize": 36,
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true,
-				"showSparklineAreaGraph": true,
-				"showSparklineTooltip": true,
-				"showTrendIndicator": true,
-				"sparklineDisplay": "below",
-				"sparklineNullValueDisplay": "connect",
-				"trendDisplay": "percent",
-				"majorColor": "#ff7169",
-				"majorValue": "> primary | seriesByName('count') | lastPoint()"
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "off",
+				"seriesColors": [
+					"#fda4af"
+				],
+				"dataValuesDisplay": "minmax",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 3,
+				"markerDisplay": "outlined",
+				"nullValueDisplay": "connect"
 			},
 			"description": "Counts unique cloud firewall blocks as distinct source, destination, and port tuples from Secure Access or Umbrella web firewall telemetry."
 		},
@@ -120,24 +120,24 @@
 			"description": "Recent Web Application Firewall findings from Cisco Multicloud Defense - ModSecurity-style rule hits with category (sqli, xss, etc.) and the raw event text."
 		},
 		"viz_security_multicloud_defense_action_breakdown_kpi": {
-			"type": "splunk.singlevalue",
+			"type": "splunk.area",
 			"title": "Multicloud Defense Deny Rate",
 			"dataSources": {
 				"primary": "ds_security_multicloud_defense_action_breakdown_kpi"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
-				"majorFontSize": 36,
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true,
-				"showSparklineAreaGraph": true,
-				"showSparklineTooltip": true,
-				"showTrendIndicator": true,
-				"sparklineDisplay": "below",
-				"sparklineNullValueDisplay": "connect",
-				"trendDisplay": "percent",
-				"majorColor": "#ff7169",
-				"majorValue": "> primary | seriesByName('deny_pct') | lastPoint()"
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "off",
+				"seriesColors": [
+					"#fda4af"
+				],
+				"dataValuesDisplay": "minmax",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 3,
+				"markerDisplay": "outlined",
+				"nullValueDisplay": "connect"
 			},
 			"description": "Single-value deny rate across all Cisco Multicloud Defense security event subtypes (WAF, AV, DLP, URL/FQDN filter, L4 FW, L7 DoS, malicious source, SNI, TLS, DPI). Excludes audit logs and gateway system logs."
 		},

@@ -167,18 +167,18 @@
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#16a34a",
-					"#dc2626",
-					"#64748b"
+					"#6ee7b7",
+					"#fda4af",
+					"#cbd5e1"
 				],
 				"stackMode": "stacked",
-				"lineWidth": 2,
+				"lineWidth": 3,
 				"nullValueDisplay": "gaps"
 			},
 			"description": "Charts Cisco ISE authentication outcomes over time, split into success and failure series for Zero Trust Access monitoring."
 		},
 		"viz_zta_radius_latency": {
-			"type": "splunk.line",
+			"type": "splunk.area",
 			"title": "RADIUS Latency by ISE Node",
 			"dataSources": {
 				"primary": "ds_zta_radius_latency"
@@ -190,12 +190,12 @@
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#2563eb",
-					"#16a34a",
-					"#f59e0b",
-					"#dc2626"
+					"#7dd3fc",
+					"#6ee7b7",
+					"#fcd34d",
+					"#fda4af"
 				],
-				"lineWidth": 2,
+				"lineWidth": 3,
 				"nullValueDisplay": "gaps"
 			},
 			"description": "Tracks average RADIUS request processing latency in milliseconds per ISE node, the most direct indicator of authentication performance visible to end users and NADs."
@@ -213,13 +213,13 @@
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#16a34a",
-					"#f59e0b",
-					"#dc2626",
-					"#64748b"
+					"#6ee7b7",
+					"#fcd34d",
+					"#fda4af",
+					"#cbd5e1"
 				],
 				"stackMode": "stacked",
-				"lineWidth": 2,
+				"lineWidth": 3,
 				"nullValueDisplay": "gaps"
 			},
 			"description": "Hourly trend of Cisco SSE ZTNA connection statuses over time, enabling operators to track ZTNA adoption growth, detect access disruptions, and correlate denial spikes with policy or infrastructure changes."
@@ -271,7 +271,7 @@
 			"description": "Cross-source user/identity activity correlation spanning ISE NAC, Cisco ZTNA, and FMC firewall layers, providing a unified per-user view of how many Zero Trust enforcement layers an identity is active across and whether…"
 		},
 		"viz_zta_ravpn_connection_rate": {
-			"type": "splunk.line",
+			"type": "splunk.area",
 			"title": "Remote Access VPN Clients, Sessions, and Connect Rate",
 			"dataSources": {
 				"primary": "ds_zta_ravpn_connection_rate"
@@ -283,12 +283,12 @@
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#2563eb",
-					"#0ea5e9",
-					"#16a34a",
-					"#dc2626"
+					"#7dd3fc",
+					"#67e8f9",
+					"#6ee7b7",
+					"#fda4af"
 				],
-				"lineWidth": 2,
+				"lineWidth": 3,
 				"nullValueDisplay": "gaps"
 			},
 			"description": "Tracks remote-access VPN clients, sessions, successful connections, and failed connections in 15-minute intervals."

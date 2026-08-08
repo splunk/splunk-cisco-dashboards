@@ -51,24 +51,24 @@
 			}
 		},
 		"viz_secure_networking_meraki_rogue_ap_count": {
-			"type": "splunk.singlevalue",
+			"type": "splunk.area",
 			"title": "Meraki Rogue AP Count",
 			"dataSources": {
 				"primary": "ds_secure_networking_meraki_rogue_ap_count"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
-				"majorFontSize": 36,
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true,
-				"showSparklineAreaGraph": true,
-				"showSparklineTooltip": true,
-				"showTrendIndicator": true,
-				"sparklineDisplay": "below",
-				"sparklineNullValueDisplay": "connect",
-				"trendDisplay": "percent",
-				"majorColor": "#2563EB",
-				"majorValue": "> primary | seriesByName('rogue_ap_count') | lastPoint()"
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "off",
+				"seriesColors": [
+					"#fda4af"
+				],
+				"dataValuesDisplay": "minmax",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 3,
+				"markerDisplay": "outlined",
+				"nullValueDisplay": "connect"
 			},
 			"description": "Total count of unique rogue access points detected by Cisco Meraki Air Marshal , providing the wireless threat detection KPI for the Secure Infrastructure pillar."
 		},
@@ -101,113 +101,112 @@
 			"description": "Distribution of detected SSIDs by encryption type from Cisco Meraki Air Marshal, enabling quick identification of open or weakly encrypted wireless networks in the vicinity that pose user risk."
 		},
 		"viz_secure_networking_meraki_ap_count": {
-			"type": "splunk.singlevalue",
+			"type": "splunk.area",
 			"title": "Meraki Access Point Count",
 			"dataSources": {
 				"primary": "ds_secure_networking_meraki_ap_count"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
-				"majorFontSize": 36,
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true,
-				"showSparklineAreaGraph": true,
-				"showSparklineTooltip": true,
-				"showTrendIndicator": true,
-				"sparklineDisplay": "below",
-				"sparklineNullValueDisplay": "connect",
-				"trendDisplay": "percent",
-				"majorColor": "#2563EB",
-				"majorValue": "> primary | seriesByName('ap_count') | lastPoint()"
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "off",
+				"seriesColors": [
+					"#7dd3fc"
+				],
+				"dataValuesDisplay": "minmax",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 3,
+				"markerDisplay": "outlined",
+				"nullValueDisplay": "connect"
 			},
 			"description": "Total count of unique Cisco Meraki access points in the managed wireless infrastructure, providing the wireless footprint KPI."
 		},
 		"viz_secure_networking_meraki_unencrypted_ssid_count": {
-			"type": "splunk.singlevalue",
+			"type": "splunk.area",
 			"title": "Meraki Unencrypted SSID Count",
 			"dataSources": {
 				"primary": "ds_secure_networking_meraki_unencrypted_ssid_count"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
-				"majorFontSize": 36,
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true,
-				"showSparklineAreaGraph": true,
-				"showSparklineTooltip": true,
-				"showTrendIndicator": true,
-				"sparklineDisplay": "below",
-				"sparklineNullValueDisplay": "connect",
-				"trendDisplay": "percent",
-				"majorColor": "#2563EB",
-				"majorValue": "> primary | seriesByName('unencrypted_ssid_count') | lastPoint()"
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "off",
+				"seriesColors": [
+					"#fcd34d"
+				],
+				"dataValuesDisplay": "minmax",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 3,
+				"markerDisplay": "outlined",
+				"nullValueDisplay": "connect"
 			},
 			"description": "Count of unique open/unencrypted SSIDs detected by Cisco Meraki Air Marshal, providing the wireless compliance KPI for environments with a \"no open wireless\" security policy."
 		},
 		"viz_secure_networking_meraki_wireless_client_count": {
-			"type": "splunk.singlevalue",
+			"type": "splunk.area",
 			"title": "Meraki Wireless Client Count",
 			"dataSources": {
 				"primary": "ds_secure_networking_meraki_wireless_client_count"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
-				"majorFontSize": 36,
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true,
-				"showSparklineAreaGraph": true,
-				"showSparklineTooltip": true,
-				"showTrendIndicator": true,
-				"sparklineDisplay": "below",
-				"sparklineNullValueDisplay": "connect",
-				"trendDisplay": "percent",
-				"majorColor": "#2563EB",
-				"majorValue": "> primary | seriesByName('wireless_client_count') | lastPoint()"
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "off",
+				"seriesColors": [
+					"#7dd3fc"
+				],
+				"dataValuesDisplay": "minmax",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 3,
+				"markerDisplay": "outlined",
+				"nullValueDisplay": "connect"
 			},
 			"description": "Total count of unique wireless clients seen authenticating to Cisco Meraki access points, providing a real-time wireless endpoint population KPI."
 		},
 		"viz_secure_networking_infra_fmc_firewall_count": {
-			"type": "splunk.singlevalue",
+			"type": "splunk.area",
 			"title": "Infrastructure FMC Managed Firewall Count",
 			"dataSources": {
 				"primary": "ds_secure_networking_infra_fmc_firewall_count"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
-				"majorFontSize": 36,
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true,
-				"showSparklineAreaGraph": true,
-				"showSparklineTooltip": true,
-				"showTrendIndicator": true,
-				"sparklineDisplay": "below",
-				"sparklineNullValueDisplay": "connect",
-				"trendDisplay": "percent",
-				"majorColor": "#ff7169",
-				"majorValue": "> primary | seriesByName('firewall_count') | lastPoint()"
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "off",
+				"seriesColors": [
+					"#7dd3fc"
+				],
+				"dataValuesDisplay": "minmax",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 3,
+				"markerDisplay": "outlined",
+				"nullValueDisplay": "connect"
 			},
 			"description": "Total count of unique Cisco Firepower/FTD firewalls actively reporting to Cisco FMC, based on distinct Device UUIDs seen in FMC syslog, providing the on-premises firewall infrastructure footprint KPI."
 		},
 		"viz_feed_monitor_ftd_firewall_staleness": {
-			"type": "splunk.singlevalue",
+			"type": "splunk.area",
 			"title": "FTD Firewall - Stream Staleness (Signal Rail KPI)",
 			"dataSources": {
 				"primary": "ds_feed_monitor_ftd_firewall_staleness"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
-				"majorFontSize": 36,
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true,
-				"showSparklineAreaGraph": true,
-				"showSparklineTooltip": true,
-				"showTrendIndicator": true,
-				"sparklineDisplay": "below",
-				"sparklineNullValueDisplay": "connect",
-				"trendDisplay": "percent",
-				"majorColor": "#53bfff",
-				"majorValue": "> primary | seriesByName('age_minutes') | lastPoint()",
-				"unit": "min"
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "off",
+				"seriesColors": [
+					"#fdba74"
+				],
+				"dataValuesDisplay": "minmax",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 3,
+				"markerDisplay": "outlined",
+				"nullValueDisplay": "connect"
 			},
 			"description": "Staleness monitor for Cisco FTD firewall feeds covering syslog, advanced JSON connection events, and DNS logs. Any production firewall sees continuous traffic - silence beyond 30 minutes means the feed is broken, not the…"
 		},

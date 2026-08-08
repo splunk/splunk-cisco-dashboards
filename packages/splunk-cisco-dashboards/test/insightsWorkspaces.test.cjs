@@ -353,14 +353,6 @@ for (const block of searchbaseConf.split(/(?=^\[)/m)) {
   }
 }
 
-const intentionallyCategoricalSecureOverviewStanzas = new Set([
-  "secure_networking_sdwan_apps_health_breakdown",
-  "secure_networking_ip_sgt_bindings_by_group",
-  "secure_networking_sgt_fmc_blocks_by_sgt",
-  "secure_networking_fmc_top_rules_hit",
-  "secure_networking_fmc_top_url_categories_blocked",
-]);
-
 for (const tileId of secureNetworkingLayoutTileIds) {
   const mappings = secureOverviewMappings.filter(
     ({ overview }) => overview.tileId === tileId,
@@ -386,7 +378,11 @@ for (const tileId of secureNetworkingLayoutTileIds) {
   );
 
   const defaultViz = block.match(/^default_viz = (.+)$/m)?.[1] ?? "";
-  if (defaultViz === "splunk.table") continue;
+  assert.match(
+    defaultViz,
+    /^splunk\.(line|area|column)$/,
+    `${tileId} (${stanzaId}) must use a trend visualization`,
+  );
   const valueField = overview.valueField ?? vizOptions.valueField;
   assert.ok(
     typeof valueField === "string" && valueField.trim().length > 0,
@@ -399,23 +395,21 @@ for (const tileId of secureNetworkingLayoutTileIds) {
     searchStart === -1
       ? ""
       : block.slice(searchStart + searchPrefix.length).trimEnd();
-  if (!intentionallyCategoricalSecureOverviewStanzas.has(stanzaId)) {
-    assert.match(
-      search,
-      /\| timechart /i,
-      tileId + " (" + stanzaId + ") must expose a timechart trend",
-    );
-  }
-  const isTimeSeries =
-    /^splunk\.(line|area|column)$/.test(defaultViz) &&
-    /\| timechart /i.test(search);
-  if (isTimeSeries) {
-    const sparkDataField = overview.sparkDataField ?? vizOptions.sparkDataField;
-    assert.ok(
-      typeof sparkDataField === "string" && sparkDataField.trim().length > 0,
-      `${tileId} (${stanzaId}) must bind an explicit sparkDataField`,
-    );
-  }
+  assert.match(
+    search,
+    /\| timechart /i,
+    tileId + " (" + stanzaId + ") must expose a timechart trend",
+  );
+  assert.match(
+    search,
+    /\| timechart fixedrange=false cont=false bins=(?:48|60)\b/i,
+    `${tileId} (${stanzaId}) must cap its timechart at 48 or 60 buckets`,
+  );
+  const sparkDataField = overview.sparkDataField ?? vizOptions.sparkDataField;
+  assert.ok(
+    typeof sparkDataField === "string" && sparkDataField.trim().length > 0,
+    `${tileId} (${stanzaId}) must bind an explicit sparkDataField`,
+  );
 
   const drilldownSearchName = block.match(
     /^drilldown_search_name = (.+)$/m,

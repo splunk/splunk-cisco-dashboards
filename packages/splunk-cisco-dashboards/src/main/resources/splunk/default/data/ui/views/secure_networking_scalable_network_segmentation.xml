@@ -225,13 +225,13 @@
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"seriesColors": [
-					"#0d9488",
-					"#2563eb",
-					"#f59e0b",
-					"#dc2626",
-					"#8b5cf6"
+					"#5eead4",
+					"#7dd3fc",
+					"#fcd34d",
+					"#fda4af",
+					"#c4b5fd"
 				],
-				"lineWidth": 2,
+				"lineWidth": 3,
 				"nullValueDisplay": "gaps"
 			},
 			"description": "Trends observed Cisco IOS VRF, VLAN, VXLAN, VPN, and SGT/TrustSec events over time."

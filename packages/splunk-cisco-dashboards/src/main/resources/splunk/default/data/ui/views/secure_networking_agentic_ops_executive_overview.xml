@@ -51,47 +51,46 @@
 			}
 		},
 		"viz_overview_ap_health": {
-			"type": "splunk.singlevalue",
+			"type": "splunk.area",
 			"title": "AP Health",
 			"dataSources": {
 				"primary": "ds_overview_ap_health"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
-				"majorFontSize": 36,
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true,
-				"showSparklineAreaGraph": true,
-				"showSparklineTooltip": true,
-				"showTrendIndicator": true,
-				"sparklineDisplay": "below",
-				"sparklineNullValueDisplay": "connect",
-				"trendDisplay": "percent",
-				"majorColor": "#10b981",
-				"majorValue": "> primary | seriesByName('pct') | lastPoint()",
-				"unit": "%"
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "off",
+				"seriesColors": [
+					"#6ee7b7"
+				],
+				"dataValuesDisplay": "minmax",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 3,
+				"markerDisplay": "outlined",
+				"nullValueDisplay": "connect"
 			},
 			"description": "Shows what percentage of Catalyst Center access points are reachable at any moment, along with a count of how many are up or down."
 		},
 		"viz_secure_networking_meraki_ap_count": {
-			"type": "splunk.singlevalue",
+			"type": "splunk.area",
 			"title": "Meraki Access Point Count",
 			"dataSources": {
 				"primary": "ds_secure_networking_meraki_ap_count"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
-				"majorFontSize": 36,
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true,
-				"showSparklineAreaGraph": true,
-				"showSparklineTooltip": true,
-				"showTrendIndicator": true,
-				"sparklineDisplay": "below",
-				"sparklineNullValueDisplay": "connect",
-				"trendDisplay": "percent",
-				"majorColor": "#2563EB",
-				"majorValue": "> primary | seriesByName('ap_count') | lastPoint()"
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "off",
+				"seriesColors": [
+					"#7dd3fc"
+				],
+				"dataValuesDisplay": "minmax",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 3,
+				"markerDisplay": "outlined",
+				"nullValueDisplay": "connect"
 			},
 			"description": "Total count of unique Cisco Meraki access points in the managed wireless infrastructure, providing the wireless footprint KPI."
 		},
@@ -105,15 +104,15 @@
 				"backgroundColor": "#0f1a2a",
 				"legendDisplay": "bottom",
 				"seriesColors": [
-					"#2563EB",
-					"#8bd45b",
-					"#ff9a4a",
-					"#ff7169"
+					"#7dd3fc",
+					"#6ee7b7",
+					"#fdba74",
+					"#fda4af"
 				],
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
-				"lineWidth": 2,
+				"lineWidth": 3,
 				"nullValueDisplay": "gaps",
 				"dataValuesDisplay": "minmax"
 			},
@@ -190,46 +189,46 @@
 			"description": "Per-device detail roster backing the DEVICE HEALTH tile drilldown. One row per DeviceID with the latest reachability and manageability flags, the 0/50/100 health score the parent tile averages, and the most-recent event…"
 		},
 		"viz_executive_dashboard_ds_device_health_trend_compare": {
-			"type": "splunk.singlevalue",
+			"type": "splunk.area",
 			"title": "Device Health Trend Comparison",
 			"dataSources": {
 				"primary": "ds_executive_dashboard_ds_device_health_trend_compare"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
-				"majorFontSize": 36,
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true,
-				"showSparklineAreaGraph": true,
-				"showSparklineTooltip": true,
-				"showTrendIndicator": true,
-				"sparklineDisplay": "below",
-				"sparklineNullValueDisplay": "connect",
-				"trendDisplay": "percent",
-				"majorColor": "#3B82F6",
-				"majorValue": "> primary | seriesByName('current') | lastPoint()"
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "off",
+				"seriesColors": [
+					"#7dd3fc"
+				],
+				"dataValuesDisplay": "minmax",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 3,
+				"markerDisplay": "outlined",
+				"nullValueDisplay": "connect"
 			},
 			"description": "Shows the Catalyst Center fleet-average device health trend across automatic time buckets in the selected dashboard range."
 		},
 		"viz_executive_summary_healthy_device_count": {
-			"type": "splunk.singlevalue",
+			"type": "splunk.area",
 			"title": "Healthy Device Count",
 			"dataSources": {
 				"primary": "ds_executive_summary_healthy_device_count"
 			},
 			"options": {
-				"backgroundColor": "#0f1a2a",
-				"majorFontSize": 36,
-				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true,
-				"showSparklineAreaGraph": true,
-				"showSparklineTooltip": true,
-				"showTrendIndicator": true,
-				"sparklineDisplay": "below",
-				"sparklineNullValueDisplay": "connect",
-				"trendDisplay": "percent",
-				"majorColor": "#3B82F6",
-				"majorValue": "> primary | seriesByName('healthy_count') | lastPoint()"
+				"backgroundColor": "#0f172a",
+				"legendDisplay": "off",
+				"seriesColors": [
+					"#6ee7b7"
+				],
+				"dataValuesDisplay": "minmax",
+				"showYMajorGridLines": true,
+				"xAxisTitleVisibility": "hide",
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 3,
+				"markerDisplay": "outlined",
+				"nullValueDisplay": "connect"
 			},
 			"description": "Supplies the Healthy Devices KPI tile with an absolute count of reachable, managed assets plus the fleet total and percent healthy for quick ratio context."
 		},

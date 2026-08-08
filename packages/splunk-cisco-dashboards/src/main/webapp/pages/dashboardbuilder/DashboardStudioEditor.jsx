@@ -96,6 +96,7 @@ import {
     resolveSearchbaseDefinitionForNativeStudio,
 } from './searchbaseDefinitionUtils';
 import { repairSearchbaseTimeQueryParameters } from './dashboardTimeUtils';
+import { syncSplunkShellTheme } from '../../common/theme/splunkShellTheme';
 
 const ENABLE_EXPERIMENTAL_SPACE_MANAGER = false;
 const DASHBOARD_STUDIO_HEIGHT = 1200;
@@ -884,6 +885,11 @@ const DashboardStudioEditor = ({
     );
     const hasThemedPortalModal =
         openConvertModal || openBackToManagerModal || openDashboardModal;
+
+    useEffect(
+        () => syncSplunkShellTheme(dashboardColorScheme),
+        [dashboardColorScheme],
+    );
 
     // Splunk React UI mounts modal backdrops in a portal outside the Dashboard
     // Studio root. Mark the document while one of our dialogs is open so the

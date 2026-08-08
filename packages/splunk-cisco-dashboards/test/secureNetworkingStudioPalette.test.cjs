@@ -30,6 +30,18 @@ const HOME_DARK_PALETTE = {
   accentStroke: "rgba(14,165,233,0.42)",
 };
 
+const BRIGHT_TREND_COLORS = new Set([
+  "#5eead4", // teal-300
+  "#67e8f9", // cyan-300
+  "#6ee7b7", // emerald-300
+  "#7dd3fc", // sky-300
+  "#c4b5fd", // violet-300
+  "#cbd5e1", // slate-300
+  "#fcd34d", // amber-300
+  "#fda4af", // rose-300
+  "#fdba74", // orange-300
+]);
+
 const ALLOWED_COLORS = new Set([
   ...Object.values(HOME_DARK_PALETTE)
     .filter((color) => color.startsWith("#"))
@@ -41,6 +53,7 @@ const ALLOWED_COLORS = new Set([
   "#dc2626", // red-600
   "#8b5cf6", // violet-500
   "#0d9488", // teal-600
+  ...BRIGHT_TREND_COLORS,
 ]);
 
 const RETIRED_STUDIO_COLORS = [
@@ -123,8 +136,8 @@ for (const dashboardName of DASHBOARD_NAMES) {
     `${dashboardName} must use the Insights Workspace primary text color`,
   );
   assert.ok(
-    colors.includes(HOME_DARK_PALETTE.accent),
-    `${dashboardName} must use the Insights Workspace primary accent`,
+    colors.includes(HOME_DARK_PALETTE.accent) || colors.includes("#7dd3fc"),
+    `${dashboardName} must use the Insights Workspace accent or its brighter trend counterpart`,
   );
 }
 
@@ -147,18 +160,67 @@ const secureNetworkingStudioViews = fs
     fileName,
     xml: fs.readFileSync(path.join(VIEWS_DIR, fileName), "utf8"),
   }))
-  .filter(({ xml }) => /<dashboard\s+version="2"/.test(xml) && /"description"\s*:/.test(xml));
+  .filter(({ xml }) => /<dashboard\s+version="2"/.test(xml) && /"description"\s*:/.test(xml))
+  .map(({ fileName, xml }) => {
+    const definitionMatch = xml.match(
+      /<definition><!\[CDATA\[([\s\S]*?)\]\]><\/definition>/,
+    );
+    assert.ok(definitionMatch, `${fileName} must contain a Dashboard Studio definition`);
+    return { fileName, xml, definition: JSON.parse(definitionMatch[1]) };
+  });
 
 assert.ok(
   secureNetworkingStudioViews.length > DASHBOARD_NAMES.length,
   "The stylesheet regression must cover pillar detail dashboards as well as the five landing dashboards",
 );
-for (const { fileName, xml } of secureNetworkingStudioViews) {
+let areaChartCount = 0;
+for (const { fileName, xml, definition } of secureNetworkingStudioViews) {
   assert.match(
     xml,
     /<dashboard\s+version="2"[^>]*stylesheet="application\.css"/,
     `${fileName} must load the shared description treatment`,
   );
+
+  for (const [visualizationId, visualization] of Object.entries(
+    definition.visualizations,
+  )) {
+    assert.notEqual(
+      visualization.type,
+      "splunk.line",
+      `${fileName}:${visualizationId} must use the higher-contrast area trend treatment`,
+    );
+    assert.ok(
+      !(
+        visualization.type === "splunk.singlevalue" &&
+        visualization.options?.sparklineDisplay === "below"
+      ),
+      `${fileName}:${visualizationId} must not hide a time series in a single-value sparkline`,
+    );
+    if (visualization.type !== "splunk.area") continue;
+
+    areaChartCount += 1;
+    assert.equal(
+      visualization.options?.lineWidth,
+      3,
+      `${fileName}:${visualizationId} must use the thicker dark-mode area outline`,
+    );
+    assert.ok(
+      visualization.options?.seriesColors?.length > 0,
+      `${fileName}:${visualizationId} must define an explicit bright series palette`,
+    );
+    for (const color of visualization.options.seriesColors) {
+      assert.ok(
+        BRIGHT_TREND_COLORS.has(color.toLowerCase()),
+        `${fileName}:${visualizationId} uses low-contrast area color ${color}`,
+      );
+    }
+  }
 }
+
+assert.equal(
+  areaChartCount,
+  27,
+  "Secure Networking Studio must preserve all 27 high-contrast area trend panels",
+);
 
 console.log("✓ Secure Networking Studio palette regression test passed");

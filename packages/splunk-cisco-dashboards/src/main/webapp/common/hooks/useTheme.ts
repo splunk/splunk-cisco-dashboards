@@ -17,6 +17,7 @@ import {
     type ResolvedTheme,
     type ThemePreference,
 } from '@/common/theme/themePreference';
+import { syncSplunkShellTheme } from '@/common/theme/splunkShellTheme';
 
 export type { ResolvedTheme, ThemePreference } from '@/common/theme/themePreference';
 
@@ -32,7 +33,9 @@ interface UseThemeResult {
 
 export const useTheme = (): UseThemeResult => {
     const [theme, setThemeState] = useState<ThemePreference>(readThemePreference);
-    const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>('light');
+    const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() =>
+        readThemePreference() === 'dark' ? 'dark' : 'light'
+    );
 
     useEffect(() => {
         let active = true;
@@ -43,6 +46,8 @@ export const useTheme = (): UseThemeResult => {
             active = false;
         };
     }, [theme]);
+
+    useEffect(() => syncSplunkShellTheme(resolvedTheme), [resolvedTheme]);
 
     const setTheme = useCallback((next: ThemePreference) => {
         setThemeState(next);

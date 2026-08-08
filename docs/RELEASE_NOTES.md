@@ -2,6 +2,16 @@
 
 ## 1.0.36
 
+- Secure Networking Dashboard Studio trends now use 27 true area charts with
+  brighter sky, cyan, emerald, amber, orange, rose, violet, teal, and slate
+  series colors plus thicker outlines for dark-mode visibility. Thirteen faint
+  single-value sparklines and five remaining line charts were upgraded while
+  categorical and point-in-time visualizations retain their best-fit types.
+- Theme-capable dashboards now synchronize Splunk's side navigation and
+  navigation drawer with each dashboard's resolved light or dark mode. This
+  applies live, without reloading or discarding unsaved canvas work, across
+  Searchbase Canvas, Insights Workspace profiles, Health Monitoring, Network
+  Diagram, Secure Operations Glass, and Dashboard Studio.
 - Insights Workspace profile pages now opt into Splunk's dark Classic XML
   shell, so the side navigation matches the shipped dark workspace theme
   instead of remaining light beside a dark dashboard.
@@ -23,12 +33,11 @@
   without box borders. Signal Rail pause, style, and configuration controls
   reveal on desktop hover or keyboard focus while remaining visible on compact
   layouts, and metric help uses a larger filled Splunk React information icon.
-- Secure Networking factory KPIs now use explicit time-series contracts wherever
-  the metric has a meaningful temporal grain. Window-level headline values are
-  broadcast alongside bounded per-bucket spark fields for anomaly, TrustSec,
-  firewall, ThousandEyes, AI Defense, and authentication signals. The five
-  categorical breakdowns and all entity-detail drill-down tables deliberately
-  retain their non-timechart schemas.
+- All 45 Secure Networking factory overview searches now use explicit,
+  bounded `timechart` contracts and render with a best-fit line, area, or
+  column trend. Window-level headline values remain available alongside
+  48- or 60-bucket spark fields; the five former categorical overview tiles
+  retain their detailed breakdowns in the existing drill-down tables.
 - Added a documented SUI 5.13 / Themes 1.10 / Cisco Cloud Control alignment
   matrix, including the deliberate boundary between Splunk global chrome and
   the application content surface.
