@@ -3,616 +3,1278 @@
     <description>Connect segmentation posture, trust boundaries, and enforcement coverage at scale.</description>
     <definition><![CDATA[
 {
-	"title": "Scalable Network Segmentation",
-	"description": "Connect segmentation posture, trust boundaries, and enforcement coverage at scale.",
-	"inputs": {
-		"input_time_range": {
-			"options": {
-				"defaultValue": "-24h@h,now",
-				"token": "time_tok"
-			},
-			"title": "Time Range",
-			"type": "input.timerange"
-		}
-	},
-	"defaults": {
-		"visualizations": {
-			"global": {
-				"showLastUpdated": true,
-				"showProgressBar": true
-			}
-		}
-	},
-	"visualizations": {
-		"viz_header_bg": {
-			"type": "splunk.rectangle",
-			"options": {
-				"fillColor": "#1e293b",
-				"strokeColor": "rgba(14,165,233,0.42)"
-			}
-		},
-		"viz_header_icon": {
-			"type": "splunk.image",
-			"title": "Scalable Network Segmentation",
-			"options": {
-				"preserveAspectRatio": true,
-				"src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/segmentation.svg"
-			}
-		},
-		"viz_header": {
-			"type": "splunk.markdown",
-			"title": "",
-			"showLastUpdated": false,
-			"showProgressBar": false,
-			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#f1f5f9",
-				"markdown": "# Scalable Network Segmentation\nConnect segmentation posture, trust boundaries, and enforcement coverage at scale."
-			}
-		},
-		"viz_seg_total_assignments": {
-			"type": "splunk.singlevalue",
-			"title": "Active SGT Assignments",
-			"dataSources": {
-				"primary": "ds_seg_total_assignments"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"majorFontSize": 36,
-				"majorValue": "> primary | seriesByName('total_assignments') | lastPoint()",
-				"shouldAbbreviateMajorValue": true,
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
-				"majorColor": "#0ea5e9"
-			},
-			"description": "Count of active SGT assignments observed in the selected time window from Cisco ISE authentication syslog, reflecting the number of distinct user/device classifications where a non-default Security Group Tag was…"
-		},
-		"viz_seg_unique_sgts": {
-			"type": "splunk.singlevalue",
-			"title": "Unique SGTs",
-			"dataSources": {
-				"primary": "ds_seg_unique_sgts"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"majorFontSize": 36,
-				"majorValue": "> primary | seriesByName('unique_sgts') | lastPoint()",
-				"shouldAbbreviateMajorValue": true,
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
-				"majorColor": "#0d9488"
-			},
-			"description": "Count of unique Security Group Tags actively in use across ISE authentication events, reflecting the breadth of TrustSec segmentation classification deployed in the environment."
-		},
-		"viz_seg_sgt_blocks": {
-			"type": "splunk.singlevalue",
-			"title": "SGT-Enforced Blocks",
-			"dataSources": {
-				"primary": "ds_seg_sgt_blocks_total"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"majorFontSize": 36,
-				"majorValue": "> primary | seriesByName('sgt_enforced_blocks') | lastPoint()",
-				"shouldAbbreviateMajorValue": true,
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
-				"majorColor": "#dc2626"
-			},
-			"description": "Total count of FMC block decisions where the source carried an active TrustSec SGT , serving as the primary Scalable Network Segmentation enforcement KPI for the Hybrid Mesh Firewalling overview."
-		},
-		"viz_seg_binding_mix": {
-			"type": "splunk.pie",
-			"title": "IP-SGT Binding Mix",
-			"dataSources": {
-				"primary": "ds_seg_ip_sgt_bindings"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"legendDisplay": "right",
-				"seriesColors": [
-					"#0ea5e9",
-					"#16a34a",
-					"#f59e0b",
-					"#dc2626",
-					"#8b5cf6"
-				]
-			},
-			"description": "Shows the distribution of IP-to-SGT bindings across Security Group Tags, reporting how many bound IPs fall under each Security Group — the core \"SGT by Site/Device\" view for the Segmentation pillar."
-		},
-		"viz_seg_status_rollup": {
-			"type": "splunk.table",
-			"title": "Segmentation Status by Site",
-			"dataSources": {
-				"primary": "ds_seg_status_rollup"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Creates a segmentation adoption rollup by ISE site, comparing total authenticated endpoints to the subset carrying Security Group Tags."
-		},
-		"viz_seg_sgt_distribution": {
-			"type": "splunk.table",
-			"title": "SGT Distribution by Site and Device",
-			"dataSources": {
-				"primary": "ds_seg_sgt_distribution"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Breaks SGT-tagged authentications down by site, network device, and Security Group Tag for segmentation drilldowns."
-		},
-		"viz_seg_policy_hits": {
-			"type": "splunk.bar",
-			"title": "ISE Policy Hits by Network Device",
-			"dataSources": {
-				"primary": "ds_seg_policy_hits"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"legendDisplay": "off",
-				"showYMajorGridLines": true,
-				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"seriesColors": [
-					"#8b5cf6"
-				]
-			},
-			"description": "Ranks ISE policy-set hits by the network device (site/branch identity, e.g. wireless controller or firewall hostname) that triggered them — the closest real, validated proxy for \"Policy Hits by Site\" available today."
-		},
-		"viz_seg_trustsec_readiness": {
-			"type": "splunk.bar",
-			"title": "TrustSec Hardware Readiness",
-			"dataSources": {
-				"primary": "ds_seg_trustsec_readiness"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"legendDisplay": "off",
-				"showYMajorGridLines": true,
-				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"seriesColors": [
-					"#0d9488"
-				]
-			},
-			"description": "Rolls up managed devices by Device Family and exact Device Type (model) from Catalyst Center inventory — the baseline needed to determine TrustSec/SGT hardware readiness across the fleet."
-		},
-		"viz_seg_excessive_mac": {
-			"type": "splunk.table",
-			"title": "Excessive MACs per Wired Port",
-			"dataSources": {
-				"primary": "ds_seg_excessive_mac"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Ranks wired switch ports by the number of distinct MAC addresses that authenticated behind them — a NAC-deployment health check that surfaces ports with a hub, daisy-chained switch, or loop behind a single access port."
-		},
-		"viz_seg_ot_iot": {
-			"type": "splunk.table",
-			"title": "OT/IoT Device Visibility",
-			"dataSources": {
-				"primary": "ds_seg_ot_iot"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Inventories OT/IoT devices discovered by Cisco Cyber Vision , grouped by device type with device counts and average risk score — the Cisco-native operational-technology visibility layer for segmentation planning."
-		},
-		"viz_seg_router_feature_trend": {
-			"type": "splunk.area",
-			"title": "Router Segmentation Feature Event Trend",
-			"dataSources": {
-				"primary": "ds_seg_router_feature_trend"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"legendDisplay": "right",
-				"showYMajorGridLines": true,
-				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"seriesColors": [
-					"#5eead4",
-					"#7dd3fc",
-					"#fcd34d",
-					"#fda4af",
-					"#c4b5fd"
-				],
-				"lineWidth": 3,
-				"nullValueDisplay": "gaps"
-			},
-			"description": "Trends observed Cisco IOS VRF, VLAN, VXLAN, VPN, and SGT/TrustSec events over time."
-		},
-		"viz_seg_router_feature_evidence": {
-			"type": "splunk.table",
-			"title": "Router VRF, VLAN, VXLAN, VPN, and SGT Evidence",
-			"dataSources": {
-				"primary": "ds_seg_router_feature_evidence"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Shows Cisco router and switch telemetry containing VRF, 802.1Q VLAN subinterface, VXLAN/VNI, VPN, or SGT/TrustSec evidence by device."
-		},
-		"viz_design_context": {
-			"type": "splunk.markdown",
-			"title": "",
-			"showLastUpdated": false,
-			"showProgressBar": false,
-			"options": {
-				"backgroundColor": "#1e293b",
-				"fontColor": "#f1f5f9",
-				"markdown": "**Audience:** Network security, identity, and TrustSec operations  •  **Sources:** Cisco ISE authentication, SGT, and IP-SGT binding telemetry  •  **Reading guide:** Read adoption breadth first, then investigate binding mix and site-level gaps.  •  **Freshness:** Uses the dashboard time range"
-			}
-		},
-		"viz_design_section": {
-			"type": "splunk.markdown",
-			"title": "",
-			"showLastUpdated": false,
-			"showProgressBar": false,
-			"options": {
-				"backgroundColor": "#1e293b",
-				"fontColor": "#f1f5f9",
-				"markdown": "### TrustSec posture\nRead adoption breadth first, then investigate binding mix and site-level gaps."
-			}
-		}
-	},
-	"dataSources": {
-		"ds_seg_total_assignments": {
-			"name": "Secure Networking chain - SGT assignment count",
-			"options": {
-				"ref": "secure_networking_sgt_total_assignments_count",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_seg_unique_sgts": {
-			"name": "Secure Networking chain - unique SGT count",
-			"options": {
-				"ref": "secure_networking_sgt_unique_count",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_seg_sgt_blocks_total": {
-			"name": "Secure Networking chain - SGT block count",
-			"options": {
-				"ref": "secure_networking_sgt_fmc_blocks_total_count",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_seg_ip_sgt_bindings": {
-			"name": "Secure Networking - IP-SGT Bindings by Security Group",
-			"options": {
-				"ref": "secure_networking_ip_sgt_bindings_by_group",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_seg_status_rollup": {
-			"name": "Secure Networking chain - segmentation status",
-			"options": {
-				"ref": "secure_networking_segmentation_status_rollup",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_seg_sgt_distribution": {
-			"name": "Secure Networking chain - SGT distribution",
-			"options": {
-				"ref": "secure_networking_sgt_distribution_by_site_device",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_seg_policy_hits": {
-			"name": "Secure Networking - ISE Policy Hits by Network Device",
-			"options": {
-				"ref": "secure_networking_ise_policy_hits_by_device",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_seg_trustsec_readiness": {
-			"name": "Secure Networking - TrustSec Hardware Readiness",
-			"options": {
-				"ref": "secure_networking_trustsec_hardware_readiness",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_seg_excessive_mac": {
-			"name": "Secure Networking - Excessive Unique MAC per Wired Port",
-			"options": {
-				"ref": "secure_networking_excessive_mac_per_port",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_seg_ot_iot": {
-			"name": "Secure Networking - OT IoT Device Visibility",
-			"options": {
-				"ref": "secure_networking_ot_iot_device_visibility",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_seg_router_feature_trend": {
-			"name": "Secure Networking - Router Segmentation Feature Event Trend",
-			"options": {
-				"ref": "secure_networking_router_segmentation_feature_trend",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_seg_router_feature_evidence": {
-			"name": "Secure Networking - Router Segmentation Feature Evidence",
-			"options": {
-				"ref": "secure_networking_router_segmentation_feature_evidence",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		}
-	},
-	"layout": {
-		"globalInputs": [
-			"input_time_range"
-		],
-		"layoutDefinitions": {
-			"layout_overview": {
-				"options": {
-					"backgroundColor": "#020617",
-					"display": "auto-scale",
-					"height": 1706,
-					"width": 1440
-				},
-				"structure": [
-					{
-						"item": "viz_header_bg",
-						"position": {
-							"x": 20,
-							"y": 0,
-							"w": 1400,
-							"h": 88
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_header_icon",
-						"position": {
-							"x": 36,
-							"y": 14,
-							"w": 56,
-							"h": 56
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_header",
-						"position": {
-							"x": 108,
-							"y": 4,
-							"w": 1292,
-							"h": 76
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_design_context",
-						"position": {
-							"x": 20,
-							"y": 100,
-							"w": 1400,
-							"h": 64
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_design_section",
-						"position": {
-							"x": 20,
-							"y": 176,
-							"w": 1400,
-							"h": 54
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_seg_total_assignments",
-						"position": {
-							"x": 20,
-							"y": 242,
-							"w": 335,
-							"h": 200
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_seg_unique_sgts",
-						"position": {
-							"x": 375,
-							"y": 242,
-							"w": 335,
-							"h": 200
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_seg_sgt_blocks",
-						"position": {
-							"x": 730,
-							"y": 242,
-							"w": 335,
-							"h": 200
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_seg_binding_mix",
-						"position": {
-							"x": 1085,
-							"y": 242,
-							"w": 335,
-							"h": 200
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_seg_status_rollup",
-						"position": {
-							"x": 20,
-							"y": 458,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_seg_sgt_distribution",
-						"position": {
-							"x": 730,
-							"y": 458,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_seg_policy_hits",
-						"position": {
-							"x": 20,
-							"y": 774,
-							"w": 690,
-							"h": 280
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_seg_trustsec_readiness",
-						"position": {
-							"x": 730,
-							"y": 774,
-							"w": 690,
-							"h": 280
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_seg_excessive_mac",
-						"position": {
-							"x": 20,
-							"y": 1070,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_seg_ot_iot",
-						"position": {
-							"x": 730,
-							"y": 1070,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_seg_router_feature_trend",
-						"position": {
-							"x": 20,
-							"y": 1386,
-							"w": 690,
-							"h": 280
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_seg_router_feature_evidence",
-						"position": {
-							"x": 730,
-							"y": 1386,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					}
-				],
-				"type": "absolute"
-			}
-		},
-		"options": {
-			"showTitleAndDescription": false,
-			"submitButton": false,
-			"submitOnDashboardLoad": true
-		},
-		"tabs": {
-			"items": [
-				{
-					"label": "overview",
-					"layoutId": "layout_overview"
-				}
-			]
-		}
-	},
-	"applicationProperties": {
-		"collapseNavigation": false,
-		"hideEdit": false,
-		"hideExport": false
-	}
+    "title": "Scalable Network Segmentation",
+    "description": "Connect segmentation posture, trust boundaries, and enforcement coverage at scale.",
+    "inputs": {
+        "input_time_range": {
+            "options": {
+                "defaultValue": "-24h@h,now",
+                "token": "time_tok"
+            },
+            "title": "Time Range",
+            "type": "input.timerange"
+        }
+    },
+    "defaults": {
+        "visualizations": {
+            "global": {
+                "showLastUpdated": true,
+                "showProgressBar": true
+            }
+        }
+    },
+    "visualizations": {
+        "viz_header_bg": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#1e293b",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 10
+            }
+        },
+        "viz_header_icon": {
+            "type": "splunk.image",
+            "title": "Scalable Network Segmentation",
+            "options": {
+                "preserveAspectRatio": true,
+                "src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/segmentation.svg"
+            }
+        },
+        "viz_header": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "markdown": "# Scalable Network Segmentation\nConnect segmentation posture, trust boundaries, and enforcement coverage at scale\\."
+            }
+        },
+        "viz_card_01_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_01_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**TrustSec Readiness**"
+            }
+        },
+        "viz_card_01_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Asset  •  Scalable Network Segmentation"
+            }
+        },
+        "viz_card_01_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Trends the Catalyst Center device inventory by family over time, with the model\\-level TrustSec readiness baseline retained as drill\\-down detail\\."
+            }
+        },
+        "viz_card_01_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_01"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"PeakObservedDevices\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_01_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_01"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"BucketTotal\")"
+            }
+        },
+        "viz_card_01_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=TrustSec%20Readiness&target=Secure%20Networking%20-%20TrustSec%20Hardware%20Readiness,Secure%20Networking%20-%20Segmentation%20Status%20Rollup"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_02_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_02_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Active SGT Assignments**"
+            }
+        },
+        "viz_card_02_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Identity  •  Scalable Network Segmentation"
+            }
+        },
+        "viz_card_02_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Count of active SGT assignments observed in the selected time window from Cisco ISE authentication syslog, reflecting the number of distinct user/device classifications where a non\\-default Security Group Tag was assigned\\."
+            }
+        },
+        "viz_card_02_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_02"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"total_assignments\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_02_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_02"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"assignments_trend\")"
+            }
+        },
+        "viz_card_02_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Active%20SGT%20Assignments&target=Secure%20Networking%20-%20SGT%20Distribution%20by%20Site%20and%20Device,Secure%20Networking%20-%20Excessive%20Unique%20MAC%20per%20Wired%20Port,Secure%20Networking%20-%20OT%2FIoT%20Device%20Visibility"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_03_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_03_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Security Groups in Use**"
+            }
+        },
+        "viz_card_03_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Identity  •  Scalable Network Segmentation"
+            }
+        },
+        "viz_card_03_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Count of unique Security Group Tags actively in use across ISE authentication events, reflecting the breadth of TrustSec segmentation classification deployed in the environment\\."
+            }
+        },
+        "viz_card_03_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_03"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"unique_sgts\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_03_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_03"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"unique_sgts_trend\")"
+            }
+        },
+        "viz_card_03_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Security%20Groups%20in%20Use&target=Secure%20Networking%20-%20SGT%20Distribution%20by%20Site%20and%20Device,Secure%20Networking%20-%20SGT%20by%20Site"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_04_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_04_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**IP\\-SGT Binding Activity**"
+            }
+        },
+        "viz_card_04_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Identity  •  Scalable Network Segmentation"
+            }
+        },
+        "viz_card_04_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Tracks distinct IP prefixes bound to each SGT over time and retains the full binding inventory as drill\\-down detail\\."
+            }
+        },
+        "viz_card_04_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_04"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"PeakBoundPrefixes\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_04_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_04"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"BucketTotal\")"
+            }
+        },
+        "viz_card_04_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=IP-SGT%20Binding%20Activity&target=Secure%20Networking%20-%20SGT%20Binding%20Inventory,Secure%20Networking%20-%20IP-SGT%20Bindings%20by%20Security%20Group"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_05_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_05_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**SGACL Enforcement**"
+            }
+        },
+        "viz_card_05_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Identity  •  Scalable Network Segmentation"
+            }
+        },
+        "viz_card_05_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Hourly trend of TrustSec SGACL enforcement events from the Catalyst data model, split by permit/deny \\(and other\\) actions — the primary “is role\\-based policy doing work over time?” signal for scalable segmentation\\."
+            }
+        },
+        "viz_card_05_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_05"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_05_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_05"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"BucketTotal\")"
+            }
+        },
+        "viz_card_05_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=SGACL%20Enforcement&target=Secure%20Networking%20-%20SGACL%20Deny%20Pairs%20by%20SGT,Secure%20Networking%20-%20SGT%20Policy%20Activity%20and%20SGACL%20Matrix%20Hits"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_06_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_06_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**SGT\\-Enforced Blocks**"
+            }
+        },
+        "viz_card_06_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Security  •  Scalable Network Segmentation"
+            }
+        },
+        "viz_card_06_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Trend of FMC block decisions correlated with Security Group Tags, showing enforcement volume across the selected time window\\."
+            }
+        },
+        "viz_card_06_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_06"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"window_blocks\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_06_trend": {
+            "type": "splunk.column",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_06"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "right",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "showYMajorGridLines": true,
+                "stackMode": "unstacked",
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"blocks_trend\")"
+            }
+        },
+        "viz_card_06_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=SGT-Enforced%20Blocks&target=Secure%20Networking%20-%20FMC%20Events%20Correlated%20by%20SGT"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        }
+    },
+    "dataSources": {
+        "ds_story_01": {
+            "name": "Secure Networking - TrustSec Hardware Inventory Trend",
+            "options": {
+                "ref": "secure_networking_trustsec_hardware_inventory_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_02": {
+            "name": "Secure Networking - SGT Total Active Assignments Count",
+            "options": {
+                "ref": "secure_networking_sgt_total_assignments_count",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_03": {
+            "name": "Secure Networking - SGT Unique Tags in Use Count",
+            "options": {
+                "ref": "secure_networking_sgt_unique_count",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_04": {
+            "name": "Secure Networking - SGT Binding Activity Trend",
+            "options": {
+                "ref": "secure_networking_sgt_binding_activity_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_05": {
+            "name": "Secure Networking - SGACL Enforcement Activity Trend",
+            "options": {
+                "ref": "secure_networking_sgacl_enforcement_activity_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_06": {
+            "name": "Secure Networking - SGT-Classified FMC Blocks by Tag",
+            "options": {
+                "ref": "secure_networking_sgt_fmc_blocks_by_sgt",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        }
+    },
+    "layout": {
+        "globalInputs": [
+            "input_time_range"
+        ],
+        "layoutDefinitions": {
+            "layout_overview": {
+                "options": {
+                    "backgroundColor": "#020617",
+                    "display": "auto-scale",
+                    "height": 1128,
+                    "width": 1440
+                },
+                "structure": [
+                    {
+                        "item": "viz_header_bg",
+                        "position": {
+                            "x": 20,
+                            "y": 0,
+                            "w": 1400,
+                            "h": 104
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_header_icon",
+                        "position": {
+                            "x": 38,
+                            "y": 18,
+                            "w": 64,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_header",
+                        "position": {
+                            "x": 118,
+                            "y": 8,
+                            "w": 1280,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_background",
+                        "position": {
+                            "x": 20,
+                            "y": 128,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_title",
+                        "position": {
+                            "x": 36,
+                            "y": 140,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_metadata",
+                        "position": {
+                            "x": 36,
+                            "y": 176,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_description",
+                        "position": {
+                            "x": 36,
+                            "y": 204,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_singlevalue",
+                        "position": {
+                            "x": 36,
+                            "y": 284,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_trend",
+                        "position": {
+                            "x": 36,
+                            "y": 376,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_drilldown_trigger",
+                        "position": {
+                            "x": 418,
+                            "y": 134,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_background",
+                        "position": {
+                            "x": 493,
+                            "y": 128,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_title",
+                        "position": {
+                            "x": 509,
+                            "y": 140,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_metadata",
+                        "position": {
+                            "x": 509,
+                            "y": 176,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_description",
+                        "position": {
+                            "x": 509,
+                            "y": 204,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_singlevalue",
+                        "position": {
+                            "x": 509,
+                            "y": 284,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_trend",
+                        "position": {
+                            "x": 509,
+                            "y": 376,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_drilldown_trigger",
+                        "position": {
+                            "x": 891,
+                            "y": 134,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_background",
+                        "position": {
+                            "x": 966,
+                            "y": 128,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_title",
+                        "position": {
+                            "x": 982,
+                            "y": 140,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_metadata",
+                        "position": {
+                            "x": 982,
+                            "y": 176,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_description",
+                        "position": {
+                            "x": 982,
+                            "y": 204,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_singlevalue",
+                        "position": {
+                            "x": 982,
+                            "y": 284,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_trend",
+                        "position": {
+                            "x": 982,
+                            "y": 376,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_drilldown_trigger",
+                        "position": {
+                            "x": 1364,
+                            "y": 134,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_background",
+                        "position": {
+                            "x": 20,
+                            "y": 624,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_title",
+                        "position": {
+                            "x": 36,
+                            "y": 636,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_metadata",
+                        "position": {
+                            "x": 36,
+                            "y": 672,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_description",
+                        "position": {
+                            "x": 36,
+                            "y": 700,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_singlevalue",
+                        "position": {
+                            "x": 36,
+                            "y": 780,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_trend",
+                        "position": {
+                            "x": 36,
+                            "y": 872,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_drilldown_trigger",
+                        "position": {
+                            "x": 418,
+                            "y": 630,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_background",
+                        "position": {
+                            "x": 493,
+                            "y": 624,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_title",
+                        "position": {
+                            "x": 509,
+                            "y": 636,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_metadata",
+                        "position": {
+                            "x": 509,
+                            "y": 672,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_description",
+                        "position": {
+                            "x": 509,
+                            "y": 700,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_singlevalue",
+                        "position": {
+                            "x": 509,
+                            "y": 780,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_trend",
+                        "position": {
+                            "x": 509,
+                            "y": 872,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_drilldown_trigger",
+                        "position": {
+                            "x": 891,
+                            "y": 630,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_background",
+                        "position": {
+                            "x": 966,
+                            "y": 624,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_title",
+                        "position": {
+                            "x": 982,
+                            "y": 636,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_metadata",
+                        "position": {
+                            "x": 982,
+                            "y": 672,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_description",
+                        "position": {
+                            "x": 982,
+                            "y": 700,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_singlevalue",
+                        "position": {
+                            "x": 982,
+                            "y": 780,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_trend",
+                        "position": {
+                            "x": 982,
+                            "y": 872,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_drilldown_trigger",
+                        "position": {
+                            "x": 1364,
+                            "y": 630,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    }
+                ],
+                "type": "absolute"
+            }
+        },
+        "options": {
+            "showTitleAndDescription": false,
+            "submitButton": false,
+            "submitOnDashboardLoad": true
+        },
+        "tabs": {
+            "items": [
+                {
+                    "label": "overview",
+                    "layoutId": "layout_overview"
+                }
+            ]
+        }
+    },
+    "applicationProperties": {
+        "collapseNavigation": false,
+        "hideEdit": false,
+        "hideExport": false
+    }
 }
     ]]></definition>
 </dashboard>

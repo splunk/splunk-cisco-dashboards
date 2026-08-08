@@ -1540,8 +1540,8 @@ iseval = 0`}</CodeBlock>
                         {APP_VERSION_LABEL}
                       </td>
                       <td className="px-3 py-3 text-slate-700">
-                        Secure Networking dashboard clarity, guided setup,
-                        workspace customization, Searchbase navigation, and
+                        Six-card Secure Networking KPI stories, guided setup,
+                        workspace customization, Searchbase drilldowns, and
                         site-connectivity improvements.
                       </td>
                       <td className="px-3 py-3 text-slate-700">
@@ -1555,24 +1555,18 @@ iseval = 0`}</CodeBlock>
 
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <InfoCard title="Secure Networking dashboards">
-                  All 16 Secure Networking Dashboard Studio views now use a
-                  Cisco-inspired dark-mode hierarchy with purpose-led headers,
-                  compact audience and source context, decision-oriented
-                  section guidance, and visible Searchbase-derived
-                  descriptions on all 131 data panels. Existing searches,
-                  tokens, drilldowns, and data-source references are preserved.
-                  The five pillar dashboards share the Insights Workspace dark
-                  palette, including slate surfaces and text, sky accents, and
-                  the same semantic status colors used by the home dashboard.
-                  Panel rows are now compact, and Dashboard Manager view mode
-                  provides Studio-style Display, zoom, JSON export, and clone
-                  controls without giving up Searchbase-backed rendering.
-                  The 13 single-value KPIs across Executive Overview, Threat
-                  Detection and Enforcement, Authentication and Policy
-                  Enforcement, and Secure Infrastructure Status now include
-                  time-bucketed sparklines and percent trends. SD-WAN site
-                  mapping, the Segmentation binding pie, and ISE RADIUS latency
-                  formatting are also corrected for their live result shapes.
+                  All 16 Secure Networking Dashboard Studio views now use the
+                  same clean dark three-by-two layout. Each dashboard tells a
+                  six-KPI story from footprint through outcome: every card has
+                  a concise explanation, a current value, a trend or
+                  categorical graph, and a quiet Searchbase category and
+                  sub-category label. Supporting tables and graphs move into
+                  ordered in-dashboard drilldowns, so operators can move from
+                  what changed to why it changed without leaving the dashboard.
+                  Each value and graph pair shares one search, limiting the
+                  initial canvas to six searches while details dispatch only
+                  when opened. Dashboard Manager view mode still provides
+                  Studio-style Display, zoom, JSON export, and clone controls.
                 </InfoCard>
                 <InfoCard title="Guided setup and performance readiness">
                   Setup now brings package checks, index macro discovery, data
@@ -1607,12 +1601,12 @@ iseval = 0`}</CodeBlock>
                   open-details-panel icon as the home dashboard, and
                   multi-target links use Back/Forward navigation while
                   dispatching only the visible search. Each detail includes
-                  the Searchbase description, explanation, solution, related
-                  information, and available actions.
-                  Segmentation Overview renders IP-SGT binding results as a
-                  paginated table, and the Searchbase catalogue action now
-                  describes adding reusable searches instead of
-                  visualizations.
+                  the active search&apos;s category, sub-category, description,
+                  explanation, solution, related information, and available
+                  actions. Main canvases contain six KPI cards instead of
+                  detail tables; supporting tables remain available inside the
+                  drilldown. The Searchbase catalogue action describes adding
+                  reusable searches instead of visualizations.
                 </InfoCard>
                 <InfoCard title="Searchbase and tile selection">
                   Searchbase Canvas distinguishes failed searches from other

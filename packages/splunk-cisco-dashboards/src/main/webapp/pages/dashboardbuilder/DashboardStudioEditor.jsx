@@ -1390,6 +1390,12 @@ const DashboardStudioEditor = ({
     }, [apiRef]);
 
     useEffect(() => {
+        if ((dashMode ?? 'view') === 'view' && isDashboardMounted) {
+            apiRef?.collapseToolbar?.();
+        }
+    }, [apiRef, dashID, dashMode, isDashboardMounted]);
+
+    useEffect(() => {
         const dashboardApi = dashboardApiElem.current ?? apiRef;
         const definition = dashboardApi?.getDefinition?.();
 

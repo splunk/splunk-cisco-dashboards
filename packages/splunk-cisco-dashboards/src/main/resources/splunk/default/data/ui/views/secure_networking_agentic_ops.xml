@@ -3,626 +3,1281 @@
     <description>Coordinate telemetry readiness, path health, routing instability, and AI Defense signals.</description>
     <definition><![CDATA[
 {
-	"title": "Agentic Ops",
-	"description": "Coordinate telemetry readiness, path health, routing instability, and AI Defense signals.",
-	"inputs": {
-		"input_time_range": {
-			"options": {
-				"defaultValue": "-24h@h,now",
-				"token": "time_tok"
-			},
-			"title": "Time Range",
-			"type": "input.timerange"
-		}
-	},
-	"defaults": {
-		"visualizations": {
-			"global": {
-				"showLastUpdated": true,
-				"showProgressBar": true
-			}
-		}
-	},
-	"visualizations": {
-		"viz_header_bg": {
-			"type": "splunk.rectangle",
-			"options": {
-				"fillColor": "#1e293b",
-				"strokeColor": "rgba(14,165,233,0.42)"
-			}
-		},
-		"viz_header_icon": {
-			"type": "splunk.image",
-			"title": "Agentic Ops",
-			"options": {
-				"preserveAspectRatio": true,
-				"src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/agentic-ops.svg"
-			}
-		},
-		"viz_header": {
-			"type": "splunk.markdown",
-			"title": "",
-			"showLastUpdated": false,
-			"showProgressBar": false,
-			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#f1f5f9",
-				"markdown": "# Agentic Ops\nCoordinate telemetry readiness, path health, routing instability, and AI Defense signals."
-			}
-		},
-		"viz_agentic_ai_defense": {
-			"type": "splunk.singlevalueradial",
-			"title": "AI Defense Block Rate",
-			"dataSources": {
-				"primary": "ds_agentic_ai_defense"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"majorFontSize": 36,
-				"majorValue": "> primary | seriesByName('block_pct') | lastPoint()",
-				"shouldAbbreviateMajorValue": true,
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
-				"majorColor": "> primary | seriesByName('block_pct') | lastPoint() | rangeValue(lowerBetter)",
-				"unit": "%"
-			},
-			"context": {
-				"lowerBetter": [
-					{
-						"to": 20,
-						"value": "#16a34a"
-					},
-					{
-						"from": 20,
-						"to": 50,
-						"value": "#f59e0b"
-					},
-					{
-						"from": 50,
-						"value": "#dc2626"
-					}
-				]
-			},
-			"description": "Single-value block rate for Cisco AI Defense over the dashboard window - share of GenAI prompts and responses denied by policy."
-		},
-		"viz_agentic_te_feed": {
-			"type": "splunk.singlevalueradial",
-			"title": "ThousandEyes Feed Age",
-			"dataSources": {
-				"primary": "ds_agentic_te_feed_health"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"majorFontSize": 36,
-				"majorValue": "> primary | seriesByName('age_minutes') | lastPoint()",
-				"shouldAbbreviateMajorValue": true,
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
-				"majorColor": "> primary | seriesByName('age_minutes') | lastPoint() | rangeValue(staleness)",
-				"unit": "min"
-			},
-			"context": {
-				"staleness": [
-					{
-						"to": 30,
-						"value": "#16a34a"
-					},
-					{
-						"from": 30,
-						"to": 90,
-						"value": "#f59e0b"
-					},
-					{
-						"from": 90,
-						"value": "#dc2626"
-					}
-				]
-			},
-			"description": "Staleness monitor for the ThousandEyes OTel metric stream. Detects feed death within 30 minutes - the typical symptom of an OAuth2 token expiry, endpoint URL change after a TE platform upgrade, or HEC token rotation."
-		},
-		"viz_agentic_latency": {
-			"type": "splunk.singlevalueradial",
-			"title": "Avg Latency",
-			"dataSources": {
-				"primary": "ds_agentic_latency"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"majorFontSize": 36,
-				"majorValue": "> primary | seriesByName('avg_latency_ms') | lastPoint()",
-				"shouldAbbreviateMajorValue": true,
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
-				"majorColor": "> primary | seriesByName('avg_latency_ms') | lastPoint() | rangeValue(latencyRange)",
-				"unit": "ms"
-			},
-			"context": {
-				"latencyRange": [
-					{
-						"to": 100,
-						"value": "#16a34a"
-					},
-					{
-						"from": 100,
-						"to": 200,
-						"value": "#f59e0b"
-					},
-					{
-						"from": 200,
-						"value": "#dc2626"
-					}
-				]
-			},
-			"description": "Average round-trip network latency in milliseconds across all Cisco ThousandEyes network tests, with max and 95th-percentile values as a composite network performance KPI for the Agentic Ops pillar."
-		},
-		"viz_agentic_loss": {
-			"type": "splunk.singlevalueradial",
-			"title": "Avg Packet Loss",
-			"dataSources": {
-				"primary": "ds_agentic_loss"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"majorFontSize": 36,
-				"majorValue": "> primary | seriesByName('avg_loss_pct') | lastPoint()",
-				"shouldAbbreviateMajorValue": true,
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
-				"majorColor": "> primary | seriesByName('avg_loss_pct') | lastPoint() | rangeValue(lowerBetter)",
-				"unit": "%"
-			},
-			"context": {
-				"lowerBetter": [
-					{
-						"to": 1,
-						"value": "#16a34a"
-					},
-					{
-						"from": 1,
-						"to": 5,
-						"value": "#f59e0b"
-					},
-					{
-						"from": 5,
-						"value": "#dc2626"
-					}
-				]
-			},
-			"description": "Average network packet loss percentage across all Cisco ThousandEyes network tests, with maximum loss for outlier context, as the primary network path quality KPI for Agentic Ops."
-		},
-		"viz_agentic_loss_trend": {
-			"type": "splunk.area",
-			"title": "Network Loss Trend",
-			"dataSources": {
-				"primary": "ds_agentic_loss_trend"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"legendDisplay": "right",
-				"showYMajorGridLines": true,
-				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"seriesColors": [
-					"#fda4af",
-					"#fcd34d"
-				],
-				"lineWidth": 3,
-				"nullValueDisplay": "gaps"
-			},
-			"description": "Hourly trend of average and maximum network packet loss from Cisco ThousandEyes, enabling detection of transient vs sustained path quality degradation over time."
-		},
-		"viz_agentic_bgp_changes": {
-			"type": "splunk.area",
-			"title": "BGP Path Changes",
-			"dataSources": {
-				"primary": "ds_agentic_bgp_changes"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"legendDisplay": "right",
-				"showYMajorGridLines": true,
-				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"seriesColors": [
-					"#c4b5fd",
-					"#7dd3fc",
-					"#fcd34d"
-				],
-				"lineWidth": 3,
-				"nullValueDisplay": "gaps"
-			},
-			"description": "Hourly trend of BGP path changes detected by Cisco ThousandEyes per monitored test, surfacing internet routing instability that can degrade application reachability and performance before users report issues."
-		},
-		"viz_agentic_test_health": {
-			"type": "splunk.column",
-			"title": "Healthy vs Degraded Tests",
-			"dataSources": {
-				"primary": "ds_agentic_test_health"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"legendDisplay": "right",
-				"showYMajorGridLines": true,
-				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"seriesColors": [
-					"#16a34a",
-					"#dc2626"
-				]
-			},
-			"description": "Summary of Cisco ThousandEyes test health — total tests monitored, healthy tests, and degraded tests — derived from network loss and HTTP availability metrics to provide the Agentic Ops visibility KPI."
-		},
-		"viz_agentic_http_availability": {
-			"type": "splunk.bar",
-			"title": "HTTP Availability by Test",
-			"dataSources": {
-				"primary": "ds_agentic_http_availability"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"legendDisplay": "right",
-				"showYMajorGridLines": true,
-				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"seriesColors": [
-					"#16a34a",
-					"#f59e0b"
-				]
-			},
-			"description": "Per-test HTTP server availability from Cisco ThousandEyes, showing average and minimum availability percentages with health status for each monitored application or service endpoint."
-		},
-		"viz_agentic_web_errors": {
-			"type": "splunk.singlevalue",
-			"title": "Web Transaction Errors",
-			"dataSources": {
-				"primary": "ds_agentic_web_errors"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"majorFontSize": 36,
-				"majorValue": "> primary | seriesByName('total_errors') | lastPoint()",
-				"shouldAbbreviateMajorValue": true,
-				"sparklineDisplay": "off",
-				"trendDisplay": "off",
-				"majorColor": "#dc2626"
-			},
-			"description": "Total count of web transaction errors detected by Cisco ThousandEyes across all monitored web transaction tests, indicating failed steps or HTTP errors encountered during synthetic transaction execution."
-		},
-		"viz_agentic_feed_matrix": {
-			"type": "splunk.table",
-			"title": "Telemetry Feed Health Matrix",
-			"dataSources": {
-				"primary": "ds_agentic_feed_matrix"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"count": 25,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Single-pane consolidated health matrix for every critical Cisco data feed - ThousandEyes, FTD, FMC eStreamer, Catalyst Center, SD-WAN, ISE, Cisco Spaces, IOS syslog, Duo, Meraki, Zeek, and ACI/ND."
-		},
-		"viz_design_context": {
-			"type": "splunk.markdown",
-			"title": "",
-			"showLastUpdated": false,
-			"showProgressBar": false,
-			"options": {
-				"backgroundColor": "#1e293b",
-				"fontColor": "#f1f5f9",
-				"markdown": "**Audience:** Security and network operations  •  **Sources:** AI Defense, ThousandEyes, routing, and feed-health telemetry  •  **Reading guide:** Confirm feed health first, then investigate path quality, routing, and enforcement exceptions.  •  **Freshness:** Uses the dashboard time range"
-			}
-		},
-		"viz_design_section": {
-			"type": "splunk.markdown",
-			"title": "",
-			"showLastUpdated": false,
-			"showProgressBar": false,
-			"options": {
-				"backgroundColor": "#1e293b",
-				"fontColor": "#f1f5f9",
-				"markdown": "### Operational posture\nConfirm feed health first, then investigate path quality, routing, and enforcement exceptions."
-			}
-		}
-	},
-	"dataSources": {
-		"ds_agentic_ai_defense": {
-			"name": "Security - GenAI Protection - Cisco AI Defense Block Rate",
-			"options": {
-				"ref": "security_ai_defense_block_rate_kpi",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_agentic_te_feed_health": {
-			"name": "Feed Monitor - ThousandEyes - Stream Staleness - Signal Rail KPI",
-			"options": {
-				"ref": "feed_monitor_thousandeyes_stream_staleness",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_agentic_latency": {
-			"name": "Secure Networking chain - ThousandEyes average latency",
-			"options": {
-				"ref": "secure_networking_thousandeyes_avg_latency",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_agentic_loss": {
-			"name": "Secure Networking chain - ThousandEyes packet loss",
-			"options": {
-				"ref": "secure_networking_thousandeyes_avg_loss_pct",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_agentic_loss_trend": {
-			"name": "Secure Networking chain - ThousandEyes loss trend",
-			"options": {
-				"ref": "secure_networking_thousandeyes_network_loss_trend",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_agentic_bgp_changes": {
-			"name": "Secure Networking chain - ThousandEyes BGP path changes",
-			"options": {
-				"ref": "secure_networking_thousandeyes_bgp_path_changes_trend",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_agentic_test_health": {
-			"name": "Secure Networking chain - ThousandEyes test health",
-			"options": {
-				"ref": "secure_networking_thousandeyes_test_success_vs_failed",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_agentic_http_availability": {
-			"name": "Secure Networking chain - ThousandEyes HTTP availability",
-			"options": {
-				"ref": "secure_networking_thousandeyes_http_availability_by_test",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_agentic_web_errors": {
-			"name": "Secure Networking chain - ThousandEyes web errors",
-			"options": {
-				"ref": "secure_networking_thousandeyes_web_transaction_errors",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_agentic_feed_matrix": {
-			"name": "Feed Monitor - ALL Feeds - Consolidated Health Matrix",
-			"options": {
-				"ref": "feed_monitor_all_feeds_health_matrix",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		}
-	},
-	"layout": {
-		"globalInputs": [
-			"input_time_range"
-		],
-		"layoutDefinitions": {
-			"layout_overview": {
-				"options": {
-					"backgroundColor": "#020617",
-					"display": "auto-scale",
-					"height": 1370,
-					"width": 1440
-				},
-				"structure": [
-					{
-						"item": "viz_header_bg",
-						"position": {
-							"x": 20,
-							"y": 0,
-							"w": 1400,
-							"h": 88
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_header_icon",
-						"position": {
-							"x": 36,
-							"y": 14,
-							"w": 56,
-							"h": 56
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_header",
-						"position": {
-							"x": 108,
-							"y": 4,
-							"w": 1292,
-							"h": 76
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_design_context",
-						"position": {
-							"x": 20,
-							"y": 100,
-							"w": 1400,
-							"h": 64
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_design_section",
-						"position": {
-							"x": 20,
-							"y": 176,
-							"w": 1400,
-							"h": 54
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_agentic_ai_defense",
-						"position": {
-							"x": 20,
-							"y": 242,
-							"w": 335,
-							"h": 200
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_agentic_te_feed",
-						"position": {
-							"x": 375,
-							"y": 242,
-							"w": 335,
-							"h": 200
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_agentic_latency",
-						"position": {
-							"x": 730,
-							"y": 242,
-							"w": 335,
-							"h": 200
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_agentic_loss",
-						"position": {
-							"x": 1085,
-							"y": 242,
-							"w": 335,
-							"h": 200
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_agentic_loss_trend",
-						"position": {
-							"x": 20,
-							"y": 458,
-							"w": 690,
-							"h": 280
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_agentic_bgp_changes",
-						"position": {
-							"x": 730,
-							"y": 458,
-							"w": 690,
-							"h": 280
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_agentic_test_health",
-						"position": {
-							"x": 20,
-							"y": 754,
-							"w": 690,
-							"h": 280
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_agentic_http_availability",
-						"position": {
-							"x": 730,
-							"y": 754,
-							"w": 690,
-							"h": 280
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_agentic_web_errors",
-						"position": {
-							"x": 20,
-							"y": 1050,
-							"w": 690,
-							"h": 190
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_agentic_feed_matrix",
-						"position": {
-							"x": 730,
-							"y": 1050,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					}
-				],
-				"type": "absolute"
-			}
-		},
-		"options": {
-			"showTitleAndDescription": false,
-			"submitButton": false,
-			"submitOnDashboardLoad": true
-		},
-		"tabs": {
-			"items": [
-				{
-					"label": "overview",
-					"layoutId": "layout_overview"
-				}
-			]
-		}
-	},
-	"applicationProperties": {
-		"collapseNavigation": false,
-		"hideEdit": false,
-		"hideExport": false
-	}
+    "title": "Agentic Ops",
+    "description": "Coordinate telemetry readiness, path health, routing instability, and AI Defense signals.",
+    "inputs": {
+        "input_time_range": {
+            "options": {
+                "defaultValue": "-24h@h,now",
+                "token": "time_tok"
+            },
+            "title": "Time Range",
+            "type": "input.timerange"
+        }
+    },
+    "defaults": {
+        "visualizations": {
+            "global": {
+                "showLastUpdated": true,
+                "showProgressBar": true
+            }
+        }
+    },
+    "visualizations": {
+        "viz_header_bg": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#1e293b",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 10
+            }
+        },
+        "viz_header_icon": {
+            "type": "splunk.image",
+            "title": "Agentic Ops",
+            "options": {
+                "preserveAspectRatio": true,
+                "src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/agentic-ops.svg"
+            }
+        },
+        "viz_header": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "markdown": "# Agentic Ops\nCoordinate telemetry readiness, path health, routing instability, and AI Defense signals\\."
+            }
+        },
+        "viz_card_01_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_01_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**ThousandEyes Feed Freshness**"
+            }
+        },
+        "viz_card_01_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Monitoring  •  ThousandEyes"
+            }
+        },
+        "viz_card_01_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Staleness monitor for the ThousandEyes OTel metric stream\\. Detects feed death within 30 minutes \\- the typical symptom of an OAuth2 token expiry, endpoint URL change after a TE platform upgrade, or HEC token rotation\\."
+            }
+        },
+        "viz_card_01_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_01"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"age_minutes\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_01_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_01"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"last_seen\")",
+                "y": "> primary | seriesByName(\"age_minutes\")"
+            }
+        },
+        "viz_card_01_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=ThousandEyes%20Feed%20Freshness&target=Feed%20Monitor%20-%20ALL%20Feeds%20-%20Consolidated%20Health%20Matrix"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_02_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_02_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**AI Defense Policy Outcomes**"
+            }
+        },
+        "viz_card_02_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Security  •  GenAI Protection"
+            }
+        },
+        "viz_card_02_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Time series trend of Cisco AI Defense Block vs Allow decisions\\. Useful to spot bursts of denied prompts \\(likely attack/probing\\) against the steady\\-state allow baseline\\."
+            }
+        },
+        "viz_card_02_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_02"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"WindowBlocked\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_02_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_02"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"Blocked\")"
+            }
+        },
+        "viz_card_02_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=AI%20Defense%20Policy%20Outcomes&target=Security%20-%20GenAI%20Protection%20-%20Cisco%20AI%20Defense%20Top%20Blocked%20Policies,Security%20-%20GenAI%20Protection%20-%20Cisco%20AI%20Defense%20Recent%20Blocked%20Messages"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_03_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_03_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Path Latency by Agent**"
+            }
+        },
+        "viz_card_03_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Network  •  Agentic Ops"
+            }
+        },
+        "viz_card_03_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Tracks ThousandEyes network latency by agent location over time, with the statistical agent table retained as drill\\-down detail\\."
+            }
+        },
+        "viz_card_03_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_03"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"WindowPeakLatencyMs\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_03_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_03"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"RowMaxLatencyMs\")"
+            }
+        },
+        "viz_card_03_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Path%20Latency%20by%20Agent&target=Secure%20Networking%20-%20ThousandEyes%20Latency%20by%20Agent%20Location"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_04_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_04_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Network Loss**"
+            }
+        },
+        "viz_card_04_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Network  •  Agentic Ops"
+            }
+        },
+        "viz_card_04_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Hourly trend of average and maximum network packet loss from Cisco ThousandEyes, enabling detection of transient vs sustained path quality degradation over time\\."
+            }
+        },
+        "viz_card_04_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_04"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"WindowAvgLossPct\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_04_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_04"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"avg_loss_pct\")"
+            }
+        },
+        "viz_card_04_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Network%20Loss&target=Secure%20Networking%20-%20ThousandEyes%20Latency%20by%20Agent%20Location,Secure%20Networking%20-%20ThousandEyes%20HTTP%20Trace%20Log"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_05_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_05_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Application Availability**"
+            }
+        },
+        "viz_card_05_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Network  •  Agentic Ops"
+            }
+        },
+        "viz_card_05_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Tracks ThousandEyes HTTP availability by monitored test over time and retains the per\\-test SLA table as drill\\-down detail\\."
+            }
+        },
+        "viz_card_05_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_05"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"WindowMinAvailabilityPct\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_05_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_05"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"RowMinAvailabilityPct\")"
+            }
+        },
+        "viz_card_05_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Application%20Availability&target=Secure%20Networking%20-%20ThousandEyes%20HTTP%20Availability%20by%20Test,Secure%20Networking%20-%20ThousandEyes%20HTTP%20Trace%20Log"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_06_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_06_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**BGP Path Instability**"
+            }
+        },
+        "viz_card_06_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Network  •  Agentic Ops"
+            }
+        },
+        "viz_card_06_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Hourly trend of BGP path changes detected by Cisco ThousandEyes per monitored test, surfacing internet routing instability that can degrade application reachability and performance before users report issues\\."
+            }
+        },
+        "viz_card_06_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_06"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"WindowPathChanges\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_06_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_06"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"BucketPathChanges\")"
+            }
+        },
+        "viz_card_06_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=BGP%20Path%20Instability&target=Secure%20Networking%20-%20ThousandEyes%20BGP%20Path%20Change%20Detail"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        }
+    },
+    "dataSources": {
+        "ds_story_01": {
+            "name": "Feed Monitor - ThousandEyes - Stream Staleness (Signal Rail KPI)",
+            "options": {
+                "ref": "feed_monitor_thousandeyes_stream_staleness",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_02": {
+            "name": "Security - GenAI Protection - Cisco AI Defense Block vs Allow Trend",
+            "options": {
+                "ref": "security_ai_defense_action_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_03": {
+            "name": "Secure Networking - ThousandEyes Latency by Agent Trend",
+            "options": {
+                "ref": "secure_networking_thousandeyes_latency_by_agent_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_04": {
+            "name": "Secure Networking - ThousandEyes Network Loss Trend",
+            "options": {
+                "ref": "secure_networking_thousandeyes_network_loss_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_05": {
+            "name": "Secure Networking - ThousandEyes HTTP Availability by Test Trend",
+            "options": {
+                "ref": "secure_networking_thousandeyes_http_availability_by_test_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_06": {
+            "name": "Secure Networking - ThousandEyes BGP Path Changes Trend",
+            "options": {
+                "ref": "secure_networking_thousandeyes_bgp_path_changes_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        }
+    },
+    "layout": {
+        "globalInputs": [
+            "input_time_range"
+        ],
+        "layoutDefinitions": {
+            "layout_overview": {
+                "options": {
+                    "backgroundColor": "#020617",
+                    "display": "auto-scale",
+                    "height": 1128,
+                    "width": 1440
+                },
+                "structure": [
+                    {
+                        "item": "viz_header_bg",
+                        "position": {
+                            "x": 20,
+                            "y": 0,
+                            "w": 1400,
+                            "h": 104
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_header_icon",
+                        "position": {
+                            "x": 38,
+                            "y": 18,
+                            "w": 64,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_header",
+                        "position": {
+                            "x": 118,
+                            "y": 8,
+                            "w": 1280,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_background",
+                        "position": {
+                            "x": 20,
+                            "y": 128,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_title",
+                        "position": {
+                            "x": 36,
+                            "y": 140,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_metadata",
+                        "position": {
+                            "x": 36,
+                            "y": 176,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_description",
+                        "position": {
+                            "x": 36,
+                            "y": 204,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_singlevalue",
+                        "position": {
+                            "x": 36,
+                            "y": 284,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_trend",
+                        "position": {
+                            "x": 36,
+                            "y": 376,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_drilldown_trigger",
+                        "position": {
+                            "x": 418,
+                            "y": 134,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_background",
+                        "position": {
+                            "x": 493,
+                            "y": 128,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_title",
+                        "position": {
+                            "x": 509,
+                            "y": 140,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_metadata",
+                        "position": {
+                            "x": 509,
+                            "y": 176,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_description",
+                        "position": {
+                            "x": 509,
+                            "y": 204,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_singlevalue",
+                        "position": {
+                            "x": 509,
+                            "y": 284,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_trend",
+                        "position": {
+                            "x": 509,
+                            "y": 376,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_drilldown_trigger",
+                        "position": {
+                            "x": 891,
+                            "y": 134,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_background",
+                        "position": {
+                            "x": 966,
+                            "y": 128,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_title",
+                        "position": {
+                            "x": 982,
+                            "y": 140,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_metadata",
+                        "position": {
+                            "x": 982,
+                            "y": 176,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_description",
+                        "position": {
+                            "x": 982,
+                            "y": 204,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_singlevalue",
+                        "position": {
+                            "x": 982,
+                            "y": 284,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_trend",
+                        "position": {
+                            "x": 982,
+                            "y": 376,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_drilldown_trigger",
+                        "position": {
+                            "x": 1364,
+                            "y": 134,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_background",
+                        "position": {
+                            "x": 20,
+                            "y": 624,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_title",
+                        "position": {
+                            "x": 36,
+                            "y": 636,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_metadata",
+                        "position": {
+                            "x": 36,
+                            "y": 672,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_description",
+                        "position": {
+                            "x": 36,
+                            "y": 700,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_singlevalue",
+                        "position": {
+                            "x": 36,
+                            "y": 780,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_trend",
+                        "position": {
+                            "x": 36,
+                            "y": 872,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_drilldown_trigger",
+                        "position": {
+                            "x": 418,
+                            "y": 630,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_background",
+                        "position": {
+                            "x": 493,
+                            "y": 624,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_title",
+                        "position": {
+                            "x": 509,
+                            "y": 636,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_metadata",
+                        "position": {
+                            "x": 509,
+                            "y": 672,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_description",
+                        "position": {
+                            "x": 509,
+                            "y": 700,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_singlevalue",
+                        "position": {
+                            "x": 509,
+                            "y": 780,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_trend",
+                        "position": {
+                            "x": 509,
+                            "y": 872,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_drilldown_trigger",
+                        "position": {
+                            "x": 891,
+                            "y": 630,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_background",
+                        "position": {
+                            "x": 966,
+                            "y": 624,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_title",
+                        "position": {
+                            "x": 982,
+                            "y": 636,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_metadata",
+                        "position": {
+                            "x": 982,
+                            "y": 672,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_description",
+                        "position": {
+                            "x": 982,
+                            "y": 700,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_singlevalue",
+                        "position": {
+                            "x": 982,
+                            "y": 780,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_trend",
+                        "position": {
+                            "x": 982,
+                            "y": 872,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_drilldown_trigger",
+                        "position": {
+                            "x": 1364,
+                            "y": 630,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    }
+                ],
+                "type": "absolute"
+            }
+        },
+        "options": {
+            "showTitleAndDescription": false,
+            "submitButton": false,
+            "submitOnDashboardLoad": true
+        },
+        "tabs": {
+            "items": [
+                {
+                    "label": "overview",
+                    "layoutId": "layout_overview"
+                }
+            ]
+        }
+    },
+    "applicationProperties": {
+        "collapseNavigation": false,
+        "hideEdit": false,
+        "hideExport": false
+    }
 }
     ]]></definition>
 </dashboard>

@@ -148,6 +148,9 @@ const DashboardStudioDrilldownModal = ({
         () => getDashboardDrilldownMetadata(activeSearch),
         [activeSearch],
     );
+    const activeClassification = [activeMetadata.category, activeMetadata.subCategory].filter(
+        Boolean,
+    );
     const sanitizedMetadata = useMemo(
         () => ({
             description: sanitizeMetadataHtml(activeMetadata.description),
@@ -309,6 +312,24 @@ const DashboardStudioDrilldownModal = ({
                         <div className="dashboard-builder-drilldown-search-title">
                             <Search size={20} aria-hidden="true" />
                             <h2>{activeMetadata.title}</h2>
+                            {activeClassification.length > 0 && (
+                                <span
+                                    className="dashboard-builder-drilldown-classification"
+                                    aria-label={`Search classification: ${activeClassification.join(
+                                        ', ',
+                                    )}`}
+                                >
+                                    {activeMetadata.category && (
+                                        <span>{activeMetadata.category}</span>
+                                    )}
+                                    {activeMetadata.category && activeMetadata.subCategory && (
+                                        <span aria-hidden="true">•</span>
+                                    )}
+                                    {activeMetadata.subCategory && (
+                                        <span>{activeMetadata.subCategory}</span>
+                                    )}
+                                </span>
+                            )}
                         </div>
 
                         <div className="dashboard-builder-drilldown-result-shell">

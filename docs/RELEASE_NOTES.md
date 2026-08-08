@@ -2,6 +2,23 @@
 
 ## 1.0.36
 
+- Dashboard Manager now starts its view-mode toolbar folded so dashboards get
+  the maximum available canvas width by default; the existing edge control can
+  still expand it on demand.
+- All 16 Secure Networking Dashboard Studio views now tell a consistent
+  six-KPI story in a clean dark three-by-two card layout. Every card pairs a
+  current value with a trend or categorical graph, shows its Searchbase
+  category and sub-category, and opens one or more ordered supporting searches
+  as an in-dashboard drilldown instead of placing detail tables on the main
+  canvas. The shared data source for each value/graph pair bounds every
+  dashboard to six initial searches, down from 131 panels across the suite to
+  96 card searches, while drilldown searches continue to dispatch only when
+  visible.
+- Searchbase now includes 12 bounded trends needed to complete the Secure
+  Endpoint, XDR, Attack Analyzer, and remote-access VPN stories. These searches
+  use at most 60 time buckets and capped dynamic series, and the existing RaVPN
+  connection-rate search now renders as a bounded area trend with an ordered
+  session-profile drilldown.
 - Infrastructure ISE Network Device Count now opens two in-dashboard details:
   ZTA RADIUS Node Health by Site and ZTA ISE Auth Failure Rate by Network
   Device. Dashboard Manager presents the ordered searches with Back/Forward
@@ -16,14 +33,14 @@
   confirmation when the active configuration matches the workspace preset. The
   control becomes an enabled red `Restore workspace default` action only after
   a customization, making both the reset and its immediate result visible.
-- Segmentation Overview now renders IP-SGT binding results as a paginated table,
-  and Dashboard Manager describes its Searchbase catalogue action as adding
-  reusable searches instead of visualizations.
-- Secure Networking Dashboard Studio trends now use 27 true area charts with
-  brighter sky, cyan, emerald, amber, orange, rose, violet, teal, and slate
-  series colors plus thicker outlines for dark-mode visibility. Thirteen faint
-  single-value sparklines and five remaining line charts were upgraded while
-  categorical and point-in-time visualizations retain their best-fit types.
+- Segmentation Overview now renders IP-SGT binding results as a paginated
+  drilldown table, and Dashboard Manager describes its Searchbase catalogue
+  action as adding reusable searches instead of visualizations.
+- Secure Networking Dashboard Studio cards now use 84 area charts, six bars,
+  four columns, and two pies with high-contrast sky, cyan, emerald, amber,
+  orange, rose, violet, teal, and slate series colors. Categorical searches keep
+  an appropriate comparison chart while continuous signals use bounded area
+  trends.
 - Theme-capable dashboards now synchronize Splunk's side navigation and
   navigation drawer with each dashboard's resolved light or dark mode. This
   applies live, without reloading or discarding unsaved canvas work, across
@@ -167,21 +184,21 @@
   dashboards show a dismissible context and portability notice on each edit
   entry. Convert messaging now distinguishes native Studio compatibility from
   remaining app, macro, lookup, data-model, command, and data dependencies.
-- All 16 Secure Networking canvases now use compact headers and 190-300 pixel
-  visualization rows instead of the previous 408-438 pixel panels, reducing
-  dashboard height while preserving panel order, searches, and drilldowns.
-- Executive Overview, Threat Detection and Enforcement, Authentication and
-  Policy Enforcement, and Secure Infrastructure Status now render all 13
-  single-value KPIs with time-bucketed sparklines and percent trends.
+- All 16 Secure Networking canvases now use compact headers and exactly six
+  narrative cards in a three-by-two layout. Each card shares one Searchbase
+  dispatch between its current value and lower graph, with the supporting
+  detail searches reserved for drilldown navigation.
+- Every Secure Networking story card now includes a current single value and a
+  best-fit historical or categorical graph, with concise decision-oriented copy
+  and a small Searchbase category and sub-category label.
 - Secure Networking visualization fixes now plot SD-WAN site coordinates on a
   world view, supply the Segmentation binding pie with a strict category/value
   result shape, and present ISE RADIUS latency with concise node labels,
   bounded series, connected samples, and millisecond axis labeling.
-- All 16 Secure Networking Dashboard Studio views now use a Cisco-inspired
-  dark-mode information hierarchy with purpose-led headers, compact audience
-  and source context, decision-oriented section guidance, and visible
-  Searchbase-derived descriptions on all 131 data panels. Existing searches,
-  tokens, drilldowns, and data-source references are unchanged.
+- All 16 Secure Networking Dashboard Studio views use a Cisco-inspired
+  dark-mode information hierarchy with purpose-led headers, readable slate
+  surfaces, bright data colors, and the same open-details interaction used by
+  the Insights Workspace home dashboard.
 - Searchbase now includes eight Cisco SD-WAN controller threat hunts for rogue
   peering, software downgrade, certificate failures, CVE-2022-20775 path
   traversal, root access, local-account persistence, and attack-stage

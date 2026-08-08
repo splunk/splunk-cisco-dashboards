@@ -3,591 +3,1281 @@
     <description>Summarize secure-networking posture, operational risk, and business-relevant outcomes.</description>
     <definition><![CDATA[
 {
-	"title": "Executive Overview",
-	"description": "Summarize secure-networking posture, operational risk, and business-relevant outcomes.",
-	"inputs": {
-		"input_time_range": {
-			"options": {
-				"defaultValue": "-24h@h,now",
-				"token": "time_tok"
-			},
-			"title": "Time Range",
-			"type": "input.timerange"
-		}
-	},
-	"defaults": {
-		"visualizations": {
-			"global": {
-				"showLastUpdated": true,
-				"showProgressBar": true
-			}
-		}
-	},
-	"visualizations": {
-		"viz_header_bg": {
-			"type": "splunk.rectangle",
-			"options": {
-				"fillColor": "#16283c",
-				"strokeColor": "rgba(53,207,245,0.42)"
-			}
-		},
-		"viz_header_icon": {
-			"type": "splunk.image",
-			"title": "Agentic Ops",
-			"options": {
-				"preserveAspectRatio": true,
-				"src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/agentic-ops.svg"
-			}
-		},
-		"viz_header": {
-			"type": "splunk.markdown",
-			"title": "",
-			"showLastUpdated": false,
-			"showProgressBar": false,
-			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#e8f1fb",
-				"markdown": "# Executive Overview\nSummarize secure-networking posture, operational risk, and business-relevant outcomes."
-			}
-		},
-		"viz_overview_ap_health": {
-			"type": "splunk.area",
-			"title": "AP Health",
-			"dataSources": {
-				"primary": "ds_overview_ap_health"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"legendDisplay": "off",
-				"seriesColors": [
-					"#6ee7b7"
-				],
-				"dataValuesDisplay": "minmax",
-				"showYMajorGridLines": true,
-				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"lineWidth": 3,
-				"markerDisplay": "outlined",
-				"nullValueDisplay": "connect"
-			},
-			"description": "Shows what percentage of Catalyst Center access points are reachable at any moment, along with a count of how many are up or down."
-		},
-		"viz_secure_networking_meraki_ap_count": {
-			"type": "splunk.area",
-			"title": "Meraki Access Point Count",
-			"dataSources": {
-				"primary": "ds_secure_networking_meraki_ap_count"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"legendDisplay": "off",
-				"seriesColors": [
-					"#7dd3fc"
-				],
-				"dataValuesDisplay": "minmax",
-				"showYMajorGridLines": true,
-				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"lineWidth": 3,
-				"markerDisplay": "outlined",
-				"nullValueDisplay": "connect"
-			},
-			"description": "Total count of unique Cisco Meraki access points in the managed wireless infrastructure, providing the wireless footprint KPI."
-		},
-		"viz_secure_networking_dc_health_signals_trend": {
-			"type": "splunk.area",
-			"title": "DC Health Signals Trend",
-			"dataSources": {
-				"primary": "ds_secure_networking_dc_health_signals_trend"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"legendDisplay": "bottom",
-				"seriesColors": [
-					"#7dd3fc",
-					"#6ee7b7",
-					"#fdba74",
-					"#fda4af"
-				],
-				"showYMajorGridLines": true,
-				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"lineWidth": 3,
-				"nullValueDisplay": "gaps",
-				"dataValuesDisplay": "minmax"
-			},
-			"description": "Hourly trend combining Cisco Nexus Dashboard anomalies and security advisories as a unified DC health signal, enabling operators to correlate infrastructure health degradation with specific time windows."
-		},
-		"viz_feed_monitor_all_feeds_health_matrix": {
-			"type": "splunk.table",
-			"title": "ALL Feeds - Consolidated Health Matrix",
-			"dataSources": {
-				"primary": "ds_feed_monitor_all_feeds_health_matrix"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Single-pane consolidated health matrix for every critical Cisco data feed - ThousandEyes, FTD, FMC eStreamer, Catalyst Center, SD-WAN, ISE, Cisco Spaces, IOS syslog, Duo, Meraki, Zeek, and ACI/ND."
-		},
-		"viz_overview_topology_overview": {
-			"type": "splunk.table",
-			"title": "Topology Overview",
-			"dataSources": {
-				"primary": "ds_overview_topology_overview"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Overview topology feed - one normalized search that populates topology sites, topology links, and the two right-column KPI cards next to the map. Rows use itemType values of site , link , or summary ."
-		},
-		"viz_overview_link_auburndale_tallahassee_health": {
-			"type": "splunk.table",
-			"title": "Link Site 1 to Site 2 Health",
-			"dataSources": {
-				"primary": "ds_overview_link_auburndale_tallahassee_health"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Site 1 to Site 2 link health — normalized topology-link row for the Overview map. This is the only inter-site link stanza for a two-site footprint."
-		},
-		"viz_overview_link_state_drilldown": {
-			"type": "splunk.table",
-			"title": "Link State Drilldown",
-			"dataSources": {
-				"primary": "ds_overview_link_state_drilldown"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Per-link SD-WAN telemetry snapshot used as the drilldown for the topology link tiles. One row per (device, interface) pair with the latest utilization and a thresholded Stable/Warning/Critical flag."
-		},
-		"viz_executive_dashboard_ds_device_health_current_drilldown": {
-			"type": "splunk.table",
-			"title": "Current Device Health Drilldown",
-			"dataSources": {
-				"primary": "ds_executive_dashboard_ds_device_health_current_drilldown"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Per-device detail roster backing the DEVICE HEALTH tile drilldown. One row per DeviceID with the latest reachability and manageability flags, the 0/50/100 health score the parent tile averages, and the most-recent event…"
-		},
-		"viz_executive_dashboard_ds_device_health_trend_compare": {
-			"type": "splunk.area",
-			"title": "Device Health Trend Comparison",
-			"dataSources": {
-				"primary": "ds_executive_dashboard_ds_device_health_trend_compare"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"legendDisplay": "off",
-				"seriesColors": [
-					"#7dd3fc"
-				],
-				"dataValuesDisplay": "minmax",
-				"showYMajorGridLines": true,
-				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"lineWidth": 3,
-				"markerDisplay": "outlined",
-				"nullValueDisplay": "connect"
-			},
-			"description": "Shows the Catalyst Center fleet-average device health trend across automatic time buckets in the selected dashboard range."
-		},
-		"viz_executive_summary_healthy_device_count": {
-			"type": "splunk.area",
-			"title": "Healthy Device Count",
-			"dataSources": {
-				"primary": "ds_executive_summary_healthy_device_count"
-			},
-			"options": {
-				"backgroundColor": "#0f172a",
-				"legendDisplay": "off",
-				"seriesColors": [
-					"#6ee7b7"
-				],
-				"dataValuesDisplay": "minmax",
-				"showYMajorGridLines": true,
-				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"lineWidth": 3,
-				"markerDisplay": "outlined",
-				"nullValueDisplay": "connect"
-			},
-			"description": "Supplies the Healthy Devices KPI tile with an absolute count of reachable, managed assets plus the fleet total and percent healthy for quick ratio context."
-		},
-		"viz_executive_dashboard_data_source_status": {
-			"type": "splunk.table",
-			"title": "Data Source Status",
-			"dataSources": {
-				"primary": "ds_executive_dashboard_data_source_status"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Shows which Cisco and IT systems are actively sending data to Splunk and how many events each sent in the last 24 hours. A row appearing here confirms that integration is working — a missing row means that system’s data…"
-		},
-		"viz_design_context": {
-			"type": "splunk.markdown",
-			"title": "",
-			"showLastUpdated": false,
-			"showProgressBar": false,
-			"options": {
-				"backgroundColor": "#111f31",
-				"fontColor": "#e8f1fb",
-				"markdown": "**Audience:** Executives, security leaders, and network leaders  •  **Sources:** Cisco network, security, data-center, and telemetry feeds  •  **Reading guide:** Use KPIs for posture, trends for trajectory, and feed health to judge confidence.  •  **Freshness:** Uses the dashboard time range"
-			}
-		},
-		"viz_design_section": {
-			"type": "splunk.markdown",
-			"title": "",
-			"showLastUpdated": false,
-			"showProgressBar": false,
-			"options": {
-				"backgroundColor": "#111f31",
-				"fontColor": "#e8f1fb",
-				"markdown": "### Executive signals\nUse KPIs for posture, trends for trajectory, and feed health to judge confidence."
-			}
-		}
-	},
-	"dataSources": {
-		"ds_overview_ap_health": {
-			"name": "Overview - AP Health",
-			"options": {
-				"ref": "overview_ap_health",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_secure_networking_meraki_ap_count": {
-			"name": "Secure Networking - Meraki Access Point Count",
-			"options": {
-				"ref": "secure_networking_meraki_ap_count",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_secure_networking_dc_health_signals_trend": {
-			"name": "Secure Networking - DC Health Signals Trend",
-			"options": {
-				"ref": "secure_networking_dc_health_signals_trend",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_feed_monitor_all_feeds_health_matrix": {
-			"name": "Feed Monitor - ALL Feeds - Consolidated Health Matrix",
-			"options": {
-				"ref": "feed_monitor_all_feeds_health_matrix",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_overview_topology_overview": {
-			"name": "Overview - Topology Overview",
-			"options": {
-				"ref": "overview_topology_overview",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_overview_link_auburndale_tallahassee_health": {
-			"name": "Overview - Link Site 1 to Site 2 Health",
-			"options": {
-				"ref": "overview_link_auburndale_tallahassee_health",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_overview_link_state_drilldown": {
-			"name": "Overview - Link State Drilldown",
-			"options": {
-				"ref": "overview_link_state_drilldown",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_executive_dashboard_ds_device_health_current_drilldown": {
-			"name": "Executive - Current Device Health Drilldown",
-			"options": {
-				"ref": "executive_dashboard_ds_device_health_current_drilldown",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_executive_dashboard_ds_device_health_trend_compare": {
-			"name": "Executive - Device Health Trend Comparison",
-			"options": {
-				"ref": "executive_dashboard_ds_device_health_trend_compare",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_executive_summary_healthy_device_count": {
-			"name": "Executive Summary - Healthy Device Count",
-			"options": {
-				"ref": "executive_summary_healthy_device_count",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_executive_dashboard_data_source_status": {
-			"name": "Executive - Data Source Status",
-			"options": {
-				"ref": "executive_dashboard_data_source_status",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		}
-	},
-	"layout": {
-		"globalInputs": [
-			"input_time_range"
-		],
-		"layoutDefinitions": {
-			"layout_overview": {
-				"options": {
-					"backgroundColor": "#07101d",
-					"display": "auto-scale",
-					"height": 1922,
-					"width": 1440
-				},
-				"structure": [
-					{
-						"item": "viz_header_bg",
-						"position": {
-							"x": 20,
-							"y": 0,
-							"w": 1400,
-							"h": 88
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_header_icon",
-						"position": {
-							"x": 36,
-							"y": 14,
-							"w": 56,
-							"h": 56
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_header",
-						"position": {
-							"x": 108,
-							"y": 4,
-							"w": 1292,
-							"h": 76
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_design_context",
-						"position": {
-							"x": 20,
-							"y": 100,
-							"w": 1400,
-							"h": 64
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_design_section",
-						"position": {
-							"x": 20,
-							"y": 176,
-							"w": 1400,
-							"h": 54
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_overview_ap_health",
-						"position": {
-							"x": 20,
-							"y": 242,
-							"w": 690,
-							"h": 190
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_secure_networking_meraki_ap_count",
-						"position": {
-							"x": 730,
-							"y": 242,
-							"w": 690,
-							"h": 190
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_secure_networking_dc_health_signals_trend",
-						"position": {
-							"x": 20,
-							"y": 448,
-							"w": 690,
-							"h": 280
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_feed_monitor_all_feeds_health_matrix",
-						"position": {
-							"x": 730,
-							"y": 448,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_overview_topology_overview",
-						"position": {
-							"x": 20,
-							"y": 764,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_overview_link_auburndale_tallahassee_health",
-						"position": {
-							"x": 730,
-							"y": 764,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_overview_link_state_drilldown",
-						"position": {
-							"x": 20,
-							"y": 1080,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_executive_dashboard_ds_device_health_current_drilldown",
-						"position": {
-							"x": 730,
-							"y": 1080,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_executive_dashboard_ds_device_health_trend_compare",
-						"position": {
-							"x": 20,
-							"y": 1396,
-							"w": 690,
-							"h": 190
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_executive_summary_healthy_device_count",
-						"position": {
-							"x": 730,
-							"y": 1396,
-							"w": 690,
-							"h": 190
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_executive_dashboard_data_source_status",
-						"position": {
-							"x": 20,
-							"y": 1602,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					}
-				],
-				"type": "absolute"
-			}
-		},
-		"options": {
-			"showTitleAndDescription": false,
-			"submitButton": false,
-			"submitOnDashboardLoad": true
-		},
-		"tabs": {
-			"items": [
-				{
-					"label": "overview",
-					"layoutId": "layout_overview"
-				}
-			]
-		}
-	},
-	"applicationProperties": {
-		"collapseNavigation": false,
-		"hideEdit": false,
-		"hideExport": false
-	}
+    "title": "Executive Overview",
+    "description": "Summarize secure-networking posture, operational risk, and business-relevant outcomes.",
+    "inputs": {
+        "input_time_range": {
+            "options": {
+                "defaultValue": "-24h@h,now",
+                "token": "time_tok"
+            },
+            "title": "Time Range",
+            "type": "input.timerange"
+        }
+    },
+    "defaults": {
+        "visualizations": {
+            "global": {
+                "showLastUpdated": true,
+                "showProgressBar": true
+            }
+        }
+    },
+    "visualizations": {
+        "viz_header_bg": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#1e293b",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 10
+            }
+        },
+        "viz_header_icon": {
+            "type": "splunk.image",
+            "title": "Executive Overview",
+            "options": {
+                "preserveAspectRatio": true,
+                "src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/agentic-ops.svg"
+            }
+        },
+        "viz_header": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "markdown": "# Executive Overview\nSummarize secure\\-networking posture, operational risk, and business\\-relevant outcomes\\."
+            }
+        },
+        "viz_card_01_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_01_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Fleet Device Health**"
+            }
+        },
+        "viz_card_01_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Network  •  Device Health"
+            }
+        },
+        "viz_card_01_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Shows the Catalyst Center fleet\\-average device health trend across automatic time buckets in the selected dashboard range\\."
+            }
+        },
+        "viz_card_01_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_01"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"current\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_01_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_01"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"current\")"
+            }
+        },
+        "viz_card_01_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Fleet%20Device%20Health&target=Executive%20-%20Current%20Device%20Health%20Drilldown,Executive%20-%20Data%20Source%20Status,Feed%20Monitor%20-%20ALL%20Feeds%20-%20Consolidated%20Health%20Matrix"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_02_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_02_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Site Connectivity**"
+            }
+        },
+        "viz_card_02_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Network  •  Site Connectivity"
+            }
+        },
+        "viz_card_02_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Trends the worst site’s inter\\-device link availability as a percentage, read from Catalyst Center’s InterDeviceLinkAvailHealth field on raw cisco:dnac:devicehealth events\\."
+            }
+        },
+        "viz_card_02_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_02"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"availability_pct\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_02_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_02"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"availability_pct\")"
+            }
+        },
+        "viz_card_02_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Site%20Connectivity&target=Overview%20-%20Link%20Site%201%20to%20Site%202%20Health,Overview%20-%20Link%20State%20Drilldown"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_03_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_03_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Wireless Availability**"
+            }
+        },
+        "viz_card_03_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Network  •  Wireless"
+            }
+        },
+        "viz_card_03_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Shows what percentage of Catalyst Center access points are reachable at any moment, along with a count of how many are up or down\\."
+            }
+        },
+        "viz_card_03_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_03"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"pct\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_03_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_03"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"pct\")"
+            }
+        },
+        "viz_card_03_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Wireless%20Availability&target=Overview%20-%20AP%20Health%20Drilldown,Overview%20-%20Topology%20Overview"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_04_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_04_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Identity Friction**"
+            }
+        },
+        "viz_card_04_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Identity  •  Zero Trust Access"
+            }
+        },
+        "viz_card_04_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Tracks the Cisco ISE authentication failure rate over time, with the existing per\\-network\\-device table available as the operational drill\\-down\\."
+            }
+        },
+        "viz_card_04_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_04"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"WindowFailureRatePct\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_04_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_04"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"Failure Rate %\")"
+            }
+        },
+        "viz_card_04_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Identity%20Friction&target=Secure%20Networking%20-%20ZTA%20ISE%20Auth%20Failure%20Rate%20by%20Network%20Device,Secure%20Networking%20-%20ZTA%20Failure%20Reasons%20by%20Site"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_05_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_05_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Enforcement Pressure**"
+            }
+        },
+        "viz_card_05_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Security  •  Hybrid Mesh Firewalling"
+            }
+        },
+        "viz_card_05_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Creates a unified block trend across Meraki security events, SD\\-WAN UTD, Secure Access firewall events, and Secure Firewall/ASA\\-style feeds\\."
+            }
+        },
+        "viz_card_05_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_05"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"WindowBlocks\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_05_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_05"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"BucketBlocks\")"
+            }
+        },
+        "viz_card_05_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Enforcement%20Pressure&target=Secure%20Networking%20-%20FMC%20Blocked%20Connection%20Detail,Secure%20Networking%20-%20SSE%20Security%20Event%20Detail"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_06_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_06_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Application Reachability**"
+            }
+        },
+        "viz_card_06_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Network  •  Agentic Ops"
+            }
+        },
+        "viz_card_06_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Tracks ThousandEyes HTTP availability by monitored test over time and retains the per\\-test SLA table as drill\\-down detail\\."
+            }
+        },
+        "viz_card_06_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_06"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"WindowMinAvailabilityPct\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_06_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_06"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"RowMinAvailabilityPct\")"
+            }
+        },
+        "viz_card_06_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Application%20Reachability&target=Secure%20Networking%20-%20ThousandEyes%20HTTP%20Availability%20by%20Test"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        }
+    },
+    "dataSources": {
+        "ds_story_01": {
+            "name": "Executive - Device Health Trend Comparison",
+            "options": {
+                "ref": "executive_dashboard_ds_device_health_trend_compare",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_02": {
+            "name": "IT Critical Systems - Site Link Availability % (Worst Site)",
+            "options": {
+                "ref": "it_critical_systems_site_link_availability_pct_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_03": {
+            "name": "Overview - AP Health",
+            "options": {
+                "ref": "overview_ap_health",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_04": {
+            "name": "Secure Networking - ZTA ISE Authentication Failure Rate Trend",
+            "options": {
+                "ref": "secure_networking_zta_ise_auth_failure_rate_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_05": {
+            "name": "Secure Networking - HMF Unified Blocks Trend",
+            "options": {
+                "ref": "secure_networking_hmf_unified_blocks_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_06": {
+            "name": "Secure Networking - ThousandEyes HTTP Availability by Test Trend",
+            "options": {
+                "ref": "secure_networking_thousandeyes_http_availability_by_test_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        }
+    },
+    "layout": {
+        "globalInputs": [
+            "input_time_range"
+        ],
+        "layoutDefinitions": {
+            "layout_overview": {
+                "options": {
+                    "backgroundColor": "#020617",
+                    "display": "auto-scale",
+                    "height": 1128,
+                    "width": 1440
+                },
+                "structure": [
+                    {
+                        "item": "viz_header_bg",
+                        "position": {
+                            "x": 20,
+                            "y": 0,
+                            "w": 1400,
+                            "h": 104
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_header_icon",
+                        "position": {
+                            "x": 38,
+                            "y": 18,
+                            "w": 64,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_header",
+                        "position": {
+                            "x": 118,
+                            "y": 8,
+                            "w": 1280,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_background",
+                        "position": {
+                            "x": 20,
+                            "y": 128,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_title",
+                        "position": {
+                            "x": 36,
+                            "y": 140,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_metadata",
+                        "position": {
+                            "x": 36,
+                            "y": 176,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_description",
+                        "position": {
+                            "x": 36,
+                            "y": 204,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_singlevalue",
+                        "position": {
+                            "x": 36,
+                            "y": 284,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_trend",
+                        "position": {
+                            "x": 36,
+                            "y": 376,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_drilldown_trigger",
+                        "position": {
+                            "x": 418,
+                            "y": 134,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_background",
+                        "position": {
+                            "x": 493,
+                            "y": 128,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_title",
+                        "position": {
+                            "x": 509,
+                            "y": 140,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_metadata",
+                        "position": {
+                            "x": 509,
+                            "y": 176,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_description",
+                        "position": {
+                            "x": 509,
+                            "y": 204,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_singlevalue",
+                        "position": {
+                            "x": 509,
+                            "y": 284,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_trend",
+                        "position": {
+                            "x": 509,
+                            "y": 376,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_drilldown_trigger",
+                        "position": {
+                            "x": 891,
+                            "y": 134,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_background",
+                        "position": {
+                            "x": 966,
+                            "y": 128,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_title",
+                        "position": {
+                            "x": 982,
+                            "y": 140,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_metadata",
+                        "position": {
+                            "x": 982,
+                            "y": 176,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_description",
+                        "position": {
+                            "x": 982,
+                            "y": 204,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_singlevalue",
+                        "position": {
+                            "x": 982,
+                            "y": 284,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_trend",
+                        "position": {
+                            "x": 982,
+                            "y": 376,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_drilldown_trigger",
+                        "position": {
+                            "x": 1364,
+                            "y": 134,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_background",
+                        "position": {
+                            "x": 20,
+                            "y": 624,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_title",
+                        "position": {
+                            "x": 36,
+                            "y": 636,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_metadata",
+                        "position": {
+                            "x": 36,
+                            "y": 672,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_description",
+                        "position": {
+                            "x": 36,
+                            "y": 700,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_singlevalue",
+                        "position": {
+                            "x": 36,
+                            "y": 780,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_trend",
+                        "position": {
+                            "x": 36,
+                            "y": 872,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_drilldown_trigger",
+                        "position": {
+                            "x": 418,
+                            "y": 630,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_background",
+                        "position": {
+                            "x": 493,
+                            "y": 624,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_title",
+                        "position": {
+                            "x": 509,
+                            "y": 636,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_metadata",
+                        "position": {
+                            "x": 509,
+                            "y": 672,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_description",
+                        "position": {
+                            "x": 509,
+                            "y": 700,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_singlevalue",
+                        "position": {
+                            "x": 509,
+                            "y": 780,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_trend",
+                        "position": {
+                            "x": 509,
+                            "y": 872,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_drilldown_trigger",
+                        "position": {
+                            "x": 891,
+                            "y": 630,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_background",
+                        "position": {
+                            "x": 966,
+                            "y": 624,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_title",
+                        "position": {
+                            "x": 982,
+                            "y": 636,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_metadata",
+                        "position": {
+                            "x": 982,
+                            "y": 672,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_description",
+                        "position": {
+                            "x": 982,
+                            "y": 700,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_singlevalue",
+                        "position": {
+                            "x": 982,
+                            "y": 780,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_trend",
+                        "position": {
+                            "x": 982,
+                            "y": 872,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_drilldown_trigger",
+                        "position": {
+                            "x": 1364,
+                            "y": 630,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    }
+                ],
+                "type": "absolute"
+            }
+        },
+        "options": {
+            "showTitleAndDescription": false,
+            "submitButton": false,
+            "submitOnDashboardLoad": true
+        },
+        "tabs": {
+            "items": [
+                {
+                    "label": "overview",
+                    "layoutId": "layout_overview"
+                }
+            ]
+        }
+    },
+    "applicationProperties": {
+        "collapseNavigation": false,
+        "hideEdit": false,
+        "hideExport": false
+    }
 }
     ]]></definition>
 </dashboard>

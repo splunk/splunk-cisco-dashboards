@@ -3,660 +3,1275 @@
     <description>Reveal unusual access behavior and the identities, devices, and resources involved.</description>
     <definition><![CDATA[
 {
-	"title": "User Activity Monitoring",
-	"description": "Reveal unusual access behavior and the identities, devices, and resources involved.",
-	"inputs": {
-		"input_time_range": {
-			"options": {
-				"defaultValue": "-24h@h,now",
-				"token": "time_tok"
-			},
-			"title": "Time Range",
-			"type": "input.timerange"
-		}
-	},
-	"defaults": {
-		"visualizations": {
-			"global": {
-				"showLastUpdated": true,
-				"showProgressBar": true
-			}
-		}
-	},
-	"visualizations": {
-		"viz_header_bg": {
-			"type": "splunk.rectangle",
-			"options": {
-				"fillColor": "#16283c",
-				"strokeColor": "rgba(53,207,245,0.42)"
-			}
-		},
-		"viz_header_icon": {
-			"type": "splunk.image",
-			"title": "Zero Trust Access",
-			"options": {
-				"preserveAspectRatio": true,
-				"src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg"
-			}
-		},
-		"viz_header": {
-			"type": "splunk.markdown",
-			"title": "",
-			"showLastUpdated": false,
-			"showProgressBar": false,
-			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#e8f1fb",
-				"markdown": "# User Activity Monitoring\nReveal unusual access behavior and the identities, devices, and resources involved."
-			}
-		},
-		"viz_secure_networking_zta_user_activity_cross_source": {
-			"type": "splunk.table",
-			"title": "ZTA User Activity Cross-Source Correlation",
-			"dataSources": {
-				"primary": "ds_secure_networking_zta_user_activity_cross_source"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Cross-source user/identity activity correlation spanning ISE NAC, Cisco ZTNA, and FMC firewall layers, providing a unified per-user view of how many Zero Trust enforcement layers an identity is active across and whether…"
-		},
-		"viz_secure_networking_zta_ztna_blocked_access_reasons": {
-			"type": "splunk.table",
-			"title": "ZTA ZTNA Blocked Access Reasons",
-			"dataSources": {
-				"primary": "ds_secure_networking_zta_ztna_blocked_access_reasons"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Ranks blocked ZTNA access decisions by reason, device category, private application or resource, and enforcing rule so operators can distinguish posture failures from policy mistakes."
-		},
-		"viz_secure_networking_zta_ztna_device_category_outcomes": {
-			"type": "splunk.column",
-			"title": "ZTA ZTNA Access Outcomes by Device Category",
-			"dataSources": {
-				"primary": "ds_secure_networking_zta_ztna_device_category_outcomes"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"legendDisplay": "bottom",
-				"seriesColors": [
-					"#8bd45b",
-					"#ff7169",
-					"#64748B"
-				],
-				"showYMajorGridLines": true,
-				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"stackMode": "stacked"
-			},
-			"description": "Compares allowed, blocked, and other ZTNA access decisions by device category , showing where device posture or enrollment type creates the most policy friction."
-		},
-		"viz_secure_networking_zta_ztna_connection_status_trend": {
-			"type": "splunk.area",
-			"title": "ZTA ZTNA Connection Status Trend",
-			"dataSources": {
-				"primary": "ds_secure_networking_zta_ztna_connection_status_trend"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"legendDisplay": "bottom",
-				"seriesColors": [
-					"#7dd3fc",
-					"#6ee7b7",
-					"#fdba74",
-					"#fda4af"
-				],
-				"showYMajorGridLines": true,
-				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"lineWidth": 3,
-				"nullValueDisplay": "gaps",
-				"dataValuesDisplay": "minmax"
-			},
-			"description": "Hourly trend of Cisco SSE ZTNA connection statuses over time, enabling operators to track ZTNA adoption growth, detect access disruptions, and correlate denial spikes with policy or infrastructure changes."
-		},
-		"viz_secure_networking_zta_ztna_app_access_summary": {
-			"type": "splunk.table",
-			"title": "ZTA ZTNA Application Access Summary",
-			"dataSources": {
-				"primary": "ds_secure_networking_zta_ztna_app_access_summary"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Which private resources are accessed through Cisco SSE ZTNA and how many distinct users and sessions each resource sees — complementing the aggregate session KPI with a resource-level adoption view."
-		},
-		"viz_network_nvm_endpoint_os_inventory": {
-			"type": "splunk.table",
-			"title": "Cisco NVM Endpoint OS Inventory",
-			"dataSources": {
-				"primary": "ds_network_nvm_endpoint_os_inventory"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "OS-family rollup of endpoints reporting to NVM - deduplicates to the latest snapshot per udid , then rolls up by OS name with the edition, architecture, and agent-version mix seen per family for an at-a-glance fleet…"
-		},
-		"viz_network_nvm_top_processes_by_flow_volume": {
-			"type": "splunk.bar",
-			"title": "Cisco NVM Top Processes by Flow Volume",
-			"dataSources": {
-				"primary": "ds_network_nvm_top_processes_by_flow_volume"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"legendDisplay": "bottom",
-				"seriesColors": [
-					"#0284C7",
-					"#0D9488",
-					"#ff9a4a",
-					"#ff7169"
-				],
-				"showYMajorGridLines": true,
-				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"stackMode": "unstacked"
-			},
-			"description": "Per-process flow-volume leaderboard from Cisco Network Visibility Module (NVM) flowdata. Each NVM endpoint emits a record per egress flow with the originating process, inbound/outbound bytes ( ibc / obc ), and…"
-		},
-		"viz_network_nvm_top_destination_hosts": {
-			"type": "splunk.bar",
-			"title": "Cisco NVM Top Destination Hosts",
-			"dataSources": {
-				"primary": "ds_network_nvm_top_destination_hosts"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"legendDisplay": "bottom",
-				"seriesColors": [
-					"#0284C7",
-					"#0D9488",
-					"#ff9a4a",
-					"#ff7169"
-				],
-				"showYMajorGridLines": true,
-				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"stackMode": "unstacked"
-			},
-			"description": "Top destination hostnames observed by Cisco NVM endpoints - captured as dh (destination host header / SNI) on every flow. Includes byte counts and the number of distinct internal endpoints (UDID) connecting to each…"
-		},
-		"viz_network_nvm_top_users_by_egress": {
-			"type": "splunk.bar",
-			"title": "Cisco NVM Top Users by Egress Volume",
-			"dataSources": {
-				"primary": "ds_network_nvm_top_users_by_egress"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"legendDisplay": "bottom",
-				"seriesColors": [
-					"#0284C7",
-					"#0D9488",
-					"#ff9a4a",
-					"#ff7169"
-				],
-				"showYMajorGridLines": true,
-				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide",
-				"stackMode": "unstacked"
-			},
-			"description": "Per-logged-in-user egress leaderboard from Cisco NVM flowdata - bytes out, bytes in, flow count, distinct destination hosts, distinct processes. Identifies users with abnormally high data movement for IR triage."
-		},
-		"viz_secure_networking_zta_duo_auth_outcomes_by_application": {
-			"type": "splunk.table",
-			"title": "ZTA Duo Authentication Outcomes by Application",
-			"dataSources": {
-				"primary": "ds_secure_networking_zta_duo_auth_outcomes_by_application"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Summarizes end-user Cisco Duo MFA decisions by protected application and factor, including successes, denials, fraud reports, affected users, and failure rate."
-		},
-		"viz_secure_networking_infra_secure_endpoint_incidents": {
-			"type": "splunk.table",
-			"title": "Secure Endpoint Incident and Malware Activity",
-			"dataSources": {
-				"primary": "ds_secure_networking_infra_secure_endpoint_incidents"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Ranks Cisco Secure Endpoint incidents and malware detections by severity, disposition, threat, endpoint, and user."
-		},
-		"viz_secure_networking_infra_duo_blocked_posture_identity": {
-			"type": "splunk.table",
-			"title": "Duo Blocked Posture and Identity Events",
-			"dataSources": {
-				"primary": "ds_secure_networking_infra_duo_blocked_posture_identity"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Combines Duo denied identity decisions with current endpoint posture failures such as missing encryption, firewall, password, or trust controls."
-		},
-		"viz_secure_networking_infra_duo_application_access": {
-			"type": "splunk.table",
-			"title": "Duo Application Access Detail",
-			"dataSources": {
-				"primary": "ds_secure_networking_infra_duo_application_access"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Answers which Duo-protected applications were accessed, by whom, from where, and when , including factor and outcome."
-		},
-		"viz_design_context": {
-			"type": "splunk.markdown",
-			"title": "",
-			"showLastUpdated": false,
-			"showProgressBar": false,
-			"options": {
-				"backgroundColor": "#111f31",
-				"fontColor": "#e8f1fb",
-				"markdown": "**Audience:** SOC, identity-threat, and access-security teams  •  **Sources:** Cisco ISE, Secure Access ZTNA, and Secure Firewall identity telemetry  •  **Reading guide:** Compare access outcomes first, then correlate users across enforcement layers and time.  •  **Freshness:** Uses the dashboard time range"
-			}
-		},
-		"viz_design_section": {
-			"type": "splunk.markdown",
-			"title": "",
-			"showLastUpdated": false,
-			"showProgressBar": false,
-			"options": {
-				"backgroundColor": "#111f31",
-				"fontColor": "#e8f1fb",
-				"markdown": "### Identity activity\nCompare access outcomes first, then correlate users across enforcement layers and time."
-			}
-		}
-	},
-	"dataSources": {
-		"ds_secure_networking_zta_user_activity_cross_source": {
-			"name": "Secure Networking - ZTA User Activity Cross-Source Correlation",
-			"options": {
-				"ref": "secure_networking_zta_user_activity_cross_source",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_secure_networking_zta_ztna_blocked_access_reasons": {
-			"name": "Secure Networking - ZTA ZTNA Blocked Access Reasons",
-			"options": {
-				"ref": "secure_networking_zta_ztna_blocked_access_reasons",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_secure_networking_zta_ztna_device_category_outcomes": {
-			"name": "Secure Networking - ZTA ZTNA Access Outcomes by Device Category",
-			"options": {
-				"ref": "secure_networking_zta_ztna_device_category_outcomes",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_secure_networking_zta_ztna_connection_status_trend": {
-			"name": "Secure Networking - ZTA ZTNA Connection Status Trend",
-			"options": {
-				"ref": "secure_networking_zta_ztna_connection_status_trend",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_secure_networking_zta_ztna_app_access_summary": {
-			"name": "Secure Networking - ZTA ZTNA Application Access Summary",
-			"options": {
-				"ref": "secure_networking_zta_ztna_app_access_summary",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_network_nvm_endpoint_os_inventory": {
-			"name": "Network - Endpoint Telemetry - Cisco NVM Endpoint OS Inventory",
-			"options": {
-				"ref": "network_nvm_endpoint_os_inventory",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_network_nvm_top_processes_by_flow_volume": {
-			"name": "Network - Endpoint Telemetry - Cisco NVM Top Processes by Flow Volume",
-			"options": {
-				"ref": "network_nvm_top_processes_by_flow_volume",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_network_nvm_top_destination_hosts": {
-			"name": "Network - Endpoint Telemetry - Cisco NVM Top Destination Hosts",
-			"options": {
-				"ref": "network_nvm_top_destination_hosts",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_network_nvm_top_users_by_egress": {
-			"name": "Network - Endpoint Telemetry - Cisco NVM Top Users by Egress Volume",
-			"options": {
-				"ref": "network_nvm_top_users_by_egress",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_secure_networking_zta_duo_auth_outcomes_by_application": {
-			"name": "Secure Networking - ZTA Duo Authentication Outcomes by Application",
-			"options": {
-				"ref": "secure_networking_zta_duo_auth_outcomes_by_application",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_secure_networking_infra_secure_endpoint_incidents": {
-			"name": "Secure Networking - Secure Endpoint Incident and Malware Activity",
-			"options": {
-				"ref": "secure_networking_infra_secure_endpoint_incidents",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_secure_networking_infra_duo_blocked_posture_identity": {
-			"name": "Secure Networking - Duo Blocked Posture and Identity Events",
-			"options": {
-				"ref": "secure_networking_infra_duo_blocked_posture_identity",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_secure_networking_infra_duo_application_access": {
-			"name": "Secure Networking - Duo Application Access Detail",
-			"options": {
-				"ref": "secure_networking_infra_duo_application_access",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		}
-	},
-	"layout": {
-		"globalInputs": [
-			"input_time_range"
-		],
-		"layoutDefinitions": {
-			"layout_overview": {
-				"options": {
-					"backgroundColor": "#07101d",
-					"display": "auto-scale",
-					"height": 2418,
-					"width": 1440
-				},
-				"structure": [
-					{
-						"item": "viz_header_bg",
-						"position": {
-							"x": 20,
-							"y": 0,
-							"w": 1400,
-							"h": 88
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_header_icon",
-						"position": {
-							"x": 36,
-							"y": 14,
-							"w": 56,
-							"h": 56
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_header",
-						"position": {
-							"x": 108,
-							"y": 4,
-							"w": 1292,
-							"h": 76
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_design_context",
-						"position": {
-							"x": 20,
-							"y": 100,
-							"w": 1400,
-							"h": 64
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_design_section",
-						"position": {
-							"x": 20,
-							"y": 176,
-							"w": 1400,
-							"h": 54
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_secure_networking_zta_user_activity_cross_source",
-						"position": {
-							"x": 20,
-							"y": 242,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_secure_networking_zta_ztna_blocked_access_reasons",
-						"position": {
-							"x": 730,
-							"y": 242,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_secure_networking_zta_ztna_device_category_outcomes",
-						"position": {
-							"x": 20,
-							"y": 558,
-							"w": 690,
-							"h": 280
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_secure_networking_zta_ztna_connection_status_trend",
-						"position": {
-							"x": 730,
-							"y": 558,
-							"w": 690,
-							"h": 280
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_secure_networking_zta_ztna_app_access_summary",
-						"position": {
-							"x": 20,
-							"y": 854,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_network_nvm_endpoint_os_inventory",
-						"position": {
-							"x": 730,
-							"y": 854,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_network_nvm_top_processes_by_flow_volume",
-						"position": {
-							"x": 20,
-							"y": 1170,
-							"w": 690,
-							"h": 280
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_network_nvm_top_destination_hosts",
-						"position": {
-							"x": 730,
-							"y": 1170,
-							"w": 690,
-							"h": 280
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_network_nvm_top_users_by_egress",
-						"position": {
-							"x": 20,
-							"y": 1466,
-							"w": 690,
-							"h": 280
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_secure_networking_zta_duo_auth_outcomes_by_application",
-						"position": {
-							"x": 730,
-							"y": 1466,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_secure_networking_infra_secure_endpoint_incidents",
-						"position": {
-							"x": 20,
-							"y": 1782,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_secure_networking_infra_duo_blocked_posture_identity",
-						"position": {
-							"x": 730,
-							"y": 1782,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_secure_networking_infra_duo_application_access",
-						"position": {
-							"x": 20,
-							"y": 2098,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					}
-				],
-				"type": "absolute"
-			}
-		},
-		"options": {
-			"showTitleAndDescription": false,
-			"submitButton": false,
-			"submitOnDashboardLoad": true
-		},
-		"tabs": {
-			"items": [
-				{
-					"label": "overview",
-					"layoutId": "layout_overview"
-				}
-			]
-		}
-	},
-	"applicationProperties": {
-		"collapseNavigation": false,
-		"hideEdit": false,
-		"hideExport": false
-	}
+    "title": "User Activity Monitoring",
+    "description": "Reveal unusual access behavior and the identities, devices, and resources involved.",
+    "inputs": {
+        "input_time_range": {
+            "options": {
+                "defaultValue": "-24h@h,now",
+                "token": "time_tok"
+            },
+            "title": "Time Range",
+            "type": "input.timerange"
+        }
+    },
+    "defaults": {
+        "visualizations": {
+            "global": {
+                "showLastUpdated": true,
+                "showProgressBar": true
+            }
+        }
+    },
+    "visualizations": {
+        "viz_header_bg": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#1e293b",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 10
+            }
+        },
+        "viz_header_icon": {
+            "type": "splunk.image",
+            "title": "User Activity Monitoring",
+            "options": {
+                "preserveAspectRatio": true,
+                "src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg"
+            }
+        },
+        "viz_header": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "markdown": "# User Activity Monitoring\nReveal unusual access behavior and the identities, devices, and resources involved\\."
+            }
+        },
+        "viz_card_01_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_01_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Cross\\-Source Identity Activity**"
+            }
+        },
+        "viz_card_01_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Identity  •  Zero Trust Access"
+            }
+        },
+        "viz_card_01_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Compares user activity volume across ISE, ZTNA, and FMC over time, with cross\\-source identity correlation available in the drill\\-down modal\\."
+            }
+        },
+        "viz_card_01_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_01"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_01_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_01"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"BucketTotal\")"
+            }
+        },
+        "viz_card_01_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Cross-Source%20Identity%20Activity&target=Secure%20Networking%20-%20ZTA%20User%20Activity%20Cross-Source%20Correlation,Secure%20Networking%20-%20Duo%20Application%20Access%20Detail"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_02_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_02_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Private Application Access**"
+            }
+        },
+        "viz_card_02_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Identity  •  Zero Trust Access"
+            }
+        },
+        "viz_card_02_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Hourly trend of Cisco SSE ZTNA connection statuses over time, enabling operators to track ZTNA adoption growth, detect access disruptions, and correlate denial spikes with policy or infrastructure changes\\."
+            }
+        },
+        "viz_card_02_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_02"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"WindowConnections\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_02_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_02"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"BucketConnections\")"
+            }
+        },
+        "viz_card_02_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Private%20Application%20Access&target=Secure%20Networking%20-%20ZTA%20ZTNA%20Application%20Access%20Summary"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_03_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_03_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Access Denial Causes**"
+            }
+        },
+        "viz_card_03_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Identity  •  Zero Trust Access"
+            }
+        },
+        "viz_card_03_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Tracks the leading ZTNA block and deny reasons over time while retaining the full policy/posture detail table as a drill\\-down\\."
+            }
+        },
+        "viz_card_03_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_03"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_03_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_03"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"BucketTotal\")"
+            }
+        },
+        "viz_card_03_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Access%20Denial%20Causes&target=Secure%20Networking%20-%20ZTA%20ZTNA%20Blocked%20Access%20Reasons"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_04_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_04_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**MFA Activity**"
+            }
+        },
+        "viz_card_04_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Identity  •  Zero Trust Access"
+            }
+        },
+        "viz_card_04_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Tracks Duo MFA authentication outcomes over time and keeps the application/factor breakdown as a drill\\-down table\\."
+            }
+        },
+        "viz_card_04_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_04"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"WindowRiskyOutcomes\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_04_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_04"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"RiskyOutcomes\")"
+            }
+        },
+        "viz_card_04_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=MFA%20Activity&target=Secure%20Networking%20-%20ZTA%20Duo%20Authentication%20Outcomes%20by%20Application,Secure%20Networking%20-%20Duo%20Blocked%20Posture%20and%20Identity%20Events"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_05_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_05_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**User Egress Concentration**"
+            }
+        },
+        "viz_card_05_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Network  •  Endpoint Telemetry"
+            }
+        },
+        "viz_card_05_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Per\\-logged\\-in\\-user egress leaderboard from Cisco NVM flowdata \\- bytes out, bytes in, flow count, distinct destination hosts, distinct processes\\. Identifies users with abnormally high data movement for IR triage\\."
+            }
+        },
+        "viz_card_05_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_05"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"WindowBytesOut\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_05_trend": {
+            "type": "splunk.bar",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_05"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "right",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "showYMajorGridLines": true,
+                "stackMode": "unstacked",
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"User\")",
+                "y": "> primary | seriesByName(\"Bytes Out\")"
+            }
+        },
+        "viz_card_05_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=User%20Egress%20Concentration&target=Network%20-%20Endpoint%20Telemetry%20-%20Cisco%20NVM%20Top%20Destination%20Hosts,Network%20-%20Endpoint%20Telemetry%20-%20Cisco%20NVM%20Endpoint%20OS%20Inventory"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_06_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_06_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Process Flow Concentration**"
+            }
+        },
+        "viz_card_06_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Network  •  Endpoint Telemetry"
+            }
+        },
+        "viz_card_06_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Per\\-process flow\\-volume leaderboard from Cisco Network Visibility Module \\(NVM\\) flowdata\\. Each NVM endpoint emits a record per egress flow with the originating process, inbound/outbound bytes \\(ibc/obc\\), and distinct\\-destination context\\."
+            }
+        },
+        "viz_card_06_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_06"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"WindowBytesOut\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_06_trend": {
+            "type": "splunk.bar",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_06"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "right",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "showYMajorGridLines": true,
+                "stackMode": "unstacked",
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"Process\")",
+                "y": "> primary | seriesByName(\"Bytes Out\")"
+            }
+        },
+        "viz_card_06_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Process%20Flow%20Concentration&target=Network%20-%20Endpoint%20Telemetry%20-%20Cisco%20NVM%20Top%20Destination%20Hosts,Network%20-%20Endpoint%20Telemetry%20-%20Cisco%20NVM%20Endpoint%20OS%20Inventory,Secure%20Networking%20-%20Secure%20Endpoint%20Incident%20and%20Malware%20Activity"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        }
+    },
+    "dataSources": {
+        "ds_story_01": {
+            "name": "Secure Networking - ZTA User Activity Cross-Source Trend",
+            "options": {
+                "ref": "secure_networking_zta_user_activity_source_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_02": {
+            "name": "Secure Networking - ZTA ZTNA Connection Status Trend",
+            "options": {
+                "ref": "secure_networking_zta_ztna_connection_status_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_03": {
+            "name": "Secure Networking - ZTA ZTNA Blocked Access Reason Trend",
+            "options": {
+                "ref": "secure_networking_zta_blocked_access_reason_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_04": {
+            "name": "Secure Networking - ZTA Duo Authentication Outcomes Trend",
+            "options": {
+                "ref": "secure_networking_zta_duo_auth_outcomes_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_05": {
+            "name": "Network - Endpoint Telemetry - Cisco NVM Top Users by Egress Volume",
+            "options": {
+                "ref": "network_nvm_top_users_by_egress",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_06": {
+            "name": "Network - Endpoint Telemetry - Cisco NVM Top Processes by Flow Volume",
+            "options": {
+                "ref": "network_nvm_top_processes_by_flow_volume",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        }
+    },
+    "layout": {
+        "globalInputs": [
+            "input_time_range"
+        ],
+        "layoutDefinitions": {
+            "layout_overview": {
+                "options": {
+                    "backgroundColor": "#020617",
+                    "display": "auto-scale",
+                    "height": 1128,
+                    "width": 1440
+                },
+                "structure": [
+                    {
+                        "item": "viz_header_bg",
+                        "position": {
+                            "x": 20,
+                            "y": 0,
+                            "w": 1400,
+                            "h": 104
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_header_icon",
+                        "position": {
+                            "x": 38,
+                            "y": 18,
+                            "w": 64,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_header",
+                        "position": {
+                            "x": 118,
+                            "y": 8,
+                            "w": 1280,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_background",
+                        "position": {
+                            "x": 20,
+                            "y": 128,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_title",
+                        "position": {
+                            "x": 36,
+                            "y": 140,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_metadata",
+                        "position": {
+                            "x": 36,
+                            "y": 176,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_description",
+                        "position": {
+                            "x": 36,
+                            "y": 204,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_singlevalue",
+                        "position": {
+                            "x": 36,
+                            "y": 284,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_trend",
+                        "position": {
+                            "x": 36,
+                            "y": 376,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_drilldown_trigger",
+                        "position": {
+                            "x": 418,
+                            "y": 134,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_background",
+                        "position": {
+                            "x": 493,
+                            "y": 128,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_title",
+                        "position": {
+                            "x": 509,
+                            "y": 140,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_metadata",
+                        "position": {
+                            "x": 509,
+                            "y": 176,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_description",
+                        "position": {
+                            "x": 509,
+                            "y": 204,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_singlevalue",
+                        "position": {
+                            "x": 509,
+                            "y": 284,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_trend",
+                        "position": {
+                            "x": 509,
+                            "y": 376,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_drilldown_trigger",
+                        "position": {
+                            "x": 891,
+                            "y": 134,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_background",
+                        "position": {
+                            "x": 966,
+                            "y": 128,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_title",
+                        "position": {
+                            "x": 982,
+                            "y": 140,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_metadata",
+                        "position": {
+                            "x": 982,
+                            "y": 176,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_description",
+                        "position": {
+                            "x": 982,
+                            "y": 204,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_singlevalue",
+                        "position": {
+                            "x": 982,
+                            "y": 284,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_trend",
+                        "position": {
+                            "x": 982,
+                            "y": 376,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_drilldown_trigger",
+                        "position": {
+                            "x": 1364,
+                            "y": 134,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_background",
+                        "position": {
+                            "x": 20,
+                            "y": 624,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_title",
+                        "position": {
+                            "x": 36,
+                            "y": 636,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_metadata",
+                        "position": {
+                            "x": 36,
+                            "y": 672,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_description",
+                        "position": {
+                            "x": 36,
+                            "y": 700,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_singlevalue",
+                        "position": {
+                            "x": 36,
+                            "y": 780,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_trend",
+                        "position": {
+                            "x": 36,
+                            "y": 872,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_drilldown_trigger",
+                        "position": {
+                            "x": 418,
+                            "y": 630,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_background",
+                        "position": {
+                            "x": 493,
+                            "y": 624,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_title",
+                        "position": {
+                            "x": 509,
+                            "y": 636,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_metadata",
+                        "position": {
+                            "x": 509,
+                            "y": 672,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_description",
+                        "position": {
+                            "x": 509,
+                            "y": 700,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_singlevalue",
+                        "position": {
+                            "x": 509,
+                            "y": 780,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_trend",
+                        "position": {
+                            "x": 509,
+                            "y": 872,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_drilldown_trigger",
+                        "position": {
+                            "x": 891,
+                            "y": 630,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_background",
+                        "position": {
+                            "x": 966,
+                            "y": 624,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_title",
+                        "position": {
+                            "x": 982,
+                            "y": 636,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_metadata",
+                        "position": {
+                            "x": 982,
+                            "y": 672,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_description",
+                        "position": {
+                            "x": 982,
+                            "y": 700,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_singlevalue",
+                        "position": {
+                            "x": 982,
+                            "y": 780,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_trend",
+                        "position": {
+                            "x": 982,
+                            "y": 872,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_drilldown_trigger",
+                        "position": {
+                            "x": 1364,
+                            "y": 630,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    }
+                ],
+                "type": "absolute"
+            }
+        },
+        "options": {
+            "showTitleAndDescription": false,
+            "submitButton": false,
+            "submitOnDashboardLoad": true
+        },
+        "tabs": {
+            "items": [
+                {
+                    "label": "overview",
+                    "layoutId": "layout_overview"
+                }
+            ]
+        }
+    },
+    "applicationProperties": {
+        "collapseNavigation": false,
+        "hideEdit": false,
+        "hideExport": false
+    }
 }
     ]]></definition>
 </dashboard>

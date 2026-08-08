@@ -57,6 +57,9 @@ assert.match(editor, /dashboardbuilder-display-button/);
 assert.match(editor, /dashboardbuilder-actions-button/);
 assert.match(editor, /dashboardbuilder-export-json-action/);
 assert.match(editor, /dashboardbuilder-clone-action/);
+assert.match(editor, /if \(\(dashMode \?\? 'view'\) === 'view' && isDashboardMounted\) \{/);
+assert.match(editor, /apiRef\?\.collapseToolbar\?\.\(\);/);
+assert.match(editor, /\[apiRef, dashID, dashMode, isDashboardMounted\]/);
 assert.match(styles, /body\.dashboardbuilder-navigation-hidden header/);
 assert.match(styles, /body\.dashboardbuilder-navigation-hidden nav/);
 assert.match(insightKpiButton, /label="Add Searchbase"/);
@@ -75,6 +78,15 @@ assert.match(editor, /dashboard-builder-drilldown-open/);
 assert.match(styles, /dashboard-builder-drilldown-open[\s\S]*?z-index:\s*100003/);
 assert.match(editor, /initialDefinition=\{runtimeDashboardDefinition\}/);
 assert.match(drilldownModal, /getDashboardDrilldownMetadata/);
+assert.match(drilldownModal, /activeMetadata\.category/);
+assert.match(drilldownModal, /activeMetadata\.subCategory/);
+assert.match(drilldownModal, /dashboard-builder-drilldown-classification/);
+assert.match(drilldownModal, /<Search size=\{20\} aria-hidden="true"/);
+assert.match(styles, /\.dashboard-builder-drilldown-classification/);
+assert.match(
+  styles,
+  /dashboard-builder-themed-modal-dark \.dashboard-builder-drilldown-classification/,
+);
 assert.match(drilldownModal, />\s*Back\s*</);
 assert.match(drilldownModal, />\s*Forward\s*</);
 assert.match(drilldownModal, /title="Description"/);

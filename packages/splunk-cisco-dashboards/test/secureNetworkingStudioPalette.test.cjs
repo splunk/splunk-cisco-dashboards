@@ -4,13 +4,32 @@ const assert = require("assert").strict;
 const fs = require("fs");
 const path = require("path");
 
-const DASHBOARD_NAMES = [
-  "secure_networking_zta",
-  "secure_networking_secure_infrastructure",
-  "secure_networking_scalable_network_segmentation",
-  "secure_networking_hybrid_mesh_firewalling",
-  "secure_networking_agentic_ops",
+const EXPECTED_STUDIO_FILES = [
+  "secure_networking_agentic_ops.xml",
+  "secure_networking_agentic_ops_executive_overview.xml",
+  "secure_networking_hmf_dlp_cloud_native_security.xml",
+  "secure_networking_hmf_sdwan_network_health_monitoring.xml",
+  "secure_networking_hmf_threat_detection_enforcement.xml",
+  "secure_networking_hybrid_mesh_firewalling.xml",
+  "secure_networking_scalable_network_segmentation.xml",
+  "secure_networking_secure_infrastructure.xml",
+  "secure_networking_secure_infrastructure_status.xml",
+  "secure_networking_segmentation_overview.xml",
+  "secure_networking_zta.xml",
+  "secure_networking_zta_authentication_policy_enforcement.xml",
+  "secure_networking_zta_detection_response.xml",
+  "secure_networking_zta_policy_management.xml",
+  "secure_networking_zta_ravpn_sessions_and_posture.xml",
+  "secure_networking_zta_user_activity_monitoring.xml",
 ];
+
+const EXPECTED_GRAPH_COUNTS = {
+  "splunk.area": 84,
+  "splunk.bar": 6,
+  "splunk.column": 4,
+  "splunk.pie": 2,
+};
+const GRAPH_TYPES = new Set(Object.keys(EXPECTED_GRAPH_COUNTS));
 
 const VIEWS_DIR = path.resolve(
   __dirname,
@@ -30,7 +49,7 @@ const HOME_DARK_PALETTE = {
   accentStroke: "rgba(14,165,233,0.42)",
 };
 
-const BRIGHT_TREND_COLORS = new Set([
+const BRIGHT_GRAPH_COLORS = new Set([
   "#5eead4", // teal-300
   "#67e8f9", // cyan-300
   "#6ee7b7", // emerald-300
@@ -53,7 +72,7 @@ const ALLOWED_COLORS = new Set([
   "#dc2626", // red-600
   "#8b5cf6", // violet-500
   "#0d9488", // teal-600
-  ...BRIGHT_TREND_COLORS,
+  ...BRIGHT_GRAPH_COLORS,
 ]);
 
 const RETIRED_STUDIO_COLORS = [
@@ -70,82 +89,305 @@ const RETIRED_STUDIO_COLORS = [
   "rgba(53,207,245,0.42)",
 ];
 
-const readDashboard = (name) => {
-  const filePath = path.resolve(
-    __dirname,
-    `../src/main/resources/splunk/default/data/ui/views/${name}.xml`,
-  );
+const readDashboard = (fileName) => {
+  const filePath = path.join(VIEWS_DIR, fileName);
   const xml = fs.readFileSync(filePath, "utf8");
-  const definitionMatch = xml.match(/<definition><!\[CDATA\[([\s\S]*?)\]\]><\/definition>/);
-  assert.ok(definitionMatch, `${name} must contain a Dashboard Studio definition`);
-  return { xml, definition: JSON.parse(definitionMatch[1]) };
+  const definitionMatch = xml.match(
+    /<definition><!\[CDATA\[([\s\S]*?)\]\]><\/definition>/,
+  );
+  assert.ok(definitionMatch, `${fileName} must contain a Dashboard Studio definition`);
+  return { fileName, xml, definition: JSON.parse(definitionMatch[1]) };
 };
 
-for (const dashboardName of DASHBOARD_NAMES) {
-  const { xml, definition } = readDashboard(dashboardName);
-  const layout = definition.layout.layoutDefinitions.layout_overview;
-  const header = definition.visualizations.viz_header_bg.options;
+const actualStudioFiles = fs
+  .readdirSync(VIEWS_DIR)
+  .filter((fileName) => fileName.startsWith("secure_networking_") && fileName.endsWith(".xml"))
+  .filter((fileName) =>
+    /<dashboard\s+version="2"/.test(fs.readFileSync(path.join(VIEWS_DIR, fileName), "utf8")),
+  )
+  .sort();
 
+assert.deepEqual(
+  actualStudioFiles,
+  EXPECTED_STUDIO_FILES,
+  "Secure Networking must ship the authoritative set of 16 Studio story dashboards",
+);
+
+const dashboardViews = actualStudioFiles.map(readDashboard);
+const totalGraphCounts = Object.fromEntries(
+  Object.keys(EXPECTED_GRAPH_COUNTS).map((type) => [type, 0]),
+);
+
+for (const { fileName, xml, definition } of dashboardViews) {
+  assert.match(
+    xml,
+    /<dashboard\s+version="2"[^>]*theme="dark"[^>]*stylesheet="application\.css"/,
+    `${fileName} must use the dark theme and shared Studio stylesheet`,
+  );
+
+  const visualizations = definition.visualizations;
+  const visualizationEntries = Object.entries(visualizations);
+  const dataSources = definition.dataSources;
+  const layout = definition.layout.layoutDefinitions.layout_overview;
+  const header = visualizations.viz_header_bg?.options;
+
+  assert.equal(layout.type, "absolute", `${fileName} must use an absolute layout`);
+  assert.equal(layout.options.width, 1440, `${fileName} must use the 1440-pixel canvas`);
+  assert.equal(
+    layout.options.display,
+    "auto-scale",
+    `${fileName} must auto-scale its 1440-pixel canvas`,
+  );
   assert.equal(
     layout.options.backgroundColor,
     HOME_DARK_PALETTE.canvas,
-    `${dashboardName} must use the Insights Workspace canvas color`,
+    `${fileName} must use the Insights Workspace canvas color`,
   );
   assert.equal(
-    header.fillColor,
+    header?.fillColor,
     HOME_DARK_PALETTE.secondary,
-    `${dashboardName} must use the Insights Workspace secondary surface for its header`,
+    `${fileName} must use the secondary surface for its header`,
   );
   assert.equal(
-    header.strokeColor,
+    header?.strokeColor,
     HOME_DARK_PALETTE.accentStroke,
-    `${dashboardName} must use the Insights Workspace sky accent for its header border`,
+    `${fileName} must use the current sky accent for its header border`,
   );
+
+  assert.equal(
+    Object.keys(dataSources).length,
+    6,
+    `${fileName} must dispatch exactly six Searchbase searches`,
+  );
+  for (const [dataSourceId, dataSource] of Object.entries(dataSources)) {
+    assert.equal(dataSource.type, "ds.searchbase", `${fileName}:${dataSourceId} must use Searchbase`);
+    assert.deepEqual(
+      dataSource.options?.queryParameters,
+      { earliest: "$time_tok.earliest$", latest: "$time_tok.latest$" },
+      `${fileName}:${dataSourceId} must use the shared time_tok input`,
+    );
+  }
+
+  const graphEntries = visualizationEntries.filter(([, visualization]) =>
+    GRAPH_TYPES.has(visualization.type),
+  );
+  assert.equal(graphEntries.length, 6, `${fileName} must render exactly six KPI graphs`);
+  assert.equal(
+    visualizationEntries.filter(([, visualization]) => visualization.type === "splunk.singlevalue")
+      .length,
+    6,
+    `${fileName} must render one headline value for each KPI graph`,
+  );
+  assert.ok(
+    visualizationEntries.every(([, visualization]) => visualization.type !== "splunk.table"),
+    `${fileName} must keep detail tables out of the six-card canvas`,
+  );
+  assert.ok(
+    visualizationEntries.every(([, visualization]) => visualization.type !== "splunk.line"),
+    `${fileName} must not regress area trends to low-contrast line charts`,
+  );
+
+  const cardBackgrounds = layout.structure.filter(({ item }) =>
+    item.endsWith("_background"),
+  );
+  assert.equal(cardBackgrounds.length, 6, `${fileName} must define six card backgrounds`);
+  assert.deepEqual(
+    [...new Set(cardBackgrounds.map(({ position }) => position.x))].sort((a, b) => a - b),
+    [20, 493, 966],
+    `${fileName} must lay out three KPI columns`,
+  );
+  assert.deepEqual(
+    [...new Set(cardBackgrounds.map(({ position }) => position.y))].sort((a, b) => a - b),
+    [128, 624],
+    `${fileName} must lay out two KPI rows`,
+  );
+  for (const { item } of cardBackgrounds) {
+    assert.equal(
+      visualizations[item].options?.fillColor,
+      HOME_DARK_PALETTE.panel,
+      `${fileName}:${item} must use the current card surface`,
+    );
+    assert.equal(
+      visualizations[item].options?.strokeColor,
+      HOME_DARK_PALETTE.accentStroke,
+      `${fileName}:${item} must use the current card border`,
+    );
+  }
+
+  for (let cardNumber = 1; cardNumber <= 6; cardNumber += 1) {
+    const cardKey = `card_${String(cardNumber).padStart(2, "0")}`;
+    const singleValue = visualizations[`viz_${cardKey}_singlevalue`];
+    const graph = visualizations[`viz_${cardKey}_trend`];
+    const trigger = visualizations[`viz_${cardKey}_drilldown_trigger`];
+    const backgroundBlock = layout.structure.find(
+      ({ item }) => item === `viz_${cardKey}_background`,
+    );
+    const singleValueBlock = layout.structure.find(
+      ({ item }) => item === `viz_${cardKey}_singlevalue`,
+    );
+    const graphBlock = layout.structure.find(
+      ({ item }) => item === `viz_${cardKey}_trend`,
+    );
+
+    assert.ok(singleValue, `${fileName}:${cardKey} must have a headline value`);
+    assert.ok(graph, `${fileName}:${cardKey} must have a supporting graph`);
+    assert.equal(
+      singleValue.dataSources?.primary,
+      graph.dataSources?.primary,
+      `${fileName}:${cardKey} must share one Searchbase dispatch across both visualizations`,
+    );
+    assert.equal(
+      singleValue.options?.sparklineDisplay,
+      "off",
+      `${fileName}:${cardKey} must not hide the trend in a single-value sparkline`,
+    );
+    assert.equal(
+      singleValue.options?.trendDisplay,
+      "off",
+      `${fileName}:${cardKey} must reserve trend rendering for the supporting graph`,
+    );
+    assert.match(
+      singleValue.options?.majorValue || "",
+      /^> primary \| seriesByName\(".+"\) \| lastPoint\(\)$/,
+      `${fileName}:${cardKey} must bind its headline to one named result field`,
+    );
+
+    assert.ok(backgroundBlock, `${fileName}:${cardKey} must have card geometry`);
+    assert.deepEqual(
+      singleValueBlock?.position,
+      {
+        x: backgroundBlock.position.x + 16,
+        y: backgroundBlock.position.y + 156,
+        w: 421,
+        h: 88,
+      },
+      `${fileName}:${cardKey} must center the headline above the graph`,
+    );
+    assert.deepEqual(
+      graphBlock?.position,
+      {
+        x: backgroundBlock.position.x + 16,
+        y: backgroundBlock.position.y + 248,
+        w: 421,
+        h: 212,
+      },
+      `${fileName}:${cardKey} must use a compact full-width lower graph`,
+    );
+
+    assert.ok(trigger, `${fileName}:${cardKey} must provide a drilldown trigger`);
+    assert.equal(trigger.type, "splunk.rectangle");
+    assert.equal(trigger.options?.fillColor, "transparent");
+    assert.equal(trigger.options?.strokeColor, "transparent");
+    assert.equal(trigger.eventHandlers?.length, 1);
+    assert.equal(trigger.eventHandlers?.[0]?.type, "drilldown.customUrl");
+    assert.match(
+      trigger.eventHandlers?.[0]?.options?.url || "",
+      /^\/drilldown\?origin=.+&target=.+/,
+      `${fileName}:${cardKey} must route to one or more ordered Searchbase details`,
+    );
+    assert.ok(
+      !visualizations[`viz_${cardKey}_drilldown_icon`],
+      `${fileName}:${cardKey} must rely on Dashboard Manager for the standard drilldown icon`,
+    );
+  }
+
+  for (const [visualizationId, graph] of graphEntries) {
+    totalGraphCounts[graph.type] += 1;
+    assert.equal(
+      graph.options?.backgroundColor,
+      "transparent",
+      `${fileName}:${visualizationId} must preserve the card background`,
+    );
+    assert.ok(
+      graph.options?.seriesColors?.length > 0,
+      `${fileName}:${visualizationId} must define an explicit bright series palette`,
+    );
+    for (const color of graph.options.seriesColors) {
+      assert.ok(
+        BRIGHT_GRAPH_COLORS.has(color.toLowerCase()),
+        `${fileName}:${visualizationId} uses low-contrast graph color ${color}`,
+      );
+    }
+    if (graph.type === "splunk.area") {
+      assert.equal(
+        graph.options?.lineWidth,
+        3,
+        `${fileName}:${visualizationId} must use the thicker area outline`,
+      );
+      assert.equal(graph.options?.markerDisplay, "outlined");
+      assert.equal(graph.options?.nullValueDisplay, "connect");
+    } else if (graph.type === "splunk.bar" || graph.type === "splunk.column") {
+      assert.equal(graph.options?.stackMode, "unstacked");
+      assert.equal(graph.options?.legendDisplay, "right");
+    } else if (graph.type === "splunk.pie") {
+      assert.equal(graph.options?.legendDisplay, "right");
+    }
+    if (graph.type === "splunk.pie") {
+      assert.match(
+        graph.options?.label || "",
+        /^> primary \| seriesByName\(".+"\)$/,
+        `${fileName}:${visualizationId} must bind its pie category field`,
+      );
+      assert.match(
+        graph.options?.value || "",
+        /^> primary \| seriesByName\(".+"\)$/,
+        `${fileName}:${visualizationId} must bind its pie value field`,
+      );
+    } else {
+      assert.match(
+        graph.options?.x || "",
+        /^> primary \| seriesByName\(".+"\)$/,
+        `${fileName}:${visualizationId} must bind its x-axis field`,
+      );
+      assert.match(
+        graph.options?.y || "",
+        /^> primary \| (?:seriesByName|frameBySeriesNames)\(".+"(?:, ".+")*\)$/,
+        `${fileName}:${visualizationId} must bind only its intended graph fields`,
+      );
+    }
+  }
 
   for (const retiredColor of RETIRED_STUDIO_COLORS) {
     assert.ok(
       !xml.toLowerCase().includes(retiredColor),
-      `${dashboardName} must not retain retired Studio color ${retiredColor}`,
+      `${fileName} must not retain retired Studio color ${retiredColor}`,
     );
   }
-
   const colors = [...xml.matchAll(/#[0-9a-f]{6}/gi)].map((match) =>
     match[0].toLowerCase(),
   );
   for (const color of colors) {
     assert.ok(
       ALLOWED_COLORS.has(color),
-      `${dashboardName} uses ${color}, which is outside the home dashboard palette`,
+      `${fileName} uses ${color}, which is outside the home dashboard palette`,
     );
   }
-
-  const visualizations = Object.values(definition.visualizations);
-  const opaqueBackgrounds = visualizations
-    .map((visualization) => visualization.options?.backgroundColor)
-    .filter((color) => color && color !== "transparent");
-  assert.ok(opaqueBackgrounds.length > 0, `${dashboardName} must define panel backgrounds`);
-  for (const backgroundColor of opaqueBackgrounds) {
-    assert.ok(
-      [HOME_DARK_PALETTE.panel, HOME_DARK_PALETTE.secondary].includes(backgroundColor),
-      `${dashboardName} uses unexpected panel background ${backgroundColor}`,
-    );
-  }
-
   assert.ok(
     colors.includes(HOME_DARK_PALETTE.text),
-    `${dashboardName} must use the Insights Workspace primary text color`,
+    `${fileName} must use the primary dark-mode text color`,
   );
   assert.ok(
     colors.includes(HOME_DARK_PALETTE.accent) || colors.includes("#7dd3fc"),
-    `${dashboardName} must use the Insights Workspace accent or its brighter trend counterpart`,
+    `${fileName} must use the sky accent or its bright graph counterpart`,
   );
 }
+
+assert.deepEqual(
+  totalGraphCounts,
+  EXPECTED_GRAPH_COUNTS,
+  "The 16 story dashboards must preserve their 96 intentionally selected graph types",
+);
+assert.equal(
+  Object.values(totalGraphCounts).reduce((total, count) => total + count, 0),
+  96,
+  "The story dashboard set must contain exactly 96 graphs",
+);
 
 const applicationCss = fs.readFileSync(APPLICATION_CSS_PATH, "utf8");
 assert.match(
   applicationCss,
   /\[data-test='viz-description'\][\s\S]*?white-space:\s*normal;[\s\S]*?-webkit-line-clamp:\s*3;/,
-  "Dashboard Studio descriptions must wrap to the shared three-line limit",
+  "Dashboard Studio descriptions must retain the shared wrapping treatment",
 );
 assert.match(
   applicationCss,
@@ -153,74 +395,6 @@ assert.match(
   "Dashboard Studio visualizations must resize below wrapped descriptions",
 );
 
-const secureNetworkingStudioViews = fs
-  .readdirSync(VIEWS_DIR)
-  .filter((fileName) => fileName.startsWith("secure_networking_") && fileName.endsWith(".xml"))
-  .map((fileName) => ({
-    fileName,
-    xml: fs.readFileSync(path.join(VIEWS_DIR, fileName), "utf8"),
-  }))
-  .filter(({ xml }) => /<dashboard\s+version="2"/.test(xml) && /"description"\s*:/.test(xml))
-  .map(({ fileName, xml }) => {
-    const definitionMatch = xml.match(
-      /<definition><!\[CDATA\[([\s\S]*?)\]\]><\/definition>/,
-    );
-    assert.ok(definitionMatch, `${fileName} must contain a Dashboard Studio definition`);
-    return { fileName, xml, definition: JSON.parse(definitionMatch[1]) };
-  });
-
-assert.ok(
-  secureNetworkingStudioViews.length > DASHBOARD_NAMES.length,
-  "The stylesheet regression must cover pillar detail dashboards as well as the five landing dashboards",
+console.log(
+  "✓ Secure Networking palette and 16-dashboard six-card story contract passed",
 );
-let areaChartCount = 0;
-for (const { fileName, xml, definition } of secureNetworkingStudioViews) {
-  assert.match(
-    xml,
-    /<dashboard\s+version="2"[^>]*stylesheet="application\.css"/,
-    `${fileName} must load the shared description treatment`,
-  );
-
-  for (const [visualizationId, visualization] of Object.entries(
-    definition.visualizations,
-  )) {
-    assert.notEqual(
-      visualization.type,
-      "splunk.line",
-      `${fileName}:${visualizationId} must use the higher-contrast area trend treatment`,
-    );
-    assert.ok(
-      !(
-        visualization.type === "splunk.singlevalue" &&
-        visualization.options?.sparklineDisplay === "below"
-      ),
-      `${fileName}:${visualizationId} must not hide a time series in a single-value sparkline`,
-    );
-    if (visualization.type !== "splunk.area") continue;
-
-    areaChartCount += 1;
-    assert.equal(
-      visualization.options?.lineWidth,
-      3,
-      `${fileName}:${visualizationId} must use the thicker dark-mode area outline`,
-    );
-    assert.ok(
-      visualization.options?.seriesColors?.length > 0,
-      `${fileName}:${visualizationId} must define an explicit bright series palette`,
-    );
-    for (const color of visualization.options.seriesColors) {
-      assert.ok(
-        BRIGHT_TREND_COLORS.has(color.toLowerCase()),
-        `${fileName}:${visualizationId} uses low-contrast area color ${color}`,
-      );
-    }
-  }
-}
-
-assert.equal(
-  areaChartCount,
-  27,
-  "Secure Networking Studio must preserve all 27 high-contrast area trend panels",
-);
-
-console.log("✓ Secure Networking Studio palette regression test passed");

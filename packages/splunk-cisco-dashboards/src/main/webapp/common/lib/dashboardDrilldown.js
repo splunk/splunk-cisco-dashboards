@@ -177,6 +177,8 @@ export const resolveDashboardDrilldownSearches = (entries = [], targetIds = []) 
 
 export const getDashboardDrilldownMetadata = (entry) => ({
     title: normalizeText(entry?.content?.search_name) || normalizeText(entry?.name),
+    category: normalizeText(entry?.content?.category),
+    subCategory: normalizeText(entry?.content?.sub_category),
     description: normalizeText(entry?.content?.description),
     explanation: normalizeText(entry?.content?.explanation),
     solution: normalizeText(entry?.content?.solution),

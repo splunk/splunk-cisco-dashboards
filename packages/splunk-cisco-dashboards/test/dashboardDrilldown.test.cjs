@@ -116,6 +116,8 @@ const entries = [
       search_name: "App Details",
       default_viz: "splunk.table",
       viz_options: '{"count":25}',
+      category: " Security ",
+      sub_category: " Secure Infrastructure ",
       description: "<p>Device detail.</p>",
       explanation: "<p>How it works.</p>",
       solution: "<p>Suggested actions.</p>",
@@ -141,6 +143,8 @@ assert.deepEqual(
 assert.deepEqual(resolved.missingTargetIds, ["not-installed"]);
 assert.deepEqual(getDashboardDrilldownMetadata(entries[0]), {
   title: "App Details",
+  category: "Security",
+  subCategory: "Secure Infrastructure",
   description: "<p>Device detail.</p>",
   explanation: "<p>How it works.</p>",
   solution: "<p>Suggested actions.</p>",

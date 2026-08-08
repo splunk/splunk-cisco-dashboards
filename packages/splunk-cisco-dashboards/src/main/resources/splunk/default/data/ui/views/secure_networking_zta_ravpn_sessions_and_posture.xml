@@ -3,305 +3,1281 @@
     <description>Connect remote-session health with endpoint posture and access risk.</description>
     <definition><![CDATA[
 {
-	"title": "Remote Access VPN (RaVPN) Sessions and Posture",
-	"description": "Connect remote-session health with endpoint posture and access risk.",
-	"inputs": {
-		"input_time_range": {
-			"options": {
-				"defaultValue": "-24h@h,now",
-				"token": "time_tok"
-			},
-			"title": "Time Range",
-			"type": "input.timerange"
-		}
-	},
-	"defaults": {
-		"visualizations": {
-			"global": {
-				"showLastUpdated": true,
-				"showProgressBar": true
-			}
-		}
-	},
-	"visualizations": {
-		"viz_header_bg": {
-			"type": "splunk.rectangle",
-			"options": {
-				"fillColor": "#16283c",
-				"strokeColor": "rgba(53,207,245,0.42)"
-			}
-		},
-		"viz_header_icon": {
-			"type": "splunk.image",
-			"title": "Zero Trust Access",
-			"options": {
-				"preserveAspectRatio": true,
-				"src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg"
-			}
-		},
-		"viz_header": {
-			"type": "splunk.markdown",
-			"title": "",
-			"showLastUpdated": false,
-			"showProgressBar": false,
-			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#e8f1fb",
-				"markdown": "# Remote Access VPN (RaVPN) Sessions and Posture\nConnect remote-session health with endpoint posture and access risk."
-			}
-		},
-		"viz_secure_networking_zta_ravpn_sessions_by_profile": {
-			"type": "splunk.table",
-			"title": "ZTA RaVPN Sessions by Profile",
-			"dataSources": {
-				"primary": "ds_secure_networking_zta_ravpn_sessions_by_profile"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Summarizes remote-access VPN activity by Secure Access VPN profile, region, enforcement host, and Security Group Tag."
-		},
-		"viz_secure_networking_zta_ravpn_connection_rate": {
-			"type": "splunk.table",
-			"title": "ZTA RaVPN Connection Rate and Clients",
-			"dataSources": {
-				"primary": "ds_secure_networking_zta_ravpn_connection_rate"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Tracks remote-access VPN clients, sessions, successful connections, and failed connections in 15-minute intervals."
-		},
-		"viz_secure_networking_zta_ravpn_failure_reasons": {
-			"type": "splunk.table",
-			"title": "ZTA RaVPN Failure Reasons",
-			"dataSources": {
-				"primary": "ds_secure_networking_zta_ravpn_failure_reasons"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Ranks remote-access VPN failure and warning reasons by profile, region, ASA syslog identifier, and Secure Access enforcement host."
-		},
-		"viz_secure_networking_zta_ravpn_posture_alerts": {
-			"type": "splunk.table",
-			"title": "ZTA RaVPN Posture Alerts and Logs",
-			"dataSources": {
-				"primary": "ds_secure_networking_zta_ravpn_posture_alerts"
-			},
-			"options": {
-				"backgroundColor": "#0f1a2a",
-				"count": 20,
-				"fontSize": "small",
-				"showInternalFields": false
-			},
-			"description": "Surfaces RaVPN posture failures, warnings, alerts, and operational log reasons with user, profile, region, and device context."
-		},
-		"viz_design_context": {
-			"type": "splunk.markdown",
-			"title": "",
-			"showLastUpdated": false,
-			"showProgressBar": false,
-			"options": {
-				"backgroundColor": "#111f31",
-				"fontColor": "#e8f1fb",
-				"markdown": "**Audience:** Remote-access, identity, and security operations  •  **Sources:** Secure Access RaVPN, ASA, identity, and endpoint-posture telemetry  •  **Reading guide:** Review profile volume and connection pressure before opening failure and posture detail.  •  **Freshness:** Uses the dashboard time range"
-			}
-		},
-		"viz_design_section": {
-			"type": "splunk.markdown",
-			"title": "",
-			"showLastUpdated": false,
-			"showProgressBar": false,
-			"options": {
-				"backgroundColor": "#111f31",
-				"fontColor": "#e8f1fb",
-				"markdown": "### Remote-access assurance\nReview profile volume and connection pressure before opening failure and posture detail."
-			}
-		}
-	},
-	"dataSources": {
-		"ds_secure_networking_zta_ravpn_sessions_by_profile": {
-			"name": "Secure Networking - ZTA RaVPN Sessions by Profile",
-			"options": {
-				"ref": "secure_networking_zta_ravpn_sessions_by_profile",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_secure_networking_zta_ravpn_connection_rate": {
-			"name": "Secure Networking - ZTA RaVPN Connection Rate and Clients",
-			"options": {
-				"ref": "secure_networking_zta_ravpn_connection_rate",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_secure_networking_zta_ravpn_failure_reasons": {
-			"name": "Secure Networking - ZTA RaVPN Failure Reasons",
-			"options": {
-				"ref": "secure_networking_zta_ravpn_failure_reasons",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		},
-		"ds_secure_networking_zta_ravpn_posture_alerts": {
-			"name": "Secure Networking - ZTA RaVPN Posture Alerts and Logs",
-			"options": {
-				"ref": "secure_networking_zta_ravpn_posture_alerts",
-				"queryParameters": {
-					"earliest": "$time_tok.earliest$",
-					"latest": "$time_tok.latest$"
-				}
-			},
-			"type": "ds.searchbase"
-		}
-	},
-	"layout": {
-		"globalInputs": [
-			"input_time_range"
-		],
-		"layoutDefinitions": {
-			"layout_overview": {
-				"options": {
-					"backgroundColor": "#07101d",
-					"display": "auto-scale",
-					"height": 878,
-					"width": 1440
-				},
-				"structure": [
-					{
-						"item": "viz_header_bg",
-						"position": {
-							"x": 20,
-							"y": 0,
-							"w": 1400,
-							"h": 88
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_header_icon",
-						"position": {
-							"x": 36,
-							"y": 14,
-							"w": 56,
-							"h": 56
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_header",
-						"position": {
-							"x": 108,
-							"y": 4,
-							"w": 1292,
-							"h": 76
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_design_context",
-						"position": {
-							"x": 20,
-							"y": 100,
-							"w": 1400,
-							"h": 64
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_design_section",
-						"position": {
-							"x": 20,
-							"y": 176,
-							"w": 1400,
-							"h": 54
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_secure_networking_zta_ravpn_sessions_by_profile",
-						"position": {
-							"x": 20,
-							"y": 242,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_secure_networking_zta_ravpn_connection_rate",
-						"position": {
-							"x": 730,
-							"y": 242,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_secure_networking_zta_ravpn_failure_reasons",
-						"position": {
-							"x": 20,
-							"y": 558,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					},
-					{
-						"item": "viz_secure_networking_zta_ravpn_posture_alerts",
-						"position": {
-							"x": 730,
-							"y": 558,
-							"w": 690,
-							"h": 300
-						},
-						"type": "block"
-					}
-				],
-				"type": "absolute"
-			}
-		},
-		"options": {
-			"showTitleAndDescription": false,
-			"submitButton": false,
-			"submitOnDashboardLoad": true
-		},
-		"tabs": {
-			"items": [
-				{
-					"label": "overview",
-					"layoutId": "layout_overview"
-				}
-			]
-		}
-	},
-	"applicationProperties": {
-		"collapseNavigation": false,
-		"hideEdit": false,
-		"hideExport": false
-	}
+    "title": "Remote Access VPN (RaVPN) Sessions and Posture",
+    "description": "Connect remote-session health with endpoint posture and access risk.",
+    "inputs": {
+        "input_time_range": {
+            "options": {
+                "defaultValue": "-24h@h,now",
+                "token": "time_tok"
+            },
+            "title": "Time Range",
+            "type": "input.timerange"
+        }
+    },
+    "defaults": {
+        "visualizations": {
+            "global": {
+                "showLastUpdated": true,
+                "showProgressBar": true
+            }
+        }
+    },
+    "visualizations": {
+        "viz_header_bg": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#1e293b",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 10
+            }
+        },
+        "viz_header_icon": {
+            "type": "splunk.image",
+            "title": "Remote Access VPN (RaVPN) Sessions and Posture",
+            "options": {
+                "preserveAspectRatio": true,
+                "src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg"
+            }
+        },
+        "viz_header": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "markdown": "# Remote Access VPN \\(RaVPN\\) Sessions and Posture\nConnect remote\\-session health with endpoint posture and access risk\\."
+            }
+        },
+        "viz_card_01_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_01_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Active Clients and Sessions**"
+            }
+        },
+        "viz_card_01_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Identity  •  Zero Trust Access"
+            }
+        },
+        "viz_card_01_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Tracks distinct remote\\-access VPN clients and sessions to show changing access demand and reconnect behavior\\."
+            }
+        },
+        "viz_card_01_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_01"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"WindowPeakClients\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_01_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_01"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"Clients\")"
+            }
+        },
+        "viz_card_01_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Active%20Clients%20and%20Sessions&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Sessions%20by%20Profile"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_02_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_02_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Connection Outcomes**"
+            }
+        },
+        "viz_card_02_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Identity  •  Zero Trust Access"
+            }
+        },
+        "viz_card_02_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Tracks remote\\-access VPN clients, sessions, successful connections, and failed connections over time\\."
+            }
+        },
+        "viz_card_02_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_02"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_02_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_02"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"BucketTotal\")"
+            }
+        },
+        "viz_card_02_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Connection%20Outcomes&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Sessions%20by%20Profile,Secure%20Networking%20-%20ZTA%20RaVPN%20Failure%20Reasons"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_03_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_03_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Profile Activity**"
+            }
+        },
+        "viz_card_03_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Identity  •  Zero Trust Access"
+            }
+        },
+        "viz_card_03_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Shows remote\\-access VPN activity by profile over time so demand shifts and profile\\-specific disruptions stand out\\."
+            }
+        },
+        "viz_card_03_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_03"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_03_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_03"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"BucketTotal\")"
+            }
+        },
+        "viz_card_03_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Profile%20Activity&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Sessions%20by%20Profile"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_04_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_04_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Regional Activity**"
+            }
+        },
+        "viz_card_04_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Identity  •  Zero Trust Access"
+            }
+        },
+        "viz_card_04_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Compares remote\\-access VPN activity across regions to reveal localized demand shifts and disruptions\\."
+            }
+        },
+        "viz_card_04_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_04"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_04_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_04"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"BucketTotal\")"
+            }
+        },
+        "viz_card_04_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Regional%20Activity&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Sessions%20by%20Profile"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_05_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_05_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Failure Reasons**"
+            }
+        },
+        "viz_card_05_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Identity  •  Zero Trust Access"
+            }
+        },
+        "viz_card_05_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Shows remote\\-access VPN failures and warnings by reason over time to reveal recurring access blockers\\."
+            }
+        },
+        "viz_card_05_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_05"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_05_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_05"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"BucketTotal\")"
+            }
+        },
+        "viz_card_05_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Failure%20Reasons&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Failure%20Reasons"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_06_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#0f172a",
+                "strokeColor": "rgba(14,165,233,0.42)",
+                "rx": 12
+            }
+        },
+        "viz_card_06_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#f1f5f9",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Posture Outcomes**"
+            }
+        },
+        "viz_card_06_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#7dd3fc",
+                "fontSize": "custom",
+                "customFontSize": 11,
+                "markdown": "Identity  •  Zero Trust Access"
+            }
+        },
+        "viz_card_06_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#cbd5e1",
+                "fontSize": "custom",
+                "customFontSize": 12,
+                "markdown": "Tracks remote\\-access VPN posture failures, warnings, and alerts to reveal changing device\\-compliance pressure\\."
+            }
+        },
+        "viz_card_06_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_06"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#f1f5f9",
+                "majorFontSize": 38,
+                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_card_06_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_06"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7dd3fc",
+                    "#6ee7b7",
+                    "#fdba74",
+                    "#fda4af"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"BucketTotal\")"
+            }
+        },
+        "viz_card_06_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Posture%20Outcomes&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Posture%20Alerts%20and%20Logs"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        }
+    },
+    "dataSources": {
+        "ds_story_01": {
+            "name": "Secure Networking - ZTA RaVPN Active Clients and Sessions Trend",
+            "options": {
+                "ref": "secure_networking_zta_ravpn_active_clients_sessions_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_02": {
+            "name": "Secure Networking - ZTA RaVPN Connection Rate and Clients",
+            "options": {
+                "ref": "secure_networking_zta_ravpn_connection_rate",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_03": {
+            "name": "Secure Networking - ZTA RaVPN Profile Activity Trend",
+            "options": {
+                "ref": "secure_networking_zta_ravpn_profile_activity_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_04": {
+            "name": "Secure Networking - ZTA RaVPN Region Activity Trend",
+            "options": {
+                "ref": "secure_networking_zta_ravpn_region_activity_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_05": {
+            "name": "Secure Networking - ZTA RaVPN Failure Reason Trend",
+            "options": {
+                "ref": "secure_networking_zta_ravpn_failure_reason_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_06": {
+            "name": "Secure Networking - ZTA RaVPN Posture Outcome Trend",
+            "options": {
+                "ref": "secure_networking_zta_ravpn_posture_outcome_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        }
+    },
+    "layout": {
+        "globalInputs": [
+            "input_time_range"
+        ],
+        "layoutDefinitions": {
+            "layout_overview": {
+                "options": {
+                    "backgroundColor": "#020617",
+                    "display": "auto-scale",
+                    "height": 1128,
+                    "width": 1440
+                },
+                "structure": [
+                    {
+                        "item": "viz_header_bg",
+                        "position": {
+                            "x": 20,
+                            "y": 0,
+                            "w": 1400,
+                            "h": 104
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_header_icon",
+                        "position": {
+                            "x": 38,
+                            "y": 18,
+                            "w": 64,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_header",
+                        "position": {
+                            "x": 118,
+                            "y": 8,
+                            "w": 1280,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_background",
+                        "position": {
+                            "x": 20,
+                            "y": 128,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_title",
+                        "position": {
+                            "x": 36,
+                            "y": 140,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_metadata",
+                        "position": {
+                            "x": 36,
+                            "y": 176,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_description",
+                        "position": {
+                            "x": 36,
+                            "y": 204,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_singlevalue",
+                        "position": {
+                            "x": 36,
+                            "y": 284,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_trend",
+                        "position": {
+                            "x": 36,
+                            "y": 376,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_drilldown_trigger",
+                        "position": {
+                            "x": 418,
+                            "y": 134,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_background",
+                        "position": {
+                            "x": 493,
+                            "y": 128,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_title",
+                        "position": {
+                            "x": 509,
+                            "y": 140,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_metadata",
+                        "position": {
+                            "x": 509,
+                            "y": 176,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_description",
+                        "position": {
+                            "x": 509,
+                            "y": 204,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_singlevalue",
+                        "position": {
+                            "x": 509,
+                            "y": 284,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_trend",
+                        "position": {
+                            "x": 509,
+                            "y": 376,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_drilldown_trigger",
+                        "position": {
+                            "x": 891,
+                            "y": 134,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_background",
+                        "position": {
+                            "x": 966,
+                            "y": 128,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_title",
+                        "position": {
+                            "x": 982,
+                            "y": 140,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_metadata",
+                        "position": {
+                            "x": 982,
+                            "y": 176,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_description",
+                        "position": {
+                            "x": 982,
+                            "y": 204,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_singlevalue",
+                        "position": {
+                            "x": 982,
+                            "y": 284,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_trend",
+                        "position": {
+                            "x": 982,
+                            "y": 376,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_drilldown_trigger",
+                        "position": {
+                            "x": 1364,
+                            "y": 134,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_background",
+                        "position": {
+                            "x": 20,
+                            "y": 624,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_title",
+                        "position": {
+                            "x": 36,
+                            "y": 636,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_metadata",
+                        "position": {
+                            "x": 36,
+                            "y": 672,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_description",
+                        "position": {
+                            "x": 36,
+                            "y": 700,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_singlevalue",
+                        "position": {
+                            "x": 36,
+                            "y": 780,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_trend",
+                        "position": {
+                            "x": 36,
+                            "y": 872,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_drilldown_trigger",
+                        "position": {
+                            "x": 418,
+                            "y": 630,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_background",
+                        "position": {
+                            "x": 493,
+                            "y": 624,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_title",
+                        "position": {
+                            "x": 509,
+                            "y": 636,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_metadata",
+                        "position": {
+                            "x": 509,
+                            "y": 672,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_description",
+                        "position": {
+                            "x": 509,
+                            "y": 700,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_singlevalue",
+                        "position": {
+                            "x": 509,
+                            "y": 780,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_trend",
+                        "position": {
+                            "x": 509,
+                            "y": 872,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_drilldown_trigger",
+                        "position": {
+                            "x": 891,
+                            "y": 630,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_background",
+                        "position": {
+                            "x": 966,
+                            "y": 624,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_title",
+                        "position": {
+                            "x": 982,
+                            "y": 636,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_metadata",
+                        "position": {
+                            "x": 982,
+                            "y": 672,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_description",
+                        "position": {
+                            "x": 982,
+                            "y": 700,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_singlevalue",
+                        "position": {
+                            "x": 982,
+                            "y": 780,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_trend",
+                        "position": {
+                            "x": 982,
+                            "y": 872,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_drilldown_trigger",
+                        "position": {
+                            "x": 1364,
+                            "y": 630,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    }
+                ],
+                "type": "absolute"
+            }
+        },
+        "options": {
+            "showTitleAndDescription": false,
+            "submitButton": false,
+            "submitOnDashboardLoad": true
+        },
+        "tabs": {
+            "items": [
+                {
+                    "label": "overview",
+                    "layoutId": "layout_overview"
+                }
+            ]
+        }
+    },
+    "applicationProperties": {
+        "collapseNavigation": false,
+        "hideEdit": false,
+        "hideExport": false
+    }
 }
     ]]></definition>
 </dashboard>
-
