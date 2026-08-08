@@ -2679,6 +2679,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     config: signalTickerConfig,
     setConfig: setSignalTickerConfig,
     resetAll: resetSignalTickerConfig,
+    isWorkspaceDefault: signalTickerIsWorkspaceDefault,
     itemCount: signalTickerItemCount,
     persistenceStatus: signalTickerPersistenceStatus,
     persistenceError: signalTickerPersistenceError,
@@ -5231,6 +5232,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         onIncludeTableSearchesChange={setSignalTickerIncludeTableSearches}
         onChange={setSignalTickerConfig}
         onReset={resetSignalTickerConfig}
+        isWorkspaceDefault={signalTickerIsWorkspaceDefault}
         persistenceStatus={signalTickerPersistenceStatus}
         persistenceError={signalTickerPersistenceError}
         onClose={() => setSignalTickerEditorOpen(false)}

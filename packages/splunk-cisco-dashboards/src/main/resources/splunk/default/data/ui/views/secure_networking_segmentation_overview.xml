@@ -65,20 +65,16 @@
 			"description": "Breaks down Security Group Tag–tagged ISE authentication events by site location , using ISE's own structured Location hierarchy — a real, validated \"SGT by Site\" view for the Segmentation pillar."
 		},
 		"viz_secure_networking_ip_sgt_bindings_by_group": {
-			"type": "splunk.pie",
+			"type": "splunk.table",
 			"title": "IP-SGT Bindings by Security Group",
 			"dataSources": {
 				"primary": "ds_secure_networking_ip_sgt_bindings_by_group"
 			},
 			"options": {
 				"backgroundColor": "#0f1a2a",
-				"legendDisplay": "right",
-				"seriesColors": [
-					"#0D9488",
-					"#2563EB",
-					"#ff9a4a",
-					"#ff7169"
-				]
+				"count": 20,
+				"fontSize": "small",
+				"showInternalFields": false
 			},
 			"description": "Shows the distribution of IP-to-SGT bindings across Security Group Tags, reporting how many bound IPs fall under each Security Group — the core \"SGT by Site/Device\" view for the Segmentation pillar."
 		},
@@ -308,4 +304,3 @@
 }
     ]]></definition>
 </dashboard>
-

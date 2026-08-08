@@ -248,7 +248,7 @@ class SecureNetworkingPillarDashboardTest(unittest.TestCase):
                     stanza = self.searchbase_by_stanza[ref]
                     self.assertIn("_time", stanza, f"{ref} must return a time series")
 
-    def test_map_pie_and_latency_result_contracts(self):
+    def test_map_table_and_latency_result_contracts(self):
         sdwan = json.loads(
             ET.parse(VIEWS / "secure_networking_hmf_sdwan_network_health_monitoring.xml")
             .getroot()
@@ -259,9 +259,17 @@ class SecureNetworkingPillarDashboardTest(unittest.TestCase):
         self.assertLess(map_options["zoom"], 1)
         self.assertIn("tonumber(raw_lat)", self.searchbase_by_stanza["monitoring_sdwan_site_health_map"])
 
-        pie_search = self.searchbase_by_stanza["secure_networking_ip_sgt_bindings_by_group"]
-        self.assertIn('| table "SGT Tag" "Bound IPs"', pie_search)
-        self.assertNotIn('"ISE Node"', pie_search)
+        segmentation = json.loads(
+            ET.parse(VIEWS / "secure_networking_segmentation_overview.xml")
+            .getroot()
+            .findtext("definition")
+        )
+        bindings_table = segmentation["visualizations"][
+            "viz_secure_networking_ip_sgt_bindings_by_group"
+        ]
+        self.assertEqual(bindings_table["type"], "splunk.table")
+        self.assertEqual(bindings_table["options"]["count"], 20)
+        self.assertFalse(bindings_table["options"]["showInternalFields"])
 
         latency_search = self.searchbase_by_stanza["security_resilience_ise_radius_latency"]
         self.assertIn("limit=6 useother=false", latency_search)

@@ -26,6 +26,9 @@ const signalRail = read(
 const signalTickerRail = read(
   "../src/main/webapp/common/components/florida/SignalTickerRail.tsx",
 );
+const signalTickerHook = read(
+  "../src/main/webapp/common/hooks/usePersistedSignalTicker.ts",
+);
 const tailwindStyles = read(
   "../src/main/webapp/common/styles/tailwind.css",
 );
@@ -292,6 +295,21 @@ assert.match(
   signalTickerRail,
   />\s*Font size\s*</,
   "Signal Rail settings must expose a tile font-size control",
+);
+assert.match(
+  signalTickerHook,
+  /isWorkspaceDefault[\s\S]*?signalTickerConfigsEqual\(config, defaultConfig\)/,
+  "Signal Rail persistence must expose whether the active settings match the workspace default",
+);
+assert.match(
+  signalTickerRail,
+  /disabled=\{isWorkspaceDefault\}[\s\S]*?'Using workspace default'[\s\S]*?'Restore workspace default'/,
+  "Signal Rail settings must distinguish the no-op default state from an available restore action",
+);
+assert.match(
+  profile,
+  /isWorkspaceDefault=\{signalTickerIsWorkspaceDefault\}/,
+  "The workspace profile must pass the persisted default-state result into Signal Rail settings",
 );
 assert.match(
   sortableMetricCard,

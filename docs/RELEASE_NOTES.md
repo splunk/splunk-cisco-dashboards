@@ -7,6 +7,13 @@
   search with the dashboard's active time range. Drilldown triggers use the
   same open-details-panel icon as the home dashboard, and multiple targets load
   one at a time instead of dispatching in parallel.
+- Signal Rail settings now show a disabled green `Using workspace default`
+  confirmation when the active configuration matches the workspace preset. The
+  control becomes an enabled red `Restore workspace default` action only after
+  a customization, making both the reset and its immediate result visible.
+- Segmentation Overview now renders IP-SGT binding results as a paginated table,
+  and Dashboard Manager describes its Searchbase catalogue action as adding
+  reusable searches instead of visualizations.
 - Secure Networking Dashboard Studio trends now use 27 true area charts with
   brighter sky, cyan, emerald, amber, orange, rose, violet, teal, and slate
   series colors plus thicker outlines for dark-mode visibility. Thirteen faint

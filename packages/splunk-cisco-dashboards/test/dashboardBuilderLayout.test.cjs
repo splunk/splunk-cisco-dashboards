@@ -55,9 +55,12 @@ assert.match(editor, /dashboardbuilder-clone-action/);
 assert.match(styles, /body\.dashboardbuilder-navigation-hidden header/);
 assert.match(styles, /body\.dashboardbuilder-navigation-hidden nav/);
 assert.match(insightKpiButton, /label="Add Searchbase"/);
-assert.match(insightKpiButton, /ariaLabel="Add visualizations from Searchbase"/);
+assert.match(insightKpiButton, /<strong>Add Searchbase searches<\/strong>/);
+assert.match(insightKpiButton, /ariaLabel="Add Searchbase searches"/);
+assert.doesNotMatch(insightKpiButton, /Add visualizations from Searchbase/);
 assert.match(insightKpiButton, /dashboardbuilder-searchbase-toolbar-control/);
 assert.match(styles, /\.dashboardbuilder-searchbase-toolbar-control \[data-test='button'\]/);
+assert.match(editor, /Editing a Searchbase-wired dashboard/);
 assert.match(editor, /onLinkToUrl: handleDashboardLinkToUrl/);
 assert.match(editor, /<DashboardStudioDrilldownModal/);
 assert.match(editor, /ownerApp=\{currentDashboard\?\.app\}/);
@@ -66,7 +69,6 @@ assert.match(manager, /initialDashboard=\{selectedDash\}/);
 assert.match(editor, /dashboard-builder-drilldown-open/);
 assert.match(styles, /dashboard-builder-drilldown-open[\s\S]*?z-index:\s*100003/);
 assert.match(editor, /initialDefinition=\{runtimeDashboardDefinition\}/);
-assert.match(editor, /Editing a Searchbase-wired dashboard/);
 assert.match(
   editor,
   /dashMode === 'edit' && dashboardUsesSearchbase && showEditContextNotice/,

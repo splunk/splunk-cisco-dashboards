@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
     ArrowDown,
     ArrowUp,
+    Check,
     ChevronDown,
     ExternalLink,
     GripVertical,
@@ -620,6 +621,7 @@ interface SignalTickerEditorProps {
     onIncludeTableSearchesChange?: (includeTables: boolean) => void;
     onChange: (config: SignalTickerConfig) => void;
     onReset: () => void;
+    isWorkspaceDefault?: boolean;
     persistenceStatus?: SignalTickerPersistenceStatus;
     persistenceError?: string;
     onClose: () => void;
@@ -672,6 +674,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
     onIncludeTableSearchesChange,
     onChange,
     onReset,
+    isWorkspaceDefault = false,
     persistenceStatus = 'account',
     persistenceError,
     onClose,
@@ -1912,10 +1915,22 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                     <button
                         type="button"
                         onClick={onReset}
-                        className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-600 transition-colors hover:bg-red-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300 dark:border-red-900/70 dark:bg-red-950/40 dark:text-red-300"
+                        disabled={isWorkspaceDefault}
+                        className={cn(
+                            'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2',
+                            isWorkspaceDefault
+                                ? 'cursor-default border-emerald-200 bg-emerald-50 text-emerald-700 focus-visible:ring-emerald-300 dark:border-emerald-900/70 dark:bg-emerald-950/40 dark:text-emerald-300'
+                                : 'border-red-200 bg-red-50 text-red-600 hover:bg-red-100 focus-visible:ring-red-300 dark:border-red-900/70 dark:bg-red-950/40 dark:text-red-300'
+                        )}
                     >
-                        <RotateCcw className="h-4 w-4" />
-                        Workspace default
+                        {isWorkspaceDefault ? (
+                            <Check className="h-4 w-4" />
+                        ) : (
+                            <RotateCcw className="h-4 w-4" />
+                        )}
+                        {isWorkspaceDefault
+                            ? 'Using workspace default'
+                            : 'Restore workspace default'}
                     </button>
                     <button
                         type="button"

@@ -1606,6 +1606,10 @@ iseval = 0`}</CodeBlock>
                   dashboard time range. Their triggers use the same
                   open-details-panel icon as the home dashboard, and
                   multi-target links dispatch only the selected search.
+                  Segmentation Overview renders IP-SGT binding results as a
+                  paginated table, and the Searchbase catalogue action now
+                  describes adding reusable searches instead of
+                  visualizations.
                 </InfoCard>
                 <InfoCard title="Searchbase and tile selection">
                   Searchbase Canvas distinguishes failed searches from other

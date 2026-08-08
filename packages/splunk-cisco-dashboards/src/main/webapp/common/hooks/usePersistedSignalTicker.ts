@@ -133,6 +133,7 @@ export interface UsePersistedSignalTickerResult {
     config: SignalTickerConfig;
     setConfig: (config: SignalTickerConfig) => void;
     resetAll: () => void;
+    isWorkspaceDefault: boolean;
     itemCount: number;
     persistenceStatus: SignalTickerPersistenceStatus;
     persistenceError?: string;
@@ -386,11 +387,16 @@ export const usePersistedSignalTicker = (
     }, [defaultConfig, legacyStorageKey, persistNow, userStorageKey]);
 
     const itemCount = useMemo(() => config.items.length, [config.items.length]);
+    const isWorkspaceDefault = useMemo(
+        () => signalTickerConfigsEqual(config, defaultConfig),
+        [config, defaultConfig]
+    );
 
     return {
         config,
         setConfig,
         resetAll,
+        isWorkspaceDefault,
         itemCount,
         persistenceStatus,
         persistenceError,
