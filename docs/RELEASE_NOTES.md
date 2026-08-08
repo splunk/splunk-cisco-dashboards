@@ -2,6 +2,9 @@
 
 ## 1.0.36
 
+- The Insights Workspace theme toggle now inherits the same explicit
+  high-contrast light, dark, and hover colors as adjacent toolbar controls, so
+  its sun, moon, and automatic-theme icons remain visible in every mode.
 - Insights Workspace detail drilldowns now share Dashboard Manager's
   Searchbase guidance contract while retaining their compact, resizable glass
   shell. The modal identifies the active supporting search and classification,

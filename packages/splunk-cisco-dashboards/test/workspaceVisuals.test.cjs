@@ -243,8 +243,8 @@ assert.match(
 );
 assert.match(
   profile,
-  /<ThemeToggle theme=\{theme\} onCycle=\{cycleTheme\} iconOnly \/>/,
-  "The crowded overview header must use the compact icon-only theme control",
+  /<ThemeToggle[\s\S]*?theme=\{theme\}[\s\S]*?onCycle=\{cycleTheme\}[\s\S]*?className=\{iconBtnClass\}[\s\S]*?iconOnly/,
+  "The crowded overview header must use the compact theme control with explicit toolbar contrast",
 );
 assert.doesNotMatch(
   profile,

@@ -4384,7 +4384,12 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           >
             <Sparkles className="w-4 h-4" />
           </button>
-          <ThemeToggle theme={theme} onCycle={cycleTheme} iconOnly />
+          <ThemeToggle
+            theme={theme}
+            onCycle={cycleTheme}
+            className={iconBtnClass}
+            iconOnly
+          />
           <button
             type="button"
             onClick={toggleMapVisibility}
