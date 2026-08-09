@@ -660,3 +660,183 @@ body {
         transition: none;
     }
 }
+
+/*
+ * Fixed C3 / 1CD dark setup surface.
+ *
+ * Secure Networking ships dark by default, so the first-run experience must
+ * not flash a separate light product. Match the home workspace's layered
+ * atmosphere and restrained charcoal panels while retaining the setup page's
+ * existing semantic status colors and compact workflow.
+ */
+html,
+body {
+    background: #000 !important;
+}
+
+.scd-setup {
+    color: #e1e6eb;
+    background-color: #000;
+    background-image:
+        radial-gradient(
+            100% 50% at 50% 0%,
+            rgb(26 29 46 / 82%) 0%,
+            rgb(15 17 23 / 62%) 40%,
+            transparent 70%
+        ),
+        radial-gradient(
+            70% 45% at 52% 112%,
+            rgb(92 67 147 / 20%) 0%,
+            transparent 68%
+        ),
+        linear-gradient(180deg, #1a1d2e 0%, #0f1117 50%, #000 100%);
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+}
+
+.scd-setup__shell {
+    border-color: rgb(65 74 86 / 68%);
+    background: rgb(15 17 23 / 96%);
+    box-shadow:
+        0 20px 56px rgb(0 0 0 / 34%),
+        inset 0 1px 0 rgb(255 255 255 / 3%);
+}
+
+.scd-setup__header {
+    border-bottom: 1px solid rgb(65 74 86 / 58%);
+    background: linear-gradient(180deg, rgb(19 26 35 / 99%), rgb(15 17 23 / 97%));
+}
+
+.scd-setup__content {
+    background: rgb(6 11 19 / 42%);
+}
+
+.scd-setup__section,
+.scd-setup__disclosure,
+.scd-setup__scan {
+    border: 1px solid rgb(65 74 86 / 64%);
+    background: linear-gradient(145deg, rgb(19 26 35 / 98%), rgb(17 24 32 / 96%));
+    box-shadow:
+        0 3px 8px rgb(0 0 0 / 12%),
+        inset 0 1px 0 rgb(255 255 255 / 3%);
+}
+
+.scd-setup__readiness {
+    border-color: rgb(56 189 248 / 34%);
+    background: linear-gradient(145deg, rgb(14 32 48 / 98%), rgb(17 24 32 / 96%));
+}
+
+.scd-setup__section-intro,
+.scd-setup__disclosure summary small,
+.scd-setup__caption,
+.scd-setup__action-note,
+.scd-setup__loading,
+.scd-setup__metric span {
+    color: #94a3b8;
+}
+
+.scd-setup__requirement-copy code {
+    border: 1px solid rgb(65 74 86 / 54%);
+    background: rgb(15 23 35 / 88%);
+    color: #94a3b8;
+}
+
+.scd-setup__metric,
+.scd-setup__requirement {
+    border-color: rgb(65 74 86 / 58%);
+    background: rgb(26 35 48 / 82%);
+}
+
+.scd-setup__metric strong {
+    color: #7dd3fc;
+}
+
+.scd-setup__metric:nth-child(2) strong {
+    color: #6ee7a8;
+}
+
+.scd-setup__metric:nth-child(3) strong {
+    color: #ffd166;
+}
+
+.scd-setup__status {
+    background: rgb(51 65 85 / 72%);
+    color: #cbd5e1;
+}
+
+.is-installed .scd-setup__status {
+    background: rgb(16 185 129 / 16%);
+    color: #6ee7a8;
+}
+
+.is-update .scd-setup__status,
+.is-verify .scd-setup__status {
+    background: rgb(245 158 11 / 16%);
+    color: #ffd166;
+}
+
+.is-missing .scd-setup__status,
+.is-disabled .scd-setup__status {
+    background: rgb(239 68 68 / 16%);
+    color: #ff8a94;
+}
+
+.scd-setup__external,
+.scd-setup__secondary-link,
+.scd-setup__external.is-inverse {
+    color: #6ccfff;
+}
+
+.scd-setup__disclosure summary::after {
+    color: #6ccfff;
+}
+
+.scd-setup__discovery-body,
+.scd-setup__table-wrap,
+.scd-setup__table th,
+.scd-setup__table td {
+    border-color: rgb(65 74 86 / 55%);
+}
+
+.scd-setup__table th {
+    background: rgb(26 35 48 / 88%);
+    color: #94a3b8;
+}
+
+.scd-setup__table tbody tr:nth-child(even) {
+    background: rgb(30 41 59 / 24%);
+}
+
+.scd-setup__warning,
+.scd-setup__empty {
+    background: rgb(245 158 11 / 10%);
+    color: #f8d98b;
+}
+
+.scd-setup__actions {
+    border-color: rgb(65 74 86 / 64%);
+    background: rgb(15 17 23 / 92%);
+}
+
+.scd-setup__button.is-secondary {
+    border-color: rgb(100 116 139 / 72%);
+    background: rgb(26 35 48 / 88%);
+    color: #e1e6eb;
+}
+
+.scd-setup__button.is-secondary:hover:not(:disabled) {
+    border-color: #6ccfff;
+    background: rgb(30 41 59 / 96%);
+    color: #fff;
+}
+
+.scd-setup__alert {
+    background: rgb(69 10 10 / 72%);
+    color: #fecaca;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 24%);
+}
+
+.scd-setup__spinner {
+    border-color: #475569;
+    border-top-color: #6ccfff;
+}

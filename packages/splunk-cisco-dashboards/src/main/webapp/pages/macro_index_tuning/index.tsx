@@ -31,6 +31,7 @@ import {
 } from "@/common/services/splunkSearchService";
 import { getSearchbaseCatalogue } from "@/common/services/searchbaseCatalogue";
 import { splunkSearchAppUrl } from "@/common/lib/splunkSearchUrl";
+import { useTheme } from "@/common/hooks/useTheme";
 import timeParser from "../dashboardbuilder/custominput/timeparser";
 
 const APP_NAME = "splunk-cisco-dashboards";
@@ -1643,6 +1644,10 @@ function useTimeRangeParser(): {
 
 export default function MacroIndexTuningPage(): JSX.Element {
   const setupMode = isInitialSetupMode();
+  const { setTheme } = useTheme();
+  useEffect(() => {
+    setTheme("dark");
+  }, [setTheme]);
   const [rows, setRows] = useState<EditableMacroRow[]>([]);
   const [cimRows, setCimRows] = useState<EditableMacroRow[]>([]);
   const [scanState, setScanState] = useState<ScanState>("idle");
@@ -2625,7 +2630,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
     }
 
     return (
-      <main className="min-h-screen bg-[#f4f8fa] pb-28 text-slate-800">
+      <main className="scd-admin-dark dark min-h-screen bg-[#f4f8fa] pb-28 text-slate-800">
         <section className="bg-[#102a43] text-white">
           <div className="mx-auto grid max-w-[1180px] gap-6 px-7 py-5 md:grid-cols-[minmax(0,1fr)_400px] md:items-center">
             <div className="min-w-0">
@@ -3265,7 +3270,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
 
   return (
     <main
-      className={`min-h-screen bg-[#f4f6f8] px-6 py-5 text-slate-800 ${
+      className={`scd-admin-dark dark min-h-screen bg-[#f4f6f8] px-6 py-5 text-slate-800 ${
         setupMode ? "pb-28" : ""
       }`}
     >

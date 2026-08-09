@@ -5,6 +5,11 @@
 - Dashboard Manager source editing now supports in-editor find and replace via
   the standard Command/Ctrl+F shortcut without loading Monaco's unrelated
   editor features.
+- Setup and Macro Index Tuning now use the same fixed dark Splunk shell,
+  layered C3 atmospheric canvas, charcoal operational panels, restrained
+  borders, semantic status tints, and 1CD-themed controls as the Secure
+  Networking home workspace. Their existing setup, scanning, editing, and
+  save workflows are unchanged.
 - Dashboard Manager drilldowns now use the same compact glass dialog, bounded
   scrolling, header-level Search and Searchbase actions, and collapsible
   guidance treatment as Insights Workspace. Short result tables use a tighter

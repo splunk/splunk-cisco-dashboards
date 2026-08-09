@@ -295,6 +295,27 @@ const searchbaseSource = fs.readFileSync(
   ),
   "utf8",
 );
+const setupViewSource = fs.readFileSync(
+  path.join(viewsRoot, "start.xml"),
+  "utf8",
+);
+const macroTuningViewSource = fs.readFileSync(
+  path.join(viewsRoot, "macro_index_tuning.xml"),
+  "utf8",
+);
+const macroTuningStyleSource = fs.readFileSync(
+  path.resolve(
+    __dirname,
+    "../src/main/webapp/pages/macro_index_tuning/macro-index-tuning.css",
+  ),
+  "utf8",
+);
+assert.match(setupViewSource, /<dashboard\b[^>]*\btheme="dark"/);
+assert.match(macroTuningViewSource, /<dashboard\b[^>]*\btheme="dark"/);
+assert.match(macroTuningSource, /scd-admin-dark dark/);
+assert.match(macroTuningSource, /setTheme\("dark"\)/);
+assert.match(macroTuningStyleSource, /scd-admin-dark/);
+assert.match(macroTuningStyleSource, /radial-gradient/);
 assert.match(macroTuningSource, /Review only what needs attention/);
 assert.match(macroTuningSource, /Balanced \(recommended\)/);
 assert.match(macroTuningSource, /Tune app-owned routing macros/);

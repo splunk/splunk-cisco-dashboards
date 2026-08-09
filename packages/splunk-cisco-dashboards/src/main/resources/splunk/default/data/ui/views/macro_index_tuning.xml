@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<dashboard version="1.1" theme="light" hideEdit="true" hideExport="true" hideTitle="true"
+<dashboard version="1.1" theme="dark" hideEdit="true" hideExport="true" hideTitle="true"
            script="macro_index_tuning_bootstrap.js">
     <label>SASN | Macro Index Tuning</label>
     <description>Discover SCD index_* macros, scan known Cisco sourcetypes, and generate index and sourcetype routing definitions for splunk-cisco-dashboards and related apps.</description>
