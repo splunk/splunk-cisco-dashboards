@@ -5,6 +5,9 @@
 - Dashboard Manager source editing now supports in-editor find and replace via
   the standard Command/Ctrl+F shortcut without loading Monaco's unrelated
   editor features.
+- Dashboard Manager now honors Dashboard Studio `hideEdit` metadata and hides
+  the View-mode Edit control by default, while explicit `/edit` routes remain
+  available for intentional dashboard editing.
 - DC Networking Searchbase harvesting now removes trailing title separators
   with a linear scan, eliminating an exponential-backtracking ReDoS path while
   preserving harvested search names.

@@ -24,6 +24,22 @@ const managerPath = path.resolve(
   "../src/main/webapp/pages/dashboardbuilder/DBHomePage.jsx",
 );
 const manager = fs.readFileSync(managerPath, "utf8");
+const studioViewsPath = path.resolve(
+  __dirname,
+  "../src/main/resources/splunk/default/data/ui/views",
+);
+const secureNetworkingStudioViews = fs
+  .readdirSync(studioViewsPath)
+  .filter(
+    (fileName) =>
+      fileName.startsWith("secure_networking_") &&
+      fileName.endsWith(".xml") &&
+      fileName !== "secure_networking_profile.xml",
+  )
+  .map((fileName) => ({
+    fileName,
+    source: fs.readFileSync(path.join(studioViewsPath, fileName), "utf8"),
+  }));
 const drilldownModalPath = path.resolve(
   __dirname,
   "../src/main/webapp/pages/dashboardbuilder/DashboardStudioDrilldownModal.jsx",
@@ -57,6 +73,33 @@ assert.doesNotMatch(declarations, /^\s*width:\s*0(?:px)?\s*;/m);
 assert.match(editor, /const DASHBOARD_STUDIO_HEIGHT = 1200;/);
 assert.match(
   editor,
+  /const hideDashboardEdit = editedDefinition\?\.applicationProperties\?\.hideEdit \?\? true;/,
+  "Dashboard Manager must default missing edit-visibility metadata to hidden",
+);
+assert.match(
+  editor,
+  /\{!hideDashboardEdit && <ModeSwitch key="modeSwitch" \/>\}/,
+  "View mode must honor Dashboard Studio hideEdit metadata",
+);
+assert.doesNotMatch(editor, /dashboardbuilder-edit-disabled/);
+assert.match(
+  manager,
+  /const buildDashboardStudioPath = \(dashboardId, mode = "view"\)/,
+  "Dashboard Manager links must open Dashboard Studio in view mode",
+);
+assert.match(manager, /: `\/\$\{encodedDashboardId\}`;/);
+assert.match(manager, /navigate\(buildDashboardStudioPath\(dash\.title, "edit"\)\);/);
+assert.match(entry, /<Route path=":dashboardid\/:currentmode"/);
+assert.ok(secureNetworkingStudioViews.length > 0);
+secureNetworkingStudioViews.forEach(({ fileName, source: studioView }) => {
+  assert.match(
+    studioView,
+    /"applicationProperties"\s*:\s*\{[\s\S]*?"hideEdit"\s*:\s*true/,
+    `${fileName} must hide the View-mode Edit control by default`,
+  );
+});
+assert.match(
+  editor,
   /const embeddedDashboardHeight = embededMode \? '100%' : DASHBOARD_STUDIO_HEIGHT;/,
 );
 assert.match(editor, /height=\{DASHBOARD_STUDIO_HEIGHT\}/);
@@ -77,6 +120,11 @@ assert.match(editor, /dashboardbuilder-display-button/);
 assert.match(editor, /dashboardbuilder-actions-button/);
 assert.match(editor, /dashboardbuilder-export-json-action/);
 assert.match(editor, /dashboardbuilder-clone-action/);
+assert.match(
+  editor,
+  /dashMode === 'edit' && dashboardUsesSearchbase[\s\S]*?\? 'editconvert'[\s\S]*?: dashMode \|\| 'view'/,
+  "Searchbase dashboards must not receive the edit toolbar while in view mode",
+);
 assert.match(editor, /if \(\(dashMode \?\? 'view'\) === 'view' && isDashboardMounted\) \{/);
 assert.match(editor, /apiRef\?\.collapseToolbar\?\.\(\);/);
 assert.match(editor, /\[apiRef, dashID, dashMode, isDashboardMounted\]/);

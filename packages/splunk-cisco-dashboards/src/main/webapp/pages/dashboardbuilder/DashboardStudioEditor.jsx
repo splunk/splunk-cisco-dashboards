@@ -988,6 +988,7 @@ const DashboardStudioEditor = ({
     const [showEditContextNotice, setShowEditContextNotice] = useState(false);
     const previousDashModeRef = useRef();
     const [serverInfo, setServerInfo] = useState();
+    const hideDashboardEdit = editedDefinition?.applicationProperties?.hideEdit ?? true;
 
     const dashboardUsesSearchbase = useMemo(() => {
         if (editedDefinition) {
@@ -1497,7 +1498,7 @@ const DashboardStudioEditor = ({
                         onClone={handleCloneDashboard}
                         onExportJson={handleExportDashboardJson}
                     />
-                    <ModeSwitch key="modeSwitch" />
+                    {!hideDashboardEdit && <ModeSwitch key="modeSwitch" />}
                 </ItemGroup>,
             ],
             edit: [
@@ -1579,6 +1580,7 @@ const DashboardStudioEditor = ({
             handleCloneDashboard,
             handleExportDashboardJson,
             handleSaveClick,
+            hideDashboardEdit,
             isDirty,
             setIsCodeEditable,
             showClose,
@@ -1862,17 +1864,10 @@ const DashboardStudioEditor = ({
                         readOnly
                             ? []
                             : toolbarMenus[
-                                  dashMode
-	                                      ? dashboardApiElem.current
-	                                          ? Object.values(
-	                                                dashboardApiElem.current.getDefinition()
-	                                                    .dataSources,
-	                                            ).some((ds) => ds.type === 'ds.searchbase')
-	                                              ? `editconvert`
-	                                              : dashMode
-	                                          : dashMode
-	                                      : 'view'
-	                              ]
+                                  dashMode === 'edit' && dashboardUsesSearchbase
+                                      ? 'editconvert'
+                                      : dashMode || 'view'
+                              ]
                     }
                     actionMenus={actionMenus[dashMode ? dashMode : 'view']}
                     dashboardApiRef={(apiRef) => {
