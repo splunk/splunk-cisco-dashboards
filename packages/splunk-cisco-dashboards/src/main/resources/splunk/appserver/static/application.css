@@ -116,3 +116,30 @@
     min-height: 0;
     height: auto !important;
 }
+
+/*
+ * Home-density pilot: let the Authentication and Policy Enforcement canvas
+ * consume the space beside Splunk's navigation rail instead of preserving its
+ * 1440px min-content width. The dashboard already requests auto-scale, so the
+ * narrower host scales its header, cards, charts, and type together. Keep the
+ * experiment isolated through the body marker maintained by dashboard.js.
+ */
+body.scd-studio-home-density-pilot
+    > [role='main']
+    > div:has(#collection_container.dashboardbuilderview) {
+    flex: 1 1 0;
+    min-width: 900px;
+    width: 0;
+}
+
+body.scd-studio-home-density-pilot #collection_container.dashboardbuilderview {
+    width: 100%;
+    min-width: 0;
+}
+
+body.scd-studio-home-density-pilot
+    [data-test='DashboardLayoutContainer'],
+body.scd-studio-home-density-pilot
+    [data-test='DashboardLayoutContainer'] * {
+    font-family: Inter, system-ui, sans-serif !important;
+}

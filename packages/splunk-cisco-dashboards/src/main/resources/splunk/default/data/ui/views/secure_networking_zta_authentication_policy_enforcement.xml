@@ -8,11 +8,34 @@
     "inputs": {
         "input_time_range": {
             "options": {
-                "defaultValue": "-24h@h,now",
+                "defaultValue": "-7d@d,now,1d",
+                "showAdvanced": true,
+                "selections": [
+                    {
+                        "value": "-7d@d,now,1d",
+                        "label": "7d"
+                    },
+                    {
+                        "value": "-30d@d,now,1d",
+                        "label": "30d"
+                    },
+                    {
+                        "value": "-60d@d,now,1w",
+                        "label": "60d"
+                    },
+                    {
+                        "value": "-90d@d,now,1w",
+                        "label": "90d"
+                    },
+                    {
+                        "value": "-1y,now,1mon",
+                        "label": "1y"
+                    }
+                ],
                 "token": "time_tok"
             },
-            "title": "Time Range",
-            "type": "input.timerange"
+            "title": "Time range",
+            "type": "input.simpleTimePicker"
         }
     },
     "defaults": {
@@ -81,7 +104,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Identity  •  Zero Trust Access"
             }
         },
@@ -94,7 +117,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Tracks the Cisco ISE authentication failure rate over time, with the existing per\\-network\\-device table available as the operational drill\\-down\\."
             }
         },
@@ -109,7 +132,7 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
+                "majorFontSize": 44,
                 "majorValue": "> primary | seriesByName(\"WindowFailureRatePct\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
@@ -128,10 +151,10 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
-                    "#4cbf7f",
                     "#f7782f",
-                    "#fa5762"
+                    "#f0c243",
+                    "#fa5762",
+                    "#649ef5"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -193,7 +216,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Identity  •  Zero Trust Access"
             }
         },
@@ -206,7 +229,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Trends ISE RADIUS and TACACS\\+ policy\\-set hit activity over time while retaining the policy\\-family inventory as a drill\\-down table\\."
             }
         },
@@ -221,7 +244,7 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
+                "majorFontSize": 44,
                 "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
@@ -240,10 +263,10 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
-                    "#4cbf7f",
-                    "#f7782f",
-                    "#fa5762"
+                    "#049fd9",
+                    "#9ca6ff",
+                    "#9b5ff5",
+                    "#00bceb"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -305,7 +328,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Identity  •  Zero Trust Access"
             }
         },
@@ -318,7 +341,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Tracks RADIUS authentication outcomes over time and moves the ISE host/site/network\\-device health table into the drill\\-down modal\\."
             }
         },
@@ -333,7 +356,7 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
+                "majorFontSize": 44,
                 "majorValue": "> primary | seriesByName(\"WindowFailures\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
@@ -352,10 +375,10 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
-                    "#4cbf7f",
+                    "#fa5762",
                     "#f7782f",
-                    "#fa5762"
+                    "#f0c243",
+                    "#649ef5"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -417,7 +440,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Identity  •  Zero Trust Access"
             }
         },
@@ -430,7 +453,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Trends observed RadSec/RADIUS\\-over\\-TLS authentication activity while retaining node\\-level transport evidence in the drill\\-down modal\\."
             }
         },
@@ -445,7 +468,7 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
+                "majorFontSize": 44,
                 "majorValue": "> primary | seriesByName(\"WindowFailures\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
@@ -464,10 +487,10 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
-                    "#4cbf7f",
+                    "#fa5762",
                     "#f7782f",
-                    "#fa5762"
+                    "#f0c243",
+                    "#649ef5"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -529,7 +552,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Identity  •  Zero Trust Access"
             }
         },
@@ -542,7 +565,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Tracks Duo MFA authentication outcomes over time and keeps the application/factor breakdown as a drill\\-down table\\."
             }
         },
@@ -557,7 +580,7 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
+                "majorFontSize": 44,
                 "majorValue": "> primary | seriesByName(\"WindowRiskyOutcomes\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
@@ -576,10 +599,10 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
-                    "#4cbf7f",
                     "#f7782f",
-                    "#fa5762"
+                    "#f0c243",
+                    "#fa5762",
+                    "#9b5ff5"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -641,7 +664,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Asset  •  Zero Trust Access"
             }
         },
@@ -654,7 +677,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Total count of unique network access devices \\(NADs\\) enforcing ISE policy, based on distinct device names seen in ISE syslog, providing the Zero Trust enforcement infrastructure footprint KPI\\."
             }
         },
@@ -669,7 +692,7 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
+                "majorFontSize": 44,
                 "majorValue": "> primary | seriesByName(\"ise_device_count\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
@@ -688,10 +711,10 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
-                    "#4cbf7f",
-                    "#f7782f",
-                    "#fa5762"
+                    "#00bceb",
+                    "#049fd9",
+                    "#9ca6ff",
+                    "#4cbf7f"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,

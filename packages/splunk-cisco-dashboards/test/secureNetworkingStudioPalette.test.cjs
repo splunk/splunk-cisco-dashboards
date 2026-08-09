@@ -39,6 +39,10 @@ const APPLICATION_CSS_PATH = path.resolve(
   __dirname,
   "../src/main/resources/splunk/appserver/static/application.css",
 );
+const DASHBOARD_SCRIPT_PATH = path.resolve(
+  __dirname,
+  "../src/main/resources/splunk/appserver/static/dashboard.js",
+);
 const TEMPLATES_CONF_PATH = path.resolve(
   __dirname,
   "../src/main/resources/splunk/default/templates.conf",
@@ -453,6 +457,88 @@ assert.match(
   /\[data-test='viz-size-wrapper'\][\s\S]*?flex:\s*1 1 0;[\s\S]*?height:\s*auto !important;/,
   "Dashboard Studio visualizations must resize below wrapped descriptions",
 );
+assert.match(
+  applicationCss,
+  /body\.scd-studio-home-density-pilot[\s\S]*?> \[role='main'\][\s\S]*?flex:\s*1 1 0;[\s\S]*?min-width:\s*900px;[\s\S]*?width:\s*0;/,
+  "the Studio density pilot must shrink beside app navigation without making type unreadable",
+);
+assert.match(
+  applicationCss,
+  /body\.scd-studio-home-density-pilot[\s\S]*?\[data-test='DashboardLayoutContainer'\][\s\S]*?font-family:\s*Inter, system-ui, sans-serif !important;/,
+  "the Studio density pilot must use the Insights Workspace font stack",
+);
+
+const dashboardScript = fs.readFileSync(DASHBOARD_SCRIPT_PATH, "utf8");
+assert.match(
+  dashboardScript,
+  /secure_networking_zta_authentication_policy_enforcement/,
+  "the Studio density pilot must target Authentication and Policy Enforcement",
+);
+assert.match(
+  dashboardScript,
+  /classList\.toggle\(pilotClass, dashboardId === pilotDashboard\)/,
+  "the Studio density pilot must follow Dashboard Manager hash navigation",
+);
+
+const densityPilot = dashboardViews.find(
+  ({ fileName }) =>
+    fileName === "secure_networking_zta_authentication_policy_enforcement.xml",
+).definition;
+assert.deepEqual(
+  densityPilot.inputs.input_time_range,
+  {
+    options: {
+      defaultValue: "-7d@d,now,1d",
+      showAdvanced: true,
+      selections: [
+        { value: "-7d@d,now,1d", label: "7d" },
+        { value: "-30d@d,now,1d", label: "30d" },
+        { value: "-60d@d,now,1w", label: "60d" },
+        { value: "-90d@d,now,1w", label: "90d" },
+        { value: "-1y,now,1mon", label: "1y" },
+      ],
+      token: "time_tok",
+    },
+    title: "Time range",
+    type: "input.simpleTimePicker",
+  },
+  "density pilot must reuse the IS4S simple time picker with honest display ranges",
+);
+
+const densityPilotTrendColors = {
+  viz_card_01_trend: "#f7782f",
+  viz_card_02_trend: "#049fd9",
+  viz_card_03_trend: "#fa5762",
+  viz_card_04_trend: "#fa5762",
+  viz_card_05_trend: "#f7782f",
+  viz_card_06_trend: "#00bceb",
+};
+for (const [visualizationId, expectedColor] of Object.entries(densityPilotTrendColors)) {
+  assert.equal(
+    densityPilot.visualizations[visualizationId].options.seriesColors[0],
+    expectedColor,
+    `density pilot ${visualizationId} must lead with its semantic C3 color`,
+  );
+}
+
+for (let cardNumber = 1; cardNumber <= 6; cardNumber += 1) {
+  const cardKey = `card_${String(cardNumber).padStart(2, "0")}`;
+  assert.equal(
+    densityPilot.visualizations[`viz_${cardKey}_metadata`].options.customFontSize,
+    14,
+    `density pilot ${cardKey} metadata must remain readable after auto-scaling`,
+  );
+  assert.equal(
+    densityPilot.visualizations[`viz_${cardKey}_description`].options.customFontSize,
+    15,
+    `density pilot ${cardKey} description must remain readable after auto-scaling`,
+  );
+  assert.equal(
+    densityPilot.visualizations[`viz_${cardKey}_singlevalue`].options.majorFontSize,
+    44,
+    `density pilot ${cardKey} value must match the Insights Workspace emphasis`,
+  );
+}
 
 console.log(
   "✓ Secure Networking palette and 16-dashboard six-card story contract passed",
