@@ -3,48 +3,28 @@
 /**
  * First-run setup controller backed by setup.conf.
  *
- * The first two setup stages intentionally use Splunk's REST endpoints from a
- * static Simple XML view. This keeps setup available before the React
- * dashboard framework is initialized. Macro Index Tuning is the final stage
+ * Data discovery and package recommendations intentionally use Splunk's REST
+ * endpoints from a static Simple XML view. This keeps setup available before
+ * the React dashboard framework is initialized. The existing Macro Index
+ * Tuning React experience mounts into the same Setup view for the final step
  * and is responsible for setting setup.conf is_configured=1.
  */
 const SCD_SETUP_APP = "splunk-cisco-dashboards";
 const SCD_SETUP_HOME_VIEW = "secure_networking_profile";
-const SCD_SETUP_TUNING_VIEW = "macro_index_tuning";
 const SCD_SETUP_DISCOVERY_SEARCH = [
-  '| tstats count max(_time) AS latest WHERE index=* sourcetype="cisco:*" BY index sourcetype',
+  '| tstats count max(_time) AS latest WHERE index=* (sourcetype="cisco:*" OR sourcetype="meraki:*" OR sourcetype="WinEventLog:*" OR sourcetype="XmlWinEventLog:*" OR sourcetype="linux:*" OR sourcetype="nix:*") BY index sourcetype',
   "| sort - count",
 ].join("\n");
 
 const SCD_SETUP_DEPENDENCIES = [
   {
-    id: "dc-networking",
-    name: "Cisco DC Networking App for Splunk",
-    appIds: ["cisco_dc_networking_app_for_splunk"],
+    id: "cim",
+    name: "Splunk Common Information Model",
+    appIds: ["Splunk_SA_CIM"],
     always: true,
     importance: "required",
-    splunkbase:
-      "https://splunkbase.splunk.com/apps/#/search/Cisco%20DC%20Networking/",
     purpose:
-      "Provides the data-center networking searches and dashboards used by Searchbase.",
-  },
-  {
-    id: "catalyst-app",
-    name: "Cisco Enterprise Networking for Splunk Platform",
-    appIds: ["cisco-catalyst-app"],
-    always: true,
-    importance: "required",
-    splunkbase: "https://splunkbase.splunk.com/app/7539",
-    purpose: "Provides Cisco Catalyst search content and data models.",
-  },
-  {
-    id: "security-cloud",
-    name: "Cisco Security Cloud",
-    appIds: ["CiscoSecurityCloud"],
-    always: true,
-    importance: "required",
-    splunkbase: "https://splunkbase.splunk.com/app/7404",
-    purpose: "Provides the supported Cisco security integrations and searches.",
+      "Provides the normalized authentication and network fields shared by the dashboards.",
   },
   {
     id: "searchbase",
@@ -54,16 +34,16 @@ const SCD_SETUP_DEPENDENCIES = [
     importance: "required",
     splunkbase:
       "https://splunkbase.splunk.com/apps/#/search/Searchbase%20App%20for%20Splunk/",
-    purpose: "Supplies the shared search layer used by this app.",
+    purpose: "Supplies the shared search catalog used by this app.",
   },
   {
     id: "ai-toolkit",
     name: "Splunk AI Toolkit",
     appIds: ["Splunk_ML_Toolkit", "Splunk AI Toolkit"],
     always: true,
-    importance: "required",
+    importance: "recommended",
     splunkbase: "https://splunkbase.splunk.com/app/2890",
-    purpose: "Runs forecasting and anomaly-detection searches.",
+    purpose: "Enables forecasting and anomaly-detection panels.",
   },
   {
     id: "scientific-python",
@@ -72,70 +52,152 @@ const SCD_SETUP_DEPENDENCIES = [
     appIdPrefix: "Splunk_SA_Scientific_Python_",
     displayId: "Splunk_SA_Scientific_Python_<os>",
     always: true,
-    importance: "required",
+    importance: "recommended",
     splunkbase:
       "https://splunkbase.splunk.com/apps/#/search/Python%20for%20Scientific%20Computing/",
-    purpose:
-      "Provides the OS-specific Python runtime required by Splunk AI Toolkit.",
+    purpose: "Provides the OS-specific runtime used by Splunk AI Toolkit.",
   },
   {
-    id: "meraki-ta",
-    name: "Cisco Meraki Add-on for Splunk",
-    appIds: ["Splunk_TA_cisco_meraki"],
-    always: true,
+    id: "dc-networking",
+    name: "Cisco DC Networking App for Splunk",
+    appIds: ["cisco_dc_networking_app_for_splunk"],
+    pattern: /^cisco:(?:dc:)?(?:aci|nd|ndfc|nexus(?:9k)?)(?::|$)/i,
     importance: "required",
     splunkbase:
-      "https://splunkbase.splunk.com/apps/#/search/Cisco%20Meraki%20Add-on/",
-    purpose: "Collects and normalizes Cisco Meraki data.",
+      "https://splunkbase.splunk.com/apps/#/search/Cisco%20DC%20Networking/",
+    purpose: "Provides data-center networking searches and data models.",
+    impact: "Secure Infrastructure fabric, anomaly, and inventory panels",
   },
   {
-    id: "windows-ta",
-    name: "Splunk Add-on for Microsoft Windows",
-    appIds: ["Splunk_TA_windows"],
-    always: true,
+    id: "catalyst-app",
+    name: "Cisco Enterprise Networking for Splunk Platform",
+    appIds: ["cisco-catalyst-app"],
+    pattern: /^cisco:(?:dnac|catalyst|sdwan)(?::|$)/i,
     importance: "required",
-    splunkbase:
-      "https://splunkbase.splunk.com/apps/#/search/Splunk%20Add-on%20for%20Microsoft%20Windows/",
-    purpose: "Provides Windows host data used by cross-domain Searchbase content.",
-  },
-  {
-    id: "nix-ta",
-    name: "Splunk Add-on for Unix and Linux",
-    appIds: ["Splunk_TA_nix"],
-    always: true,
-    importance: "required",
-    splunkbase: "https://splunkbase.splunk.com/app/833",
-    purpose:
-      "Provides Unix and Linux host data used by cross-domain Searchbase content.",
+    splunkbase: "https://splunkbase.splunk.com/app/7539",
+    purpose: "Provides Catalyst Center and SD-WAN search content and data models.",
+    impact: "Network readiness, access, SD-WAN, and inventory panels",
   },
   {
     id: "catalyst-ta",
     name: "Cisco Catalyst Add-on for Splunk",
     appIds: ["TA_cisco_catalyst"],
-    always: true,
+    pattern: /^cisco:(?:dnac|catalyst|sdwan)(?::|$)/i,
     importance: "required",
     splunkbase:
       "https://splunkbase.splunk.com/apps/#/search/Cisco%20Catalyst%20Add-on/",
-    purpose: "Collects and normalizes Cisco Catalyst data.",
+    purpose: "Collects and normalizes Catalyst Center data.",
+    impact: "Network readiness, access, and Catalyst inventory panels",
+  },
+  {
+    id: "security-cloud",
+    name: "Cisco Security Cloud",
+    appIds: ["CiscoSecurityCloud"],
+    pattern:
+      /^cisco:(?:asa|cloud_security|duo|estreamer|firepower|fmc|ftd|ise|multicloud:defense|nvm|secure:workload|secure_access|sfw|sna|sourcefire|umbrella|xdr)(?::|$)/i,
+    importance: "required",
+    splunkbase: "https://splunkbase.splunk.com/app/7404",
+    purpose: "Provides supported Cisco security integrations and data models.",
+    impact: "Zero Trust, firewall, identity, and Security Operations panels",
+  },
+  {
+    id: "meraki-ta",
+    name: "Cisco Meraki Add-on for Splunk",
+    appIds: ["Splunk_TA_cisco_meraki"],
+    pattern: /^(?:cisco:)?meraki(?::|$)/i,
+    importance: "required",
+    splunkbase:
+      "https://splunkbase.splunk.com/apps/#/search/Cisco%20Meraki%20Add-on/",
+    purpose: "Collects and normalizes Cisco Meraki data.",
+    impact: "Meraki wireless, access-point, SSID, and client panels",
   },
   {
     id: "spaces-ta",
     name: "Cisco Spaces Add-on for Splunk",
-    appIds: ["ta_cisco_spaces"],
-    always: true,
+    appIds: ["ta_cisco_spaces", "TA_cisco_spaces", "Cisco_Spaces"],
+    pattern: /^cisco:spaces(?::|$)/i,
     importance: "required",
     splunkbase:
       "https://splunkbase.splunk.com/apps/#/search/Cisco%20Spaces/",
-    purpose: "Collects and parses Cisco Spaces Firehose events.",
+    purpose: "Collects and parses Cisco Spaces events.",
+    impact: "Workplace Intelligence, occupancy, and location panels",
   },
   {
     id: "thousandeyes-ta",
     name: "Cisco ThousandEyes App for Splunk",
     appIds: ["ta_cisco_thousandeyes"],
-    always: true,
+    pattern: /^cisco:thousandeyes(?::|$)/i,
     importance: "required",
     splunkbase: "https://splunkbase.splunk.com/app/7719",
-    purpose: "Provides ThousandEyes data models and macros.",
+    purpose: "Provides ThousandEyes data models and routing macros.",
+    impact: "Digital experience, agent-test, path, and availability panels",
+  },
+  {
+    id: "windows-ta",
+    name: "Splunk Add-on for Microsoft Windows",
+    appIds: ["Splunk_TA_windows"],
+    pattern: /^(?:WinEventLog|XmlWinEventLog):/i,
+    importance: "required",
+    splunkbase:
+      "https://splunkbase.splunk.com/apps/#/search/Splunk%20Add-on%20for%20Microsoft%20Windows/",
+    purpose: "Normalizes Windows host and event-log data.",
+    impact: "Cross-domain host health and Agentic Ops panels",
+  },
+  {
+    id: "nix-ta",
+    name: "Splunk Add-on for Unix and Linux",
+    appIds: ["Splunk_TA_nix"],
+    pattern: /^(?:linux|nix):/i,
+    importance: "required",
+    splunkbase: "https://splunkbase.splunk.com/app/833",
+    purpose: "Normalizes Unix and Linux host data.",
+    impact: "Cross-domain host health and Agentic Ops panels",
+  },
+];
+
+const SCD_SETUP_CAPABILITIES = [
+  {
+    id: "identity",
+    name: "Identity and segmentation",
+    pattern: /^cisco:ise(?::|$)/i,
+    impact: "Zero Trust Access and Scalable Network Segmentation",
+  },
+  {
+    id: "enterprise-networking",
+    name: "Enterprise networking",
+    pattern: /^cisco:(?:dnac|catalyst|sdwan)(?::|$)/i,
+    impact: "Network readiness, Catalyst inventory, and SD-WAN",
+  },
+  {
+    id: "data-center",
+    name: "Data-center networking",
+    pattern: /^cisco:(?:dc:)?(?:aci|nd|ndfc|nexus(?:9k)?)(?::|$)/i,
+    impact: "Secure Infrastructure fabric, anomaly, and inventory",
+  },
+  {
+    id: "security",
+    name: "Security and firewall",
+    pattern:
+      /^cisco:(?:asa|cloud_security|duo|estreamer|firepower|fmc|ftd|multicloud:defense|nvm|secure:workload|secure_access|sfw|sna|sourcefire|umbrella|xdr)(?::|$)/i,
+    impact: "Hybrid Mesh Firewalling and Security Operations",
+  },
+  {
+    id: "meraki",
+    name: "Meraki",
+    pattern: /^(?:cisco:)?meraki(?::|$)/i,
+    impact: "Wireless, access-point, SSID, and client health",
+  },
+  {
+    id: "thousandeyes",
+    name: "ThousandEyes",
+    pattern: /^cisco:thousandeyes(?::|$)/i,
+    impact: "Digital experience, agent-test, path, and availability",
+  },
+  {
+    id: "spaces",
+    name: "Cisco Spaces",
+    pattern: /^cisco:spaces(?::|$)/i,
+    impact: "Workplace Intelligence, occupancy, and location",
   },
 ];
 
@@ -175,40 +237,11 @@ function scdSetupHomeUrl(pathname) {
 function scdSetupTuningUrl(pathname) {
   return `${scdSetupLocalePrefix(pathname)}/app/${encodeURIComponent(
     SCD_SETUP_APP,
-  )}/${SCD_SETUP_TUNING_VIEW}?setup=1`;
+  )}/start?setup=1#tune-indexes`;
 }
 
-function scdSetupFullTuningUrl(pathname) {
-  return `${scdSetupLocalePrefix(pathname)}/app/${encodeURIComponent(
-    SCD_SETUP_APP,
-  )}/${SCD_SETUP_TUNING_VIEW}`;
-}
-
-function scdSetupTuningAction(pathname, configured) {
-  if (configured) {
-    return {
-      ariaLabel: "Open the full index macro tuner",
-      description:
-        "Open the full tuner whenever indexes or sourcetypes change. Setup checks stay available here without forcing you through onboarding again.",
-      footerLabel: "Tune index macros",
-      heading: "Keep dashboard macros current",
-      href: scdSetupFullTuningUrl(pathname),
-      label: "Tune index macros",
-      readyNote:
-        "Setup is complete. Reopen the tuner whenever indexes, sourcetypes, or routing requirements change.",
-    };
-  }
-  return {
-    ariaLabel: "Continue to guided index macro tuning",
-    description:
-      "Review the detected routing macros, choose search performance, and finish the guided setup.",
-    footerLabel: "Next: tune indexes",
-    heading: "Finish setup with detected indexes",
-    href: scdSetupTuningUrl(pathname),
-    label: "Continue guided setup",
-    readyNote:
-      "All priority packages are ready. Next, save the index macros that power the dashboards.",
-  };
+function scdSetupIsTuningHash(hash) {
+  return String(hash || "").replace(/^#/, "") === "tune-indexes";
 }
 
 function scdSetupManageAppsUrl(pathname) {
@@ -409,6 +442,40 @@ function scdSetupCompareVersions(left, right) {
   return leftVersion.prerelease > rightVersion.prerelease ? 1 : -1;
 }
 
+function scdSetupPatternMatches(pattern, value) {
+  if (!pattern) {
+    return false;
+  }
+  return pattern.test(String(value || ""));
+}
+
+function scdSetupMatchingSourcetypes(rows, pattern) {
+  return Array.from(
+    new Set(
+      (rows || [])
+        .map((row) => String(row.sourcetype || ""))
+        .filter((sourcetype) => scdSetupPatternMatches(pattern, sourcetype)),
+    ),
+  );
+}
+
+function scdSetupResolveCapabilities(rows) {
+  return SCD_SETUP_CAPABILITIES.map((capability) => {
+    const sourcetypes = scdSetupMatchingSourcetypes(rows, capability.pattern);
+    const events = (rows || [])
+      .filter((row) =>
+        scdSetupPatternMatches(capability.pattern, row.sourcetype),
+      )
+      .reduce((total, row) => total + (Number(row.count) || 0), 0);
+    return {
+      ...capability,
+      detected: sourcetypes.length > 0,
+      events,
+      sourcetypes,
+    };
+  });
+}
+
 function scdSetupResolvePrerequisites(rows, appEntries) {
   const sourcetypes = Array.from(
     new Set(rows.map((row) => row.sourcetype)),
@@ -425,7 +492,7 @@ function scdSetupResolvePrerequisites(rows, appEntries) {
     }
     const matches = sourcetypes.filter(
       (sourcetype) =>
-        dependency.pattern && dependency.pattern.test(sourcetype),
+        scdSetupPatternMatches(dependency.pattern, sourcetype),
     );
     return matches.length > 0;
   }).map((dependency) => {
@@ -474,12 +541,24 @@ function scdSetupResolvePrerequisites(rows, appEntries) {
       updateVersion: hasUpdate ? updateVersion : "",
       sourcetypes: sourcetypes.filter(
         (sourcetype) =>
-          dependency.pattern && dependency.pattern.test(sourcetype),
+          scdSetupPatternMatches(dependency.pattern, sourcetype),
       ),
     };
   });
 
   return resolved;
+}
+
+function scdSetupResolveSkippedPackages(rows) {
+  return SCD_SETUP_DEPENDENCIES.filter(
+    (dependency) =>
+      !dependency.always &&
+      scdSetupMatchingSourcetypes(rows, dependency.pattern).length === 0,
+  ).map((dependency) => ({
+    id: dependency.id,
+    impact: dependency.impact,
+    name: dependency.name,
+  }));
 }
 
 function scdSetupElement(tagName, className, text) {
@@ -696,115 +775,52 @@ function scdSetupRenderPrerequisites(parent, prerequisites, appsError) {
   parent.appendChild(list);
 }
 
-function scdSetupRenderResults(root, dataRows, appEntries, errors, configured) {
-  scdSetupSetActiveStep(root, configured ? 4 : 2);
-  const content = root.querySelector(".scd-setup__content");
-  content.textContent = "";
+function scdSetupSetHeaderCopy(root, title, description) {
+  const brand = root.querySelector(".scd-setup__brand");
+  const heading = brand && brand.querySelector("h1");
+  const paragraphs = brand ? brand.querySelectorAll("p") : [];
+  if (heading) {
+    heading.textContent = title;
+  }
+  if (paragraphs.length > 1) {
+    paragraphs[1].textContent = description;
+  }
+}
 
-  const uniqueSourcetypes = new Set(dataRows.map((row) => row.sourcetype));
-  const uniqueIndexes = new Set(dataRows.map((row) => row.index));
-  const totalEvents = dataRows.reduce((sum, row) => sum + row.count, 0);
-  const prerequisites = scdSetupResolvePrerequisites(dataRows, appEntries);
-  const needsAttention = prerequisites.filter((item) =>
-    ["missing", "disabled", "update", "verify"].includes(item.status),
-  ).length;
-  const readyCount = prerequisites.length - needsAttention;
+function scdSetupRenderMetrics(parent, metrics) {
+  const metricsElement = scdSetupElement("div", "scd-setup__metrics");
+  metrics.forEach(([value, label]) => {
+    const metric = scdSetupElement("div", "scd-setup__metric");
+    metric.appendChild(scdSetupElement("strong", "", value));
+    metric.appendChild(scdSetupElement("span", "", label));
+    metricsElement.appendChild(metric);
+  });
+  parent.appendChild(metricsElement);
+}
+
+function scdSetupRenderNavigator(parent, appEntries) {
   const navigatorInstalled = (appEntries || []).some(
     (entry) =>
       String(entry.name || "").toLowerCase() ===
       "splunk-cisco-app-navigator",
   );
-  const tuningAction = scdSetupTuningAction(
-    window.location.pathname,
-    configured,
-  );
-
-  const workspace = scdSetupElement("div", "scd-setup__workspace");
-  const main = scdSetupElement("main", "scd-setup__main");
-  const aside = scdSetupElement("aside", "scd-setup__aside");
-
-  const readinessSection = scdSetupElement(
-    "section",
-    "scd-setup__section scd-setup__readiness",
-  );
-  const readinessCopy = scdSetupElement("div");
-  readinessCopy.appendChild(
-    scdSetupElement("p", "scd-setup__eyebrow", "SEARCHBASE READINESS"),
-  );
-  readinessCopy.appendChild(
-    scdSetupElement("h2", "", `${readyCount} of ${prerequisites.length} packages ready`),
-  );
-  readinessCopy.appendChild(
-    scdSetupElement(
-      "p",
-      "scd-setup__section-intro",
-      "These are the high-priority apps and add-ons used by searchbase.conf.",
-    ),
-  );
-  readinessSection.appendChild(readinessCopy);
-  const readinessMetrics = scdSetupElement("div", "scd-setup__metrics");
-  [
-    [scdSetupFormatNumber(prerequisites.length), "Priority"],
-    [scdSetupFormatNumber(readyCount), "Ready"],
-    [scdSetupFormatNumber(needsAttention), "Attention"],
-  ].forEach(([value, label]) => {
-    const metric = scdSetupElement("div", "scd-setup__metric");
-    metric.appendChild(scdSetupElement("strong", "", value));
-    metric.appendChild(scdSetupElement("span", "", label));
-    readinessMetrics.appendChild(metric);
-  });
-  readinessSection.appendChild(readinessMetrics);
-  main.appendChild(readinessSection);
-
-  const appsSection = scdSetupElement("section", "scd-setup__section");
-  const appsHeader = scdSetupElement("div", "scd-setup__section-heading");
-  const appsHeadingCopy = scdSetupElement("div");
-  appsHeadingCopy.appendChild(
-    scdSetupElement("p", "scd-setup__eyebrow", "PRIORITY APPS & ADD-ONS"),
-  );
-  appsHeadingCopy.appendChild(
-    scdSetupElement("h2", "", "Package checklist"),
-  );
-  appsHeadingCopy.appendChild(
-    scdSetupElement(
-      "p",
-      "scd-setup__section-intro",
-      "Technical IDs stay visible so administrators can match deployment packages exactly.",
-    ),
-  );
-  appsHeader.appendChild(appsHeadingCopy);
-  const appsLink = scdSetupLink(
-    "scd-setup__secondary-link",
-    "Manage Apps",
-    scdSetupManageAppsUrl(window.location.pathname),
-  );
-  appsLink.target = "_blank";
-  appsLink.rel = "noopener noreferrer";
-  appsHeader.appendChild(appsLink);
-  appsSection.appendChild(appsHeader);
-  scdSetupRenderPrerequisites(appsSection, prerequisites, errors.apps);
-  main.appendChild(appsSection);
-
-  const navigatorSection = scdSetupElement(
-    "section",
-    "scd-setup__scan",
-  );
-  navigatorSection.appendChild(
+  const section = scdSetupElement("section", "scd-setup__scan");
+  section.appendChild(
     scdSetupElement("p", "scd-setup__eyebrow", "COMPANION APP"),
   );
-  navigatorSection.appendChild(
+  section.appendChild(
     scdSetupElement("h2", "", "Splunk Cisco App Navigator"),
   );
-  navigatorSection.appendChild(
+  section.appendChild(
     scdSetupElement(
       "p",
       "",
-      "Your front door to 50+ Cisco integrations, with package selection, data-flow, platform, and tier guidance.",
+      "Explore Cisco integrations, collection paths, deployment tiers, and package guidance.",
     ),
   );
-  const navigatorLinks = scdSetupElement("div", "scd-setup__scan-links");
+  const links = scdSetupElement("div", "scd-setup__scan-links");
   if (navigatorInstalled) {
-    navigatorLinks.appendChild(
+    links.appendChild(
       scdSetupLink(
         "scd-setup__button is-scan",
         "Open App Navigator",
@@ -812,116 +828,391 @@ function scdSetupRenderResults(root, dataRows, appEntries, errors, configured) {
       ),
     );
   }
-  const navigatorLink = scdSetupLink(
+  const splunkbaseLink = scdSetupLink(
     "scd-setup__external is-inverse",
     "View on Splunkbase",
     "https://splunkbase.splunk.com/app/8566",
   );
-  navigatorLink.target = "_blank";
-  navigatorLink.rel = "noopener noreferrer";
-  navigatorLinks.appendChild(navigatorLink);
-  navigatorSection.appendChild(navigatorLinks);
-  aside.appendChild(navigatorSection);
+  splunkbaseLink.target = "_blank";
+  splunkbaseLink.rel = "noopener noreferrer";
+  links.appendChild(splunkbaseLink);
+  section.appendChild(links);
+  parent.appendChild(section);
+}
 
-  const tuningSection = scdSetupElement(
+function scdSetupRenderCapabilities(parent, capabilities) {
+  const grid = scdSetupElement("div", "scd-setup__capabilities");
+  capabilities.forEach((capability) => {
+    const card = scdSetupElement(
+      "article",
+      `scd-setup__capability ${
+        capability.detected ? "is-detected" : "is-unavailable"
+      }`,
+    );
+    const heading = scdSetupElement("div", "scd-setup__capability-heading");
+    heading.appendChild(scdSetupElement("strong", "", capability.name));
+    heading.appendChild(
+      scdSetupElement(
+        "span",
+        "scd-setup__status",
+        capability.detected ? "Data detected" : "Not detected",
+      ),
+    );
+    card.appendChild(heading);
+    card.appendChild(
+      scdSetupElement(
+        "p",
+        "",
+        capability.detected
+          ? `${scdSetupFormatNumber(capability.events)} events across ${capability.sourcetypes.length} sourcetype${capability.sourcetypes.length === 1 ? "" : "s"}.`
+          : `Panels for ${capability.impact} will remain unavailable until this data is onboarded.`,
+      ),
+    );
+    grid.appendChild(card);
+  });
+  parent.appendChild(grid);
+}
+
+function scdSetupRenderActions(root, buttons, message) {
+  const actions = root.querySelector(".scd-setup__actions");
+  actions.textContent = "";
+  buttons.forEach((buttonConfig) => {
+    const button = scdSetupElement(
+      "button",
+      `scd-setup__button${buttonConfig.secondary ? " is-secondary" : ""}`,
+      buttonConfig.label,
+    );
+    button.type = "button";
+    button.addEventListener("click", buttonConfig.onClick);
+    actions.appendChild(button);
+  });
+  actions.appendChild(
+    scdSetupElement("p", "scd-setup__action-note", message),
+  );
+}
+
+function scdSetupRenderDiscoveryStep(root) {
+  const state = root.scdSetupState;
+  const { dataRows, errors } = state;
+  scdSetupSetActiveStep(root, 1);
+  scdSetupSetHeaderCopy(
+    root,
+    "Discover your Cisco environment",
+    "Start with the data this Splunk deployment actually has, then build a setup plan around it.",
+  );
+  const content = root.querySelector(".scd-setup__content");
+  content.textContent = "";
+  const uniqueSourcetypes = new Set(dataRows.map((row) => row.sourcetype));
+  const uniqueIndexes = new Set(dataRows.map((row) => row.index));
+  const totalEvents = dataRows.reduce((sum, row) => sum + row.count, 0);
+  const capabilities = scdSetupResolveCapabilities(dataRows);
+  const detectedCapabilities = capabilities.filter(
+    (capability) => capability.detected,
+  ).length;
+
+  const workspace = scdSetupElement("div", "scd-setup__workspace");
+  const main = scdSetupElement("main", "scd-setup__main");
+  const aside = scdSetupElement("aside", "scd-setup__aside");
+  const summary = scdSetupElement(
     "section",
-    "scd-setup__scan scd-setup__tuning",
+    "scd-setup__section scd-setup__readiness",
   );
-  tuningSection.appendChild(
-    scdSetupElement("p", "scd-setup__eyebrow", "INDEX ROUTING"),
+  const summaryCopy = scdSetupElement("div");
+  summaryCopy.appendChild(
+    scdSetupElement("p", "scd-setup__eyebrow", "STEP 1 · DATA DISCOVERY"),
   );
-  tuningSection.appendChild(
-    scdSetupElement("h2", "", tuningAction.heading),
+  summaryCopy.appendChild(
+    scdSetupElement(
+      "h2",
+      "",
+      errors.data
+        ? "The data scan needs attention"
+        : `${detectedCapabilities} of ${capabilities.length} solution areas detected`,
+    ),
   );
-  tuningSection.appendChild(
-    scdSetupElement("p", "", tuningAction.description),
+  summaryCopy.appendChild(
+    scdSetupElement(
+      "p",
+      "scd-setup__section-intro",
+      "The 30-day metadata scan reads counts and timestamps, not event payloads.",
+    ),
   );
-  const tuningLink = scdSetupLink(
-    "scd-setup__button is-scan",
-    tuningAction.label,
-    tuningAction.href,
-  );
-  tuningLink.setAttribute("aria-label", tuningAction.ariaLabel);
-  const tuningLinks = scdSetupElement("div", "scd-setup__scan-links");
-  tuningLinks.appendChild(tuningLink);
-  tuningSection.appendChild(tuningLinks);
-  aside.appendChild(tuningSection);
+  summary.appendChild(summaryCopy);
+  scdSetupRenderMetrics(summary, [
+    [scdSetupFormatNumber(uniqueSourcetypes.size), "Sourcetypes"],
+    [scdSetupFormatNumber(uniqueIndexes.size), "Indexes"],
+    [scdSetupFormatNumber(totalEvents), "Events"],
+  ]);
+  main.appendChild(summary);
 
-  const discoverySection = scdSetupElement(
-    "details",
-    "scd-setup__disclosure",
+  const coverage = scdSetupElement("section", "scd-setup__section");
+  coverage.appendChild(
+    scdSetupElement("p", "scd-setup__eyebrow", "DASHBOARD COVERAGE"),
   );
-  const discoverySummary = scdSetupElement("summary", "");
-  const discoverySummaryCopy = scdSetupElement("span");
-  discoverySummaryCopy.appendChild(
-    scdSetupElement("strong", "", "Discovered Cisco data"),
+  coverage.appendChild(scdSetupElement("h2", "", "What will work today"));
+  coverage.appendChild(
+    scdSetupElement(
+      "p",
+      "scd-setup__section-intro",
+      "Detected data enables the matching experiences. Missing products stay optional and their affected panels are called out clearly.",
+    ),
   );
-  discoverySummaryCopy.appendChild(
+  if (errors.data) {
+    const warning = scdSetupElement(
+      "div",
+      "scd-setup__warning",
+      "Discovery could not run. Verify this user can search the target indexes, then rescan before relying on package recommendations.",
+    );
+    warning.setAttribute("role", "status");
+    coverage.appendChild(warning);
+  } else {
+    scdSetupRenderCapabilities(coverage, capabilities);
+  }
+  main.appendChild(coverage);
+
+  const evidence = scdSetupElement("details", "scd-setup__disclosure");
+  const evidenceSummary = scdSetupElement("summary", "");
+  const evidenceCopy = scdSetupElement("span");
+  evidenceCopy.appendChild(scdSetupElement("strong", "", "Discovery evidence"));
+  evidenceCopy.appendChild(
     scdSetupElement(
       "small",
       "",
       errors.data
         ? "Scan unavailable"
-        : `${scdSetupFormatNumber(uniqueSourcetypes.size)} sourcetypes · ${scdSetupFormatNumber(uniqueIndexes.size)} indexes · ${scdSetupFormatNumber(totalEvents)} events`,
+        : `${uniqueSourcetypes.size} sourcetypes across ${uniqueIndexes.size} indexes`,
     ),
   );
-  discoverySummary.appendChild(discoverySummaryCopy);
-  discoverySection.appendChild(discoverySummary);
-  const discoveryBody = scdSetupElement("div", "scd-setup__discovery-body");
-
-  if (errors.data) {
-    const warning = scdSetupElement(
-      "div",
-      "scd-setup__warning",
-      "Cisco data discovery could not run. Verify this user can search the target indexes, then rescan. You may still continue to macro tuning.",
-    );
-    warning.setAttribute("role", "status");
-    discoveryBody.appendChild(warning);
-  } else {
-    discoveryBody.appendChild(
-      scdSetupElement(
-        "p",
-        "scd-setup__caption",
-        "The 30-day scan reads metadata only; event payloads are not inspected.",
-      ),
-    );
-    scdSetupRenderSourceTable(discoveryBody, dataRows);
-  }
-  discoverySection.appendChild(discoveryBody);
-  aside.appendChild(discoverySection);
-
+  evidenceSummary.appendChild(evidenceCopy);
+  evidence.appendChild(evidenceSummary);
+  const evidenceBody = scdSetupElement("div", "scd-setup__discovery-body");
+  scdSetupRenderSourceTable(evidenceBody, dataRows);
+  evidence.appendChild(evidenceBody);
+  aside.appendChild(evidence);
+  scdSetupRenderNavigator(aside, state.appEntries);
   workspace.appendChild(main);
   workspace.appendChild(aside);
   content.appendChild(workspace);
 
-  const actions = root.querySelector(".scd-setup__actions");
-  actions.textContent = "";
-  const rescan = scdSetupElement("button", "scd-setup__button is-secondary", "Rescan");
-  rescan.type = "button";
-  // The rescan callback runs only after all setup functions are initialized.
-  // eslint-disable-next-line no-use-before-define
-  rescan.addEventListener("click", () => scdSetupLoad(root, configured));
-  const continueButton = scdSetupElement(
-    "a",
-    "scd-setup__button",
-    tuningAction.footerLabel,
+  scdSetupRenderActions(
+    root,
+    [
+      {
+        label: "Rescan data",
+        secondary: true,
+        // eslint-disable-next-line no-use-before-define
+        onClick: () => scdSetupLoad(root, state.configured),
+      },
+      {
+        label: "Next: review recommendations",
+        // eslint-disable-next-line no-use-before-define
+        onClick: () => scdSetupRenderPackageStep(root),
+      },
+    ],
+    errors.data
+      ? "Recommendations will include only foundational packages until discovery succeeds."
+      : "Next, review only the packages relevant to the data found here.",
   );
-  continueButton.href = tuningAction.href;
-  continueButton.setAttribute("aria-label", tuningAction.ariaLabel);
-  actions.appendChild(continueButton);
-  actions.appendChild(rescan);
-  const summary = scdSetupElement(
-    "p",
-    "scd-setup__action-note",
+}
+
+function scdSetupRenderPackageStep(root) {
+  const state = root.scdSetupState;
+  const { appEntries, dataRows, errors } = state;
+  scdSetupSetActiveStep(root, 2);
+  scdSetupSetHeaderCopy(
+    root,
+    "Review data-aware recommendations",
+    "Install or update only what supports the products found in this environment.",
+  );
+  const content = root.querySelector(".scd-setup__content");
+  content.textContent = "";
+  const prerequisites = scdSetupResolvePrerequisites(dataRows, appEntries);
+  const skippedPackages = scdSetupResolveSkippedPackages(dataRows);
+  const needsAttention = prerequisites.filter((item) =>
+    ["missing", "disabled", "update", "verify"].includes(item.status),
+  ).length;
+  const readyCount = prerequisites.length - needsAttention;
+  const workspace = scdSetupElement("div", "scd-setup__workspace");
+  const main = scdSetupElement("main", "scd-setup__main");
+  const aside = scdSetupElement("aside", "scd-setup__aside");
+
+  const readiness = scdSetupElement(
+    "section",
+    "scd-setup__section scd-setup__readiness",
+  );
+  const readinessCopy = scdSetupElement("div");
+  readinessCopy.appendChild(
+    scdSetupElement("p", "scd-setup__eyebrow", "STEP 2 · PACKAGE READINESS"),
+  );
+  readinessCopy.appendChild(
+    scdSetupElement(
+      "h2",
+      "",
+      `${readyCount} of ${prerequisites.length} recommended packages ready`,
+    ),
+  );
+  readinessCopy.appendChild(
+    scdSetupElement(
+      "p",
+      "scd-setup__section-intro",
+      "Foundational packages are always shown; product packages appear only when matching data was detected.",
+    ),
+  );
+  readiness.appendChild(readinessCopy);
+  scdSetupRenderMetrics(readiness, [
+    [scdSetupFormatNumber(prerequisites.length), "Recommended"],
+    [scdSetupFormatNumber(readyCount), "Ready"],
+    [scdSetupFormatNumber(needsAttention), "Attention"],
+  ]);
+  main.appendChild(readiness);
+
+  const packages = scdSetupElement("section", "scd-setup__section");
+  const packagesHeader = scdSetupElement("div", "scd-setup__section-heading");
+  const packagesCopy = scdSetupElement("div");
+  packagesCopy.appendChild(
+    scdSetupElement("p", "scd-setup__eyebrow", "RECOMMENDED APPS & ADD-ONS"),
+  );
+  packagesCopy.appendChild(scdSetupElement("h2", "", "Package checklist"));
+  packagesCopy.appendChild(
+    scdSetupElement(
+      "p",
+      "scd-setup__section-intro",
+      "Technical IDs remain visible so administrators can match deployment packages exactly.",
+    ),
+  );
+  packagesHeader.appendChild(packagesCopy);
+  const manageApps = scdSetupLink(
+    "scd-setup__secondary-link",
+    "Manage Apps",
+    scdSetupManageAppsUrl(window.location.pathname),
+  );
+  manageApps.target = "_blank";
+  manageApps.rel = "noopener noreferrer";
+  packagesHeader.appendChild(manageApps);
+  packages.appendChild(packagesHeader);
+  scdSetupRenderPrerequisites(packages, prerequisites, errors.apps);
+  main.appendChild(packages);
+
+  const skipped = scdSetupElement("section", "scd-setup__section");
+  skipped.appendChild(
+    scdSetupElement("p", "scd-setup__eyebrow", "NOT RECOMMENDED YET"),
+  );
+  skipped.appendChild(
+    scdSetupElement("h2", "", "Packages skipped because data is absent"),
+  );
+  skipped.appendChild(
+    scdSetupElement(
+      "p",
+      "scd-setup__section-intro",
+      "These packages are optional until the corresponding source is onboarded. The listed dashboard areas will remain empty or unavailable.",
+    ),
+  );
+  const skippedList = scdSetupElement("div", "scd-setup__impact-list");
+  skippedPackages.forEach((item) => {
+    const row = scdSetupElement("article", "scd-setup__impact");
+    row.appendChild(scdSetupElement("strong", "", item.name));
+    row.appendChild(scdSetupElement("span", "", item.impact));
+    skippedList.appendChild(row);
+  });
+  skipped.appendChild(skippedList);
+  aside.appendChild(skipped);
+  scdSetupRenderNavigator(aside, appEntries);
+  workspace.appendChild(main);
+  workspace.appendChild(aside);
+  content.appendChild(workspace);
+
+  scdSetupRenderActions(
+    root,
+    [
+      {
+        label: "Back to data discovery",
+        secondary: true,
+        onClick: () => scdSetupRenderDiscoveryStep(root),
+      },
+      {
+        label: "Next: tune index macros",
+        // eslint-disable-next-line no-use-before-define
+        onClick: () => scdSetupShowTuningStep(root),
+      },
+    ],
     needsAttention
-      ? `${needsAttention} package${needsAttention === 1 ? "" : "s"} need attention. You can still review index routing while an administrator verifies deployment.`
-      : tuningAction.readyNote,
+      ? `${needsAttention} recommended package${needsAttention === 1 ? "" : "s"} need attention. You can still review index routing.`
+      : "The recommended package set is ready. Continue to index routing.",
   );
-  actions.appendChild(summary);
+}
+
+function scdSetupShowTuningStep(root) {
+  const setupRoot = root;
+  const tunerRoot = document.getElementById("scan-root");
+  if (!tunerRoot) {
+    scdSetupShowError(
+      setupRoot,
+      "The integrated macro tuner could not be mounted.",
+    );
+    return;
+  }
+  window.history.replaceState(
+    null,
+    "",
+    scdSetupTuningUrl(window.location.pathname),
+  );
+  setupRoot.hidden = true;
+  tunerRoot.hidden = false;
+  if (tunerRoot.dataset.loaded === "true") {
+    return;
+  }
+  tunerRoot.dataset.loaded = "loading";
+  const assetUrl = `/static/app/${SCD_SETUP_APP}/pages/macro_index_tuning.js?v=${Date.now()}`;
+  if (typeof window.require !== "function") {
+    tunerRoot.dataset.loaded = "error";
+    tunerRoot.textContent = "The integrated macro tuner could not be loaded.";
+    return;
+  }
+  window.require(
+    [assetUrl],
+    () => {
+      tunerRoot.dataset.loaded = "true";
+    },
+    () => {
+      tunerRoot.dataset.loaded = "error";
+      tunerRoot.textContent = "The integrated macro tuner could not be loaded.";
+    },
+  );
+}
+
+function scdSetupRestoreStep(root, step) {
+  const setupRoot = root;
+  const tunerRoot = document.getElementById("scan-root");
+  if (tunerRoot) {
+    tunerRoot.hidden = true;
+  }
+  setupRoot.hidden = false;
+  window.history.replaceState(null, "", `${window.location.pathname}?setup=1`);
+  if (step === 1) {
+    scdSetupRenderDiscoveryStep(setupRoot);
+  } else {
+    scdSetupRenderPackageStep(setupRoot);
+  }
+  setupRoot.querySelector("h1")?.focus?.();
+}
+
+function scdSetupRenderResults(root, dataRows, appEntries, errors, configured) {
+  const setupRoot = root;
+  setupRoot.scdSetupState = {
+    appEntries,
+    configured,
+    dataRows,
+    errors,
+  };
+  if (scdSetupIsTuningHash(window.location.hash)) {
+    scdSetupShowTuningStep(setupRoot);
+    return;
+  }
+  scdSetupRenderDiscoveryStep(setupRoot);
 }
 
 function scdSetupLoad(root, configured) {
-  scdSetupSetActiveStep(root, configured ? 2 : 1);
+  scdSetupSetActiveStep(root, 1);
   const content = root.querySelector(".scd-setup__content");
   const actions = root.querySelector(".scd-setup__actions");
   content.textContent = "";
@@ -972,27 +1263,23 @@ function scdSetupRender(root, configured) {
       "SPLUNK APP FOR SECURE NETWORKING · SETUP",
     ),
   );
-  brandCopy.appendChild(
-    scdSetupElement(
-      "h1",
-      "",
-      configured
-        ? "Setup and data readiness"
-        : "Get ready to explore your Cisco environment",
-    ),
+  const heading = scdSetupElement(
+    "h1",
+    "",
+    "Discover your Cisco environment",
   );
+  heading.tabIndex = -1;
+  brandCopy.appendChild(heading);
   brandCopy.appendChild(
     scdSetupElement(
       "p",
       "",
-      configured
-        ? "Review package health and discovered Cisco data, then tune the index macros that power your dashboards."
-        : "Confirm the packages used by Searchbase, review discovered data, then tune index macros.",
+      "Start with the data this Splunk deployment actually has, then build a setup plan around it.",
     ),
   );
   brand.appendChild(brandCopy);
   header.appendChild(brand);
-  scdSetupRenderStepper(header, configured ? 2 : 1);
+  scdSetupRenderStepper(header, 1);
   shell.appendChild(header);
   shell.appendChild(scdSetupElement("div", "scd-setup__content"));
   shell.appendChild(scdSetupElement("footer", "scd-setup__actions"));
@@ -1013,6 +1300,10 @@ function scdSetupStart() {
         return;
       }
       scdSetupRender(root, scdSetupIsConfigured(payload));
+      window.addEventListener("scd:setup-step", (event) => {
+        const requestedStep = Number(event && event.detail && event.detail.step);
+        scdSetupRestoreStep(root, requestedStep === 1 ? 1 : 2);
+      });
     })
     .catch(() => {
       root.textContent = "";
@@ -1035,15 +1326,16 @@ if (typeof module !== "undefined" && module.exports) {
     csrfToken: scdSetupCsrfToken,
     discoveryEndpoint: scdSetupDiscoveryEndpoint,
     endpoint: scdSetupEndpoint,
-    fullTuningUrl: scdSetupFullTuningUrl,
     homeUrl: scdSetupHomeUrl,
     isConfigured: scdSetupIsConfigured,
     isOnDemand: scdSetupIsOnDemand,
+    isTuningHash: scdSetupIsTuningHash,
     localePrefix: scdSetupLocalePrefix,
     parseExportRows: scdSetupParseExportRows,
+    resolveCapabilities: scdSetupResolveCapabilities,
     resolvePrerequisites: scdSetupResolvePrerequisites,
+    resolveSkippedPackages: scdSetupResolveSkippedPackages,
     shouldRender: scdSetupShouldRender,
-    tuningAction: scdSetupTuningAction,
     tuningUrl: scdSetupTuningUrl,
   };
 }

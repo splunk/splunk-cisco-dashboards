@@ -18,13 +18,17 @@
 - Setup and Macro Index Tuning now use the same fixed dark Splunk shell,
   layered C3 atmospheric canvas, charcoal operational panels, restrained
   borders, semantic status tints, and 1CD-themed controls as the Secure
-  Networking home workspace. Their existing setup, scanning, editing, and
-  save workflows are unchanged.
+  Networking home workspace.
 - Setup is now the single visible administration entry point for readiness and
-  index routing. First-run users continue into guided tuning, while configured
-  installations get a direct full-tuner action without repeating onboarding;
-  the advanced Macro Index Tuning route remains available for deep links and
-  diagnostics.
+  index routing. Its restored three-step workflow discovers available customer
+  data, explains which dashboard areas will remain unavailable, recommends only
+  the relevant apps and add-ons, and embeds full macro tuning as the final step
+  without navigating to a second dashboard. Existing tuner deep links redirect
+  into the integrated Setup step. Data-center and Meraki sourcetypes now map to
+  their correct solution coverage and package recommendations, responsive
+  discovery cards no longer compress beside expanded evidence, and the final
+  step keeps disclosure and action surfaces consistently dark without changing
+  the user's saved app-wide theme preference.
 - The former Other drawer is now a More Dashboards library organized into
   executive, network and IT, security, workplace, event, visual-lab, and
   administration groups. Experimental destinations remain explicitly marked

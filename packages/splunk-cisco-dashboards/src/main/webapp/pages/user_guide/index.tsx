@@ -328,10 +328,10 @@ function GuideContents({
 
       <div className="scd-guide-toc-footer">
         <a
-          href={appUrl("macro_index_tuning")}
+          href={`${appUrl("start")}?setup=1#tune-indexes`}
           className="scd-guide-toc-quicklink"
         >
-          Macro Index Tuning →
+          Setup: Tune indexes →
         </a>
         <a
           href={appUrl("searchbase_canvas")}
@@ -602,7 +602,7 @@ const supportMacros = [
 const troubleshootingRows = [
   [
     "Panels are empty",
-    "Run Macro Index Tuning first, verify the time range, then open the panel in Search.",
+    "Open Setup, run Tune indexes, verify the time range, then open the panel in Search.",
   ],
   [
     "Searches are slow",
@@ -623,8 +623,8 @@ const troubleshootingRows = [
 ];
 
 export default function UserGuidePage(): JSX.Element {
-  const macroTuningUrl = appUrl("macro_index_tuning");
   const setupUrl = `${appUrl("start")}?setup=1`;
+  const setupTuningUrl = `${setupUrl}#tune-indexes`;
   const workspaceUrl = appUrl("insights_workspace");
   const secureNetworkingUrl = appUrl("secure_networking_profile");
   const scdMacrosUrl = managerUrl(APP_NAME, "data/macros");
@@ -934,9 +934,9 @@ export default function UserGuidePage(): JSX.Element {
               </span>
             </div>
             <div className="scd-guide-no-print mt-5 flex flex-wrap gap-2">
-              <GuideLink href={macroTuningUrl}>
+              <GuideLink href={setupTuningUrl}>
                 <SlidersHorizontal size={15} />
-                Macro Index Tuning
+                Setup: Tune indexes
               </GuideLink>
               <GuideLink
                 href={searchUrl(
@@ -1087,9 +1087,9 @@ export default function UserGuidePage(): JSX.Element {
                   <PlayCircle size={15} />
                   Open Guided Setup
                 </GuideLink>
-                <GuideLink href={macroTuningUrl}>
+                <GuideLink href={setupTuningUrl}>
                   <SlidersHorizontal size={15} />
-                  Open Macro Index Tuning
+                  Open Tune indexes
                 </GuideLink>
                 <GuideLink
                   href={searchUrl(
@@ -1104,19 +1104,21 @@ export default function UserGuidePage(): JSX.Element {
 
             <Section
               id="macro-tuning"
-              title="Macro Index Tuning"
+              title="Setup: Tune Indexes"
               kicker="The most important setup step. It maps your real indexes to the macros the dashboards and data models use."
               icon={<SlidersHorizontal size={19} />}
             >
               <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
                 <div className="space-y-4 text-sm leading-6 text-slate-700">
                   <p className="m-0">
-                    The <strong>Macro Index Tuning</strong> dashboard is a React
-                    view mounted by{" "}
+                    <strong>Tune indexes</strong> is the third and final step of
+                    the Setup workflow. Its React interface is loaded directly
+                    inside Setup; the legacy{" "}
                     <code className="rounded bg-slate-100 px-1 py-0.5">
                       macro_index_tuning.xml
                     </code>
-                    . The fast scan uses the{" "}
+                    {" "}route redirects here so administrators have one setup
+                    destination. The fast scan uses the{" "}
                     <code className="rounded bg-slate-100 px-1 py-0.5">
                       admin_macro_index_tuning
                     </code>
@@ -1444,8 +1446,8 @@ iseval = 0`}</CodeBlock>
                 </InfoCard>
                 <InfoCard title="Dashboard Studio and React">
                   Most operational dashboards are Dashboard Studio XML. Utility
-                  pages such as Macro Index Tuning and this guide are React
-                  bundles mounted inside Simple XML shells.
+                  experiences such as Setup's Tune indexes step and this guide
+                  use React bundles mounted inside Simple XML shells.
                 </InfoCard>
               </div>
             </Section>
@@ -1458,7 +1460,7 @@ iseval = 0`}</CodeBlock>
             >
               <div className="grid gap-4 md:grid-cols-3">
                 <InfoCard title="After index changes">
-                  Rerun Macro Index Tuning and save updated macros before
+                  Open Setup, rerun Tune indexes, and save updated macros before
                   troubleshooting individual panels.
                 </InfoCard>
                 <InfoCard title="After add-on changes">

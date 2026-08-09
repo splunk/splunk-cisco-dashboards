@@ -170,6 +170,24 @@
     color: #fff !important;
 }
 
+#scan-root .scd-admin-dark summary[class*='hover:bg-slate-']:hover {
+    background: rgb(26 35 48 / 96%) !important;
+    color: #ecf0f5 !important;
+}
+
+#scan-root .scd-admin-dark summary:focus-visible {
+    outline: 2px solid #649ef5;
+    outline-offset: -2px;
+}
+
+#scan-root .scd-admin-dark .scd-setup-action-bar {
+    border-color: rgb(65 74 86 / 64%) !important;
+    background: rgb(15 17 23 / 96%) !important;
+    box-shadow:
+        0 -8px 24px rgb(0 0 0 / 28%),
+        inset 0 1px 0 rgb(255 255 255 / 3%) !important;
+}
+
 #scan-root .scd-admin-dark .shadow-sm {
     box-shadow:
         0 3px 8px rgb(0 0 0 / 12%),

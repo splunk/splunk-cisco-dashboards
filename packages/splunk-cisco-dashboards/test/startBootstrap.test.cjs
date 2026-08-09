@@ -16,15 +16,16 @@ const {
   csrfToken,
   discoveryEndpoint,
   endpoint,
-  fullTuningUrl,
   homeUrl,
   isConfigured,
   isOnDemand,
+  isTuningHash,
   localePrefix,
   parseExportRows,
+  resolveCapabilities,
   resolvePrerequisites,
+  resolveSkippedPackages,
   shouldRender,
-  tuningAction,
   tuningUrl,
 } = require(bootstrapPath);
 
@@ -42,34 +43,11 @@ assert.equal(
 );
 assert.equal(
   tuningUrl("/de-DE/app/splunk-cisco-dashboards/start"),
-  "/de-DE/app/splunk-cisco-dashboards/macro_index_tuning?setup=1",
+  "/de-DE/app/splunk-cisco-dashboards/start?setup=1#tune-indexes",
 );
-assert.equal(
-  fullTuningUrl("/de-DE/app/splunk-cisco-dashboards/start"),
-  "/de-DE/app/splunk-cisco-dashboards/macro_index_tuning",
-);
-assert.deepEqual(
-  tuningAction("/en-US/app/splunk-cisco-dashboards/start", true),
-  {
-    ariaLabel: "Open the full index macro tuner",
-    description:
-      "Open the full tuner whenever indexes or sourcetypes change. Setup checks stay available here without forcing you through onboarding again.",
-    footerLabel: "Tune index macros",
-    heading: "Keep dashboard macros current",
-    href: "/en-US/app/splunk-cisco-dashboards/macro_index_tuning",
-    label: "Tune index macros",
-    readyNote:
-      "Setup is complete. Reopen the tuner whenever indexes, sourcetypes, or routing requirements change.",
-  },
-);
-assert.equal(
-  tuningAction("/en-US/app/splunk-cisco-dashboards/start", false).href,
-  "/en-US/app/splunk-cisco-dashboards/macro_index_tuning?setup=1",
-);
-assert.equal(
-  tuningAction("/en-US/app/splunk-cisco-dashboards/start", false).label,
-  "Continue guided setup",
-);
+assert.equal(isTuningHash("#tune-indexes"), true);
+assert.equal(isTuningHash("tune-indexes"), true);
+assert.equal(isTuningHash("#review-packages"), false);
 assert.equal(
   appsEndpoint("/en-US/app/splunk-cisco-dashboards/start"),
   "/en-US/splunkd/__raw/services/apps/local?count=0&output_mode=json",
@@ -181,6 +159,18 @@ const prerequisites = resolvePrerequisites(
       count: 5,
       latest: 0,
     },
+    {
+      index: "aci",
+      sourcetype: "cisco:dc:aci:class",
+      count: 25,
+      latest: 0,
+    },
+    {
+      index: "meraki",
+      sourcetype: "meraki:devices",
+      count: 12,
+      latest: 0,
+    },
   ],
   [
     {
@@ -204,27 +194,23 @@ const prerequisites = resolvePrerequisites(
 assert.deepEqual(
   prerequisites.map((item) => item.id),
   [
-    "dc-networking",
-    "catalyst-app",
-    "security-cloud",
+    "cim",
     "searchbase",
     "ai-toolkit",
     "scientific-python",
-    "meraki-ta",
-    "windows-ta",
-    "nix-ta",
+    "dc-networking",
+    "catalyst-app",
     "catalyst-ta",
-    "spaces-ta",
-    "thousandeyes-ta",
+    "security-cloud",
+    "meraki-ta",
   ],
 );
-assert.equal(prerequisites.length, 12);
-assert.equal(prerequisites[0].status, "update");
-assert.equal(prerequisites[1].status, "installed");
-const nix = prerequisites.find((item) => item.id === "nix-ta");
-assert.equal(nix.status, "installed");
-assert.equal(nix.installedId, "Splunk_TA_nix");
-assert.equal(nix.splunkbase, "https://splunkbase.splunk.com/app/833");
+assert.equal(prerequisites.length, 9);
+assert.equal(prerequisites.find((item) => item.id === "cim").status, "missing");
+assert.equal(
+  prerequisites.find((item) => item.id === "catalyst-app").status,
+  "installed",
+);
 const scientificPython = prerequisites.find(
   (item) => item.id === "scientific-python",
 );
@@ -236,6 +222,58 @@ assert.equal(
 assert.equal(
   scientificPython.displayId,
   "Splunk_SA_Scientific_Python_<os>",
+);
+
+const capabilityCoverage = resolveCapabilities([
+  {
+    index: "identity",
+    sourcetype: "cisco:ise:syslog",
+    count: 300,
+    latest: 0,
+  },
+  {
+    index: "network",
+    sourcetype: "cisco:dnac:devicehealth",
+    count: 200,
+    latest: 0,
+  },
+  {
+    index: "aci",
+    sourcetype: "cisco:dc:nexus9k:syslog",
+    count: 150,
+    latest: 0,
+  },
+  {
+    index: "meraki",
+    sourcetype: "meraki:devices",
+    count: 100,
+    latest: 0,
+  },
+]);
+assert.equal(
+  capabilityCoverage.find((item) => item.id === "identity").detected,
+  true,
+);
+assert.equal(
+  capabilityCoverage.find((item) => item.id === "enterprise-networking")
+    .detected,
+  true,
+);
+assert.equal(
+  capabilityCoverage.find((item) => item.id === "data-center").detected,
+  true,
+);
+assert.equal(
+  capabilityCoverage.find((item) => item.id === "meraki").detected,
+  true,
+);
+assert.equal(
+  capabilityCoverage.find((item) => item.id === "thousandeyes").detected,
+  false,
+);
+assert.equal(
+  resolveSkippedPackages([]).some((item) => item.id === "thousandeyes-ta"),
+  true,
 );
 
 const securityCloudPrerequisites = resolvePrerequisites(
@@ -265,7 +303,10 @@ const securityCloud = securityCloudPrerequisites.find(
 );
 assert.equal(securityCloud.status, "installed");
 assert.equal(securityCloud.splunkbase, "https://splunkbase.splunk.com/app/7404");
-assert.deepEqual(securityCloud.sourcetypes, []);
+assert.deepEqual(securityCloud.sourcetypes, [
+  "cisco:duo:user",
+  "cisco:sfw:estreamer",
+]);
 
 global.window = { $C: { FORM_KEY: "runtime-token" } };
 global.document = { cookie: "" };
@@ -285,13 +326,15 @@ const bootstrapSource = fs.readFileSync(bootstrapPath, "utf8");
 assert.match(bootstrapSource, /Splunk Cisco App Navigator/);
 assert.match(bootstrapSource, /https:\/\/splunkbase\.splunk\.com\/app\/8566/);
 assert.match(bootstrapSource, /scd-setup__disclosure/);
-assert.match(bootstrapSource, /Setup and data readiness/);
-assert.match(bootstrapSource, /Keep dashboard macros current/);
-assert.match(bootstrapSource, /Continue guided setup/);
-assert.match(bootstrapSource, /Open the full index macro tuner/);
-assert.match(bootstrapSource, /Setup progress: complete/);
+assert.match(bootstrapSource, /Discover your Cisco environment/);
+assert.match(bootstrapSource, /sourcetype="meraki:\*"/);
+assert.match(bootstrapSource, /Next: review recommendations/);
+assert.match(bootstrapSource, /Next: tune index macros/);
+assert.match(bootstrapSource, /Packages skipped because data is absent/);
+assert.match(bootstrapSource, /scdSetupShowTuningStep/);
+assert.match(bootstrapSource, /pages\/macro_index_tuning\.js/);
+assert.doesNotMatch(bootstrapSource, /Open the full index macro tuner/);
 assert.match(bootstrapSource, /aria-current/);
-assert.match(bootstrapSource, /configured \? 4 : 2/);
 assert.match(bootstrapSource, /Splunk_SA_Scientific_Python_<os>/);
 assert.match(bootstrapSource, /Update \$\{prerequisite\.name\} in Manage Apps/);
 const legacyOverviewTemplatePath = path.resolve(
@@ -345,12 +388,42 @@ const macroTuningStyleSource = fs.readFileSync(
   ),
   "utf8",
 );
+const macroTuningRenderSource = fs.readFileSync(
+  path.resolve(
+    __dirname,
+    "../src/main/webapp/pages/macro_index_tuning/render.tsx",
+  ),
+  "utf8",
+);
+const setupStyleSource = fs.readFileSync(
+  path.resolve(
+    __dirname,
+    "../src/main/resources/splunk/appserver/static/start.css",
+  ),
+  "utf8",
+);
+const macroTuningBootstrapSource = fs.readFileSync(
+  path.resolve(
+    __dirname,
+    "../src/main/resources/splunk/appserver/static/macro_index_tuning_bootstrap.js",
+  ),
+  "utf8",
+);
 assert.match(setupViewSource, /<dashboard\b[^>]*\btheme="dark"/);
+assert.match(setupViewSource, /id="scan-root" hidden="hidden"/);
 assert.match(macroTuningViewSource, /<dashboard\b[^>]*\btheme="dark"/);
 assert.match(macroTuningSource, /scd-admin-dark dark/);
-assert.match(macroTuningSource, /setTheme\("dark"\)/);
+assert.doesNotMatch(macroTuningSource, /setTheme\("dark"\)/);
+assert.match(macroTuningRenderSource, /fixedColorScheme: 'dark'/);
+assert.match(macroTuningSource, /Back to recommendations/);
+assert.match(macroTuningSource, /scd:setup-step/);
+assert.doesNotMatch(macroTuningSource, /Open full tuner/);
+assert.match(macroTuningBootstrapSource, /start.*setup=1#tune-indexes/s);
 assert.match(macroTuningStyleSource, /scd-admin-dark/);
 assert.match(macroTuningStyleSource, /radial-gradient/);
+assert.match(macroTuningStyleSource, /scd-setup-action-bar/);
+assert.match(macroTuningStyleSource, /summary\[class\*='hover:bg-slate-'\]:hover/);
+assert.match(setupStyleSource, /@container setup-content \(max-width: 880px\)/);
 assert.match(macroTuningSource, /Review only what needs attention/);
 assert.match(macroTuningSource, /Balanced \(recommended\)/);
 assert.match(macroTuningSource, /Tune app-owned routing macros/);

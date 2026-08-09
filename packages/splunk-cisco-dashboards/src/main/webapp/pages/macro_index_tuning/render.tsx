@@ -6,4 +6,4 @@ import MacroIndexTuningPage from './index';
 import '@/common/styles/tailwind.css';
 import './macro-index-tuning.css';
 
-mountPageRaw(MacroIndexTuningPage);
+mountPageRaw(MacroIndexTuningPage, { fixedColorScheme: 'dark' });

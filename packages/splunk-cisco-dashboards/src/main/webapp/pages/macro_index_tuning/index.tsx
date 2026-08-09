@@ -31,7 +31,6 @@ import {
 } from "@/common/services/splunkSearchService";
 import { getSearchbaseCatalogue } from "@/common/services/searchbaseCatalogue";
 import { splunkSearchAppUrl } from "@/common/lib/splunkSearchUrl";
-import { useTheme } from "@/common/hooks/useTheme";
 import timeParser from "../dashboardbuilder/custominput/timeparser";
 
 const APP_NAME = "splunk-cisco-dashboards";
@@ -840,6 +839,9 @@ const isInitialSetupMode = (): boolean =>
   typeof window !== "undefined" &&
   new URLSearchParams(window.location.search).get("setup") === "1";
 
+const isIntegratedSetupView = (): boolean =>
+  typeof window !== "undefined" && /\/start\/?$/.test(window.location.pathname);
+
 const isTrueConfigValue = (value: unknown): boolean =>
   value === true ||
   value === 1 ||
@@ -1644,10 +1646,7 @@ function useTimeRangeParser(): {
 
 export default function MacroIndexTuningPage(): JSX.Element {
   const setupMode = isInitialSetupMode();
-  const { setTheme } = useTheme();
-  useEffect(() => {
-    setTheme("dark");
-  }, [setTheme]);
+  const integratedSetupView = isIntegratedSetupView();
   const [rows, setRows] = useState<EditableMacroRow[]>([]);
   const [cimRows, setCimRows] = useState<EditableMacroRow[]>([]);
   const [scanState, setScanState] = useState<ScanState>("idle");
@@ -1705,6 +1704,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
   const cimAbortRef = useRef<AbortController | null>(null);
   const searchSplRef = useRef<string>("");
   const macroPreviewRef = useRef<HTMLTextAreaElement>(null);
+  const setupSurfaceRef = useRef<HTMLElement>(null);
   const fastTimeParser = useTimeRangeParser();
   const cimTimeParser = useTimeRangeParser();
   const allRows = useMemo(() => [...rows, ...cimRows], [cimRows, rows]);
@@ -1728,6 +1728,25 @@ export default function MacroIndexTuningPage(): JSX.Element {
       TARGET_APP_ORDER.filter((targetApp) => installedAppIds.has(targetApp)),
     [installedAppIds],
   );
+
+  useEffect(() => {
+    if (!setupMode || !setupSurfaceRef.current) return undefined;
+    const surface = setupSurfaceRef.current;
+    const updateFooterInset = () => {
+      surface.style.setProperty(
+        "--scd-setup-footer-left",
+        `${Math.max(0, Math.round(surface.getBoundingClientRect().left))}px`,
+      );
+    };
+    const resizeObserver = new ResizeObserver(updateFooterInset);
+    resizeObserver.observe(surface);
+    window.addEventListener("resize", updateFooterInset);
+    updateFooterInset();
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateFooterInset);
+    };
+  }, [setupMode]);
   const isTargetAppInstalled = useCallback(
     (targetApp: string): boolean => installedAppIds.has(targetApp),
     [installedAppIds],
@@ -2391,6 +2410,16 @@ export default function MacroIndexTuningPage(): JSX.Element {
     summariesOnlyBlocked,
   ]);
 
+  const returnToSetupPackages = useCallback(() => {
+    if (integratedSetupView) {
+      window.dispatchEvent(
+        new CustomEvent("scd:setup-step", { detail: { step: 2 } }),
+      );
+      return;
+    }
+    window.location.assign(`${splunkAppViewUrl(APP_SETUP_VIEW)}?setup=1`);
+  }, [integratedSetupView]);
+
   const saveAdhocMacro = useCallback(async () => {
     const definition = adhocDefinition.trim();
     if (!definition) return;
@@ -2626,11 +2655,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
       setupActionMessage = "Waiting for the automatic index scan to finish.";
     } else if (scanState === "error") {
       setupActionMessage =
-        "The index scan did not complete. Finish setup now and retry macro tuning later.";
+        "The index scan did not complete. Finish setup now and retry Tune indexes later from Setup.";
     }
 
     return (
-      <main className="scd-admin-dark dark min-h-screen bg-[#f4f8fa] pb-28 text-slate-800">
+      <main
+        ref={setupSurfaceRef}
+        className="scd-admin-dark dark min-h-screen bg-[#f4f8fa] pb-28 text-slate-800"
+      >
         <section className="bg-[#102a43] text-white">
           <div className="mx-auto grid max-w-[1180px] gap-6 px-7 py-5 md:grid-cols-[minmax(0,1fr)_400px] md:items-center">
             <div className="min-w-0">
@@ -2642,7 +2674,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               </h1>
               <p className="mt-1.5 max-w-3xl text-sm text-slate-300">
                 Review exceptions, choose a search-performance mode, then save
-                and unlock the dashboards.
+                and return to the dashboards.
               </p>
             </div>
             <ol className="grid grid-cols-3 overflow-hidden rounded-md bg-white/10 text-xs font-bold">
@@ -2923,8 +2955,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
               </section>
 
               <p className="mt-3 text-xs text-slate-500">
-                All CIM data-model macros remain optional and can be tuned
-                after setup.
+                All CIM data-model macros remain optional and can be tuned later
+                by reopening Setup.
               </p>
             </section>
 
@@ -2940,7 +2972,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   Choose how searches run
                 </h2>
                 <p className="mt-1 text-xs text-slate-600">
-                  You can change this later from Macro Index Tuning.
+                  You can revisit this choice later from Setup.
                 </p>
 
                 <div className="mt-4 grid gap-3">
@@ -2983,8 +3015,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
                         Accelerated summaries only
                       </span>
                       <span className="mt-0.5 block text-xs leading-5 text-slate-600">
-                        Fastest, but requires all three Cisco data models to be
-                        accelerated.
+                        Fastest, but requires all three required Cisco data
+                        models to be accelerated.
                       </span>
                     </span>
                   </label>
@@ -3194,16 +3226,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 </summary>
                 <div className="grid gap-2 border-t border-slate-200 p-4 text-xs text-slate-600">
                   <p>
-                    Run CIM discovery, tune external-app macros, inspect raw
-                    SPL, or use per-macro diagnostics after setup.
+                    Run CIM discovery, tune app-owned macros, inspect raw SPL,
+                    or use per-macro diagnostics without leaving Setup.
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <a
-                      href={splunkAppViewUrl("macro_index_tuning")}
-                      className={`${compactButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
-                    >
-                      Open full tuner
-                    </a>
                     <a
                       href={openSearchUrl || undefined}
                       target="_blank"
@@ -3225,7 +3251,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
 
         <section
           aria-label="Initial setup actions"
-          className="fixed bottom-0 left-0 right-0 z-[80] flex flex-wrap items-center justify-between gap-3 border-t border-slate-300 bg-white/95 px-6 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.14)] backdrop-blur md:left-[72px]"
+          className="scd-setup-action-bar fixed bottom-0 right-0 z-[80] flex flex-wrap items-center justify-between gap-3 border-t border-slate-700 bg-[#0f1117] px-6 py-3 shadow-[0_-8px_24px_rgba(0,0,0,0.3)] backdrop-blur"
+          style={{ left: "var(--scd-setup-footer-left, 0px)" }}
         >
           <div>
             <div className="text-xs font-bold uppercase tracking-wide text-sky-800">
@@ -3236,13 +3263,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <a
-              href={splunkAppViewUrl(APP_SETUP_VIEW)}
+            <button
+              type="button"
+              onClick={returnToSetupPackages}
               className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
             >
               <ArrowLeft size={16} />
-              Back
-            </a>
+              Back to recommendations
+            </button>
             <button
               type="button"
               onClick={finishInitialSetup}
@@ -3342,13 +3370,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <a
-              href={splunkAppViewUrl(APP_SETUP_VIEW)}
+            <button
+              type="button"
+              onClick={returnToSetupPackages}
               className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
             >
               <ArrowLeft size={16} />
-              Back
-            </a>
+              Back to recommendations
+            </button>
             <button
               type="button"
               onClick={finishInitialSetup}

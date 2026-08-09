@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import CopyrightMark from '@/common/components/CopyrightMark';
 import AppThemeProvider from '@/common/theme/AppThemeProvider';
+import type { ResolvedTheme } from '@/common/theme/themePreference';
 import '@/common/styles/splunkShellTheme.css';
 
 /**
@@ -11,7 +12,14 @@ import '@/common/styles/splunkShellTheme.css';
  */
 const MAX_RETRIES = 100;
 
-export default function mountPageRaw(PageComponent: React.ComponentType): void {
+interface MountPageRawOptions {
+    fixedColorScheme?: ResolvedTheme;
+}
+
+export default function mountPageRaw(
+    PageComponent: React.ComponentType,
+    options: MountPageRawOptions = {}
+): void {
     let reactRoot: Root | null = null;
     let attempts = 0;
 
@@ -30,7 +38,7 @@ export default function mountPageRaw(PageComponent: React.ComponentType): void {
         }
         reactRoot.render(
             <React.StrictMode>
-                <AppThemeProvider>
+                <AppThemeProvider fixedColorScheme={options.fixedColorScheme}>
                     <>
                         <PageComponent />
                         <CopyrightMark />

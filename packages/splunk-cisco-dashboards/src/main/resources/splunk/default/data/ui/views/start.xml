@@ -8,6 +8,7 @@
                 <main id="scd-setup-root" class="scd-setup" aria-live="polite">
                     <div class="scd-setup__loading">Checking setup status...</div>
                 </main>
+                <div id="scan-root" hidden="hidden"></div>
             </html>
         </panel>
     </row>
