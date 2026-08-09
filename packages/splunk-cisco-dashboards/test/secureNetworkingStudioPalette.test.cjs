@@ -643,6 +643,36 @@ assert.deepEqual(
   "the five pillar menus must wire all 16 managed Studio dashboards",
 );
 
+const overviewMenuLabels = Object.fromEntries(
+  [...navSource.matchAll(/<a href="dashboardbuilder#\/([^"]+)">([^<]+)<\/a>/g)].map(
+    ([, dashboardId, label]) => [dashboardId, label],
+  ),
+);
+assert.deepEqual(
+  {
+    secure_networking_zta: overviewMenuLabels.secure_networking_zta,
+    secure_networking_secure_infrastructure:
+      overviewMenuLabels.secure_networking_secure_infrastructure,
+    secure_networking_scalable_network_segmentation:
+      overviewMenuLabels.secure_networking_scalable_network_segmentation,
+    secure_networking_segmentation_overview:
+      overviewMenuLabels.secure_networking_segmentation_overview,
+    secure_networking_hybrid_mesh_firewalling:
+      overviewMenuLabels.secure_networking_hybrid_mesh_firewalling,
+    secure_networking_agentic_ops: overviewMenuLabels.secure_networking_agentic_ops,
+  },
+  {
+    secure_networking_zta: "Zero Trust Posture Overview",
+    secure_networking_secure_infrastructure: "Infrastructure Posture Overview",
+    secure_networking_scalable_network_segmentation:
+      "Segmentation Readiness Overview",
+    secure_networking_segmentation_overview: "Segmentation Operations Overview",
+    secure_networking_hybrid_mesh_firewalling: "Hybrid Mesh Enforcement Overview",
+    secure_networking_agentic_ops: "Operational Intelligence Overview",
+  },
+  "pillar overview links must use distinct role-specific labels",
+);
+
 const densityPilot = dashboardViews.find(
   ({ fileName }) =>
     fileName === "secure_networking_zta_authentication_policy_enforcement.xml",
