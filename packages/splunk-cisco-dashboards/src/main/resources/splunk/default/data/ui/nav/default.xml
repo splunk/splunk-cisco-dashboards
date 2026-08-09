@@ -12,7 +12,7 @@
         primary navigation structure.
     -->
     <collection label="Zero Trust Access" icon="shieldkeyhole">
-        <a href="dashboardbuilder#/secure_networking_zta">Zero Trust Posture Overview</a>
+        <a href="dashboardbuilder#/secure_networking_zta">Zero Trust Posture</a>
         <divider />
         <a href="dashboardbuilder#/secure_networking_zta_authentication_policy_enforcement">Authentication and Policy Enforcement</a>
         <a href="dashboardbuilder#/secure_networking_zta_policy_management">Policy Management</a>
@@ -22,19 +22,19 @@
     </collection>
 
     <collection label="Secure Infrastructure" icon="layerstriple">
-        <a href="dashboardbuilder#/secure_networking_secure_infrastructure">Infrastructure Posture Overview</a>
+        <a href="dashboardbuilder#/secure_networking_secure_infrastructure">Infrastructure Posture</a>
         <divider />
         <a href="dashboardbuilder#/secure_networking_secure_infrastructure_status">Secure Infrastructure Status</a>
     </collection>
 
     <collection label="Scalable Network Segmentation" icon="nodetopology">
-        <a href="dashboardbuilder#/secure_networking_scalable_network_segmentation">Segmentation Readiness Overview</a>
+        <a href="dashboardbuilder#/secure_networking_scalable_network_segmentation">Segmentation Readiness</a>
         <divider />
-        <a href="dashboardbuilder#/secure_networking_segmentation_overview">Segmentation Operations Overview</a>
+        <a href="dashboardbuilder#/secure_networking_segmentation_overview">Segmentation Operations</a>
     </collection>
 
     <collection label="Hybrid Mesh Firewalling" icon="forwarderuniversal">
-        <a href="dashboardbuilder#/secure_networking_hybrid_mesh_firewalling">Hybrid Mesh Enforcement Overview</a>
+        <a href="dashboardbuilder#/secure_networking_hybrid_mesh_firewalling">Hybrid Mesh Enforcement</a>
         <divider />
         <a href="dashboardbuilder#/secure_networking_hmf_sdwan_network_health_monitoring">SD-WAN and Network Health Monitoring</a>
         <a href="dashboardbuilder#/secure_networking_hmf_threat_detection_enforcement">Threat Detection and Enforcement</a>
@@ -42,9 +42,9 @@
     </collection>
 
     <collection label="Agentic Ops" icon="pulse">
-        <a href="dashboardbuilder#/secure_networking_agentic_ops">Operational Intelligence Overview</a>
+        <a href="dashboardbuilder#/secure_networking_agentic_ops">Operational Intelligence</a>
         <divider />
-        <a href="dashboardbuilder#/secure_networking_agentic_ops_executive_overview">Executive Assurance Overview</a>
+        <a href="dashboardbuilder#/secure_networking_agentic_ops_executive_overview">Executive Assurance</a>
     </collection>
 
     <collection label="Dashboards" icon="chartcolumnpanel">

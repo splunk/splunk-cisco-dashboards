@@ -1,9 +1,9 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>Hybrid Mesh Enforcement Overview</label>
+    <label>Hybrid Mesh Enforcement</label>
     <description>Unify firewall posture, enforcement, and workload protection across the hybrid mesh.</description>
     <definition><![CDATA[
 {
-    "title": "Hybrid Mesh Enforcement Overview",
+    "title": "Hybrid Mesh Enforcement",
     "description": "Unify firewall posture, enforcement, and workload protection across the hybrid mesh.",
     "inputs": {
         "input_time_range": {
@@ -57,7 +57,7 @@
         },
         "viz_header_icon": {
             "type": "splunk.image",
-            "title": "Hybrid Mesh Enforcement Overview",
+            "title": "Hybrid Mesh Enforcement",
             "options": {
                 "preserveAspectRatio": true,
                 "src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/hybrid-mesh-firewalling.svg"
@@ -71,7 +71,7 @@
             "options": {
                 "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
-                "markdown": "# Hybrid Mesh Enforcement Overview\nUnify firewall posture, enforcement, and workload protection across the hybrid mesh\\."
+                "markdown": "# Hybrid Mesh Enforcement\nUnify firewall posture, enforcement, and workload protection across the hybrid mesh\\."
             }
         },
         "viz_card_01_background": {

@@ -1,9 +1,9 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>Segmentation Operations Overview</label>
+    <label>Segmentation Operations</label>
     <description>Summarize segment health, policy alignment, and areas needing investigation.</description>
     <definition><![CDATA[
 {
-    "title": "Segmentation Operations Overview",
+    "title": "Segmentation Operations",
     "description": "Summarize segment health, policy alignment, and areas needing investigation.",
     "inputs": {
         "input_time_range": {
@@ -57,7 +57,7 @@
         },
         "viz_header_icon": {
             "type": "splunk.image",
-            "title": "Segmentation Operations Overview",
+            "title": "Segmentation Operations",
             "options": {
                 "preserveAspectRatio": true,
                 "src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/segmentation.svg"
@@ -71,7 +71,7 @@
             "options": {
                 "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
-                "markdown": "# Segmentation Operations Overview\nSummarize segment health, policy alignment, and areas needing investigation\\."
+                "markdown": "# Segmentation Operations\nSummarize segment health, policy alignment, and areas needing investigation\\."
             }
         },
         "viz_card_01_background": {

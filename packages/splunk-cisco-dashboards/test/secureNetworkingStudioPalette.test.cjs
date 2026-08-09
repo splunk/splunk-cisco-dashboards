@@ -704,14 +704,14 @@ assert.deepEqual(
       menuDashboardLabels.secure_networking_agentic_ops_executive_overview,
   },
   {
-    secure_networking_zta: "Zero Trust Posture Overview",
-    secure_networking_secure_infrastructure: "Infrastructure Posture Overview",
+    secure_networking_zta: "Zero Trust Posture",
+    secure_networking_secure_infrastructure: "Infrastructure Posture",
     secure_networking_scalable_network_segmentation:
-      "Segmentation Readiness Overview",
-    secure_networking_segmentation_overview: "Segmentation Operations Overview",
-    secure_networking_hybrid_mesh_firewalling: "Hybrid Mesh Enforcement Overview",
-    secure_networking_agentic_ops: "Operational Intelligence Overview",
-    secure_networking_agentic_ops_executive_overview: "Executive Assurance Overview",
+      "Segmentation Readiness",
+    secure_networking_segmentation_overview: "Segmentation Operations",
+    secure_networking_hybrid_mesh_firewalling: "Hybrid Mesh Enforcement",
+    secure_networking_agentic_ops: "Operational Intelligence",
+    secure_networking_agentic_ops_executive_overview: "Executive Assurance",
   },
   "pillar overview links must use distinct role-specific labels",
 );

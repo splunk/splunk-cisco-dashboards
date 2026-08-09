@@ -12,10 +12,10 @@
   Workspace typography, C3 graph palettes, and no-red semantic KPI trends.
   Each dashboard still shares one Searchbase dispatch between a headline and
   its supporting graph, keeping initial load bounded to six searches. The five
-  pillar overview dashboards are restored to their navigation menus with
+  pillar summary dashboards are restored to their navigation menus with
   distinct posture, readiness, enforcement, and operations labels. Menu names,
   Dashboard Studio titles, and visible header titles now stay synchronized
-  across all 16 views, including the renamed Executive Assurance Overview.
+  across all 16 views, including the shortened Executive Assurance title.
 - Searchbase contextual drilldowns now use target stanza IDs instead of mutable
   `search_name` labels. All 401 shipped relationships were migrated and are
   validated for exact target existence, while existing local configuration and
