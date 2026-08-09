@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
 from scripts.harvest_dc_networking_app_to_searchbase import (
     TOKEN,
+    clean_title,
     detokenize,
     extract_dashboard,
     has_match_all_predicate,
@@ -20,6 +22,20 @@ from scripts.validate_searchbase_export import validate_stanza
 
 
 class HarvestDcNetworkingTest(unittest.TestCase):
+    def test_clean_title_strips_trailing_separators_in_linear_time(self) -> None:
+        self.assertEqual(
+            clean_title("Failure by User:   ", "Fallback"),
+            "Failure by User",
+        )
+        self.assertEqual(clean_title("Trailing - : -\t", "Fallback"), "Trailing")
+        self.assertEqual(clean_title(" - : ", "Fallback"), "Fallback")
+        self.assertEqual(clean_title("CPU - core", "Fallback"), "CPU - core")
+
+        adversarial = "-" + " -" * 20 + "X"
+        started = time.perf_counter()
+        self.assertEqual(clean_title(adversarial, "Fallback"), "X")
+        self.assertLess(time.perf_counter() - started, 0.1)
+
     def test_lints_limits_before_aggregation_and_sort_after_stats(self) -> None:
         conf = """[bad]
 search = index=main | head 100 | stats count by host

@@ -5,6 +5,9 @@
 - Dashboard Manager source editing now supports in-editor find and replace via
   the standard Command/Ctrl+F shortcut without loading Monaco's unrelated
   editor features.
+- DC Networking Searchbase harvesting now removes trailing title separators
+  with a linear scan, eliminating an exponential-backtracking ReDoS path while
+  preserving harvested search names.
 - Setup and Macro Index Tuning now use the same fixed dark Splunk shell,
   layered C3 atmospheric canvas, charcoal operational panels, restrained
   borders, semantic status tints, and 1CD-themed controls as the Secure
