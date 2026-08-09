@@ -1,5 +1,5 @@
 
-<dashboard version="2" theme="light">
+<dashboard version="2" theme="dark" stylesheet="application.css">
     <label>IT - Critical Systems Health</label>
     <description>Network health, device status, compliance, inventory, and configuration</description>
     <definition><![CDATA[
@@ -76,16 +76,16 @@
 	"visualizations": {
 		"viz_about_bg": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_about_purpose": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "# IT — Critical Systems Health\n\nReal-time, centralized view of **critical infrastructure health** across network and core systems. Use this dashboard to assess system status, identify anomalies, and prioritize response to potential service-impacting issues.\n\n**Audience:** Network Operations, Infrastructure Leads, IT Management\n**Primary Sources:** Cisco Catalyst Center (DNAC), Cisco IOS Syslog, Cisco ISE, DHCP Servers\n**Refresh:** All panels follow the global time picker; key saved searches run every 15 minutes\n\n---\n\n## How to Navigate This Dashboard\n\n**Overview** — Health scores, issue counts, syslog severity, device inventory, compliance trends.\n*Start here — confirm the backbone is operating within normal bounds.*\n\n**Details & KPI Reference** — Site-level breakdowns, WAN circuit reference, topology map, full device inventory.\n*Drill in when Overview shows degraded health or rising issue counts.*\n\n**Catalyst Center Intelligence** — Deep DNAC analytics: unreachable devices, CPU/memory alerts, DHCP events, power resilience.\n*Investigation mode — root cause analysis on specific device or site issues.*\n\n> **Reading pattern:** Green numbers on Overview = healthy, move on. Yellow/red = switch to Details for site-level context, then CC Intelligence for device-level root cause."
 			},
@@ -93,8 +93,8 @@
 		},
 		"viz_about_sources": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "## Data Sources & Troubleshooting\n\n---\n\n**Cisco Catalyst Center** — Cisco DNA Center App for Splunk\nSourcetypes: `cisco:dnac:networkhealth`, `cisco:dnac:devicehealth`, `cisco:dnac:issues`, `cisco:dnac:compliance`\nFreshness: ~15 min\n\n**Network Syslog** — Splunk Add-on for Cisco ESA / IOS\nSourcetypes: `cisco:ios`, `cisco:asa`\nFreshness: Real-time\n\n**DHCP (Windows)** — Splunk Add-on for Windows\nSourcetypes: `WinEventLog:Microsoft-Windows-Dhcp*`\nFreshness: Real-time\n\n**ITSI KPI Summary** — Splunk ITSI\nSourcetypes: `itsi_summary`\nFreshness: Per-service interval\n\n---\n\n**Panel showing \"No results\"?**\n\n1. **Widen the time range** — some metrics need 4+ hours of data to populate\n2. **Verify the TAs are installed** — check *Manage Apps* for the add-ons listed above\n3. **Confirm data flow** — run `index=* sourcetype=cisco:dnac:* | head 5` to test\n4. **Check saved search status** — some panels depend on scheduled searches; verify they are enabled under *Settings → Searches, Reports, and Alerts*."
 			},
@@ -106,11 +106,11 @@
 			},
 			"description": "Access points per site",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"dataValuesDisplay": "all",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#049FD9"
+					"#649ef5"
 				],
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide"
@@ -120,159 +120,160 @@
 		},
 		"viz_box_analysis": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_counts": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_device_table": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_issues": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_maps": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_row1": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_row2": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_row3": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_cc_box_charts": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_cc_box_compliance": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_cc_box_dhcp": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_cc_box_guest": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_cc_box_kpi": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_cc_box_power": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_cc_box_power_detect": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_cc_box_power_timeline": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_cc_box_routing": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_cc_box_tables1": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_cc_box_tables2": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_cc_compliance_report_header": {
 			"options": {
-				"fontColor": "#049FD9",
+				"backgroundColor": "#131a23",
+				"fontColor": "#649ef5",
 				"fontSize": "small",
 				"markdown": "### Non-Compliant Device Report\nDevices failing Catalyst Center compliance checks — RUNNING_CONFIG, IMAGE, PSIRT, EOX"
 			},
@@ -283,25 +284,25 @@
 				"viz_cc_compliance_report_table_Manageability_colors": [
 					{
 						"match": "Unmanaged",
-						"value": "rgba(214,69,80,0.35)"
+						"value": "rgba(250,87,98,0.24)"
 					},
 					{
 						"match": "Managed (With Errors)",
-						"value": "rgba(229,168,35,0.30)"
+						"value": "rgba(240,194,67,0.22)"
 					},
 					{
 						"match": "Managed",
-						"value": "rgba(110,190,74,0.15)"
+						"value": "rgba(76,191,127,0.18)"
 					}
 				],
 				"viz_cc_compliance_report_table_Reachability_colors": [
 					{
 						"match": "Unreachable",
-						"value": "rgba(214,69,80,0.35)"
+						"value": "rgba(250,87,98,0.24)"
 					},
 					{
 						"match": "Reachable",
-						"value": "rgba(110,190,74,0.15)"
+						"value": "rgba(76,191,127,0.18)"
 					}
 				]
 			},
@@ -310,7 +311,7 @@
 			},
 			"description": "Devices failing compliance checks with detail",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"columnFormat": {
 					"Manageability": {
 						"rowBackgroundColors": "> table | seriesByName(\"Manageability\") | matchValue(viz_cc_compliance_report_table_Manageability_colors)"
@@ -323,7 +324,7 @@
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"headerBackgroundColor": "rgba(255,255,255,0.06)",
+					"headerBackgroundColor": "#1c2738",
 					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rgba(255,255,255,0.03))"
 				}
 			},
@@ -335,29 +336,29 @@
 				"viz_cc_cpu_mem_table_cpustatus_colors": [
 					{
 						"match": "Critical",
-						"value": "rgba(214,69,80,0.35)"
+						"value": "rgba(250,87,98,0.24)"
 					},
 					{
 						"match": "Warning",
-						"value": "rgba(229,168,35,0.30)"
+						"value": "rgba(240,194,67,0.22)"
 					},
 					{
 						"match": "OK",
-						"value": "rgba(110,190,74,0.15)"
+						"value": "rgba(76,191,127,0.18)"
 					}
 				],
 				"viz_cc_cpu_mem_table_memstatus_colors": [
 					{
 						"match": "Critical",
-						"value": "rgba(214,69,80,0.35)"
+						"value": "rgba(250,87,98,0.24)"
 					},
 					{
 						"match": "Warning",
-						"value": "rgba(229,168,35,0.30)"
+						"value": "rgba(240,194,67,0.22)"
 					},
 					{
 						"match": "OK",
-						"value": "rgba(110,190,74,0.15)"
+						"value": "rgba(76,191,127,0.18)"
 					}
 				]
 			},
@@ -366,7 +367,7 @@
 			},
 			"description": "Devices with CPU or memory utilization > 80%",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"columnFormat": {
 					"cpu_status": {
 						"rowBackgroundColors": "> table | seriesByName(\"cpu_status\") | matchValue(viz_cc_cpu_mem_table_cpustatus_colors)"
@@ -379,7 +380,8 @@
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738"
 				}
 			},
 			"title": "CPU / Memory Threshold Alerts",
@@ -391,12 +393,13 @@
 			},
 			"description": "Pool exhaustion, lease denial, and range events from Windows DHCP",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 10,
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738"
 				}
 			},
 			"title": "DHCP Pool Events",
@@ -404,9 +407,9 @@
 		},
 		"viz_cc_header_bg": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.88)",
+				"fillColor": "#1c2738",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.06)"
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
@@ -416,13 +419,13 @@
 			},
 			"description": "By device family and site — Good (8-10), Fair (5-7), Poor (1-4)",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"dataValuesDisplay": "all",
 				"seriesColors": [
-					"#6EBE4A",
-					"#E5A823",
-					"#D64550",
-					"#6E6E6E"
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#a6adb6"
 				],
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
@@ -433,8 +436,8 @@
 		},
 		"viz_cc_info": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "## Metric Reference — Catalyst Center Intelligence Tab\n\n---\n\n#### Critical Alerts\n\n**Unreachable Devices** — Devices Catalyst Center cannot reach via SNMP/SSH\n**CPU/Memory Alerts** — Devices with utilization > 80% (Warning) or > 90% (Critical)\n**Recent Reboots** — Devices with uptime < 4 hours (unexpected restarts or maintenance)\n**DHCP Pool Events** — DHCP NACK, denial, and pool exhaustion events from Windows servers\n\n---\n\n#### Health Distribution & Trends\n\n**Device Health Score Distribution** — All devices categorized as Good (8–10), Fair (5–7), Poor (1–4) by family and site\n**Issue Trend by Category** — Hourly timechart of categorized DNAC issues\n**Network Health Trend** — Good / Fair / Bad percentages from Catalyst Center health rollup\n\n---\n\n#### Device Deep-Dive\n\n**Unreachable Devices Table** — Full detail: device name, family, platform, site, IP, failure reason\n**CPU/Memory Threshold Alerts** — Resource-constrained devices with CPU/memory status\n**Top 20 Devices by Issue Count** — Most problematic devices ranked by active issues\n**Issues by Site** — Per-site issue counts with critical/high breakdown\n\n---\n\n#### DHCP & Interface\n\n**DHCP Pool Events** — Pool exhaustion and lease denial events\n**Issues by Priority** — P1–P4 distribution across all DNAC-detected issues\n**Interface Utilization Alerts** — Bandwidth saturation hotspots by device and site\n**Guest Client Count Trend** — Connected client count with capacity threshold lines\n**Recently Rebooted Devices** — Devices rebooted within the monitoring window\n\n---\n\n#### ⚡ Power Event Correlation\n\n**Power Events** — Power-related syslog events (RELOAD, PLATFORM_ENV, SWITCHOVER, STACK_CHANGE)\n**Power Event Timeline** — Chronology: Reload → Link Down → Protocol Down → Reconvergence → Recovery\n**Power Event Detection** — Correlated syslog events classified by type with affected devices\n**Link Flap Storm Detection** — Distinguishes mass power events from isolated port issues\n**Routing Reconvergence** — OSPF/EIGRP/BGP neighbor state changes showing Down → Up recovery\n**STP Reconvergence** — Spanning-tree topology changes per device/VLAN after power events\n**Non-Compliant Devices** — Compliance policy failures from Catalyst Center"
 			},
@@ -454,7 +457,7 @@
 			},
 			"description": "Bandwidth saturation hotspots from DNAC issues",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"columnFormat": {
 					"issue_count": {
 						"align": "auto",
@@ -468,7 +471,8 @@
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738"
 				}
 			},
 			"title": "Interface Utilization Alerts",
@@ -480,13 +484,13 @@
 			},
 			"description": "P1/P2/P3/P4 distribution",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"labelDisplay": "valuesAndPercentage",
 				"seriesColors": [
-					"#D64550",
-					"#E5A823",
-					"#E5A823",
-					"#6E6E6E"
+					"#fa5762",
+					"#f0c243",
+					"#f0c243",
+					"#a6adb6"
 				],
 				"showDonutHole": true
 			},
@@ -499,12 +503,13 @@
 			},
 			"description": "Issue count per site with severity and affected device count",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 10,
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738"
 				}
 			},
 			"title": "Issues by Site",
@@ -516,12 +521,22 @@
 			},
 			"description": "Categorized DNAC issues over time — correlate spikes with incidents",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "bottom",
 				"nullValueDisplay": "connect",
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"seriesColors": [
+					"#649ef5",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f",
+					"#a6adb6"
+				],
+				"lineWidth": 2
 			},
 			"title": "Issue Trend by Category",
 			"type": "splunk.area"
@@ -531,11 +546,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#4cbf7f"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#fa5762"
 					}
 				]
 			},
@@ -544,17 +559,18 @@
 			},
 			"description": "Devices with CPU or memory utilization above threshold",
 			"options": {
-				"majorColor": "#049FD9",
+				"backgroundColor": "#131a23",
+				"majorColor": "#649ef5",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#649ef5",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#649ef5",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent"
 			},
@@ -566,11 +582,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#4cbf7f"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#fa5762"
 					}
 				]
 			},
@@ -579,17 +595,18 @@
 			},
 			"description": "DHCP pool exhaustion or lease denial events",
 			"options": {
-				"majorColor": "#049FD9",
+				"backgroundColor": "#131a23",
+				"majorColor": "#649ef5",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#649ef5",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#649ef5",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent"
 			},
@@ -601,16 +618,16 @@
 				"majorColorEditorConfig": [
 					{
 						"to": 1,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					},
 					{
 						"from": 1,
 						"to": 3,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 3,
-						"value": "#D64550"
+						"value": "#fa5762"
 					}
 				]
 			},
@@ -619,7 +636,7 @@
 			},
 			"description": "Power-related syslog events detected",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"majorFontSize": 42,
 				"shouldAbbreviateMajorValue": true,
@@ -635,11 +652,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#4cbf7f"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#fa5762"
 					}
 				]
 			},
@@ -648,17 +665,18 @@
 			},
 			"description": "Devices rebooted within the selected time range",
 			"options": {
-				"majorColor": "#049FD9",
+				"backgroundColor": "#131a23",
+				"majorColor": "#649ef5",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#649ef5",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#649ef5",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent"
 			},
@@ -670,11 +688,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#4cbf7f"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#fa5762"
 					}
 				]
 			},
@@ -683,17 +701,18 @@
 			},
 			"description": "Devices Catalyst Center cannot currently reach",
 			"options": {
-				"majorColor": "#049FD9",
+				"backgroundColor": "#131a23",
+				"majorColor": "#649ef5",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#649ef5",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#649ef5",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent"
 			},
@@ -706,12 +725,13 @@
 			},
 			"description": "Mass flap = power event, isolated = port issue",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 10,
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738"
 				}
 			},
 			"title": "Link Flap Storm Detection",
@@ -723,17 +743,18 @@
 			},
 			"description": "Good / Fair / Bad percentages from Catalyst Center",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "bottom",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
-					"#6EBE4A",
-					"#E5A823",
-					"#D64550"
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762"
 				],
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 2
 			},
 			"title": "Network Health Trend",
 			"type": "splunk.area"
@@ -744,12 +765,13 @@
 			},
 			"description": "Correlated syslog events classified by type — affected devices and timing",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 10,
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738"
 				}
 			},
 			"title": "Power Event Detection",
@@ -757,7 +779,8 @@
 		},
 		"viz_cc_power_header": {
 			"options": {
-				"fontColor": "#E5A823",
+				"backgroundColor": "#131a23",
+				"fontColor": "#f0c243",
 				"fontSize": "small",
 				"markdown": "### ⚡ Power Event & Infrastructure Resilience"
 			},
@@ -769,22 +792,23 @@
 			},
 			"description": "Incident lifecycle: Reload → Link Down → Routing Reconvergence → Recovery",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "bottom",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
-					"#D64550",
-					"#E5A823",
-					"#E5A823",
-					"#E5A823",
-					"#049FD9",
-					"#6EBE4A",
-					"#6EBE4A",
-					"#6E6E6E"
+					"#fa5762",
+					"#f0c243",
+					"#f0c243",
+					"#f0c243",
+					"#649ef5",
+					"#4cbf7f",
+					"#4cbf7f",
+					"#a6adb6"
 				],
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 2
 			},
 			"title": "Power Event Timeline (minute-by-minute)",
 			"type": "splunk.area"
@@ -795,13 +819,14 @@
 			},
 			"description": "Devices with uptime < 4 hours — check for unexpected restarts",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 10,
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"showRowNumbers": true,
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738"
 				}
 			},
 			"title": "Recently Rebooted Devices",
@@ -813,12 +838,13 @@
 			},
 			"description": "OSPF/EIGRP/BGP neighbor changes — down then up = recovery",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 10,
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738"
 				}
 			},
 			"title": "Routing Reconvergence",
@@ -826,9 +852,12 @@
 		},
 		"viz_cc_section": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.45)",
+				"fillColor": "rgba(15,17,23,0.78)",
 				"rx": 12,
-				"strokeColor": "rgba(0,0,0,0.06)"
+				"strokeColor": "rgba(65,74,86,0.52)",
+				"fillOpacity": 1,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
@@ -838,12 +867,13 @@
 			},
 			"description": "Spanning-tree topology changes per device/VLAN after power event",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 10,
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738"
 				}
 			},
 			"title": "STP Reconvergence",
@@ -855,12 +885,13 @@
 			},
 			"description": "Most problematic infrastructure with health and resource context",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 10,
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738"
 				}
 			},
 			"title": "Top 20 Devices by Issue Count",
@@ -872,12 +903,13 @@
 			},
 			"description": "Devices Catalyst Center cannot reach — investigate immediately",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 10,
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738"
 				}
 			},
 			"title": "Unreachable Devices",
@@ -888,27 +920,27 @@
 				"viz_compliance_detail_table_Status_colors": [
 					{
 						"match": "NON_COMPLIANT",
-						"value": "rgba(214,69,80,0.35)"
+						"value": "rgba(250,87,98,0.24)"
 					},
 					{
 						"match": "ERROR",
-						"value": "rgba(214,69,80,0.35)"
+						"value": "rgba(250,87,98,0.24)"
 					},
 					{
 						"match": "WARNING",
-						"value": "rgba(229,168,35,0.30)"
+						"value": "rgba(240,194,67,0.22)"
 					},
 					{
 						"match": "IN_PROGRESS",
-						"value": "rgba(229,168,35,0.30)"
+						"value": "rgba(240,194,67,0.22)"
 					},
 					{
 						"match": "REMEDIATION_IN_PROGRESS",
-						"value": "rgba(229,168,35,0.30)"
+						"value": "rgba(240,194,67,0.22)"
 					},
 					{
 						"match": "COMPLIANT",
-						"value": "rgba(110,190,74,0.15)"
+						"value": "rgba(76,191,127,0.18)"
 					}
 				]
 			},
@@ -917,7 +949,7 @@
 			},
 			"description": "Devices failing compliance checks",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"columnFormat": {
 					"Status": {
 						"rowBackgroundColors": "> table | seriesByName(\"Status\") | matchValue(viz_compliance_detail_table_Status_colors)"
@@ -927,7 +959,8 @@
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738"
 				}
 			},
 			"title": "Non-Compliant Devices",
@@ -939,8 +972,14 @@
 			},
 			"description": "Compliance status distribution across the fleet",
 			"options": {
-				"backgroundColor": "transparent",
-				"showDonutHole": true
+				"backgroundColor": "#131a23",
+				"showDonutHole": true,
+				"seriesColors": [
+					"#4cbf7f",
+					"#fa5762",
+					"#a6adb6",
+					"#f0c243"
+				]
 			},
 			"title": "Compliance by Status*",
 			"type": "splunk.pie"
@@ -950,16 +989,16 @@
 				"majorColorEditorConfig": [
 					{
 						"to": 70,
-						"value": "#D64550"
+						"value": "#fa5762"
 					},
 					{
 						"from": 70,
 						"to": 90,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 90,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -968,13 +1007,14 @@
 			},
 			"description": "Percentage of devices passing compliance checks",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"majorFontSize": 32,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"sparklineDisplay": "off",
 				"unit": "%",
-				"unitPosition": "after"
+				"unitPosition": "after",
+				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)"
 			},
 			"title": "Compliance %",
 			"type": "splunk.singlevalue"
@@ -984,16 +1024,16 @@
 				"majorColorEditorConfig": [
 					{
 						"to": 10,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					},
 					{
 						"from": 10,
 						"to": 30,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 30,
-						"value": "#D64550"
+						"value": "#fa5762"
 					}
 				]
 			},
@@ -1002,11 +1042,12 @@
 			},
 			"description": "Distinct workflows in selected window. Methodology above.",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"majorFontSize": 28,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"sparklineDisplay": "off"
+				"sparklineDisplay": "off",
+				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)"
 			},
 			"title": "Human config workflows (window)",
 			"type": "splunk.singlevalue"
@@ -1016,19 +1057,19 @@
 				"viz_config_detail_How_colors": [
 					{
 						"match": "DNAC CLI session",
-						"value": "rgba(229,168,35,0.30)"
+						"value": "rgba(240,194,67,0.22)"
 					},
 					{
 						"match": "DNAC NETCONF push",
-						"value": "rgba(229,168,35,0.30)"
+						"value": "rgba(240,194,67,0.22)"
 					},
 					{
 						"match": "DNAC UI / REST API",
-						"value": "rgba(110,190,74,0.15)"
+						"value": "rgba(76,191,127,0.18)"
 					},
 					{
 						"match": "DNAC API",
-						"value": "rgba(110,190,74,0.15)"
+						"value": "rgba(76,191,127,0.18)"
 					}
 				]
 			},
@@ -1037,7 +1078,7 @@
 			},
 			"description": "Top 50 most recent events. Audit description newlines collapsed for readability.",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"columnFormat": {
 					"How": {
 						"rowBackgroundColors": "> table | seriesByName(\"How\") | matchValue(viz_config_detail_How_colors)"
@@ -1046,7 +1087,10 @@
 				"count": 100,
 				"fontSize": "small",
 				"headerVisibility": "fixed",
-				"rowNumbers": false
+				"rowNumbers": false,
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738"
+				}
 			},
 			"title": "Recent human config changes - who, how, what, where",
 			"type": "splunk.table"
@@ -1057,12 +1101,14 @@
 			},
 			"description": "Trend stacked by admin (top 5).",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#049FD9",
-					"#D64550",
-					"#E5A823"
+					"#649ef5",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb"
 				],
 				"stackMode": "stacked",
 				"xAxisLabelVisibility": "hide",
@@ -1077,16 +1123,16 @@
 				"majorColorEditorConfig": [
 					{
 						"to": 5,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					},
 					{
 						"from": 5,
 						"to": 15,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 15,
-						"value": "#D64550"
+						"value": "#fa5762"
 					}
 				]
 			},
@@ -1095,7 +1141,7 @@
 			},
 			"description": "Last 4 hours.",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"majorFontSize": 28,
 				"shouldAbbreviateMajorValue": true,
@@ -1111,11 +1157,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#fa5762"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -1124,17 +1170,18 @@
 			},
 			"description": "Overall device health score from Catalyst Center",
 			"options": {
-				"majorColor": "#049FD9",
+				"backgroundColor": "#131a23",
+				"majorColor": "#649ef5",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#649ef5",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#649ef5",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
 				"unit": "%"
@@ -1148,16 +1195,17 @@
 			},
 			"description": "Device health score trending over time",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "off",
-				"markerDisplay": "filled",
+				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
-					"#6EBE4A"
+					"#4cbf7f"
 				],
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 2
 			},
 			"title": "Device Health Trend",
 			"type": "splunk.line"
@@ -1167,11 +1215,11 @@
 				"viz_device_table_Reachability_colors": [
 					{
 						"match": "Unreachable",
-						"value": "rgba(214,69,80,0.35)"
+						"value": "rgba(250,87,98,0.24)"
 					},
 					{
 						"match": "Reachable",
-						"value": "rgba(110,190,74,0.15)"
+						"value": "rgba(76,191,127,0.18)"
 					}
 				]
 			},
@@ -1180,7 +1228,7 @@
 			},
 			"description": "All managed devices with health, role, platform, site, software, and issue count",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"columnFormat": {
 					"Reachability": {
 						"rowBackgroundColors": "> table | seriesByName(\"Reachability\") | matchValue(viz_device_table_Reachability_colors)"
@@ -1190,7 +1238,8 @@
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738"
 				}
 			},
 			"title": "Live Device Inventory — Catalyst Center",
@@ -1202,16 +1251,16 @@
 			},
 			"description": "Core, Distribution, Access, AP, WLC, Router",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"labelDisplay": "valuesAndPercentage",
 				"seriesColors": [
-					"#D64550",
-					"#E5A823",
-					"#049FD9",
-					"#6EBE4A",
-					"#E5A823",
-					"#6E6E6E",
-					"#8B6FC9"
+					"#649ef5",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f",
+					"#a6adb6"
 				],
 				"showDonutHole": true
 			},
@@ -1220,8 +1269,8 @@
 		},
 		"viz_info_details": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "## Metric Reference — Details & KPI Reference Tab\n\n---\n\n#### Reference Data\n\n**WAN Circuit Bandwidth Reference** — Circuit capacity metadata from configuration\n**Site Reference** — Site names, codes, and metadata from configuration\n\n---\n\n#### Site-Level Analysis\n\n**Top 5 Sites by Issue Count** — Most impacted locations ranked by open issues\n**Network vs Client Issues** — Issue type breakdown (infrastructure vs. client)\n**Week-over-Week Health** — Health score delta from prior week\n**Site-level Health** — Per-site network health score\n\n---\n\n#### Issue Drill-Down\n\n**Top 5 Network Issues** — Most frequent network issues by occurrence\n**Top 5 Client Issues** — Most frequent client issues by occurrence\n**Non-Compliant Devices** — Devices failing Catalyst Center compliance checks\n\n---\n\n#### Topology & Inventory\n\n**AP Count by Location** — Access point distribution per site\n**Switch Count by Location** — Switch distribution per site\n**Site Locations** — Geographic map of monitored sites with live device count\n**Live Network Topology** — Interactive topology view from Catalyst Center\n**Devices by Role** — Distribution by role (access, distribution, core, border, etc.)\n**Live Device Inventory** — Full device list with health, IP, platform, and role"
 			},
@@ -1229,8 +1278,8 @@
 		},
 		"viz_info_overview": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "## Metric Reference — Overview Tab\n\n---\n\n#### Health & Issues\n\n**Network Health** — Composite network health score from Catalyst Center (0–100)\n**Device Health** — Composite device health score from Catalyst Center (0–100)\n**Open Issues** — Current active issues reported by Catalyst Center\n**Issues By Severity** — Issue distribution by P1 / P2 / P3 / P4 priority\n**Syslog Critical** — Emergency + Critical syslog events from Cisco IOS devices\n**Syslog By Severity** — Full syslog event distribution by severity level\n\n---\n\n#### Inventory & Compliance\n\n**Device Inventory** — Total managed device count in Catalyst Center\n**Inventory with Compliance** — Device count by role overlaid with compliance status\n**Audit Events Today** — Configuration change events detected in the current day\n**Config Change Trend** — Configuration changes over time (Catalyst Center audit)\n**Issue Trend** — Open issue count trending over the selected time range\n**Compliance by Status** — Compliant / Non-Compliant / Not Applicable breakdown\n\n---\n\n#### Trends\n\n**Network Health Trend** — Network health score over time\n**Device Health Trend** — Device health score over time\n**Compliance %** — Policy compliance percentage across all managed devices\n**Audit Events** — Audit event volume over time"
 			},
@@ -1242,11 +1291,11 @@
 			},
 			"description": "Device count by role with compliance overlay",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"dataValuesDisplay": "all",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#049FD9"
+					"#649ef5"
 				],
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide"
@@ -1260,8 +1309,8 @@
 			},
 			"description": "Total managed devices in Catalyst Center inventory",
 			"options": {
-				"backgroundColor": "transparent",
-				"majorColor": "#049FD9",
+				"backgroundColor": "#131a23",
+				"majorColor": "#649ef5",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
@@ -1278,12 +1327,15 @@
 			},
 			"description": "Per-user, per-device authentication and command activity in the window.",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 30,
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"rowNumbers": false,
-				"showRowNumbers": true
+				"showRowNumbers": true,
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738"
+				}
 			},
 			"title": "Identity-attested device logins - who authenticated where (cisco:ise:syslog)",
 			"type": "splunk.table"
@@ -1294,12 +1346,12 @@
 			},
 			"description": "Network vs client issues (DNAC)",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"labelDisplay": "valuesAndPercentage",
 				"seriesColors": [
-					"#049FD9",
-					"#6EBE4A",
-					"#6E6E6E"
+					"#649ef5",
+					"#049fd9",
+					"#a6adb6"
 				],
 				"showDonutHole": true
 			},
@@ -1312,16 +1364,17 @@
 			},
 			"description": "Open issue count trending over time",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "off",
-				"markerDisplay": "filled",
+				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
-					"#049FD9"
+					"#649ef5"
 				],
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 2
 			},
 			"title": "Issue Trend",
 			"type": "splunk.line"
@@ -1332,12 +1385,12 @@
 			},
 			"description": "Issue distribution by P1/P2/P3/P4 severity",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"labelDisplay": "valuesAndPercentage",
 				"seriesColors": [
-					"#D64550",
-					"#E5A823",
-					"#E5A823"
+					"#fa5762",
+					"#f0c243",
+					"#f0c243"
 				],
 				"showDonutHole": true
 			},
@@ -1349,11 +1402,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#4cbf7f"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#fa5762"
 					}
 				]
 			},
@@ -1362,17 +1415,18 @@
 			},
 			"description": "Total active issues from Catalyst Center",
 			"options": {
-				"majorColor": "#049FD9",
+				"backgroundColor": "#131a23",
+				"majorColor": "#649ef5",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#649ef5",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#649ef5",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent"
 			},
@@ -1381,22 +1435,22 @@
 		},
 		"viz_it_section": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.45)",
+				"fillColor": "rgba(15,17,23,0.78)",
 				"fillOpacity": 1,
 				"rx": 12,
-				"strokeColor": "rgba(0,0,0,0.06)",
-				"strokeOpacity": 0.3,
+				"strokeColor": "rgba(65,74,86,0.52)",
+				"strokeOpacity": 1,
 				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_it_section2": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.45)",
+				"fillColor": "rgba(15,17,23,0.78)",
 				"fillOpacity": 1,
 				"rx": 12,
-				"strokeColor": "rgba(0,0,0,0.06)",
-				"strokeOpacity": 0.3,
+				"strokeColor": "rgba(65,74,86,0.52)",
+				"strokeOpacity": 1,
 				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
@@ -1407,12 +1461,12 @@
 			},
 			"description": "Device role hierarchy by site — from Catalyst Center",
 			"options": {
-				"backgroundColor": "transparent",
-				"linkColor": "#6E6E6E",
+				"backgroundColor": "#131a23",
+				"linkColor": "#a6adb6",
 				"linkWidth": 2,
-				"nodeColor": "#049FD9",
+				"nodeColor": "#649ef5",
 				"nodeHeight": 28,
-				"nodeHighlightColor": "#E5A823",
+				"nodeHighlightColor": "#f0c243",
 				"nodeSpacingX": 40,
 				"nodeSpacingY": 12,
 				"nodeWidth": 180,
@@ -1425,8 +1479,8 @@
 		},
 		"viz_md_config_detail_header": {
 			"options": {
-				"backgroundColor": "#ffffff",
-				"fontColor": "#000000",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "**Recent human config changes** &mdash; Detailed audit log entries for human-initiated workflows in the selected window. Each row = one action: **who** triggered it (admin), **how** (DNAC UI / API), **what** was done (description with newlines collapsed), and **where** (target site / device / template / network profile). Use this table to drill into individual changes captured in the trend tile above. Source: `cisco:dnac:audit:logs`."
 			},
@@ -1434,8 +1488,8 @@
 		},
 		"viz_md_ise_logins_header": {
 			"options": {
-				"backgroundColor": "#ffffff",
-				"fontColor": "#000000",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "**Identity-attested device logins** &mdash; Cross-source view of who authenticated to network devices via TACACS+/ISE &mdash; including auth success/failure and per-command authorization decisions (allowed / denied) &mdash; and the last device they touched. Pair this with the Catalyst Center audit table above to confirm config changes were performed by an authorized human and not via an out-of-band channel. Source: `cisco:ise:syslog`."
 			},
@@ -1443,8 +1497,8 @@
 		},
 		"viz_md_workflow_header": {
 			"options": {
-				"backgroundColor": "#ffffff",
-				"fontColor": "#000000",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "**Human config workflows** &mdash; A *workflow* = one admin &times; one 5-minute window of activity, collapsing multi-device fan-out (a single push to 28 devices that fires 8 audit lines within 5 min counts as **1 workflow**, not 8). Excludes service accounts, sub-events, read-only commands, and \"Going to deploy\" precursors. Source: `cisco:dnac:audit:logs`."
 			},
@@ -1452,8 +1506,8 @@
 		},
 		"viz_narr_cc_intel": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#6E6E6E",
+				"backgroundColor": "#131a23",
+				"fontColor": "#a6adb6",
 				"fontSize": "small",
 				"markdown": "**Catalyst Center (DNAC)** analytics — fabric health, client onboarding, AP performance, and issue correlation. Drill into Catalyst-reported anomalies and their impact on client experience."
 			},
@@ -1461,8 +1515,8 @@
 		},
 		"viz_narr_details": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#6E6E6E",
+				"backgroundColor": "#131a23",
+				"fontColor": "#a6adb6",
 				"fontSize": "small",
 				"markdown": "Detailed **device and interface KPIs** broken down by site, device role, and metric type. Use this tab to pinpoint which devices or links are contributing to overall health degradation."
 			},
@@ -1470,8 +1524,8 @@
 		},
 		"viz_narr_overview": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#6E6E6E",
+				"backgroundColor": "#131a23",
+				"fontColor": "#a6adb6",
 				"fontSize": "small",
 				"markdown": "Real-time, centralized view of **critical infrastructure health** across network and core systems. Use this dashboard to assess system status, identify anomalies, and prioritize response to potential service-impacting issues."
 			},
@@ -1482,11 +1536,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#fa5762"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -1495,17 +1549,18 @@
 			},
 			"description": "Current network health score from Catalyst Center",
 			"options": {
-				"majorColor": "#049FD9",
+				"backgroundColor": "#131a23",
+				"majorColor": "#649ef5",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#649ef5",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#649ef5",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
 				"unit": "%"
@@ -1519,31 +1574,33 @@
 			},
 			"description": "Network health score trending over time",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "off",
 				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
-					"#049FD9"
+					"#649ef5"
 				],
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 2
 			},
 			"title": "Network Health Trend",
 			"type": "splunk.line"
 		},
 		"viz_p_hdr_bg": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.88)",
+				"fillColor": "#1c2738",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.06)"
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_p_hdr_title": {
 			"options": {
-				"fontColor": "#005073",
+				"backgroundColor": "#1c2738",
+				"fontColor": "#ecf0f5",
 				"fontSize": "large",
 				"markdown": "## IT - Critical Systems Health"
 			},
@@ -1555,15 +1612,15 @@
 			},
 			"description": "Devices per site, broken down by Catalyst Center health tier",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"dataValuesDisplay": "all",
 				"legendDisplay": "right",
 				"legendTruncation": "ellipsisEnd",
 				"seriesColors": [
-					"#6EBE4A",
-					"#E5A823",
-					"#D64550",
-					"#9CA3AF"
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#a6adb6"
 				],
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
@@ -1578,12 +1635,13 @@
 			},
 			"description": "Network score per site",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 10,
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738"
 				}
 			},
 			"title": "Site-level Health",
@@ -1595,11 +1653,11 @@
 			},
 			"description": "Switches per site",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"dataValuesDisplay": "all",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#6EBE4A"
+					"#649ef5"
 				],
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide"
@@ -1613,12 +1671,12 @@
 			},
 			"description": "Syslog events by severity from Cisco IOS devices",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"seriesColors": [
-					"#D64550",
-					"#E5A823",
-					"#6E6E6E",
-					"#E5A823"
+					"#fa5762",
+					"#f0c243",
+					"#a6adb6",
+					"#f0c243"
 				],
 				"showDonutHole": true
 			},
@@ -1630,11 +1688,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#4cbf7f"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#fa5762"
 					}
 				]
 			},
@@ -1643,17 +1701,18 @@
 			},
 			"description": "Critical syslog events requiring immediate attention",
 			"options": {
-				"majorColor": "#049FD9",
+				"backgroundColor": "#131a23",
+				"majorColor": "#649ef5",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#649ef5",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#649ef5",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent"
 			},
@@ -1666,12 +1725,12 @@
 			},
 			"description": "Active alert count grouped by severity",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#D43F3F",
-					"#EDA800",
-					"#0EA5E9"
+					"#fa5762",
+					"#f0c243",
+					"#649ef5"
 				],
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide"
@@ -1694,7 +1753,7 @@
 				}
 			],
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"columnFormat": {
 					"Alert ID": {
 						"width": 216
@@ -1714,7 +1773,8 @@
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738"
 				}
 			},
 			"title": "Recent Alerts",
@@ -1726,12 +1786,12 @@
 			},
 			"description": "Hourly stacked alert volume by severity",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "bottom",
 				"seriesColors": [
-					"#D43F3F",
-					"#EDA800",
-					"#0EA5E9"
+					"#fa5762",
+					"#f0c243",
+					"#649ef5"
 				],
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
@@ -1742,8 +1802,8 @@
 		},
 		"viz_te_alerts_title": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#005073",
+				"backgroundColor": "#131a23",
+				"fontColor": "#649ef5",
 				"fontSize": "default",
 				"markdown": "### Alerts\n\nActive ThousandEyes alerts by severity, hourly trend, and the most-recent 20 with permalinks back to the TE console."
 			},
@@ -1751,25 +1811,25 @@
 		},
 		"viz_te_box_alerts": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.06)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_te_box_path": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.06)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_te_box_traces": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.06)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
@@ -1791,7 +1851,7 @@
 				}
 			],
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"columnFormat": {
 					"Agent": {
 						"width": 129
@@ -1811,7 +1871,8 @@
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738"
 				}
 			},
 			"title": "Endpoint Health by Agent",
@@ -1823,12 +1884,15 @@
 			},
 			"description": "Per-destination jitter (ms) from agent-to-server and agent-to-agent tests",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "bottom",
 				"lineWidth": 2,
 				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
-				"yAxisTitleText": "Jitter (ms)"
+				"yAxisTitleText": "Jitter (ms)",
+				"seriesColors": [
+					"#649ef5"
+				]
 			},
 			"title": "Network Jitter Trend",
 			"type": "splunk.line"
@@ -1839,12 +1903,15 @@
 			},
 			"description": "Per-destination network latency (ms) from agent-to-server and agent-to-agent tests",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "bottom",
 				"lineWidth": 2,
 				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
-				"yAxisTitleText": "Latency (ms)"
+				"yAxisTitleText": "Latency (ms)",
+				"seriesColors": [
+					"#649ef5"
+				]
 			},
 			"title": "Network Latency Trend",
 			"type": "splunk.line"
@@ -1855,20 +1922,23 @@
 			},
 			"description": "Per-destination packet loss (%) from agent-to-server and agent-to-agent tests",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "bottom",
 				"lineWidth": 2,
 				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
-				"yAxisTitleText": "Loss (%)"
+				"yAxisTitleText": "Loss (%)",
+				"seriesColors": [
+					"#649ef5"
+				]
 			},
 			"title": "Network Loss Trend",
 			"type": "splunk.line"
 		},
 		"viz_te_narrative": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#6E6E6E",
+				"backgroundColor": "#131a23",
+				"fontColor": "#a6adb6",
 				"fontSize": "small",
 				"markdown": "**ThousandEyes** &mdash; Internet path quality (latency / loss / jitter), active alerts by severity, and per-trace endpoint health for HTTP-server tests. Use this tab when the Overview map shows a degraded inter-site link or when an external SaaS dependency may be impacting users. Requires the *Cisco ThousandEyes App for Splunk* with both `Cisco_ThousandEyes.Test_Metrics` and `Cisco_ThousandEyes.Alerts` data models accelerated."
 			},
@@ -1876,8 +1946,8 @@
 		},
 		"viz_te_path_title": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#005073",
+				"backgroundColor": "#131a23",
+				"fontColor": "#649ef5",
 				"fontSize": "default",
 				"markdown": "### Path Quality\n\nPer-destination latency / loss / jitter from agent-to-server and agent-to-agent tests &mdash; sorted worst-first."
 			},
@@ -1885,19 +1955,19 @@
 		},
 		"viz_te_section": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.45)",
+				"fillColor": "rgba(15,17,23,0.78)",
 				"fillOpacity": 1,
 				"rx": 12,
-				"strokeColor": "rgba(0,0,0,0.06)",
-				"strokeOpacity": 0.3,
+				"strokeColor": "rgba(65,74,86,0.52)",
+				"strokeOpacity": 1,
 				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_te_traces_title": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#005073",
+				"backgroundColor": "#131a23",
+				"fontColor": "#649ef5",
 				"fontSize": "default",
 				"markdown": "### Endpoint Health\n\nPer-test endpoint availability, latency, loss, jitter, and originating ThousandEyes agent from `cisco:thousandeyes:metric` events."
 			},
@@ -1909,12 +1979,13 @@
 			},
 			"description": "By occurrence count",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 5,
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738"
 				}
 			},
 			"title": "Top 5 Client Issues",
@@ -1926,12 +1997,13 @@
 			},
 			"description": "By occurrence count",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 5,
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738"
 				}
 			},
 			"title": "Top 5 Network Issues",
@@ -1943,11 +2015,11 @@
 			},
 			"description": "Most impacted locations",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"dataValuesDisplay": "all",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#049FD9"
+					"#649ef5"
 				],
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide"
@@ -1957,25 +2029,25 @@
 		},
 		"viz_uxh_box_breakdown": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_uxh_box_gauges": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_uxh_box_trend": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"fillColor": "#131a23",
+				"rx": 12,
+				"strokeColor": "rgba(100,158,245,0.28)"
 			},
 			"type": "splunk.rectangle"
 		},
@@ -1985,14 +2057,16 @@
 			},
 			"description": "Top operating systems by unique MAC count",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"labelDisplay": "valuesAndPercentage",
 				"seriesColors": [
-					"#6EBE4A",
-					"#049FD9",
-					"#E5A823",
-					"#D64550",
-					"#6E6E6E"
+					"#649ef5",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f",
+					"#a6adb6"
 				],
 				"showDonutHole": true
 			},
@@ -2005,15 +2079,16 @@
 			},
 			"description": "Client health distribution over time, stacked Good / Fair / Poor",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "right",
 				"seriesColors": [
-					"#6EBE4A",
-					"#E5A823",
-					"#D64550"
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762"
 				],
 				"stackMode": "stacked100",
-				"xAxisTitleVisibility": "hide"
+				"xAxisTitleVisibility": "hide",
+				"lineWidth": 2
 			},
 			"title": "Client Health Trend",
 			"type": "splunk.area"
@@ -2024,11 +2099,11 @@
 			},
 			"description": "Top device categories by unique MAC count",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"dataValuesDisplay": "all",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#049FD9"
+					"#649ef5"
 				],
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide"
@@ -2038,8 +2113,8 @@
 		},
 		"viz_uxh_narrative": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#6E6E6E",
+				"backgroundColor": "#131a23",
+				"fontColor": "#a6adb6",
 				"fontSize": "small",
 				"markdown": "End-user **client experience** seen from Catalyst Center &mdash; wireless and wired health scores, distribution over time, and what kinds of devices are on the network. Use this tab to confirm clients are healthy and to spot which device categories or operating systems trend with degraded experience. Internet-path metrics (ThousandEyes) appear here once the `Cisco_ThousandEyes.Test_Metrics` data model is installed and accelerated."
 			},
@@ -2047,19 +2122,19 @@
 		},
 		"viz_uxh_section": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.45)",
+				"fillColor": "rgba(15,17,23,0.78)",
 				"fillOpacity": 1,
 				"rx": 12,
-				"strokeColor": "rgba(0,0,0,0.06)",
-				"strokeOpacity": 0.3,
+				"strokeColor": "rgba(65,74,86,0.52)",
+				"strokeOpacity": 1,
 				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_uxh_te_note": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "### Internet path metrics (ThousandEyes)\n\nThousandEyes per-test latency, loss, jitter, and HTTP availability panels are **temporarily parked** because the `Cisco_ThousandEyes.Test_Metrics` data model is not installed on this stack. Once the *Cisco ThousandEyes App for Splunk* is installed and the data model is accelerated, these panels will return:\n\n- Internet path composite score (gauge)\n- Per-agent latency / loss / jitter table\n- Per-test result table with status\n- Test-health distribution (donut)\n\nReinstating them requires no SPL changes &mdash; the underlying searches already live in `searchbase.conf` and are filterable in the KPI Picker via the `Requires_Cisco_ThousandEyes_DM` tag."
 			},
@@ -2070,16 +2145,16 @@
 				"majorColorEditorConfig": [
 					{
 						"to": 70,
-						"value": "#D64550"
+						"value": "#fa5762"
 					},
 					{
 						"from": 70,
 						"to": 85,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 85,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -2088,7 +2163,7 @@
 			},
 			"description": "Current wired client health score from Catalyst Center",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"majorFontSize": 48,
 				"shouldAbbreviateMajorValue": true,
@@ -2105,16 +2180,16 @@
 				"majorColorEditorConfig": [
 					{
 						"to": 70,
-						"value": "#D64550"
+						"value": "#fa5762"
 					},
 					{
 						"from": 70,
 						"to": 85,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 85,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -2123,7 +2198,7 @@
 			},
 			"description": "Current wireless client health score from Catalyst Center",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"majorFontSize": 48,
 				"shouldAbbreviateMajorValue": true,
@@ -2140,16 +2215,16 @@
 				"majorColorEditorConfig": [
 					{
 						"to": 70,
-						"value": "#D64550"
+						"value": "#fa5762"
 					},
 					{
 						"from": 70,
 						"to": 85,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 85,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -2158,7 +2233,7 @@
 			},
 			"description": "Week-over-week health change — positive means improving",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"majorFontSize": 48,
 				"shouldAbbreviateMajorValue": true,
@@ -2939,10 +3014,16 @@
 		"layoutDefinitions": {
 			"layout_about": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 1800,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -3030,10 +3111,16 @@
 			},
 			"layout_cc_intel": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 3800,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -3451,10 +3538,16 @@
 			},
 			"layout_details": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 2000,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -3702,10 +3795,16 @@
 			},
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 2140,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -4013,10 +4112,16 @@
 			},
 			"layout_thousandeyes": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 1900,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -4204,10 +4309,16 @@
 			},
 			"layout_user_experience": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 950,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -4392,5 +4503,5 @@
 		"hideOpenInSearch": false
 	}
 }
-    ]]></definition>
+]]></definition>
 </dashboard>

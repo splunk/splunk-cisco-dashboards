@@ -2,6 +2,10 @@
 
 ## 1.0.36
 
+- IT Critical Systems Health now uses the shared Cisco Cloud Control
+  atmospheric dark canvas, opaque operational panels, accessible dark table
+  chrome, and centralized semantic visualization palette across all six tabs,
+  while preserving its searches, inputs, tokens, drilldowns, and interactions.
 - Dashboard Manager source editing now supports in-editor find and replace via
   the standard Command/Ctrl+F shortcut without loading Monaco's unrelated
   editor features.
