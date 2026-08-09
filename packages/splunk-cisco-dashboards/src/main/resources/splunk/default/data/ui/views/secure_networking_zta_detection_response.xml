@@ -8,11 +8,34 @@
     "inputs": {
         "input_time_range": {
             "options": {
-                "defaultValue": "-24h@h,now",
+                "defaultValue": "-24h,now,1h",
+                "showAdvanced": true,
+                "selections": [
+                    {
+                        "value": "-4h,now,30m",
+                        "label": "4h"
+                    },
+                    {
+                        "value": "-24h,now,1h",
+                        "label": "24h"
+                    },
+                    {
+                        "value": "-48h,now,2h",
+                        "label": "48h"
+                    },
+                    {
+                        "value": "-7d@d,now,1d",
+                        "label": "7d"
+                    },
+                    {
+                        "value": "-30d@d,now,1d",
+                        "label": "30d"
+                    }
+                ],
                 "token": "time_tok"
             },
-            "title": "Time Range",
-            "type": "input.timerange"
+            "title": "Time range",
+            "type": "input.simpleTimePicker"
         }
     },
     "defaults": {
@@ -81,7 +104,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Security  •  Zero Trust Access"
             }
         },
@@ -94,7 +117,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Tracks distinct XDR incidents by severity to show how response pressure changes over time\\."
             }
         },
@@ -109,11 +132,29 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#049fd9",
+                        "to": 0
+                    },
+                    {
+                        "value": "#049fd9",
+                        "from": 0
+                    }
+                ]
             }
         },
         "viz_card_01_trend": {
@@ -128,10 +169,11 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
-                    "#4cbf7f",
+                    "#fa5762",
                     "#f7782f",
-                    "#fa5762"
+                    "#f0c243",
+                    "#00bceb",
+                    "#a6adb6"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -193,7 +235,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Security  •  Zero Trust Access"
             }
         },
@@ -206,7 +248,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Shows average and peak XDR global risk over time to distinguish broad deterioration from isolated urgent incidents\\."
             }
         },
@@ -221,11 +263,29 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowPeakRisk\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"Peak Global Risk\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#049fd9",
+                        "to": 0
+                    },
+                    {
+                        "value": "#049fd9",
+                        "from": 0
+                    }
+                ]
             }
         },
         "viz_card_02_trend": {
@@ -240,10 +300,9 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
-                    "#4cbf7f",
-                    "#f7782f",
-                    "#fa5762"
+                    "#fa5762",
+                    "#f0c243",
+                    "#00bceb"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -305,7 +364,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Security  •  Zero Trust Access"
             }
         },
@@ -318,7 +377,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Tracks Attack Analyzer network flows, jobs, and destination breadth to reveal changes in sandbox service activity\\."
             }
         },
@@ -333,11 +392,29 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#049fd9",
+                        "to": 0
+                    },
+                    {
+                        "value": "#049fd9",
+                        "from": 0
+                    }
+                ]
             }
         },
         "viz_card_03_trend": {
@@ -352,10 +429,9 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
-                    "#4cbf7f",
-                    "#f7782f",
-                    "#fa5762"
+                    "#9ca6ff",
+                    "#00bceb",
+                    "#4cbf7f"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -417,7 +493,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Security  •  Zero Trust Access"
             }
         },
@@ -430,7 +506,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Shows external sandbox flows, sources, and destinations over time after removing local and broadcast traffic\\."
             }
         },
@@ -445,11 +521,29 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#049fd9",
+                        "to": 0
+                    },
+                    {
+                        "value": "#049fd9",
+                        "from": 0
+                    }
+                ]
             }
         },
         "viz_card_04_trend": {
@@ -464,10 +558,9 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
-                    "#4cbf7f",
+                    "#fa5762",
                     "#f7782f",
-                    "#fa5762"
+                    "#00bceb"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -529,7 +622,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Security  •  Zero Trust Access"
             }
         },
@@ -542,7 +635,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Tracks forensic file artifacts, analysis jobs, and unique hashes to expose changing payload\\-delivery pressure\\."
             }
         },
@@ -557,11 +650,29 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#049fd9",
+                        "to": 0
+                    },
+                    {
+                        "value": "#049fd9",
+                        "from": 0
+                    }
+                ]
             }
         },
         "viz_card_05_trend": {
@@ -576,10 +687,9 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
-                    "#4cbf7f",
-                    "#f7782f",
-                    "#fa5762"
+                    "#fa5762",
+                    "#9ca6ff",
+                    "#00bceb"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -641,7 +751,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Security  •  Zero Trust Access"
             }
         },
@@ -654,7 +764,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Shows Attack Analyzer forensic detections by severity over time to expose changing signature pressure\\."
             }
         },
@@ -669,11 +779,29 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#049fd9",
+                        "to": 0
+                    },
+                    {
+                        "value": "#049fd9",
+                        "from": 0
+                    }
+                ]
             }
         },
         "viz_card_06_trend": {
@@ -688,10 +816,11 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
-                    "#4cbf7f",
+                    "#fa5762",
                     "#f7782f",
-                    "#fa5762"
+                    "#f0c243",
+                    "#00bceb",
+                    "#a6adb6"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -793,9 +922,7 @@
         }
     },
     "layout": {
-        "globalInputs": [
-            "input_time_range"
-        ],
+        "globalInputs": [],
         "layoutDefinitions": {
             "layout_overview": {
                 "options": {
@@ -836,10 +963,20 @@
                         "position": {
                             "x": 118,
                             "y": 8,
-                            "w": 1280,
+                            "w": 886,
                             "h": 88
                         },
                         "type": "block"
+                    },
+                    {
+                        "item": "input_time_range",
+                        "position": {
+                            "x": 1034,
+                            "y": 12,
+                            "w": 370,
+                            "h": 80
+                        },
+                        "type": "input"
                     },
                     {
                         "item": "viz_card_01_background",

@@ -40,22 +40,41 @@
 })();
 
 /**
- * Pilot the Insights Workspace density on one Dashboard Studio story before
- * applying it to the full factory set. Dashboard Manager is a hash-routed SPA,
+ * Apply the approved Insights Workspace density to the 16 five-pillar
+ * Dashboard Manager views. Dashboard Manager is a hash-routed SPA,
  * so keep the body marker synchronized as users move between dashboards.
  */
-(function setStudioHomeDensityPilot() {
-  const pilotDashboard =
-    "secure_networking_zta_authentication_policy_enforcement";
-  const pilotClass = "scd-studio-home-density-pilot";
+(function setManagedStudioTemplate() {
+  const managedDashboards = new Set([
+    "secure_networking_agentic_ops",
+    "secure_networking_agentic_ops_executive_overview",
+    "secure_networking_hmf_dlp_cloud_native_security",
+    "secure_networking_hmf_sdwan_network_health_monitoring",
+    "secure_networking_hmf_threat_detection_enforcement",
+    "secure_networking_hybrid_mesh_firewalling",
+    "secure_networking_scalable_network_segmentation",
+    "secure_networking_secure_infrastructure",
+    "secure_networking_secure_infrastructure_status",
+    "secure_networking_segmentation_overview",
+    "secure_networking_zta",
+    "secure_networking_zta_authentication_policy_enforcement",
+    "secure_networking_zta_detection_response",
+    "secure_networking_zta_policy_management",
+    "secure_networking_zta_ravpn_sessions_and_posture",
+    "secure_networking_zta_user_activity_monitoring",
+  ]);
+  const templateClass = "scd-managed-studio-template";
 
-  const applyPilotClass = () => {
+  const applyTemplateClass = () => {
     const dashboardId = window.location.hash
       .replace(/^#\/?/, "")
       .split(/[/?&]/, 1)[0];
-    document.body.classList.toggle(pilotClass, dashboardId === pilotDashboard);
+    document.body.classList.toggle(
+      templateClass,
+      managedDashboards.has(dashboardId),
+    );
   };
 
-  applyPilotClass();
-  window.addEventListener("hashchange", applyPilotClass);
+  applyTemplateClass();
+  window.addEventListener("hashchange", applyTemplateClass);
 })();

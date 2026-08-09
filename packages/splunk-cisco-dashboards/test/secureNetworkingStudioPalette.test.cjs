@@ -23,6 +23,42 @@ const EXPECTED_STUDIO_FILES = [
   "secure_networking_zta_user_activity_monitoring.xml",
 ];
 
+const TEMPLATED_MENU_FILES = [
+  "secure_networking_agentic_ops.xml",
+  "secure_networking_agentic_ops_executive_overview.xml",
+  "secure_networking_hmf_dlp_cloud_native_security.xml",
+  "secure_networking_hmf_sdwan_network_health_monitoring.xml",
+  "secure_networking_hmf_threat_detection_enforcement.xml",
+  "secure_networking_hybrid_mesh_firewalling.xml",
+  "secure_networking_scalable_network_segmentation.xml",
+  "secure_networking_secure_infrastructure.xml",
+  "secure_networking_secure_infrastructure_status.xml",
+  "secure_networking_segmentation_overview.xml",
+  "secure_networking_zta.xml",
+  "secure_networking_zta_authentication_policy_enforcement.xml",
+  "secure_networking_zta_detection_response.xml",
+  "secure_networking_zta_policy_management.xml",
+  "secure_networking_zta_ravpn_sessions_and_posture.xml",
+  "secure_networking_zta_user_activity_monitoring.xml",
+];
+
+const SIMPLE_TIME_PICKER = {
+  options: {
+    defaultValue: "-24h,now,1h",
+    showAdvanced: true,
+    selections: [
+      { value: "-4h,now,30m", label: "4h" },
+      { value: "-24h,now,1h", label: "24h" },
+      { value: "-48h,now,2h", label: "48h" },
+      { value: "-7d@d,now,1d", label: "7d" },
+      { value: "-30d@d,now,1d", label: "30d" },
+    ],
+    token: "time_tok",
+  },
+  title: "Time range",
+  type: "input.simpleTimePicker",
+};
+
 const EXPECTED_GRAPH_COUNTS = {
   "splunk.area": 84,
   "splunk.bar": 6,
@@ -42,6 +78,10 @@ const APPLICATION_CSS_PATH = path.resolve(
 const DASHBOARD_SCRIPT_PATH = path.resolve(
   __dirname,
   "../src/main/resources/splunk/appserver/static/dashboard.js",
+);
+const NAV_PATH = path.resolve(
+  __dirname,
+  "../src/main/resources/splunk/default/data/ui/nav/default.xml",
 );
 const TEMPLATES_CONF_PATH = path.resolve(
   __dirname,
@@ -170,6 +210,11 @@ assert.deepEqual(
   EXPECTED_STUDIO_FILES,
   "Secure Networking must ship the authoritative set of 16 Studio story dashboards",
 );
+assert.deepEqual(
+  TEMPLATED_MENU_FILES,
+  EXPECTED_STUDIO_FILES,
+  "all 16 five-pillar dashboards must use the approved template",
+);
 
 const dashboardViews = actualStudioFiles.map(readDashboard);
 const totalGraphCounts = Object.fromEntries(
@@ -177,6 +222,7 @@ const totalGraphCounts = Object.fromEntries(
 );
 
 for (const { fileName, xml, definition } of dashboardViews) {
+  const isTemplated = TEMPLATED_MENU_FILES.includes(fileName);
   assert.match(
     xml,
     /<dashboard\s+version="2"[^>]*theme="dark"[^>]*stylesheet="application\.css"/,
@@ -216,6 +262,48 @@ for (const { fileName, xml, definition } of dashboardViews) {
     HOME_DARK_PALETTE.accentStroke,
     `${fileName} must use the C3 information accent for its header border`,
   );
+
+  const pickerBlock = layout.structure.find(({ item }) => item === "input_time_range");
+  const headerBlock = layout.structure.find(({ item }) => item === "viz_header");
+  if (isTemplated) {
+    assert.deepEqual(
+      definition.layout.globalInputs,
+      [],
+      `${fileName} must keep its compact time picker inside the header`,
+    );
+    assert.deepEqual(
+      pickerBlock,
+      {
+        item: "input_time_range",
+        position: { x: 1034, y: 12, w: 370, h: 80 },
+        type: "input",
+      },
+      `${fileName} must position the simple time picker inside the header`,
+    );
+    assert.deepEqual(
+      headerBlock?.position,
+      { x: 118, y: 8, w: 886, h: 88 },
+      `${fileName} header copy must leave a clear right-side region for the picker`,
+    );
+    assert.deepEqual(
+      definition.inputs.input_time_range,
+      SIMPLE_TIME_PICKER,
+      `${fileName} must reuse the approved 4h through 30d simple time picker`,
+    );
+  } else {
+    assert.deepEqual(
+      definition.layout.globalInputs,
+      ["input_time_range"],
+      `${fileName} must remain unchanged while it is under review`,
+    );
+    assert.equal(pickerBlock, undefined, `${fileName} must not receive the rollout picker`);
+    assert.deepEqual(
+      headerBlock?.position,
+      { x: 118, y: 8, w: 1280, h: 88 },
+      `${fileName} must retain its pre-rollout header geometry`,
+    );
+    assert.equal(definition.inputs.input_time_range.type, "input.timerange");
+  }
 
   assert.equal(
     Object.keys(dataSources).length,
@@ -306,9 +394,7 @@ for (const { fileName, xml, definition } of dashboardViews) {
     );
     assert.equal(
       singleValue.options?.trendDisplay,
-      fileName === "secure_networking_zta_authentication_policy_enforcement.xml"
-        ? "percent"
-        : "off",
+      isTemplated ? "percent" : "off",
       `${fileName}:${cardKey} must use the intended headline trend treatment`,
     );
     assert.match(
@@ -316,6 +402,52 @@ for (const { fileName, xml, definition } of dashboardViews) {
       /^(?:> primary \| seriesByName\(".+"\)|> sparklineValues) \| lastPoint\(\)$/,
       `${fileName}:${cardKey} must bind its headline to one named result field`,
     );
+
+    if (isTemplated) {
+      assert.equal(singleValue.options?.majorFontSize, 44);
+      assert.equal(singleValue.options?.majorValue, "> sparklineValues | lastPoint()");
+      assert.equal(singleValue.options?.shouldAbbreviateTrendValue, true);
+      assert.equal(singleValue.options?.showTrendIndicator, true);
+      assert.match(
+        singleValue.options?.sparklineValues || "",
+        /^> primary \| seriesByName\(".+"\)$/,
+        `${fileName}:${cardKey} must trend the graph's named result series`,
+      );
+      assert.equal(
+        singleValue.options?.trendColor,
+        "> trendValue | rangeValue(trendColorEditorConfig)",
+      );
+      assert.equal(singleValue.options?.trendFontSize, 28);
+      assert.equal(singleValue.options?.trendValue, "> sparklineValues | delta(-2)");
+      const trendColors = singleValue.context?.trendColorEditorConfig?.map(
+        ({ value }) => value.toLowerCase(),
+      );
+      assert.ok(
+        trendColors?.length >= 2,
+        `${fileName}:${cardKey} must define semantic trend colors`,
+      );
+      assert.ok(
+        !trendColors.includes("#fa5762"),
+        `${fileName}:${cardKey} must reserve red for charted failure data`,
+      );
+      assert.ok(
+        trendColors.every((color) => C3_GRAPH_COLORS.has(color)),
+        `${fileName}:${cardKey} trend colors must use the C3 palette`,
+      );
+      assert.equal(
+        visualizations[`viz_${cardKey}_metadata`].options.customFontSize,
+        14,
+        `${fileName}:${cardKey} metadata must remain readable after auto-scaling`,
+      );
+      assert.equal(
+        visualizations[`viz_${cardKey}_description`].options.customFontSize,
+        15,
+        `${fileName}:${cardKey} description must remain readable after auto-scaling`,
+      );
+    } else {
+      assert.equal(singleValue.options?.majorFontSize, 38);
+      assert.equal(singleValue.context, undefined);
+    }
 
     assert.ok(backgroundBlock, `${fileName}:${cardKey} must have card geometry`);
     assert.deepEqual(
@@ -461,35 +593,54 @@ assert.match(
 );
 assert.match(
   applicationCss,
-  /body\.scd-studio-home-density-pilot[\s\S]*?> \[role='main'\][\s\S]*?flex:\s*1 1 0;[\s\S]*?min-width:\s*900px;[\s\S]*?width:\s*0;/,
-  "the Studio density pilot must shrink beside app navigation without making type unreadable",
+  /body\.scd-managed-studio-template[\s\S]*?> \[role='main'\][\s\S]*?flex:\s*1 1 0;[\s\S]*?min-width:\s*900px;[\s\S]*?width:\s*0;/,
+  "the managed Studio template must shrink beside app navigation without making type unreadable",
 );
 assert.match(
   applicationCss,
-  /body\.scd-studio-home-density-pilot[\s\S]*?\[data-test='DashboardLayoutContainer'\][\s\S]*?font-family:\s*Inter, system-ui, sans-serif !important;/,
-  "the Studio density pilot must use the Insights Workspace font stack",
+  /body\.scd-managed-studio-template[\s\S]*?\[data-test='DashboardLayoutContainer'\][\s\S]*?font-family:\s*Inter, system-ui, sans-serif !important;/,
+  "the managed Studio template must use the Insights Workspace font stack",
 );
 assert.match(
   applicationCss,
-  /body\.scd-studio-home-density-pilot #input_time_range > button \{[\s\S]*?background-color:\s*#131a23 !important;[\s\S]*?color:\s*#ecf0f5 !important;/,
-  "the Studio density pilot time presets must use dark-header colors",
+  /body\.scd-managed-studio-template #input_time_range > button \{[\s\S]*?background-color:\s*#131a23 !important;[\s\S]*?color:\s*#ecf0f5 !important;/,
+  "the managed Studio template time presets must use dark-header colors",
 );
 assert.match(
   applicationCss,
   /button:not\(\[value='advancedTR'\]\)\[style\*='rgb\(204, 204, 204\)'\][\s\S]*?background:\s*#049fd9 !important;[\s\S]*?border-color:\s*#00bceb !important;/,
-  "the Studio density pilot selected time preset must use the C3 cyan state",
+  "the managed Studio template selected time preset must use the C3 cyan state",
 );
 
 const dashboardScript = fs.readFileSync(DASHBOARD_SCRIPT_PATH, "utf8");
-assert.match(
-  dashboardScript,
-  /secure_networking_zta_authentication_policy_enforcement/,
-  "the Studio density pilot must target Authentication and Policy Enforcement",
+const managedDashboardMatch = dashboardScript.match(
+  /const managedDashboards = new Set\(\[([\s\S]*?)\]\);/,
+);
+assert.ok(managedDashboardMatch, "dashboard.js must declare the managed Studio allowlist");
+const managedDashboardFiles = [
+  ...managedDashboardMatch[1].matchAll(/"([^"]+)"/g),
+].map(([, dashboardId]) => `${dashboardId}.xml`);
+assert.deepEqual(
+  managedDashboardFiles,
+  TEMPLATED_MENU_FILES,
+  "the route-scoped Studio styling must target exactly the 16 five-pillar dashboards",
 );
 assert.match(
   dashboardScript,
-  /classList\.toggle\(pilotClass, dashboardId === pilotDashboard\)/,
-  "the Studio density pilot must follow Dashboard Manager hash navigation",
+  /managedDashboards\.has\(dashboardId\)/,
+  "the managed Studio template must follow Dashboard Manager hash navigation",
+);
+
+const navSource = fs.readFileSync(NAV_PATH, "utf8");
+const menuDashboardFiles = [
+  ...navSource.matchAll(/<a href="dashboardbuilder#\/([^"]+)">/g),
+]
+  .map(([, dashboardId]) => `${dashboardId}.xml`)
+  .sort();
+assert.deepEqual(
+  menuDashboardFiles,
+  EXPECTED_STUDIO_FILES,
+  "the five pillar menus must wire all 16 managed Studio dashboards",
 );
 
 const densityPilot = dashboardViews.find(

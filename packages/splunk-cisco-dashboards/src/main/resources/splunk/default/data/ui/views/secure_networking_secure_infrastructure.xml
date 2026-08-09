@@ -8,11 +8,34 @@
     "inputs": {
         "input_time_range": {
             "options": {
-                "defaultValue": "-24h@h,now",
+                "defaultValue": "-24h,now,1h",
+                "showAdvanced": true,
+                "selections": [
+                    {
+                        "value": "-4h,now,30m",
+                        "label": "4h"
+                    },
+                    {
+                        "value": "-24h,now,1h",
+                        "label": "24h"
+                    },
+                    {
+                        "value": "-48h,now,2h",
+                        "label": "48h"
+                    },
+                    {
+                        "value": "-7d@d,now,1d",
+                        "label": "7d"
+                    },
+                    {
+                        "value": "-30d@d,now,1d",
+                        "label": "30d"
+                    }
+                ],
                 "token": "time_tok"
             },
-            "title": "Time Range",
-            "type": "input.timerange"
+            "title": "Time range",
+            "type": "input.simpleTimePicker"
         }
     },
     "defaults": {
@@ -81,7 +104,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Network  •  Secure Infrastructure"
             }
         },
@@ -94,7 +117,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Hourly trend combining Cisco Nexus Dashboard anomalies and security advisories as a unified DC health signal, enabling operators to correlate infrastructure health degradation with specific time windows\\."
             }
         },
@@ -109,11 +132,34 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowAnomalies\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"Anomaly\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
+                    }
+                ]
             }
         },
         "viz_card_01_trend": {
@@ -130,7 +176,7 @@
                 "seriesColors": [
                     "#649ef5",
                     "#4cbf7f",
-                    "#f7782f",
+                    "#f0c243",
                     "#fa5762"
                 ],
                 "dataValuesDisplay": "minmax",
@@ -193,7 +239,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Security  •  Secure Infrastructure"
             }
         },
@@ -206,7 +252,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Count of active security advisories from Cisco Nexus Dashboard, including unique advisory IDs and critical\\-severity advisory count, providing the DC vulnerability posture KPI\\."
             }
         },
@@ -221,11 +267,34 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"critical_count\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"critical_count_trend\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
+                    }
+                ]
             }
         },
         "viz_card_02_trend": {
@@ -240,10 +309,7 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
-                    "#4cbf7f",
-                    "#f7782f",
-                    "#fa5762"
+                    "#649ef5"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -305,7 +371,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Asset  •  Secure Infrastructure"
             }
         },
@@ -318,7 +384,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Total count of unique Cisco Meraki access points in the managed wireless infrastructure, providing the wireless footprint KPI\\."
             }
         },
@@ -333,11 +399,34 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"ap_count\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"ap_count\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#f7782f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#4cbf7f",
+                        "from": 0.000001
+                    }
+                ]
             }
         },
         "viz_card_03_trend": {
@@ -352,10 +441,7 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
-                    "#4cbf7f",
-                    "#f7782f",
-                    "#fa5762"
+                    "#649ef5"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -417,7 +503,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Network  •  Secure Infrastructure"
             }
         },
@@ -430,7 +516,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Trends contained and uncontained Meraki rogue access points over time, with the SSID\\-level status table available on drill\\-down\\."
             }
         },
@@ -445,11 +531,34 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowUncontained\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"Uncontained\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
+                    }
+                ]
             }
         },
         "viz_card_04_trend": {
@@ -464,9 +573,7 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
                     "#4cbf7f",
-                    "#f7782f",
                     "#fa5762"
                 ],
                 "dataValuesDisplay": "minmax",
@@ -529,7 +636,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Identity  •  Zero Trust Access"
             }
         },
@@ -542,7 +649,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Tracks Duo MFA authentication outcomes over time and keeps the application/factor breakdown as a drill\\-down table\\."
             }
         },
@@ -557,11 +664,34 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowRiskyOutcomes\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"RiskyOutcomes\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
+                    }
+                ]
             }
         },
         "viz_card_05_trend": {
@@ -576,10 +706,10 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
                     "#4cbf7f",
-                    "#f7782f",
-                    "#fa5762"
+                    "#fa5762",
+                    "#f0c243",
+                    "#a6adb6"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -641,7 +771,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Security  •  Secure Infrastructure"
             }
         },
@@ -654,7 +784,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Shows Secure Endpoint incidents, events, endpoints, and users over time to expose malware pressure and spread\\."
             }
         },
@@ -669,11 +799,29 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#049fd9",
+                        "to": 0
+                    },
+                    {
+                        "value": "#049fd9",
+                        "from": 0
+                    }
+                ]
             }
         },
         "viz_card_06_trend": {
@@ -688,10 +836,10 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
-                    "#4cbf7f",
-                    "#f7782f",
-                    "#fa5762"
+                    "#fa5762",
+                    "#f0c243",
+                    "#00bceb",
+                    "#4cbf7f"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -793,9 +941,7 @@
         }
     },
     "layout": {
-        "globalInputs": [
-            "input_time_range"
-        ],
+        "globalInputs": [],
         "layoutDefinitions": {
             "layout_overview": {
                 "options": {
@@ -836,10 +982,20 @@
                         "position": {
                             "x": 118,
                             "y": 8,
-                            "w": 1280,
+                            "w": 886,
                             "h": 88
                         },
                         "type": "block"
+                    },
+                    {
+                        "item": "input_time_range",
+                        "position": {
+                            "x": 1034,
+                            "y": 12,
+                            "w": 370,
+                            "h": 80
+                        },
+                        "type": "input"
                     },
                     {
                         "item": "viz_card_01_background",

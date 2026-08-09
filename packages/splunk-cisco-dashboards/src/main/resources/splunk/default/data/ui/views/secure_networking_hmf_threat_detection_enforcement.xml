@@ -8,11 +8,34 @@
     "inputs": {
         "input_time_range": {
             "options": {
-                "defaultValue": "-24h@h,now",
+                "defaultValue": "-24h,now,1h",
+                "showAdvanced": true,
+                "selections": [
+                    {
+                        "value": "-4h,now,30m",
+                        "label": "4h"
+                    },
+                    {
+                        "value": "-24h,now,1h",
+                        "label": "24h"
+                    },
+                    {
+                        "value": "-48h,now,2h",
+                        "label": "48h"
+                    },
+                    {
+                        "value": "-7d@d,now,1d",
+                        "label": "7d"
+                    },
+                    {
+                        "value": "-30d@d,now,1d",
+                        "label": "30d"
+                    }
+                ],
                 "token": "time_tok"
             },
-            "title": "Time Range",
-            "type": "input.timerange"
+            "title": "Time range",
+            "type": "input.simpleTimePicker"
         }
     },
     "defaults": {
@@ -81,7 +104,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Network  •  Hybrid Mesh Firewalling"
             }
         },
@@ -94,7 +117,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Summarizes perimeter decisions into Blocked versus Allowed volumes using both normalized action fields and raw syslog cues so mixed Cisco firewall feeds still aggregate cleanly\\."
             }
         },
@@ -109,11 +132,29 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"Connections\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#049fd9",
+                        "to": 0
+                    },
+                    {
+                        "value": "#049fd9",
+                        "from": 0
+                    }
+                ]
             }
         },
         "viz_card_01_trend": {
@@ -128,10 +169,8 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "right",
                 "seriesColors": [
-                    "#649ef5",
-                    "#4cbf7f",
-                    "#f7782f",
-                    "#fa5762"
+                    "#fa5762",
+                    "#4cbf7f"
                 ],
                 "showYMajorGridLines": true,
                 "stackMode": "unstacked",
@@ -190,7 +229,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Security  •  Cloud Security"
             }
         },
@@ -203,7 +242,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Counts unique cloud firewall blocks as distinct source, destination, and port tuples from Secure Access or Umbrella web firewall telemetry\\."
             }
         },
@@ -218,11 +257,29 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"count\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"count\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#049fd9",
+                        "to": 0
+                    },
+                    {
+                        "value": "#049fd9",
+                        "from": 0
+                    }
+                ]
             }
         },
         "viz_card_02_trend": {
@@ -302,7 +359,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Security  •  Cloud Security"
             }
         },
@@ -315,7 +372,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Single\\-value deny rate across all Cisco Multicloud Defense security event subtypes \\(WAF, AV, DLP, URL/FQDN filter, L4 FW, L7 DoS, malicious source, SNI, TLS, DPI\\)\\. Excludes audit logs and gateway system logs\\."
             }
         },
@@ -330,11 +387,29 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"deny_pct\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"deny_pct\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#049fd9",
+                        "to": 0
+                    },
+                    {
+                        "value": "#049fd9",
+                        "from": 0
+                    }
+                ]
             }
         },
         "viz_card_03_trend": {
@@ -349,9 +424,6 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
-                    "#4cbf7f",
-                    "#f7782f",
                     "#fa5762"
                 ],
                 "dataValuesDisplay": "minmax",
@@ -414,7 +486,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Security  •  eBPF Observability"
             }
         },
@@ -427,7 +499,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Cisco Isovalent \\(Tetragon\\) runtime\\-security alerts grouped by severity \\(typically critical, medium, informational\\)\\. Each event is one detection from an eBPF\\-based policy applied to container or host activity\\."
             }
         },
@@ -442,11 +514,29 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"Alerts\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#049fd9",
+                        "to": 0
+                    },
+                    {
+                        "value": "#049fd9",
+                        "from": 0
+                    }
+                ]
             }
         },
         "viz_card_04_trend": {
@@ -461,10 +551,10 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "right",
                 "seriesColors": [
-                    "#649ef5",
-                    "#4cbf7f",
+                    "#fa5762",
                     "#f7782f",
-                    "#fa5762"
+                    "#f0c243",
+                    "#00bceb"
                 ],
                 "showYMajorGridLines": true,
                 "stackMode": "unstacked",
@@ -523,7 +613,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Security  •  UTD / IPS"
             }
         },
@@ -536,7 +626,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Time series of UTD IPS events bucketed by Snort Priority as Low / Medium / High risk\\. Mirrors the Intrusion Prevention chart on Monitor → Security\\."
             }
         },
@@ -551,11 +641,29 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowHighRisk\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"High Risk\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#049fd9",
+                        "to": 0
+                    },
+                    {
+                        "value": "#049fd9",
+                        "from": 0
+                    }
+                ]
             }
         },
         "viz_card_05_trend": {
@@ -570,9 +678,8 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
                     "#4cbf7f",
-                    "#f7782f",
+                    "#f0c243",
                     "#fa5762"
                 ],
                 "dataValuesDisplay": "minmax",
@@ -635,7 +742,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Security  •  Hybrid Mesh Firewalling"
             }
         },
@@ -648,7 +755,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Creates a unified block trend across Meraki security events, SD\\-WAN UTD, Secure Access firewall events, and Secure Firewall/ASA\\-style feeds\\."
             }
         },
@@ -663,11 +770,34 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowBlocks\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"BucketBlocks\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
+                    }
+                ]
             }
         },
         "viz_card_06_trend": {
@@ -682,10 +812,10 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
+                    "#fa5762",
+                    "#f0c243",
                     "#4cbf7f",
-                    "#f7782f",
-                    "#fa5762"
+                    "#649ef5"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -787,9 +917,7 @@
         }
     },
     "layout": {
-        "globalInputs": [
-            "input_time_range"
-        ],
+        "globalInputs": [],
         "layoutDefinitions": {
             "layout_overview": {
                 "options": {
@@ -830,10 +958,20 @@
                         "position": {
                             "x": 118,
                             "y": 8,
-                            "w": 1280,
+                            "w": 886,
                             "h": 88
                         },
                         "type": "block"
+                    },
+                    {
+                        "item": "input_time_range",
+                        "position": {
+                            "x": 1034,
+                            "y": 12,
+                            "w": 370,
+                            "h": 80
+                        },
+                        "type": "input"
                     },
                     {
                         "item": "viz_card_01_background",

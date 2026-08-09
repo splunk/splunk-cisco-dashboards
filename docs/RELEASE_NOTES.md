@@ -7,6 +7,12 @@
   guidance treatment as Insights Workspace. Short result tables use a tighter
   canvas, and inline SPL fields use high-contrast monospaced code styling
   instead of low-contrast red text.
+- All 16 five-pillar Dashboard Manager views now use the approved compact
+  header template, with the 4h/24h/48h/7d/30d picker, larger Insights
+  Workspace typography, C3 graph palettes, and no-red semantic KPI trends.
+  Each dashboard still shares one Searchbase dispatch between a headline and
+  its supporting graph, keeping initial load bounded to six searches. The five
+  pillar overview dashboards are restored to their navigation menus.
 - Searchbase contextual drilldowns now use target stanza IDs instead of mutable
   `search_name` labels. All 401 shipped relationships were migrated and are
   validated for exact target existence, while existing local configuration and

@@ -8,11 +8,34 @@
     "inputs": {
         "input_time_range": {
             "options": {
-                "defaultValue": "-24h@h,now",
+                "defaultValue": "-24h,now,1h",
+                "showAdvanced": true,
+                "selections": [
+                    {
+                        "value": "-4h,now,30m",
+                        "label": "4h"
+                    },
+                    {
+                        "value": "-24h,now,1h",
+                        "label": "24h"
+                    },
+                    {
+                        "value": "-48h,now,2h",
+                        "label": "48h"
+                    },
+                    {
+                        "value": "-7d@d,now,1d",
+                        "label": "7d"
+                    },
+                    {
+                        "value": "-30d@d,now,1d",
+                        "label": "30d"
+                    }
+                ],
                 "token": "time_tok"
             },
-            "title": "Time Range",
-            "type": "input.timerange"
+            "title": "Time range",
+            "type": "input.simpleTimePicker"
         }
     },
     "defaults": {
@@ -81,7 +104,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Monitoring  •  Hybrid Mesh Firewalling"
             }
         },
@@ -94,7 +117,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Counts of SD\\-WAN sites by overall health bucket \\(good / fair / poor / no\\_data\\) using the most recent poll per site\\. Mirrors the Overview tile that summarises Sites Up/Down on Monitor → Overview\\."
             }
         },
@@ -109,11 +132,29 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"Sites\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#049fd9",
+                        "to": 0
+                    },
+                    {
+                        "value": "#049fd9",
+                        "from": 0
+                    }
+                ]
             }
         },
         "viz_card_01_trend": {
@@ -128,10 +169,9 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "right",
                 "seriesColors": [
-                    "#649ef5",
                     "#4cbf7f",
-                    "#f7782f",
-                    "#fa5762"
+                    "#fa5762",
+                    "#a6adb6"
                 ],
                 "label": "> primary | seriesByName(\"State\")",
                 "value": "> primary | seriesByName(\"Sites\")"
@@ -186,7 +226,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Monitoring  •  Hybrid Mesh Firewalling"
             }
         },
@@ -199,7 +239,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Counts of SD\\-WAN WAN\\-transport circuits \\(physical/virtual interfaces carrying a TLOC color\\) that are currently Up vs Down\\. Mirrors the Circuits tile on Monitor → Overview\\."
             }
         },
@@ -214,11 +254,29 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"Circuits\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#049fd9",
+                        "to": 0
+                    },
+                    {
+                        "value": "#049fd9",
+                        "from": 0
+                    }
+                ]
             }
         },
         "viz_card_02_trend": {
@@ -233,9 +291,7 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "right",
                 "seriesColors": [
-                    "#649ef5",
                     "#4cbf7f",
-                    "#f7782f",
                     "#fa5762"
                 ],
                 "label": "> primary | seriesByName(\"State\")",
@@ -291,7 +347,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Monitoring  •  SD\\-WAN"
             }
         },
@@ -304,7 +360,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Time series of the count of poor\\-latency SD\\-WAN tunnels per 15\\-minute bucket\\. Mirrors the Overview → Tunnel Health \\(Latency, Poor Tunnels\\) tile\\."
             }
         },
@@ -319,11 +375,29 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowPoorTunnels\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"poor_tunnels\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#049fd9",
+                        "to": 0
+                    },
+                    {
+                        "value": "#049fd9",
+                        "from": 0
+                    }
+                ]
             }
         },
         "viz_card_03_trend": {
@@ -338,10 +412,9 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
-                    "#4cbf7f",
-                    "#f7782f",
-                    "#fa5762"
+                    "#fa5762",
+                    "#f0c243",
+                    "#00bceb"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -403,7 +476,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Network  •  Secure Infrastructure"
             }
         },
@@ -416,7 +489,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Trend of Cisco Catalyst SD\\-WAN sites with poor or fair application health, compared with healthy sites across the selected time window\\."
             }
         },
@@ -431,11 +504,34 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"degraded_sites\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"degraded_sites_trend\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
+                    }
+                ]
             }
         },
         "viz_card_04_trend": {
@@ -450,10 +546,8 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "right",
                 "seriesColors": [
-                    "#649ef5",
-                    "#4cbf7f",
-                    "#f7782f",
-                    "#fa5762"
+                    "#f0c243",
+                    "#4cbf7f"
                 ],
                 "showYMajorGridLines": true,
                 "stackMode": "unstacked",
@@ -512,7 +606,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Network  •  Agentic Ops"
             }
         },
@@ -525,7 +619,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Hourly trend of average and maximum network packet loss from Cisco ThousandEyes, enabling detection of transient vs sustained path quality degradation over time\\."
             }
         },
@@ -540,11 +634,34 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowAvgLossPct\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"avg_loss_pct\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
+                    }
+                ]
             }
         },
         "viz_card_05_trend": {
@@ -559,9 +676,9 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
+                    "#049fd9",
                     "#4cbf7f",
-                    "#f7782f",
+                    "#f0c243",
                     "#fa5762"
                 ],
                 "dataValuesDisplay": "minmax",
@@ -624,7 +741,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Network  •  Agentic Ops"
             }
         },
@@ -637,7 +754,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Hourly trend of BGP path changes detected by Cisco ThousandEyes per monitored test, surfacing internet routing instability that can degrade application reachability and performance before users report issues\\."
             }
         },
@@ -652,11 +769,34 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowPathChanges\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"BucketPathChanges\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
+                    }
+                ]
             }
         },
         "viz_card_06_trend": {
@@ -671,9 +811,9 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
+                    "#049fd9",
                     "#4cbf7f",
-                    "#f7782f",
+                    "#f0c243",
                     "#fa5762"
                 ],
                 "dataValuesDisplay": "minmax",
@@ -776,9 +916,7 @@
         }
     },
     "layout": {
-        "globalInputs": [
-            "input_time_range"
-        ],
+        "globalInputs": [],
         "layoutDefinitions": {
             "layout_overview": {
                 "options": {
@@ -819,10 +957,20 @@
                         "position": {
                             "x": 118,
                             "y": 8,
-                            "w": 1280,
+                            "w": 886,
                             "h": 88
                         },
                         "type": "block"
+                    },
+                    {
+                        "item": "input_time_range",
+                        "position": {
+                            "x": 1034,
+                            "y": 12,
+                            "w": 370,
+                            "h": 80
+                        },
+                        "type": "input"
                     },
                     {
                         "item": "viz_card_01_background",

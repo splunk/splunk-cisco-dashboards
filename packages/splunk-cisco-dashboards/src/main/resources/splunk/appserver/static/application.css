@@ -118,13 +118,13 @@
 }
 
 /*
- * Home-density pilot: let the Authentication and Policy Enforcement canvas
- * consume the space beside Splunk's navigation rail instead of preserving its
- * 1440px min-content width. The dashboard already requests auto-scale, so the
- * narrower host scales its header, cards, charts, and type together. Keep the
- * experiment isolated through the body marker maintained by dashboard.js.
+ * Managed Studio template: let the 16 five-pillar Dashboard Manager canvases
+ * consume the space beside Splunk's navigation rail instead of preserving a
+ * 1440px min-content width. The dashboards request auto-scale, so the narrower
+ * host scales the header, cards, charts, and type together. Keep this isolated
+ * through the exact route allowlist maintained by dashboard.js.
  */
-body.scd-studio-home-density-pilot
+body.scd-managed-studio-template
     > [role='main']
     > div:has(#collection_container.dashboardbuilderview) {
     flex: 1 1 0;
@@ -132,41 +132,41 @@ body.scd-studio-home-density-pilot
     width: 0;
 }
 
-body.scd-studio-home-density-pilot #collection_container.dashboardbuilderview {
+body.scd-managed-studio-template #collection_container.dashboardbuilderview {
     width: 100%;
     min-width: 0;
 }
 
-body.scd-studio-home-density-pilot
+body.scd-managed-studio-template
     [data-test='DashboardLayoutContainer'],
-body.scd-studio-home-density-pilot
+body.scd-managed-studio-template
     [data-test='DashboardLayoutContainer'] * {
     font-family: Inter, system-ui, sans-serif !important;
 }
 
 /*
- * Keep the pilot's compact time-range control aligned with the dark header.
+ * Keep the template's compact time-range control aligned with the dark header.
  * Dashboard Studio writes light-theme colors inline, so these selectors stay
  * route-scoped and use the selected button's inline color only as a state hook.
  */
-body.scd-studio-home-density-pilot #input_time_range {
+body.scd-managed-studio-template #input_time_range {
     border-radius: 6px;
     overflow: hidden;
 }
 
-body.scd-studio-home-density-pilot #input_time_range > button {
+body.scd-managed-studio-template #input_time_range > button {
     background-color: #131a23 !important;
     border-color: rgba(100, 158, 245, 0.28) !important;
     color: #ecf0f5 !important;
 }
 
-body.scd-studio-home-density-pilot #input_time_range > button:hover,
-body.scd-studio-home-density-pilot #input_time_range > button[value='advancedTR'] {
+body.scd-managed-studio-template #input_time_range > button:hover,
+body.scd-managed-studio-template #input_time_range > button[value='advancedTR'] {
     background: #1c2738 !important;
     color: #a6adb6 !important;
 }
 
-body.scd-studio-home-density-pilot
+body.scd-managed-studio-template
     #input_time_range
     > button:not([value='advancedTR'])[style*='rgb(204, 204, 204)'] {
     background: #049fd9 !important;
@@ -174,13 +174,13 @@ body.scd-studio-home-density-pilot
     color: #ecf0f5 !important;
 }
 
-body.scd-studio-home-density-pilot
+body.scd-managed-studio-template
     #input_time_range
     > button:not([value='advancedTR'])[style*='rgb(204, 204, 204)']:hover,
-body.scd-studio-home-density-pilot
+body.scd-managed-studio-template
     #input_time_range
     > button:not([value='advancedTR'])[style*='rgb(204, 204, 204)']:focus,
-body.scd-studio-home-density-pilot
+body.scd-managed-studio-template
     #input_time_range
     > button:not([value='advancedTR'])[style*='rgb(204, 204, 204)']:active {
     background: #049fd9 !important;
@@ -189,15 +189,15 @@ body.scd-studio-home-density-pilot
     color: #ecf0f5 !important;
 }
 
-body.scd-studio-home-density-pilot #input_time_range > button:first-child {
+body.scd-managed-studio-template #input_time_range > button:first-child {
     border-radius: 6px 0 0 6px;
 }
 
-body.scd-studio-home-density-pilot #input_time_range > button:last-child {
+body.scd-managed-studio-template #input_time_range > button:last-child {
     border-radius: 0 6px 6px 0;
 }
 
-body.scd-studio-home-density-pilot #input_time_range svg {
+body.scd-managed-studio-template #input_time_range svg {
     color: currentColor;
     fill: currentColor;
 }

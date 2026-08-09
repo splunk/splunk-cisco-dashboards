@@ -8,11 +8,34 @@
     "inputs": {
         "input_time_range": {
             "options": {
-                "defaultValue": "-24h@h,now",
+                "defaultValue": "-24h,now,1h",
+                "showAdvanced": true,
+                "selections": [
+                    {
+                        "value": "-4h,now,30m",
+                        "label": "4h"
+                    },
+                    {
+                        "value": "-24h,now,1h",
+                        "label": "24h"
+                    },
+                    {
+                        "value": "-48h,now,2h",
+                        "label": "48h"
+                    },
+                    {
+                        "value": "-7d@d,now,1d",
+                        "label": "7d"
+                    },
+                    {
+                        "value": "-30d@d,now,1d",
+                        "label": "30d"
+                    }
+                ],
                 "token": "time_tok"
             },
-            "title": "Time Range",
-            "type": "input.timerange"
+            "title": "Time range",
+            "type": "input.simpleTimePicker"
         }
     },
     "defaults": {
@@ -81,7 +104,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Monitoring  •  ThousandEyes"
             }
         },
@@ -94,7 +117,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Staleness monitor for the ThousandEyes OTel metric stream\\. Detects feed death within 30 minutes \\- the typical symptom of an OAuth2 token expiry, endpoint URL change after a TE platform upgrade, or HEC token rotation\\."
             }
         },
@@ -109,11 +132,34 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"age_minutes\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"age_minutes\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
+                    }
+                ]
             }
         },
         "viz_card_01_trend": {
@@ -193,7 +239,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Security  •  GenAI Protection"
             }
         },
@@ -206,7 +252,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Time series trend of Cisco AI Defense Block vs Allow decisions\\. Useful to spot bursts of denied prompts \\(likely attack/probing\\) against the steady\\-state allow baseline\\."
             }
         },
@@ -221,11 +267,29 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowBlocked\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"Blocked\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#049fd9",
+                        "to": 0
+                    },
+                    {
+                        "value": "#049fd9",
+                        "from": 0
+                    }
+                ]
             }
         },
         "viz_card_02_trend": {
@@ -240,10 +304,9 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
+                    "#fa5762",
                     "#4cbf7f",
-                    "#f7782f",
-                    "#fa5762"
+                    "#a6adb6"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -305,7 +368,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Network  •  Agentic Ops"
             }
         },
@@ -318,7 +381,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Tracks ThousandEyes network latency by agent location over time, with the statistical agent table retained as drill\\-down detail\\."
             }
         },
@@ -333,11 +396,34 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowPeakLatencyMs\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"RowMaxLatencyMs\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
+                    }
+                ]
             }
         },
         "viz_card_03_trend": {
@@ -352,9 +438,9 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
+                    "#049fd9",
                     "#4cbf7f",
-                    "#f7782f",
+                    "#f0c243",
                     "#fa5762"
                 ],
                 "dataValuesDisplay": "minmax",
@@ -417,7 +503,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Network  •  Agentic Ops"
             }
         },
@@ -430,7 +516,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Hourly trend of average and maximum network packet loss from Cisco ThousandEyes, enabling detection of transient vs sustained path quality degradation over time\\."
             }
         },
@@ -445,11 +531,34 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowAvgLossPct\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"avg_loss_pct\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
+                    }
+                ]
             }
         },
         "viz_card_04_trend": {
@@ -464,9 +573,9 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
+                    "#049fd9",
                     "#4cbf7f",
-                    "#f7782f",
+                    "#f0c243",
                     "#fa5762"
                 ],
                 "dataValuesDisplay": "minmax",
@@ -529,7 +638,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Network  •  Agentic Ops"
             }
         },
@@ -542,7 +651,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Tracks ThousandEyes HTTP availability by monitored test over time and retains the per\\-test SLA table as drill\\-down detail\\."
             }
         },
@@ -557,11 +666,34 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowMinAvailabilityPct\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"RowMinAvailabilityPct\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#f7782f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#4cbf7f",
+                        "from": 0.000001
+                    }
+                ]
             }
         },
         "viz_card_05_trend": {
@@ -576,9 +708,9 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
+                    "#049fd9",
                     "#4cbf7f",
-                    "#f7782f",
+                    "#f0c243",
                     "#fa5762"
                 ],
                 "dataValuesDisplay": "minmax",
@@ -641,7 +773,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": "Network  •  Agentic Ops"
             }
         },
@@ -654,7 +786,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": "Hourly trend of BGP path changes detected by Cisco ThousandEyes per monitored test, surfacing internet routing instability that can degrade application reachability and performance before users report issues\\."
             }
         },
@@ -669,11 +801,34 @@
             "options": {
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
-                "majorFontSize": 38,
-                "majorValue": "> primary | seriesByName(\"WindowPathChanges\") | lastPoint()",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"BucketPathChanges\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
+                    }
+                ]
             }
         },
         "viz_card_06_trend": {
@@ -688,9 +843,9 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#649ef5",
+                    "#049fd9",
                     "#4cbf7f",
-                    "#f7782f",
+                    "#f0c243",
                     "#fa5762"
                 ],
                 "dataValuesDisplay": "minmax",
@@ -793,9 +948,7 @@
         }
     },
     "layout": {
-        "globalInputs": [
-            "input_time_range"
-        ],
+        "globalInputs": [],
         "layoutDefinitions": {
             "layout_overview": {
                 "options": {
@@ -836,10 +989,20 @@
                         "position": {
                             "x": 118,
                             "y": 8,
-                            "w": 1280,
+                            "w": 886,
                             "h": 88
                         },
                         "type": "block"
+                    },
+                    {
+                        "item": "input_time_range",
+                        "position": {
+                            "x": 1034,
+                            "y": 12,
+                            "w": 370,
+                            "h": 80
+                        },
+                        "type": "input"
                     },
                     {
                         "item": "viz_card_01_background",
