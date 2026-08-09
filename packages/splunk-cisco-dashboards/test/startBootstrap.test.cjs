@@ -505,6 +505,102 @@ assert.doesNotMatch(
   /<a href="macro_index_tuning">Macro Index Tuning<\/a>/,
   "Macro Index Tuning should remain accessible from Setup instead of duplicating the navigation entry",
 );
+for (const dashboardGroup of [
+  "More Dashboards",
+  "Executive Views",
+  "Network &amp; IT Operations",
+  "Security Operations",
+  "Workplace Intelligence",
+  "Events &amp; Exercises",
+  "Visual Labs (Beta)",
+  "Administration",
+]) {
+  assert.match(
+    navSource,
+    new RegExp(`label="${dashboardGroup.replace(/[()]/g, "\\$&")}"`),
+    `Navigation must include the ${dashboardGroup} group`,
+  );
+}
+for (const legacyDashboardGroup of [
+  "Other",
+  "Core Dashboards",
+  "Operations",
+  "Workplace &amp; Collaboration",
+  "Event Ops",
+  "Concepts (Beta)",
+  "Admin &amp; Tools",
+]) {
+  assert.doesNotMatch(
+    navSource,
+    new RegExp(`label="${legacyDashboardGroup.replace(/[()]/g, "\\$&")}"`),
+    `Navigation must not retain the legacy ${legacyDashboardGroup} group`,
+  );
+}
+for (const betaDashboardLabel of [
+  "Health Monitoring (Beta)",
+  "Secure Operations Glass (Beta)",
+  "Statewide Exercise (Beta)",
+]) {
+  assert.match(
+    navSource,
+    new RegExp(`>${betaDashboardLabel.replace(/[()]/g, "\\$&")}<`),
+    `${betaDashboardLabel} must remain visibly identified as beta`,
+  );
+}
+assert.match(
+  navSource,
+  /name="spaces_intelligence_v1" label="Cisco Spaces — Intelligence"/,
+);
+assert.match(
+  navSource,
+  /name="workplace_spog_v1" label="Workplace — Single Pane of Glass"/,
+);
+const organizedDashboardGroups = {
+  "Executive Views": ["executive_briefing_profile"],
+  "Network &amp; IT Operations": [
+    "it_health_v1",
+    "netops_readiness_v1",
+    "asset_inventory_v1",
+    "health_monitoring",
+  ],
+  "Security Operations": ["security_v1", "secure_operations_glass"],
+  "Workplace Intelligence": [
+    "building_v1",
+    "spaces_intelligence_v1",
+    "workplace_spog_v1",
+  ],
+  "Events &amp; Exercises": [
+    "statewide_exercise_v1",
+    "statewide_exercise_v1_studio_modern",
+  ],
+  "Visual Labs (Beta)": [
+    "searchbase_canvas",
+    "network_diagram",
+    "topology_canvas_v1",
+  ],
+  Administration: ["start"],
+};
+for (const [dashboardGroup, destinations] of Object.entries(
+  organizedDashboardGroups,
+)) {
+  const groupStart = navSource.indexOf(`<collection label="${dashboardGroup}">`);
+  const groupEnd = navSource.indexOf("</collection>", groupStart);
+  assert.notEqual(groupStart, -1, `${dashboardGroup} group must exist`);
+  assert.notEqual(groupEnd, -1, `${dashboardGroup} group must be closed`);
+  const groupSource = navSource.slice(groupStart, groupEnd);
+  for (const destination of destinations) {
+    assert.match(
+      groupSource,
+      new RegExp(`(?:href|name)="${destination}(?:\\?setup=1)?"`),
+      `${destination} must remain in ${dashboardGroup}`,
+    );
+    assert.equal(
+      fs.existsSync(path.join(viewsRoot, `${destination}.xml`)),
+      true,
+      `${destination} must resolve to a shipped Splunk view`,
+    );
+  }
+}
 assert.doesNotMatch(navSource, /name="secure_networking_overview"/);
 assert.doesNotMatch(navSource, /name="overview"/);
 

@@ -56,38 +56,41 @@
 
     <a href="user_guide" icon="organizernotebook">User Guide</a>
 
-    <collection label="Other" icon="layout">
-        <collection label="Core Dashboards">
+    <collection label="More Dashboards" icon="layout">
+        <collection label="Executive Views">
             <view name="executive_briefing_profile" label="Executive Briefing" />
-            <a href="it_health_v1">IT Health</a>
-            <a href="security_v1">Security</a>
-            <a href="building_v1">Building Intelligence</a>
         </collection>
 
-        <collection label="Operations">
+        <collection label="Network &amp; IT Operations">
+            <a href="it_health_v1">IT Health</a>
             <a href="netops_readiness_v1">NetOps Readiness</a>
             <a href="asset_inventory_v1">Asset Inventory</a>
+            <a href="health_monitoring">Health Monitoring (Beta)</a>
         </collection>
 
-        <collection label="Workplace &amp; Collaboration">
-            <view name="spaces_intelligence_v1" label="Spaces Intelligence" />
-            <view name="workplace_spog_v1" label="Workplace SPOG" />
+        <collection label="Security Operations">
+            <a href="security_v1">Security</a>
+            <a href="secure_operations_glass">Secure Operations Glass (Beta)</a>
         </collection>
 
-        <collection label="Event Ops">
+        <collection label="Workplace Intelligence">
+            <a href="building_v1">Building Intelligence</a>
+            <view name="spaces_intelligence_v1" label="Cisco Spaces — Intelligence" />
+            <view name="workplace_spog_v1" label="Workplace — Single Pane of Glass" />
+        </collection>
+
+        <collection label="Events &amp; Exercises">
             <a href="statewide_exercise_v1">Network Activation Report</a>
+            <a href="statewide_exercise_v1_studio_modern">Statewide Exercise (Beta)</a>
         </collection>
 
-        <collection label="Concepts (Beta)">
+        <collection label="Visual Labs (Beta)">
             <a href="searchbase_canvas">Searchbase Canvas</a>
             <a href="network_diagram">Network Diagram</a>
             <a href="topology_canvas_v1">Topology Canvas</a>
-            <a href="statewide_exercise_v1_studio_modern">Statewide Exercise</a>
-            <a href="health_monitoring">Health Monitoring</a>
-            <a href="secure_operations_glass">Secure Operations Glass</a>
         </collection>
 
-        <collection label="Admin &amp; Tools">
+        <collection label="Administration">
             <a href="start?setup=1">Setup</a>
         </collection>
     </collection>

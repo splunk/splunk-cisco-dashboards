@@ -21,6 +21,10 @@
   installations get a direct full-tuner action without repeating onboarding;
   the advanced Macro Index Tuning route remains available for deep links and
   diagnostics.
+- The former Other drawer is now a More Dashboards library organized into
+  executive, network and IT, security, workplace, event, visual-lab, and
+  administration groups. Experimental destinations remain explicitly marked
+  as beta instead of being mixed into a single concepts bucket.
 - Dashboard Manager drilldowns now use the same compact glass dialog, bounded
   scrolling, header-level Search and Searchbase actions, and collapsible
   guidance treatment as Insights Workspace. Short result tables use a tighter
