@@ -1351,7 +1351,11 @@ iseval = 0`}</CodeBlock>
                   Use executive workspaces for a concise briefing and a deeper
                   operational workspace for troubleshooting. The map can sit
                   beside, above, or below the tile grid, or be hidden when it
-                  is not useful to the audience.
+                  is not useful to the audience. Sections start expanded and
+                  can be collapsed to a KPI and health summary or focused to
+                  use the available metrics pane. Compact H1 sparklines keep
+                  the trend visible; focus restores full labels and chart
+                  detail without changing the shared factory layout.
                 </InfoCard>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
@@ -1592,7 +1596,10 @@ iseval = 0`}</CodeBlock>
                   comfortable density, offer small, standard, and large KPI
                   text, and use the full width without a fixed label block.
                   Tile drag and remove controls appear only from the top-left
-                  action corner. A template helps create the initial workspace
+                  action corner. Sections can collapse to a status summary or
+                  enter a temporary focus view; compact charts automatically
+                  trade static labels for plotting room and restore full detail
+                  when focused. A template helps create the initial workspace
                   but does not constrain future customization.
                 </InfoCard>
                 <InfoCard title="Dashboard Studio editing">

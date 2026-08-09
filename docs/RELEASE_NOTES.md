@@ -2,6 +2,12 @@
 
 ## 1.0.36
 
+- Insights Workspace H1 tiles now use height-aware compact sparklines that
+  dedicate the available canvas to the trend, retain hover detail, mark the
+  latest point, and apply bounded scale padding without exaggerating flat
+  data. Each section can be collapsed to a KPI and health summary or focused
+  as the primary work surface; factory sections remain expanded, collapse
+  preferences stay private to the workspace, and focus mode is temporary.
 - Secure Networking visualizations now use a C3-observed operational palette
   across Insights Workspace trends, ranked bars, gauges, topology status, and
   all 16 Dashboard Studio stories. Information blue, healthy green, caution

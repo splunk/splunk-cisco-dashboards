@@ -51,6 +51,9 @@ const sparkline = read(
 const dashboardSection = read(
   "../src/main/webapp/common/components/florida/DashboardSection.tsx",
 );
+const sectionPresentation = read(
+  "../src/main/webapp/common/hooks/usePersistedSectionPresentation.ts",
+);
 const c3VisualizationPalette = read(
   "../src/main/webapp/common/theme/c3VisualizationPalette.ts",
 );
@@ -432,8 +435,53 @@ assert.match(
 );
 assert.match(
   profile,
-  /compactHeight=\{isCompactHeight\}/,
+  /compactHeight=\{renderCompactHeight\}/,
   "The H1 height control must activate compact section rendering",
+);
+assert.match(
+  sparkline,
+  /data-sparkline-density=\{compact \? 'compact' : 'detailed'\}/,
+  "Sparklines must expose their adaptive compact or detailed presentation",
+);
+assert.match(
+  sparkline,
+  /compact[\s\S]*?top: 6[\s\S]*?bottom: 6[\s\S]*?!compact && Number\.isFinite\(firstTime\)/,
+  "Compact H1 sparklines must reclaim plot height from labels and timestamp chrome",
+);
+assert.match(
+  sparkline,
+  /const minimumSpan = Math\.max\(1, Math\.abs\(center\) \* 0\.05\)/,
+  "Sparkline domains must retain a bounded minimum range for near-flat data",
+);
+assert.match(
+  dashboardSection,
+  /aria-expanded=\{!collapsed\}[\s\S]*?aria-controls=\{sectionBodyId\}/,
+  "Section collapse controls must expose their state and controlled region",
+);
+assert.match(
+  dashboardSection,
+  /collapsed && 'hidden'/,
+  "Collapsed sections must hide mounted content instead of unmounting live searches",
+);
+assert.match(
+  dashboardSection,
+  /aria-pressed=\{focused\}/,
+  "Section focus controls must expose their pressed state",
+);
+assert.match(
+  profile,
+  /focusedSection === section[\s\S]*?collapsedSections\[section\] \|\| focusedSection/,
+  "Focusing one section must temporarily collapse its siblings",
+);
+assert.match(
+  profile,
+  /!isSectionFocused &&[\s\S]*?compactDensity \|\| renderCompactHeight/,
+  "Focused sections must restore detailed chart presentation",
+);
+assert.match(
+  sectionPresentation,
+  /sectionPresentation\.v1[\s\S]*?workspaceStorageKey\(/,
+  "Collapsed section preferences must stay private to the active workspace",
 );
 
 console.log("✓ Workspace topology, signal rail, and drilldown affordance tests passed");

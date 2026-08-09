@@ -156,6 +156,7 @@ import { usePersistedSectionHiddenTiles } from "@/common/hooks/usePersistedSecti
 import { usePersistedSectionLayout } from "@/common/hooks/usePersistedSectionLayout";
 import { usePersistedSectionTileOrder } from "@/common/hooks/usePersistedSectionTileOrder";
 import { usePersistedSectionHeights } from "@/common/hooks/usePersistedSectionHeights";
+import { usePersistedSectionPresentation } from "@/common/hooks/usePersistedSectionPresentation";
 import {
   getDefaultSignalTickerConfig,
   usePersistedSignalTicker,
@@ -1817,12 +1818,9 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
       // the existing one regardless of what the searchbase
       // entry asked for.
       dataValuesDisplay={
-        hidePeak
-          ? "off"
-          : compactDensity && dataValuesDisplay === "minmax"
-            ? "maxonly"
-            : dataValuesDisplay
+        hidePeak ? "off" : dataValuesDisplay
       }
+      sparklineDensity={compactDensity ? "compact" : "detailed"}
       status={result.status}
       source={result.source}
       onOpenInSearch={drilldownSpl ? handleClick : undefined}
@@ -2539,6 +2537,47 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     workspaceId: insightsWorkspace.id,
     availableSections,
   });
+
+  // Collapsed state is a private, workspace-scoped preference. Focus is
+  // deliberately transient: a reload always returns to the user's expanded /
+  // collapsed layout instead of reopening an investigation-only view.
+  const {
+    collapsed: collapsedSections,
+    setCollapsed: setSectionCollapsed,
+    resetAll: resetAllSectionPresentation,
+  } = usePersistedSectionPresentation({
+    workspaceId: insightsWorkspace.id,
+    availableSections,
+  });
+  const [focusedSection, setFocusedSection] = useState<SectionId | null>(null);
+
+  useEffect(() => {
+    setFocusedSection(null);
+  }, [insightsWorkspace.id]);
+
+  const toggleSectionFocus = useCallback(
+    (section: SectionId) => {
+      setFocusedSection((current) => (current === section ? null : section));
+    },
+    [],
+  );
+
+  const toggleSectionCollapsed = useCallback(
+    (section: SectionId) => {
+      if (focusedSection === section) {
+        setFocusedSection(null);
+        setSectionCollapsed(section, true);
+        return;
+      }
+      if (focusedSection && focusedSection !== section) {
+        setFocusedSection(null);
+        setSectionCollapsed(section, false);
+        return;
+      }
+      setSectionCollapsed(section, !collapsedSections[section]);
+    },
+    [collapsedSections, focusedSection, setSectionCollapsed],
+  );
 
   // ------------------------------ Section tile-order preference ------------------------------
   //
@@ -3802,6 +3841,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   //                                      into profile sections
   //   • sectionHiddenTiles.v1         — per-user hidden factory tiles
   //   • sectionHeights.v1             — vertical room per section
+  //   • sectionPresentation.v1        — collapsed state per section
   //   • sectionTileOrder.v1           — drag-to-reorder preference
   //   • customerTopology.v4           — retired per-browser map payload
   //   • scd_overview_split_pct        — tiles ↔ map splitter position
@@ -3833,6 +3873,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     resetAllSectionTileAdditions();
     resetAllSectionHiddenTiles();
     resetAllSectionHeights();
+    resetAllSectionPresentation();
     resetAllSectionTileOrder();
     resetSignalTickerConfig();
     clearCustomerTopologyStorage();
@@ -3841,6 +3882,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     setMapPosition(MAP_POS_DEFAULT);
     setMapVisible(MAP_VISIBLE_DEFAULT);
     setSelectedPriorityDrilldownView(DEFAULT_PRIORITY_DRILLDOWN_VIEW);
+    setFocusedSection(null);
     clearPriorityDrilldownView();
     setAddTileSection(null);
     if (typeof window !== "undefined" && window.localStorage) {
@@ -3862,6 +3904,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     resetAllSectionTileAdditions,
     resetAllSectionHiddenTiles,
     resetAllSectionHeights,
+    resetAllSectionPresentation,
     resetAllSectionTileOrder,
     resetSignalTickerConfig,
     SPLIT_KEY,
@@ -4693,16 +4736,22 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               const estimatedTileRows = wrapTiles
                 ? Math.ceil(visibleCount / SECTION_WRAPPED_TILE_COLUMNS)
                 : 1;
+              const isSectionFocused = focusedSection === section;
+              const isSectionCollapsed = isSectionFocused
+                ? false
+                : Boolean(collapsedSections[section] || focusedSection);
               const heightLevel =
                 sectionHeights[section] ?? sectionHeightBounds.defaultLevel;
               const isCompactHeight =
                 heightLevel === sectionHeightBounds.minLevel;
-              const baseMinHeight = isCompactHeight
+              const renderCompactHeight =
+                isCompactHeight && !isSectionFocused;
+              const baseMinHeight = renderCompactHeight
                 ? SECTION_HEIGHT_H1_BASE_PX
                 : compactDensity
                   ? SECTION_HEIGHT_COMPACT_BASE_PX
                   : SECTION_HEIGHT_BASE_PX;
-              const wrappedRowStep = isCompactHeight
+              const wrappedRowStep = renderCompactHeight
                 ? SECTION_WRAPPED_H1_TILE_ROW_STEP_PX
                 : SECTION_WRAPPED_TILE_ROW_STEP_PX;
               const sectionMinHeight =
@@ -4726,6 +4775,27 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               const orderedIds = getSectionTileOrder(section, canonicalIds);
               const visibleIds = orderedIds.slice(0, visibleCount);
               const byId = new Map(allSectionMetrics.map((m) => [m.id, m]));
+              const sectionStatuses = visibleIds
+                .map((id) => statuses[id])
+                .filter((status): status is MetricStatus => Boolean(status));
+              const criticalCount = sectionStatuses.filter(
+                (status) => status === "critical",
+              ).length;
+              const warningCount = sectionStatuses.filter(
+                (status) => status === "warning",
+              ).length;
+              const collapsedSummary = [
+                `${visibleCount} KPI${visibleCount === 1 ? "" : "s"}`,
+                criticalCount > 0 ? `${criticalCount} critical` : null,
+                warningCount > 0 ? `${warningCount} warning` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ");
+              let sectionFlexGrow = heightLevel;
+              if (isSectionCollapsed) sectionFlexGrow = 0;
+              if (isSectionFocused) {
+                sectionFlexGrow = sectionHeightBounds.maxLevel;
+              }
 
               // Drag handler scoped to this section: dnd-kit
               // emits the dragged id and the id it was
@@ -4757,9 +4827,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   // floor that triggers metric-column
                   // scrolling on short screens.
                   style={{
-                    flexGrow: heightLevel,
+                    flexGrow: sectionFlexGrow,
                     flexShrink: 0,
-                    minHeight: sectionMinHeight,
+                    minHeight: isSectionCollapsed ? 42 : sectionMinHeight,
                   }}
                   height={{
                     value: heightLevel,
@@ -4769,7 +4839,12 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                     label: `${meta.title} height`,
                   }}
                   wrapTiles={wrapTiles}
-                  compactHeight={isCompactHeight}
+                  compactHeight={renderCompactHeight}
+                  collapsed={isSectionCollapsed}
+                  focused={isSectionFocused}
+                  collapsedSummary={collapsedSummary}
+                  onToggleCollapsed={() => toggleSectionCollapsed(section)}
+                  onToggleFocus={() => toggleSectionFocus(section)}
                   tileCount={
                     sectionMaxAvailable > 0
                       ? {
@@ -4843,7 +4918,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                               wrapTiles
                                 ? cn(
                                     "min-w-[240px] md:min-w-[250px]",
-                                    isCompactHeight
+                                    renderCompactHeight
                                       ? "min-h-[124px]"
                                       : "min-h-[148px]",
                                   )
@@ -4867,7 +4942,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                               searchbaseById={searchbaseById}
                               searchbaseDrilldowns={searchbaseDrilldowns}
                               compactDensity={
-                                compactDensity || isCompactHeight
+                                !isSectionFocused &&
+                                (compactDensity || renderCompactHeight)
                               }
                               isDark={resolvedTheme === "dark"}
                               onOpenDetailTable={setActiveDetailTable}

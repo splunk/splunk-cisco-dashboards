@@ -1,5 +1,15 @@
 import React from 'react';
-import { ChevronRight, ArrowUpRight, ArrowUpDown, Minus, Pencil, Plus } from '@/common/icons/SuiIcon';
+import {
+    ChevronDown,
+    ChevronRight,
+    ArrowUpRight,
+    ArrowUpDown,
+    Maximize2,
+    Minimize2,
+    Minus,
+    Pencil,
+    Plus,
+} from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 
 interface TileCountControlConfig {
@@ -70,6 +80,14 @@ interface DashboardSectionProps {
     /** Optional section-level action rendered as a compact icon button. */
     addTileAction?: HeaderActionConfig;
     onEditTitle?: () => void;
+    /** Collapses only the body; children stay mounted to preserve live searches. */
+    collapsed?: boolean;
+    /** True while this section owns the metrics pane's focused presentation. */
+    focused?: boolean;
+    /** Compact KPI/status summary shown while the section is collapsed. */
+    collapsedSummary?: string;
+    onToggleCollapsed?: () => void;
+    onToggleFocus?: () => void;
 }
 
 const TileCountPill: React.FC<TileCountControlConfig> = ({
@@ -221,7 +239,19 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
     compactHeight = false,
     addTileAction,
     onEditTitle,
+    collapsed = false,
+    focused = false,
+    collapsedSummary,
+    onToggleCollapsed,
+    onToggleFocus,
 }) => {
+    const sectionBodyId = `dashboard-section-${React.useId().replace(/:/g, '')}`;
+    let densityClass = 'min-h-[180px] py-2.5';
+    if (compactHeight) densityClass = 'min-h-[152px] py-2';
+    if (collapsed) densityClass = 'min-h-0 py-2';
+    let sectionState = 'expanded';
+    if (collapsed) sectionState = 'collapsed';
+    if (focused) sectionState = 'focused';
     // Build 101 (2026-05-13): the drill-down link moved from a
     // bottom footer row up onto the section title itself. On short
     // viewports the footer was the first thing to get clipped — Alan
@@ -317,18 +347,33 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
             // less per-section chrome to amortise.
             className={cn(
                 'scd-c3-panel bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 px-4 shadow-[0_4px_20px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_20px_-10px_rgba(0,0,0,0.45)] relative overflow-hidden group flex flex-col flex-shrink-0',
-                compactHeight ? 'min-h-[152px] py-2' : 'min-h-[180px] py-2.5',
+                densityClass,
+                focused &&
+                    'border-sky-300/90 dark:border-sky-700/90 shadow-[0_10px_34px_-18px_rgba(2,132,199,0.48)] dark:shadow-[0_10px_34px_-18px_rgba(14,165,233,0.38)]',
                 className
             )}
             data-section-density={compactHeight ? 'compact' : 'standard'}
+            data-section-state={sectionState}
             style={style}
         >
             <div className="absolute top-0 left-0 w-1.5 h-full bg-sky-100 dark:bg-sky-900/40 group-hover:bg-sky-600 dark:group-hover:bg-sky-500 transition-colors" />
 
-            <div className="flex items-center justify-between gap-2 mb-1.5">
-                {titleNode}
+            <div
+                className={cn(
+                    'flex items-center justify-between gap-2',
+                    collapsed ? 'mb-0' : 'mb-1.5'
+                )}
+            >
+                <div className="flex min-w-0 items-center gap-2">
+                    {titleNode}
+                    {collapsed && collapsedSummary && (
+                        <span className="truncate rounded-full border border-slate-200/90 bg-slate-50/80 px-2 py-0.5 text-[10px] font-bold tracking-wide text-slate-500 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
+                            {collapsedSummary}
+                        </span>
+                    )}
+                </div>
                 <div className="flex items-center gap-1.5">
-                    {addTileAction && (
+                    {!collapsed && addTileAction && (
                         <button
                             type="button"
                             onClick={addTileAction.onClick}
@@ -351,7 +396,7 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
                             <Plus className="w-3.5 h-3.5" />
                         </button>
                     )}
-                    {onEditTitle && (
+                    {!collapsed && onEditTitle && (
                         <button
                             type="button"
                             onClick={onEditTitle}
@@ -368,8 +413,51 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
                             <Pencil className="w-3.5 h-3.5" />
                         </button>
                     )}
-                    {height && <HeightPill {...height} />}
-                    {tileCount && <TileCountPill {...tileCount} />}
+                    {!collapsed && height && <HeightPill {...height} />}
+                    {!collapsed && tileCount && <TileCountPill {...tileCount} />}
+                    {onToggleFocus && (
+                        <button
+                            type="button"
+                            onClick={onToggleFocus}
+                            aria-pressed={focused}
+                            aria-label={focused ? `Exit ${title} focus view` : `Focus ${title}`}
+                            title={focused ? 'Exit focus view' : 'Focus this section'}
+                            className={cn(
+                                'flex h-6 w-6 items-center justify-center rounded-md border transition',
+                                'focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-400',
+                                focused
+                                    ? 'border-sky-300 bg-sky-100 text-sky-800 dark:border-sky-700 dark:bg-sky-950 dark:text-sky-200'
+                                    : 'border-transparent text-slate-400 hover:border-slate-200 hover:bg-slate-100 hover:text-sky-700 dark:hover:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-sky-200'
+                            )}
+                        >
+                            {focused ? (
+                                <Minimize2 className="h-3.5 w-3.5" />
+                            ) : (
+                                <Maximize2 className="h-3.5 w-3.5" />
+                            )}
+                        </button>
+                    )}
+                    {onToggleCollapsed && (
+                        <button
+                            type="button"
+                            onClick={onToggleCollapsed}
+                            aria-expanded={!collapsed}
+                            aria-controls={sectionBodyId}
+                            aria-label={collapsed ? `Expand ${title}` : `Collapse ${title}`}
+                            title={collapsed ? 'Expand section' : 'Collapse section'}
+                            className={cn(
+                                'flex h-6 w-6 items-center justify-center rounded-md border border-transparent text-slate-400 transition',
+                                'hover:border-slate-200 hover:bg-slate-100 hover:text-sky-700 dark:hover:border-slate-700 dark:hover:bg-slate-800 dark:hover:text-sky-200',
+                                'focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-400'
+                            )}
+                        >
+                            {collapsed ? (
+                                <ChevronRight className="h-3.5 w-3.5" />
+                            ) : (
+                                <ChevronDown className="h-3.5 w-3.5" />
+                            )}
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -390,8 +478,11 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
               * defense against any future ancestor clipping pattern.
               */}
             <div
+                id={sectionBodyId}
+                aria-hidden={collapsed}
                 className={cn(
                     'flex flex-1 min-h-0',
+                    collapsed && 'hidden',
                     wrapTiles
                         ? 'flex-wrap content-stretch items-stretch gap-2'
                         : 'flex-wrap md:flex-nowrap gap-0 divide-x divide-slate-100 dark:divide-slate-800'

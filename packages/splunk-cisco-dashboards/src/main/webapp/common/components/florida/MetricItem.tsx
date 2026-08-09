@@ -12,6 +12,7 @@ import {
 } from '@/common/icons/SuiIcon';
 import {
     Sparkline,
+    type SparklineDensity,
     type SparklineVizType,
     type DataValuesDisplay,
 } from './Sparkline';
@@ -137,6 +138,8 @@ interface MetricItemProps {
      * both the period low and high without per-stanza configuration.
      */
     dataValuesDisplay?: DataValuesDisplay;
+    /** Compact H1 charts hide static labels; focused charts restore detail. */
+    sparklineDensity?: SparklineDensity;
     className?: string;
 }
 
@@ -291,6 +294,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     rangeLabel,
     vizType = 'area',
     dataValuesDisplay,
+    sparklineDensity = 'auto',
     className,
 }) => {
     const [isFocusOpen, setIsFocusOpen] = React.useState(false);
@@ -613,6 +617,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                         color={isMock ? MOCK_VIZ_COLOR : STATUS_VIZ_COLOR[status] ?? color}
                         vizType={vizType}
                         dataValuesDisplay={dataValuesDisplay}
+                        density={sparklineDensity}
                         previousData={previousData}
                         previousLabel={previousLabel}
                         timestamps={sparkTimestamps}
@@ -724,6 +729,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                         color={focusChartColor}
                         vizType={vizType}
                         dataValuesDisplay={dataValuesDisplay}
+                        density="detailed"
                         previousData={previousData}
                         previousLabel={previousLabel}
                         timestamps={sparkTimestamps}
