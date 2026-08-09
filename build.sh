@@ -16,7 +16,7 @@
 #   ./build.sh --install --auth admin:pw --restart            # build + install + restart Splunk
 #
 # Deploy workflow (filesystem swap; fast for dev iteration):
-#   ./build.sh --deploy                                       # rm -rf $SPLUNK_HOME/etc/apps/<app> + cp -R (preserves local/)
+#   ./build.sh --deploy                                       # filesystem swap (preserves local/ + live lookup CSVs)
 #   SPLUNK_HOME=/opt/10 ./build.sh --deploy --restart         # same against /opt/10, then `splunk restart`
 #
 # Install/deploy WITHOUT rebuilding (re-use the most recent dist/*.tar.gz).
@@ -38,7 +38,7 @@
 #              by the -update 1 contract.
 #   --deploy:  filesystem swap (cp -R). NO auth required, NO mgmt port
 #              touched. Restart still needed for Python/conf to take
-#              effect. local/ explicitly preserved by this script.
+#              effect. local/ and live lookup CSVs are explicitly preserved.
 #
 # Auth can also be supplied via the splunk-CLI-native short form (`-auth`)
 # or the single-arg form (`--auth=user:pass`). The legacy `SPLUNK_AUTH`
@@ -200,8 +200,9 @@ Push-to-Splunk options (mutually exclusive):
                          \`splunk install app dist/<app>.tar.gz -update 1
                           -auth user:pass\`. Requires --auth.
   --deploy               Filesystem swap into \$SPLUNK_HOME/etc/apps/<app>
-                         (rm -rf + cp -R, preserves local/). Faster than
-                         --install for dev iteration. No auth required.
+                         (rm -rf + cp -R, preserves local/ and runtime lookup
+                         CSVs). Faster than --install for dev iteration. No
+                         auth required.
 
 Other options:
   --no-build             Skip the yarn package step and use the most
@@ -535,22 +536,35 @@ fi
 # --deploy path: rm -rf + cp -R into etc/apps. Faster than --install for
 # dev iteration because splunkd doesn't have to extract anything, and
 # (more importantly) we don't go through the REST mgmt port at all. We
-# preserve $TARGET/local/ across the swap because that's where any
-# operator-edited stanzas live.
+# preserve $TARGET/local/ across the swap because that's where operator-edited
+# stanzas live. We also preserve live lookups/*.csv files: saved searches and
+# editors update those at runtime, while the package intentionally carries
+# *.csv.default seed files. Dropping the live files during a dev deploy makes
+# otherwise-valid lookup-backed searches fail until their generators run.
 if [[ "$do_deploy" -eq 1 ]]; then
     APPS_DIR="${SPLUNK_HOME}/etc/apps"
     TARGET="${APPS_DIR}/${APP_NAME}"
-    LOCAL_BACKUP=""
+    STATE_BACKUP="$(mktemp -d)"
+    preserved_lookup_count=0
     hdr "Deploying to ${TARGET} ..."
     if [[ -d "${TARGET}/local" ]]; then
-        LOCAL_BACKUP="$(mktemp -d)"
-        say "[build] Preserving ${TARGET}/local in ${LOCAL_BACKUP} during swap..."
-        cp -R "${TARGET}/local" "${LOCAL_BACKUP}/local"
+        say "[build] Preserving ${TARGET}/local during swap..."
+        cp -R "${TARGET}/local" "${STATE_BACKUP}/local"
+    fi
+    if [[ -d "${TARGET}/lookups" ]]; then
+        mkdir -p "${STATE_BACKUP}/lookups"
+        while IFS= read -r -d '' lookup_path; do
+            cp -p "$lookup_path" "${STATE_BACKUP}/lookups/"
+            preserved_lookup_count=$((preserved_lookup_count + 1))
+        done < <(find "${TARGET}/lookups" -maxdepth 1 -type f -name '*.csv' -print0)
+        if [[ "$preserved_lookup_count" -gt 0 ]]; then
+            say "[build] Preserving ${preserved_lookup_count} live lookup CSV(s) during swap..."
+        fi
     fi
 
     UNPACK_DIR="$(mktemp -d)"
     # shellcheck disable=SC2064
-    trap "rm -rf '${UNPACK_DIR}' '${LOCAL_BACKUP}'" EXIT
+    trap "rm -rf '${UNPACK_DIR}' '${STATE_BACKUP}'" EXIT
 
     say "[build] Extracting ${package_path} -> ${UNPACK_DIR} ..."
     run_quietly tar xzf "$package_path" -C "$UNPACK_DIR"
@@ -563,9 +577,16 @@ if [[ "$do_deploy" -eq 1 ]]; then
     rm -rf "$TARGET"
     cp -R "${UNPACK_DIR}/${APP_NAME}" "$TARGET"
 
-    if [[ -n "$LOCAL_BACKUP" ]]; then
+    if [[ -d "${STATE_BACKUP}/local" ]]; then
         say "[build] Restoring local/ ..."
-        cp -R "${LOCAL_BACKUP}/local" "${TARGET}/local"
+        cp -R "${STATE_BACKUP}/local" "${TARGET}/local"
+    fi
+    if [[ "$preserved_lookup_count" -gt 0 ]]; then
+        say "[build] Restoring ${preserved_lookup_count} live lookup CSV(s) ..."
+        mkdir -p "${TARGET}/lookups"
+        while IFS= read -r -d '' lookup_path; do
+            cp -p "$lookup_path" "${TARGET}/lookups/"
+        done < <(find "${STATE_BACKUP}/lookups" -maxdepth 1 -type f -name '*.csv' -print0)
     fi
 fi
 

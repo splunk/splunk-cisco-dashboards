@@ -957,12 +957,11 @@ export const useMetric = (
             .catch((err) => {
                 if (cancelled || isAbortError(err)) return;
                 const failure = classifySearchDispatchError(err);
-                console.error('[useMetric] dispatch failed', {
-                    stanzaId: cfg.id,
-                    httpStatus: failure.httpStatus,
-                    reason: failure.reason,
-                    message: failure.message,
-                });
+                console.error(
+                    `[useMetric] dispatch failed stanzaId=${cfg.id} ` +
+                        `httpStatus=${failure.httpStatus ?? 'none'} reason=${failure.reason} ` +
+                        `message=${failure.message}`,
+                );
                 debugLog(cfg.id, 'dispatch threw', {
                     error: failure.message,
                     httpStatus: failure.httpStatus,

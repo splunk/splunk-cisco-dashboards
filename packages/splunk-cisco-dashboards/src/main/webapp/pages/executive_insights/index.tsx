@@ -1028,6 +1028,14 @@ const splunkSearchAppUrl = (
   return `/${locale}/app/${resolveSearchAppName(appName)}/search?${params.toString()}`;
 };
 
+const splunkSearchbaseEditUrl = (stanzaId: string): string => {
+  const path =
+    typeof window !== "undefined" ? window.location.pathname : "/en-US";
+  const localeMatch = path.match(/^\/([a-z]{2}-[A-Z]{2})\//);
+  const locale = localeMatch ? localeMatch[1] : "en-US";
+  return `/${locale}/app/searchbase/start#/edit/${encodeURIComponent(stanzaId)}#search-spl`;
+};
+
 type MetricDetailTableColumnKind = "text" | "status" | "metric";
 
 interface MetricDetailTableColumn {
@@ -1041,6 +1049,7 @@ interface MetricDetailTableColumn {
 
 interface MetricDetailTableConfig {
   title: string;
+  searchbaseId: string;
   metadata: SearchbaseDrilldownMetadata;
   buttonTitle: string;
   subtitle: (range: TimeRange) => string;
@@ -1204,6 +1213,7 @@ const buildMetricDetailTableConfig = (
     title:
       readDetailStringOption(options, "modalTitle") ??
       `Drill down: ${source.searchName}`,
+    searchbaseId: detail.id,
     metadata: {
       title: detail.searchName,
       category: detail.category,
@@ -7089,6 +7099,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
     range,
     config.dispatchContext,
   );
+  const searchbaseUrl = splunkSearchbaseEditUrl(config.searchbaseId);
   const activeClassification = [
     config.metadata.category,
     config.metadata.subCategory,
@@ -7102,6 +7113,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
       titleId={titleId}
       onClose={onClose}
       openInSearchHref={searchUrl}
+      openInSearchbaseHref={searchbaseUrl}
       wide={displayColumns.length > 5}
       contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950/[0.28]"
       headerMeta={
@@ -7119,10 +7131,10 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
         ) : undefined
       }
     >
-      <div className="flex shrink-0 items-center gap-3 border-b border-white/[0.1] bg-slate-950/[0.28] px-4 py-2.5">
-        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-sky-300/15 bg-sky-400/[0.08] text-sky-300">
-          <Search className="h-4 w-4" aria-hidden="true" />
-        </span>
+      <div
+        className="flex shrink-0 items-center border-b border-white/[0.1] bg-slate-950/[0.28] px-4 py-2.5"
+        data-detail-search-summary="true"
+      >
         <div className="min-w-0">
           <div className="truncate text-sm font-bold text-[#edf5fb]">
             {config.metadata.title}

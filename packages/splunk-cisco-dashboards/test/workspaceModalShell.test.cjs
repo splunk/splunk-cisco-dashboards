@@ -19,6 +19,9 @@ const chartFocus = read(
 const searchbaseGuidance = read(
   "../src/main/webapp/common/components/florida/SearchbaseDrilldownGuidance.tsx",
 );
+const kpiPicker = read(
+  "../src/main/webapp/common/components/florida/KpiPickerPanel.tsx",
+);
 const dashboardManagerDrilldown = read(
   "../src/main/webapp/pages/dashboardbuilder/DashboardStudioDrilldownModal.jsx",
 );
@@ -128,6 +131,26 @@ assert.match(
   profile,
   /<WorkspaceModalShell[\s\S]*?variant="detail"[\s\S]*?wide=\{displayColumns\.length > 5\}/,
   "Detail drilldowns must auto-widen further for dense tables",
+);
+assert.match(
+  profile,
+  /searchbaseId: detail\.id[\s\S]*openInSearchHref=\{searchUrl\}[\s\S]*openInSearchbaseHref=\{searchbaseUrl\}/,
+  "Detail drilldowns must expose both Search and Searchbase destinations",
+);
+assert.match(
+  profile,
+  /data-detail-search-summary="true"\s*>\s*<div className="min-w-0">/,
+  "The non-interactive detail summary must not show a misleading search icon",
+);
+assert.match(
+  shell,
+  /openInSearchbaseHref[\s\S]*Open \$\{title\} in Searchbase[\s\S]*Searchbase[\s\S]*\{searchAction\}[\s\S]*\{searchbaseAction\}/,
+  "The shared modal shell must place Searchbase beside Search",
+);
+assert.match(
+  kpiPicker,
+  /data-current-search-actions="true"[\s\S]*View in Searchbase[\s\S]*Test in Search/,
+  "Configure Tile must keep the bound search's learning and test actions permanently visible",
 );
 for (const stateTitle of [
   "Loading details",

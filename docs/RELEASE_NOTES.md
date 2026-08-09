@@ -49,6 +49,17 @@
   follow their content height for short searches and become internally
   scrollable at a bounded height for long searches, keeping the guidance region
   visible and consistent without a large empty table surface.
+- Detail drilldowns now place Searchbase beside Search in the dialog header
+  and remove the decorative search glyph from the supporting-search summary.
+  Configure Tile keeps View in Searchbase and Test in Search visible directly
+  beneath the currently bound search, so operators do not need to find the
+  selected row before validating or learning about its SPL.
+- The development `--deploy` workflow now preserves live runtime lookup CSVs
+  alongside `local/` during its filesystem swap. Lookup-backed background
+  searches therefore remain dispatchable after a fast deployment instead of
+  waiting for their saved-search generators to recreate mutable CSVs. Fast
+  packaging also excludes watcher-linked runtime CSVs that are not present in
+  the source resource tree, keeping generated instance state out of tarballs.
 - Insights Workspace dialogs now include a persistent Backdrop opacity slider
   in the desktop header. Operators can tune workspace dimming from 0–100%
   without changing the dialog, table, or chart content.

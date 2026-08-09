@@ -15,6 +15,7 @@ interface WorkspaceModalShellProps {
     onClose: () => void;
     onOpenInSearch?: () => void;
     openInSearchHref?: string;
+    openInSearchbaseHref?: string;
     onOpenDetailTable?: () => void;
     detailTableTitle?: string;
     headerMeta?: React.ReactNode;
@@ -124,6 +125,7 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
     onClose,
     onOpenInSearch,
     openInSearchHref,
+    openInSearchbaseHref,
     onOpenDetailTable,
     detailTableTitle,
     headerMeta,
@@ -375,6 +377,20 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
         );
     }
 
+    const searchbaseAction = openInSearchbaseHref ? (
+        <a
+            href={openInSearchbaseHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Open ${title} in Searchbase`}
+            aria-label={`Open ${title} in Searchbase`}
+            className={ACTION_CLASS}
+        >
+            Searchbase
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+        </a>
+    ) : null;
+
     return createPortal(
         <div
             className="fixed inset-0 z-[1900] flex items-center justify-center p-4 backdrop-blur-[2px] max-[719px]:items-end max-[719px]:p-0 max-[719px]:pt-4"
@@ -461,6 +477,7 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                             </output>
                         </label>
                         {searchAction}
+                        {searchbaseAction}
                         {onOpenDetailTable && (
                             <button
                                 type="button"

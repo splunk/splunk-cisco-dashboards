@@ -1688,6 +1688,9 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
             catalogue.find((e) => entryMatchesKey(e, context.currentSavedSearch)) ?? null
         );
     }, [catalogue, context]);
+    const currentBoundSearchbaseUrl = currentBoundEntry
+        ? buildSearchbaseEditUrl(currentBoundEntry)
+        : null;
 
     // Refs for scroll-to-current behaviour. When the panel opens, we
     // want the bound entry to be on-screen even if it's deep in a
@@ -2537,38 +2540,74 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                     // row of two siblings instead of nested buttons
                     // (nested <button> isn't valid HTML and Safari
                     // refuses the click).
-                    <div className="mx-2 mb-1 px-2 py-1 rounded-md border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 flex items-center gap-2 flex-shrink-0">
-                        <button
-                            type="button"
-                            onClick={jumpToCurrent}
-                            title={`Scroll to "${currentBoundEntry.searchName}" and select it`}
-                            className="flex-1 min-w-0 flex items-center gap-2 text-left hover:opacity-80 focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded"
-                        >
-                            <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-emerald-500 text-white text-xs font-black flex-shrink-0">
-                                ✓
-                            </span>
-                            <span className="text-xs font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400 flex-shrink-0">
-                                Bound:
-                            </span>
-                            <span
-                                className="flex-1 text-xs font-bold text-slate-800 dark:text-slate-100 truncate min-w-0"
-                                title={currentBoundEntry.searchName}
+                    <div className="mx-2 mb-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1 dark:border-emerald-800 dark:bg-emerald-950/30 flex-shrink-0">
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={jumpToCurrent}
+                                title={`Scroll to "${currentBoundEntry.searchName}" and select it`}
+                                className="flex-1 min-w-0 flex items-center gap-2 text-left hover:opacity-80 focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded"
                             >
-                                {currentBoundEntry.searchName}
-                            </span>
-                            <span className="text-xs font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-300 flex-shrink-0">
-                                Jump to
-                            </span>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setBoundDismissed(true)}
-                            title="Dismiss this strip (gives the result list more room — reopens next time you open the picker)"
-                            aria-label="Dismiss currently-bound strip"
-                            className="p-0.5 rounded text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 flex-shrink-0 transition-colors focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                                <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-emerald-500 text-white text-xs font-black flex-shrink-0">
+                                    ✓
+                                </span>
+                                <span className="text-xs font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400 flex-shrink-0">
+                                    Bound:
+                                </span>
+                                <span
+                                    className="flex-1 text-xs font-bold text-slate-800 dark:text-slate-100 truncate min-w-0"
+                                    title={currentBoundEntry.searchName}
+                                >
+                                    {currentBoundEntry.searchName}
+                                </span>
+                                <span className="text-xs font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-300 flex-shrink-0">
+                                    Jump to
+                                </span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setBoundDismissed(true)}
+                                title="Dismiss this strip (gives the result list more room — reopens next time you open the picker)"
+                                aria-label="Dismiss currently-bound strip"
+                                className="p-0.5 rounded text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 flex-shrink-0 transition-colors focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                            >
+                                <X className="w-3 h-3" />
+                            </button>
+                        </div>
+                        <div
+                            className="mt-1 flex items-center gap-2 border-t border-emerald-200 pt-1 pl-5 dark:border-emerald-900/70"
+                            data-current-search-actions="true"
                         >
-                            <X className="w-3 h-3" />
-                        </button>
+                            {currentBoundSearchbaseUrl && (
+                                <a
+                                    href={currentBoundSearchbaseUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    title={`Open ${currentBoundEntry.id} in Searchbase`}
+                                    className="inline-flex items-center gap-1 rounded px-1 py-0.5 text-xs font-bold uppercase tracking-widest text-emerald-700 hover:bg-emerald-100 focus:outline-none focus:ring-1 focus:ring-emerald-400 dark:text-emerald-300 dark:hover:bg-emerald-900/40"
+                                >
+                                    View in Searchbase
+                                    <ExternalLink className="w-2.5 h-2.5" />
+                                </a>
+                            )}
+                            {onTestInSearch && currentBoundEntry.search && (
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        onTestInSearch(
+                                            currentBoundEntry.search,
+                                            currentBoundEntry.dispatchContext
+                                        )
+                                    }
+                                    title="Run the currently bound SPL in Search (new tab)"
+                                    className="inline-flex items-center gap-1 rounded px-1 py-0.5 text-xs font-bold uppercase tracking-widest text-emerald-700 hover:bg-emerald-100 focus:outline-none focus:ring-1 focus:ring-emerald-400 dark:text-emerald-300 dark:hover:bg-emerald-900/40"
+                                >
+                                    <Play className="w-2.5 h-2.5" />
+                                    Test in Search
+                                    <ExternalLink className="w-2.5 h-2.5" />
+                                </button>
+                            )}
+                        </div>
                     </div>
                 )}
 

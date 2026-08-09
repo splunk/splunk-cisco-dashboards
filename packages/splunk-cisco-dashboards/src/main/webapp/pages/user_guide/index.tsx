@@ -1603,7 +1603,10 @@ iseval = 0`}</CodeBlock>
                   but does not constrain future customization. Detail
                   drilldowns size short result tables to their rows, cap long
                   tables with an internal scroller, and dedicate the remaining
-                  dialog height to Searchbase guidance.
+                  dialog height to Searchbase guidance. Search and Searchbase
+                  links sit together in detail headers, while Configure Tile
+                  keeps View in Searchbase and Test in Search attached to the
+                  currently bound search.
                 </InfoCard>
                 <InfoCard title="Dashboard Studio editing">
                   Dashboard Manager confirmation dialogs now use the edited

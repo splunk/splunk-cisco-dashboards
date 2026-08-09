@@ -617,13 +617,11 @@ export const runSearch = async ({
  httpStatus: classified.httpStatus ?? status,
  reason: classified.reason,
  });
- console.error('[splunkSearchService] dispatch failed', {
- tag: tagLabel,
- appContext: resolvedAppContext,
- httpStatus: classified.httpStatus ?? status,
- reason: classified.reason,
- message: classified.message,
- });
+ console.error(
+ `[splunkSearchService] dispatch failed tag=${tagLabel} appContext=${resolvedAppContext} ` +
+ `httpStatus=${classified.httpStatus ?? status ?? 'none'} reason=${classified.reason} ` +
+ `message=${classified.message}`,
+ );
  throw err instanceof SearchDispatchError
  ? err
  : new SearchDispatchError(classified.message, {
