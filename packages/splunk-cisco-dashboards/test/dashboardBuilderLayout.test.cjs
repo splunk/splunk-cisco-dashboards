@@ -87,6 +87,35 @@ assert.match(drilldownModal, /activeMetadata\.category/);
 assert.match(drilldownModal, /activeMetadata\.subCategory/);
 assert.match(drilldownModal, /dashboard-builder-drilldown-classification/);
 assert.match(drilldownModal, /<Search size=\{20\} aria-hidden="true"/);
+assert.match(
+  drilldownModal,
+  /<WorkspaceModalShell[\s\S]*?variant="detail"/,
+);
+assert.match(
+  drilldownModal,
+  /openInSearchHref=\{activeSearchUrl \|\| undefined\}/,
+);
+assert.match(
+  drilldownModal,
+  /openInSearchbaseHref=\{[\s\S]*?splunkSearchbaseEditUrl\(activeSearch\.name\)/,
+);
+assert.match(drilldownModal, /renderInDocumentBody/);
+assert.match(
+  drilldownModal,
+  /<DashboardCore width="100%" height=\{DRILLDOWN_RESULT_HEIGHT\}/,
+);
+assert.match(
+  styles,
+  /\.dashboard-builder-drilldown-result-shell \{[\s\S]*?min-height:\s*340px;/,
+);
+assert.match(
+  styles,
+  /\.dashboard-builder-drilldown-dashboard \{[\s\S]*?height:\s*340px;/,
+);
+assert.match(
+  styles,
+  /\[data-searchbase-drilldown-guidance='workspace'\] code \{[\s\S]*?background:\s*rgba\(2, 44, 34, 0\.72\);[\s\S]*?color:\s*#a7f3d0;[\s\S]*?font-family:\s*ui-monospace[^;]*!important/,
+);
 assert.match(styles, /\.dashboard-builder-drilldown-classification/);
 assert.match(
   styles,
@@ -96,13 +125,12 @@ assert.match(drilldownModal, />\s*Back\s*</);
 assert.match(drilldownModal, />\s*Forward\s*</);
 assert.match(
   drilldownModal,
-  /<SearchbaseDrilldownGuidance[\s\S]*appearance="manager"/,
+  /<SearchbaseDrilldownGuidance[\s\S]*appearance="workspace"/,
 );
 assert.match(drilldownGuidance, /title="Description"/);
 assert.match(drilldownGuidance, /title="Explanation"/);
 assert.match(drilldownGuidance, /title="Solution"/);
 assert.match(drilldownGuidance, /title="Related information"/);
-assert.match(drilldownModal, /Open in Search/);
 assert.match(drilldownModal, /Generate a Dashboard/);
 assert.match(drilldownModal, /DOMPurify\.sanitize/);
 assert.equal(

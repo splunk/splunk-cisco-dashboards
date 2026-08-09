@@ -20,6 +20,7 @@ interface WorkspaceModalShellProps {
     detailTableTitle?: string;
     headerMeta?: React.ReactNode;
     wide?: boolean;
+    renderInDocumentBody?: boolean;
     contentClassName?: string;
     children: React.ReactNode;
 }
@@ -130,6 +131,7 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
     detailTableTitle,
     headerMeta,
     wide = false,
+    renderInDocumentBody = false,
     contentClassName,
     children,
 }) => {
@@ -242,7 +244,9 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
 
     const portalTarget =
         typeof document !== 'undefined'
-            ? document.getElementById('scan-root') ?? document.body
+            ? renderInDocumentBody
+                ? document.body
+                : document.getElementById('scan-root') ?? document.body
             : null;
 
     React.useEffect(() => {
@@ -391,7 +395,7 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
         </a>
     ) : null;
 
-    return createPortal(
+    const modalLayer = (
         <div
             className="fixed inset-0 z-[1900] flex items-center justify-center p-4 backdrop-blur-[2px] max-[719px]:items-end max-[719px]:p-0 max-[719px]:pt-4"
             data-workspace-modal-backdrop="true"
@@ -552,7 +556,17 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                     </>
                 )}
             </div>
-        </div>,
+        </div>
+    );
+
+    return createPortal(
+        renderInDocumentBody ? (
+            <div id="scan-root" data-workspace-modal-portal="document">
+                {modalLayer}
+            </div>
+        ) : (
+            modalLayer
+        ),
         portalTarget
     );
 };

@@ -469,6 +469,16 @@ assert.match(
   /body\.scd-studio-home-density-pilot[\s\S]*?\[data-test='DashboardLayoutContainer'\][\s\S]*?font-family:\s*Inter, system-ui, sans-serif !important;/,
   "the Studio density pilot must use the Insights Workspace font stack",
 );
+assert.match(
+  applicationCss,
+  /body\.scd-studio-home-density-pilot #input_time_range > button \{[\s\S]*?background-color:\s*#131a23 !important;[\s\S]*?color:\s*#ecf0f5 !important;/,
+  "the Studio density pilot time presets must use dark-header colors",
+);
+assert.match(
+  applicationCss,
+  /button:not\(\[value='advancedTR'\]\)\[style\*='rgb\(204, 204, 204\)'\][\s\S]*?background:\s*#049fd9 !important;[\s\S]*?border-color:\s*#00bceb !important;/,
+  "the Studio density pilot selected time preset must use the C3 cyan state",
+);
 
 const dashboardScript = fs.readFileSync(DASHBOARD_SCRIPT_PATH, "utf8");
 assert.match(
@@ -513,14 +523,14 @@ assert.deepEqual(
   densityPilot.inputs.input_time_range,
   {
     options: {
-      defaultValue: "-7d@d,now,1d",
+      defaultValue: "-24h,now,1h",
       showAdvanced: true,
       selections: [
+        { value: "-4h,now,30m", label: "4h" },
+        { value: "-24h,now,1h", label: "24h" },
+        { value: "-48h,now,2h", label: "48h" },
         { value: "-7d@d,now,1d", label: "7d" },
         { value: "-30d@d,now,1d", label: "30d" },
-        { value: "-60d@d,now,1w", label: "60d" },
-        { value: "-90d@d,now,1w", label: "90d" },
-        { value: "-1y,now,1mon", label: "1y" },
       ],
       token: "time_tok",
     },
@@ -568,6 +578,17 @@ for (const [visualizationId, seriesName] of Object.entries(densityPilotSingleVal
   assert.ok(
     singleValue.context?.trendColorEditorConfig?.length >= 2,
     `density pilot ${visualizationId} must define semantic trend colors`,
+  );
+  const trendColors = singleValue.context.trendColorEditorConfig.map(
+    ({ value }) => value.toLowerCase(),
+  );
+  assert.ok(
+    !trendColors.includes("#fa5762"),
+    `density pilot ${visualizationId} must reserve red for charted failure data`,
+  );
+  assert.ok(
+    trendColors.every((color) => C3_GRAPH_COLORS.has(color)),
+    `density pilot ${visualizationId} trend colors must use the C3 palette`,
   );
 }
 

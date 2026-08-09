@@ -1,19 +1,16 @@
 /* eslint-disable react/prop-types */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Button from '@splunk/react-ui/Button';
-import Link from '@splunk/react-ui/Link';
 import Message from '@splunk/react-ui/Message';
-import Modal from '@splunk/react-ui/Modal';
 import WaitSpinner from '@splunk/react-ui/WaitSpinner';
 import { DashboardContextProvider } from '@splunk/dashboard-context';
 import { DashboardCore } from '@splunk/dashboard-core';
 import DOMPurify from 'dompurify';
 import SearchbaseDrilldownGuidance from '../../common/components/florida/SearchbaseDrilldownGuidance';
+import { WorkspaceModalShell } from '../../common/components/florida/WorkspaceModalShell';
 import {
     ChevronLeft,
     ChevronRight,
     ExternalLink,
-    PanelRightOpen,
     Search,
 } from '../../common/icons/SuiIcon';
 import { addDash } from '../../common/lib/splunk';
@@ -24,6 +21,7 @@ import {
     getDashboardDrilldownMetadata,
     resolveDashboardDrilldownSearches,
 } from '../../common/lib/dashboardDrilldown';
+import '../../common/styles/tailwind.css';
 
 const metadataHtmlToText = (value) =>
     DOMPurify.sanitize(value || '', { ALLOWED_TAGS: [], ALLOWED_ATTR: [] })
@@ -32,6 +30,15 @@ const metadataHtmlToText = (value) =>
 
 const isTruthyConfValue = (value) =>
     ['1', 'true', 'yes', 'on'].includes(String(value || '').trim().toLowerCase());
+
+const DRILLDOWN_RESULT_HEIGHT = '340px';
+
+const splunkSearchbaseEditUrl = (stanzaId) => {
+    const path = typeof window !== 'undefined' ? window.location.pathname : '/en-US';
+    const localeMatch = path.match(/^\/([a-z]{2}-[A-Z]{2})\//);
+    const locale = localeMatch ? localeMatch[1] : 'en-US';
+    return `/${locale}/app/searchbase/start#/edit/${encodeURIComponent(stanzaId)}#search-spl`;
+};
 
 const getSearchApp = (entry, fallbackApp) => {
     const content = entry?.content || {};
@@ -52,7 +59,6 @@ const DashboardStudioDrilldownModal = ({
     iconRegistry,
     timezone,
     colorScheme,
-    modalThemeStyle,
     onRequestClose,
 }) => {
     const [searchEntries, setSearchEntries] = useState(null);
@@ -208,77 +214,71 @@ const DashboardStudioDrilldownModal = ({
     ]);
 
     return (
-        <Modal
-            open={open}
-            className={`dashboard-builder-themed-modal dashboard-builder-drilldown-modal dashboard-builder-themed-modal-${colorScheme}`}
-            style={{
-                width: 'min(1400px, calc(100vw - 48px))',
-                maxHeight: 'calc(100vh - 40px)',
-                ...modalThemeStyle,
-            }}
-            onRequestClose={onRequestClose}
+        <WorkspaceModalShell
+            isOpen={open}
+            variant="detail"
+            title={`Drill down: ${origin || 'Dashboard details'}`}
+            subtitle="Supporting Searchbase results and guidance for the dashboard selection."
+            onClose={onRequestClose}
+            openInSearchHref={activeSearchUrl || undefined}
+            openInSearchbaseHref={
+                activeSearch ? splunkSearchbaseEditUrl(activeSearch.name) : undefined
+            }
+            renderInDocumentBody
+            contentClassName="dashboard-builder-drilldown-shell flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950/[0.28]"
         >
-            <Modal.Header
-                title={`Drill down: ${origin || 'Dashboard details'}`}
-                subtitle="Supporting Searchbase results and guidance for the dashboard selection."
-                icon={<PanelRightOpen size={32} aria-hidden="true" />}
-            />
-            <Modal.Body
-                className="dashboard-builder-drilldown-body"
-                style={{ padding: 0, maxHeight: 'calc(100vh - 172px)', overflowY: 'auto' }}
-            >
-                {loadError && (
-                    <div className="dashboard-builder-drilldown-status">
-                        <Message type="error" appearance="fill">
-                            <Message.Title>Unable to open drilldown</Message.Title>
-                            {loadError}
-                        </Message>
-                    </div>
-                )}
+            {loadError && (
+                <div className="dashboard-builder-drilldown-status">
+                    <Message type="error" appearance="fill">
+                        <Message.Title>Unable to open drilldown</Message.Title>
+                        {loadError}
+                    </Message>
+                </div>
+            )}
 
-                {!loadError && searchEntries === null && (
-                    <div role="status" className="dashboard-builder-drilldown-loading">
-                        <WaitSpinner size="large" />
-                    </div>
-                )}
+            {!loadError && searchEntries === null && (
+                <div role="status" className="dashboard-builder-drilldown-loading">
+                    <WaitSpinner size="large" />
+                </div>
+            )}
 
-                {!loadError && searchEntries !== null && resolvedSearches.length === 0 && (
-                    <div className="dashboard-builder-drilldown-status">
-                        <Message type="warning" appearance="fill">
-                            <Message.Title>No drilldown searches were found</Message.Title>
-                            None of the configured targets exist in this app&apos;s Searchbase catalogue.
-                        </Message>
-                    </div>
-                )}
+            {!loadError && searchEntries !== null && resolvedSearches.length === 0 && (
+                <div className="dashboard-builder-drilldown-status">
+                    <Message type="warning" appearance="fill">
+                        <Message.Title>No drilldown searches were found</Message.Title>
+                        None of the configured targets exist in this app&apos;s Searchbase catalogue.
+                    </Message>
+                </div>
+            )}
 
-                {resolvedSearches.length > 1 && (
-                    <nav
-                        className="dashboard-builder-drilldown-workflow"
-                        aria-label="Drilldown search navigation"
-                    >
-                        <button type="button" disabled={!canGoBack} onClick={showPrevious}>
-                            Back
-                        </button>
-                        <span aria-live="polite">
-                            {activeIndex + 1} / {resolvedSearches.length}
-                        </span>
-                        <button type="button" disabled={!canGoForward} onClick={showNext}>
-                            Forward
-                        </button>
-                    </nav>
-                )}
+            {resolvedSearches.length > 1 && (
+                <nav
+                    className="dashboard-builder-drilldown-workflow"
+                    aria-label="Drilldown search navigation"
+                >
+                    <button type="button" disabled={!canGoBack} onClick={showPrevious}>
+                        Back
+                    </button>
+                    <span aria-live="polite">
+                        {activeIndex + 1} / {resolvedSearches.length}
+                    </span>
+                    <button type="button" disabled={!canGoForward} onClick={showNext}>
+                        Forward
+                    </button>
+                </nav>
+            )}
 
-                {missingTargetIds.length > 0 && searchEntries !== null && (
-                    <div className="dashboard-builder-drilldown-status dashboard-builder-drilldown-warning">
-                        <Message type="warning" appearance="fill">
-                            <Message.Title>Some drilldown searches are unavailable</Message.Title>
-                            {missingTargetIds.join(', ')}
-                        </Message>
-                    </div>
-                )}
+            {missingTargetIds.length > 0 && searchEntries !== null && (
+                <div className="dashboard-builder-drilldown-status dashboard-builder-drilldown-warning">
+                    <Message type="warning" appearance="fill">
+                        <Message.Title>Some drilldown searches are unavailable</Message.Title>
+                        {missingTargetIds.join(', ')}
+                    </Message>
+                </div>
+            )}
 
-                {activeDefinition && (
-                    <article className="dashboard-builder-drilldown-slide">
+            {activeDefinition && (
+                <article className="dashboard-builder-drilldown-slide dashboard-builder-drilldown-workspace">
                         <div className="dashboard-builder-drilldown-search-title">
                             <Search size={20} aria-hidden="true" />
                             <h2>{activeMetadata.title}</h2>
@@ -324,7 +324,7 @@ const DashboardStudioDrilldownModal = ({
                                     initialDefinition={activeDefinition}
                                     initialMode="view"
                                 >
-                                    <DashboardCore width="100%" height="420px" />
+                                    <DashboardCore width="100%" height={DRILLDOWN_RESULT_HEIGHT} />
                                 </DashboardContextProvider>
                             </div>
                             {resolvedSearches.length > 1 && (
@@ -341,11 +341,6 @@ const DashboardStudioDrilldownModal = ({
                         </div>
 
                         <div className="dashboard-builder-drilldown-actions">
-                            {activeSearchUrl && (
-                                <Link to={activeSearchUrl} openInNewContext>
-                                    Open in Search
-                                </Link>
-                            )}
                             <button
                                 type="button"
                                 className="dashboard-builder-drilldown-link-button"
@@ -369,15 +364,11 @@ const DashboardStudioDrilldownModal = ({
 
                         <SearchbaseDrilldownGuidance
                             metadata={activeMetadata}
-                            appearance="manager"
+                            appearance="workspace"
                         />
-                    </article>
-                )}
-            </Modal.Body>
-            <Modal.Footer>
-                <Button appearance="secondary" label="Close" onClick={onRequestClose} />
-            </Modal.Footer>
-        </Modal>
+                </article>
+            )}
+        </WorkspaceModalShell>
     );
 };
 

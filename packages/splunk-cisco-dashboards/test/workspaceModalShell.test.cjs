@@ -74,6 +74,16 @@ assert.match(
 );
 assert.match(
   shell,
+  /renderInDocumentBody[\s\S]*?\? document\.body[\s\S]*?document\.getElementById\('scan-root'\)/,
+  "The shared shell must support document-level portals for transformed Dashboard Studio canvases",
+);
+assert.match(
+  shell,
+  /renderInDocumentBody \? \([\s\S]*?<div id="scan-root" data-workspace-modal-portal="document">/,
+  "Document-level portals must recreate the scoped Tailwind root used by the shared shell",
+);
+assert.match(
+  shell,
   /rounded-\[4px\][\s\S]*border-white\/\[0\.18\][\s\S]*rgba\(255,255,255,0\.01\)[\s\S]*rgba\(90,101,111,0\.45\)[\s\S]*rgba\(62,73,83,0\.25\)[\s\S]*backdrop-blur-\[75px\]/,
   "Shared modal shell must follow the SUI glass radius, border, tint, and blur treatment",
 );
@@ -174,8 +184,18 @@ assert.ok(
 
 assert.match(
   dashboardManagerDrilldown,
-  /<SearchbaseDrilldownGuidance[\s\S]*metadata=\{activeMetadata\}[\s\S]*appearance="manager"/,
-  "Dashboard Manager must use the shared Searchbase guidance contract",
+  /<WorkspaceModalShell[\s\S]*openInSearchHref=\{activeSearchUrl \|\| undefined\}[\s\S]*openInSearchbaseHref=[\s\S]*renderInDocumentBody/,
+  "Dashboard Manager drilldowns must use the same shared shell and header actions as Insights Workspace",
+);
+assert.match(
+  dashboardManagerDrilldown,
+  /import '\.\.\/\.\.\/common\/styles\/tailwind\.css';/,
+  "Dashboard Manager must load the shared shell's scoped utility styles",
+);
+assert.match(
+  dashboardManagerDrilldown,
+  /<SearchbaseDrilldownGuidance[\s\S]*metadata=\{activeMetadata\}[\s\S]*appearance="workspace"/,
+  "Dashboard Manager must use the shared Insights Workspace guidance treatment",
 );
 assert.match(
   profile,
@@ -203,6 +223,11 @@ assert.match(
   searchbaseGuidance,
   /DOMPurify\.sanitize[\s\S]*aria-expanded=\{expanded\}/,
   "Workspace guidance must sanitize Searchbase HTML and remain collapsible",
+);
+assert.match(
+  searchbaseGuidance,
+  /\[&_code\]:font-mono[\s\S]*?\[&_code\]:text-emerald-200/,
+  "Workspace guidance must render inline SPL as high-contrast code instead of red prose",
 );
 assert.match(
   searchbaseGuidance,

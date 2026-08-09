@@ -34,7 +34,7 @@ const sanitizeMetadataHtml = (value: string): string =>
     });
 
 const MetadataBlock: React.FC<MetadataBlockProps> = ({ title, html, appearance }) => {
-    if (!html) return null;
+    if (!html) {return null;}
 
     if (appearance === 'manager') {
         return (
@@ -55,7 +55,7 @@ const MetadataBlock: React.FC<MetadataBlockProps> = ({ title, html, appearance }
             {/* Searchbase metadata is sanitized before it reaches this renderer. */}
             {/* eslint-disable-next-line react/no-danger */}
             <div
-                className="text-xs leading-relaxed text-[#c6d4e1] [&_a]:font-semibold [&_a]:text-sky-300 [&_a]:underline [&_code]:rounded [&_code]:bg-slate-950/70 [&_code]:px-1 [&_li]:mb-1 [&_ol]:ml-4 [&_ol]:list-decimal [&_p]:my-1 [&_ul]:ml-4 [&_ul]:list-disc"
+                className="text-xs leading-relaxed text-[#c6d4e1] [&_a]:font-semibold [&_a]:text-sky-300 [&_a]:underline [&_code]:rounded [&_code]:border [&_code]:border-emerald-400/20 [&_code]:bg-emerald-950/40 [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-emerald-200 [&_li]:mb-1 [&_ol]:ml-4 [&_ol]:list-decimal [&_p]:my-1 [&_ul]:ml-4 [&_ul]:list-disc"
                 dangerouslySetInnerHTML={{ __html: html }}
             />
         </section>
@@ -86,7 +86,7 @@ export const SearchbaseDrilldownGuidance: React.FC<SearchbaseDrilldownGuidancePr
     );
     const sectionCount = Object.values(sanitized).filter(Boolean).length;
 
-    if (sectionCount === 0) return null;
+    if (sectionCount === 0) {return null;}
 
     const columns = (
         <>

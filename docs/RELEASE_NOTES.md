@@ -2,6 +2,11 @@
 
 ## 1.0.36
 
+- Dashboard Manager drilldowns now use the same compact glass dialog, bounded
+  scrolling, header-level Search and Searchbase actions, and collapsible
+  guidance treatment as Insights Workspace. Short result tables use a tighter
+  canvas, and inline SPL fields use high-contrast monospaced code styling
+  instead of low-contrast red text.
 - Searchbase contextual drilldowns now use target stanza IDs instead of mutable
   `search_name` labels. All 401 shipped relationships were migrated and are
   validated for exact target existence, while existing local configuration and

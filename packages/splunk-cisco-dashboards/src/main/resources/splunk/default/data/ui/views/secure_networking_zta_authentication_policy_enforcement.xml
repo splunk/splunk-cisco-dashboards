@@ -8,9 +8,21 @@
     "inputs": {
         "input_time_range": {
             "options": {
-                "defaultValue": "-7d@d,now,1d",
+                "defaultValue": "-24h,now,1h",
                 "showAdvanced": true,
                 "selections": [
+                    {
+                        "value": "-4h,now,30m",
+                        "label": "4h"
+                    },
+                    {
+                        "value": "-24h,now,1h",
+                        "label": "24h"
+                    },
+                    {
+                        "value": "-48h,now,2h",
+                        "label": "48h"
+                    },
                     {
                         "value": "-7d@d,now,1d",
                         "label": "7d"
@@ -18,18 +30,6 @@
                     {
                         "value": "-30d@d,now,1d",
                         "label": "30d"
-                    },
-                    {
-                        "value": "-60d@d,now,1w",
-                        "label": "60d"
-                    },
-                    {
-                        "value": "-90d@d,now,1w",
-                        "label": "90d"
-                    },
-                    {
-                        "value": "-1y,now,1mon",
-                        "label": "1y"
                     }
                 ],
                 "token": "time_tok"
@@ -156,7 +156,7 @@
                         "to": 0.000001
                     },
                     {
-                        "value": "#fa5762",
+                        "value": "#f7782f",
                         "from": 0.000001
                     }
                 ]
@@ -421,7 +421,7 @@
                         "to": 0.000001
                     },
                     {
-                        "value": "#fa5762",
+                        "value": "#f7782f",
                         "from": 0.000001
                     }
                 ]
@@ -556,7 +556,7 @@
                         "to": 0.000001
                     },
                     {
-                        "value": "#fa5762",
+                        "value": "#f7782f",
                         "from": 0.000001
                     }
                 ]
@@ -691,7 +691,7 @@
                         "to": 0.000001
                     },
                     {
-                        "value": "#fa5762",
+                        "value": "#f7782f",
                         "from": 0.000001
                     }
                 ]
@@ -817,7 +817,7 @@
             "context": {
                 "trendColorEditorConfig": [
                     {
-                        "value": "#fa5762",
+                        "value": "#f7782f",
                         "to": -0.000001
                     },
                     {

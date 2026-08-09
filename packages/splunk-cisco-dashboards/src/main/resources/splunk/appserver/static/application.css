@@ -143,3 +143,61 @@ body.scd-studio-home-density-pilot
     [data-test='DashboardLayoutContainer'] * {
     font-family: Inter, system-ui, sans-serif !important;
 }
+
+/*
+ * Keep the pilot's compact time-range control aligned with the dark header.
+ * Dashboard Studio writes light-theme colors inline, so these selectors stay
+ * route-scoped and use the selected button's inline color only as a state hook.
+ */
+body.scd-studio-home-density-pilot #input_time_range {
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+body.scd-studio-home-density-pilot #input_time_range > button {
+    background-color: #131a23 !important;
+    border-color: rgba(100, 158, 245, 0.28) !important;
+    color: #ecf0f5 !important;
+}
+
+body.scd-studio-home-density-pilot #input_time_range > button:hover,
+body.scd-studio-home-density-pilot #input_time_range > button[value='advancedTR'] {
+    background: #1c2738 !important;
+    color: #a6adb6 !important;
+}
+
+body.scd-studio-home-density-pilot
+    #input_time_range
+    > button:not([value='advancedTR'])[style*='rgb(204, 204, 204)'] {
+    background: #049fd9 !important;
+    border-color: #00bceb !important;
+    color: #ecf0f5 !important;
+}
+
+body.scd-studio-home-density-pilot
+    #input_time_range
+    > button:not([value='advancedTR'])[style*='rgb(204, 204, 204)']:hover,
+body.scd-studio-home-density-pilot
+    #input_time_range
+    > button:not([value='advancedTR'])[style*='rgb(204, 204, 204)']:focus,
+body.scd-studio-home-density-pilot
+    #input_time_range
+    > button:not([value='advancedTR'])[style*='rgb(204, 204, 204)']:active {
+    background: #049fd9 !important;
+    background-color: #049fd9 !important;
+    border-color: #00bceb !important;
+    color: #ecf0f5 !important;
+}
+
+body.scd-studio-home-density-pilot #input_time_range > button:first-child {
+    border-radius: 6px 0 0 6px;
+}
+
+body.scd-studio-home-density-pilot #input_time_range > button:last-child {
+    border-radius: 0 6px 6px 0;
+}
+
+body.scd-studio-home-density-pilot #input_time_range svg {
+    color: currentColor;
+    fill: currentColor;
+}
