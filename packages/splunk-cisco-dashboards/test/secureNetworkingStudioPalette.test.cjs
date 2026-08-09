@@ -306,12 +306,14 @@ for (const { fileName, xml, definition } of dashboardViews) {
     );
     assert.equal(
       singleValue.options?.trendDisplay,
-      "off",
-      `${fileName}:${cardKey} must reserve trend rendering for the supporting graph`,
+      fileName === "secure_networking_zta_authentication_policy_enforcement.xml"
+        ? "percent"
+        : "off",
+      `${fileName}:${cardKey} must use the intended headline trend treatment`,
     );
     assert.match(
       singleValue.options?.majorValue || "",
-      /^> primary \| seriesByName\(".+"\) \| lastPoint\(\)$/,
+      /^(?:> primary \| seriesByName\(".+"\)|> sparklineValues) \| lastPoint\(\)$/,
       `${fileName}:${cardKey} must bind its headline to one named result field`,
     );
 
@@ -485,6 +487,29 @@ const densityPilot = dashboardViews.find(
     fileName === "secure_networking_zta_authentication_policy_enforcement.xml",
 ).definition;
 assert.deepEqual(
+  densityPilot.layout.globalInputs,
+  [],
+  "density pilot must not render the time picker in a global row above the header",
+);
+assert.deepEqual(
+  densityPilot.layout.layoutDefinitions.layout_overview.structure.find(
+    ({ item }) => item === "input_time_range",
+  ),
+  {
+    item: "input_time_range",
+    position: { x: 1034, y: 12, w: 370, h: 80 },
+    type: "input",
+  },
+  "density pilot must position the segmented time picker inside the header",
+);
+assert.deepEqual(
+  densityPilot.layout.layoutDefinitions.layout_overview.structure.find(
+    ({ item }) => item === "viz_header",
+  ).position,
+  { x: 118, y: 8, w: 886, h: 88 },
+  "density pilot header copy must leave a clear right-side region for the picker",
+);
+assert.deepEqual(
   densityPilot.inputs.input_time_range,
   {
     options: {
@@ -518,6 +543,31 @@ for (const [visualizationId, expectedColor] of Object.entries(densityPilotTrendC
     densityPilot.visualizations[visualizationId].options.seriesColors[0],
     expectedColor,
     `density pilot ${visualizationId} must lead with its semantic C3 color`,
+  );
+}
+
+const densityPilotSingleValueSeries = {
+  viz_card_01_singlevalue: "Failure Rate %",
+  viz_card_02_singlevalue: "BucketTotal",
+  viz_card_03_singlevalue: "Failure",
+  viz_card_04_singlevalue: "Failure",
+  viz_card_05_singlevalue: "RiskyOutcomes",
+  viz_card_06_singlevalue: "ise_device_count",
+};
+for (const [visualizationId, seriesName] of Object.entries(densityPilotSingleValueSeries)) {
+  const singleValue = densityPilot.visualizations[visualizationId];
+  assert.equal(singleValue.options.majorValue, "> sparklineValues | lastPoint()");
+  assert.equal(
+    singleValue.options.sparklineValues,
+    `> primary | seriesByName(\"${seriesName}\")`,
+  );
+  assert.equal(singleValue.options.trendValue, "> sparklineValues | delta(-2)");
+  assert.equal(singleValue.options.trendDisplay, "percent");
+  assert.equal(singleValue.options.showTrendIndicator, true);
+  assert.equal(singleValue.options.trendFontSize, 28);
+  assert.ok(
+    singleValue.context?.trendColorEditorConfig?.length >= 2,
+    `density pilot ${visualizationId} must define semantic trend colors`,
   );
 }
 

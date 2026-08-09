@@ -133,10 +133,33 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"WindowFailureRatePct\") | lastPoint()",
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "sparklineValues": "> primary | seriesByName(\"Failure Rate %\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendDisplay": "percent",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#fa5762",
+                        "from": 0.000001
+                    }
+                ]
             }
         },
         "viz_card_01_trend": {
@@ -245,10 +268,28 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendDisplay": "percent",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#049fd9",
+                        "to": 0
+                    },
+                    {
+                        "value": "#049fd9",
+                        "from": 0
+                    }
+                ]
             }
         },
         "viz_card_02_trend": {
@@ -357,10 +398,33 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"WindowFailures\") | lastPoint()",
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "sparklineValues": "> primary | seriesByName(\"Failure\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendDisplay": "percent",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#fa5762",
+                        "from": 0.000001
+                    }
+                ]
             }
         },
         "viz_card_03_trend": {
@@ -469,10 +533,33 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"WindowFailures\") | lastPoint()",
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "sparklineValues": "> primary | seriesByName(\"Failure\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendDisplay": "percent",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#fa5762",
+                        "from": 0.000001
+                    }
+                ]
             }
         },
         "viz_card_04_trend": {
@@ -581,10 +668,33 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"WindowRiskyOutcomes\") | lastPoint()",
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "sparklineValues": "> primary | seriesByName(\"RiskyOutcomes\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendDisplay": "percent",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#fa5762",
+                        "from": 0.000001
+                    }
+                ]
             }
         },
         "viz_card_05_trend": {
@@ -693,10 +803,33 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"ise_device_count\") | lastPoint()",
+                "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
+                "sparklineValues": "> primary | seriesByName(\"ise_device_count\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendDisplay": "percent",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#fa5762",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#4cbf7f",
+                        "from": 0.000001
+                    }
+                ]
             }
         },
         "viz_card_06_trend": {
@@ -816,9 +949,7 @@
         }
     },
     "layout": {
-        "globalInputs": [
-            "input_time_range"
-        ],
+        "globalInputs": [],
         "layoutDefinitions": {
             "layout_overview": {
                 "options": {
@@ -859,10 +990,20 @@
                         "position": {
                             "x": 118,
                             "y": 8,
-                            "w": 1280,
+                            "w": 886,
                             "h": 88
                         },
                         "type": "block"
+                    },
+                    {
+                        "item": "input_time_range",
+                        "position": {
+                            "x": 1034,
+                            "y": 12,
+                            "w": 370,
+                            "h": 80
+                        },
+                        "type": "input"
                     },
                     {
                         "item": "viz_card_01_background",
