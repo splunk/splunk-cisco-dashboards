@@ -178,8 +178,13 @@ for (const metadataField of [
 }
 assert.match(
   searchbaseGuidance,
-  /DOMPurify\.sanitize[\s\S]*aria-expanded=\{expanded\}[\s\S]*max-h-\[220px\]/,
-  "Workspace guidance must sanitize Searchbase HTML and remain collapsible and bounded",
+  /DOMPurify\.sanitize[\s\S]*aria-expanded=\{expanded\}/,
+  "Workspace guidance must sanitize Searchbase HTML and remain collapsible",
+);
+assert.match(
+  searchbaseGuidance,
+  /expanded \? 'flex min-h-\[120px\] flex-1 flex-col'[\s\S]*min-h-0 flex-1 grid-cols-1/,
+  "Expanded workspace guidance must use the remaining dialog height",
 );
 assert.doesNotMatch(
   searchbaseGuidance,
@@ -209,6 +214,11 @@ assert.match(
   detailModal,
   /const controller = new AbortController\(\)[\s\S]*count: 1000,[\s\S]*signal: controller\.signal[\s\S]*controller\.abort\(\)/,
   "Workspace drilldowns must cap results and cancel obsolete dispatches",
+);
+assert.match(
+  detailModal,
+  /max-h-\[min\(46vh,520px\)\][\s\S]*data-detail-results-region="content-aware"/,
+  "Detail results must follow their content height and cap large tables without hiding guidance",
 );
 
 console.log("✓ Workspace modal shell design and accessibility tests passed");

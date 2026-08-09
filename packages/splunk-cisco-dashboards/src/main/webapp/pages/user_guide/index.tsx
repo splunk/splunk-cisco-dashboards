@@ -1600,7 +1600,10 @@ iseval = 0`}</CodeBlock>
                   enter a temporary focus view; compact charts automatically
                   trade static labels for plotting room and restore full detail
                   when focused. A template helps create the initial workspace
-                  but does not constrain future customization.
+                  but does not constrain future customization. Detail
+                  drilldowns size short result tables to their rows, cap long
+                  tables with an internal scroller, and dedicate the remaining
+                  dialog height to Searchbase guidance.
                 </InfoCard>
                 <InfoCard title="Dashboard Studio editing">
                   Dashboard Manager confirmation dialogs now use the edited

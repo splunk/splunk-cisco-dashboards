@@ -135,7 +135,10 @@ export const SearchbaseDrilldownGuidance: React.FC<SearchbaseDrilldownGuidancePr
 
     return (
         <section
-            className="shrink-0 border-t border-white/[0.1] bg-slate-950/[0.34]"
+            className={cn(
+                'border-t border-white/[0.1] bg-slate-950/[0.34]',
+                expanded ? 'flex min-h-[120px] flex-1 flex-col' : 'shrink-0'
+            )}
             data-searchbase-drilldown-guidance="workspace"
         >
             <button
@@ -165,7 +168,7 @@ export const SearchbaseDrilldownGuidance: React.FC<SearchbaseDrilldownGuidancePr
             {expanded && (
                 <div
                     id={guidanceId}
-                    className="grid max-h-[220px] grid-cols-1 gap-3 overflow-y-auto overscroll-contain border-t border-white/[0.08] p-3 lg:grid-cols-2"
+                    className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-y-auto overscroll-contain border-t border-white/[0.08] p-3 lg:grid-cols-2"
                 >
                     {columns}
                 </div>

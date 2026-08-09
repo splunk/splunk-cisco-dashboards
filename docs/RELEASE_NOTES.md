@@ -45,7 +45,10 @@
   shell. The modal identifies the active supporting search and classification,
   adds expandable Description, Explanation, Solution, Related information, and
   Execution plan content, and keeps dispatch bounded to one cancellable,
-  1,000-row search with no additional catalogue request.
+  1,000-row search with no additional catalogue request. Result tables now
+  follow their content height for short searches and become internally
+  scrollable at a bounded height for long searches, keeping the guidance region
+  visible and consistent without a large empty table surface.
 - Insights Workspace dialogs now include a persistent Backdrop opacity slider
   in the desktop header. Operators can tune workspace dimming from 0–100%
   without changing the dialog, table, or chart content.

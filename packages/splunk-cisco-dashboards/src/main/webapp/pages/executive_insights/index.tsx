@@ -7134,7 +7134,10 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
           )}
         </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto overscroll-contain">
+      <div
+        className="min-h-[154px] max-h-[min(46vh,520px)] shrink overflow-auto overscroll-contain"
+        data-detail-results-region="content-aware"
+      >
         <table className="w-full min-w-[860px] bg-transparent text-sm">
             <thead className="sticky top-0 z-10 border-b border-white/[0.1] bg-slate-950/[0.72] backdrop-blur-xl">
               <tr className="text-left text-xs font-bold text-[#8ea3b8]">
