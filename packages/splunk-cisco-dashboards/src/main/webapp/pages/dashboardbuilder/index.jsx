@@ -1,4 +1,5 @@
 import React from 'react';
+import 'monaco-editor/esm/vs/editor/contrib/find/browser/findController.js';
 
 import EnterprisePreset from '@splunk/dashboard-presets/EnterprisePreset';
 import {

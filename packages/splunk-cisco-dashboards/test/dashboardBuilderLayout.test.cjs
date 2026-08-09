@@ -14,6 +14,11 @@ const editorPath = path.resolve(
   "../src/main/webapp/pages/dashboardbuilder/DashboardStudioEditor.jsx",
 );
 const editor = fs.readFileSync(editorPath, "utf8");
+const entryPath = path.resolve(
+  __dirname,
+  "../src/main/webapp/pages/dashboardbuilder/index.jsx",
+);
+const entry = fs.readFileSync(entryPath, "utf8");
 const managerPath = path.resolve(
   __dirname,
   "../src/main/webapp/pages/dashboardbuilder/DBHomePage.jsx",
@@ -56,6 +61,16 @@ assert.match(
 );
 assert.match(editor, /height=\{DASHBOARD_STUDIO_HEIGHT\}/);
 assert.doesNotMatch(editor, /height=["']1200["']/);
+assert.match(
+  entry,
+  /import 'monaco-editor\/esm\/vs\/editor\/contrib\/find\/browser\/findController\.js';/,
+  "Dashboard Builder must register Monaco's focused find and replace contribution",
+);
+assert.doesNotMatch(
+  entry,
+  /monaco-editor\/esm\/vs\/editor\/(?:editor\.all|edcore\.main)/,
+  "Dashboard Builder must not load Monaco's full editor contribution bundle",
+);
 
 assert.match(editor, /\bZoom\b/);
 assert.match(editor, /dashboardbuilder-display-button/);

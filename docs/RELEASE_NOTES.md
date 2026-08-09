@@ -2,6 +2,9 @@
 
 ## 1.0.36
 
+- Dashboard Manager source editing now supports in-editor find and replace via
+  the standard Command/Ctrl+F shortcut without loading Monaco's unrelated
+  editor features.
 - Dashboard Manager drilldowns now use the same compact glass dialog, bounded
   scrolling, header-level Search and Searchbase actions, and collapsible
   guidance treatment as Insights Workspace. Short result tables use a tighter
