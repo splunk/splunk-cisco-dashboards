@@ -1,5 +1,5 @@
 
-<dashboard version="2" theme="light">
+<dashboard version="2" theme="dark" stylesheet="application.css">
     <label>Cisco Spaces - Building Intelligence</label>
     <description>Cisco Spaces location and occupancy plus ISE-correlated wireless device trust</description>
     <definition><![CDATA[
@@ -42,16 +42,18 @@
 	"visualizations": {
 		"viz_about_bg": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_about_purpose": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "# Building Resilience — Cisco Spaces\n\nReal-time **location analytics, occupancy, and collaboration intelligence** from Cisco Spaces and Webex devices — plus **wireless trust** when Splunk correlates the same MAC addresses with **Cisco ISE**.\n\n**Why Splunk when Spaces already has great maps?** Cisco Spaces tells you *where* people and devices are. Splunk tells you *which devices on the network are authenticated, which are guest-only, and which deserve a second look* — in one place, with your security and IT data, over days or weeks.\n\n**Audience:** Facilities Management, Workplace Services, IT Operations, Security\n**Primary Sources:** Cisco Spaces Firehose, Webex Telemetry, Cisco ISE (`index_identity`)\n**Refresh:** All panels follow the global time picker; Spaces ~5–15 min, ISE per your syslog pipeline\n\n---\n\n## How to Navigate This Dashboard\n\n**Cisco Spaces Overview** — Building hierarchy, device vs user counts, SSID activity, and trends.\n*Mirrors Spaces KPIs; use when validating firehose health.*\n\n**Wireless Trust (Spaces + ISE)** — MAC classification and **devices to review**.\n*This is the Splunk differentiator: connected devices minus corporate ISE success → actionable review list with building/floor context.*\n\n**Collaboration & Occupancy** — Webex inventory, people counts, room utilization.\n*Use for workspace efficiency; drill into Spaces for floor plans and live signage.*\n\n> **Reading pattern:** Large gap between **Connected Devices** and **Active Users** is normal (multiple devices per person). Use **Wireless Trust** to see which MACs are not corporate-authenticated."
 			},
@@ -59,8 +61,8 @@
 		},
 		"viz_about_sources": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "## Data Sources & Troubleshooting\n\n---\n\n**Cisco Spaces** — Cisco Spaces App for Splunk\nSourcetypes: `cisco:spaces:firehose` (DEVICE_LOCATION_UPDATE, USER_PRESENCE, SPACE_OCCUPANCY, DEVICE_ASSOCIATION)\nFreshness: ~5 min\n\n**Cisco ISE** — ISE syslog in `index_identity`, sourcetype `cisco:ise:syslog` (5200/5400)\nUsed for MAC ↔ user/profile correlation on the **Wireless Trust** tab\n\n**Webex Devices** — Cisco Webex Add-on for Splunk\nSourcetypes: `cisco:webex:devices`, `cisco:webex:telemetry`\nFreshness: ~15 min\n\n---\n\n**Wireless Trust empty or all \"No ISE record\"?**\n\n1. Confirm ISE logs reach Splunk: `` `index_identity` sourcetype=cisco:ise:syslog \"5200\" | head 5 ``\n2. Widen time range (ISE pass/fail must overlap Spaces MAC activity)\n3. Rogue/interferer labels from Spaces Detect & Locate are not fully in firehose yet — use this tab for policy alignment; confirm device class in Spaces UI\n\n**Other panels \"No results\"?**\n\n1. Widen time range — Spaces may need 4+ hours\n2. Verify Spaces App and firehose: `` sourcetype=cisco:spaces:firehose | head 5 ``"
 			},
@@ -68,55 +70,61 @@
 		},
 		"viz_box_kpi": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_location": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_rooms": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_trends": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_webex": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_wireless": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
@@ -126,11 +134,11 @@
 			},
 			"description": "Network device count per building from Cisco Spaces",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"dataValuesDisplay": "all",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#049FD9"
+					"#049fd9"
 				],
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide"
@@ -146,75 +154,83 @@
 			"description": "Device presence by city over time",
 			"options": {
 				"annotationColor": [
-					"#D64550"
+					"#fa5762"
 				],
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "bottom",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
-					"#049FD9",
-					"#6EBE4A"
+					"#049fd9",
+					"#4cbf7f"
 				],
 				"stackMode": "stacked",
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Active devices by location",
 			"type": "splunk.area"
 		},
 		"viz_hdr_kpi": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Real-Time KPIs"
+				"markdown": "## Real-Time KPIs",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_location": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Location Intelligence"
+				"markdown": "## Location Intelligence",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_rooms": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Room Occupancy"
+				"markdown": "## Room Occupancy",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_trends": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Presence Trends"
+				"markdown": "## Presence Trends",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_webex": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Webex Collaboration"
+				"markdown": "## Webex Collaboration",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_wireless": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Wireless Intelligence\n\nSSID distribution from Spaces. For **MAC trust and ISE correlation**, see **Wireless Trust (Spaces + ISE)**."
+				"markdown": "## Wireless Intelligence\n\nSSID distribution from Spaces. For **MAC trust and ISE correlation**, see **Wireless Trust (Spaces + ISE)**.",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_info_collab": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "## Metric Reference — Collaboration & Occupancy Tab\n\n---\n\n**Webex Device Inventory** — All Webex devices with model, location, serial, and people count\n**Webex People Count Trend** — People detected by Webex devices over time\n\n---\n\n**Room Occupancy Detail** — Per-room capacity, peak count, presence, and utilization percentage\n**Room Utilization by Building** — Aggregate occupancy summary per building"
 			},
@@ -222,8 +238,8 @@
 		},
 		"viz_info_overview": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "## Metric Reference — Cisco Spaces Overview Tab\n\n---\n\n**Connected Devices** — Unique MAC addresses (`DEVICE_LOCATION_UPDATE` + `dc`)\n**Active Users** — Portfolio headcount (`USER_PRESENCE`, `max(totalUsers)` — never sum floors)\n**Rooms Occupied** — % of ROOM spaces with presence (`dc` room names)\n**Active SSIDs** / **Webex Devices** — As labeled\n\n---\n\n**Wireless Trust tab** — Splunk value-add: ISE auth + SSID + building/floor per MAC; see saved searches `building_resilience_wireless_device_trust_summary` and `building_resilience_wireless_devices_to_review`.\n\n**Location Breakdown** — Campus / Building / Floor device and AP counts\n**Presence Trends** — Users and devices by city over time\n**Wireless Intelligence** — SSID client distribution and trends"
 			},
@@ -234,11 +250,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -247,15 +263,15 @@
 			},
 			"description": "Distinct MAC addresses on the wireless network (Spaces). Compare to Active Users and Wireless Trust — not every MAC is a person, and not every MAC is corporate-authenticated.",
 			"options": {
-				"backgroundColor": "transparent",
-				"majorColor": "#049FD9",
+				"backgroundColor": "#131a23",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
 				"shouldAbbreviateMajorValue": true,
@@ -269,11 +285,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -282,15 +298,15 @@
 			},
 			"description": "Rooms currently occupied based on Webex device sensors",
 			"options": {
-				"backgroundColor": "transparent",
-				"majorColor": "#049FD9",
+				"backgroundColor": "#131a23",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
 				"shouldAbbreviateMajorValue": true,
@@ -304,11 +320,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -317,15 +333,15 @@
 			},
 			"description": "Number of SSIDs with active client associations",
 			"options": {
-				"backgroundColor": "transparent",
-				"majorColor": "#049FD9",
+				"backgroundColor": "#131a23",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
 				"shouldAbbreviateMajorValue": true,
@@ -339,11 +355,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -352,14 +368,15 @@
 			},
 			"description": "Portfolio user headcount (USER_PRESENCE). Typically lower than Connected Devices — people carry multiple MACs; see Wireless Trust for MAC-level policy view.",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showTrendIndicator": true,
 				"sparklineDisplay": "off",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Active Users",
 			"type": "splunk.singlevalue"
@@ -369,12 +386,12 @@
 				"primary": "ds_kpi_users"
 			},
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"chartShowLabels": false,
 				"dataValuesDisplay": "off",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#049FD9"
+					"#049fd9"
 				],
 				"xAxisTitleVisibility": "hide",
 				"xAxisVisibility": "hide",
@@ -388,11 +405,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -401,15 +418,15 @@
 			},
 			"description": "Webex collaboration devices reporting to Control Hub",
 			"options": {
-				"backgroundColor": "transparent",
-				"majorColor": "#049FD9",
+				"backgroundColor": "#131a23",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
 				"shouldAbbreviateMajorValue": true,
@@ -424,12 +441,12 @@
 			},
 			"description": "Hierarchical view of all managed locations with device and user counts",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 20,
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"headerBackgroundColor": "#F5F5F5",
-					"headerColor": "#2B2B2B",
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5",
 					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(tableAltRowBackgroundColorsByBackgroundColor)"
 				},
 				"fontSize": "small"
@@ -439,8 +456,8 @@
 		},
 		"viz_narr_collab": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#6E6E6E",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "**Room and Webex utilization** — best viewed in Cisco Spaces for live floor plans. Splunk here supports **trends and tables**; use Spaces Space Manager for room-level drill-down."
 			},
@@ -448,8 +465,8 @@
 		},
 		"viz_narr_overview": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#6E6E6E",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "Spaces-native KPIs: **where** devices are and how rooms are used. For *which MACs should not be on the network*, open **Wireless Trust (Spaces + ISE)** — Splunk joins location to ISE authorization."
 			},
@@ -457,17 +474,20 @@
 		},
 		"viz_p_hdr_bg": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.88)",
+				"fillColor": "#1c2738",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.06)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_p_hdr_title": {
 			"options": {
-				"fontColor": "#005073",
+				"fontColor": "#649ef5",
 				"fontSize": "large",
-				"markdown": "## Cisco Spaces - Building Intelligence"
+				"markdown": "## Cisco Spaces - Building Intelligence",
+				"backgroundColor": "#1c2738"
 			},
 			"type": "splunk.markdown"
 		},
@@ -477,12 +497,12 @@
 			},
 			"description": "Per-room occupancy with building, floor, and device info",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 20,
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"headerBackgroundColor": "#F5F5F5",
-					"headerColor": "#2B2B2B",
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5",
 					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(tableAltRowBackgroundColorsByBackgroundColor)"
 				},
 				"fontSize": "small"
@@ -496,12 +516,12 @@
 			},
 			"description": "Rooms used vs total per building",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"dataValuesDisplay": "all",
 				"legendDisplay": "bottom",
 				"seriesColors": [
-					"#049FD9",
-					"#E5A823"
+					"#049fd9",
+					"#f0c243"
 				],
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide"
@@ -511,21 +531,23 @@
 		},
 		"viz_section_collab": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.45)",
+				"fillColor": "rgba(15,17,23,0.78)",
 				"fillOpacity": 1,
 				"rx": 12,
-				"strokeColor": "rgba(0,0,0,0.06)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(65,74,86,0.52)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_section_overview": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.45)",
+				"fillColor": "rgba(15,17,23,0.78)",
 				"fillOpacity": 1,
 				"rx": 12,
-				"strokeColor": "rgba(0,0,0,0.06)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(65,74,86,0.52)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
@@ -535,11 +557,11 @@
 			},
 			"description": "Client count breakdown by SSID — which networks are busiest",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"dataValuesDisplay": "all",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#8B6FC9"
+					"#9ca6ff"
 				],
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide"
@@ -553,13 +575,25 @@
 			},
 			"description": "SSID client association count trending over time",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "bottom",
 				"nullValueDisplay": "connect",
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
-				"markerDisplay": "outlined"
+				"markerDisplay": "show",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				],
+				"lineWidth": 2
 			},
 			"title": "SSID Association Trend",
 			"type": "splunk.line"
@@ -572,19 +606,21 @@
 			"description": "Concurrent users by location (15-minute DEVICE_COUNT floor roll-up; USER_PRESENCE totalUsers is portfolio-wide)",
 			"options": {
 				"annotationColor": [
-					"#D64550"
+					"#fa5762"
 				],
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "bottom",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
-					"#049FD9",
-					"#6EBE4A"
+					"#049fd9",
+					"#4cbf7f"
 				],
 				"stackMode": "stacked",
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Active users by location",
 			"type": "splunk.area"
@@ -595,11 +631,11 @@
 			},
 			"description": "Device count per building from Webex telemetry",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"dataValuesDisplay": "all",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#049FD9"
+					"#049fd9"
 				],
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide"
@@ -613,17 +649,19 @@
 			},
 			"description": "Webex sensor people count by city",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "bottom",
 				"seriesColors": [
-					"#049FD9",
-					"#6EBE4A"
+					"#049fd9",
+					"#4cbf7f"
 				],
 				"stackMode": "stacked",
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
-				"nullValueDisplay": "connect"
+				"nullValueDisplay": "connect",
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "People detected by location",
 			"type": "splunk.area"
@@ -634,12 +672,12 @@
 			},
 			"description": "Webex devices with model, location, and connectivity status",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 20,
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"headerBackgroundColor": "#F5F5F5",
-					"headerColor": "#2B2B2B",
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5",
 					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(tableAltRowBackgroundColorsByBackgroundColor)"
 				},
 				"fontSize": "small"
@@ -649,12 +687,12 @@
 		},
 		"viz_kpi_devices_chart": {
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"chartShowLabels": false,
 				"dataValuesDisplay": "off",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#049FD9"
+					"#049fd9"
 				],
 				"xAxisTitleVisibility": "hide",
 				"xAxisVisibility": "hide",
@@ -668,12 +706,12 @@
 		},
 		"viz_kpi_ssids_chart": {
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"chartShowLabels": false,
 				"dataValuesDisplay": "off",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#049FD9"
+					"#049fd9"
 				],
 				"xAxisTitleVisibility": "hide",
 				"xAxisVisibility": "hide",
@@ -687,12 +725,12 @@
 		},
 		"viz_kpi_occupancy_chart": {
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"chartShowLabels": false,
 				"dataValuesDisplay": "off",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#049FD9"
+					"#049fd9"
 				],
 				"xAxisTitleVisibility": "hide",
 				"xAxisVisibility": "hide",
@@ -706,12 +744,12 @@
 		},
 		"viz_kpi_webex_chart": {
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"chartShowLabels": false,
 				"dataValuesDisplay": "off",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#049FD9"
+					"#049fd9"
 				],
 				"xAxisTitleVisibility": "hide",
 				"xAxisVisibility": "hide",
@@ -725,25 +763,27 @@
 		},
 		"viz_box_trust": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_hdr_trust": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Wireless device trust (Spaces + ISE)"
+				"markdown": "## Wireless device trust (Spaces + ISE)",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_info_trust": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "## Metric Reference — Wireless Trust Tab\n\n---\n\n**Devices to Review** — Count of MACs not corporate-authenticated (ISE pass on non-guest SSID)\n**Trust segments** — Breakdown: corporate auth, guest, guest WLAN only, Spaces-identified, no ISE identity, other\n**Review table** — MAC, building, floor, SSID, ISE user/profile, why flagged\n\n---\n\n**Story for leadership:** *Cisco Spaces tells you where devices are; Splunk tells you which devices on the network are trusted.* Confirm interferer/rogue types in Spaces Detect & Locate until firehose exports those categories."
 			},
@@ -754,11 +794,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					},
 					{
 						"from": 0,
-						"value": "#D64550"
+						"value": "#fa5762"
 					}
 				]
 			},
@@ -767,8 +807,8 @@
 			},
 			"description": "MAC addresses visible to Spaces that are not corporate-authenticated in ISE for this time range",
 			"options": {
-				"backgroundColor": "transparent",
-				"majorColor": "#D64550",
+				"backgroundColor": "#131a23",
+				"majorColor": "#fa5762",
 				"majorFontSize": 36,
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
@@ -780,8 +820,8 @@
 		},
 		"viz_narr_trust": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#6E6E6E",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "**Splunk value-add:** correlate wireless **MAC addresses** (Cisco Spaces) with **ISE authentication** — who is on the network, on which SSID, and in which building."
 			},
@@ -793,13 +833,13 @@
 			},
 			"description": "Endpoints to validate: not corporate-authenticated, or policy mismatch between SSID and ISE",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 25,
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"headerBackgroundColor": "#F5F5F5",
-					"headerColor": "#2B2B2B",
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5",
 					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(tableAltRowBackgroundColorsByBackgroundColor)"
 				}
 			},
@@ -812,15 +852,15 @@
 			},
 			"description": "How tracked MACs classify when Spaces location/SSID is joined to ISE pass/fail",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"dataValuesDisplay": "all",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#22C55E",
-					"#049FD9",
-					"#EDA800",
-					"#D64550",
-					"#6E6E6E"
+					"#4cbf7f",
+					"#049fd9",
+					"#f0c243",
+					"#fa5762",
+					"#a6adb6"
 				],
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide"
@@ -830,8 +870,8 @@
 		},
 		"viz_why_splunk": {
 			"options": {
-				"backgroundColor": "rgba(5, 80, 115, 0.06)",
-				"fontColor": "#005073",
+				"backgroundColor": "#131a23",
+				"fontColor": "#649ef5",
 				"fontSize": "small",
 				"markdown": "### Why Splunk when Cisco Spaces already has beautiful maps?\n\n**Cisco Spaces** shows live floor plans, room occupancy, and Detect & Locate for a single MAC. **Splunk** answers the cross-domain question David cares about: *of all the devices on the network, which ones are authenticated corporate users, which are guests, and which should we investigate?* — with **building and floor context**, over **your chosen time range**, next to firewall, DNAC, and identity data.\n\n> *Spaces tells you where they are. Splunk tells you which devices on the network are trusted.*"
 			},
@@ -1093,10 +1133,16 @@
 		"layoutDefinitions": {
 			"layout_about": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 1000,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -1184,10 +1230,16 @@
 			},
 			"layout_collab": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 1000,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -1335,10 +1387,16 @@
 			},
 			"layout_trust": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 1100,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -1446,10 +1504,16 @@
 			},
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 1593,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -1775,5 +1839,5 @@
 		"hideEdit": true
 	}
 }
-    ]]></definition>
+]]></definition>
 </dashboard>

@@ -1,5 +1,5 @@
 
-<dashboard version="2" theme="light">
+<dashboard version="2" theme="dark" stylesheet="application.css">
     <label>NetOps Readiness</label>
     <description></description>
     <definition><![CDATA[
@@ -57,32 +57,34 @@
 				"lineCurveStyle": "smooth",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
-					"#049FD9",
-					"#D64550",
-					"#CCCCCC",
-					"#CCCCCC"
+					"#049fd9",
+					"#fa5762",
+					"#a6adb6",
+					"#a6adb6"
 				],
 				"xAxisTitleText": "Time",
 				"yAxisMax": 100,
 				"yAxisMin": 0,
 				"yAxisTitleText": "NRS",
-				"markerDisplay": "outlined"
+				"markerDisplay": "show",
+				"backgroundColor": "#131a23",
+				"lineWidth": 2
 			},
 			"title": "NRS forecast - next 24 hours (95% confidence band)",
 			"type": "splunk.line"
 		},
 		"viz_about": {
 			"options": {
-				"backgroundColor": "#ffffff",
-				"fontColor": "#333333",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"markdown": "## About this dashboard and shipped NOC alerts\n\n### NRS Formula\n\n**NRS = (0.30 × A + 0.30 × R + 0.25 × Q) × D_risk**\n\n- **A - Attainability (DNAC)**: percentage of access points with `Reachability=REACHABLE`.\n- **R - Retainability (DNAC)**: 50% APs with `OverallHealth >= 7` and 50% clients with `health.overallScore >= 5`.\n- **Q - Quality (DNAC)**: in the headline NRS, 60% mean client health (×10 to scale to 100) and 40% onboarding-time score (100 if avg ≤ 1s, 0 if ≥ 5s, linear in between). The standalone Q tile additionally blends 30% RSSI signal strength.\n- **D_risk - Risk deflator**: 1.0 − 0.05·P1 − 0.02·P2 (count of distinct active P1/P2 IssueIDs from `cisco:dnac:issue`). Floored at 0.5 so a catastrophe still leaves something to recover.\n\n### Why max NRS ≈ 85, not 100\n\nThe top-level weights sum to 0.85, not 1.0. The remaining 15% is reserved for future sub-scores (e.g., per-floor saturation, ThousandEyes path quality). For now, treat ≥ 80 as healthy, 70-79 as watch, < 70 as act-now. Tile thresholds are tunable in the score visualization once the weights are re-tuned via the `nrs_w_nrs_*` macros.\n\n### Data sources\n\n- **DNAC / Catalyst Center** (`cisco:dnac:devicehealth`, `cisco:dnac:client`, `cisco:dnac:issue`): the network-side truth - which APs are up, how clients are doing, what's broken.\n- **Cisco Spaces Firehose** (`cisco:spaces:firehose`, eventType `DEVICE_PRESENCE` and `DEVICE_ASSOCIATION`): the demand-side truth - how many people are actually on the network, where, on which SSID.\n\n### Shipped alerts (savedsearches.conf)\n\n- **NRS Below Threshold** - fires when headline NRS drops below 75.\n- **AP Saturation** - fires when any AP exceeds 30 concurrent clients.\n- **AP Health Degraded** - fires when any AP's `OverallHealth` drops below 7.\n- **Client Health Degraded** - fires when avg client health drops below 5."
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_arq_legend": {
 			"options": {
-				"backgroundColor": "#FFFFFF",
-				"fontColor": "#333333",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"markdown": "**NRS = (0.30·A + 0.30·R + 0.25·Q) × D_risk**\n\n- **A** - % of APs with `Reachability=REACHABLE`\n- **R** - 50% APs with health ≥ 7 and 50% clients with health ≥ 5\n- **Q** - 60% mean client health (×10) + 40% onboarding-time score (headline). Standalone Q tile adds 30% RSSI.\n- **D_risk** - 1.0 − 0.05·P1 − 0.02·P2 from `cisco:dnac:issue`, floor 0.5\n\n*Score scale:* max achievable ≈ 85 (see About). ≥ 80 green, 70-79 amber, < 70 red."
 			},
 			"type": "splunk.markdown"
@@ -92,16 +94,16 @@
 				"rangeColorsEditorConfig": [
 					{
 						"to": 60,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					},
 					{
 						"from": 60,
 						"to": 80,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 80,
-						"value": "#D64550"
+						"value": "#fa5762"
 					}
 				]
 			},
@@ -110,7 +112,7 @@
 			},
 			"description": "Network-wide utilization: peak concurrent users (sum across all sites, from Spaces) divided by total AP capacity (DNAC AP count × 30 design-maximum clients per AP). Read alongside Q1 and Q2 below for site-level detail.",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(rangeColorsEditorConfig)",
 				"majorValue": "> primary | seriesByName(\"used_pct\") | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -123,171 +125,191 @@
 		},
 		"viz_box_a_forecast": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_a_headline": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_a_persite": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_a_trend": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_b_aphealth": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_b_capacity": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_b_gauge": {
 			"options": {
-				"fillColor": "#ffffff",
-				"rounding": 8,
-				"strokeColor": "#dde1e6"
+				"fillColor": "#131a23",
+				"rounding": 10,
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_b_people": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_c_corr": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_c_forecast": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_c_q4": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_c_q5": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_c_q6": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_c_q7": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_d_clients": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_d_recovery": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_d_surge": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_d_wow": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_e_about": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
@@ -303,16 +325,18 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
-				"markerDisplay": "outlined",
+				"markerDisplay": "show",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
-					"#D64550",
-					"#049FD9",
-					"#CCCCCC",
-					"#CCCCCC"
+					"#fa5762",
+					"#049fd9",
+					"#a6adb6",
+					"#a6adb6"
 				],
 				"xAxisTitleText": "Time",
-				"yAxisTitleText": "Active issues (dc IssueID)"
+				"yAxisTitleText": "Active issues (dc IssueID)",
+				"backgroundColor": "#131a23",
+				"lineWidth": 2
 			},
 			"title": "Active issues forecast - next 24 hours (95% confidence band)",
 			"type": "splunk.line"
@@ -329,16 +353,16 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
-				"markerDisplay": "outlined",
+				"markerDisplay": "show",
 				"nullValueDisplay": "connect",
 				"overlayFields": [
 					"DNAC Active Issues",
 					"Spaces Concurrent Users"
 				],
 				"seriesColors": [
-					"#049FD9",
-					"#D64550",
-					"#E5A823"
+					"#049fd9",
+					"#fa5762",
+					"#f0c243"
 				],
 				"showOverlayY2Axis": true,
 				"showXMajorGridLines": true,
@@ -346,7 +370,9 @@
 				"xAxisTitleVisibility": "hide",
 				"y2AxisAbbreviation": "auto",
 				"y2AxisTitleText": "Issues / Concurrent users",
-				"yAxisTitleText": "AP Health (0-100)"
+				"yAxisTitleText": "AP Health (0-100)",
+				"backgroundColor": "#131a23",
+				"lineWidth": 2
 			},
 			"title": "Splunk Cross-Source Correlation - Catalyst (AP Health + Issues) and Spaces (Concurrent Users)",
 			"type": "splunk.line"
@@ -365,68 +391,77 @@
 				"lineCurveStyle": "smooth",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
-					"#049FD9",
-					"#9AA0A6"
+					"#049fd9",
+					"#a6adb6"
 				],
 				"stackMode": "stacked",
 				"xAxisTitleText": "Hour of week (last week shifted +7d for alignment)",
-				"yAxisTitleText": "Concurrent users (dc MAC, hourly)"
+				"yAxisTitleText": "Concurrent users (dc MAC, hourly)",
+				"backgroundColor": "#131a23",
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Concurrent users - This week vs Last week",
 			"type": "splunk.area"
 		},
 		"viz_hdr_a_forecast": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## NRS forecast - next 24 hours (predict + 95% band)"
+				"markdown": "## NRS forecast - next 24 hours (predict + 95% band)",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_a_headline": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Network Readiness Score"
+				"markdown": "## Network Readiness Score",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_a_persite": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Per-Site Readiness"
+				"markdown": "## Per-Site Readiness",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_a_trend": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## NRS Over Time"
+				"markdown": "## NRS Over Time",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_b_aphealth": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## AP Health Risk Triage"
+				"markdown": "## AP Health Risk Triage",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_b_capacity": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Forecast — Capacity Headroom"
+				"markdown": "## Forecast — Capacity Headroom",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_b_gauge": {
 			"options": {
-				"backgroundColor": "transparent",
-				"majorColor": "#1a1a1a",
+				"backgroundColor": "#131a23",
+				"majorColor": "#ecf0f5",
 				"majorFontSize": 16,
 				"majorValue": "Network capacity utilization at a glance",
 				"shouldAbbreviateMajorValue": true,
@@ -436,97 +471,109 @@
 		},
 		"viz_hdr_b_people": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Forecast — People per AP"
+				"markdown": "## Forecast — People per AP",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_c_corr": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Cross-Source Correlation Strip - Catalyst plus Spaces"
+				"markdown": "## Cross-Source Correlation Strip - Catalyst plus Spaces",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_c_forecast": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Active issues forecast - next 24 hours (predict + 95% band)"
+				"markdown": "## Active issues forecast - next 24 hours (predict + 95% band)",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_c_q4": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Q4 — Onboarding Success & Concurrent Users"
+				"markdown": "## Q4 — Onboarding Success & Concurrent Users",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_c_q5": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Q5 — AP Saturation"
+				"markdown": "## Q5 — AP Saturation",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_c_q6": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Q6 — Issues & Occupancy"
+				"markdown": "## Q6 — Issues & Occupancy",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_c_q7": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Q7 — SSID Concurrency"
+				"markdown": "## Q7 — SSID Concurrency",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_d_clients": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Q9 — Worst-Hit Clients"
+				"markdown": "## Q9 — Worst-Hit Clients",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_d_recovery": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Q10 — Recovery Trends (Health · Onboarding · Issues)"
+				"markdown": "## Q10 — Recovery Trends (Health · Onboarding · Issues)",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_d_surge": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Q8 — Surge Pattern"
+				"markdown": "## Q8 — Surge Pattern",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_d_wow": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Week-over-week comparison - concurrent users by hour"
+				"markdown": "## Week-over-week comparison - concurrent users by hour",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_hdr_e_about": {
 			"options": {
-				"fontColor": "#D64550",
+				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## About & Alerts"
+				"markdown": "## About & Alerts",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
@@ -535,16 +582,16 @@
 				"majorColorEditorConfig": [
 					{
 						"to": 80,
-						"value": "#D64550"
+						"value": "#fa5762"
 					},
 					{
 						"from": 80,
 						"to": 95,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 95,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -553,7 +600,7 @@
 			},
 			"description": "AP reach % — should be ≥ 95 before exercise",
 			"options": {
-				"backgroundColor": "#FFFFFF",
+				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
@@ -568,16 +615,16 @@
 				"majorColorEditorConfig": [
 					{
 						"to": 85,
-						"value": "#D64550"
+						"value": "#fa5762"
 					},
 					{
 						"from": 85,
 						"to": 95,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 95,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -586,7 +633,7 @@
 			},
 			"description": "Risk deflator from P1/P2/saturation — floor 0.5",
 			"options": {
-				"backgroundColor": "#FFFFFF",
+				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
@@ -618,11 +665,12 @@
 				"dataValuesDisplay": "all",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#049FD9"
+					"#049fd9"
 				],
 				"showRoundedY": true,
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"backgroundColor": "#131a23"
 			},
 			"title": "NRS per site — where am I weak?",
 			"type": "splunk.bar"
@@ -647,7 +695,12 @@
 			],
 			"options": {
 				"count": 20,
-				"fontSize": "small"
+				"fontSize": "small",
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "NRS detail per site",
 			"type": "splunk.table"
@@ -657,16 +710,16 @@
 				"majorColorEditorConfig": [
 					{
 						"to": 80,
-						"value": "#D64550"
+						"value": "#fa5762"
 					},
 					{
 						"from": 80,
 						"to": 95,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 95,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -675,7 +728,7 @@
 			},
 			"description": "Client health · onboarding · RSSI — fix if < 90",
 			"options": {
-				"backgroundColor": "#FFFFFF",
+				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
@@ -690,16 +743,16 @@
 				"majorColorEditorConfig": [
 					{
 						"to": 80,
-						"value": "#D64550"
+						"value": "#fa5762"
 					},
 					{
 						"from": 80,
 						"to": 95,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 95,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -708,7 +761,7 @@
 			},
 			"description": "AP + client health pass rate — fix if < 90",
 			"options": {
-				"backgroundColor": "#FFFFFF",
+				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
@@ -723,16 +776,16 @@
 				"majorColorEditorConfig": [
 					{
 						"to": 75,
-						"value": "#D64550"
+						"value": "#fa5762"
 					},
 					{
 						"from": 75,
 						"to": 90,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 90,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -741,13 +794,13 @@
 			},
 			"description": "Composite NRS, computed every 5 minutes from DNAC + Spaces telemetry. Max achievable ≈ 85 (see About tab for why). Currently rendered green at ≥ 90, amber 75-89, red < 75 - thresholds will be re-baselined once the weights are re-tuned. Sparkline shows the trend over the selected window.",
 			"options": {
-				"backgroundColor": "#FFFFFF",
+				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"majorValue": "> primary | seriesByName('NRS') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"sparklineDisplay": "below",
-				"sparklineSeriesColor": "#049FD9",
+				"sparklineSeriesColor": "#049fd9",
 				"unit": "%",
 				"unitPosition": "after",
 				"sparklineNullValueDisplay": "connect",
@@ -768,16 +821,16 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "linear",
-				"markerDisplay": "outlined",
+				"markerDisplay": "show",
 				"nullValueDisplay": "gaps",
 				"overlayFields": [
 					"DNAC Active Issues",
 					"Spaces Concurrent Users (overlay)"
 				],
 				"seriesColors": [
-					"#049FD9",
-					"#D64550",
-					"#E5A823"
+					"#049fd9",
+					"#fa5762",
+					"#f0c243"
 				],
 				"showOverlayY2Axis": true,
 				"xAxisTitleVisibility": "hide",
@@ -785,24 +838,29 @@
 				"y2AxisTitleText": "Issues / Concurrent users",
 				"yAxisMax": 100,
 				"yAxisMin": 0,
-				"yAxisTitleText": "NRS (0-100)"
+				"yAxisTitleText": "NRS (0-100)",
+				"backgroundColor": "#131a23",
+				"lineWidth": 2
 			},
 			"title": "NRS over time - with Op Florida Ready operational milestones (annotation: Op Florida Ready milestones)",
 			"type": "splunk.line"
 		},
 		"viz_p_hdr_bg": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.88)",
+				"fillColor": "#1c2738",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.06)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_p_hdr_title": {
 			"options": {
-				"fontColor": "#005073",
+				"fontColor": "#649ef5",
 				"fontSize": "large",
-				"markdown": "## NetOps Readiness — Op Florida Ready"
+				"markdown": "## NetOps Readiness — Op Florida Ready",
+				"backgroundColor": "#1c2738"
 			},
 			"type": "splunk.markdown"
 		},
@@ -818,14 +876,16 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
-				"markerDisplay": "outlined",
+				"markerDisplay": "show",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
-					"#6EBE4A"
+					"#4cbf7f"
 				],
 				"xAxisTitleVisibility": "hide",
 				"yAxisMax": 10,
-				"yAxisMin": 0
+				"yAxisMin": 0,
+				"backgroundColor": "#131a23",
+				"lineWidth": 2
 			},
 			"title": "Q10a — DNAC: Avg client health score over time (annotation: Op Florida Ready milestones)",
 			"type": "splunk.line"
@@ -842,9 +902,10 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"seriesColors": [
-					"#D64550"
+					"#fa5762"
 				],
-				"xAxisTitleVisibility": "hide"
+				"xAxisTitleVisibility": "hide",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Q10c — DNAC: Issue count over time (annotation: Op Florida Ready milestones)",
 			"type": "splunk.column"
@@ -861,13 +922,15 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
-				"markerDisplay": "outlined",
+				"markerDisplay": "show",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
-					"#E5A823"
+					"#f0c243"
 				],
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Seconds"
+				"yAxisTitleText": "Seconds",
+				"backgroundColor": "#131a23",
+				"lineWidth": 2
 			},
 			"title": "Q10b — DNAC: Avg onboarding time over time (annotation: Op Florida Ready milestones)",
 			"type": "splunk.line"
@@ -879,7 +942,12 @@
 			"description": "Peak concurrent users (Spaces) divided by AP count (DNAC) at every site. Industry rule: > 30:1 = saturation risk. Add APs to any 'At Risk' site BEFORE the exercise.",
 			"options": {
 				"fontSize": "small",
-				"showRowNumbers": true
+				"showRowNumbers": true,
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Q1 — Spaces × DNAC: Users-to-AP ratio per site",
 			"type": "splunk.table"
@@ -891,7 +959,12 @@
 			"description": "Theoretical capacity (APs × 30 design clients) vs actual peak users. Plan additional APs at sites with < 20% headroom.",
 			"options": {
 				"fontSize": "small",
-				"showRowNumbers": true
+				"showRowNumbers": true,
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Q2 — Spaces × DNAC: Capacity headroom per site",
 			"type": "splunk.table"
@@ -904,7 +977,12 @@
 			"options": {
 				"count": 20,
 				"fontSize": "small",
-				"showRowNumbers": true
+				"showRowNumbers": true,
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Q3 — DNAC: APs to fix before the exercise",
 			"type": "splunk.table"
@@ -921,7 +999,7 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
-				"markerDisplay": "outlined",
+				"markerDisplay": "show",
 				"nullValueDisplay": "connect",
 				"overlayFields": [
 					"DNAC Active Issues"
@@ -929,7 +1007,20 @@
 				"showOverlayY2Axis": true,
 				"xAxisTitleVisibility": "hide",
 				"y2AxisTitleText": "DNAC Active Issues",
-				"yAxisTitleText": "Concurrent users"
+				"yAxisTitleText": "Concurrent users",
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				],
+				"lineWidth": 2
 			},
 			"title": "Q4b — Spaces: Concurrent users per site (annotation: Op Florida Ready milestones)",
 			"type": "splunk.line"
@@ -946,10 +1037,23 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
-				"markerDisplay": "outlined",
+				"markerDisplay": "show",
 				"nullValueDisplay": "connect",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Seconds"
+				"yAxisTitleText": "Seconds",
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				],
+				"lineWidth": 2
 			},
 			"title": "Q4a — DNAC: Onboarding time per site (annotation: Op Florida Ready milestones)",
 			"type": "splunk.line"
@@ -959,16 +1063,16 @@
 				"majorColorEditorConfig": [
 					{
 						"to": 1,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					},
 					{
 						"from": 1,
 						"to": 3,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 3,
-						"value": "#D64550"
+						"value": "#fa5762"
 					}
 				]
 			},
@@ -977,7 +1081,7 @@
 			},
 			"description": "Live count of APs that hit > 30 concurrent clients in the selected window (saturation hotspots). Tile is green at 0, amber at 1-2, red at ≥ 3. The 'AP Saturation' alert fires whenever this is > 0.",
 			"options": {
-				"backgroundColor": "#FFFFFF",
+				"backgroundColor": "#131a23",
 				"majorColor": "> primary | seriesByName('at_risk') | lastPoint() | rangeValue(majorColorEditorConfig)",
 				"majorValue": "> primary | seriesByName('label') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -997,7 +1101,19 @@
 				"legendDisplay": "off",
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Max clients per AP"
+				"yAxisTitleText": "Max clients per AP",
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				]
 			},
 			"title": "Q5 — DNAC: Top 30 busiest APs (stacked, threshold overlay)",
 			"type": "splunk.column"
@@ -1015,7 +1131,19 @@
 				"legendDisplay": "bottom",
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Issues"
+				"yAxisTitleText": "Issues",
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				]
 			},
 			"title": "Q6 — DNAC: Issues stacked by severity (annotation: Op Florida Ready milestones)",
 			"type": "splunk.column"
@@ -1032,19 +1160,21 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
-				"markerDisplay": "outlined",
+				"markerDisplay": "show",
 				"nullValueDisplay": "connect",
 				"overlayFields": [
 					"APs over saturation threshold"
 				],
 				"seriesColors": [
-					"#049FD9",
-					"#D64550"
+					"#049fd9",
+					"#fa5762"
 				],
 				"showOverlayY2Axis": true,
 				"xAxisTitleVisibility": "hide",
 				"y2AxisTitleText": "APs over saturation",
-				"yAxisTitleText": "Concurrent users"
+				"yAxisTitleText": "Concurrent users",
+				"backgroundColor": "#131a23",
+				"lineWidth": 2
 			},
 			"title": "Q6 — Spaces: Total concurrent users (paired with Q6 issues above)",
 			"type": "splunk.line"
@@ -1061,10 +1191,23 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
-				"markerDisplay": "outlined",
+				"markerDisplay": "show",
 				"nullValueDisplay": "connect",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Concurrent clients"
+				"yAxisTitleText": "Concurrent clients",
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				],
+				"lineWidth": 2
 			},
 			"title": "Q7 - Spaces: Per-SSID concurrent associations (top 10, annotation: Op Florida Ready milestones)",
 			"type": "splunk.line"
@@ -1077,7 +1220,19 @@
 			"options": {
 				"fontSize": "small",
 				"legendDisplay": "bottom",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				]
 			},
 			"title": "Q8 — Spaces: Surge multiplier per building (baseline week vs exercise)",
 			"type": "splunk.bar"
@@ -1090,65 +1245,75 @@
 			"options": {
 				"count": 20,
 				"fontSize": "small",
-				"showRowNumbers": true
+				"showRowNumbers": true,
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Q9 — DNAC: Top 50 worst client experiences",
 			"type": "splunk.table"
 		},
 		"viz_section_tab_a": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.45)",
+				"fillColor": "rgba(15,17,23,0.78)",
 				"fillOpacity": 1,
 				"rx": 12,
-				"strokeColor": "rgba(0,0,0,0.06)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(65,74,86,0.52)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_section_tab_b": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.45)",
+				"fillColor": "rgba(15,17,23,0.78)",
 				"fillOpacity": 1,
 				"rx": 12,
-				"strokeColor": "rgba(0,0,0,0.06)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(65,74,86,0.52)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_section_tab_c": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.45)",
+				"fillColor": "rgba(15,17,23,0.78)",
 				"fillOpacity": 1,
 				"rx": 12,
-				"strokeColor": "rgba(0,0,0,0.06)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(65,74,86,0.52)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_section_tab_d": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.45)",
+				"fillColor": "rgba(15,17,23,0.78)",
 				"fillOpacity": 1,
 				"rx": 12,
-				"strokeColor": "rgba(0,0,0,0.06)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(65,74,86,0.52)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_section_tab_e": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.45)",
+				"fillColor": "rgba(15,17,23,0.78)",
 				"fillOpacity": 1,
 				"rx": 12,
-				"strokeColor": "rgba(0,0,0,0.06)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(65,74,86,0.52)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_tab_a_hdr": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#6E6E6E",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "**Network Readiness Score (NRS)** — E-Score: NRS = (0.30·A + 0.30·R + 0.25·Q) × D_risk. Updated every 5 min. Green ≥ 90, amber 75-89, red < 75."
 			},
@@ -1156,8 +1321,8 @@
 		},
 		"viz_tab_b_hdr": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#6E6E6E",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "**BEFORE — Capacity Planning** — two weeks out: where am I undersized, where will I hit the ceiling, what must I fix before Friday?"
 			},
@@ -1165,8 +1330,8 @@
 		},
 		"viz_tab_c_hdr": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#6E6E6E",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "**DURING — Real-Time NetOps (Apr 13-15, 2026)** — saturation, onboarding, issues, SSID load. Refreshed every 5 min and feeding the alerting engine on Tab E."
 			},
@@ -1174,8 +1339,8 @@
 		},
 		"viz_tab_d_hdr": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#6E6E6E",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "**AFTER — Post-Mortem (Apr 16-22, 2026)** — the lessons-learned tab. Where did the surge land hardest, who suffered most, did the network fully recover?"
 			},
@@ -1521,10 +1686,16 @@
 		"layoutDefinitions": {
 			"layout_tab_a": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 1900,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -1752,10 +1923,16 @@
 			},
 			"layout_tab_b": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 1780,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -1923,10 +2100,16 @@
 			},
 			"layout_tab_c": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 2750,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -2184,10 +2367,16 @@
 			},
 			"layout_tab_d": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 2395,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -2375,10 +2564,16 @@
 			},
 			"layout_tab_e": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 830,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -2477,5 +2672,5 @@
 		"hideEdit": true
 	}
 }
-    ]]></definition>
+]]></definition>
 </dashboard>

@@ -110,6 +110,7 @@
 html.scd-overview-active,
 body.scd-overview-active {
     max-width: 100%;
+    min-width: 0;
     overflow-x: hidden;
 }
 
@@ -133,6 +134,29 @@ body.scd-overview-active .panel-body,
     max-width: 100%;
 }
 
+/* Shared C3 presentation tokens for React-mounted operational surfaces. The
+ * Dashboard Studio definitions consume the same values from
+ * c3VisualizationPalette.ts and the shared c3-atmosphere template. */
+#scan-root {
+    --scd-c3-canvas: #0f1117;
+    --scd-c3-panel: #131a23;
+    --scd-c3-secondary: #1c2738;
+    --scd-c3-text: #ecf0f5;
+    --scd-c3-muted: #a6adb6;
+    --scd-c3-info: #649ef5;
+    --scd-c3-cyan: #049fd9;
+    --scd-c3-cyan-bright: #00bceb;
+    --scd-c3-positive: #4cbf7f;
+    --scd-c3-caution: #f0c243;
+    --scd-c3-orange: #f7782f;
+    --scd-c3-critical: #fa5762;
+    --scd-c3-lavender: #9ca6ff;
+    --scd-c3-purple: #9b5ff5;
+    --scd-c3-panel-border: rgb(65 74 86 / 64%);
+    --scd-c3-toolbar-border: rgb(65 74 86 / 52%);
+    --scd-c3-accent-stroke: rgb(100 158 245 / 28%);
+}
+
 /*
  * Cisco Cloud Control-inspired content surface.
  *
@@ -145,8 +169,6 @@ body.scd-overview-active .panel-body,
  * Light mode retains the standard SUI page foundation.
  */
 #scan-root .scd-overview-page.scd-c3-surface.dark {
-    --scd-c3-panel-border: rgb(65 74 86 / 64%);
-    --scd-c3-toolbar-border: rgb(65 74 86 / 52%);
     background-color: #000000;
     background-image:
         radial-gradient(
@@ -163,7 +185,7 @@ body.scd-overview-active .panel-body,
         linear-gradient(
             180deg,
             #1a1d2e 0%,
-            #0f1117 50%,
+            var(--scd-c3-canvas) 50%,
             #000000 100%
         );
     background-repeat: no-repeat;

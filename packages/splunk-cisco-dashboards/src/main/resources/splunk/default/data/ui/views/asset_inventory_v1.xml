@@ -1,5 +1,5 @@
 
-<dashboard version="2" theme="light">
+<dashboard version="2" theme="dark" stylesheet="application.css">
     <label>Asset Inventory</label>
     <description>Unified device inventory from Catalyst Center, Meraki, IOS, ASA/FTD, ISE, F5, and Windows/AD</description>
     <definition><![CDATA[
@@ -134,65 +134,81 @@
 	"visualizations": {
 		"viz_about_bg": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_gap_analysis": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_gap_fw": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_gap_kpi": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_inv_charts": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_inv_kpi": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_inv_location": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_inv_table": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
@@ -201,10 +217,21 @@
 				"primary": "ds_count_by_family"
 			},
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "off",
 				"xAxisVisibility": "show",
-				"yAxisVisibility": "show"
+				"yAxisVisibility": "show",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				]
 			},
 			"title": "Devices by Family",
 			"type": "splunk.bar"
@@ -214,10 +241,21 @@
 				"primary": "ds_count_by_location"
 			},
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "off",
 				"xAxisVisibility": "show",
-				"yAxisVisibility": "show"
+				"yAxisVisibility": "show",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				]
 			},
 			"title": "Devices by Location",
 			"type": "splunk.bar"
@@ -227,8 +265,19 @@
 				"primary": "ds_filtered_count_by_source"
 			},
 			"options": {
-				"backgroundColor": "transparent",
-				"showDonutHole": true
+				"backgroundColor": "#131a23",
+				"showDonutHole": true,
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				]
 			},
 			"title": "Devices by Management Source",
 			"type": "splunk.pie"
@@ -238,8 +287,19 @@
 				"primary": "ds_filtered_count_by_type"
 			},
 			"options": {
-				"backgroundColor": "transparent",
-				"showDonutHole": true
+				"backgroundColor": "#131a23",
+				"showDonutHole": true,
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				]
 			},
 			"title": "Devices by Type",
 			"type": "splunk.pie"
@@ -250,11 +310,13 @@
 			},
 			"description": "All known firewalls — which are sending FTD/ASA/eStreamer data to Splunk",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 20,
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
 				},
 				"fontSize": "small",
 				"columnFormat": {
@@ -304,9 +366,10 @@
 		},
 		"viz_fw_header": {
 			"options": {
-				"fontColor": "#E5A823",
+				"fontColor": "#f0c243",
 				"fontSize": "small",
-				"markdown": "### Firewall Coverage"
+				"markdown": "### Firewall Coverage",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
@@ -315,8 +378,8 @@
 				"primary": "ds_fw_kpi_expected"
 			},
 			"options": {
-				"backgroundColor": "transparent",
-				"majorColor": "#049FD9",
+				"backgroundColor": "#131a23",
+				"majorColor": "#049fd9",
 				"majorFontSize": 42,
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
@@ -332,16 +395,16 @@
 				"majorColorEditorConfig": [
 					{
 						"to": 1,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					},
 					{
 						"from": 1,
 						"to": 5,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 5,
-						"value": "#D64550"
+						"value": "#fa5762"
 					}
 				]
 			},
@@ -349,7 +412,7 @@
 				"primary": "ds_fw_kpi_gap"
 			},
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"majorFontSize": 42,
 				"showTrendIndicator": false,
@@ -366,8 +429,8 @@
 				"primary": "ds_fw_kpi_pairs"
 			},
 			"options": {
-				"backgroundColor": "transparent",
-				"majorColor": "#049FD9",
+				"backgroundColor": "#131a23",
+				"majorColor": "#049fd9",
 				"majorFontSize": 42,
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
@@ -383,8 +446,8 @@
 				"primary": "ds_fw_kpi_sending"
 			},
 			"options": {
-				"backgroundColor": "transparent",
-				"majorColor": "#6EBE4A",
+				"backgroundColor": "#131a23",
+				"majorColor": "#4cbf7f",
 				"majorFontSize": 42,
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
@@ -397,9 +460,11 @@
 		},
 		"viz_gap_header_bg": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.88)",
+				"fillColor": "#1c2738",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.06)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
@@ -408,16 +473,16 @@
 				"majorColorEditorConfig": [
 					{
 						"to": 1,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					},
 					{
 						"from": 1,
 						"to": 10,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 10,
-						"value": "#D64550"
+						"value": "#fa5762"
 					}
 				]
 			},
@@ -425,7 +490,7 @@
 				"primary": "ds_gap_kpi_nodata"
 			},
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"majorFontSize": 42,
 				"showTrendIndicator": false,
@@ -442,16 +507,16 @@
 				"majorColorEditorConfig": [
 					{
 						"to": 50,
-						"value": "#D64550"
+						"value": "#fa5762"
 					},
 					{
 						"from": 50,
 						"to": 80,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 80,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -459,7 +524,7 @@
 				"primary": "ds_gap_kpi_pct"
 			},
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"majorFontSize": 42,
 				"showTrendIndicator": false,
@@ -477,8 +542,8 @@
 				"primary": "ds_gap_kpi_sending"
 			},
 			"options": {
-				"backgroundColor": "transparent",
-				"majorColor": "#6EBE4A",
+				"backgroundColor": "#131a23",
+				"majorColor": "#4cbf7f",
 				"majorFontSize": 42,
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
@@ -494,8 +559,8 @@
 				"primary": "ds_gap_kpi_total"
 			},
 			"options": {
-				"backgroundColor": "transparent",
-				"majorColor": "#049FD9",
+				"backgroundColor": "#131a23",
+				"majorColor": "#049fd9",
 				"majorFontSize": 42,
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
@@ -512,12 +577,14 @@
 			},
 			"description": "These inventory devices have no matching events in any Splunk data source",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 20,
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
 				},
 				"showRowNumbers": true
 			},
@@ -526,9 +593,11 @@
 		},
 		"viz_gap_section": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.45)",
+				"fillColor": "rgba(15,17,23,0.78)",
 				"rx": 12,
-				"strokeColor": "rgba(0,0,0,0.06)"
+				"strokeColor": "rgba(65,74,86,0.52)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
@@ -538,11 +607,11 @@
 			},
 			"description": "Sending Data vs No Data per device family",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"dataValuesDisplay": "all",
 				"seriesColors": [
-					"#D64550",
-					"#6EBE4A"
+					"#fa5762",
+					"#4cbf7f"
 				],
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
@@ -553,33 +622,39 @@
 		},
 		"viz_header_bg": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.88)",
+				"fillColor": "#1c2738",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.06)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_info_charts": {
 			"options": {
-				"fontColor": "#2B2B2B",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "### Metric Reference — Asset Inventory\n\n---\n\n**Total Devices** — Unique devices across all management sources\n\n**Known IP Addresses** — Devices with a known management IP\n\n**Known Serials** — Devices with a hardware serial number\n\n**Last Lookup Refresh** — Scheduled nightly at 02:05 AM\n\n---\n\n**Devices by Type** — Pie chart of device categories (switch, router, AP, firewall, etc.)\n\n**Devices by Management Source** — Which platform discovered each device\n\n**Devices by Family** — Hardware families (Catalyst 9300, Meraki MR, ASA 5500, etc.)\n\n**Devices by Location** — Device distribution across physical sites\n\n---\n\n**Full Inventory** — Searchable table with device name, type, IP, serial, site, source, and last-seen time"
+				"markdown": "### Metric Reference — Asset Inventory\n\n---\n\n**Total Devices** — Unique devices across all management sources\n\n**Known IP Addresses** — Devices with a known management IP\n\n**Known Serials** — Devices with a hardware serial number\n\n**Last Lookup Refresh** — Scheduled nightly at 02:05 AM\n\n---\n\n**Devices by Type** — Pie chart of device categories (switch, router, AP, firewall, etc.)\n\n**Devices by Management Source** — Which platform discovered each device\n\n**Devices by Family** — Hardware families (Catalyst 9300, Meraki MR, ASA 5500, etc.)\n\n**Devices by Location** — Device distribution across physical sites\n\n---\n\n**Full Inventory** — Searchable table with device name, type, IP, serial, site, source, and last-seen time",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_info_gap": {
 			"options": {
-				"fontColor": "#2B2B2B",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "### Metric Reference — Data Coverage Gaps\n\n---\n\n**Total Devices** — Catalyst Center managed devices in the asset inventory\n\n**Sending Data** — Devices with live telemetry arriving in Splunk within the selected time range\n\n**No Data** — Devices that have never sent any data to Splunk\n\n**Coverage** — Percentage of managed devices with active data\n\n---\n\n**Coverage by Device Family** — Data coverage broken down by hardware family\n\n**Devices NOT Sending Data** — Detail table with first seen, last seen, and data status (Sending Data / Data Stopped / NO DATA)\n\n---\n\n**FW Sending Data** — Firewalls actively sending FTD/ASA/eStreamer data\n\n**FW Expected** — Expected firewall count from the asset inventory\n\n**FW Missing** — Gap between expected and sending firewalls\n\n**HA Pairs Detected** — High availability pair discovery\n\n**Firewall Data Status** — Per-firewall detail with sourcetypes, event count, first seen, and last seen"
+				"markdown": "### Metric Reference — Data Coverage Gaps\n\n---\n\n**Total Devices** — Catalyst Center managed devices in the asset inventory\n\n**Sending Data** — Devices with live telemetry arriving in Splunk within the selected time range\n\n**No Data** — Devices that have never sent any data to Splunk\n\n**Coverage** — Percentage of managed devices with active data\n\n---\n\n**Coverage by Device Family** — Data coverage broken down by hardware family\n\n**Devices NOT Sending Data** — Detail table with first seen, last seen, and data status (Sending Data / Data Stopped / NO DATA)\n\n---\n\n**FW Sending Data** — Firewalls actively sending FTD/ASA/eStreamer data\n\n**FW Expected** — Expected firewall count from the asset inventory\n\n**FW Missing** — Gap between expected and sending firewalls\n\n**HA Pairs Detected** — High availability pair discovery\n\n**Firewall Data Status** — Per-firewall detail with sourcetypes, event count, first seen, and last seen",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_inv_section": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.45)",
+				"fillColor": "rgba(15,17,23,0.78)",
 				"rx": 12,
-				"strokeColor": "rgba(0,0,0,0.06)"
+				"strokeColor": "rgba(65,74,86,0.52)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
@@ -589,7 +664,7 @@
 			},
 			"description": "Device Inventory Detail",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"columnOrder": [
 					"Device Name",
 					"Type",
@@ -608,8 +683,8 @@
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"headerBackgroundColor": "> backgroundColor | setColorChannel(tableHeaderBackgroundColorConfig)",
-					"headerColor": "> headerBackgroundColor | maxContrast(tableRowColorMaxContrast)",
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5",
 					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(tableAltRowBackgroundColorsByBackgroundColor)",
 					"rowColors": "> rowBackgroundColors | maxContrast(tableRowColorMaxContrast)"
 				}
@@ -622,8 +697,8 @@
 				"primary": "ds_last_refresh"
 			},
 			"options": {
-				"backgroundColor": "transparent",
-				"majorColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"majorColor": "#ecf0f5",
 				"sparklineDisplay": "off",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true
@@ -634,17 +709,20 @@
 		},
 		"viz_p_hdr_bg": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.88)",
+				"fillColor": "#1c2738",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.06)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_p_hdr_title": {
 			"options": {
-				"fontColor": "#005073",
+				"fontColor": "#649ef5",
 				"markdown": "## Asset Inventory",
-				"fontSize": "large"
+				"fontSize": "large",
+				"backgroundColor": "#1c2738"
 			},
 			"type": "splunk.markdown"
 		},
@@ -653,8 +731,8 @@
 				"primary": "ds_total_devices"
 			},
 			"options": {
-				"backgroundColor": "transparent",
-				"majorColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"majorColor": "#ecf0f5",
 				"sparklineDisplay": "off",
 				"unit": "devices",
 				"unitPosition": "after",
@@ -670,8 +748,8 @@
 				"primary": "ds_total_with_ip"
 			},
 			"options": {
-				"backgroundColor": "transparent",
-				"majorColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"majorColor": "#ecf0f5",
 				"sparklineDisplay": "off",
 				"unit": "with IP",
 				"unitPosition": "after",
@@ -687,8 +765,8 @@
 				"primary": "ds_total_with_serial"
 			},
 			"options": {
-				"backgroundColor": "transparent",
-				"majorColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"majorColor": "#ecf0f5",
 				"sparklineDisplay": "off",
 				"unit": "with serial",
 				"unitPosition": "after",
@@ -702,25 +780,33 @@
 		"viz_narr_inventory": {
 			"type": "splunk.markdown",
 			"options": {
-				"markdown": "Centralized view of **all Cisco network assets** discovered across Catalyst Center, Meraki, and other management platforms. Use this tab to verify device coverage, spot missing serial numbers, and drill into the inventory by type, source, or location."
+				"markdown": "Centralized view of **all Cisco network assets** discovered across Catalyst Center, Meraki, and other management platforms. Use this tab to verify device coverage, spot missing serial numbers, and drill into the inventory by type, source, or location.",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5"
 			}
 		},
 		"viz_narr_gaps": {
 			"type": "splunk.markdown",
 			"options": {
-				"markdown": "Identifies **devices in inventory that are not sending data** to Splunk — helping you close visibility gaps before they become blind spots. The firewall section highlights missing ASA, FTD, and Firepower data sources."
+				"markdown": "Identifies **devices in inventory that are not sending data** to Splunk — helping you close visibility gaps before they become blind spots. The firewall section highlights missing ASA, FTD, and Firepower data sources.",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5"
 			}
 		},
 		"viz_about_purpose": {
 			"type": "splunk.markdown",
 			"options": {
-				"markdown": "## Asset Inventory & Coverage Dashboard\n\nThis dashboard provides a **consolidated view of all Cisco network assets** discovered across management platforms (Catalyst Center, Meraki Dashboard, and other sources), along with a **data coverage gap analysis** that identifies devices not actively sending telemetry or log data to Splunk.\n\n**Audience:** Network operations, security operations, IT asset management\n\n**Data Sources:** asset_inventory lookup (generated from Catalyst Center, Meraki, and other management APIs), Cisco syslog/NetFlow data in Splunk indexes\n\n**Refresh:** Data updates when the inventory lookup is refreshed (nightly at 02:05 AM); coverage gaps are evaluated against the selected time range\n\n---\n\n### Tab Guide\n\n**Asset Inventory** — Browse and filter the full device inventory by type, management source, and device family. View breakdowns by location and platform.\n\n**Data Coverage Gaps** — Identify devices that exist in inventory but are not sending any data to Splunk. Includes a dedicated firewall coverage section for ASA/FTD/Firepower devices.\n\n**About** — This page. Metric reference, data sources, and troubleshooting."
+				"markdown": "## Asset Inventory & Coverage Dashboard\n\nThis dashboard provides a **consolidated view of all Cisco network assets** discovered across management platforms (Catalyst Center, Meraki Dashboard, and other sources), along with a **data coverage gap analysis** that identifies devices not actively sending telemetry or log data to Splunk.\n\n**Audience:** Network operations, security operations, IT asset management\n\n**Data Sources:** asset_inventory lookup (generated from Catalyst Center, Meraki, and other management APIs), Cisco syslog/NetFlow data in Splunk indexes\n\n**Refresh:** Data updates when the inventory lookup is refreshed (nightly at 02:05 AM); coverage gaps are evaluated against the selected time range\n\n---\n\n### Tab Guide\n\n**Asset Inventory** — Browse and filter the full device inventory by type, management source, and device family. View breakdowns by location and platform.\n\n**Data Coverage Gaps** — Identify devices that exist in inventory but are not sending any data to Splunk. Includes a dedicated firewall coverage section for ASA/FTD/Firepower devices.\n\n**About** — This page. Metric reference, data sources, and troubleshooting.",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5"
 			}
 		},
 		"viz_about_sources": {
 			"type": "splunk.markdown",
 			"options": {
-				"markdown": "### Data Sources & Troubleshooting\n\n**Primary Lookup:** asset_inventory — consolidated from Catalyst Center device health, Meraki device inventory, and other management platform APIs. Refreshed nightly at 02:05 AM.\n\n**Coverage Evaluation:** Searches Splunk indexes for matching device events to determine whether each inventory device is actively sending data.\n\n**Firewall Detection:** Pattern-matches device family against ASA, FTD, and Firepower strings to build the dedicated firewall coverage analysis.\n\n---\n\n**No devices appearing?**\nVerify the asset_inventory lookup exists and is populated. Run: | inputlookup asset_inventory | stats count\n\n**Coverage % seems wrong?**\nCoverage is evaluated over the selected time range. A narrow window may miss devices that report infrequently. Try expanding to 24h or 7d.\n\n**Firewall section empty?**\nThe firewall section filters on device_family matching ASA, FTD, or Firepower. If your inventory uses different naming, the regex may need adjustment."
+				"markdown": "### Data Sources & Troubleshooting\n\n**Primary Lookup:** asset_inventory — consolidated from Catalyst Center device health, Meraki device inventory, and other management platform APIs. Refreshed nightly at 02:05 AM.\n\n**Coverage Evaluation:** Searches Splunk indexes for matching device events to determine whether each inventory device is actively sending data.\n\n**Firewall Detection:** Pattern-matches device family against ASA, FTD, and Firepower strings to build the dedicated firewall coverage analysis.\n\n---\n\n**No devices appearing?**\nVerify the asset_inventory lookup exists and is populated. Run: | inputlookup asset_inventory | stats count\n\n**Coverage % seems wrong?**\nCoverage is evaluated over the selected time range. A narrow window may miss devices that report infrequently. Try expanding to 24h or 7d.\n\n**Firewall section empty?**\nThe firewall section filters on device_family matching ASA, FTD, or Firepower. If your inventory uses different naming, the regex may need adjustment.",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5"
 			}
 		}
 	},
@@ -937,10 +1023,16 @@
 		"layoutDefinitions": {
 			"layout_1": {
 				"options": {
-					"backgroundColor": "transparent",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 1580,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -1147,10 +1239,16 @@
 			},
 			"layout_about": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 1100,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -1221,10 +1319,16 @@
 			},
 			"layout_gap_analysis": {
 				"options": {
-					"backgroundColor": "transparent",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 1115,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -1455,5 +1559,5 @@
 		"collapseNavigation": false
 	}
 }
-    ]]></definition>
+]]></definition>
 </dashboard>

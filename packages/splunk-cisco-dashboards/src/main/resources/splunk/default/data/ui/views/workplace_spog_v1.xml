@@ -1,5 +1,5 @@
 
-<dashboard version="2" theme="light">
+<dashboard version="2" theme="dark" stylesheet="application.css">
     <label>Workplace — Single Pane of Glass</label>
     <description></description>
     <definition><![CDATA[
@@ -41,17 +41,18 @@
 	"visualizations": {
 		"viz_about_box": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.85)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_about_md": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "# Workplace — Single Pane of Glass\n\n**Audience:** Executive Sponsors, NetOps Leadership, Workplace Services, Cisco Account Team\n\nThis is the executive view aligned to the **Cisco Future-Proof Workplace** strategy paper . It rolls Catalyst Center + Cisco Spaces (Wi-Fi-based, not camera-based) into five Health Tiles. Two tiles are fully wired today; one is a Phase-3 placeholder pending data ingestion. Use this dashboard for monthly business reviews and incident-window readouts. Drill into `NetOps Readiness — Op Florida Ready` for operational detail."
 			},
@@ -59,10 +60,11 @@
 		},
 		"viz_bmxsRvR0": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.85)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
@@ -78,15 +80,15 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
-				"markerDisplay": "outlined",
+				"markerDisplay": "show",
 				"nullValueDisplay": "connect",
 				"overlayFields": "AP Health (0-100), Spaces Concurrent Users, Auth Failures",
 				"seriesColors": [
-					"#005073",
-					"#049FD9",
-					"#6EBE4A",
-					"#FF8C25",
-					"#D64550"
+					"#649ef5",
+					"#049fd9",
+					"#4cbf7f",
+					"#f7782f",
+					"#fa5762"
 				],
 				"showLegend": true,
 				"showOverlayY2Axis": true,
@@ -94,41 +96,45 @@
 				"y2AxisAbbreviation": "auto",
 				"y2AxisTitleText": "AP Health / Spaces / Auth failures",
 				"yAxisAbbreviation": "auto",
-				"yAxisTitleText": "Wired / Wireless clients"
+				"yAxisTitleText": "Wired / Wireless clients",
+				"backgroundColor": "#131a23",
+				"lineWidth": 2
 			},
 			"title": "Cross-source correlation",
 			"type": "splunk.line"
 		},
 		"viz_corr_box": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.85)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_corr_title": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
-				"markdown": "## Cross-source correlation strip\n\nWired clients, wireless clients, AP health (all DNAC), Spaces presence (post-Apr 17 only), and Windows auth failures on a shared time axis. \n<span style=\"color:#0B5394\">●</span> **Vertical blue markers:** Op Florida Ready exercise — *Day 1 (Apr 13), Day 2 (Apr 14), Day 3 (Apr 15)*. **Reading pattern:** wireless surges + wired stays flat = mobile-driven event. All signals moving together = full operational mobilization. The point: Splunk is the integration fabric tying disparate Cisco + non-Cisco signals into one story."
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
+				"markdown": "## Cross-source correlation strip\n\nWired clients, wireless clients, AP health (all DNAC), Spaces presence (post-Apr 17 only), and Windows auth failures on a shared time axis. \n<span style=\"color:#649ef5\">●</span> **Vertical blue markers:** Op Florida Ready exercise — *Day 1 (Apr 13), Day 2 (Apr 14), Day 3 (Apr 15)*. **Reading pattern:** wireless surges + wired stays flat = mobile-driven event. All signals moving together = full operational mobilization. The point: Splunk is the integration fabric tying disparate Cisco + non-Cisco signals into one story."
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_footer_box": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.85)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_footer_md": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#a6adb6",
 				"fontSize": "small",
 				"markdown": "## Phase roadmap *(per Cisco Future-Proof Workplace strategy)*\n\n**Phase 1 — Done:** NetOps Readiness for Op Florida Ready (separate dashboard) + this Workplace SPoG scaffold.\n\n**Phase 2 — In progress:** Tile 4 frictionless-access via badging integration; per-site Spaces hourly heatmap once firehose Apr 13–15 gap is escalated to vendor.\n\n**Phase 3 — Pending:** Tile 3 Energy Intensity (Catalyst 9300X PoE + utility meters); Tile 4 access-control system; Tile 5 OT life-safety / fire-panel integration via BACnet.\n\n**Phase 4 — Visionary:** AI Agents on the data lake — same agentic pattern Cisco deployed for CoreNet in Kuala Lumpur Malaysia. Splunk is the substrate.\n\n*Source: `reference_design/Cisco_FutureProof_Workplace.md`*"
 			},
@@ -159,31 +165,36 @@
 				"primary": "ds_issues"
 			},
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"columnFormat": {
 					"Priority": {
 						"rowBackgroundColors": "> table | seriesByName(\"Priority\") | matchValue(viz_issues_Priority_colors)"
 					}
 				},
 				"count": 12,
-				"headerVisibility": "fixed"
+				"headerVisibility": "fixed",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Top active issues",
 			"type": "splunk.table"
 		},
 		"viz_issues_box": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.85)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_issues_title": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"markdown": "## Active issues by category\n\nDNAC active issues grouped by category and priority. Top of the list is what's burning right now."
 			},
 			"type": "splunk.markdown"
@@ -200,14 +211,14 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
-				"markerDisplay": "outlined",
+				"markerDisplay": "show",
 				"nullValueDisplay": "connect",
 				"overlayFields": "AP Health (0-100), Active Issues",
 				"seriesColors": [
-					"#005073",
-					"#049FD9",
-					"#6EBE4A",
-					"#D64550"
+					"#649ef5",
+					"#049fd9",
+					"#4cbf7f",
+					"#fa5762"
 				],
 				"showLegend": true,
 				"showOverlayY2Axis": true,
@@ -215,25 +226,28 @@
 				"y2AxisAbbreviation": "auto",
 				"y2AxisTitleText": "AP Health (0-100) / Active Issues",
 				"yAxisAbbreviation": "auto",
-				"yAxisTitleText": "Wired / Wireless clients"
+				"yAxisTitleText": "Wired / Wireless clients",
+				"backgroundColor": "#131a23",
+				"lineWidth": 2
 			},
 			"title": "Wireless occupancy & quality over time",
 			"type": "splunk.line"
 		},
 		"viz_main_trend_box": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.85)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_main_trend_title": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
-				"markdown": "## Concurrent endpoints over time — wired vs wireless\n\nDaily concurrent endpoints from DNAC client-health rollup, split by **wired** (desktops, VoIP, kiosks) vs **wireless** (laptops, phones, tablets), overlaid with AP health and active issues. \n<span style=\"color:#0B5394\">●</span> **Vertical blue markers:** Op Florida Ready exercise — *Day 1 (Apr 13), Day 2 (Apr 14), Day 3 (Apr 15)*. **Reading pattern:** wireless surges + wired stays flat = mobile-driven event (responders roaming). Both surge = full-staff mobilization."
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
+				"markdown": "## Concurrent endpoints over time — wired vs wireless\n\nDaily concurrent endpoints from DNAC client-health rollup, split by **wired** (desktops, VoIP, kiosks) vs **wireless** (laptops, phones, tablets), overlaid with AP health and active issues. \n<span style=\"color:#649ef5\">●</span> **Vertical blue markers:** Op Florida Ready exercise — *Day 1 (Apr 13), Day 2 (Apr 14), Day 3 (Apr 15)*. **Reading pattern:** wireless surges + wired stays flat = mobile-driven event (responders roaming). Both surge = full-staff mobilization."
 			},
 			"type": "splunk.markdown"
 		},
@@ -258,48 +272,54 @@
 				"primary": "ds_persite"
 			},
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"columnFormat": {
 					"Status": {
 						"rowBackgroundColors": "> table | seriesByName(\"Status\") | matchValue(viz_persite_Status_colors)"
 					}
 				},
 				"count": 12,
-				"headerVisibility": "fixed"
+				"headerVisibility": "fixed",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Site quality leaderboard",
 			"type": "splunk.table"
 		},
 		"viz_persite_box": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.85)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_persite_title": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"markdown": "## Per-site Network Quality\n\nNQI by site, sorted worst first. Worst sites are where the executive should ask 'why?'"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_t1_box": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.85)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_t1_title": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"markdown": "**Tile 1 — Occupancy**\n\nTotal concurrent endpoints (wired + wireless) from DNAC client-health rollup. The authoritative count reported by Catalyst Center, not a per-AP estimate."
 			},
 			"type": "splunk.markdown"
@@ -309,31 +329,33 @@
 				"primary": "ds_t1_occupancy_kpi"
 			},
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 56,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"shouldUseThousandSeparators": true,
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#0B5394",
-				"sparklineNullValueDisplay": "connect"
+				"sparklineStrokeColor": "#649ef5",
+				"sparklineNullValueDisplay": "connect",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Total concurrent endpoints (wired + wireless)",
 			"type": "splunk.singlevalue"
 		},
 		"viz_t2_box": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.85)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_t2_title": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"markdown": "**Tile 2 — Network Quality**\n\nComposite Network Quality Index (NQI) blending DNAC AP health and client health, scaled 0–100. Replaces environmental tile (no MT/BMS data ingested)."
 			},
 			"type": "splunk.markdown"
@@ -343,16 +365,16 @@
 				"majorColorEditorConfig": [
 					{
 						"to": 60,
-						"value": "#D64550"
+						"value": "#fa5762"
 					},
 					{
 						"from": 60,
 						"to": 80,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 80,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -366,53 +388,56 @@
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#2E9E4A",
+				"sparklineStrokeColor": "#4cbf7f",
 				"unit": "%",
 				"unitPosition": "after",
-				"sparklineNullValueDisplay": "connect"
+				"sparklineNullValueDisplay": "connect",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Network Quality Index",
 			"type": "splunk.singlevalue"
 		},
 		"viz_t3_box": {
 			"options": {
-				"fillColor": "rgba(245,245,245,0.85)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.12)",
+				"strokeColor": "rgba(100,158,245,0.28)",
 				"strokeDasharray": "4 4",
-				"strokeWidth": 1
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_t3_placeholder": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#777777",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"markdown": "## ⏳\n**Pending data**\nIngestion roadmap:\n- Catalyst 9300X PoE telemetry via DNAC API\n- BACnet / Modbus utility meters\n- Building floor area normalization table\n\nETA: dependent on facilities engagement."
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_t3_title": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"markdown": "**Tile 3 — Energy Intensity** *(Phase 3 — pending)*\n\nReal-time kWh per square foot vs baseline. Requires Catalyst 9300X port-level PoE telemetry + utility meter ingestion. Not yet flowing into Splunk."
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_t4_box": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.85)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_t4_title": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"markdown": "**Tile 4 — Security Posture**\n\nActive P1+P2 DNAC issues plus Windows authentication failures. Frictionless badging deferred to Phase 3 (no access-control system ingested)."
 			},
 			"type": "splunk.markdown"
@@ -422,16 +447,16 @@
 				"majorColorEditorConfig": [
 					{
 						"to": 10,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					},
 					{
 						"from": 10,
 						"to": 30,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 30,
-						"value": "#D64550"
+						"value": "#fa5762"
 					}
 				]
 			},
@@ -446,25 +471,27 @@
 				"shouldAbbreviateTrendValue": true,
 				"shouldUseThousandSeparators": true,
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#D64550",
-				"sparklineNullValueDisplay": "connect"
+				"sparklineStrokeColor": "#fa5762",
+				"sparklineNullValueDisplay": "connect",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Active Risks",
 			"type": "splunk.singlevalue"
 		},
 		"viz_t5_box": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.85)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_t5_title": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"markdown": "**Tile 5 — Operational Resilience**\n\nNetwork Readiness Score (NRS) — composite of attainability, retainability, quality, and risk dampening. Same formula as the NetOps Readiness dashboard."
 			},
 			"type": "splunk.markdown"
@@ -474,16 +501,16 @@
 				"majorColorEditorConfig": [
 					{
 						"to": 75,
-						"value": "#D64550"
+						"value": "#fa5762"
 					},
 					{
 						"from": 75,
 						"to": 90,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 90,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -497,10 +524,11 @@
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#0B5394",
+				"sparklineStrokeColor": "#649ef5",
 				"unit": "%",
 				"unitPosition": "after",
-				"sparklineNullValueDisplay": "connect"
+				"sparklineNullValueDisplay": "connect",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Network Readiness Score",
 			"type": "splunk.singlevalue"
@@ -612,10 +640,16 @@
 		"layoutDefinitions": {
 			"layout_1": {
 				"options": {
-					"backgroundColor": "#F4F6FA",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 1800,
-					"width": 1640
+					"width": 1640,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -968,5 +1002,5 @@
 		"hideEdit": true
 	}
 }
-    ]]></definition>
+]]></definition>
 </dashboard>

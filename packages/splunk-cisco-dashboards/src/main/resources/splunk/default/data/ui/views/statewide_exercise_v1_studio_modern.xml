@@ -1,5 +1,5 @@
 
-<dashboard version="2" theme="light">
+<dashboard version="2" theme="dark" stylesheet="application.css">
     <label>Statewide Exercise - Modern Dashboard Studio</label>
     <description>Modern Dashboard Studio JSON conversion of statewide_exercise_v1.xml with tabbed layout, refreshed searches, token filters, drilldown detail panels, and enterprise network monitoring visuals.</description>
     <definition><![CDATA[
@@ -156,9 +156,9 @@
 	"visualizations": {
 		"viz_about_content": {
 			"options": {
-				"backgroundColor": "#ffffff",
-				"fontColor": "#111827",
-				"markdown": "### Purpose\n\nThis Dashboard Studio definition modernizes `statewide_exercise_v1.xml` into a four-tab operational view for statewide network activation exercises.\n\n### Preserved searches\n\nAll SPL data sources embedded in the existing `statewide_exercise_v1.xml` CDATA definition are copied into this JSON. New `ds_mod_*` searches add tokenized filters, reusable base searches, 60-second refresh behavior, issue drilldowns, and the executive health distribution panels.\n\n### Data sources\n\n- `cisco:dnac:clienthealth`: wired and wireless health KPIs, client counts, 24-hour and 7-day trends.\n- `cisco:dnac:client`: SSID, OS, site, traffic, onboarding, and per-client detail tables.\n- `cisco:dnac:devicehealth`: device type KPIs, health distribution, inventory, and total fleet summary.\n- `cisco:dnac:issue`: active issue summaries and row-click detail panels.\n\n### Interaction model\n\n- Global time range controls dashboard searches through `$time_tok$`.\n- Refresh rate defaults to 60 seconds through `$refresh_tok$`.\n- Client Type and Site Filter tokens narrow client distribution/detail searches.\n- Selecting an issue row sets `$selected_issue$` and opens the Issue Detail panel. Use Close Details to clear the token.\n\n### Health color policy\n\n- `>=95%`: green `#16a34a`.\n- `80-95%`: yellow `#eab308`.\n- `<80%`: red `#dc2626`.\n\n### Studio schema notes\n\nDashboard Studio source JSON uses `splunk.*` visualization type IDs. The old `viz.*` syntax is legacy and is migrated by Splunk when opened in current Studio. JSON does not support comments, so implementation notes are encoded here and in visualization descriptions to keep this definition importable."
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
+				"markdown": "### Purpose\n\nThis Dashboard Studio definition modernizes `statewide_exercise_v1.xml` into a four-tab operational view for statewide network activation exercises.\n\n### Preserved searches\n\nAll SPL data sources embedded in the existing `statewide_exercise_v1.xml` CDATA definition are copied into this JSON. New `ds_mod_*` searches add tokenized filters, reusable base searches, 60-second refresh behavior, issue drilldowns, and the executive health distribution panels.\n\n### Data sources\n\n- `cisco:dnac:clienthealth`: wired and wireless health KPIs, client counts, 24-hour and 7-day trends.\n- `cisco:dnac:client`: SSID, OS, site, traffic, onboarding, and per-client detail tables.\n- `cisco:dnac:devicehealth`: device type KPIs, health distribution, inventory, and total fleet summary.\n- `cisco:dnac:issue`: active issue summaries and row-click detail panels.\n\n### Interaction model\n\n- Global time range controls dashboard searches through `$time_tok$`.\n- Refresh rate defaults to 60 seconds through `$refresh_tok$`.\n- Client Type and Site Filter tokens narrow client distribution/detail searches.\n- Selecting an issue row sets `$selected_issue$` and opens the Issue Detail panel. Use Close Details to clear the token.\n\n### Health color policy\n\n- `>=95%`: green `#4cbf7f`.\n- `80-95%`: yellow `#f0c243`.\n- `<80%`: red `#fa5762`.\n\n### Studio schema notes\n\nDashboard Studio source JSON uses `splunk.*` visualization type IDs. The old `viz.*` syntax is legacy and is migrated by Splunk when opened in current Studio. JSON does not support comments, so implementation notes are encoded here and in visualization descriptions to keep this definition importable."
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
@@ -171,21 +171,32 @@
 			},
 			"description": "Daily active clients with average onboarding duration as an overlay.",
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#131a23",
 				"dataValuesDisplay": "all",
 				"legendDisplay": "right",
 				"overlayFields": [
 					"Avg Onboarding (ms)"
 				],
 				"seriesColorsByField": {
-					"Active Clients": "#a855f7",
-					"Avg Onboarding (ms)": "#0ea5e9"
+					"Active Clients": "#9b5ff5",
+					"Avg Onboarding (ms)": "#049fd9"
 				},
 				"showOverlayY2Axis": true,
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleText": "Active Clients",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				]
 			},
 			"title": "Client Activity and Onboarding",
 			"type": "splunk.bar"
@@ -195,16 +206,16 @@
 				"healthColorRange": [
 					{
 						"to": 80,
-						"value": "#dc2626"
+						"value": "#fa5762"
 					},
 					{
 						"from": 80,
 						"to": 95,
-						"value": "#eab308"
+						"value": "#f0c243"
 					},
 					{
 						"from": 95,
-						"value": "#16a34a"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -226,7 +237,7 @@
 				}
 			],
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#131a23",
 				"columnFormat": {
 					"Health %": {
 						"rowColors": "> table | seriesByName(\"Health %\") | rangeValue(healthColorRange)"
@@ -238,7 +249,11 @@
 				"count": 20,
 				"drilldown": "row",
 				"fontSize": "small",
-				"showInternalFields": false
+				"showInternalFields": false,
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Wireless Client Details",
 			"type": "splunk.table"
@@ -248,16 +263,16 @@
 				"healthColorRange": [
 					{
 						"to": 80,
-						"value": "#dc2626"
+						"value": "#fa5762"
 					},
 					{
 						"from": 80,
 						"to": 95,
-						"value": "#eab308"
+						"value": "#f0c243"
 					},
 					{
 						"from": 95,
-						"value": "#16a34a"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -266,7 +281,7 @@
 			},
 			"description": "Percentage of clients reporting GOOD health.",
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#131a23",
 				"majorColor": "> primary | seriesByName('healthy_pct') | lastPoint() | rangeValue(healthColorRange)",
 				"majorValue": "> primary | seriesByName('healthy_pct') | lastPoint()",
 				"sparklineDisplay": "off",
@@ -282,13 +297,13 @@
 			},
 			"description": "Stacked client health distribution across wired and wireless clients.",
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#131a23",
 				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
-					"Fair Count": "#eab308",
-					"Good Count": "#16a34a",
-					"Idle Count": "#94a3b8",
-					"Poor Count": "#dc2626"
+					"Fair Count": "#f0c243",
+					"Good Count": "#4cbf7f",
+					"Idle Count": "#a6adb6",
+					"Poor Count": "#fa5762"
 				},
 				"showYMajorGridLines": true,
 				"splitByLayout": "trellis",
@@ -296,7 +311,20 @@
 				"trellisColumns": 2,
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleText": "Clients",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				],
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Client Health Over Time",
 			"type": "splunk.area"
@@ -306,16 +334,16 @@
 				"healthColorRange": [
 					{
 						"to": 80,
-						"value": "#dc2626"
+						"value": "#fa5762"
 					},
 					{
 						"from": 80,
 						"to": 95,
-						"value": "#eab308"
+						"value": "#f0c243"
 					},
 					{
 						"from": 95,
-						"value": "#16a34a"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -324,7 +352,7 @@
 			},
 			"description": "Average client health score across wired and wireless clients.",
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(healthColorRange)",
 				"majorFontSize": 38,
 				"majorValue": "> primary | seriesByName('Client Health Score') | lastPoint()",
@@ -349,12 +377,12 @@
 			},
 			"description": "Top sites by connected client count.",
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#131a23",
 				"dataValuesDisplay": "all",
 				"legendDisplay": "off",
 				"orientation": "horizontal",
 				"seriesColors": [
-					"#2563eb"
+					"#649ef5"
 				],
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -369,12 +397,12 @@
 			},
 			"description": "Operating system breakdown for filtered clients.",
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#131a23",
 				"dataValuesDisplay": "all",
 				"legendDisplay": "off",
 				"orientation": "horizontal",
 				"seriesColors": [
-					"#111827"
+					"#a6adb6"
 				],
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
@@ -389,8 +417,8 @@
 			},
 			"description": "Total unique connected clients in the selected time range.",
 			"options": {
-				"backgroundColor": "#ffffff",
-				"majorColor": "#111827",
+				"backgroundColor": "#131a23",
+				"majorColor": "#ecf0f5",
 				"majorFontSize": 38,
 				"majorValue": "> primary | seriesByName('Total Connected Clients') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -398,10 +426,10 @@
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "rgba(37,99,235,0.18)",
+				"sparklineAreaColor": "rgba(100,158,245,0.18)",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#2563eb",
+				"sparklineStrokeColor": "#649ef5",
 				"trendDisplay": "percent"
 			},
 			"title": "Total Active Clients",
@@ -412,16 +440,16 @@
 				"healthColorRange": [
 					{
 						"to": 80,
-						"value": "#dc2626"
+						"value": "#fa5762"
 					},
 					{
 						"from": 80,
 						"to": 95,
-						"value": "#eab308"
+						"value": "#f0c243"
 					},
 					{
 						"from": 95,
-						"value": "#16a34a"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -430,7 +458,7 @@
 			},
 			"description": "Reachable and managed access points as a percentage of total AP inventory.",
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#131a23",
 				"gaugeColor": "> primary | seriesByName('health_pct') | lastPoint() | rangeValue(healthColorRange)",
 				"labelDisplay": "percentage",
 				"orientation": "horizontal",
@@ -446,19 +474,30 @@
 			},
 			"description": "Fleet-wide healthy, fair, and poor device distribution.",
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#131a23",
 				"dataValuesDisplay": "all",
 				"legendDisplay": "bottom",
 				"orientation": "horizontal",
 				"seriesColorsByField": {
-					"Fair": "#eab308",
-					"Healthy": "#16a34a",
-					"Poor": "#dc2626"
+					"Fair": "#f0c243",
+					"Healthy": "#4cbf7f",
+					"Poor": "#fa5762"
 				},
 				"showYMajorGridLines": true,
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				]
 			},
 			"title": "Device Health Distribution",
 			"type": "splunk.bar"
@@ -469,18 +508,29 @@
 			},
 			"description": "Reachable versus attention-needed devices by network role.",
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#131a23",
 				"dataValuesDisplay": "all",
 				"legendDisplay": "bottom",
 				"orientation": "horizontal",
 				"seriesColorsByField": {
-					"Healthy": "#16a34a",
-					"NeedsAttention": "#dc2626"
+					"Healthy": "#4cbf7f",
+					"NeedsAttention": "#fa5762"
 				},
 				"showYMajorGridLines": true,
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				]
 			},
 			"title": "Device Inventory",
 			"type": "splunk.bar"
@@ -490,16 +540,16 @@
 				"healthColorRange": [
 					{
 						"to": 80,
-						"value": "#dc2626"
+						"value": "#fa5762"
 					},
 					{
 						"from": 80,
 						"to": 95,
-						"value": "#eab308"
+						"value": "#f0c243"
 					},
 					{
 						"from": 95,
-						"value": "#16a34a"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -508,7 +558,7 @@
 			},
 			"description": "Total discovered network devices, with radial color based on overall device health.",
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#131a23",
 				"majorColor": "> primary | seriesByName('health_pct') | lastPoint() | rangeValue(healthColorRange)",
 				"majorValue": "> primary | seriesByName('total') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -523,16 +573,16 @@
 				"healthColorRange": [
 					{
 						"to": 80,
-						"value": "#dc2626"
+						"value": "#fa5762"
 					},
 					{
 						"from": 80,
 						"to": 95,
-						"value": "#eab308"
+						"value": "#f0c243"
 					},
 					{
 						"from": 95,
-						"value": "#16a34a"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -541,7 +591,7 @@
 			},
 			"description": "Reachable and managed firewalls as a percentage of total firewall inventory.",
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#131a23",
 				"gaugeColor": "> primary | seriesByName('health_pct') | lastPoint() | rangeValue(healthColorRange)",
 				"labelDisplay": "percentage",
 				"orientation": "horizontal",
@@ -564,11 +614,15 @@
 			},
 			"description": "Row-click detail view for the selected active issue.",
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#131a23",
 				"count": 10,
 				"drilldown": "none",
 				"fontSize": "small",
-				"showInternalFields": false
+				"showInternalFields": false,
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Issue Detail",
 			"type": "splunk.table"
@@ -623,7 +677,7 @@
 				}
 			],
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#131a23",
 				"columnFormat": {
 					"Devices": {
 						"textOverflow": "break-word"
@@ -642,7 +696,11 @@
 				"count": 15,
 				"drilldown": "row",
 				"fontSize": "small",
-				"showInternalFields": false
+				"showInternalFields": false,
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Issues",
 			"type": "splunk.table"
@@ -652,16 +710,16 @@
 				"healthColorRange": [
 					{
 						"to": 80,
-						"value": "#dc2626"
+						"value": "#fa5762"
 					},
 					{
 						"from": 80,
 						"to": 95,
-						"value": "#eab308"
+						"value": "#f0c243"
 					},
 					{
 						"from": 95,
-						"value": "#16a34a"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -670,7 +728,7 @@
 			},
 			"description": "Reachable and managed routers as a percentage of total router inventory.",
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#131a23",
 				"gaugeColor": "> primary | seriesByName('health_pct') | lastPoint() | rangeValue(healthColorRange)",
 				"labelDisplay": "percentage",
 				"orientation": "horizontal",
@@ -685,16 +743,16 @@
 				"healthColorRange": [
 					{
 						"to": 80,
-						"value": "#dc2626"
+						"value": "#fa5762"
 					},
 					{
 						"from": 80,
 						"to": 95,
-						"value": "#eab308"
+						"value": "#f0c243"
 					},
 					{
 						"from": 95,
-						"value": "#16a34a"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -703,7 +761,7 @@
 			},
 			"description": "Reachable and managed switches as a percentage of total switch inventory.",
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#131a23",
 				"gaugeColor": "> primary | seriesByName('health_pct') | lastPoint() | rangeValue(healthColorRange)",
 				"labelDisplay": "percentage",
 				"orientation": "horizontal",
@@ -715,8 +773,8 @@
 		},
 		"viz_header_about": {
 			"options": {
-				"backgroundColor": "#ffffff",
-				"fontColor": "#111827",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "## About This Dashboard\nSource, design, and operational notes for the statewide network exercise dashboard."
 			},
@@ -726,8 +784,8 @@
 		},
 		"viz_header_client": {
 			"options": {
-				"backgroundColor": "#ffffff",
-				"fontColor": "#111827",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "## Client Summary\nComprehensive client health, distribution, activity, and top-client details for operational troubleshooting."
 			},
@@ -737,8 +795,8 @@
 		},
 		"viz_header_exec": {
 			"options": {
-				"backgroundColor": "#ffffff",
-				"fontColor": "#111827",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "## Overall Health Summary - Network Devices\nExecutive view of device health, inventory, and active Catalyst Center issues across the statewide environment."
 			},
@@ -748,8 +806,8 @@
 		},
 		"viz_header_overview": {
 			"options": {
-				"backgroundColor": "#ffffff",
-				"fontColor": "#111827",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "## General Overview\nMonitor statewide wired and wireless client health across all sites. Use the filters above to narrow client views by site or connection type."
 			},
@@ -763,11 +821,11 @@
 			},
 			"description": "Wireless client distribution by SSID for the selected time range.",
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#131a23",
 				"dataValuesDisplay": "all",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#2563eb"
+					"#649ef5"
 				],
 				"showYMajorGridLines": true,
 				"xAxisTitleText": "SSID",
@@ -784,17 +842,28 @@
 			},
 			"description": "Wireless and wired client counts over the last 7 days.",
 			"options": {
-				"backgroundColor": "#ffffff",
-				"lineWidth": 3,
-				"markerDisplay": "outlined",
+				"backgroundColor": "#131a23",
+				"lineWidth": 2,
+				"markerDisplay": "show",
 				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
-					"Wired Clients": "#7c3aed",
-					"Wireless Clients": "#2563eb"
+					"Wired Clients": "#9b5ff5",
+					"Wireless Clients": "#649ef5"
 				},
 				"showYMajorGridLines": true,
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				]
 			},
 			"title": "Past Week - Client Trends",
 			"type": "splunk.line"
@@ -805,8 +874,8 @@
 			},
 			"description": "Total wired clients currently connected.",
 			"options": {
-				"backgroundColor": "#ffffff",
-				"majorColor": "#7c3aed",
+				"backgroundColor": "#131a23",
+				"majorColor": "#9b5ff5",
 				"majorFontSize": 38,
 				"majorValue": "> primary | seriesByName('Wired Clients') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -814,10 +883,10 @@
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "rgba(124,58,237,0.18)",
+				"sparklineAreaColor": "rgba(156,166,255,0.18)",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#7c3aed",
+				"sparklineStrokeColor": "#9b5ff5",
 				"trendDisplay": "percent"
 			},
 			"title": "Wired Clients",
@@ -828,16 +897,16 @@
 				"healthColorRange": [
 					{
 						"to": 80,
-						"value": "#dc2626"
+						"value": "#fa5762"
 					},
 					{
 						"from": 80,
 						"to": 95,
-						"value": "#eab308"
+						"value": "#f0c243"
 					},
 					{
 						"from": 95,
-						"value": "#16a34a"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -846,7 +915,7 @@
 			},
 			"description": "Wired client health with threshold-colored sparkline.",
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(healthColorRange)",
 				"majorFontSize": 38,
 				"majorValue": "> primary | seriesByName('Wired Health') | lastPoint()",
@@ -871,8 +940,8 @@
 			},
 			"description": "Wired clients currently in healthy status.",
 			"options": {
-				"backgroundColor": "#ffffff",
-				"majorColor": "#16a34a",
+				"backgroundColor": "#131a23",
+				"majorColor": "#4cbf7f",
 				"majorFontSize": 38,
 				"majorValue": "> primary | seriesByName('Healthy') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -880,10 +949,10 @@
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "rgba(37,99,235,0.18)",
+				"sparklineAreaColor": "rgba(100,158,245,0.18)",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#2563eb",
+				"sparklineStrokeColor": "#649ef5",
 				"trendDisplay": "percent"
 			},
 			"title": "Healthy Wired Clients",
@@ -895,7 +964,7 @@
 			},
 			"description": "Stacked wired client count with health score and 80/95 threshold overlays.",
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#131a23",
 				"nullValueDisplay": "connect",
 				"overlayFields": [
 					"Wired Health",
@@ -903,13 +972,13 @@
 					"Healthy Threshold"
 				],
 				"seriesColorsByField": {
-					"Fair": "#eab308",
-					"Healthy": "#16a34a",
-					"Healthy Threshold": "#16a34a",
-					"No Data": "#94a3b8",
-					"Poor": "#dc2626",
-					"Warning Threshold": "#eab308",
-					"Wired Health": "#7c3aed"
+					"Fair": "#f0c243",
+					"Healthy": "#4cbf7f",
+					"Healthy Threshold": "#4cbf7f",
+					"No Data": "#a6adb6",
+					"Poor": "#fa5762",
+					"Warning Threshold": "#f0c243",
+					"Wired Health": "#9b5ff5"
 				},
 				"showOverlayY2Axis": true,
 				"showYMajorGridLines": true,
@@ -917,7 +986,20 @@
 				"xAxisTitleVisibility": "hide",
 				"y2AxisTitleText": "Health %",
 				"yAxisTitleText": "Clients",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				],
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Wired Client Trend",
 			"type": "splunk.area"
@@ -928,8 +1010,8 @@
 			},
 			"description": "Total wireless clients currently connected.",
 			"options": {
-				"backgroundColor": "#ffffff",
-				"majorColor": "#2563eb",
+				"backgroundColor": "#131a23",
+				"majorColor": "#649ef5",
 				"majorFontSize": 38,
 				"majorValue": "> primary | seriesByName('Wireless Clients') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -937,10 +1019,10 @@
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "rgba(37,99,235,0.18)",
+				"sparklineAreaColor": "rgba(100,158,245,0.18)",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#2563eb",
+				"sparklineStrokeColor": "#649ef5",
 				"trendDisplay": "percent"
 			},
 			"title": "Wireless Clients",
@@ -951,16 +1033,16 @@
 				"healthColorRange": [
 					{
 						"to": 80,
-						"value": "#dc2626"
+						"value": "#fa5762"
 					},
 					{
 						"from": 80,
 						"to": 95,
-						"value": "#eab308"
+						"value": "#f0c243"
 					},
 					{
 						"from": 95,
-						"value": "#16a34a"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -969,7 +1051,7 @@
 			},
 			"description": "Wireless client health with threshold-colored sparkline.",
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(healthColorRange)",
 				"majorFontSize": 38,
 				"majorValue": "> primary | seriesByName('Wireless Health') | lastPoint()",
@@ -994,8 +1076,8 @@
 			},
 			"description": "Wireless clients currently in healthy status.",
 			"options": {
-				"backgroundColor": "#ffffff",
-				"majorColor": "#16a34a",
+				"backgroundColor": "#131a23",
+				"majorColor": "#4cbf7f",
 				"majorFontSize": 38,
 				"majorValue": "> primary | seriesByName('Healthy') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -1003,10 +1085,10 @@
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "rgba(37,99,235,0.18)",
+				"sparklineAreaColor": "rgba(100,158,245,0.18)",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#2563eb",
+				"sparklineStrokeColor": "#649ef5",
 				"trendDisplay": "percent"
 			},
 			"title": "Healthy Wireless Clients",
@@ -1018,7 +1100,7 @@
 			},
 			"description": "Stacked wireless client count with health score and 80/95 threshold overlays.",
 			"options": {
-				"backgroundColor": "#ffffff",
+				"backgroundColor": "#131a23",
 				"nullValueDisplay": "connect",
 				"overlayFields": [
 					"Wireless Health",
@@ -1026,13 +1108,13 @@
 					"Healthy Threshold"
 				],
 				"seriesColorsByField": {
-					"Fair": "#eab308",
-					"Healthy": "#16a34a",
-					"Healthy Threshold": "#16a34a",
-					"No Data": "#94a3b8",
-					"Poor": "#dc2626",
-					"Warning Threshold": "#eab308",
-					"Wireless Health": "#2563eb"
+					"Fair": "#f0c243",
+					"Healthy": "#4cbf7f",
+					"Healthy Threshold": "#4cbf7f",
+					"No Data": "#a6adb6",
+					"Poor": "#fa5762",
+					"Warning Threshold": "#f0c243",
+					"Wireless Health": "#649ef5"
 				},
 				"showOverlayY2Axis": true,
 				"showYMajorGridLines": true,
@@ -1040,7 +1122,20 @@
 				"xAxisTitleVisibility": "hide",
 				"y2AxisTitleText": "Health %",
 				"yAxisTitleText": "Clients",
-				"yAxisTitleVisibility": "hide"
+				"yAxisTitleVisibility": "hide",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				],
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Wireless Client Trend",
 			"type": "splunk.area"
@@ -1393,10 +1488,16 @@
 		"layoutDefinitions": {
 			"layout_about": {
 				"options": {
-					"backgroundColor": "#f5f7fb",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 900,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -1424,10 +1525,16 @@
 			},
 			"layout_client": {
 				"options": {
-					"backgroundColor": "#f5f7fb",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 1930,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -1525,10 +1632,16 @@
 			},
 			"layout_exec": {
 				"options": {
-					"backgroundColor": "#f5f7fb",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 1530,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -1646,10 +1759,16 @@
 			},
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#f5f7fb",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 1600,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -1807,5 +1926,5 @@
 		"hideExport": false
 	}
 }
-    ]]></definition>
+]]></definition>
 </dashboard>

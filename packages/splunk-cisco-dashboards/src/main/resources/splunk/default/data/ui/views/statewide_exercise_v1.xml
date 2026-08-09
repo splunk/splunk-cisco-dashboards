@@ -1,5 +1,5 @@
 
-<dashboard version="2" theme="light">
+<dashboard version="2" theme="dark" stylesheet="application.css">
     <label>Network Activation Report</label>
     <description>Client health and Catalyst Center reports network activation operations.</description>
     <definition><![CDATA[
@@ -33,24 +33,27 @@
 	"visualizations": {
 		"viz_about_bg": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_about_hdr_title": {
 			"options": {
-				"fontColor": "#005073",
+				"fontColor": "#649ef5",
 				"fontSize": "large",
-				"markdown": "# Dashboard Metrics Overview"
+				"markdown": "# Dashboard Metrics Overview",
+				"backgroundColor": "#1c2738"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_about_purpose": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "# Statewide Network Exercise\n\nComprehensive view of **client connectivity and network readiness** across all statewide sites. Use this dashboard to validate operational posture, compare site performance, and support readiness exercises.\n\n**Audience:** Network Operations, Field Engineers, IT Leadership\n**Primary Sources:** Cisco Catalyst Center (DNAC) — Client Health, Device Health, AP Health\n**Refresh:** All panels follow the global time picker; client health data refreshes every 15 minutes\n\n---\n\n## How to Navigate This Dashboard\n\n**Overview** — Wired and wireless client trends, health scores, and connection counts across all sites.\n*Start here — confirm client onboarding is healthy statewide.*\n\n**Executive Summary** — Aggregated KPIs, site health rankings, and trend indicators for leadership briefings.\n*Use for operational readiness reviews and cross-site comparisons.*\n\n**Client Summary** — Device types, OS distribution, connection methods, and per-site client breakdowns.\n*Drill in to identify client population shifts and troubleshoot device-specific issues.*\n\n> **Reading pattern:** Healthy client counts + green health scores = normal ops. Dropping counts or degraded scores = switch to Client Summary for device-level root cause."
 			},
@@ -58,8 +61,8 @@
 		},
 		"viz_about_sources": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "## Data Sources & Troubleshooting\n\n---\n\n**Cisco Catalyst Center** — Cisco DNA Center App for Splunk\nSourcetypes: `cisco:dnac:clienthealth`, `cisco:dnac:networkhealth`, `cisco:dnac:devicehealth`\nFreshness: ~15 min\n\n**Cisco Catalyst Center (AP)** — Cisco DNA Center App for Splunk\nSourcetypes: `cisco:dnac:aphealth`\nFreshness: ~15 min\n\n---\n\n**Panel showing \"No results\"?**\n\n1. **Widen the time range** — client health data needs at least 4 hours\n2. **Verify the DNAC App is installed** — check *Manage Apps*\n3. **Confirm data flow** — run `index=* sourcetype=cisco:dnac:clienthealth | head 5`\n4. **Check saved search status** — verify scheduled searches are enabled."
 			},
@@ -67,137 +70,171 @@
 		},
 		"viz_box_cl_activity": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_cl_health": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_cl_location": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_cl_session": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_cl_traffic": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_cl_trend": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_cl_wireless": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_ex_client": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_ex_inv": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_ex_issues": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_ex_net": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_ex_wow": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_ov_24h": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_ov_bw": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_ov_kpi": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_ov_ssid": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_ov_week": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
@@ -208,11 +245,23 @@
 			"description": "Client distribution across 2.4 GHz, 5 GHz, and 6 GHz bands",
 			"options": {
 				"seriesColorsByField": {
-					"2.4 GHz": "#E5A823",
-					"5 GHz": "#049FD9",
-					"6 GHz": "#6EBE4A"
+					"2.4 GHz": "#f0c243",
+					"5 GHz": "#049fd9",
+					"6 GHz": "#4cbf7f"
 				},
-				"showDonutHole": true
+				"showDonutHole": true,
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				]
 			},
 			"title": "Clients by Band Type",
 			"type": "splunk.pie"
@@ -223,7 +272,19 @@
 			},
 			"description": "Top client device types by unique MAC count",
 			"options": {
-				"showDonutHole": true
+				"showDonutHole": true,
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				]
 			},
 			"title": "Clients by Device Type",
 			"type": "splunk.pie"
@@ -235,7 +296,12 @@
 			"description": "Sites with the most connected clients",
 			"options": {
 				"count": 15,
-				"fontSize": "small"
+				"fontSize": "small",
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Top Networks by Client Count",
 			"type": "splunk.table"
@@ -248,9 +314,10 @@
 			"options": {
 				"dataValuesDisplay": "all",
 				"seriesColors": [
-					"#049FD9"
+					"#049fd9"
 				],
-				"yAxisTitleText": "Clients"
+				"yAxisTitleText": "Clients",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Clients by Wireless Protocol",
 			"type": "splunk.bar"
@@ -262,7 +329,12 @@
 			"description": "Client count per SSID — which networks are busiest",
 			"options": {
 				"count": 15,
-				"fontSize": "small"
+				"fontSize": "small",
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Top Networks by Client Count",
 			"type": "splunk.table"
@@ -275,57 +347,77 @@
 			"options": {
 				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
-					"Fair Count": "#E5A823",
-					"Good Count": "#6EBE4A",
-					"Idle Count": "#6E6E6E",
-					"Poor Count": "#D64550"
+					"Fair Count": "#f0c243",
+					"Good Count": "#4cbf7f",
+					"Idle Count": "#a6adb6",
+					"Poor Count": "#fa5762"
 				},
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Client Count"
+				"yAxisTitleText": "Client Count",
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				],
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Client Count Over Time — Health Distribution",
 			"type": "splunk.area"
 		},
 		"viz_cs_hdr_activity": {
 			"options": {
-				"fontColor": "#005073",
-				"markdown": "# Client Activity & Onboarding"
+				"fontColor": "#649ef5",
+				"markdown": "# Client Activity & Onboarding",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_cs_hdr_location": {
 			"options": {
-				"fontColor": "#005073",
-				"markdown": "# Client Distribution"
+				"fontColor": "#649ef5",
+				"markdown": "# Client Distribution",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_cs_hdr_session": {
 			"options": {
-				"fontColor": "#005073",
-				"markdown": "# Client Session Distribution"
+				"fontColor": "#649ef5",
+				"markdown": "# Client Session Distribution",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_cs_hdr_traffic": {
 			"options": {
-				"fontColor": "#005073",
-				"markdown": "# Client Traffic Distribution"
+				"fontColor": "#649ef5",
+				"markdown": "# Client Traffic Distribution",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_cs_hdr_trend": {
 			"options": {
-				"fontColor": "#005073",
-				"markdown": "# Client Health Over Time"
+				"fontColor": "#649ef5",
+				"markdown": "# Client Health Over Time",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_cs_hdr_wireless": {
 			"options": {
-				"fontColor": "#005073",
-				"markdown": "# Wireless Client Details"
+				"fontColor": "#649ef5",
+				"markdown": "# Wireless Client Details",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
@@ -336,7 +428,12 @@
 			"description": "Per-site client health breakdown — identify problem locations",
 			"options": {
 				"count": 15,
-				"fontSize": "small"
+				"fontSize": "small",
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Client Health by Location",
 			"type": "splunk.table"
@@ -348,13 +445,25 @@
 			"description": "Client health distribution — Healthy, Fair, Poor, Idle",
 			"options": {
 				"seriesColorsByField": {
-					"FAIR": "#E5A823",
-					"GOOD": "#6EBE4A",
-					"IDLE": "#6E6E6E",
-					"NODATA": "#999",
-					"POOR": "#D64550"
+					"FAIR": "#f0c243",
+					"GOOD": "#4cbf7f",
+					"IDLE": "#a6adb6",
+					"NODATA": "#a6adb6",
+					"POOR": "#fa5762"
 				},
-				"showDonutHole": true
+				"showDonutHole": true,
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				]
 			},
 			"title": "Health Distribution",
 			"type": "splunk.pie"
@@ -364,11 +473,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -377,7 +486,7 @@
 			},
 			"description": "Average client health score from Catalyst Center",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('Client Health Score') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -385,13 +494,14 @@
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%"
+				"unit": "%",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Client Health Score",
 			"type": "splunk.singlevalue"
@@ -403,7 +513,12 @@
 			"description": "Average client association + DHCP + AAA onboarding time",
 			"options": {
 				"count": 5,
-				"fontSize": "small"
+				"fontSize": "small",
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Client Onboarding Time (Avg ms)",
 			"type": "splunk.table"
@@ -414,7 +529,19 @@
 			},
 			"description": "Client operating system distribution by unique MAC count",
 			"options": {
-				"showDonutHole": true
+				"showDonutHole": true,
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				]
 			},
 			"title": "Clients by Operating System",
 			"type": "splunk.pie"
@@ -426,11 +553,23 @@
 			"description": "Aggregate wireless session duration per radio band.",
 			"options": {
 				"seriesColorsByField": {
-					"2.4 GHz": "#E5A823",
-					"5 GHz": "#049FD9",
-					"6 GHz": "#6EBE4A"
+					"2.4 GHz": "#f0c243",
+					"5 GHz": "#049fd9",
+					"6 GHz": "#4cbf7f"
 				},
-				"showDonutHole": true
+				"showDonutHole": true,
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				]
 			},
 			"title": "Session Hours by Band",
 			"type": "splunk.pie"
@@ -443,10 +582,11 @@
 			"options": {
 				"dataValuesDisplay": "all",
 				"seriesColors": [
-					"#049FD9"
+					"#049fd9"
 				],
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Hours"
+				"yAxisTitleText": "Hours",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Session Hours by Protocol",
 			"type": "splunk.bar"
@@ -459,10 +599,11 @@
 			"options": {
 				"dataValuesDisplay": "all",
 				"seriesColors": [
-					"#049FD9"
+					"#049fd9"
 				],
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Hours"
+				"yAxisTitleText": "Hours",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Top SSIDs by Session Hours",
 			"type": "splunk.bar"
@@ -491,7 +632,12 @@
 					}
 				},
 				"count": 20,
-				"fontSize": "small"
+				"fontSize": "small",
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Top Clients by Data Usage",
 			"type": "splunk.table"
@@ -501,11 +647,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -514,7 +660,7 @@
 			},
 			"description": "Total unique clients connected during the time range",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('Total Connected Clients') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -522,12 +668,13 @@
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Total Connected Clients",
 			"type": "splunk.singlevalue"
@@ -539,11 +686,23 @@
 			"description": "Total data transfer volume per wireless radio band.",
 			"options": {
 				"seriesColorsByField": {
-					"2.4 GHz": "#E5A823",
-					"5 GHz": "#049FD9",
-					"6 GHz": "#6EBE4A"
+					"2.4 GHz": "#f0c243",
+					"5 GHz": "#049fd9",
+					"6 GHz": "#4cbf7f"
 				},
-				"showDonutHole": true
+				"showDonutHole": true,
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				]
 			},
 			"title": "Traffic by Band (MB)",
 			"type": "splunk.pie"
@@ -558,7 +717,21 @@
 				"nullValueDisplay": "connect",
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "GB"
+				"yAxisTitleText": "GB",
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				],
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Traffic by Protocol Over Time",
 			"type": "splunk.area"
@@ -573,7 +746,21 @@
 				"nullValueDisplay": "connect",
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "GB"
+				"yAxisTitleText": "GB",
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				],
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Traffic by SSID Over Time",
 			"type": "splunk.area"
@@ -585,10 +772,22 @@
 			"description": "Wired vs wireless client ratio",
 			"options": {
 				"seriesColorsByField": {
-					"WIRED": "#E5A823",
-					"WIRELESS": "#049FD9"
+					"WIRED": "#f0c243",
+					"WIRELESS": "#049fd9"
 				},
-				"showDonutHole": true
+				"showDonutHole": true,
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				]
 			},
 			"title": "Wireless vs Wired",
 			"type": "splunk.pie"
@@ -598,11 +797,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -611,7 +810,7 @@
 			},
 			"description": "Percentage of APs reachable by Catalyst Center",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('AP Reachability') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -619,13 +818,14 @@
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%"
+				"unit": "%",
+				"backgroundColor": "#131a23"
 			},
 			"title": "AP Reachability",
 			"type": "splunk.singlevalue"
@@ -635,11 +835,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -648,7 +848,7 @@
 			},
 			"description": "Total managed access points across all sites",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('Access Points') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -656,12 +856,13 @@
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Access Points",
 			"type": "splunk.singlevalue"
@@ -673,7 +874,12 @@
 			"description": "Sites with the best client health scores",
 			"options": {
 				"count": 10,
-				"fontSize": "small"
+				"fontSize": "small",
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Sites with Highest Client Health",
 			"type": "splunk.table"
@@ -685,7 +891,12 @@
 			"description": "Sites with the worst client health scores — investigate first",
 			"options": {
 				"count": 10,
-				"fontSize": "small"
+				"fontSize": "small",
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Sites with Lowest Client Health",
 			"type": "splunk.table"
@@ -695,11 +906,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -708,7 +919,7 @@
 			},
 			"description": "Average client health across all sites",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('Client Health') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -716,12 +927,13 @@
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%"
+				"unit": "%",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Client Health",
 			"type": "splunk.singlevalue"
@@ -735,47 +947,55 @@
 				"legendDisplay": "off",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
-					"#049FD9"
+					"#049fd9"
 				],
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Health %"
+				"yAxisTitleText": "Health %",
+				"backgroundColor": "#131a23",
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Client Health Trend",
 			"type": "splunk.area"
 		},
 		"viz_ex_hdr_client": {
 			"options": {
-				"fontColor": "#005073",
-				"markdown": "# Overall Health Summary — Client Devices"
+				"fontColor": "#649ef5",
+				"markdown": "# Overall Health Summary — Client Devices",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_ex_hdr_inv": {
 			"options": {
-				"fontColor": "#005073",
-				"markdown": "# Device Inventory"
+				"fontColor": "#649ef5",
+				"markdown": "# Device Inventory",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_ex_hdr_issues": {
 			"options": {
-				"fontColor": "#005073",
-				"markdown": "# Issues"
+				"fontColor": "#649ef5",
+				"markdown": "# Issues",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_ex_hdr_net": {
 			"options": {
-				"fontColor": "#005073",
+				"fontColor": "#649ef5",
 				"fontSize": "large",
-				"markdown": "# Overall Health Summary — Network Devices"
+				"markdown": "# Overall Health Summary — Network Devices",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_ex_hdr_wow": {
 			"options": {
-				"fontColor": "#005073",
-				"markdown": "# Week-over-Week Comparison"
+				"fontColor": "#649ef5",
+				"markdown": "# Week-over-Week Comparison",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
@@ -784,11 +1004,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -797,7 +1017,7 @@
 			},
 			"description": "Percentage of network devices in Good health",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('Healthy Devices') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -805,12 +1025,13 @@
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Healthy Devices",
 			"type": "splunk.singlevalue"
@@ -823,12 +1044,24 @@
 			"options": {
 				"dataValuesDisplay": "all",
 				"seriesColorsByField": {
-					"down": "#D64550",
-					"up": "#6EBE4A"
+					"down": "#fa5762",
+					"up": "#4cbf7f"
 				},
 				"stackMode": "stacked",
 				"xAxisTitleText": "Category",
-				"yAxisTitleText": "Count"
+				"yAxisTitleText": "Count",
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				]
 			},
 			"title": "Network Device Counts",
 			"type": "splunk.bar"
@@ -840,7 +1073,12 @@
 			"description": "Full device inventory with health, platform, and software",
 			"options": {
 				"count": 10,
-				"fontSize": "small"
+				"fontSize": "small",
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Device Inventory — Detail",
 			"type": "splunk.table"
@@ -851,10 +1089,14 @@
 			},
 			"description": "Catalyst Center issue descriptions grouped by type with affected sites and devices",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 20,
 				"fontSize": "small",
-				"headerVisibility": "fixed"
+				"headerVisibility": "fixed",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Active Issue Details — Why is it unhealthy?",
 			"type": "splunk.table"
@@ -865,7 +1107,19 @@
 			},
 			"description": "Open issues grouped by P1/P2/P3/P4 priority",
 			"options": {
-				"showDonutHole": true
+				"showDonutHole": true,
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				]
 			},
 			"title": "Issues by Priority",
 			"type": "splunk.pie"
@@ -902,7 +1156,12 @@
 					}
 				},
 				"count": 15,
-				"fontSize": "small"
+				"fontSize": "small",
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Top Open Issues",
 			"type": "splunk.table"
@@ -917,7 +1176,21 @@
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
 				"xAxisVisibility": "show",
-				"yAxisTitleText": "Issues"
+				"yAxisTitleText": "Issues",
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				],
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Total Issue Trend",
 			"type": "splunk.area"
@@ -927,11 +1200,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -940,7 +1213,7 @@
 			},
 			"description": "Percentage of network devices in Good health",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('Network Health') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -948,13 +1221,14 @@
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%"
+				"unit": "%",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Network Health",
 			"type": "splunk.singlevalue"
@@ -966,7 +1240,12 @@
 			"description": "Sites with the highest percentage of healthy devices",
 			"options": {
 				"count": 10,
-				"fontSize": "small"
+				"fontSize": "small",
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Sites with Highest % of Devices in Good Health",
 			"type": "splunk.table"
@@ -978,7 +1257,12 @@
 			"description": "Sites with the lowest percentage of healthy devices",
 			"options": {
 				"count": 10,
-				"fontSize": "small"
+				"fontSize": "small",
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Sites with Lowest % of Devices in Good Health",
 			"type": "splunk.table"
@@ -992,10 +1276,13 @@
 				"legendDisplay": "off",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
-					"#6EBE4A"
+					"#4cbf7f"
 				],
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Health %"
+				"yAxisTitleText": "Health %",
+				"backgroundColor": "#131a23",
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Network Health Trend",
 			"type": "splunk.area"
@@ -1006,12 +1293,13 @@
 			},
 			"description": "P1 critical issues requiring immediate attention",
 			"options": {
-				"majorColor": "#D64550",
+				"majorColor": "#fa5762",
 				"majorValue": "> primary | seriesByName('p1') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"sparklineDisplay": "off",
-				"trendDisplay": "off"
+				"trendDisplay": "off",
+				"backgroundColor": "#131a23"
 			},
 			"title": "P1",
 			"type": "splunk.singlevalue"
@@ -1022,12 +1310,13 @@
 			},
 			"description": "P2 high-priority issues to address soon",
 			"options": {
-				"majorColor": "#E5A823",
+				"majorColor": "#f0c243",
 				"majorValue": "> primary | seriesByName('p2') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"sparklineDisplay": "off",
-				"trendDisplay": "off"
+				"trendDisplay": "off",
+				"backgroundColor": "#131a23"
 			},
 			"title": "P2",
 			"type": "splunk.singlevalue"
@@ -1038,12 +1327,13 @@
 			},
 			"description": "P3 medium-priority issues for planned remediation",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorValue": "> primary | seriesByName('p3') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"sparklineDisplay": "off",
-				"trendDisplay": "off"
+				"trendDisplay": "off",
+				"backgroundColor": "#131a23"
 			},
 			"title": "P3",
 			"type": "splunk.singlevalue"
@@ -1054,12 +1344,13 @@
 			},
 			"description": "P4 low-priority informational issues",
 			"options": {
-				"majorColor": "#6E6E6E",
+				"majorColor": "#a6adb6",
 				"majorValue": "> primary | seriesByName('p4') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"sparklineDisplay": "off",
-				"trendDisplay": "off"
+				"trendDisplay": "off",
+				"backgroundColor": "#131a23"
 			},
 			"title": "P4",
 			"type": "splunk.singlevalue"
@@ -1070,15 +1361,20 @@
 			},
 			"description": "Compares key metrics from the last 7 days against the prior 7 days, mirroring the Catalyst Center report's weekly delta annotations.",
 			"options": {
-				"fontSize": "small"
+				"fontSize": "small",
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "KPI Deltas — This Week vs Last Week",
 			"type": "splunk.table"
 		},
 		"viz_info_cl": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "## Metric Reference — Client Summary Tab\n\n---\n\n**Client Health Score** — Composite client health\n**Total Connected Clients** — Active client count\n**Wireless vs Wired** — Client type distribution\n**Health Distribution** — Good/Fair/Poor breakdown\n\n---\n\n**Client Count Over Time** — Health distribution trend\n\n---\n\n**Top Networks by Client Count** — Busiest network segments\n**Client Health by Location** — Per-site client health\n**Clients by Device Type** — Device category breakdown\n\n---\n\n**Client OS Distribution** — Operating system breakdown\n**Connection Type Breakdown** — Wired vs wireless vs VPN\n**Top SSIDs by Client Count** — Busiest wireless networks"
 			},
@@ -1086,8 +1382,8 @@
 		},
 		"viz_info_ex": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "## Metric Reference — Executive Summary Tab\n\n---\n\n#### Device & Network Health\n\n**Healthy Devices** — Count of devices in good health\n**Network Health** — Overall network health percentage\n**Access Points** — Total AP count\n**AP Reachability** — Percentage of APs responding\n\n---\n\n**Network Health Trend** — Health score over time\n**Sites with Lowest/Highest Health** — Best and worst performing sites\n\n---\n\n#### Client Health\n\n**Client Health** — Composite client health score\n**Client Health Trend** — Client score over time\n**Sites with Lowest/Highest Client Health** — Site rankings by client health\n\n---\n\n#### Site-Level Summary\n\n**Device Health by Site** — Per-site device health scores\n**Client Health by Site** — Per-site client health scores\n**AP Count by Site** — Access point distribution"
 			},
@@ -1095,8 +1391,8 @@
 		},
 		"viz_info_ov": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "## Metric Reference — Overview Tab\n\n---\n\n**Wireless Health** — Composite wireless client health score\n**Wireless Clients** — Total connected wireless clients\n**Healthy (Wireless)** — Count of wireless clients in good health\n**Wired Health** — Composite wired client health score\n**Wired Clients** — Total connected wired clients\n**Healthy (Wired)** — Count of wired clients in good health\n\n---\n\n**Wireless Client Trend (24h)** — Wireless client count over time\n**Wired Client Trend (24h)** — Wired client count over time"
 			},
@@ -1108,12 +1404,13 @@
 			},
 			"description": "Issues currently active and unresolved.",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorValue": "> primary | seriesByName('Open') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"sparklineNullValueDisplay": "connect",
-				"unit": ""
+				"unit": "",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Open Issues",
 			"type": "splunk.singlevalue"
@@ -1124,12 +1421,13 @@
 			},
 			"description": "Issues remediated or auto-resolved.",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorValue": "> primary | seriesByName('Resolved') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"sparklineNullValueDisplay": "connect",
-				"unit": ""
+				"unit": "",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Resolved Issues",
 			"type": "splunk.singlevalue"
@@ -1140,20 +1438,21 @@
 			},
 			"description": "All issues detected in the selected time range.",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorValue": "> primary | seriesByName('Total') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"sparklineNullValueDisplay": "connect",
-				"unit": ""
+				"unit": "",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Total Issues",
 			"type": "splunk.singlevalue"
 		},
 		"viz_narr_client": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#6E6E6E",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "**Client-level detail** — device types, OS distribution, and per-site breakdowns. Use this tab to identify client population shifts and troubleshoot device-specific issues."
 			},
@@ -1161,8 +1460,8 @@
 		},
 		"viz_narr_exec": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#6E6E6E",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "**Executive-level posture summary** — aggregated KPIs, site comparisons, and trend indicators. Use this tab for leadership briefings and operational readiness reviews."
 			},
@@ -1170,8 +1469,8 @@
 		},
 		"viz_narr_overview": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#6E6E6E",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "Statewide view of **wired and wireless client health** across all sites. Use this tab to confirm client onboarding is healthy and spot connectivity degradation at a macro level."
 			},
@@ -1191,15 +1490,30 @@
 				"nullValueDisplay": "connect",
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Mbps"
+				"yAxisTitleText": "Mbps",
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				],
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Internet — Bandwidth by Protocol",
 			"type": "splunk.area"
 		},
 		"viz_ov_bw_header": {
 			"options": {
-				"fontColor": "#005073",
-				"markdown": "# Bandwidth Utilization (coming soon)"
+				"fontColor": "#649ef5",
+				"markdown": "# Bandwidth Utilization (coming soon)",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
@@ -1217,16 +1531,31 @@
 				"nullValueDisplay": "connect",
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Mbps"
+				"yAxisTitleText": "Mbps",
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				],
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Public Internet — Bandwidth by Protocol",
 			"type": "splunk.area"
 		},
 		"viz_ov_client_header": {
 			"options": {
-				"fontColor": "#005073",
+				"fontColor": "#649ef5",
 				"fontSize": "extraLarge",
-				"markdown": "## General Overview"
+				"markdown": "## General Overview",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
@@ -1239,7 +1568,21 @@
 				"nullValueDisplay": "connect",
 				"xAxisTitleVisibility": "hide",
 				"xAxisVisibility": "show",
-				"yAxisTitleText": "Clients"
+				"yAxisTitleText": "Clients",
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				],
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Client Count per SSID",
 			"type": "splunk.line"
@@ -1253,22 +1596,38 @@
 				"nullValueDisplay": "connect",
 				"xAxisTitleVisibility": "hide",
 				"xAxisVisibility": "show",
-				"yAxisTitleText": "Clients"
+				"yAxisTitleText": "Clients",
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				],
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Client Count per SSID — Past Week",
 			"type": "splunk.line"
 		},
 		"viz_ov_ssid_header": {
 			"options": {
-				"fontColor": "#2B2B2B",
-				"markdown": "## Client Count per SSID"
+				"fontColor": "#ecf0f5",
+				"markdown": "## Client Count per SSID",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_ov_week_header": {
 			"options": {
-				"fontColor": "#2B2B2B",
-				"markdown": "## Past Week — Client Trends"
+				"fontColor": "#ecf0f5",
+				"markdown": "## Past Week — Client Trends",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
@@ -1280,14 +1639,28 @@
 			"options": {
 				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
-					"Fair": "#E5A823",
-					"Healthy": "#6EBE4A",
-					"No Data": "#999",
-					"Poor": "#D64550"
+					"Fair": "#f0c243",
+					"Healthy": "#4cbf7f",
+					"No Data": "#a6adb6",
+					"Poor": "#fa5762"
 				},
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Clients"
+				"yAxisTitleText": "Clients",
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				],
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Wired Client Trend",
 			"type": "splunk.area"
@@ -1300,14 +1673,28 @@
 			"options": {
 				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
-					"Fair": "#E5A823",
-					"Healthy": "#6EBE4A",
-					"No Data": "#999",
-					"Poor": "#D64550"
+					"Fair": "#f0c243",
+					"Healthy": "#4cbf7f",
+					"No Data": "#a6adb6",
+					"Poor": "#fa5762"
 				},
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Clients"
+				"yAxisTitleText": "Clients",
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				],
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Wired Clients — Past Week",
 			"type": "splunk.area"
@@ -1317,11 +1704,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -1330,7 +1717,7 @@
 			},
 			"description": "Current wired client health score",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('Wired Health') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -1338,13 +1725,14 @@
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%"
+				"unit": "%",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Wired Health",
 			"type": "splunk.singlevalue"
@@ -1355,13 +1743,14 @@
 			},
 			"description": "Count of wired clients in healthy status",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('healthy') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"sparklineDisplay": "off",
-				"trendDisplay": "off"
+				"trendDisplay": "off",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Healthy",
 			"type": "splunk.singlevalue"
@@ -1371,11 +1760,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -1384,7 +1773,7 @@
 			},
 			"description": "Total wired clients currently connected",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('Wired Clients') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -1392,12 +1781,13 @@
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Wired Clients",
 			"type": "splunk.singlevalue"
@@ -1410,14 +1800,28 @@
 			"options": {
 				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
-					"Fair": "#E5A823",
-					"Healthy": "#6EBE4A",
-					"No Data": "#999",
-					"Poor": "#D64550"
+					"Fair": "#f0c243",
+					"Healthy": "#4cbf7f",
+					"No Data": "#a6adb6",
+					"Poor": "#fa5762"
 				},
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Clients"
+				"yAxisTitleText": "Clients",
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				],
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Wireless Client Trend",
 			"type": "splunk.area"
@@ -1430,14 +1834,28 @@
 			"options": {
 				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
-					"Fair": "#E5A823",
-					"Healthy": "#6EBE4A",
-					"No Data": "#999",
-					"Poor": "#D64550"
+					"Fair": "#f0c243",
+					"Healthy": "#4cbf7f",
+					"No Data": "#a6adb6",
+					"Poor": "#fa5762"
 				},
 				"stackMode": "stacked",
 				"xAxisTitleVisibility": "hide",
-				"yAxisTitleText": "Clients"
+				"yAxisTitleText": "Clients",
+				"backgroundColor": "#131a23",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				],
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Wireless Clients — Past Week",
 			"type": "splunk.area"
@@ -1447,11 +1865,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -1460,7 +1878,7 @@
 			},
 			"description": "Current wireless client health score",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('Wireless Health') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -1468,13 +1886,14 @@
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"unit": "%"
+				"unit": "%",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Wireless Health",
 			"type": "splunk.singlevalue"
@@ -1485,13 +1904,14 @@
 			},
 			"description": "Count of wireless clients in healthy status",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('healthy') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"sparklineDisplay": "off",
-				"trendDisplay": "off"
+				"trendDisplay": "off",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Healthy",
 			"type": "splunk.singlevalue"
@@ -1501,11 +1921,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -1514,7 +1934,7 @@
 			},
 			"description": "Total wireless clients currently connected",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"majorValue": "> primary | seriesByName('Wireless Clients') | lastPoint()",
 				"shouldAbbreviateMajorValue": true,
@@ -1522,59 +1942,66 @@
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Wireless Clients",
 			"type": "splunk.singlevalue"
 		},
 		"viz_p_hdr_bg": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.88)",
+				"fillColor": "#1c2738",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.06)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_p_hdr_title": {
 			"options": {
-				"fontColor": "#005073",
+				"fontColor": "#649ef5",
 				"fontSize": "large",
-				"markdown": "# Client Summary"
+				"markdown": "# Client Summary",
+				"backgroundColor": "#1c2738"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_sw_section_cl": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.45)",
+				"fillColor": "rgba(15,17,23,0.78)",
 				"fillOpacity": 1,
 				"rx": 12,
-				"strokeColor": "rgba(0,0,0,0.06)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(65,74,86,0.52)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_sw_section_ex": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.45)",
+				"fillColor": "rgba(15,17,23,0.78)",
 				"fillOpacity": 1,
 				"rx": 12,
-				"strokeColor": "rgba(0,0,0,0.06)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(65,74,86,0.52)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_sw_section_ov": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.45)",
+				"fillColor": "rgba(15,17,23,0.78)",
 				"fillOpacity": 1,
 				"rx": 12,
-				"strokeColor": "rgba(0,0,0,0.06)",
-				"strokeWidth": 1
+				"strokeColor": "rgba(65,74,86,0.52)",
+				"strokeWidth": 1,
+				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		}
@@ -2355,10 +2782,16 @@
 		"layoutDefinitions": {
 			"layout_about": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 1200,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -2446,10 +2879,16 @@
 			},
 			"layout_client": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 3300,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -2827,10 +3266,16 @@
 			},
 			"layout_exec": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 3700,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -3222,10 +3667,16 @@
 			},
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 1900,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -3527,5 +3978,5 @@
 		"hideEdit": true
 	}
 }
-    ]]></definition>
+]]></definition>
 </dashboard>

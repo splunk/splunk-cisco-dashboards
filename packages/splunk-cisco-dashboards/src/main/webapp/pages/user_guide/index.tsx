@@ -23,6 +23,8 @@ import {
     Wifi,
 } from '@/common/icons/SuiIcon';
 import { APP_VERSION_LABEL } from "@/common/lib/buildInfo";
+import { ThemeToggle } from '@/common/components/florida/ThemeToggle';
+import { useTheme } from '@/common/hooks/useTheme';
 
 import "./user-guide.css";
 
@@ -623,6 +625,7 @@ const troubleshootingRows = [
 ];
 
 export default function UserGuidePage(): JSX.Element {
+  const { theme, resolvedTheme, cycle: cycleTheme } = useTheme();
   const setupUrl = `${appUrl("start")}?setup=1`;
   const setupTuningUrl = `${setupUrl}#tune-indexes`;
   const workspaceUrl = appUrl("insights_workspace");
@@ -643,6 +646,15 @@ export default function UserGuidePage(): JSX.Element {
   const [searchStatus, setSearchStatus] = useState("");
   const [searchMatches, setSearchMatches] = useState(0);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
+
+  useEffect(() => {
+    document.documentElement.classList.add("scd-overview-active");
+    document.body.classList.add("scd-overview-active");
+    return () => {
+      document.documentElement.classList.remove("scd-overview-active");
+      document.body.classList.remove("scd-overview-active");
+    };
+  }, []);
 
   const clearSearchClasses = useCallback(() => {
     matchesRef.current.forEach((node) => {
@@ -882,7 +894,10 @@ export default function UserGuidePage(): JSX.Element {
   }, []);
 
   return (
-    <main className="scd-user-guide min-h-screen bg-slate-100 text-slate-900">
+    <main
+      className={`scd-user-guide scd-overview-page scd-c3-surface min-h-screen ${resolvedTheme}`}
+      data-theme={resolvedTheme}
+    >
       <div className="scd-guide-layout">
         <GuideContents
           activeSection={activeSection}
@@ -908,15 +923,22 @@ export default function UserGuidePage(): JSX.Element {
                   Splunk App for Secure Networking
                 </h1>
               </div>
-              <button
-                type="button"
-                onClick={exportPdf}
-                title="Open the browser print dialog to save this guide as PDF"
-                className="scd-guide-no-print inline-flex h-11 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-bold text-sky-700 shadow-sm hover:border-sky-400 hover:bg-sky-50"
-              >
-                <Download size={17} />
-                Export PDF
-              </button>
+              <div className="scd-guide-no-print flex items-center gap-2">
+                <ThemeToggle
+                  theme={theme}
+                  onCycle={cycleTheme}
+                  className="scd-guide-theme-toggle"
+                />
+                <button
+                  type="button"
+                  onClick={exportPdf}
+                  title="Open the browser print dialog to save this guide as PDF"
+                  className="inline-flex h-11 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-bold text-sky-700 shadow-sm hover:border-sky-400 hover:bg-sky-50"
+                >
+                  <Download size={17} />
+                  Export PDF
+                </button>
+              </div>
             </div>
 
             <p className="mt-5 max-w-4xl text-lg leading-8 text-slate-700">

@@ -10,7 +10,7 @@
 
     Keep version="1.1" for Splunk 9.x custom-JS dashboard support.
 -->
-<dashboard version="1.1" theme="light" hideEdit="true" hideExport="true" hideTitle="true"
+<dashboard version="1.1" theme="dark" hideEdit="true" hideExport="true" hideTitle="true"
            script="user_guide_bootstrap.js">
     <label>User Guide</label>
     <description>Setup, operations, macro tuning, and troubleshooting for Splunk App for Secure Networking.</description>
@@ -18,7 +18,7 @@
         <panel>
             <html>
                 <div id="scan-root">
-                    <div style="padding: 24px; color: #475569;">Loading User Guide...</div>
+                    <div style="padding: 24px; color: #a6adb6; background: #0f1117;">Loading User Guide...</div>
                 </div>
             </html>
         </panel>

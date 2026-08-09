@@ -1,5 +1,5 @@
 
-<dashboard version="2" theme="light">
+<dashboard version="2" theme="dark" stylesheet="application.css">
  <label>Admin Guide</label>
  <description>Admin guide for the Cisco Executive Dashboards</description>
  <definition><![CDATA[
@@ -8,116 +8,147 @@
 		"viz_hdr_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "rgba(255,255,255,0.88)",
-				"strokeColor": "rgba(0,0,0,0.06)",
-				"rx": 10
+				"fillColor": "#1c2738",
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"rx": 10,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_hdr_title": {
 			"type": "splunk.markdown",
 			"options": {
 				"markdown": "## Admin Guide\n*Configuration reference, macros, data sources, and troubleshooting*",
-				"fontColor": "#005073"
+				"fontColor": "#649ef5",
+				"backgroundColor": "#1c2738"
 			}
 		},
 		"viz_overview": {
 			"type": "splunk.markdown",
 			"options": {
-				"markdown": "### Dashboard Overview\n\nThis app provides a curated set of executive dashboards covering network, security, and building resilience for your organization.\n\n> Set your organization name in `local/macros.conf` (`[customer_name]`) or via the pencil icon in the Overview header (revealed on hover) to brand the headers and report titles for your deployment.\n\n---\n\n**Executive Overview** — `overview`\n> Top-level overview with KPI tiles, customer topology map, and drill-down cards\n\n**IT Health** — `it_health_v1`\n> Network and device health, open issues, compliance, syslog, config changes, and the **User Experience tab** (client health, OS mix, device types). ThousandEyes panels return when the `Cisco_ThousandEyes.Test_Metrics` data model is installed.\n\n**Security Resilience** — `security_v1`\n> Firewall, IDS/IPS, ISE, AD logons, VPN, DNS, email, web, XDR, PSIRT\n\n**Building Resilience** — `building_v1`\n> Occupancy, environmental sensors, power, cooling, compliance\n\n**Admin Guide** — `admin_guide_v1`\n> This page"
+				"markdown": "### Dashboard Overview\n\nThis app provides a curated set of executive dashboards covering network, security, and building resilience for your organization.\n\n> Set your organization name in `local/macros.conf` (`[customer_name]`) or via the pencil icon in the Overview header (revealed on hover) to brand the headers and report titles for your deployment.\n\n---\n\n**Executive Overview** — `overview`\n> Top-level overview with KPI tiles, customer topology map, and drill-down cards\n\n**IT Health** — `it_health_v1`\n> Network and device health, open issues, compliance, syslog, config changes, and the **User Experience tab** (client health, OS mix, device types). ThousandEyes panels return when the `Cisco_ThousandEyes.Test_Metrics` data model is installed.\n\n**Security Resilience** — `security_v1`\n> Firewall, IDS/IPS, ISE, AD logons, VPN, DNS, email, web, XDR, PSIRT\n\n**Building Resilience** — `building_v1`\n> Occupancy, environmental sensors, power, cooling, compliance\n\n**Admin Guide** — `admin_guide_v1`\n> This page",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5"
 			}
 		},
 		"viz_macros": {
 			"type": "splunk.markdown",
 			"options": {
-				"markdown": "### Index Macros\n\nAll queries use **index macros** instead of hardcoded index names. Each macro defaults to `index=*` (all indexes). To restrict queries to specific indexes, edit the macro definitions in:\n\n**Settings → Advanced Search → Search Macros** (filter by app `splunk-cisco-dashboards`)\n\n\n---\n\n**`index_catalyst`** — Catalyst Center (DNAC)\n> `cisco:dnac:client` · `cisco:dnac:clienthealth` · `cisco:dnac:devicehealth` · `cisco:dnac:networkhealth` · `cisco:dnac:compliance` · `cisco:dnac:issue` · `cisco:dnac:audit:logs` · `cisco:dnac:securityadvisory`\n\n**`index_firewall`** — ASA, FTD, eStreamer\n> `cisco:asa` · `cisco:ftd` · `cisco:sfw:estreamer`\n\n**`index_identity`** — Cisco ISE\n> `cisco:ise:syslog`\n\n**`index_windows`** — Windows / Active Directory\n> `*WinEventLog` · `ActiveDirectory` · `MSAD:NT6:DNS`\n\n**`index_network`** — IOS Syslog\n> `cisco:ios`\n\n**`index_meraki`** — Meraki Sensors and Uplinks\n> `meraki:sensorreadingshistory` · `meraki:devicesuplinkslossandlatency` · `meraki:audit`\n\n**`index_spaces`** — Cisco Spaces (Firehose API)\n> `cisco:spaces:firehose` (eventTypes: DEVICE_COUNT, CAMERA_COUNT, IOT_TELEMETRY, DEVICE_PRESENCE)\n\n**`index_sdwan`** — Cisco SD-WAN controller and API data\n> `cisco:sdwan:syslog` · `cisco:sdwan:system:logs` · `cisco:sdwan:audit:logs` · `cisco:sdwan:tunnelhealth` · `cisco:sdwan:sitehealth` · `cisco:sdwan:linkhealth` · `cisco:sdwan:ssetunnels` · `cisco:sdwan:utd:logs`\n\n**`index_security`** — XDR, Umbrella/SSE, ESA, WSA, SD-WAN UTD\n> `cisco:xdr:incidents` · `cisco:cloud_security:dns` · `cisco:cloud_security:firewall` · `cisco:esa:amp` · `cisco:esa:antispam` · `cisco:esa:content_scanner` · `cisco:wsa:squid` · `cisco:wsa:l4tm` · `cisco:sdwan:utd:logs`\n\n---\n\n**Example** — point Catalyst Center data at a dedicated index:\n```\n[index_catalyst]\ndefinition = index=cisco_dnac\n```"
+				"markdown": "### Index Macros\n\nAll queries use **index macros** instead of hardcoded index names. Each macro defaults to `index=*` (all indexes). To restrict queries to specific indexes, edit the macro definitions in:\n\n**Settings → Advanced Search → Search Macros** (filter by app `splunk-cisco-dashboards`)\n\n\n---\n\n**`index_catalyst`** — Catalyst Center (DNAC)\n> `cisco:dnac:client` · `cisco:dnac:clienthealth` · `cisco:dnac:devicehealth` · `cisco:dnac:networkhealth` · `cisco:dnac:compliance` · `cisco:dnac:issue` · `cisco:dnac:audit:logs` · `cisco:dnac:securityadvisory`\n\n**`index_firewall`** — ASA, FTD, eStreamer\n> `cisco:asa` · `cisco:ftd` · `cisco:sfw:estreamer`\n\n**`index_identity`** — Cisco ISE\n> `cisco:ise:syslog`\n\n**`index_windows`** — Windows / Active Directory\n> `*WinEventLog` · `ActiveDirectory` · `MSAD:NT6:DNS`\n\n**`index_network`** — IOS Syslog\n> `cisco:ios`\n\n**`index_meraki`** — Meraki Sensors and Uplinks\n> `meraki:sensorreadingshistory` · `meraki:devicesuplinkslossandlatency` · `meraki:audit`\n\n**`index_spaces`** — Cisco Spaces (Firehose API)\n> `cisco:spaces:firehose` (eventTypes: DEVICE_COUNT, CAMERA_COUNT, IOT_TELEMETRY, DEVICE_PRESENCE)\n\n**`index_sdwan`** — Cisco SD-WAN controller and API data\n> `cisco:sdwan:syslog` · `cisco:sdwan:system:logs` · `cisco:sdwan:audit:logs` · `cisco:sdwan:tunnelhealth` · `cisco:sdwan:sitehealth` · `cisco:sdwan:linkhealth` · `cisco:sdwan:ssetunnels` · `cisco:sdwan:utd:logs`\n\n**`index_security`** — XDR, Umbrella/SSE, ESA, WSA, SD-WAN UTD\n> `cisco:xdr:incidents` · `cisco:cloud_security:dns` · `cisco:cloud_security:firewall` · `cisco:esa:amp` · `cisco:esa:antispam` · `cisco:esa:content_scanner` · `cisco:wsa:squid` · `cisco:wsa:l4tm` · `cisco:sdwan:utd:logs`\n\n---\n\n**Example** — point Catalyst Center data at a dedicated index:\n```\n[index_catalyst]\ndefinition = index=cisco_dnac\n```",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5"
 			}
 		},
 		"viz_demo": {
 			"type": "splunk.markdown",
 			"options": {
-				"markdown": "### Demo Mode\n\nEvery dashboard has a **Demo Data** toggle in the top-right corner.\n\n- **On** (default) — if a query returns no real data, synthetic demo values are generated so visualizations are never empty\n- **Off** — only real data is shown; empty queries display `0`, `N/A`, or blank charts\n\nThe toggle sets the token `$demo_mode$` to `on` or `off`. Demo fallback data is produced by `| makeresults` blocks guarded by `| where \"$demo_mode$\"=\"on\"`.\n\n---\n\n**How it works in each query:**\n\n```\n1. Search real data `index_catalyst` sourcetype=\"cisco:dnac:client\" | stats ...\n2. Null guard | appendpipe [| where isnull(count) | eval count=0]\n3. Demo fallback | append [| makeresults | where \"$demo_mode$\"=\"on\" | eval count=42]\n4. Pick first result | head 1\n```\n\nReal data always wins because it appears first in the pipeline. Demo data only surfaces when the real search returned nothing **and** demo mode is on."
+				"markdown": "### Demo Mode\n\nEvery dashboard has a **Demo Data** toggle in the top-right corner.\n\n- **On** (default) — if a query returns no real data, synthetic demo values are generated so visualizations are never empty\n- **Off** — only real data is shown; empty queries display `0`, `N/A`, or blank charts\n\nThe toggle sets the token `$demo_mode$` to `on` or `off`. Demo fallback data is produced by `| makeresults` blocks guarded by `| where \"$demo_mode$\"=\"on\"`.\n\n---\n\n**How it works in each query:**\n\n```\n1. Search real data `index_catalyst` sourcetype=\"cisco:dnac:client\" | stats ...\n2. Null guard | appendpipe [| where isnull(count) | eval count=0]\n3. Demo fallback | append [| makeresults | where \"$demo_mode$\"=\"on\" | eval count=42]\n4. Pick first result | head 1\n```\n\nReal data always wins because it appears first in the pipeline. Demo data only surfaces when the real search returned nothing **and** demo mode is on.",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5"
 			}
 		},
 		"viz_datasources": {
 			"type": "splunk.markdown",
 			"options": {
-				"markdown": "### Required Data Sources\n\nEach technology below requires a Splunk add-on (TA) or app to collect data.\n\n---\n\n**Cisco Catalyst Center (DNAC)** — `TA_cisco_catalyst`\n> `cisco:dnac:client` · `clienthealth` · `devicehealth` · `networkhealth` · `compliance` · `issue` · `audit:logs` · `securityadvisory`\n\n**Cisco ASA / FTD Firewalls** — `Splunk_TA_cisco-asa`\n> `cisco:asa` · `cisco:ftd`\n\n**Cisco Secure Firewall (eStreamer)** — `TA-eStreamer`\n> `cisco:sfw:estreamer`\n\n**Cisco ISE** — Syslog\n> `cisco:ise:syslog`\n\n**Cisco Meraki** — `Splunk_TA_cisco_meraki`\n> `meraki:sensorreadingshistory` · `meraki:devicesuplinkslossandlatency` · `meraki:audit`\n\n**Cisco Spaces** — `Cisco Spaces Firehose Add-on`\n> `cisco:spaces:firehose` (eventTypes: DEVICE_COUNT, CAMERA_COUNT, IOT_TELEMETRY, DEVICE_PRESENCE)\n\n**Cisco XDR** — `Cisco XDR App`\n> `cisco:xdr:incidents` · `cisco:xdr:incidents-summary`\n\n**Cisco Umbrella / Secure Access (SSE)** — `cisco-cloud-security`\n> `cisco:cloud_security:dns` · `cisco:cloud_security:firewall`\n\n**Cisco ESA** — `Cisco ESA Add-on`\n> `cisco:esa:amp` · `cisco:esa:antispam` · `cisco:esa:content_scanner`\n\n**Cisco WSA** — `Cisco WSA Add-on`\n> `cisco:wsa:squid` · `cisco:wsa:l4tm`\n\n**Cisco SD-WAN** — `TA_cisco_catalyst` / Cisco SD-WAN App\n> Controller hunts require off-appliance vSmart and manager system, application, and authentication logs routed as `cisco:sdwan:syslog` or `cisco:sdwan:system:logs`. API, audit, health, and UTD searches use their named `cisco:sdwan:*` sourcetypes.\n\n**Cisco ThousandEyes** — `ta_cisco_thousandeyes`\n> Uses the `Cisco_ThousandEyes` data model via `| tstats`\n\n**Cisco IOS** — Syslog\n> `cisco:ios`\n\n**Microsoft Active Directory** — `Splunk Add-on for Windows`\n> `*WinEventLog` (EventCodes: 4624, 4625, 4672, 4740)"
+				"markdown": "### Required Data Sources\n\nEach technology below requires a Splunk add-on (TA) or app to collect data.\n\n---\n\n**Cisco Catalyst Center (DNAC)** — `TA_cisco_catalyst`\n> `cisco:dnac:client` · `clienthealth` · `devicehealth` · `networkhealth` · `compliance` · `issue` · `audit:logs` · `securityadvisory`\n\n**Cisco ASA / FTD Firewalls** — `Splunk_TA_cisco-asa`\n> `cisco:asa` · `cisco:ftd`\n\n**Cisco Secure Firewall (eStreamer)** — `TA-eStreamer`\n> `cisco:sfw:estreamer`\n\n**Cisco ISE** — Syslog\n> `cisco:ise:syslog`\n\n**Cisco Meraki** — `Splunk_TA_cisco_meraki`\n> `meraki:sensorreadingshistory` · `meraki:devicesuplinkslossandlatency` · `meraki:audit`\n\n**Cisco Spaces** — `Cisco Spaces Firehose Add-on`\n> `cisco:spaces:firehose` (eventTypes: DEVICE_COUNT, CAMERA_COUNT, IOT_TELEMETRY, DEVICE_PRESENCE)\n\n**Cisco XDR** — `Cisco XDR App`\n> `cisco:xdr:incidents` · `cisco:xdr:incidents-summary`\n\n**Cisco Umbrella / Secure Access (SSE)** — `cisco-cloud-security`\n> `cisco:cloud_security:dns` · `cisco:cloud_security:firewall`\n\n**Cisco ESA** — `Cisco ESA Add-on`\n> `cisco:esa:amp` · `cisco:esa:antispam` · `cisco:esa:content_scanner`\n\n**Cisco WSA** — `Cisco WSA Add-on`\n> `cisco:wsa:squid` · `cisco:wsa:l4tm`\n\n**Cisco SD-WAN** — `TA_cisco_catalyst` / Cisco SD-WAN App\n> Controller hunts require off-appliance vSmart and manager system, application, and authentication logs routed as `cisco:sdwan:syslog` or `cisco:sdwan:system:logs`. API, audit, health, and UTD searches use their named `cisco:sdwan:*` sourcetypes.\n\n**Cisco ThousandEyes** — `ta_cisco_thousandeyes`\n> Uses the `Cisco_ThousandEyes` data model via `| tstats`\n\n**Cisco IOS** — Syslog\n> `cisco:ios`\n\n**Microsoft Active Directory** — `Splunk Add-on for Windows`\n> `*WinEventLog` (EventCodes: 4624, 4625, 4672, 4740)",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5"
 			}
 		},
 		"viz_troubleshoot": {
 			"type": "splunk.markdown",
 			"options": {
-				"markdown": "### Troubleshooting\n\n---\n\n**All KPIs show 0 or N/A**\n\n- Verify data is flowing: run `| tstats count where index=* by sourcetype` in Search\n- Check that index macros point to the correct indexes (see Index Macros above)\n- Confirm the required add-ons are installed and enabled\n\n---\n\n**Demo data appears even though real data exists**\n\n- Expand the time range — the default is Last 24 hours; data may be older\n- Confirm the sourcetype name matches exactly what the add-on produces\n\n---\n\n**Dashboard links are broken after renaming the app**\n\n- All internal links use `/app/splunk-cisco-dashboards/` — update drilldown URLs if the app folder is renamed\n\n---\n\n**Visualizations appear but charts are empty**\n\n- Turn Demo Data **On** temporarily to confirm the chart is wired correctly\n- Use **Open in search** from the data source editor to test the query directly\n\n---\n\n### Sourcetype-to-Macro Reference\n\nWhen onboarding new data sources, use this table to determine which index macro needs updating. Run the **Index Tuning** saved search (`Admin - Macro Index Tuning`) to discover which indexes your sourcetypes land in, then update the corresponding macro via **Settings > Advanced Search > Search Macros**.\n\n---\n\n| Macro | Sourcetypes | Technology |\n|---|---|---|\n| `index_catalyst` | `cisco:dnac:*` | Catalyst Center (DNAC) |\n| `index_firewall` | `cisco:asa`, `cisco:ftd`, `cisco:sfw:estreamer`, `cisco:estreamer:data`, `cisco:firepower:syslog` | ASA / FTD / Firepower |\n| `index_identity` | `cisco:ise:syslog` | Cisco ISE |\n| `index_windows` | `*WinEventLog`, `ActiveDirectory`, `MSAD:NT6:DNS` | Windows / Active Directory |\n| `index_network` | `cisco:ios` | IOS Syslog |\n| `index_sdwan` | `cisco:sdwan:syslog`, `cisco:sdwan:system:logs`, `cisco:sdwan:*health`, `cisco:sdwan:audit:logs`, `cisco:sdwan:utd:logs` | Cisco SD-WAN |\n| `index_security` | `cisco:xdr:*`, `cisco:cloud_security:*`, `cisco:esa:*`, `cisco:wsa:*`, `cisco:sdwan:utd:logs`, `ms:defender:*` | XDR / Umbrella / ESA / WSA / SD-WAN / Defender |\n| `index_meraki` | `meraki:*` | Meraki Dashboard |\n| `index_spaces` | `cisco:spaces:*` | Cisco Spaces |\n| `index_thousandeyes` | `cisco:thousandeyes:*` | ThousandEyes |\n| `index_dhcp` | `DhcpSrvLog` | Windows DHCP Server |\n| `index_f5` | `f5:bigip:*` | F5 BIG-IP |\n\n---\n\n**How to update a macro:**\n\n1. Run: `| tstats count where sourcetype=\"<your_sourcetype>\" by index`\n2. Note the index name(s) returned\n3. Go to **Settings > Advanced Search > Search Macros**, find the macro, and set `definition = index IN (idx1, idx2)`\n4. Ask an administrator to refresh configuration according to the deployment's change process"
+				"markdown": "### Troubleshooting\n\n---\n\n**All KPIs show 0 or N/A**\n\n- Verify data is flowing: run `| tstats count where index=* by sourcetype` in Search\n- Check that index macros point to the correct indexes (see Index Macros above)\n- Confirm the required add-ons are installed and enabled\n\n---\n\n**Demo data appears even though real data exists**\n\n- Expand the time range — the default is Last 24 hours; data may be older\n- Confirm the sourcetype name matches exactly what the add-on produces\n\n---\n\n**Dashboard links are broken after renaming the app**\n\n- All internal links use `/app/splunk-cisco-dashboards/` — update drilldown URLs if the app folder is renamed\n\n---\n\n**Visualizations appear but charts are empty**\n\n- Turn Demo Data **On** temporarily to confirm the chart is wired correctly\n- Use **Open in search** from the data source editor to test the query directly\n\n---\n\n### Sourcetype-to-Macro Reference\n\nWhen onboarding new data sources, use this table to determine which index macro needs updating. Run the **Index Tuning** saved search (`Admin - Macro Index Tuning`) to discover which indexes your sourcetypes land in, then update the corresponding macro via **Settings > Advanced Search > Search Macros**.\n\n---\n\n| Macro | Sourcetypes | Technology |\n|---|---|---|\n| `index_catalyst` | `cisco:dnac:*` | Catalyst Center (DNAC) |\n| `index_firewall` | `cisco:asa`, `cisco:ftd`, `cisco:sfw:estreamer`, `cisco:estreamer:data`, `cisco:firepower:syslog` | ASA / FTD / Firepower |\n| `index_identity` | `cisco:ise:syslog` | Cisco ISE |\n| `index_windows` | `*WinEventLog`, `ActiveDirectory`, `MSAD:NT6:DNS` | Windows / Active Directory |\n| `index_network` | `cisco:ios` | IOS Syslog |\n| `index_sdwan` | `cisco:sdwan:syslog`, `cisco:sdwan:system:logs`, `cisco:sdwan:*health`, `cisco:sdwan:audit:logs`, `cisco:sdwan:utd:logs` | Cisco SD-WAN |\n| `index_security` | `cisco:xdr:*`, `cisco:cloud_security:*`, `cisco:esa:*`, `cisco:wsa:*`, `cisco:sdwan:utd:logs`, `ms:defender:*` | XDR / Umbrella / ESA / WSA / SD-WAN / Defender |\n| `index_meraki` | `meraki:*` | Meraki Dashboard |\n| `index_spaces` | `cisco:spaces:*` | Cisco Spaces |\n| `index_thousandeyes` | `cisco:thousandeyes:*` | ThousandEyes |\n| `index_dhcp` | `DhcpSrvLog` | Windows DHCP Server |\n| `index_f5` | `f5:bigip:*` | F5 BIG-IP |\n\n---\n\n**How to update a macro:**\n\n1. Run: `| tstats count where sourcetype=\"<your_sourcetype>\" by index`\n2. Note the index name(s) returned\n3. Go to **Settings > Advanced Search > Search Macros**, find the macro, and set `definition = index IN (idx1, idx2)`\n4. Ask an administrator to refresh configuration according to the deployment's change process",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5"
 			}
 		},
 		"viz_admin_section": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "rgba(255,255,255,0.45)",
-				"strokeColor": "rgba(0,0,0,0.06)",
-				"rx": 12
+				"fillColor": "rgba(15,17,23,0.78)",
+				"strokeColor": "rgba(65,74,86,0.52)",
+				"rx": 12,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_admin_box_overview": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"rx": 10
+				"fillColor": "#131a23",
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"rx": 10,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_admin_box_macros": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"rx": 10
+				"fillColor": "#131a23",
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"rx": 10,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_admin_box_demo": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"rx": 10
+				"fillColor": "#131a23",
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"rx": 10,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_admin_box_datasources": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"rx": 10
+				"fillColor": "#131a23",
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"rx": 10,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_admin_box_troubleshoot": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"rx": 10
+				"fillColor": "#131a23",
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"rx": 10,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_ts_hdr_bg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "rgba(255,255,255,0.88)",
-				"strokeColor": "rgba(0,0,0,0.06)",
-				"rx": 0
+				"fillColor": "#1c2738",
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"rx": 10,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_ts_hdr_title": {
 			"type": "splunk.markdown",
 			"options": {
-				"markdown": "## Search Health & Troubleshooting\n*Cache performance, search concurrency, and schedule analysis*"
+				"markdown": "## Search Health & Troubleshooting\n*Cache performance, search concurrency, and schedule analysis*",
+				"backgroundColor": "#1c2738",
+				"fontColor": "#ecf0f5"
 			}
 		},
 		"viz_ts_section": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "rgba(255,255,255,0.45)",
-				"strokeColor": "rgba(0,0,0,0.06)",
-				"rx": 12
+				"fillColor": "rgba(15,17,23,0.78)",
+				"strokeColor": "rgba(65,74,86,0.52)",
+				"rx": 12,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_ts_kpi_total": {
@@ -128,7 +159,8 @@
 			"options": {
 				"majorColor": "#049fd9",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"backgroundColor": "#131a23"
 			},
 			"title": "Total Searches",
 			"description": "All search dispatches across dashboards"
@@ -141,7 +173,8 @@
 			"options": {
 				"majorColor": "#049fd9",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"backgroundColor": "#131a23"
 			},
 			"title": "Scheduled",
 			"description": "Searches triggered by a saved schedule"
@@ -152,9 +185,10 @@
 				"primary": "ds_kpi_ondemand"
 			},
 			"options": {
-				"majorColor": "#E5A823",
+				"majorColor": "#f0c243",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"backgroundColor": "#131a23"
 			},
 			"title": "On-Demand",
 			"description": "Searches triggered by user interaction"
@@ -168,7 +202,8 @@
 				"majorColor": "#049fd9",
 				"unit": "%",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"backgroundColor": "#131a23"
 			},
 			"title": "Scheduled %",
 			"description": "Percentage of searches running on schedule"
@@ -176,17 +211,21 @@
 		"viz_ts_box_kpi": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"rx": 10
+				"fillColor": "#131a23",
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"rx": 10,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_ts_box_cache": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"rx": 10
+				"fillColor": "#131a23",
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"rx": 10,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_ts_cache_table": {
@@ -195,7 +234,12 @@
 				"primary": "ds_cache_summary"
 			},
 			"options": {
-				"count": 20
+				"count": 20,
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Cache Hit Rate by Dashboard",
 			"description": "Per-dashboard cache efficiency — higher hit rate means fewer redundant searches"
@@ -204,15 +248,18 @@
 			"type": "splunk.markdown",
 			"options": {
 				"markdown": "### How to Read This Report\n\n---\n\n**CACHE HIT** — Dashboard reused a pre-computed scheduler artifact (fast, no new search dispatched)\n\n**CACHE MISS** — Dashboard dispatched a fresh search because no cached artifact was found\n\n---\n\n**Why would a search miss?**\n- The saved search is **not scheduled** (`NOT SCHEDULED`)\n- The scheduler artifact **expired** (check Age vs schedule interval)\n- The search was an **inline search** (`INLINE`)\n\n**How to fix misses:** Only schedule searches that should be materialized or reused as cached artifacts. Ad-hoc dashboard searches should live in `searchbase.conf` and run as inline `ds.search`.\n\n---\n\n### How Search Execution Works\n\nMost dashboards now use inline `ds.search` copied from `searchbase.conf`. `savedsearches.conf` is limited to scheduled/materialized jobs and explicit compatibility dependencies. When a dashboard loads:\n\n1. **Scheduled + `ds.savedSearch` (`ref`)** — Splunk loads the latest cached result from the scheduler. No new search runs. This is what produces a **CACHE HIT**.\n2. **Inline `ds.search`** — Splunk runs the literal SPL from the dashboard/searchbase catalogue. This is expected for ad-hoc panels.\n3. **`ds.search` with `| savedsearch`** — Always runs a new search regardless of schedule. Use only when tokens or compatibility require it.\n\nConcurrency limits still apply to inline searches. Schedule only the heavy or reusable searches where cached artifacts genuinely improve load time.\n\nFor full details, see the Splunk documentation: [Call saved searches — Dashboard Studio](https://help.splunk.com/en/splunk-cloud-platform/create-dashboards-and-reports/dashboard-studio/10.3.2512/use-data-sources/call-saved-searches)",
-				"backgroundColor": "#ffffff"
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5"
 			}
 		},
 		"viz_ts_box_slow": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"rx": 10
+				"fillColor": "#131a23",
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"rx": 10,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_ts_slow_table": {
@@ -222,7 +269,12 @@
 			},
 			"options": {
 				"count": 10,
-				"fontSize": "small"
+				"fontSize": "small",
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Top 10 Slowest Searches",
 			"description": "Searches with the longest run times — candidates for optimization or scheduling"
@@ -230,9 +282,11 @@
 		"viz_ts_box_avg": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"rx": 10
+				"fillColor": "#131a23",
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"rx": 10,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_ts_avg_table": {
@@ -241,7 +295,12 @@
 				"primary": "ds_avg_runtime"
 			},
 			"options": {
-				"count": 10
+				"count": 10,
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Avg Run Time by Dashboard",
 			"description": "Average search execution time grouped by dashboard — spot systemic slowness"
@@ -249,9 +308,11 @@
 		"viz_ts_box_conflicts": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"rx": 10
+				"fillColor": "#131a23",
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"rx": 10,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_ts_conflicts_table": {
@@ -261,7 +322,12 @@
 			},
 			"options": {
 				"count": 10,
-				"fontSize": "small"
+				"fontSize": "small",
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Schedule Conflicts",
 			"description": "Searches sharing the same cron schedule — may cause concurrency spikes"
@@ -269,9 +335,11 @@
 		"viz_ts_box_detail": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"rx": 10
+				"fillColor": "#131a23",
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"rx": 10,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_ts_detail_table": {
@@ -298,122 +366,127 @@
 						"rowColors": "> table | seriesByName('Age (min)') | rangeValue(Age__min_RowColorsEditorConfig)"
 					}
 				},
-				"fontSize": "small"
+				"fontSize": "small",
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"context": {
 				"Cache_Status_RowColorsEditorConfig": [
 					{
 						"match": "CACHE HIT",
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					},
 					{
 						"match": "CACHE MISS",
-						"value": "#D64550"
+						"value": "#fa5762"
 					}
 				],
 				"Cache_Status_RowBgColorsEditorConfig": [
 					{
 						"match": "CACHE HIT",
-						"value": "#E5F5FC"
+						"value": "#e5f5fc"
 					},
 					{
 						"match": "CACHE MISS",
-						"value": "#E5F5FC"
+						"value": "#e5f5fc"
 					}
 				],
 				"Run__sec_RowColorsEditorConfig": [
 					{
 						"to": 1,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					},
 					{
 						"from": 1,
 						"to": 5,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					},
 					{
 						"from": 5,
 						"to": 10,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 10,
 						"to": 60,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 60,
-						"value": "#D64550"
+						"value": "#fa5762"
 					}
 				],
 				"Run__sec_RowBgColorsEditorConfig": [
 					{
 						"to": 1,
-						"value": "#E5F5FC"
+						"value": "#e5f5fc"
 					},
 					{
 						"from": 1,
 						"to": 5,
-						"value": "#E5F5FC"
+						"value": "#e5f5fc"
 					},
 					{
 						"from": 5,
 						"to": 10,
-						"value": "#E5F5FC"
+						"value": "#e5f5fc"
 					},
 					{
 						"from": 10,
 						"to": 60,
-						"value": "#E5F5FC"
+						"value": "#e5f5fc"
 					},
 					{
 						"from": 60,
-						"value": "#E5F5FC"
+						"value": "#e5f5fc"
 					}
 				],
 				"Schedule_RowColorsEditorConfig": [
 					{
 						"match": "INLINE",
-						"value": "#D64550"
+						"value": "#fa5762"
 					},
 					{
 						"match": "NOT SCHEDULED",
-						"value": "#D64550"
+						"value": "#fa5762"
 					}
 				],
 				"Schedule_RowBgColorsEditorConfig": [
 					{
 						"match": "INLINE",
-						"value": "#E5F5FC"
+						"value": "#e5f5fc"
 					},
 					{
 						"match": "NOT SCHEDULED",
-						"value": "#E5F5FC"
+						"value": "#e5f5fc"
 					}
 				],
 				"Age__min_RowColorsEditorConfig": [
 					{
 						"to": 10,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					},
 					{
 						"from": 10,
 						"to": 30,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					},
 					{
 						"from": 30,
 						"to": 120,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 120,
 						"to": 240,
-						"value": "#E5A823"
+						"value": "#f0c243"
 					},
 					{
 						"from": 240,
-						"value": "#D64550"
+						"value": "#fa5762"
 					}
 				]
 			},
@@ -425,9 +498,11 @@
 		"viz_ts_box_views": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"rx": 10
+				"fillColor": "#131a23",
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"rx": 10,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_ts_views_table": {
@@ -436,7 +511,12 @@
 				"primary": "ds_dashboard_views"
 			},
 			"options": {
-				"count": 10
+				"count": 10,
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Published Dashboard Views (Past 7 Days)",
 			"description": "Tracks anonymous access via shared/published URLs"
@@ -449,10 +529,11 @@
 			"title": "Cache Hit vs Miss",
 			"options": {
 				"seriesColors": [
-					"#6EBE4A",
-					"#D64550"
+					"#4cbf7f",
+					"#fa5762"
 				],
-				"showDonutHole": true
+				"showDonutHole": true,
+				"backgroundColor": "#131a23"
 			},
 			"description": "Ratio of searches served from cache vs freshly dispatched"
 		},
@@ -465,9 +546,10 @@
 			"options": {
 				"seriesColors": [
 					"#049fd9",
-					"#E5A823"
+					"#f0c243"
 				],
-				"showDonutHole": true
+				"showDonutHole": true,
+				"backgroundColor": "#131a23"
 			},
 			"description": "Breakdown of scheduled searches vs user-triggered on-demand searches"
 		},
@@ -482,30 +564,37 @@
 				"seriesColors": [
 					"#049fd9"
 				],
-				"orientation": "horizontal"
+				"orientation": "horizontal",
+				"backgroundColor": "#131a23"
 			},
 			"description": "Longest-running searches ranked by execution time in seconds"
 		},
 		"viz_ts_box_charts": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"rx": 10
+				"fillColor": "#131a23",
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"rx": 10,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_ts_charts_title": {
 			"type": "splunk.markdown",
 			"options": {
-				"markdown": "### Performance at a Glance"
+				"markdown": "### Performance at a Glance",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5"
 			}
 		},
 		"viz_ts_box_advisor": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "rgba(255,87,34,0.06)",
-				"strokeColor": "rgba(255,87,34,0.25)",
-				"rx": 10
+				"fillColor": "#131a23",
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"rx": 10,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_ts_advisor_table": {
@@ -515,7 +604,12 @@
 			},
 			"options": {
 				"count": 20,
-				"fontSize": "small"
+				"fontSize": "small",
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Schedule Health Advisor",
 			"description": "Searches that need scheduling attention — use the suggested cron in Settings > Searches, Reports, and Alerts > Edit Schedule"
@@ -523,17 +617,21 @@
 		"viz_ts_box_info": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#2B2B2B",
-				"strokeColor": "rgba(0,0,0,0.12)",
-				"rx": 10
+				"fillColor": "#131a23",
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"rx": 10,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_ag_box_sourcetype": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"rx": 10
+				"fillColor": "#131a23",
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"rx": 10,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_ag_sourcetype_table": {
@@ -542,40 +640,54 @@
 				"primary": "ds_sourcetype_macro"
 			},
 			"options": {
-				"count": 15
+				"count": 15,
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			}
 		},
 		"viz_ag_sourcetype_howto": {
 			"type": "splunk.markdown",
 			"options": {
-				"markdown": "### How to Update a Macro\n\n1. Find the index for your sourcetype:\n ```\n | tstats count where index=*\n sourcetype=\"<yours>\" by index\n ```\n2. Note the index name(s) returned\n3. In Splunk Web go to:\n **Settings > Advanced Search > Search Macros**\n - Filter by App: `splunk-cisco-dashboards`\n - Click the macro (e.g. `index_network`)\n - Change **Definition** to:\n ```\n index IN (idx1, idx2)\n ```\n - Click **Save**\n4. Changes take effect immediately"
+				"markdown": "### How to Update a Macro\n\n1. Find the index for your sourcetype:\n ```\n | tstats count where index=*\n sourcetype=\"<yours>\" by index\n ```\n2. Note the index name(s) returned\n3. In Splunk Web go to:\n **Settings > Advanced Search > Search Macros**\n - Filter by App: `splunk-cisco-dashboards`\n - Click the macro (e.g. `index_network`)\n - Change **Definition** to:\n ```\n index IN (idx1, idx2)\n ```\n - Click **Save**\n4. Changes take effect immediately",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5"
 			}
 		},
 		"viz_narr_troubleshoot": {
 			"type": "splunk.markdown",
 			"options": {
-				"content": "Search performance, caching efficiency, and schedule health for all **dashboard searches**. Use this tab to identify slow queries, schedule conflicts, and cache optimization opportunities."
+				"content": "Search performance, caching efficiency, and schedule health for all **dashboard searches**. Use this tab to identify slow queries, schedule conflicts, and cache optimization opportunities.",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5"
 			}
 		},
 		"viz_narr_admin": {
 			"type": "splunk.markdown",
 			"options": {
-				"content": "Configuration reference and operational guide for the **Executive Dashboard** suite. Covers search schedules, data sources, macro definitions, and lookup dependencies."
+				"content": "Configuration reference and operational guide for the **Executive Dashboard** suite. Covers search schedules, data sources, macro definitions, and lookup dependencies.",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5"
 			}
 		},
 		"viz_usage_header": {
 			"type": "splunk.markdown",
 			"options": {
 				"markdown": "### Dashboard usage by app\nUsers and daily activity sparkline across all apps and dashboards — last 30 days",
-				"fontColor": "#005073"
+				"fontColor": "#649ef5",
+				"backgroundColor": "#131a23"
 			}
 		},
 		"viz_usage_box": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "#f5f6f8",
-				"strokeColor": "transparent",
-				"rx": 8
+				"fillColor": "#131a23",
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"rx": 10,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_usage_table": {
@@ -586,17 +698,20 @@
 			"options": {
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"headerBackgroundColor": "#F5F5F5",
-					"headerColor": "#2B2B2B"
-				}
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				},
+				"backgroundColor": "#131a23"
 			}
 		},
 		"viz_ts_box_drift": {
 			"type": "splunk.rectangle",
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
-				"strokeColor": "rgba(0,0,0,0.08)",
-				"rx": 10
+				"fillColor": "#131a23",
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"rx": 10,
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			}
 		},
 		"viz_ts_drift_table": {
@@ -612,16 +727,33 @@
 						"rowColors": "> table | seriesByName(\"driftStatus\") | matchValue(driftStatus_RowColorsEditorConfig)",
 						"rowBackgroundColors": "> table | seriesByName(\"driftStatus\") | matchValue(driftStatus_RowBgColorsEditorConfig)"
 					}
+				},
+				"backgroundColor": "#131a23",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
 				}
 			},
 			"context": {
 				"driftStatus_RowColorsEditorConfig": [
-					{ "match": "Missing from DNAC", "value": "#FFFFFF" },
-					{ "match": "Managed by DNAC", "value": "#1B5E20" }
+					{
+						"match": "Missing from DNAC",
+						"value": "#a6adb6"
+					},
+					{
+						"match": "Managed by DNAC",
+						"value": "#1b5e20"
+					}
 				],
 				"driftStatus_RowBgColorsEditorConfig": [
-					{ "match": "Missing from DNAC", "value": "#B33A3A" },
-					{ "match": "Managed by DNAC", "value": "#E6F4EA" }
+					{
+						"match": "Missing from DNAC",
+						"value": "#b33a3a"
+					},
+					{
+						"match": "Managed by DNAC",
+						"value": "#e6f4ea"
+					}
 				]
 			},
 			"title": "Site Topology Drift (Expected vs DNAC-Managed)",
@@ -815,8 +947,14 @@
 				"options": {
 					"width": 1440,
 					"height": 4510,
-					"backgroundColor": "transparent",
-					"display": "auto-scale"
+					"backgroundColor": "#0f1117",
+					"display": "auto-scale",
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -995,8 +1133,14 @@
 				"options": {
 					"width": 1440,
 					"height": 3600,
-					"backgroundColor": "transparent",
-					"display": "auto-scale"
+					"backgroundColor": "#0f1117",
+					"display": "auto-scale",
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{

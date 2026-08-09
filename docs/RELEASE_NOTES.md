@@ -2,6 +2,13 @@
 
 ## 1.0.36
 
+- All remaining factory light-mode dashboards now use the shared Cisco Cloud
+  Control atmospheric dark canvas, opaque operational surfaces, accessible
+  typography and controls, semantic status colors, centralized visualization
+  palette, and dark table chrome. Existing searches, tokens, inputs, tabs,
+  drilldowns, layout geometry, and interactions are preserved, while the React
+  operations and guide views retain reversible light, dark, and system theme
+  preferences.
 - IT Critical Systems Health now uses the shared Cisco Cloud Control
   atmospheric dark canvas, opaque operational panels, accessible dark table
   chrome, and centralized semantic visualization palette across all six tabs,

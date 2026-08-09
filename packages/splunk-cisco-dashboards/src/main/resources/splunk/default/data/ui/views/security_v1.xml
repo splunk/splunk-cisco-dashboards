@@ -1,5 +1,5 @@
 
-<dashboard version="2" theme="light">
+<dashboard version="2" theme="dark" stylesheet="application.css">
     <label>Security Resilience</label>
     <description>Firewall, identity, XDR, IDS/IPS, DNS, endpoint, threats</description>
     <definition><![CDATA[
@@ -42,16 +42,18 @@
 	"visualizations": {
 		"viz_about_bg": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_about_purpose": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "# Security Resilience\n\nCentralized view of **security posture** across firewalls, identity services, and threat intelligence. Use this dashboard to validate that defenses are holding, investigate anomalies, and prioritize response to active threats.\n\n**Audience:** Security Operations, Identity & Access Management, IT Leadership\n**Primary Sources:** Cisco ASA / FTD (Firewall), Cisco ISE, Active Directory, XDR / SecureX\n**Refresh:** All panels follow the global time picker; identity searches run every 15 minutes\n\n---\n\n## How to Navigate This Dashboard\n\n**Overview** — Firewall blocked/allowed traffic, ISE auth rates, AD lockouts, XDR incidents, and email security.\n*Start here — confirm perimeter defenses and identity services are operating normally.*\n\n**Details & KPI Reference** — Privileged user activity, failed logon analysis, account lockout trends, and identity event correlation.\n*Drill in when Overview shows elevated failures, lockouts, or unusual firewall patterns.*\n\n> **Reading pattern:** Stable blocked/allowed ratios and low failure counts = healthy. Spikes in blocked traffic, rising failed auth, or new lockout patterns = investigate on Details tab."
 			},
@@ -59,8 +61,8 @@
 		},
 		"viz_about_sources": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "## Data Sources & Troubleshooting\n\n---\n\n**Cisco ASA / FTD** — Splunk Add-on for Cisco ASA\nSourcetypes: `cisco:asa`, `cisco:ftd`\nFreshness: Real-time (syslog)\n\n**Cisco ISE** — Cisco ISE Add-on for Splunk\nSourcetypes: `cisco:ise:syslog`\nFreshness: Real-time (syslog)\n\n**Active Directory** — Splunk Add-on for Windows\nSourcetypes: `WinEventLog:Security` (Event IDs 4672, 4625, 4740)\nFreshness: Real-time\n\n**Cisco Email Security** — Cisco Email Security Add-on\nSourcetypes: `cisco:esa:textmail`\nFreshness: ~5 min\n\n**XDR / SecureX** — Cisco SecureX Add-on\nSourcetypes: `cisco:securex:incidents`\nFreshness: ~15 min\n\n---\n\n**Panel showing \"No results\"?**\n\n1. **Widen the time range** — some metrics need 24+ hours of data\n2. **Verify the TAs are installed** — check *Manage Apps* for the add-ons listed above\n3. **Confirm data flow** — run `index=* sourcetype=cisco:asa | head 5` to test\n4. **Check saved search status** — verify scheduled searches are enabled\n\n---"
 			},
@@ -68,73 +70,91 @@
 		},
 		"viz_box_events": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_fw": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_ids_detail": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_lockout_dns": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_priv": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_rogue": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_threat_kpi": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_trends": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_box_xdr_ep": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.08)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
@@ -144,10 +164,14 @@
 			},
 			"description": "Top reasons for ISE authentication denials",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 10,
 				"fontSize": "small",
-				"headerVisibility": "fixed"
+				"headerVisibility": "fixed",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "ISE Failure Reasons",
 			"type": "splunk.table"
@@ -158,10 +182,14 @@
 			},
 			"description": "Authentication pass/fail breakdown by Network Access Server",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 10,
 				"fontSize": "small",
-				"headerVisibility": "fixed"
+				"headerVisibility": "fixed",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "ISE Auth by NAS",
 			"type": "splunk.table"
@@ -171,11 +199,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -184,19 +212,20 @@
 			},
 			"description": "ISE authentication failures (final-verdict 5401 events)",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"sparklineNullValueDisplay": "connect",
+				"backgroundColor": "#131a23"
 			},
 			"title": "ISE Failures",
 			"type": "splunk.singlevalue"
@@ -206,11 +235,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -219,19 +248,20 @@
 			},
 			"description": "Malicious emails detected by email security gateway",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"sparklineNullValueDisplay": "connect",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Email Threats",
 			"type": "splunk.singlevalue"
@@ -243,8 +273,8 @@
 			},
 			"description": "Cloud firewall blocked connection count",
 			"options": {
-				"backgroundColor": "transparent",
-				"majorColor": "#049FD9",
+				"backgroundColor": "#131a23",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
@@ -274,7 +304,7 @@
 			},
 			"description": "Latest high-priority events",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"columnFormat": {
 					"Unique Sources": {
 						"align": "auto",
@@ -293,7 +323,9 @@
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
 				}
 			},
 			"title": "Recent Security Events",
@@ -313,7 +345,7 @@
 			},
 			"description": "Source IPs with the most failed logon attempts",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"columnFormat": {
 					"Failures": {
 						"align": "auto",
@@ -326,7 +358,9 @@
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
 				}
 			},
 			"title": "Top Failed Logon Sources",
@@ -346,7 +380,7 @@
 			},
 			"description": "User accounts with the most failed logon attempts",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"columnFormat": {
 					"Failures": {
 						"align": "auto",
@@ -359,7 +393,9 @@
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
 				}
 			},
 			"title": "Top Failed Logon Users",
@@ -370,11 +406,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -383,19 +419,20 @@
 			},
 			"description": "Combined ISE and Active Directory failed auth count",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"sparklineNullValueDisplay": "connect",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Failed (ISE+AD)",
 			"type": "splunk.singlevalue"
@@ -405,11 +442,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -418,18 +455,19 @@
 			},
 			"description": "Firewall allowed connection count",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Allowed",
 			"type": "splunk.singlevalue"
@@ -439,11 +477,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -452,18 +490,19 @@
 			},
 			"description": "Firewall blocked connection count",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Blocked",
 			"type": "splunk.singlevalue"
@@ -482,7 +521,7 @@
 			},
 			"description": "Destinations with the most blocked connections",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"columnFormat": {
 					"Blocked Connections": {
 						"align": "auto",
@@ -495,7 +534,9 @@
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
 				}
 			},
 			"title": "Top Blocked Destinations",
@@ -507,16 +548,18 @@
 			},
 			"description": "Allowed vs blocked firewall connections over time",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#D64550",
-					"#6EBE4A"
+					"#fa5762",
+					"#4cbf7f"
 				],
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
-				"nullValueDisplay": "connect"
+				"nullValueDisplay": "connect",
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Firewall Trend",
 			"type": "splunk.area"
@@ -527,19 +570,21 @@
 			},
 			"description": "Combined trend",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#6EBE4A",
-					"#D64550",
-					"#E5A823",
-					"#6EBE4A",
-					"#D64550"
+					"#4cbf7f",
+					"#fa5762",
+					"#f0c243",
+					"#4cbf7f",
+					"#fa5762"
 				],
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
-				"nullValueDisplay": "connect"
+				"nullValueDisplay": "connect",
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Identity Events Trend (AD + ISE)",
 			"type": "splunk.line"
@@ -550,17 +595,19 @@
 			},
 			"description": "Combined ISE and AD authentication volume over time",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#D64550",
-					"#E5A823",
-					"#049FD9"
+					"#fa5762",
+					"#f0c243",
+					"#049fd9"
 				],
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
-				"nullValueDisplay": "connect"
+				"nullValueDisplay": "connect",
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "Identity Trend (ISE + AD)",
 			"type": "splunk.line"
@@ -570,11 +617,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -583,27 +630,28 @@
 			},
 			"description": "Intrusion detection/prevention alerts from network sensors",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"sparklineNullValueDisplay": "connect",
+				"backgroundColor": "#131a23"
 			},
 			"title": "IDS/IPS Alerts",
 			"type": "splunk.singlevalue"
 		},
 		"viz_info_overview": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "## Metric Reference — Overview Tab\n\n---\n\n#### Firewall\n\n**Blocked (24h)** — Firewall denied connections from ASA + FTD\n**Allowed (24h)** — Firewall permitted connections\n**Top Blocked Destinations** — Most frequently denied external IPs\n**Firewall Trend** — Blocked vs allowed traffic over time\n\n---\n\n#### Identity & Access\n\n**ISE Auth** — ISE authentication success rate (%)\n**Failed (ISE+AD)** — Combined failed logon events from ISE and Active Directory\n**Lockouts (AD)** — Account lockout events (Event ID 4740)\n**Privileged (AD)** — Privileged logon events (Event ID 4672)\n\n---\n\n#### Email & Threat Intelligence\n\n**Email Blocked** — Blocked email messages from ESA/CES\n**Email Delivered** — Successfully delivered messages\n**Top Blocked Senders** — Most frequently blocked email senders\n**XDR Incidents** — Active incidents from SecureX/XDR"
 			},
@@ -611,8 +659,8 @@
 		},
 		"viz_info_panel": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#2B2B2B",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "## Metric Reference — Details & KPI Reference Tab\n\n---\n\n#### Privileged Access\n\n**Top Privileged Users (AD 4672)** — Most-active admin accounts by event count\n**Privileged Logon Trend (14d)** — 14-day trend of privileged logon events\n\n---\n\n#### Failed Authentication\n\n**Top Failed Logon Users** — User accounts with the most failed authentication attempts\n**Top Failed Logon Sources** — Source hosts/IPs generating the most failed logon attempts\n\n---\n\n#### Account Lockouts\n\n**Top Locked Accounts (AD 4740)** — Accounts most frequently locked out\n**Identity Events Trend (AD + ISE, 14d)** — 14-day combined identity event trend\n\n---\n\n#### ISE Deep-Dive\n\n**ISE Auth by NAS** — Authentication events broken down by network access server\n**ISE Failure Reasons** — Top ISE authentication failure reasons"
 			},
@@ -625,8 +673,8 @@
 			},
 			"description": "ISE authentication success rate as a percentage",
 			"options": {
-				"backgroundColor": "transparent",
-				"majorColor": "#049FD9",
+				"backgroundColor": "#131a23",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
@@ -643,16 +691,18 @@
 			},
 			"description": "ISE authentication success and failure over time",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"legendDisplay": "off",
 				"seriesColors": [
-					"#6EBE4A",
-					"#D64550"
+					"#4cbf7f",
+					"#fa5762"
 				],
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
-				"nullValueDisplay": "connect"
+				"nullValueDisplay": "connect",
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"title": "ISE Auth Trend",
 			"type": "splunk.area"
@@ -671,7 +721,7 @@
 			},
 			"description": "Most-locked accounts",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"columnFormat": {
 					"Lockouts": {
 						"align": "auto",
@@ -684,7 +734,9 @@
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
 				}
 			},
 			"title": "Top Locked Accounts (AD 4740)",
@@ -695,11 +747,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -708,27 +760,28 @@
 			},
 			"description": "Active Directory account lockout events (EventCode 4740)",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"sparklineNullValueDisplay": "connect",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Lockouts (AD)",
 			"type": "splunk.singlevalue"
 		},
 		"viz_narr_details": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#6E6E6E",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "Detailed **identity and access analytics** — privileged logons, failed authentication patterns, and account lockouts. Use this tab to investigate suspicious user activity and validate access control effectiveness."
 			},
@@ -736,8 +789,8 @@
 		},
 		"viz_narr_overview": {
 			"options": {
-				"backgroundColor": "transparent",
-				"fontColor": "#6E6E6E",
+				"backgroundColor": "#131a23",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
 				"markdown": "Centralized view of **security posture** across firewalls, identity services, and threat intelligence. Use this tab to validate that defenses are holding and spot anomalies requiring immediate investigation."
 			},
@@ -745,17 +798,20 @@
 		},
 		"viz_p_hdr_bg": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.88)",
+				"fillColor": "#1c2738",
 				"rx": 10,
-				"strokeColor": "rgba(0,0,0,0.06)"
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
+				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_p_hdr_title": {
 			"options": {
-				"fontColor": "#005073",
+				"fontColor": "#649ef5",
 				"fontSize": "large",
-				"markdown": "## Security Resilience - Firewall & Identity"
+				"markdown": "## Security Resilience - Firewall & Identity",
+				"backgroundColor": "#1c2738"
 			},
 			"type": "splunk.markdown"
 		},
@@ -773,7 +829,7 @@
 			},
 			"description": "Most-active admin accounts",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"columnFormat": {
 					"Priv Logons": {
 						"align": "auto",
@@ -786,7 +842,9 @@
 				"fontSize": "small",
 				"headerVisibility": "fixed",
 				"tableFormat": {
-					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)"
+					"rowBackgroundColors": "> table | seriesByIndex(0) | pick(rowBackgroundColorsByIndex)",
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
 				}
 			},
 			"title": "Top Privileged Users (AD 4672)",
@@ -799,9 +857,22 @@
 			},
 			"description": "Trend line",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"xAxisTitleVisibility": "hide",
-				"nullValueDisplay": "connect"
+				"nullValueDisplay": "connect",
+				"seriesColors": [
+					"#649ef5",
+					"#4cbf7f",
+					"#f0c243",
+					"#fa5762",
+					"#9ca6ff",
+					"#9b5ff5",
+					"#049fd9",
+					"#00bceb",
+					"#f7782f"
+				],
+				"lineWidth": 2,
+				"markerDisplay": "show"
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
@@ -813,11 +884,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -826,19 +897,20 @@
 			},
 			"description": "Privileged logon events from Active Directory (EventCode 4672)",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"sparklineNullValueDisplay": "connect",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Privileged (AD)",
 			"type": "splunk.singlevalue"
@@ -850,8 +922,8 @@
 			},
 			"description": "Cisco PSIRT security advisories affecting your inventory",
 			"options": {
-				"backgroundColor": "transparent",
-				"majorColor": "#049FD9",
+				"backgroundColor": "#131a23",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
@@ -867,10 +939,14 @@
 			},
 			"description": "SISF MAC steal, 802.1X failures, and DNAC rogue alerts",
 			"options": {
-				"backgroundColor": "transparent",
+				"backgroundColor": "#131a23",
 				"count": 10,
 				"fontSize": "small",
-				"headerVisibility": "fixed"
+				"headerVisibility": "fixed",
+				"tableFormat": {
+					"headerBackgroundColor": "#1c2738",
+					"headerColor": "#ecf0f5"
+				}
 			},
 			"title": "Rogue & Unauthorized Device Events",
 			"type": "splunk.table"
@@ -880,11 +956,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -893,19 +969,20 @@
 			},
 			"description": "Rogue or unauthorized wireless devices detected",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"sparklineNullValueDisplay": "connect",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Rogue Devices",
 			"type": "splunk.singlevalue"
@@ -915,11 +992,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -928,49 +1005,51 @@
 			},
 			"description": "SD-WAN Unified Threat Defense events",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"sparklineNullValueDisplay": "connect",
+				"backgroundColor": "#131a23"
 			},
 			"title": "SD-WAN UTD",
 			"type": "splunk.singlevalue"
 		},
 		"viz_sec_p1_label": {
 			"options": {
-				"fontColor": "#2B2B2B",
+				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "**NETWORK & FIREWALL**"
+				"markdown": "**NETWORK & FIREWALL**",
+				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_sec_section1": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"fillOpacity": 1,
 				"rx": 12,
-				"strokeColor": "rgba(0,0,0,0.06)",
-				"strokeOpacity": 0.3,
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
 				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
 		},
 		"viz_sec_section2": {
 			"options": {
-				"fillColor": "rgba(255,255,255,0.78)",
+				"fillColor": "#131a23",
 				"fillOpacity": 1,
 				"rx": 12,
-				"strokeColor": "rgba(0,0,0,0.06)",
-				"strokeOpacity": 0.3,
+				"strokeColor": "rgba(100,158,245,0.28)",
+				"strokeOpacity": 1,
 				"strokeWidth": 1
 			},
 			"type": "splunk.rectangle"
@@ -980,11 +1059,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -993,19 +1072,20 @@
 			},
 			"description": "Unauthorized wireless association attempts",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"sparklineNullValueDisplay": "connect",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Unauth Wireless",
 			"type": "splunk.singlevalue"
@@ -1015,11 +1095,11 @@
 				"trendColorEditorConfig": [
 					{
 						"to": 0,
-						"value": "#6E6E6E"
+						"value": "#a6adb6"
 					},
 					{
 						"from": 0,
-						"value": "#6EBE4A"
+						"value": "#4cbf7f"
 					}
 				]
 			},
@@ -1028,19 +1108,20 @@
 			},
 			"description": "Web traffic blocked by cloud web security",
 			"options": {
-				"majorColor": "#049FD9",
+				"majorColor": "#049fd9",
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showSparklineAreaGraph": true,
 				"showSparklineTooltip": true,
 				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049FD9",
+				"sparklineAreaColor": "#049fd9",
 				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#049FD9",
+				"sparklineStrokeColor": "#049fd9",
 				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
 				"trendDisplay": "percent",
-				"sparklineNullValueDisplay": "connect"
+				"sparklineNullValueDisplay": "connect",
+				"backgroundColor": "#131a23"
 			},
 			"title": "Web Blocked",
 			"type": "splunk.singlevalue"
@@ -1484,10 +1565,16 @@
 		"layoutDefinitions": {
 			"layout_about": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 1200,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -1565,10 +1652,16 @@
 			},
 			"layout_details": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 1550,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -1746,10 +1839,16 @@
 			},
 			"layout_overview": {
 				"options": {
-					"backgroundColor": "#f5f6f8",
+					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
 					"height": 2400,
-					"width": 1440
+					"width": 1440,
+					"backgroundImage": {
+						"sizeType": "cover",
+						"src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxsaW5lYXJHcmFkaWVudCBpZD0iYmFzZSIgeDE9Ijk2MCIgeTE9IjAiIHgyPSI5NjAiIHkyPSIxMDgwIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agc3RvcC1jb2xvcj0iIzFhMWQyZSIvPjxzdG9wIG9mZnNldD0iLjUiIHN0b3AtY29sb3I9IiMwZjExMTciLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMwMDAwMDAiLz48L2xpbmVhckdyYWRpZW50PjxyYWRpYWxHcmFkaWVudCBpZD0idG9wIiBjeD0iMCIgY3k9IjAiIHI9IjEiIGdyYWRpZW50VHJhbnNmb3JtPSJ0cmFuc2xhdGUoOTYwIDApIHNjYWxlKDE2MDAgNTQwKSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPjxzdG9wIHN0b3AtY29sb3I9IiMxYTFkMmUiIHN0b3Atb3BhY2l0eT0iLjgiLz48c3RvcCBvZmZzZXQ9Ii40IiBzdG9wLWNvbG9yPSIjMGYxMTE3IiBzdG9wLW9wYWNpdHk9Ii42Ii8+PHN0b3Agb2Zmc2V0PSIuNyIgc3RvcC1jb2xvcj0iIzBmMTExNyIgc3RvcC1vcGFjaXR5PSIwIi8+PC9yYWRpYWxHcmFkaWVudD48cmFkaWFsR3JhZGllbnQgaWQ9InZpb2xldCIgY3g9IjAiIGN5PSIwIiByPSIxIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDk5OCAxMjEwKSBzY2FsZSgxMzQ0IDQ4NikiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj48c3RvcCBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9Ii4xOCIvPjxzdG9wIG9mZnNldD0iLjY4IiBzdG9wLWNvbG9yPSIjNWM0MzkzIiBzdG9wLW9wYWNpdHk9IjAiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSJ1cmwoI2Jhc2UpIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN0b3ApIi8+PHJlY3Qgd2lkdGg9IjE5MjAiIGhlaWdodD0iMTA4MCIgZmlsbD0idXJsKCN2aW9sZXQpIi8+PC9zdmc+",
+						"x": 0,
+						"y": 0
+					}
 				},
 				"structure": [
 					{
@@ -2101,5 +2200,5 @@
 		"hideEdit": true
 	}
 }
-    ]]></definition>
+]]></definition>
 </dashboard>
