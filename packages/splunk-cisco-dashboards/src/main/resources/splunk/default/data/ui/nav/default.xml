@@ -44,7 +44,7 @@
     <collection label="Agentic Ops" icon="pulse">
         <a href="dashboardbuilder#/secure_networking_agentic_ops">Operational Intelligence Overview</a>
         <divider />
-        <a href="dashboardbuilder#/secure_networking_agentic_ops_executive_overview">Executive Overview</a>
+        <a href="dashboardbuilder#/secure_networking_agentic_ops_executive_overview">Executive Assurance Overview</a>
     </collection>
 
     <collection label="Dashboards" icon="chartcolumnpanel">

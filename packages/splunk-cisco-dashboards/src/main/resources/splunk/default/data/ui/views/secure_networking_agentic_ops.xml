@@ -1,9 +1,9 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>Agentic Ops</label>
+    <label>Operational Intelligence Overview</label>
     <description>Coordinate telemetry readiness, path health, routing instability, and AI Defense signals.</description>
     <definition><![CDATA[
 {
-    "title": "Agentic Ops",
+    "title": "Operational Intelligence Overview",
     "description": "Coordinate telemetry readiness, path health, routing instability, and AI Defense signals.",
     "inputs": {
         "input_time_range": {
@@ -57,7 +57,7 @@
         },
         "viz_header_icon": {
             "type": "splunk.image",
-            "title": "Agentic Ops",
+            "title": "Operational Intelligence Overview",
             "options": {
                 "preserveAspectRatio": true,
                 "src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/agentic-ops.svg"
@@ -71,7 +71,7 @@
             "options": {
                 "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
-                "markdown": "# Agentic Ops\nCoordinate telemetry readiness, path health, routing instability, and AI Defense signals\\."
+                "markdown": "# Operational Intelligence Overview\nCoordinate telemetry readiness, path health, routing instability, and AI Defense signals\\."
             }
         },
         "viz_card_01_background": {

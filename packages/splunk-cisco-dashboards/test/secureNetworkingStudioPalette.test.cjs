@@ -170,6 +170,15 @@ const readDashboard = (fileName) => {
   return { fileName, xml, definition: JSON.parse(definitionMatch[1]) };
 };
 
+const normalizeDisplayLabel = (value) =>
+  value
+    .replaceAll("&amp;", "&")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&apos;", "'")
+    .replace(/\\([^A-Za-z0-9\s])/g, "$1");
+
 const templatesSource = fs.readFileSync(TEMPLATES_CONF_PATH, "utf8");
 const c3BackgroundMatch = templatesSource.match(
   /\[background:\/\/c3-atmosphere\]\ndata = ([^\n]+)\nname = Cisco Cloud Control Atmosphere/,
@@ -643,23 +652,56 @@ assert.deepEqual(
   "the five pillar menus must wire all 16 managed Studio dashboards",
 );
 
-const overviewMenuLabels = Object.fromEntries(
+const menuDashboardLabels = Object.fromEntries(
   [...navSource.matchAll(/<a href="dashboardbuilder#\/([^"]+)">([^<]+)<\/a>/g)].map(
     ([, dashboardId, label]) => [dashboardId, label],
   ),
 );
+
+for (const { fileName, xml, definition } of dashboardViews) {
+  const dashboardId = fileName.replace(/\.xml$/, "");
+  const xmlLabelMatch = xml.match(/<label>([^<]+)<\/label>/);
+  assert.ok(xmlLabelMatch, `${fileName} must define a Splunk view label`);
+  const headerMarkdown = definition.visualizations.viz_header?.options?.markdown ?? "";
+  const headerTitle = headerMarkdown.split("\n")[0].replace(/^#\s*/, "");
+  const expectedLabel = normalizeDisplayLabel(menuDashboardLabels[dashboardId]);
+
+  assert.equal(
+    normalizeDisplayLabel(xmlLabelMatch[1]),
+    expectedLabel,
+    `${fileName} view label must match its five-pillar menu label`,
+  );
+  assert.equal(
+    normalizeDisplayLabel(definition.title),
+    expectedLabel,
+    `${fileName} Dashboard Studio title must match its five-pillar menu label`,
+  );
+  assert.equal(
+    normalizeDisplayLabel(definition.visualizations.viz_header_icon?.title ?? ""),
+    expectedLabel,
+    `${fileName} header icon title must match its five-pillar menu label`,
+  );
+  assert.equal(
+    normalizeDisplayLabel(headerTitle),
+    expectedLabel,
+    `${fileName} visible header must match its five-pillar menu label`,
+  );
+}
+
 assert.deepEqual(
   {
-    secure_networking_zta: overviewMenuLabels.secure_networking_zta,
+    secure_networking_zta: menuDashboardLabels.secure_networking_zta,
     secure_networking_secure_infrastructure:
-      overviewMenuLabels.secure_networking_secure_infrastructure,
+      menuDashboardLabels.secure_networking_secure_infrastructure,
     secure_networking_scalable_network_segmentation:
-      overviewMenuLabels.secure_networking_scalable_network_segmentation,
+      menuDashboardLabels.secure_networking_scalable_network_segmentation,
     secure_networking_segmentation_overview:
-      overviewMenuLabels.secure_networking_segmentation_overview,
+      menuDashboardLabels.secure_networking_segmentation_overview,
     secure_networking_hybrid_mesh_firewalling:
-      overviewMenuLabels.secure_networking_hybrid_mesh_firewalling,
-    secure_networking_agentic_ops: overviewMenuLabels.secure_networking_agentic_ops,
+      menuDashboardLabels.secure_networking_hybrid_mesh_firewalling,
+    secure_networking_agentic_ops: menuDashboardLabels.secure_networking_agentic_ops,
+    secure_networking_agentic_ops_executive_overview:
+      menuDashboardLabels.secure_networking_agentic_ops_executive_overview,
   },
   {
     secure_networking_zta: "Zero Trust Posture Overview",
@@ -669,6 +711,7 @@ assert.deepEqual(
     secure_networking_segmentation_overview: "Segmentation Operations Overview",
     secure_networking_hybrid_mesh_firewalling: "Hybrid Mesh Enforcement Overview",
     secure_networking_agentic_ops: "Operational Intelligence Overview",
+    secure_networking_agentic_ops_executive_overview: "Executive Assurance Overview",
   },
   "pillar overview links must use distinct role-specific labels",
 );

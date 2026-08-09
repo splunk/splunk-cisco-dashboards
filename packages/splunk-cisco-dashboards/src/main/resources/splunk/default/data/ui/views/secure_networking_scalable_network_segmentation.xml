@@ -1,9 +1,9 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>Scalable Network Segmentation</label>
+    <label>Segmentation Readiness Overview</label>
     <description>Connect segmentation posture, trust boundaries, and enforcement coverage at scale.</description>
     <definition><![CDATA[
 {
-    "title": "Scalable Network Segmentation",
+    "title": "Segmentation Readiness Overview",
     "description": "Connect segmentation posture, trust boundaries, and enforcement coverage at scale.",
     "inputs": {
         "input_time_range": {
@@ -57,7 +57,7 @@
         },
         "viz_header_icon": {
             "type": "splunk.image",
-            "title": "Scalable Network Segmentation",
+            "title": "Segmentation Readiness Overview",
             "options": {
                 "preserveAspectRatio": true,
                 "src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/segmentation.svg"
@@ -71,7 +71,7 @@
             "options": {
                 "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
-                "markdown": "# Scalable Network Segmentation\nConnect segmentation posture, trust boundaries, and enforcement coverage at scale\\."
+                "markdown": "# Segmentation Readiness Overview\nConnect segmentation posture, trust boundaries, and enforcement coverage at scale\\."
             }
         },
         "viz_card_01_background": {

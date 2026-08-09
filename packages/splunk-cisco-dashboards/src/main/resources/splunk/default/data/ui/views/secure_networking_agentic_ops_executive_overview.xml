@@ -1,9 +1,9 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>Executive Overview</label>
+    <label>Executive Assurance Overview</label>
     <description>Summarize secure-networking posture, operational risk, and business-relevant outcomes.</description>
     <definition><![CDATA[
 {
-    "title": "Executive Overview",
+    "title": "Executive Assurance Overview",
     "description": "Summarize secure-networking posture, operational risk, and business-relevant outcomes.",
     "inputs": {
         "input_time_range": {
@@ -57,7 +57,7 @@
         },
         "viz_header_icon": {
             "type": "splunk.image",
-            "title": "Executive Overview",
+            "title": "Executive Assurance Overview",
             "options": {
                 "preserveAspectRatio": true,
                 "src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/agentic-ops.svg"
@@ -71,7 +71,7 @@
             "options": {
                 "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
-                "markdown": "# Executive Overview\nSummarize secure\\-networking posture, operational risk, and business\\-relevant outcomes\\."
+                "markdown": "# Executive Assurance Overview\nSummarize secure\\-networking posture, operational risk, and business\\-relevant outcomes\\."
             }
         },
         "viz_card_01_background": {

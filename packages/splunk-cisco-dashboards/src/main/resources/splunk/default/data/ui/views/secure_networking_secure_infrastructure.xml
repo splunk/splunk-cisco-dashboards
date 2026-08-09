@@ -1,9 +1,9 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>Secure Infrastructure</label>
+    <label>Infrastructure Posture Overview</label>
     <description>Unify infrastructure assurance, exposure, and operational control signals.</description>
     <definition><![CDATA[
 {
-    "title": "Secure Infrastructure",
+    "title": "Infrastructure Posture Overview",
     "description": "Unify infrastructure assurance, exposure, and operational control signals.",
     "inputs": {
         "input_time_range": {
@@ -57,7 +57,7 @@
         },
         "viz_header_icon": {
             "type": "splunk.image",
-            "title": "Secure Infrastructure",
+            "title": "Infrastructure Posture Overview",
             "options": {
                 "preserveAspectRatio": true,
                 "src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/secure-infrastructure.svg"
@@ -71,7 +71,7 @@
             "options": {
                 "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
-                "markdown": "# Secure Infrastructure\nUnify infrastructure assurance, exposure, and operational control signals\\."
+                "markdown": "# Infrastructure Posture Overview\nUnify infrastructure assurance, exposure, and operational control signals\\."
             }
         },
         "viz_card_01_background": {

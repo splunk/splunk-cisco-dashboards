@@ -1,9 +1,9 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>Zero Trust Access</label>
+    <label>Zero Trust Posture Overview</label>
     <description>Connect identity, posture, policy, and response signals across the access journey.</description>
     <definition><![CDATA[
 {
-    "title": "Zero Trust Access",
+    "title": "Zero Trust Posture Overview",
     "description": "Connect identity, posture, policy, and response signals across the access journey.",
     "inputs": {
         "input_time_range": {
@@ -57,7 +57,7 @@
         },
         "viz_header_icon": {
             "type": "splunk.image",
-            "title": "Zero Trust Access",
+            "title": "Zero Trust Posture Overview",
             "options": {
                 "preserveAspectRatio": true,
                 "src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg"
@@ -71,7 +71,7 @@
             "options": {
                 "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
-                "markdown": "# Zero Trust Access\nConnect identity, posture, policy, and response signals across the access journey\\."
+                "markdown": "# Zero Trust Posture Overview\nConnect identity, posture, policy, and response signals across the access journey\\."
             }
         },
         "viz_card_01_background": {
