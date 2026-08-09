@@ -178,6 +178,39 @@ function scdSetupTuningUrl(pathname) {
   )}/${SCD_SETUP_TUNING_VIEW}?setup=1`;
 }
 
+function scdSetupFullTuningUrl(pathname) {
+  return `${scdSetupLocalePrefix(pathname)}/app/${encodeURIComponent(
+    SCD_SETUP_APP,
+  )}/${SCD_SETUP_TUNING_VIEW}`;
+}
+
+function scdSetupTuningAction(pathname, configured) {
+  if (configured) {
+    return {
+      ariaLabel: "Open the full index macro tuner",
+      description:
+        "Open the full tuner whenever indexes or sourcetypes change. Setup checks stay available here without forcing you through onboarding again.",
+      footerLabel: "Tune index macros",
+      heading: "Keep dashboard macros current",
+      href: scdSetupFullTuningUrl(pathname),
+      label: "Tune index macros",
+      readyNote:
+        "Setup is complete. Reopen the tuner whenever indexes, sourcetypes, or routing requirements change.",
+    };
+  }
+  return {
+    ariaLabel: "Continue to guided index macro tuning",
+    description:
+      "Review the detected routing macros, choose search performance, and finish the guided setup.",
+    footerLabel: "Next: tune indexes",
+    heading: "Finish setup with detected indexes",
+    href: scdSetupTuningUrl(pathname),
+    label: "Continue guided setup",
+    readyNote:
+      "All priority packages are ready. Next, save the index macros that power the dashboards.",
+  };
+}
+
 function scdSetupManageAppsUrl(pathname) {
   return `${scdSetupLocalePrefix(pathname)}/manager/system/apps/local`;
 }
@@ -498,6 +531,10 @@ function scdSetupStatusLabel(prerequisite) {
 
 function scdSetupRenderStepper(parent, activeStep) {
   const steps = scdSetupElement("ol", "scd-setup__steps");
+  steps.setAttribute(
+    "aria-label",
+    activeStep > 3 ? "Setup progress: complete" : "Setup progress",
+  );
   [
     ["1", "Check data"],
     ["2", "Review packages"],
@@ -513,6 +550,9 @@ function scdSetupRenderStepper(parent, activeStep) {
       "li",
       stateClass,
     );
+    if (stateClass === "is-active") {
+      item.setAttribute("aria-current", "step");
+    }
     item.appendChild(scdSetupElement("span", "", number));
     item.appendChild(document.createTextNode(label));
     steps.appendChild(item);
@@ -656,8 +696,8 @@ function scdSetupRenderPrerequisites(parent, prerequisites, appsError) {
   parent.appendChild(list);
 }
 
-function scdSetupRenderResults(root, dataRows, appEntries, errors) {
-  scdSetupSetActiveStep(root, 2);
+function scdSetupRenderResults(root, dataRows, appEntries, errors, configured) {
+  scdSetupSetActiveStep(root, configured ? 4 : 2);
   const content = root.querySelector(".scd-setup__content");
   content.textContent = "";
 
@@ -673,6 +713,10 @@ function scdSetupRenderResults(root, dataRows, appEntries, errors) {
     (entry) =>
       String(entry.name || "").toLowerCase() ===
       "splunk-cisco-app-navigator",
+  );
+  const tuningAction = scdSetupTuningAction(
+    window.location.pathname,
+    configured,
   );
 
   const workspace = scdSetupElement("div", "scd-setup__workspace");
@@ -779,6 +823,30 @@ function scdSetupRenderResults(root, dataRows, appEntries, errors) {
   navigatorSection.appendChild(navigatorLinks);
   aside.appendChild(navigatorSection);
 
+  const tuningSection = scdSetupElement(
+    "section",
+    "scd-setup__scan scd-setup__tuning",
+  );
+  tuningSection.appendChild(
+    scdSetupElement("p", "scd-setup__eyebrow", "INDEX ROUTING"),
+  );
+  tuningSection.appendChild(
+    scdSetupElement("h2", "", tuningAction.heading),
+  );
+  tuningSection.appendChild(
+    scdSetupElement("p", "", tuningAction.description),
+  );
+  const tuningLink = scdSetupLink(
+    "scd-setup__button is-scan",
+    tuningAction.label,
+    tuningAction.href,
+  );
+  tuningLink.setAttribute("aria-label", tuningAction.ariaLabel);
+  const tuningLinks = scdSetupElement("div", "scd-setup__scan-links");
+  tuningLinks.appendChild(tuningLink);
+  tuningSection.appendChild(tuningLinks);
+  aside.appendChild(tuningSection);
+
   const discoverySection = scdSetupElement(
     "details",
     "scd-setup__disclosure",
@@ -832,27 +900,28 @@ function scdSetupRenderResults(root, dataRows, appEntries, errors) {
   rescan.type = "button";
   // The rescan callback runs only after all setup functions are initialized.
   // eslint-disable-next-line no-use-before-define
-  rescan.addEventListener("click", () => scdSetupLoad(root));
+  rescan.addEventListener("click", () => scdSetupLoad(root, configured));
   const continueButton = scdSetupElement(
     "a",
     "scd-setup__button",
-    "Next: tune indexes",
+    tuningAction.footerLabel,
   );
-  continueButton.href = scdSetupTuningUrl(window.location.pathname);
-  actions.appendChild(rescan);
+  continueButton.href = tuningAction.href;
+  continueButton.setAttribute("aria-label", tuningAction.ariaLabel);
   actions.appendChild(continueButton);
+  actions.appendChild(rescan);
   const summary = scdSetupElement(
     "p",
     "scd-setup__action-note",
     needsAttention
-      ? `${needsAttention} package${needsAttention === 1 ? "" : "s"} need attention. You can continue while an administrator verifies deployment.`
-      : "All priority packages are ready. Next, save the index macros that power the dashboards.",
+      ? `${needsAttention} package${needsAttention === 1 ? "" : "s"} need attention. You can still review index routing while an administrator verifies deployment.`
+      : tuningAction.readyNote,
   );
   actions.appendChild(summary);
 }
 
-function scdSetupLoad(root) {
-  scdSetupSetActiveStep(root, 1);
+function scdSetupLoad(root, configured) {
+  scdSetupSetActiveStep(root, configured ? 2 : 1);
   const content = root.querySelector(".scd-setup__content");
   const actions = root.querySelector(".scd-setup__actions");
   content.textContent = "";
@@ -876,14 +945,20 @@ function scdSetupLoad(root) {
       .then((entries) => ({ entries, error: null }))
       .catch((error) => ({ entries: [], error })),
   ]).then(([data, apps]) => {
-    scdSetupRenderResults(root, data.rows, apps.entries, {
-      data: data.error,
-      apps: apps.error,
-    });
+    scdSetupRenderResults(
+      root,
+      data.rows,
+      apps.entries,
+      {
+        data: data.error,
+        apps: apps.error,
+      },
+      configured,
+    );
   });
 }
 
-function scdSetupRender(root) {
+function scdSetupRender(root, configured) {
   const mountRoot = root;
   mountRoot.textContent = "";
   const shell = scdSetupElement("section", "scd-setup__shell");
@@ -898,23 +973,31 @@ function scdSetupRender(root) {
     ),
   );
   brandCopy.appendChild(
-    scdSetupElement("h1", "", "Get ready to explore your Cisco environment"),
+    scdSetupElement(
+      "h1",
+      "",
+      configured
+        ? "Setup and data readiness"
+        : "Get ready to explore your Cisco environment",
+    ),
   );
   brandCopy.appendChild(
     scdSetupElement(
       "p",
       "",
-      "Confirm the packages used by Searchbase, review discovered data, then tune index macros.",
+      configured
+        ? "Review package health and discovered Cisco data, then tune the index macros that power your dashboards."
+        : "Confirm the packages used by Searchbase, review discovered data, then tune index macros.",
     ),
   );
   brand.appendChild(brandCopy);
   header.appendChild(brand);
-  scdSetupRenderStepper(header, 1);
+  scdSetupRenderStepper(header, configured ? 2 : 1);
   shell.appendChild(header);
   shell.appendChild(scdSetupElement("div", "scd-setup__content"));
   shell.appendChild(scdSetupElement("footer", "scd-setup__actions"));
   mountRoot.appendChild(shell);
-  scdSetupLoad(mountRoot);
+  scdSetupLoad(mountRoot, configured);
 }
 
 function scdSetupStart() {
@@ -929,7 +1012,7 @@ function scdSetupStart() {
         window.location.replace(scdSetupHomeUrl(window.location.pathname));
         return;
       }
-      scdSetupRender(root);
+      scdSetupRender(root, scdSetupIsConfigured(payload));
     })
     .catch(() => {
       root.textContent = "";
@@ -952,6 +1035,7 @@ if (typeof module !== "undefined" && module.exports) {
     csrfToken: scdSetupCsrfToken,
     discoveryEndpoint: scdSetupDiscoveryEndpoint,
     endpoint: scdSetupEndpoint,
+    fullTuningUrl: scdSetupFullTuningUrl,
     homeUrl: scdSetupHomeUrl,
     isConfigured: scdSetupIsConfigured,
     isOnDemand: scdSetupIsOnDemand,
@@ -959,6 +1043,7 @@ if (typeof module !== "undefined" && module.exports) {
     parseExportRows: scdSetupParseExportRows,
     resolvePrerequisites: scdSetupResolvePrerequisites,
     shouldRender: scdSetupShouldRender,
+    tuningAction: scdSetupTuningAction,
     tuningUrl: scdSetupTuningUrl,
   };
 }

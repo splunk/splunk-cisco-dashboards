@@ -363,6 +363,18 @@ body {
     margin-top: 14px;
 }
 
+.scd-setup__tuning {
+    border: 1px solid rgb(74 193 232 / 38%);
+    background:
+        radial-gradient(circle at 100% 0%, rgb(74 193 232 / 18%), transparent 58%),
+        var(--scd-ink);
+}
+
+.scd-setup__tuning .scd-setup__button {
+    width: 100%;
+    justify-content: center;
+}
+
 .scd-setup__external.is-inverse {
     color: #7ee8ff;
 }

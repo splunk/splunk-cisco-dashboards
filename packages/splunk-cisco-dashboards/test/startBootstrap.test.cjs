@@ -16,6 +16,7 @@ const {
   csrfToken,
   discoveryEndpoint,
   endpoint,
+  fullTuningUrl,
   homeUrl,
   isConfigured,
   isOnDemand,
@@ -23,6 +24,7 @@ const {
   parseExportRows,
   resolvePrerequisites,
   shouldRender,
+  tuningAction,
   tuningUrl,
 } = require(bootstrapPath);
 
@@ -41,6 +43,32 @@ assert.equal(
 assert.equal(
   tuningUrl("/de-DE/app/splunk-cisco-dashboards/start"),
   "/de-DE/app/splunk-cisco-dashboards/macro_index_tuning?setup=1",
+);
+assert.equal(
+  fullTuningUrl("/de-DE/app/splunk-cisco-dashboards/start"),
+  "/de-DE/app/splunk-cisco-dashboards/macro_index_tuning",
+);
+assert.deepEqual(
+  tuningAction("/en-US/app/splunk-cisco-dashboards/start", true),
+  {
+    ariaLabel: "Open the full index macro tuner",
+    description:
+      "Open the full tuner whenever indexes or sourcetypes change. Setup checks stay available here without forcing you through onboarding again.",
+    footerLabel: "Tune index macros",
+    heading: "Keep dashboard macros current",
+    href: "/en-US/app/splunk-cisco-dashboards/macro_index_tuning",
+    label: "Tune index macros",
+    readyNote:
+      "Setup is complete. Reopen the tuner whenever indexes, sourcetypes, or routing requirements change.",
+  },
+);
+assert.equal(
+  tuningAction("/en-US/app/splunk-cisco-dashboards/start", false).href,
+  "/en-US/app/splunk-cisco-dashboards/macro_index_tuning?setup=1",
+);
+assert.equal(
+  tuningAction("/en-US/app/splunk-cisco-dashboards/start", false).label,
+  "Continue guided setup",
 );
 assert.equal(
   appsEndpoint("/en-US/app/splunk-cisco-dashboards/start"),
@@ -257,6 +285,13 @@ const bootstrapSource = fs.readFileSync(bootstrapPath, "utf8");
 assert.match(bootstrapSource, /Splunk Cisco App Navigator/);
 assert.match(bootstrapSource, /https:\/\/splunkbase\.splunk\.com\/app\/8566/);
 assert.match(bootstrapSource, /scd-setup__disclosure/);
+assert.match(bootstrapSource, /Setup and data readiness/);
+assert.match(bootstrapSource, /Keep dashboard macros current/);
+assert.match(bootstrapSource, /Continue guided setup/);
+assert.match(bootstrapSource, /Open the full index macro tuner/);
+assert.match(bootstrapSource, /Setup progress: complete/);
+assert.match(bootstrapSource, /aria-current/);
+assert.match(bootstrapSource, /configured \? 4 : 2/);
 assert.match(bootstrapSource, /Splunk_SA_Scientific_Python_<os>/);
 assert.match(bootstrapSource, /Update \$\{prerequisite\.name\} in Manage Apps/);
 const legacyOverviewTemplatePath = path.resolve(
@@ -465,6 +500,11 @@ for (const viewName of [
 assert.match(navSource, /name="secure_networking_profile"\s+default="true"/);
 assert.match(navSource, /name="executive_briefing_profile"/);
 assert.match(navSource, /<a href="start\?setup=1">Setup<\/a>/);
+assert.doesNotMatch(
+  navSource,
+  /<a href="macro_index_tuning">Macro Index Tuning<\/a>/,
+  "Macro Index Tuning should remain accessible from Setup instead of duplicating the navigation entry",
+);
 assert.doesNotMatch(navSource, /name="secure_networking_overview"/);
 assert.doesNotMatch(navSource, /name="overview"/);
 

@@ -89,7 +89,6 @@
 
         <collection label="Admin &amp; Tools">
             <a href="start?setup=1">Setup</a>
-            <a href="macro_index_tuning">Macro Index Tuning</a>
         </collection>
     </collection>
 

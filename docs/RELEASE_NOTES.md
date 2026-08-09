@@ -13,6 +13,11 @@
   borders, semantic status tints, and 1CD-themed controls as the Secure
   Networking home workspace. Their existing setup, scanning, editing, and
   save workflows are unchanged.
+- Setup is now the single visible administration entry point for readiness and
+  index routing. First-run users continue into guided tuning, while configured
+  installations get a direct full-tuner action without repeating onboarding;
+  the advanced Macro Index Tuning route remains available for deep links and
+  diagnostics.
 - Dashboard Manager drilldowns now use the same compact glass dialog, bounded
   scrolling, header-level Search and Searchbase actions, and collapsible
   guidance treatment as Insights Workspace. Short result tables use a tighter
