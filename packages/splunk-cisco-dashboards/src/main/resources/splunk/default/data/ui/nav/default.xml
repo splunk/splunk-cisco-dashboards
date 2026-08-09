@@ -57,9 +57,9 @@
     <a href="user_guide" icon="organizernotebook">User Guide</a>
 
     <collection label="More Dashboards" icon="layout">
-        <collection label="Executive Views">
+        <!-- <collection label="Executive Views">
             <view name="executive_briefing_profile" label="Executive Briefing" />
-        </collection>
+        </collection> -->
 
         <collection label="Network &amp; IT Operations">
             <a href="it_health_v1">IT Health</a>
