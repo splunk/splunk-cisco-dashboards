@@ -2,6 +2,12 @@
 
 ## 1.0.36
 
+- Searchbase contextual drilldowns now use target stanza IDs instead of mutable
+  `search_name` labels. All 401 shipped relationships were migrated and are
+  validated for exact target existence, while existing local configuration and
+  browser-persisted friendly-name overrides continue to resolve during the
+  compatibility window. New admin edits write the canonical
+  `drilldown_stanza_id` field and clear the deprecated key.
 - Insights Workspace H1 tiles now use height-aware compact sparklines that
   dedicate the available canvas to the trend, retain hover detail, mark the
   latest point, and apply bounded scale padding without exaggerating flat

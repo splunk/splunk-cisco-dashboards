@@ -118,6 +118,13 @@ export interface SearchbaseRecord {
      * open as this search's contextual drilldown. The Overview page
      * currently renders table-shaped drilldowns in a modal, using the
      * target stanza's SPL and `viz_options` column metadata.
+     *
+     * New configuration stores the target stanza id in
+     * `drilldown_stanza_id`. The historical property name is retained in
+     * TypeScript so existing consumers and browser-persisted overrides can
+     * continue to supply the former friendly `search_name` identity during
+     * the compatibility window. Consumers must resolve this value against
+     * stanza id first, then `search_name`.
      */
     drilldownSearchName?: string;
     /** Optional label for the tile-level drilldown affordance. */
@@ -156,6 +163,7 @@ interface SearchbaseEntry {
         related_info?: string;
         execution_plan?: string;
         search?: string;
+        drilldown_stanza_id?: string;
         drilldown_search_name?: string;
         drilldown_button_title?: string;
         disabled?: string;
@@ -312,6 +320,18 @@ const sanitizeConfText = (
 };
 
 /**
+ * Resolves the effective drilldown identity across the config migration.
+ * Legacy wins only when non-empty so an installed local override can still
+ * supersede a new canonical default. New writes clear legacy and set stanza id.
+ */
+export const resolveConfiguredDrilldownIdentity = (content: {
+    drilldown_stanza_id?: string;
+    drilldown_search_name?: string;
+}): string | undefined =>
+    sanitizeConfText(content.drilldown_search_name, 256) ??
+    sanitizeConfText(content.drilldown_stanza_id, 256);
+
+/**
  * Splunk can hand back conf-searchbase `search` values with app macro
  * expansions inlined as a macro plus explicit index disjunction.
  * That makes the preview noisy and reintroduces hardcoded fallback
@@ -416,7 +436,12 @@ const fetchSearchbase = async (
                 typeof content.search === 'string'
                     ? collapseExpandedIndexMacro(content.search)
                     : '',
-            drilldownSearchName: sanitizeConfText(content.drilldown_search_name, 256),
+            // Prefer the legacy key when it is non-empty. This is deliberate:
+            // an installed local/searchbase.conf may still override the old
+            // key while the app's upgraded default stanza supplies the new
+            // key. New admin writes clear the legacy key and set the canonical
+            // stanza id, so they naturally fall through to the second value.
+            drilldownSearchName: resolveConfiguredDrilldownIdentity(content),
             drilldownButtonTitle: sanitizeConfText(content.drilldown_button_title, 120),
             defaultViz: sanitizeDefaultViz(content.default_viz),
             vizOptions: parseVizOptions(content.viz_options),

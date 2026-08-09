@@ -872,11 +872,12 @@ const interpolateDetailSubtitle = (
 
 const buildSearchbaseDetailTableConfig = (
     source: SearchbaseRecord,
-    entryByName: Map<string, SearchbaseRecord>
+    entryByName: Map<string, SearchbaseRecord>,
+    entryById: Map<string, SearchbaseRecord>
 ): SearchbaseDetailTableConfig | null => {
     const drilldownName = source.drilldownSearchName?.trim();
     if (!drilldownName) return null;
-    const detail = entryByName.get(drilldownName);
+    const detail = entryById.get(drilldownName) ?? entryByName.get(drilldownName);
     if (!detail?.search) return null;
     const options = detail.vizOptions;
     const columns = parseDetailTableColumns(options?.columns);
@@ -939,6 +940,7 @@ interface SearchbaseCanvasTileProps {
     tile: CanvasTile;
     record?: SearchbaseRecord;
     entryByName: Map<string, SearchbaseRecord>;
+    entryById: Map<string, SearchbaseRecord>;
     range: TimeRange;
     refreshToken: number;
     metricResultCache?: CachedMetricResultEntry;
@@ -1670,6 +1672,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
     tile,
     record,
     entryByName,
+    entryById,
     range,
     refreshToken,
     metricResultCache,
@@ -1695,11 +1698,12 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
     const viz = effectiveTileViz(tile, record);
     const tileBodyKey = searchbaseTileBodyKey(tile.id, viz);
     const drilldownRecord = record.drilldownSearchName
-        ? entryByName.get(record.drilldownSearchName)
+        ? entryById.get(record.drilldownSearchName) ??
+          entryByName.get(record.drilldownSearchName)
         : undefined;
     const detailTableConfig = useMemo(
-        () => buildSearchbaseDetailTableConfig(record, entryByName),
-        [entryByName, record]
+        () => buildSearchbaseDetailTableConfig(record, entryByName, entryById),
+        [entryById, entryByName, record]
     );
     const openSearch = useCallback(() => {
         openSplunkSearch(record.search, range, record.dispatchContext);
@@ -1909,6 +1913,7 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
     tile,
     record,
     entryByName,
+    entryById,
     range,
     onRun,
     onConfigure,
@@ -1924,8 +1929,8 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
     const color = firstSeriesColor(record.vizOptions);
     const viz = effectiveTileViz(tile, record);
     const detailTableConfig = useMemo(
-        () => buildSearchbaseDetailTableConfig(record, entryByName),
-        [entryByName, record]
+        () => buildSearchbaseDetailTableConfig(record, entryByName, entryById),
+        [entryById, entryByName, record]
     );
     const openDrilldown = () => {
         if (detailTableConfig) onOpenDetailTable(detailTableConfig);
@@ -4290,6 +4295,13 @@ const SearchbaseCanvasPage: React.FC = () => {
         }
         return map;
     }, [records]);
+    const entryById = useMemo(() => {
+        const map = new Map<string, SearchbaseRecord>();
+        for (const record of records) {
+            if (record.id) map.set(record.id, record);
+        }
+        return map;
+    }, [records]);
 
     const cachedResultForTile = useCallback(
         (tile: CanvasTile): CachedTileResult | undefined => {
@@ -5349,6 +5361,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                 tile={tile}
                 record={entryByName.get(tile.searchName)}
                 entryByName={entryByName}
+                entryById={entryById}
                 range={range}
                 refreshToken={refreshToken + (tileRefreshCounts[tile.id] ?? 0)}
                 metricResultCache={metricResultCacheByTile.get(tile.id)}

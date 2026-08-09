@@ -352,7 +352,7 @@ export interface FactoryTileConfigApplyPatch {
     dataMapping?: { label?: string; valueField?: string };
     /** Present only when the admin picked a different search entirely. */
     newSearchName?: string;
-    /** `undefined` = don't touch; `null` = clear; string = set. */
+    /** `undefined` = don't touch; `null` = clear; string = target stanza id. */
     drilldownSearchName?: string | null;
 }
 
@@ -3663,7 +3663,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                 type="button"
                                                                 onClick={() =>
                                                                     setDrilldownDraftSearchName(
-                                                                        entry.searchName
+                                                                        entry.id
                                                                     )
                                                                 }
                                                                 title={`Use ${entry.searchName} as the drilldown table`}

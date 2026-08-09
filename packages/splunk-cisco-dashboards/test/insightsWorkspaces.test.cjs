@@ -336,6 +336,35 @@ const searchbaseStanza = (stanzaId) =>
     .split(/(?=^\[)/m)
     .find((block) => block.startsWith(`[${stanzaId}]`));
 
+const searchbaseBlocks = searchbaseConf.split(/(?=^\[)/m);
+const searchbaseStanzaIds = new Set(
+  searchbaseBlocks
+    .map((block) => block.match(/^\[([^\]]+)\]/)?.[1])
+    .filter(Boolean),
+);
+assert.doesNotMatch(
+  searchbaseConf,
+  /^drilldown_search_name = /m,
+  "Shipped Searchbase defaults must use stanza-id drilldown references",
+);
+let canonicalDrilldownCount = 0;
+for (const block of searchbaseBlocks) {
+  const sourceId = block.match(/^\[([^\]]+)\]/)?.[1];
+  const targetId = block.match(/^drilldown_stanza_id = (.+)$/m)?.[1];
+  if (!sourceId || !targetId) continue;
+  canonicalDrilldownCount += 1;
+  assert.ok(
+    searchbaseStanzaIds.has(targetId),
+    `${sourceId} must resolve drilldown stanza ${targetId}`,
+  );
+  assert.notEqual(sourceId, targetId, `${sourceId} must not drill into itself`);
+}
+assert.equal(
+  canonicalDrilldownCount,
+  401,
+  "The shipped catalogue must retain every migrated drilldown relationship",
+);
+
 const secureOverviewMappings = [];
 for (const block of searchbaseConf.split(/(?=^\[)/m)) {
   const stanzaId = block.match(/^\[([^\]]+)\]/)?.[1];
@@ -433,23 +462,23 @@ for (const tileId of secureNetworkingLayoutTileIds) {
     `${tileId} (${stanzaId}) must bind an explicit sparkDataField`,
   );
 
-  const drilldownSearchName = block.match(
-    /^drilldown_search_name = (.+)$/m,
+  const drilldownStanzaId = block.match(
+    /^drilldown_stanza_id = (.+)$/m,
   )?.[1];
   assert.ok(
-    drilldownSearchName,
+    drilldownStanzaId,
     `${tileId} (${stanzaId}) must declare its detail drilldown search`,
   );
   const drilldownMatches = searchbaseConf
     .split(/(?=^\[)/m)
     .filter(
       (candidate) =>
-        candidate.match(/^search_name = (.+)$/m)?.[1] === drilldownSearchName,
+        candidate.match(/^\[([^\]]+)\]/)?.[1] === drilldownStanzaId,
     );
   assert.equal(
     drilldownMatches.length,
     1,
-    `${tileId} must resolve ${drilldownSearchName} to exactly one Searchbase stanza`,
+    `${tileId} must resolve ${drilldownStanzaId} to exactly one Searchbase stanza`,
   );
   assert.match(
     drilldownMatches[0],
@@ -517,21 +546,21 @@ for (const itemId of secureSignalItemIds ?? []) {
 const paloTrendDrilldownPairs = [
   [
     "secure_networking_sgt_palo_alto_policy_effectiveness_trend",
-    "Secure Networking - Palo Alto SGT Policy Effectiveness",
+    "secure_networking_sgt_palo_alto_policy_effectiveness",
   ],
   [
     "secure_networking_sgt_palo_alto_traffic_trend",
-    "Secure Networking - Palo Alto Traffic Correlated by SGT",
+    "secure_networking_sgt_palo_alto_traffic_detail",
   ],
 ];
-for (const [trendId, drilldownName] of paloTrendDrilldownPairs) {
+for (const [trendId, drilldownStanzaId] of paloTrendDrilldownPairs) {
   const block = searchbaseStanza(trendId);
   assert.ok(block, `expected ${trendId}`);
   assert.match(block, /^sub_category = Hybrid Mesh Firewalling$/m);
   assert.match(block, /\| timechart /);
   assert.match(
     block,
-    new RegExp(`^drilldown_search_name = ${drilldownName}$`, "m"),
+    new RegExp(`^drilldown_stanza_id = ${drilldownStanzaId}$`, "m"),
     `${trendId} must drill into its corresponding table search`,
   );
 }
@@ -542,7 +571,7 @@ for (const detailId of paloDetailTileIds) {
   assert.match(block, /^default_viz = splunk\.table$/m);
   assert.doesNotMatch(
     block,
-    /^drilldown_search_name = /m,
+    /^drilldown_(?:stanza_id|search_name) = /m,
     `${detailId} must terminate its trend drilldown`,
   );
 }

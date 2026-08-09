@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Add drilldown_search_name and drilldown_button_title to all stanzas that have matching ds_ targets.
+"""Add drilldown_stanza_id and drilldown_button_title to stanzas with matching targets.
 Also adds drilldown metadata to stanzas without ds_ targets using reasonable defaults."""
 import re
 
@@ -8,7 +8,6 @@ content = open(f).read()
 
 # Parse all stanzas
 blocks = {}
-snames = {}
 subcats = {}
 cur = None
 for line in content.splitlines():
@@ -18,9 +17,6 @@ for line in content.splitlines():
         blocks[cur] = []
     elif cur:
         blocks[cur].append(line)
-        sn = re.match(r'^search_name\s*=\s*(.+)', line)
-        if sn:
-            snames[cur] = sn.group(1).strip()
         sc = re.match(r'^sub_category\s*=\s*(.+)', line)
         if sc:
             subcats[cur] = sc.group(1).strip()
@@ -357,15 +353,16 @@ for src_name, (tgt_name, btn_title) in BEST_FIT.items():
         skipped += 1
         continue
 
-    # Idempotency: if the stanza already has any drilldown_search_name,
+    # Idempotency: if the stanza already has either drilldown identity key,
     # leave it alone. Re-running this script must not duplicate fields
     # or overwrite hand-tuned drilldowns. Run a separate audit if you
     # need to find stanzas pointed at the wrong target.
-    if any(line.startswith('drilldown_search_name ') for line in blocks[src_name]):
+    if any(
+        line.startswith(('drilldown_stanza_id ', 'drilldown_search_name '))
+        for line in blocks[src_name]
+    ):
         already_set += 1
         continue
-
-    tgt_search_name = snames[tgt_name]
 
     # Find the stanza header line and insert after dispatch_context_force line.
     # The canonical field-order formatter (`format_searchbase_conf.py`)
@@ -378,7 +375,7 @@ for src_name, (tgt_name, btn_title) in BEST_FIT.items():
     )
     m = pattern.search(content)
     if m:
-        insert_text = f"drilldown_search_name = {tgt_search_name}\ndrilldown_button_title = {btn_title}\n"
+        insert_text = f"drilldown_stanza_id = {tgt_name}\ndrilldown_button_title = {btn_title}\n"
         content = content[:m.end()] + insert_text + content[m.end():]
         applied += 1
     else:

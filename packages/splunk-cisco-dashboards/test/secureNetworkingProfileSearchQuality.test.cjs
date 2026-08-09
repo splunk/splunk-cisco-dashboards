@@ -36,7 +36,7 @@ assert.doesNotMatch(
 );
 assert.match(
   stanza("overview_inter_site_latency"),
-  /^drilldown_search_name = IT - Critical Systems - Site Health$/m,
+  /^drilldown_stanza_id = it_critical_systems_ds_site_health$/m,
 );
 expectBounded("overview_link_state_drilldown", 25);
 
@@ -78,7 +78,7 @@ assert.doesNotMatch(identityBySource, /\blayers_seen\b|\bfail_layers\b/);
 expectBounded("secure_networking_zta_user_activity_cross_source", 500);
 assert.match(
   stanza("secure_networking_zta_user_activity_source_trend"),
-  /^drilldown_search_name = Secure Networking - ZTA Identity Activity by Source$/m,
+  /^drilldown_stanza_id = secure_networking_zta_user_activity_cross_source$/m,
 );
 
 const ztnaDetail = stanza(

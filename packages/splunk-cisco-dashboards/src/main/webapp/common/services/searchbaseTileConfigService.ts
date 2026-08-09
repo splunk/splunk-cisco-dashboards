@@ -421,13 +421,18 @@ export const saveTileSearchBinding = async (
     clearSearchbaseCache();
 };
 
-/** Admin save: drilldown_search_name is already a flat top-level key — no JSON merge needed. */
+/**
+ * Admin save: stanza ids are canonical. Clearing the legacy key is required
+ * because Splunk merges default/local config by key; otherwise an older local
+ * `drilldown_search_name` override would continue to win after this write.
+ */
 export const saveTileDrilldown = async (
     stanzaId: string,
-    drilldownSearchName: string | null
+    drilldownStanzaId: string | null
 ): Promise<void> => {
     await writeStanzaKeys(stanzaId, {
-        drilldown_search_name: drilldownSearchName ?? '',
+        drilldown_stanza_id: drilldownStanzaId ?? '',
+        drilldown_search_name: '',
     });
     clearSearchbaseCache();
 };
@@ -442,7 +447,7 @@ export interface FactoryTileConfigPatch {
     dataMapping?: TileDataMappingPatch;
     /** Present only when the admin picked a different search entirely. */
     searchRebind?: { toStanzaId: string };
-    /** `undefined` = don't touch; `null` = clear; string = set. */
+    /** `undefined` = don't touch; `null` = clear; string = target stanza id. */
     drilldownSearchName?: string | null;
 }
 

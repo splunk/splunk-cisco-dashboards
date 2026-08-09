@@ -31,7 +31,7 @@ for name in blocks:
     text = "\n".join(blocks[name])
     if '_ds_' in name or name.endswith('_drilldown'):
         continue
-    if 'drilldown_search_name' in text:
+    if 'drilldown_stanza_id' in text or 'drilldown_search_name' in text:
         has_drill += 1
         continue
 

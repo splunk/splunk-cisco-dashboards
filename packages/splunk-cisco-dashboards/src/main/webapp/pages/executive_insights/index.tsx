@@ -1183,6 +1183,7 @@ const interpolateDetailSubtitle = (
 const buildMetricDetailTableConfig = (
   source: SearchbaseRecord | null,
   searchbaseByName: Map<string, SearchbaseRecord> | null | undefined,
+  searchbaseById: Map<string, SearchbaseRecord> | null | undefined,
   searchbaseDrilldowns: SearchbaseDrilldownMap,
 ): MetricDetailTableConfig | null => {
   const userDrilldown =
@@ -1197,8 +1198,12 @@ const buildMetricDetailTableConfig = (
     userDrilldown === null
       ? ""
       : (userDrilldown ?? source?.drilldownSearchName)?.trim();
-  if (!source || !drilldownName || !searchbaseByName) return null;
-  const detail = searchbaseByName.get(drilldownName);
+  if (!source || !drilldownName) return null;
+  // Stanza ids are canonical; friendly names remain a compatibility alias
+  // for existing local/searchbase.conf and browser-persisted overrides.
+  const detail =
+    searchbaseById?.get(drilldownName) ??
+    searchbaseByName?.get(drilldownName);
   if (!detail?.search) return null;
   const options = detail.vizOptions;
   const columns = parseDetailTableColumns(options?.columns);
@@ -1475,9 +1480,10 @@ const MetricCard: React.FC<MetricCardProps> = ({
       buildMetricDetailTableConfig(
         sbRecord,
         searchbaseByName,
+        searchbaseById,
         searchbaseDrilldowns,
       ),
-    [sbRecord, searchbaseByName, searchbaseDrilldowns],
+    [sbRecord, searchbaseById, searchbaseByName, searchbaseDrilldowns],
   );
   const openDetailTable =
     detailTableConfig && onOpenDetailTable
@@ -2759,7 +2765,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       signalTickerDrilldownSearchNames ?? fallbackDrilldownNames;
     return visibleSearchbaseCatalogue
       .filter((entry) => {
-        const isDrilldownSearch = drilldownNames.has(entry.searchName);
+        const isDrilldownSearch =
+          drilldownNames.has(entry.id) || drilldownNames.has(entry.searchName);
         const isTableSearch =
           entry.defaultViz?.trim().toLowerCase() === "splunk.table";
         return (
