@@ -272,7 +272,36 @@ function scdSetupShouldRender(payload, search) {
   return scdSetupIsOnDemand(search) || !scdSetupIsConfigured(payload);
 }
 
+function scdSetupCookieValue(name) {
+  const encodedName = `${encodeURIComponent(name)}=`;
+  const match = String(document.cookie || "")
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(encodedName));
+  return match ? decodeURIComponent(match.slice(encodedName.length)) : "";
+}
+
 function scdSetupCsrfToken() {
+  // Splunk Web scopes its CSRF cookie by web port. Browser cookies are shared
+  // across ports, so a host running multiple Splunk instances can expose
+  // several splunkweb_csrf_token_<port> values at once. Prefer the cookie for
+  // the current page before the bootstrapped form key, which can be stale after
+  // another instance on the same host refreshes its session.
+  const currentPort = String(window.location?.port || "").trim();
+  if (currentPort) {
+    const portToken = scdSetupCookieValue(
+      `splunkweb_csrf_token_${currentPort}`,
+    );
+    if (portToken) {
+      return portToken;
+    }
+  }
+
+  const unscopedToken = scdSetupCookieValue("splunkweb_csrf_token");
+  if (unscopedToken) {
+    return unscopedToken;
+  }
+
   const runtime = window.$C || {};
   const bootstrapToken =
     runtime.FORM_KEY ||
@@ -283,10 +312,13 @@ function scdSetupCsrfToken() {
     return bootstrapToken.trim();
   }
 
-  const match = document.cookie.match(
-    /(?:^|;\s*)splunkweb_csrf_token(?:_[^=;]+)?=([^;]+)/,
-  );
-  return match ? decodeURIComponent(match[1]) : "";
+  const suffixedTokens = String(document.cookie || "")
+    .split(";")
+    .map((part) => part.trim())
+    .filter((part) => part.startsWith("splunkweb_csrf_token_"));
+  return suffixedTokens.length === 1
+    ? decodeURIComponent(suffixedTokens[0].split("=").slice(1).join("="))
+    : "";
 }
 
 function scdSetupRequestHeaders(isPost) {

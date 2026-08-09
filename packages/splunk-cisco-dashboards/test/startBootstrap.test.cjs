@@ -308,11 +308,22 @@ assert.deepEqual(securityCloud.sourcetypes, [
   "cisco:sfw:estreamer",
 ]);
 
-global.window = { $C: { FORM_KEY: "runtime-token" } };
+global.window = {
+  location: { port: "8000" },
+  $C: { FORM_KEY: "runtime-token" },
+};
 global.document = { cookie: "" };
 assert.equal(csrfToken(), "runtime-token");
-global.window = { $C: {} };
-global.document = { cookie: "splunkweb_csrf_token_8000=cookie%2Dtoken" };
+global.window = { location: { port: "8000" }, $C: {} };
+global.document = {
+  cookie:
+    "splunkweb_csrf_token_8003=wrong%2Dinstance; splunkweb_csrf_token_8000=cookie%2Dtoken",
+};
+assert.equal(csrfToken(), "cookie-token");
+global.window = {
+  location: { port: "8000" },
+  $C: { FORM_KEY: "stale-runtime-token" },
+};
 assert.equal(csrfToken(), "cookie-token");
 delete global.window;
 delete global.document;
