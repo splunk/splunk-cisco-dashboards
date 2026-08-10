@@ -36,6 +36,11 @@
   discovery cards no longer compress beside expanded evidence, and the final
   step keeps disclosure and action surfaces consistently dark without changing
   the user's saved app-wide theme preference.
+- Setup now marks Searchbase and CIM as required foundations, groups the Splunk
+  AI Toolkit with its matching Python runtime, and collapses data-model
+  acceleration details into product summaries. Finishing setup saves every
+  detected dashboard, installed Cisco-app, and CIM routing macro before marking
+  the app configured, with visible row-level errors when any write fails.
 - The former Other drawer is now a More Dashboards library organized into
   executive, network and IT, security, workplace, event, visual-lab, and
   administration groups. Experimental destinations remain explicitly marked

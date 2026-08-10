@@ -748,7 +748,7 @@ function scdSetupRenderPrerequisites(parent, prerequisites, appsError) {
   }
 
   const list = scdSetupElement("div", "scd-setup__requirements");
-  prerequisites.forEach((prerequisite) => {
+  const renderPrerequisite = (prerequisite) => {
     const row = scdSetupElement(
       "article",
       `scd-setup__requirement is-${prerequisite.status}`,
@@ -761,6 +761,11 @@ function scdSetupRenderPrerequisites(parent, prerequisites, appsError) {
     const content = scdSetupElement("div", "scd-setup__requirement-copy");
     const heading = scdSetupElement("div", "scd-setup__requirement-heading");
     heading.appendChild(scdSetupElement("strong", "", prerequisite.name));
+    if (prerequisite.always && prerequisite.importance === "required") {
+      heading.appendChild(
+        scdSetupElement("span", "scd-setup__requirement-role", "Required"),
+      );
+    }
     content.appendChild(heading);
     content.appendChild(
       scdSetupElement(
@@ -802,7 +807,55 @@ function scdSetupRenderPrerequisites(parent, prerequisites, appsError) {
       link.rel = "noopener noreferrer";
       row.appendChild(link);
     }
-    list.appendChild(row);
+    return row;
+  };
+
+  const aiRuntimeIds = new Set(["ai-toolkit", "scientific-python"]);
+  prerequisites.forEach((prerequisite) => {
+    if (prerequisite.id === "scientific-python") {
+      return;
+    }
+    if (prerequisite.id === "ai-toolkit") {
+      const runtimeDependencies = prerequisites.filter((item) =>
+        aiRuntimeIds.has(item.id),
+      );
+      const group = scdSetupElement(
+        "section",
+        "scd-setup__requirement-suite",
+      );
+      group.setAttribute("aria-labelledby", "scd-setup-ai-runtime-heading");
+      const groupHeader = scdSetupElement(
+        "div",
+        "scd-setup__requirement-suite-heading",
+      );
+      groupHeader.appendChild(
+        scdSetupElement(
+          "strong",
+          "",
+          "AI analytics runtime",
+        ),
+      );
+      groupHeader.firstChild.id = "scd-setup-ai-runtime-heading";
+      groupHeader.appendChild(
+        scdSetupElement(
+          "span",
+          "",
+          "Toolkit and matching Python runtime",
+        ),
+      );
+      group.appendChild(groupHeader);
+      const groupItems = scdSetupElement(
+        "div",
+        "scd-setup__requirement-suite-items",
+      );
+      runtimeDependencies.forEach((item) => {
+        groupItems.appendChild(renderPrerequisite(item));
+      });
+      group.appendChild(groupItems);
+      list.appendChild(group);
+      return;
+    }
+    list.appendChild(renderPrerequisite(prerequisite));
   });
   parent.appendChild(list);
 }
@@ -915,7 +968,10 @@ function scdSetupRenderActions(root, buttons, message) {
       buttonConfig.label,
     );
     button.type = "button";
-    button.addEventListener("click", buttonConfig.onClick);
+    button.disabled = Boolean(buttonConfig.disabled);
+    if (!button.disabled) {
+      button.addEventListener("click", buttonConfig.onClick);
+    }
     actions.appendChild(button);
   });
   actions.appendChild(
@@ -1063,6 +1119,14 @@ function scdSetupRenderPackageStep(root) {
   const needsAttention = prerequisites.filter((item) =>
     ["missing", "disabled", "update", "verify"].includes(item.status),
   ).length;
+  const blockingPrerequisites = errors.apps
+    ? []
+    : prerequisites.filter(
+        (item) =>
+          item.always &&
+          item.importance === "required" &&
+          ["missing", "disabled"].includes(item.status),
+      );
   const readyCount = prerequisites.length - needsAttention;
   const workspace = scdSetupElement("div", "scd-setup__workspace");
   const main = scdSetupElement("main", "scd-setup__main");
@@ -1153,6 +1217,18 @@ function scdSetupRenderPackageStep(root) {
   workspace.appendChild(aside);
   content.appendChild(workspace);
 
+  let packageActionMessage =
+    "The recommended package set is ready. Continue to index routing.";
+  if (blockingPrerequisites.length) {
+    packageActionMessage = `${blockingPrerequisites
+      .map((item) => item.name)
+      .join(" and ")} must be installed and enabled before index tuning.`;
+  } else if (needsAttention) {
+    packageActionMessage = `${needsAttention} recommended package${
+      needsAttention === 1 ? "" : "s"
+    } need attention. You can still review index routing.`;
+  }
+
   scdSetupRenderActions(
     root,
     [
@@ -1163,13 +1239,12 @@ function scdSetupRenderPackageStep(root) {
       },
       {
         label: "Next: tune index macros",
+        disabled: blockingPrerequisites.length > 0,
         // eslint-disable-next-line no-use-before-define
         onClick: () => scdSetupShowTuningStep(root),
       },
     ],
-    needsAttention
-      ? `${needsAttention} recommended package${needsAttention === 1 ? "" : "s"} need attention. You can still review index routing.`
-      : "The recommended package set is ready. Continue to index routing.",
+    packageActionMessage,
   );
 }
 

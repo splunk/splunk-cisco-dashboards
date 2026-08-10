@@ -278,6 +278,13 @@ body {
     min-width: 0;
 }
 
+.scd-setup__requirement-heading {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 6px;
+}
+
 .scd-setup__requirement-heading strong {
     display: block;
     overflow: hidden;
@@ -285,6 +292,60 @@ body {
     line-height: 1.25;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.scd-setup__requirement-role {
+    flex: 0 0 auto;
+    padding: 2px 5px;
+    border: 1px solid rgb(14 116 144 / 28%);
+    border-radius: 999px;
+    background: rgb(14 116 144 / 10%);
+    color: #0e7490;
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.scd-setup__requirement-suite {
+    grid-column: 1 / -1;
+    overflow: hidden;
+    border: 1px solid var(--scd-line);
+    border-radius: 7px;
+    background: #f5f8fa;
+}
+
+.scd-setup__requirement-suite-heading {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--scd-line);
+}
+
+.scd-setup__requirement-suite-heading strong {
+    font-size: 11px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.scd-setup__requirement-suite-heading span {
+    color: var(--scd-muted);
+    font-size: 10px;
+}
+
+.scd-setup__requirement-suite-items {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 8px;
+}
+
+.scd-setup__requirement-suite .scd-setup__requirement {
+    min-height: 54px;
+    background: #fff;
 }
 
 .scd-setup__requirement-copy code {
@@ -606,6 +667,14 @@ body {
     text-decoration: none;
 }
 
+.scd-setup__button:disabled {
+    border-color: #64748b;
+    background: #475569;
+    color: #cbd5e1;
+    cursor: not-allowed;
+    opacity: 0.72;
+}
+
 .scd-setup__button.is-secondary {
     border-color: #9caebb;
     background: #fff;
@@ -709,6 +778,10 @@ body {
     .scd-setup__metrics {
         width: 100%;
     }
+
+    .scd-setup__requirement-suite-items {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 980px) {
@@ -748,6 +821,10 @@ body {
 
     .scd-setup__metrics {
         width: 100%;
+    }
+
+    .scd-setup__requirement-suite-items {
+        grid-template-columns: 1fr;
     }
 
     .scd-setup__section-heading,
@@ -860,10 +937,26 @@ body {
 
 .scd-setup__metric,
 .scd-setup__requirement,
+.scd-setup__requirement-suite,
 .scd-setup__capability,
 .scd-setup__impact {
     border-color: rgb(65 74 86 / 58%);
     background: rgb(26 35 48 / 82%);
+}
+
+.scd-setup__requirement-suite-heading {
+    border-color: rgb(65 74 86 / 58%);
+    background: rgb(15 23 35 / 52%);
+}
+
+.scd-setup__requirement-suite .scd-setup__requirement {
+    background: rgb(26 35 48 / 82%);
+}
+
+.scd-setup__requirement-role {
+    border-color: rgb(34 211 238 / 32%);
+    background: rgb(8 145 178 / 15%);
+    color: #67e8f9;
 }
 
 .scd-setup__capability.is-detected {

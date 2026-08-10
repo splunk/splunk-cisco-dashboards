@@ -208,6 +208,10 @@ assert.deepEqual(
 assert.equal(prerequisites.length, 9);
 assert.equal(prerequisites.find((item) => item.id === "cim").status, "missing");
 assert.equal(
+  prerequisites.find((item) => item.id === "searchbase").importance,
+  "required",
+);
+assert.equal(
   prerequisites.find((item) => item.id === "catalyst-app").status,
   "installed",
 );
@@ -347,6 +351,14 @@ assert.match(bootstrapSource, /pages\/macro_index_tuning\.js/);
 assert.doesNotMatch(bootstrapSource, /Open the full index macro tuner/);
 assert.match(bootstrapSource, /aria-current/);
 assert.match(bootstrapSource, /Splunk_SA_Scientific_Python_<os>/);
+assert.match(bootstrapSource, /AI analytics runtime/);
+assert.match(bootstrapSource, /scd-setup__requirement-suite/);
+assert.match(bootstrapSource, /scd-setup__requirement-role/);
+assert.match(bootstrapSource, /button\.disabled = Boolean\(buttonConfig\.disabled\)/);
+assert.match(
+  bootstrapSource,
+  /must be installed and enabled before index tuning/,
+);
 assert.match(bootstrapSource, /Update \$\{prerequisite\.name\} in Manage Apps/);
 const legacyOverviewTemplatePath = path.resolve(
   __dirname,
@@ -445,7 +457,7 @@ assert.match(
   macroTuningSource,
   /Companion apps could not be verified, so their macro definitions are hidden/,
 );
-assert.match(macroTuningSource, /Macro tuning is optional during setup/);
+assert.match(macroTuningSource, /Nothing was marked complete/);
 assert.match(macroTuningSource, /row\.targetApp/);
 assert.match(macroTuningSource, /Cisco app macro coverage/);
 assert.match(macroTuningSource, /Dashboard index macros/);
@@ -455,6 +467,19 @@ assert.match(macroTuningSource, /externalAppMacroSummaries/);
 assert.match(macroTuningSource, /Open CIM macros/);
 assert.match(macroTuningSource, /Advanced tuning/);
 assert.match(macroTuningSource, /Save and finish setup/);
+assert.match(macroTuningSource, /Setup was not completed/);
+assert.match(macroTuningSource, /setupCimRowsToSave/);
+assert.match(macroTuningSource, /Tune detected CIM data-model macros/);
+assert.doesNotMatch(macroTuningSource, /properties\/macros/);
+assert.doesNotMatch(macroTuningSource, /could not remove its local/);
+assert.match(
+  macroTuningSource,
+  /\.\.\.setupExternalRowsToSave,[\s\S]*\.\.\.setupCimRowsToSave/,
+);
+assert.match(
+  macroTuningSource,
+  /Expand a product only when you need its model-level actions/,
+);
 assert.match(
   macroTuningSource,
   /Finish setup now and retry macro tuning later/,
