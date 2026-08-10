@@ -1,5 +1,5 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>Remote Access VPN (RaVPN) Sessions and Posture</label>
+    <label>Zero Trust Access - Remote Access VPN (RaVPN) Sessions and Posture</label>
     <description>Connect remote-session health with endpoint posture and access risk.</description>
     <definition><![CDATA[
 {

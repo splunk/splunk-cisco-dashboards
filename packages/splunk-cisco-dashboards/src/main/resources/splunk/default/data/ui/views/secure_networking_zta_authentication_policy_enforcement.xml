@@ -1,5 +1,5 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>Authentication and Policy Enforcement</label>
+    <label>Zero Trust Access - Authentication and Policy Enforcement</label>
     <description>Validate authentication outcomes and verify access policy enforcement.</description>
     <definition><![CDATA[
 {

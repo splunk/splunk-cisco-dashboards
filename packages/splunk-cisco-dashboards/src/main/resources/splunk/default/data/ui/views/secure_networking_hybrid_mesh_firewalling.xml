@@ -1,5 +1,5 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>Hybrid Mesh Enforcement</label>
+    <label>Hybrid Mesh Firewalling - Hybrid Mesh Enforcement</label>
     <description>Unify firewall posture, enforcement, and workload protection across the hybrid mesh.</description>
     <definition><![CDATA[
 {

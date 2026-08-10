@@ -1,5 +1,5 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>Zero Trust Posture</label>
+    <label>Zero Trust Access - Zero Trust Posture</label>
     <description>Connect identity, posture, policy, and response signals across the access journey.</description>
     <definition><![CDATA[
 {

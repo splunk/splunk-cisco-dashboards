@@ -1,5 +1,5 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>Operational Intelligence</label>
+    <label> Agentic Ops - Operational Intelligence</label>
     <description>Coordinate telemetry readiness, path health, routing instability, and AI Defense signals.</description>
     <definition><![CDATA[
 {

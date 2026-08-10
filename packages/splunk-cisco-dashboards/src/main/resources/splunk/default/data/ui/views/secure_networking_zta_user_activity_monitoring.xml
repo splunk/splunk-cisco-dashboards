@@ -1,5 +1,5 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>User Activity Monitoring</label>
+    <label>Zero Trust Access - User Activity Monitoring</label>
     <description>Reveal unusual access behavior and the identities, devices, and resources involved.</description>
     <definition><![CDATA[
 {

@@ -1,5 +1,5 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>DLP and Cloud Native Security</label>
+    <label>Hybrid Mesh Firewalling - DLP and Cloud Native Security</label>
     <description>Expose data-loss risk and cloud-native workload controls in one operational view.</description>
     <definition><![CDATA[
 {

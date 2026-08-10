@@ -1,5 +1,5 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>Executive Assurance</label>
+    <label> Agentic Ops - Executive Assurance</label>
     <description>Summarize secure-networking posture, operational risk, and business-relevant outcomes.</description>
     <definition><![CDATA[
 {

@@ -1,5 +1,5 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>SD-WAN and Network Health Monitoring</label>
+    <label>Hybrid Mesh Firewalling - SD-WAN and Network Health Monitoring</label>
     <description>Correlate WAN health, reachability, and service-impact signals across the mesh.</description>
     <definition><![CDATA[
 {

@@ -1,5 +1,5 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>Policy Management</label>
+    <label>Zero Trust Access - Policy Management</label>
     <description>Monitor access-policy coverage, change, and exceptions needing review.</description>
     <definition><![CDATA[
 {

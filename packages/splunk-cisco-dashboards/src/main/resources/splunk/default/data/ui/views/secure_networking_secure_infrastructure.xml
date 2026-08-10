@@ -1,5 +1,5 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>Infrastructure Posture</label>
+    <label>Secure Infrastructure - Infrastructure Posture</label>
     <description>Unify infrastructure assurance, exposure, and operational control signals.</description>
     <definition><![CDATA[
 {

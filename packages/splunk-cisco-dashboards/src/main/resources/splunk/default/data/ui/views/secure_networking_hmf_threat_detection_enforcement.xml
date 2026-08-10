@@ -1,5 +1,5 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>Threat Detection and Enforcement</label>
+    <label>Hybrid Mesh Firewalling - Threat Detection and Enforcement</label>
     <description>Track high-confidence detections and verify the controls enforcing policy.</description>
     <definition><![CDATA[
 {

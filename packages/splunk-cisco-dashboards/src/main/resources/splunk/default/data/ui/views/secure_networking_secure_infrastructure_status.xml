@@ -1,5 +1,5 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>Secure Infrastructure Status</label>
+    <label>Secure Infrastructure - Secure Infrastructure Status</label>
     <description>Track current infrastructure state, exceptions, and emerging operational risk.</description>
     <definition><![CDATA[
 {
