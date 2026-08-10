@@ -226,6 +226,11 @@ assert.match(
 );
 assert.match(
   searchbaseGuidance,
+  /querySelectorAll<HTMLAnchorElement>\('a\[href\]'\)[\s\S]*setAttribute\('target', '_blank'\)[\s\S]*setAttribute\('rel', 'noopener noreferrer'\)/,
+  "Every link in every Searchbase metadata field must open safely in a new tab",
+);
+assert.match(
+  searchbaseGuidance,
   /\[&_code\]:font-mono[\s\S]*?\[&_code\]:text-emerald-200/,
   "Workspace guidance must render inline SPL as high-contrast code instead of red prose",
 );

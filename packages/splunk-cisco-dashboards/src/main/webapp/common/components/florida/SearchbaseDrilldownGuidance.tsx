@@ -27,11 +27,25 @@ interface MetadataBlockProps {
     appearance: 'manager' | 'workspace';
 }
 
-const sanitizeMetadataHtml = (value: string): string =>
-    DOMPurify.sanitize(value || '', {
+const openMetadataLinksInNewTabs = (html: string): string => {
+    if (!html || typeof document === 'undefined') {return html;}
+
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    template.content.querySelectorAll<HTMLAnchorElement>('a[href]').forEach((anchor) => {
+        anchor.setAttribute('target', '_blank');
+        anchor.setAttribute('rel', 'noopener noreferrer');
+    });
+    return template.innerHTML;
+};
+
+const sanitizeMetadataHtml = (value: string): string => {
+    const sanitized = DOMPurify.sanitize(value || '', {
         USE_PROFILES: { html: true },
         ADD_ATTR: ['target'],
     });
+    return openMetadataLinksInNewTabs(sanitized);
+};
 
 const MetadataBlock: React.FC<MetadataBlockProps> = ({ title, html, appearance }) => {
     if (!html) {return null;}

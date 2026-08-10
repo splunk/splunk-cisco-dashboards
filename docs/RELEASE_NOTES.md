@@ -2,6 +2,9 @@
 
 ## 1.0.36
 
+- Links in every Searchbase guidance metadata field now open in a new browser
+  tab from both Insights Workspace and Dashboard Manager, with opener access
+  disabled for safe external navigation.
 - Insights workspace section drill-downs now open native dashboards through
   Dashboard Manager, preserving its controlled search-dispatch runtime instead
   of loading Dashboard Studio views directly. The contract covers every Secure
