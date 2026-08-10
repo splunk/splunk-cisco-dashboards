@@ -233,9 +233,14 @@ assert.match(
   "Dashboard sections must use the shared C3 panel treatment",
 );
 assert.match(
+  profile,
+  /import SpotLight from "@splunk\/react-ui\/SpotLight";[\s\S]*?<SpotLight[\s\S]*?intensity="high"[\s\S]*?variant="page-bottom"/,
+  "The dark workspace must use SUI's native page-bottom SpotLight",
+);
+assert.match(
   tailwindStyles,
-  /\.scd-overview-page\.scd-c3-surface\.dark[\s\S]*?radial-gradient\([\s\S]*?linear-gradient\(/,
-  "The dark workspace must use a layered atmospheric background instead of a flat fill",
+  /\.scd-overview-page\.scd-c3-surface\.dark[\s\S]*?background-color:\s*#111215/,
+  "The dark workspace must keep the SUI page background below SpotLight",
 );
 assert.match(
   tailwindStyles,

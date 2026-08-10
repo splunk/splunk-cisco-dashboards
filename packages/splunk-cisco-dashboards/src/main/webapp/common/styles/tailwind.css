@@ -160,36 +160,16 @@ body.scd-overview-active .panel-body,
 /*
  * Cisco Cloud Control-inspired content surface.
  *
- * C3 does not use a flat dark fill: its content canvas moves from a restrained
- * blue atmosphere near the global shell through a near-black working field to
- * a soft violet bloom at the lower edge. Keep that depth on the page canvas,
- * then place mostly opaque operational panels above it so contrast and dense
- * telemetry remain dependable. The treatment is intentionally static and
- * CSS-only; it adds no image asset, animation, request, or rendering loop.
+ * C3 does not use a flat dark fill. The dark React workspace renders SUI's
+ * native page-bottom SpotLight above the theme's page background, then keeps
+ * mostly opaque operational panels above it so contrast and dense telemetry
+ * remain dependable. Dashboard Studio consumes a static SVG rendering of the
+ * same calibrated SpotLight preset because Studio cannot mount React content.
  * Light mode retains the standard SUI page foundation.
  */
 #scan-root .scd-overview-page.scd-c3-surface.dark {
-    background-color: #000000;
-    background-image:
-        radial-gradient(
-            100% 50% at 50% 0%,
-            rgb(26 29 46 / 80%) 0%,
-            rgb(15 17 23 / 60%) 40%,
-            transparent 70%
-        ),
-        radial-gradient(
-            70% 45% at 52% 112%,
-            rgb(92 67 147 / 18%) 0%,
-            transparent 68%
-        ),
-        linear-gradient(
-            180deg,
-            #1a1d2e 0%,
-            var(--scd-c3-canvas) 50%,
-            #000000 100%
-        );
-    background-repeat: no-repeat;
-    background-size: 100% 100%;
+    position: relative;
+    background-color: #111215;
     isolation: isolate;
 }
 

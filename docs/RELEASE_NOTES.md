@@ -4,6 +4,10 @@
 
 - Every native Dashboard Studio layout now uses the same borderless,
   edge-to-edge Cisco Cloud Control atmosphere as the React home workspace.
+  The React workspace now uses SUI v5.13's native high-intensity page-bottom
+  `SpotLight`, while Studio uses a static rendering of that same calibrated
+  orange/magenta, soft-light, blurred preset so its lower atmospheric bloom is
+  visibly present inside the canvas instead of reading as flat black.
   Studio line and
   area charts use the schema-valid outlined marker mode, eliminating editor
   validation errors without changing searches, tokens, inputs, tabs,

@@ -31,6 +31,7 @@ import React, {
 } from "react";
 import { createURL } from "@splunk/splunk-utils/url";
 import Select from "@splunk/react-ui/Select";
+import SpotLight from "@splunk/react-ui/SpotLight";
 import {
     Activity,
     RefreshCw,
@@ -4224,6 +4225,14 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         resolvedTheme === "dark" && "dark",
       )}
     >
+      {resolvedTheme === "dark" ? (
+        <SpotLight
+          aria-hidden="true"
+          intensity="high"
+          style={{ zIndex: -1 }}
+          variant="page-bottom"
+        />
+      ) : null}
       {/* Header */}
       <header className="scd-c3-toolbar h-14 flex-shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 flex items-center justify-between shadow-sm">
         {/*

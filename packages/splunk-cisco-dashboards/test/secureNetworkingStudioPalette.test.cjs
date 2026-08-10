@@ -206,9 +206,12 @@ assert.match(c3BackgroundData, /^data:image\/svg\+xml;base64,/);
 const c3BackgroundSvg = Buffer.from(c3BackgroundData.split(",")[1], "base64").toString("utf8");
 const c3SurfaceCss = fs.readFileSync(C3_SURFACE_CSS_PATH, "utf8");
 
-assert.match(c3BackgroundSvg, /<linearGradient id="base"/);
-assert.match(c3BackgroundSvg, /<radialGradient id="top"/);
-assert.match(c3BackgroundSvg, /<radialGradient id="violet"/);
+assert.match(c3BackgroundSvg, /<filter id="spotlight"/);
+assert.match(c3BackgroundSvg, /data-sui-spotlight="page-bottom-high"/);
+assert.match(c3BackgroundSvg, /<feGaussianBlur stdDeviation="104"/);
+assert.match(c3BackgroundSvg, /<feColorMatrix type="saturate" values="2\.2"/);
+assert.match(c3BackgroundSvg, /opacity="\.57"/);
+assert.match(c3BackgroundSvg, /mix-blend-mode:soft-light/);
 assert.doesNotMatch(
   c3BackgroundSvg,
   /\bstroke(?:-width)?=/i,
@@ -219,10 +222,10 @@ assert.doesNotMatch(
   /#ffab0f|#ff712b|#ff0f7b/i,
   "the shared C3 atmosphere must not contain the retired orange/magenta frame artwork",
 );
-for (const canonicalColor of ["#1a1d2e", "#0f1117", "#000000", "#5c4393"]) {
+for (const canonicalColor of ["#111215", "#ff9000", "#ff007f"]) {
   assert.match(c3BackgroundSvg.toLowerCase(), new RegExp(canonicalColor));
 }
-assert.match(c3SurfaceCss, /rgb\(92 67 147 \/ 18%\)/);
+assert.match(c3SurfaceCss, /background-color:\s*#111215/);
 
 const backgroundButtonSource = fs.readFileSync(BACKGROUND_BUTTON_PATH, "utf8");
 assert.match(
