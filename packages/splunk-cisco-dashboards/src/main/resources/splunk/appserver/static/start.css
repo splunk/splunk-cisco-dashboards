@@ -865,27 +865,16 @@ body {
  */
 html,
 body {
-    background: #000 !important;
+    background: #0b1118 !important;
 }
 
 .scd-setup {
     color: #e1e6eb;
-    background-color: #000;
-    background-image:
-        radial-gradient(
-            100% 50% at 50% 0%,
-            rgb(26 29 46 / 82%) 0%,
-            rgb(15 17 23 / 62%) 40%,
-            transparent 70%
-        ),
-        radial-gradient(
-            70% 45% at 52% 112%,
-            rgb(92 67 147 / 20%) 0%,
-            transparent 68%
-        ),
-        linear-gradient(180deg, #1a1d2e 0%, #0f1117 50%, #000 100%);
+    background-color: #0b1118;
+    background-image: url('/static/app/splunk-cisco-dashboards/c3-atmosphere.svg');
+    background-position: center top;
     background-repeat: no-repeat;
-    background-size: 100% 100%;
+    background-size: cover;
 }
 
 .scd-setup__shell {

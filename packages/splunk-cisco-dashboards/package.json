@@ -21,6 +21,7 @@
         "test:searchbase-drilldown-identity": "node test/searchbaseDrilldownIdentity.test.cjs",
         "test:dashboard-searchbase-time": "node test/dashboardSearchbaseTime.test.cjs",
         "test:dashboard-theme": "node test/dashboardTheme.test.cjs",
+        "test:all-dashboard-atmosphere": "node test/allDashboardAtmosphere.test.cjs",
         "test:it-health-c3-theme": "node test/itHealthC3Theme.test.cjs",
         "test:remaining-dashboards-c3-theme": "node test/remainingDashboardsC3Theme.test.cjs",
         "test:secure-networking-studio-palette": "node test/secureNetworkingStudioPalette.test.cjs",

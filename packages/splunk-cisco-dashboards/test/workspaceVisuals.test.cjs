@@ -234,13 +234,14 @@ assert.match(
 );
 assert.match(
   profile,
-  /import SpotLight from "@splunk\/react-ui\/SpotLight";[\s\S]*?<SpotLight[\s\S]*?intensity="high"[\s\S]*?variant="page-bottom"/,
-  "The dark workspace must use SUI's native page-bottom SpotLight",
+  /resolvedTheme === "dark" && "dark scd-c3-atmosphere"/,
+  "The dark workspace must use the shared borderless C3 atmosphere",
 );
+assert.doesNotMatch(profile, /@splunk\/react-ui\/SpotLight/);
 assert.match(
   tailwindStyles,
-  /\.scd-overview-page\.scd-c3-surface\.dark[\s\S]*?background-color:\s*#111215/,
-  "The dark workspace must keep the SUI page background below SpotLight",
+  /\.scd-c3-atmosphere[\s\S]*?background-color:\s*#0b1118[\s\S]*?c3-atmosphere\.svg/,
+  "The dark workspace must use the central atmospheric asset",
 );
 assert.match(
   tailwindStyles,

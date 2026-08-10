@@ -76,7 +76,7 @@ const DASHBOARDS = {
     eventHandlers: 0,
   },
   "netops_catalyst_operations.xml": {
-    digest: "67c63de0c20c503dbc3f0f195a0fcc9d576be9a6288d3d6af6e1f16221816e30",
+    digest: "ed497ec61c0ad9791c0096c138209496efa4e3e4063151ae01d1de18ebda6098",
     dataSources: 34,
     visualizations: 32,
     tabs: 4,
@@ -174,7 +174,7 @@ for (const filename of studioViewFiles) {
     assert.equal(layout.options?.backgroundColor, CANVAS, `${filename}:${layoutId} canvas`);
     assert.deepEqual(
       layout.options?.backgroundImage,
-      { sizeType: "cover", src: sharedBackground, x: 0, y: 0 },
+      { sizeType: "contain", src: sharedBackground, x: 0, y: 0 },
       `${filename}:${layoutId} atmosphere`,
     );
     if (Number(layout.options?.width) > 1440) {
@@ -290,7 +290,7 @@ for (const [filename, baseline] of Object.entries(DASHBOARDS)) {
     assert.equal(layout.options.backgroundColor, CANVAS, `${filename}:${layoutId} canvas`);
     assert.deepEqual(
       layout.options.backgroundImage,
-      { sizeType: "cover", src: sharedBackground, x: 0, y: 0 },
+      { sizeType: "contain", src: sharedBackground, x: 0, y: 0 },
       `${filename}:${layoutId} atmosphere`,
     );
   }

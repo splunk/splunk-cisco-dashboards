@@ -2421,7 +2421,9 @@ const SecureOperationsGlassPage = (): JSX.Element => {
 
     return (
         <div
-            className={`scd-glass scd-overview-page scd-c3-surface ${resolvedTheme}`}
+            className={`scd-glass scd-overview-page scd-c3-surface ${resolvedTheme} ${
+                resolvedTheme === 'dark' ? 'scd-c3-atmosphere' : ''
+            }`}
             data-theme={resolvedTheme}
         >
             <header className="scd-glass-header">

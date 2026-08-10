@@ -375,6 +375,7 @@ const navSource = fs.readFileSync(
   ),
   "utf8",
 );
+const activeNavSource = navSource.replace(/<!--[\s\S]*?-->/g, "");
 const dashboardBuilderTemplateSource = fs.readFileSync(
   path.resolve(
     __dirname,
@@ -435,7 +436,7 @@ const macroTuningBootstrapSource = fs.readFileSync(
 assert.match(setupViewSource, /<dashboard\b[^>]*\btheme="dark"/);
 assert.match(setupViewSource, /id="scan-root" hidden="hidden"/);
 assert.match(macroTuningViewSource, /<dashboard\b[^>]*\btheme="dark"/);
-assert.match(macroTuningSource, /scd-admin-dark dark/);
+assert.match(macroTuningSource, /scd-admin-dark scd-c3-atmosphere dark/);
 assert.doesNotMatch(macroTuningSource, /setTheme\("dark"\)/);
 assert.match(macroTuningRenderSource, /fixedColorScheme: 'dark'/);
 assert.match(macroTuningSource, /Back to recommendations/);
@@ -443,7 +444,8 @@ assert.match(macroTuningSource, /scd:setup-step/);
 assert.doesNotMatch(macroTuningSource, /Open full tuner/);
 assert.match(macroTuningBootstrapSource, /setup.*setup=1#tune-indexes/s);
 assert.match(macroTuningStyleSource, /scd-admin-dark/);
-assert.match(macroTuningStyleSource, /radial-gradient/);
+assert.match(macroTuningStyleSource, /c3-atmosphere\.svg/);
+assert.match(setupStyleSource, /c3-atmosphere\.svg/);
 assert.match(macroTuningStyleSource, /scd-setup-action-bar/);
 assert.match(macroTuningStyleSource, /summary\[class\*='hover:bg-slate-'\]:hover/);
 assert.match(setupStyleSource, /@container setup-content \(max-width: 880px\)/);
@@ -624,12 +626,13 @@ assert.doesNotMatch(
   "Macro Index Tuning should remain accessible from Setup instead of duplicating the navigation entry",
 );
 for (const dashboardGroup of [
-  "More Dashboards",
+  "More",
   "Network &amp; IT Operations",
   "Security Operations",
   "Workplace Intelligence",
   "Catalyst Operations",
   "Visual Labs (Beta)",
+  "Help &amp; Resources",
   "Administration",
 ]) {
   assert.match(
@@ -640,6 +643,8 @@ for (const dashboardGroup of [
 }
 for (const legacyDashboardGroup of [
   "Other",
+  "Dashboards",
+  "More Dashboards",
   "Core Dashboards",
   "Operations",
   "Workplace &amp; Collaboration",
@@ -672,6 +677,37 @@ assert.match(
   navSource,
   /name="workplace_operations_overview" label="Workplace — Single Pane of Glass"/,
 );
+assert.match(
+  activeNavSource,
+  /<collection label="More" icon="layout">\s*<a href="dashboard_manager">Dashboard Manager<\/a>\s*<divider\s*\/>/,
+  "Dashboard Manager must remain the first emphasized destination under More",
+);
+assert.equal(
+  (activeNavSource.match(/href="dashboard_manager"/g) ?? []).length,
+  1,
+  "Dashboard Manager must have one canonical navigation entry",
+);
+assert.doesNotMatch(
+  activeNavSource,
+  /<collection label="Dashboard Library">/,
+  "The optional native Dashboard Library must remain outside active navigation",
+);
+for (const [utilityGroup, destinations] of Object.entries({
+  "Help &amp; Resources": ["user_guide", "search"],
+})) {
+  const groupStart = activeNavSource.indexOf(`<collection label="${utilityGroup}">`);
+  const groupEnd = activeNavSource.indexOf("</collection>", groupStart);
+  assert.notEqual(groupStart, -1, `${utilityGroup} group must exist`);
+  assert.notEqual(groupEnd, -1, `${utilityGroup} group must be closed`);
+  const groupSource = activeNavSource.slice(groupStart, groupEnd);
+  for (const destination of destinations) {
+    assert.match(
+      groupSource,
+      new RegExp(`(?:href|name)="${destination}"`),
+      `${destination} must remain in ${utilityGroup}`,
+    );
+  }
+}
 const organizedDashboardGroups = {
   "Network &amp; IT Operations": [
     "netops_critical_systems_health",

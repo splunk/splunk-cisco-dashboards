@@ -160,17 +160,23 @@ body.scd-overview-active .panel-body,
 /*
  * Cisco Cloud Control-inspired content surface.
  *
- * C3 does not use a flat dark fill. The dark React workspace renders SUI's
- * native page-bottom SpotLight above the theme's page background, then keeps
- * mostly opaque operational panels above it so contrast and dense telemetry
- * remain dependable. Dashboard Studio consumes a static SVG rendering of the
- * same calibrated SpotLight preset because Studio cannot mount React content.
+ * C3 does not use a flat dark fill. Every dark dashboard shell consumes the
+ * same borderless atmospheric asset, then keeps mostly opaque operational
+ * panels above it so contrast and dense telemetry remain dependable.
  * Light mode retains the standard SUI page foundation.
  */
 #scan-root .scd-overview-page.scd-c3-surface.dark {
     position: relative;
-    background-color: #111215;
+    background-color: #0b1118;
     isolation: isolate;
+}
+
+#scan-root .scd-c3-atmosphere {
+    background-color: #0b1118 !important;
+    background-image: url('/static/app/splunk-cisco-dashboards/c3-atmosphere.svg') !important;
+    background-position: center top !important;
+    background-repeat: no-repeat !important;
+    background-size: cover !important;
 }
 
 #scan-root .scd-c3-surface.dark .scd-c3-toolbar {

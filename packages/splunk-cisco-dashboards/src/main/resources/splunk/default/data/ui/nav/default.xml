@@ -47,16 +47,14 @@
         <a href="dashboard_manager#/sn_agentic_ops_executive_assurance">Executive Assurance</a>
     </collection>
 
-    <collection label="Dashboards" icon="chartcolumnpanel">
+    <collection label="More" icon="layout">
         <a href="dashboard_manager">Dashboard Manager</a>
         <divider />
-        <view name="dashboards" label="Native Dashboards" />
-        <view name="reports" label="Reports" />
-    </collection>
+        <!-- <collection label="Dashboard Library">
+            <view name="dashboards" label="Native Dashboards" />
+            <view name="reports" label="Reports" />
+        </collection> -->
 
-    <a href="user_guide" icon="organizernotebook">User Guide</a>
-
-    <collection label="More Dashboards" icon="layout">
         <collection label="Network &amp; IT Operations">
             <a href="netops_critical_systems_health">IT Health</a>
             <a href="netops_readiness">NetOps Readiness</a>
@@ -85,11 +83,14 @@
             <a href="sn_topology_canvas">Topology Canvas</a>
         </collection>
 
+        <collection label="Help &amp; Resources">
+            <a href="user_guide">User Guide</a>
+            <a href="search">Search</a>
+        </collection>
+
         <collection label="Administration">
             <a href="admin_asset_inventory">Asset Inventory</a>
             <a href="setup?setup=1">Setup</a>
         </collection>
     </collection>
-
-    <a href="search" icon="magnifier">Search</a>
 </nav>

@@ -18,16 +18,28 @@ const BACKGROUND_BUTTON_PATH = path.join(
     APP_ROOT,
     'src/main/webapp/pages/dashboardbuilder/BackgroundButton.jsx'
 );
+const ATMOSPHERE_SVG_PATH = path.join(
+    APP_ROOT,
+    'src/main/resources/splunk/appserver/static/c3-atmosphere.svg'
+);
+
+const atmosphereSvg = fs.readFileSync(ATMOSPHERE_SVG_PATH, 'utf8').trim();
+if (/\bstroke(?:-width)?=/i.test(atmosphereSvg)) {
+    throw new Error('Shared C3 atmosphere must remain borderless');
+}
+const sharedBackground = `data:image/svg+xml;base64,${Buffer.from(atmosphereSvg).toString('base64')}`;
 
 const templates = fs.readFileSync(TEMPLATES_PATH, 'utf8');
-const backgroundMatch = templates.match(
-    /\[background:\/\/c3-atmosphere\]\ndata = ([^\n]+)\nname = Cisco Cloud Control Atmosphere/
-);
-if (!backgroundMatch) {
+const templateBackgroundPattern =
+    /(\[background:\/\/c3-atmosphere\]\ndata = )[^\n]+(\nname = Cisco Cloud Control Atmosphere)/;
+if (!templateBackgroundPattern.test(templates)) {
     throw new Error('Shared C3 Studio background is missing from templates.conf');
 }
+fs.writeFileSync(
+    TEMPLATES_PATH,
+    templates.replace(templateBackgroundPattern, `$1${sharedBackground}$2`)
+);
 
-const sharedBackground = backgroundMatch[1];
 const backgroundButtonSource = fs.readFileSync(BACKGROUND_BUTTON_PATH, 'utf8');
 const backgroundButtonPattern =
     /(export const C3_DEFAULT_BACKGROUND_DATA =)[ \t]*\n[ \t]*'data:image\/svg\+xml;base64,[^']+';/;
@@ -42,7 +54,6 @@ fs.writeFileSync(BACKGROUND_BUTTON_PATH, nextBackgroundButtonSource);
 
 let dashboardCount = 0;
 let layoutCount = 0;
-let markerCount = 0;
 
 for (const filename of fs.readdirSync(VIEWS_DIRECTORY).filter((name) => name.endsWith('.xml'))) {
     const dashboardPath = path.join(VIEWS_DIRECTORY, filename);
@@ -66,7 +77,7 @@ for (const filename of fs.readdirSync(VIEWS_DIRECTORY).filter((name) => name.end
         layout.options = {
             ...(layout.options || {}),
             backgroundImage: {
-                sizeType: 'cover',
+                sizeType: 'contain',
                 src: sharedBackground,
                 x: 0,
                 y: 0,
@@ -75,17 +86,10 @@ for (const filename of fs.readdirSync(VIEWS_DIRECTORY).filter((name) => name.end
         layoutCount += 1;
     }
 
-    for (const visualization of Object.values(definition.visualizations || {})) {
-        if (visualization.options?.markerDisplay === 'show') {
-            visualization.options.markerDisplay = 'outlined';
-            markerCount += 1;
-        }
-    }
-
     // Secure Networking definitions predate the tab-indented Studio dashboards.
     // Retain each dashboard family's established formatting so this focused sync
     // does not generate thousands of whitespace-only changes.
-    const isSecureNetworking = filename.startsWith('secure_networking_');
+    const isSecureNetworking = filename.startsWith('sn_');
     const indentation = isSecureNetworking ? 4 : '\t';
     const serialized = JSON.stringify(definition, null, indentation);
     const closingPadding = isSecureNetworking ? '    ' : '';
@@ -98,5 +102,5 @@ for (const filename of fs.readdirSync(VIEWS_DIRECTORY).filter((name) => name.end
 }
 
 process.stdout.write(
-    `Updated ${dashboardCount} Studio dashboards, ${layoutCount} layouts, and ${markerCount} marker options.\n`
+    `Updated ${dashboardCount} Studio dashboards and ${layoutCount} layouts.\n`
 );

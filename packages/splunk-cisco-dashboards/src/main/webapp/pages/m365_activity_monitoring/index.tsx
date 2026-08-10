@@ -346,7 +346,7 @@ const RoutedContent: React.FC = () => {
 };
 
 const DashboardShell: React.FC = () => (
-    <div className="m365-dashboard min-h-screen bg-[#0A0E17] font-sans text-slate-200">
+    <div className="m365-dashboard scd-c3-atmosphere min-h-screen bg-[#0A0E17] font-sans text-slate-200">
         <AppHeader />
         <Navigation />
         <main className="max-h-[calc(100vh-120px)] overflow-y-auto px-6 py-6">

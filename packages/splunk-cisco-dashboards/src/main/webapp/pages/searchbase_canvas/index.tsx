@@ -78,6 +78,7 @@ import {
     sparklineVizTypeFromSplunkViz,
 } from '@/common/components/florida/Sparkline';
 import { useTheme } from '@/common/hooks/useTheme';
+import { C3_ATMOSPHERE_BACKGROUND_STYLE } from '@/common/theme/c3Atmosphere';
 import {
     isBarBreakdownViz,
     isTableViz,
@@ -5405,6 +5406,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                 resolvedTheme === 'dark' && 'dark',
                 'relative min-h-screen overflow-x-hidden bg-[#f5f7fb] font-sans text-slate-900 dark:bg-slate-900 dark:text-slate-50'
             )}
+            style={resolvedTheme === 'dark' ? C3_ATMOSPHERE_BACKGROUND_STYLE : undefined}
         >
             <div className="flex min-h-screen min-w-0 flex-col overflow-x-hidden">
                 <header className="border-b border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
@@ -5731,7 +5733,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                     </div>
                 </header>
 
-                <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden bg-[#f5f7fb] p-4 dark:bg-slate-900">
+                <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden bg-[#f5f7fb] p-4 dark:bg-transparent">
                     <div className="mb-3 flex min-w-0 flex-wrap items-center gap-3 rounded-md border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950">
                         <div className="relative w-full max-w-[520px]">
                             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 dark:text-slate-400" />
@@ -5892,7 +5894,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                     </div>
 
                     {tiles.length === 0 ? (
-                        <div className="flex min-h-[calc(100vh-280px)] items-center justify-center rounded-md border border-dashed border-slate-300 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                        <div className="flex min-h-[calc(100vh-280px)] items-center justify-center rounded-md border border-dashed border-slate-300 bg-white shadow-sm dark:border-slate-800 dark:bg-transparent">
                             <div className="mx-auto max-w-sm px-6 text-center">
                                 <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-md bg-sky-50 text-sky-600 ring-1 ring-sky-100 dark:bg-sky-950 dark:text-sky-300 dark:ring-sky-900">
                                     <Plus className="h-7 w-7" />
@@ -5917,7 +5919,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                             </div>
                         </div>
                     ) : filteredTiles.length === 0 ? (
-                        <div className="flex min-h-[360px] items-center justify-center rounded-md border border-dashed border-slate-300 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                        <div className="flex min-h-[360px] items-center justify-center rounded-md border border-dashed border-slate-300 bg-white shadow-sm dark:border-slate-800 dark:bg-transparent">
                             <div className="mx-auto max-w-sm px-6 text-center">
                                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
                                     <Search className="h-7 w-7" />
@@ -5966,7 +5968,12 @@ const SearchbaseCanvasPage: React.FC = () => {
             </div>
 
             {presentationMode && (
-                <div className="absolute inset-0 z-[70] min-h-screen overflow-y-auto bg-[#f5f7fb] p-4 text-slate-950 dark:bg-slate-950 dark:text-slate-50">
+                <div
+                    className="absolute inset-0 z-[70] min-h-screen overflow-y-auto bg-[#f5f7fb] p-4 text-slate-950 dark:bg-transparent dark:text-slate-50"
+                    style={
+                        resolvedTheme === 'dark' ? C3_ATMOSPHERE_BACKGROUND_STYLE : undefined
+                    }
+                >
                     <div className="mb-4 flex min-w-0 items-center gap-3 rounded-md border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                         <div className="min-w-0 flex-1">
                             <div className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">

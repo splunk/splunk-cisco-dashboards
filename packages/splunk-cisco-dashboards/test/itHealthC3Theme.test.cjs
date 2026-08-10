@@ -118,7 +118,7 @@ for (const [layoutId, layout] of Object.entries(definition.layout.layoutDefiniti
   assert.equal(layout.options.backgroundColor, CANVAS, `${layoutId} must use the C3 canvas`);
   assert.deepEqual(
     layout.options.backgroundImage,
-    { sizeType: "cover", src: sharedBackground, x: 0, y: 0 },
+    { sizeType: "contain", src: sharedBackground, x: 0, y: 0 },
     `${layoutId} must use the shared C3 atmosphere`,
   );
 }

@@ -25,12 +25,12 @@
   convention. Customer-specific
   exercise and activation-report wording has been replaced with reusable
   Catalyst health and operations labels.
-- Every native Dashboard Studio layout now uses the same borderless,
-  edge-to-edge Cisco Cloud Control atmosphere as the React home workspace.
-  The React workspace now uses SUI v5.13's native high-intensity page-bottom
-  `SpotLight`, while Studio uses a static rendering of that same calibrated
-  orange/magenta, soft-light, blurred preset so its lower atmospheric bloom is
-  visibly present inside the canvas instead of reading as flat black.
+- All 35 dashboards now use the same borderless Cisco Cloud Control atmosphere.
+  React and static dashboard shells reference one central blue/violet SVG asset,
+  while all 53 native Dashboard Studio layouts embed an exact persisted copy so
+  the atmosphere also renders in Studio view and edit modes. The asset contains
+  no frame or stroke; React uses cover scaling to avoid seams and Studio uses
+  contain scaling to keep the lower atmospheric bloom visible on tall canvases.
   Studio line and
   area charts use the schema-valid outlined marker mode, eliminating editor
   validation errors without changing searches, tokens, inputs, tabs,
@@ -81,10 +81,11 @@
   acceleration details into product summaries. Finishing setup saves every
   detected dashboard, installed Cisco-app, and CIM routing macro before marking
   the app configured, with visible row-level errors when any write fails.
-- The former Other drawer is now a More Dashboards library organized into
-  executive, network and IT, security, workplace, event, visual-lab, and
-  administration groups. Experimental destinations remain explicitly marked
-  as beta instead of being mixed into a single concepts bucket.
+- Primary navigation now keeps Home and the five Secure Networking pillars in
+  focus while consolidating secondary destinations under More. Dashboard
+  Manager is the first emphasized action, followed by operational dashboard
+  groups, Help and Resources, visual labs, and administration; experimental
+  destinations remain explicitly marked as beta.
 - Dashboard Manager drilldowns now use the same compact glass dialog, bounded
   scrolling, header-level Search and Searchbase actions, and collapsible
   guidance treatment as Insights Workspace. Short result tables use a tighter
@@ -138,8 +139,8 @@
   the content surface closer to the shared Cisco visual language.
 - Dashboard Manager now lists the matching Cisco Cloud Control Atmosphere
   artwork first in its background selector and uses it for newly created
-  dashboards. All 16 factory Secure Networking Dashboard Studio stories ship
-  with the same cover-scaled background and near-black fallback canvas.
+  dashboards. All 25 factory Dashboard Studio views and their 53 layouts ship
+  with the same borderless background and near-black fallback canvas.
 - The Insights Workspace theme toggle now inherits the same explicit
   high-contrast light, dark, and hover colors as adjacent toolbar controls, so
   its sun, moon, and automatic-theme icons remain visible in every mode.

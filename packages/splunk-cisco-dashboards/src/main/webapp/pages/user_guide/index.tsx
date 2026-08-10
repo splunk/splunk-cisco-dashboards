@@ -895,7 +895,9 @@ export default function UserGuidePage(): JSX.Element {
 
   return (
     <main
-      className={`scd-user-guide scd-overview-page scd-c3-surface min-h-screen ${resolvedTheme}`}
+      className={`scd-user-guide scd-overview-page scd-c3-surface min-h-screen ${resolvedTheme} ${
+        resolvedTheme === "dark" ? "scd-c3-atmosphere" : ""
+      }`}
       data-theme={resolvedTheme}
     >
       <div className="scd-guide-layout">
