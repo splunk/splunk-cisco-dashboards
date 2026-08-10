@@ -64,7 +64,6 @@
         <collection label="Network &amp; IT Operations">
             <a href="it_health_v1">IT Health</a>
             <a href="netops_readiness_v1">NetOps Readiness</a>
-            <a href="asset_inventory_v1">Asset Inventory</a>
             <a href="health_monitoring">Health Monitoring (Beta)</a>
         </collection>
 
@@ -91,6 +90,7 @@
         </collection>
 
         <collection label="Administration">
+            <a href="asset_inventory_v1">Asset Inventory</a>
             <a href="start?setup=1">Setup</a>
         </collection>
     </collection>
