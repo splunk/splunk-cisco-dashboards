@@ -20,7 +20,6 @@ const PALETTE_PATH = path.join(
 );
 
 const STUDIO_DASHBOARDS = [
-    'admin_guide_v1.xml',
     'asset_inventory_v1.xml',
     'building_v1.xml',
     'netops_readiness_v1.xml',
@@ -239,7 +238,7 @@ const transformVisualization = (visualizationId, visualization) => {
 
     if (transformed.type === 'splunk.area' || transformed.type === 'splunk.line') {
         options.lineWidth = 2;
-        options.markerDisplay = 'show';
+        options.markerDisplay = 'outlined';
     }
 
     if (transformed.type === 'splunk.table') {
@@ -279,8 +278,10 @@ for (const filename of STUDIO_DASHBOARDS) {
     );
 
     for (const layoutDefinition of Object.values(definition.layout.layoutDefinitions)) {
+        const shouldFitWideCanvas = Number(layoutDefinition.options?.width) > 1440;
         layoutDefinition.options = {
             ...(layoutDefinition.options || {}),
+            ...(shouldFitWideCanvas ? { display: 'fit-to-width' } : {}),
             backgroundColor: C3.canvas,
             backgroundImage: {
                 sizeType: 'cover',

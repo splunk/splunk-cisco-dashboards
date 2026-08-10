@@ -368,7 +368,7 @@
 					"#f7782f"
 				],
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Client Count Over Time — Health Distribution",
 			"type": "splunk.area"
@@ -731,7 +731,7 @@
 					"#f7782f"
 				],
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Traffic by Protocol Over Time",
 			"type": "splunk.area"
@@ -760,7 +760,7 @@
 					"#f7782f"
 				],
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Traffic by SSID Over Time",
 			"type": "splunk.area"
@@ -953,7 +953,7 @@
 				"yAxisTitleText": "Health %",
 				"backgroundColor": "#131a23",
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Client Health Trend",
 			"type": "splunk.area"
@@ -1190,7 +1190,7 @@
 					"#f7782f"
 				],
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Total Issue Trend",
 			"type": "splunk.area"
@@ -1282,7 +1282,7 @@
 				"yAxisTitleText": "Health %",
 				"backgroundColor": "#131a23",
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Network Health Trend",
 			"type": "splunk.area"
@@ -1504,7 +1504,7 @@
 					"#f7782f"
 				],
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Internet — Bandwidth by Protocol",
 			"type": "splunk.area"
@@ -1545,7 +1545,7 @@
 					"#f7782f"
 				],
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Public Internet — Bandwidth by Protocol",
 			"type": "splunk.area"
@@ -1582,7 +1582,7 @@
 					"#f7782f"
 				],
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Client Count per SSID",
 			"type": "splunk.line"
@@ -1610,7 +1610,7 @@
 					"#f7782f"
 				],
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Client Count per SSID — Past Week",
 			"type": "splunk.line"
@@ -1660,7 +1660,7 @@
 					"#f7782f"
 				],
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Wired Client Trend",
 			"type": "splunk.area"
@@ -1694,7 +1694,7 @@
 					"#f7782f"
 				],
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Wired Clients — Past Week",
 			"type": "splunk.area"
@@ -1821,7 +1821,7 @@
 					"#f7782f"
 				],
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Wireless Client Trend",
 			"type": "splunk.area"
@@ -1855,7 +1855,7 @@
 					"#f7782f"
 				],
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Wireless Clients — Past Week",
 			"type": "splunk.area"

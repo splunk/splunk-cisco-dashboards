@@ -66,7 +66,7 @@
 				"yAxisMax": 100,
 				"yAxisMin": 0,
 				"yAxisTitleText": "NRS",
-				"markerDisplay": "show",
+				"markerDisplay": "outlined",
 				"backgroundColor": "#131a23",
 				"lineWidth": 2
 			},
@@ -325,7 +325,7 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
-				"markerDisplay": "show",
+				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
 					"#fa5762",
@@ -353,7 +353,7 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
-				"markerDisplay": "show",
+				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
 				"overlayFields": [
 					"DNAC Active Issues",
@@ -399,7 +399,7 @@
 				"yAxisTitleText": "Concurrent users (dc MAC, hourly)",
 				"backgroundColor": "#131a23",
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Concurrent users - This week vs Last week",
 			"type": "splunk.area"
@@ -821,7 +821,7 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "linear",
-				"markerDisplay": "show",
+				"markerDisplay": "outlined",
 				"nullValueDisplay": "gaps",
 				"overlayFields": [
 					"DNAC Active Issues",
@@ -876,7 +876,7 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
-				"markerDisplay": "show",
+				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
 					"#4cbf7f"
@@ -922,7 +922,7 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
-				"markerDisplay": "show",
+				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
 					"#f0c243"
@@ -999,7 +999,7 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
-				"markerDisplay": "show",
+				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
 				"overlayFields": [
 					"DNAC Active Issues"
@@ -1037,7 +1037,7 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
-				"markerDisplay": "show",
+				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleText": "Seconds",
@@ -1160,7 +1160,7 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
-				"markerDisplay": "show",
+				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
 				"overlayFields": [
 					"APs over saturation threshold"
@@ -1191,7 +1191,7 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
-				"markerDisplay": "show",
+				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleText": "Concurrent clients",

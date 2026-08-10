@@ -324,7 +324,7 @@
 					"#f7782f"
 				],
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Client Health Over Time",
 			"type": "splunk.area"
@@ -844,7 +844,7 @@
 			"options": {
 				"backgroundColor": "#131a23",
 				"lineWidth": 2,
-				"markerDisplay": "show",
+				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
 					"Wired Clients": "#9b5ff5",
@@ -999,7 +999,7 @@
 					"#f7782f"
 				],
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Wired Client Trend",
 			"type": "splunk.area"
@@ -1135,7 +1135,7 @@
 					"#f7782f"
 				],
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Wireless Client Trend",
 			"type": "splunk.area"

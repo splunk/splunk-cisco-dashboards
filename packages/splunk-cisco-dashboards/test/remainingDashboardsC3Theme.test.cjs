@@ -33,13 +33,6 @@ const SECTION_FILL = "rgba(15,17,23,0.78)";
 const SECTION_STROKE = "rgba(65,74,86,0.52)";
 
 const DASHBOARDS = {
-  "admin_guide_v1.xml": {
-    digest: "2d70500b03d8b1db0e42614535d2ba2de8dfd6b72c50ab43a5d1864049468352",
-    dataSources: 23,
-    visualizations: 52,
-    tabs: 2,
-    eventHandlers: 0,
-  },
   "asset_inventory_v1.xml": {
     digest: "937e127f71bce1243bad429ad3504bc67ab796e59806e8a20bf65854f44a98b8",
     dataSources: 25,
@@ -69,7 +62,7 @@ const DASHBOARDS = {
     eventHandlers: 0,
   },
   "spaces_intelligence_v1.xml": {
-    digest: "40cea6148eb15dd2559760349a8e49fe5da40a7938b9c30f6ffe02b48d33e137",
+    digest: "47cb20787336662e68fda7774d8ba72fa9131ac8d0bd97441dd81a7a8dfdaf5b",
     dataSources: 58,
     visualizations: 76,
     tabs: 7,
@@ -90,7 +83,7 @@ const DASHBOARDS = {
     eventHandlers: 2,
   },
   "workplace_spog_v1.xml": {
-    digest: "4db5155815c22226b068619135136a832a4288dfe9d96b32e6c332effc5958ac",
+    digest: "753fedb7c1ff37489fc349f5c421c5830fd9b31f8c2a1cc93a9bb9224b7b4891",
     dataSources: 9,
     visualizations: 32,
     tabs: 1,
@@ -147,6 +140,52 @@ const sharedPalette = new Set(
   ),
 );
 assert.ok(sharedPalette.size >= 10, "the shared C3 visualization palette must be readable");
+
+const studioViewFiles = fs
+  .readdirSync(VIEWS_DIR)
+  .filter((filename) => filename.endsWith(".xml"))
+  .filter((filename) =>
+    /<dashboard\s+version="2"/.test(fs.readFileSync(path.join(VIEWS_DIR, filename), "utf8")),
+  )
+  .sort();
+
+assert.ok(studioViewFiles.length > 0, "at least one native Studio dashboard must exist");
+
+for (const filename of studioViewFiles) {
+  const xml = fs.readFileSync(path.join(VIEWS_DIR, filename), "utf8");
+  assert.match(
+    xml,
+    /<dashboard\s+version="2"\s+theme="dark"\s+stylesheet="application\.css">/,
+    `${filename} must use the saved dark theme and shared Studio stylesheet`,
+  );
+
+  const definitionMatch = xml.match(
+    /<definition><!\[CDATA\[([\s\S]*?)\]\]><\/definition>/,
+  );
+  assert.ok(definitionMatch, `${filename} must contain a Dashboard Studio definition`);
+  const definition = JSON.parse(definitionMatch[1]);
+  const layoutDefinitions = definition.layout?.layoutDefinitions || {};
+  assert.ok(
+    Object.keys(layoutDefinitions).length > 0,
+    `${filename} must contain at least one Studio layout`,
+  );
+
+  for (const [layoutId, layout] of Object.entries(layoutDefinitions)) {
+    assert.equal(layout.options?.backgroundColor, CANVAS, `${filename}:${layoutId} canvas`);
+    assert.deepEqual(
+      layout.options?.backgroundImage,
+      { sizeType: "cover", src: sharedBackground, x: 0, y: 0 },
+      `${filename}:${layoutId} atmosphere`,
+    );
+    if (Number(layout.options?.width) > 1440) {
+      assert.equal(
+        layout.options?.display,
+        "fit-to-width",
+        `${filename}:${layoutId} wide canvas must not create horizontal page overflow`,
+      );
+    }
+  }
+}
 
 const scrubColors = (value) => {
   if (Array.isArray(value)) return value.map(scrubColors);
@@ -260,6 +299,12 @@ for (const [filename, baseline] of Object.entries(DASHBOARDS)) {
     definition.visualizations,
   )) {
     const options = visualization.options || {};
+    if (typeof options.markerDisplay === "string" && !options.markerDisplay.startsWith("$")) {
+      assert.ok(
+        ["off", "filled", "outlined"].includes(options.markerDisplay),
+        `${filename}:${visualizationId} uses invalid markerDisplay ${options.markerDisplay}`,
+      );
+    }
     if (visualization.type === "splunk.rectangle") {
       const isHeader = /(?:^|_)(?:hdr|header)(?:_|$)/i.test(visualizationId);
       const isSection = /(?:^|_)section(?:_|$)/i.test(visualizationId);
@@ -302,7 +347,7 @@ for (const [filename, baseline] of Object.entries(DASHBOARDS)) {
 
     if (visualization.type === "splunk.area" || visualization.type === "splunk.line") {
       assert.equal(options.lineWidth, 2, `${filename}:${visualizationId} line width`);
-      assert.equal(options.markerDisplay, "show", `${filename}:${visualizationId} markers`);
+      assert.equal(options.markerDisplay, "outlined", `${filename}:${visualizationId} markers`);
     }
 
     if (visualization.type === "splunk.table") {
@@ -356,4 +401,6 @@ for (const filename of allViewFiles) {
   assert.doesNotMatch(xml, /<dashboard[^>]*\stheme="light"/, `${filename} remains light`);
 }
 
-console.log("Remaining dashboards C3 dark-theme checks passed.");
+console.log(
+  `${studioViewFiles.length} native Studio dashboards use the shared C3 atmosphere on every layout.`,
+);

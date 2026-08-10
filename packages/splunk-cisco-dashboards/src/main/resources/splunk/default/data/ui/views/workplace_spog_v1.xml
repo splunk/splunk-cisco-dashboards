@@ -80,7 +80,7 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
-				"markerDisplay": "show",
+				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
 				"overlayFields": "AP Health (0-100), Spaces Concurrent Users, Auth Failures",
 				"seriesColors": [
@@ -211,7 +211,7 @@
 				"annotationX": "> annotation | seriesByName('_time')",
 				"legendDisplay": "bottom",
 				"lineCurveStyle": "smooth",
-				"markerDisplay": "show",
+				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
 				"overlayFields": "AP Health (0-100), Active Issues",
 				"seriesColors": [
@@ -641,7 +641,7 @@
 			"layout_1": {
 				"options": {
 					"backgroundColor": "#0f1117",
-					"display": "auto-scale",
+					"display": "fit-to-width",
 					"height": 1800,
 					"width": 1640,
 					"backgroundImage": {

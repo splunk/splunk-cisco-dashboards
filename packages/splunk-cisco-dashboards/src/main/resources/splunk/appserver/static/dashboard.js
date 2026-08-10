@@ -40,12 +40,17 @@
 })();
 
 /**
- * Apply the approved Insights Workspace density to the 16 five-pillar
- * Dashboard Manager views. Dashboard Manager is a hash-routed SPA,
- * so keep the body marker synchronized as users move between dashboards.
+ * Apply the approved Insights Workspace density to every native Studio
+ * Dashboard Manager view shipped by this app. Dashboard Manager is a
+ * hash-routed SPA, so keep the body marker synchronized as users move between
+ * dashboards.
  */
 (function setManagedStudioTemplate() {
   const managedDashboards = new Set([
+    "asset_inventory_v1",
+    "building_v1",
+    "it_health_v1",
+    "netops_readiness_v1",
     "secure_networking_agentic_ops",
     "secure_networking_agentic_ops_executive_overview",
     "secure_networking_hmf_dlp_cloud_native_security",
@@ -62,6 +67,11 @@
     "secure_networking_zta_policy_management",
     "secure_networking_zta_ravpn_sessions_and_posture",
     "secure_networking_zta_user_activity_monitoring",
+    "security_v1",
+    "spaces_intelligence_v1",
+    "statewide_exercise_v1",
+    "statewide_exercise_v1_studio_modern",
+    "workplace_spog_v1",
   ]);
   const templateClass = "scd-managed-studio-template";
 

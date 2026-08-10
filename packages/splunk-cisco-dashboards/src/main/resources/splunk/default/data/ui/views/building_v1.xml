@@ -168,7 +168,7 @@
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Active devices by location",
 			"type": "splunk.area"
@@ -581,7 +581,7 @@
 				"xAxisLabelVisibility": "hide",
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
-				"markerDisplay": "show",
+				"markerDisplay": "outlined",
 				"seriesColors": [
 					"#649ef5",
 					"#4cbf7f",
@@ -620,7 +620,7 @@
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide",
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Active users by location",
 			"type": "splunk.area"
@@ -661,7 +661,7 @@
 				"yAxisTitleVisibility": "hide",
 				"nullValueDisplay": "connect",
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "People detected by location",
 			"type": "splunk.area"

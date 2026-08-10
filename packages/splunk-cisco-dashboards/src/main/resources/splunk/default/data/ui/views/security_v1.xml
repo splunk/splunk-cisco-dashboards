@@ -559,7 +559,7 @@
 				"yAxisTitleVisibility": "hide",
 				"nullValueDisplay": "connect",
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Firewall Trend",
 			"type": "splunk.area"
@@ -584,7 +584,7 @@
 				"yAxisTitleVisibility": "hide",
 				"nullValueDisplay": "connect",
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Identity Events Trend (AD + ISE)",
 			"type": "splunk.line"
@@ -607,7 +607,7 @@
 				"yAxisTitleVisibility": "hide",
 				"nullValueDisplay": "connect",
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Identity Trend (ISE + AD)",
 			"type": "splunk.line"
@@ -702,7 +702,7 @@
 				"yAxisTitleVisibility": "hide",
 				"nullValueDisplay": "connect",
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "ISE Auth Trend",
 			"type": "splunk.area"
@@ -872,7 +872,7 @@
 					"#f7782f"
 				],
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,

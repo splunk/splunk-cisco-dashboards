@@ -2,6 +2,19 @@
 
 ## 1.0.36
 
+- Every native Dashboard Studio layout now uses the same borderless,
+  edge-to-edge Cisco Cloud Control atmosphere as the React home workspace.
+  Studio line and
+  area charts use the schema-valid outlined marker mode, eliminating editor
+  validation errors without changing searches, tokens, inputs, tabs,
+  drilldowns, visualization identities, layout geometry, or interactions.
+  Cisco Spaces Intelligence also expresses its unchanged 2024–2030 annotation
+  window in Splunk 10's accepted ISO format, preventing a console dispatch
+  error while retaining the same annotation query and dates. The 1640px
+  Workplace canvas now uses Studio's native fit-to-width mode so it no longer
+  creates page-level horizontal overflow at common desktop widths. All 25
+  native Studio routes now share the same responsive canvas containment beside
+  Splunk's application rail.
 - All remaining factory light-mode dashboards now use the shared Cisco Cloud
   Control atmospheric dark canvas, opaque operational surfaces, accessible
   typography and controls, semantic status colors, centralized visualization

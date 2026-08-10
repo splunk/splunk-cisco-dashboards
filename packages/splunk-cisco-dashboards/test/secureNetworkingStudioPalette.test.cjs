@@ -42,6 +42,19 @@ const TEMPLATED_MENU_FILES = [
   "secure_networking_zta_user_activity_monitoring.xml",
 ];
 
+const MANAGED_STUDIO_FILES = [
+  "asset_inventory_v1.xml",
+  "building_v1.xml",
+  "it_health_v1.xml",
+  "netops_readiness_v1.xml",
+  ...EXPECTED_STUDIO_FILES,
+  "security_v1.xml",
+  "spaces_intelligence_v1.xml",
+  "statewide_exercise_v1.xml",
+  "statewide_exercise_v1_studio_modern.xml",
+  "workplace_spog_v1.xml",
+].sort();
+
 const SIMPLE_TIME_PICKER = {
   options: {
     defaultValue: "-24h,now,1h",
@@ -90,6 +103,10 @@ const TEMPLATES_CONF_PATH = path.resolve(
 const BACKGROUND_BUTTON_PATH = path.resolve(
   __dirname,
   "../src/main/webapp/pages/dashboardbuilder/BackgroundButton.jsx",
+);
+const C3_SURFACE_CSS_PATH = path.resolve(
+  __dirname,
+  "../src/main/webapp/common/styles/tailwind.css",
 );
 const DASHBOARD_EDITOR_PATH = path.resolve(
   __dirname,
@@ -186,6 +203,26 @@ const c3BackgroundMatch = templatesSource.match(
 assert.ok(c3BackgroundMatch, "templates.conf must provide the factory C3 atmosphere background");
 const c3BackgroundData = c3BackgroundMatch[1];
 assert.match(c3BackgroundData, /^data:image\/svg\+xml;base64,/);
+const c3BackgroundSvg = Buffer.from(c3BackgroundData.split(",")[1], "base64").toString("utf8");
+const c3SurfaceCss = fs.readFileSync(C3_SURFACE_CSS_PATH, "utf8");
+
+assert.match(c3BackgroundSvg, /<linearGradient id="base"/);
+assert.match(c3BackgroundSvg, /<radialGradient id="top"/);
+assert.match(c3BackgroundSvg, /<radialGradient id="violet"/);
+assert.doesNotMatch(
+  c3BackgroundSvg,
+  /\bstroke(?:-width)?=/i,
+  "the shared C3 atmosphere must remain an edge-to-edge canvas without a frame",
+);
+assert.doesNotMatch(
+  c3BackgroundSvg,
+  /#ffab0f|#ff712b|#ff0f7b/i,
+  "the shared C3 atmosphere must not contain the retired orange/magenta frame artwork",
+);
+for (const canonicalColor of ["#1a1d2e", "#0f1117", "#000000", "#5c4393"]) {
+  assert.match(c3BackgroundSvg.toLowerCase(), new RegExp(canonicalColor));
+}
+assert.match(c3SurfaceCss, /rgb\(92 67 147 \/ 18%\)/);
 
 const backgroundButtonSource = fs.readFileSync(BACKGROUND_BUTTON_PATH, "utf8");
 assert.match(
@@ -628,11 +665,26 @@ const managedDashboardMatch = dashboardScript.match(
 assert.ok(managedDashboardMatch, "dashboard.js must declare the managed Studio allowlist");
 const managedDashboardFiles = [
   ...managedDashboardMatch[1].matchAll(/"([^"]+)"/g),
-].map(([, dashboardId]) => `${dashboardId}.xml`);
+]
+  .map(([, dashboardId]) => `${dashboardId}.xml`)
+  .sort();
 assert.deepEqual(
   managedDashboardFiles,
-  TEMPLATED_MENU_FILES,
-  "the route-scoped Studio styling must target exactly the 16 five-pillar dashboards",
+  MANAGED_STUDIO_FILES,
+  "the route-scoped Studio styling must target every native Studio dashboard",
+);
+
+const nativeStudioFiles = fs
+  .readdirSync(VIEWS_DIR)
+  .filter((fileName) => fileName.endsWith(".xml"))
+  .filter((fileName) =>
+    /<dashboard\s+version="2"/.test(fs.readFileSync(path.join(VIEWS_DIR, fileName), "utf8")),
+  )
+  .sort();
+assert.deepEqual(
+  managedDashboardFiles,
+  nativeStudioFiles,
+  "the managed Studio route set must stay synchronized with the shipped native dashboards",
 );
 assert.match(
   dashboardScript,
@@ -665,11 +717,11 @@ for (const { fileName, xml, definition } of dashboardViews) {
   const headerMarkdown = definition.visualizations.viz_header?.options?.markdown ?? "";
   const headerTitle = headerMarkdown.split("\n")[0].replace(/^#\s*/, "");
   const expectedLabel = normalizeDisplayLabel(menuDashboardLabels[dashboardId]);
+  const viewLabel = normalizeDisplayLabel(xmlLabelMatch[1]).trim();
 
-  assert.equal(
-    normalizeDisplayLabel(xmlLabelMatch[1]),
-    expectedLabel,
-    `${fileName} view label must match its five-pillar menu label`,
+  assert.ok(
+    viewLabel === expectedLabel || viewLabel.endsWith(` - ${expectedLabel}`),
+    `${fileName} view label must retain its five-pillar-qualified menu label`,
   );
   assert.equal(
     normalizeDisplayLabel(definition.title),

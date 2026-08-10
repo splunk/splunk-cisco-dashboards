@@ -95,7 +95,7 @@
 				],
 				"backgroundColor": "#131a23",
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Webex — temperature & humidity during activation",
 			"type": "splunk.line"
@@ -184,7 +184,7 @@
 				],
 				"backgroundColor": "#131a23",
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Spaces — occupancy surge + Op Florida Ready annotations",
 			"type": "splunk.area"
@@ -343,7 +343,7 @@
 				],
 				"backgroundColor": "#131a23",
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Capacity % by floor over time",
 			"type": "splunk.line"
@@ -370,7 +370,7 @@
 				],
 				"backgroundColor": "#131a23",
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Occupancy forecast (24-hour prediction)",
 			"type": "splunk.line"
@@ -404,7 +404,7 @@
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleText": "Client Health (0-10)",
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
@@ -425,7 +425,7 @@
 					"label"
 				],
 				"legendDisplay": "bottom",
-				"markerDisplay": "show",
+				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
 					"#4cbf7f",
@@ -550,7 +550,7 @@
 				"xAxisTitleVisibility": "hide",
 				"backgroundColor": "#131a23",
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "Spaces × Webex — occupancy (columns) + temperature overlay",
 			"type": "splunk.area"
@@ -600,7 +600,7 @@
 					"label"
 				],
 				"legendDisplay": "bottom",
-				"markerDisplay": "show",
+				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
 					"#049fd9",
@@ -1122,7 +1122,7 @@
 					"label"
 				],
 				"legendDisplay": "bottom",
-				"markerDisplay": "show",
+				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
 					"#049fd9",
@@ -1227,7 +1227,7 @@
 				"annotationLabel": [
 					"label"
 				],
-				"markerDisplay": "show",
+				"markerDisplay": "outlined",
 				"nullValueDisplay": "connect",
 				"seriesColors": [
 					"#049fd9",
@@ -1261,7 +1261,7 @@
 				],
 				"backgroundColor": "#131a23",
 				"lineWidth": 2,
-				"markerDisplay": "show"
+				"markerDisplay": "outlined"
 			},
 			"title": "This week vs last week",
 			"type": "splunk.area"
@@ -1325,8 +1325,8 @@
 			"options": {
 				"query": "| makeresults count=7\n| streamstats count as id\n| eval _time=case(id=1, strptime(\"2026-04-01 09:00:00\", \"%Y-%m-%d %H:%M:%S\"),\n id=2, strptime(\"2026-04-10 09:00:00\", \"%Y-%m-%d %H:%M:%S\"),\n id=3, strptime(\"2026-04-11 09:00:00\", \"%Y-%m-%d %H:%M:%S\"),\n id=4, strptime(\"2026-04-13 08:00:00\", \"%Y-%m-%d %H:%M:%S\"),\n id=5, strptime(\"2026-04-14 08:00:00\", \"%Y-%m-%d %H:%M:%S\"),\n id=6, strptime(\"2026-04-15 08:00:00\", \"%Y-%m-%d %H:%M:%S\"),\n id=7, strptime(\"2026-04-15 18:00:00\", \"%Y-%m-%d %H:%M:%S\")),\n label=case(id=1, \"Reg / Sponsor deadline\",\n id=2, \"FACHC Refund deadline\",\n id=3, \"Hurricane Prep Workshop\",\n id=4, \"Op Florida Ready - Day 1\",\n id=5, \"Op Florida Ready - Day 2\",\n id=6, \"Op Florida Ready - Day 3\",\n id=7, \"Op Florida Ready - Close\"),\n color=case(id<=3, \"#9E9E9E\",\n id>=4 AND id<=6, \"#D64550\",\n id=7, \"#6EBE4A\")\n| table _time label color",
 				"queryParameters": {
-					"earliest": "01/01/2024:00:00:00",
-					"latest": "12/31/2030:23:59:59"
+					"earliest": "2024-01-01T00:00:00",
+					"latest": "2030-12-31T23:59:59"
 				}
 			},
 			"type": "ds.search"

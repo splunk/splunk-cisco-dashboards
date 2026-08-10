@@ -118,11 +118,11 @@
 }
 
 /*
- * Managed Studio template: let the 16 five-pillar Dashboard Manager canvases
- * consume the space beside Splunk's navigation rail instead of preserving a
- * 1440px min-content width. The dashboards request auto-scale, so the narrower
- * host scales the header, cards, charts, and type together. Keep this isolated
- * through the exact route allowlist maintained by dashboard.js.
+ * Managed Studio template: let every native Studio Dashboard Manager canvas
+ * consume the space beside Splunk's navigation rail instead of preserving its
+ * configured min-content width. The host can then scale the header, cards,
+ * charts, and type together. Keep this isolated through the exact route
+ * allowlist maintained by dashboard.js.
  */
 body.scd-managed-studio-template
     > [role='main']
