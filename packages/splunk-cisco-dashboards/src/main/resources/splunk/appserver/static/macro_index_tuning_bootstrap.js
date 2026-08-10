@@ -8,11 +8,11 @@
  * #scan-root inside the dashboard's HTML panel.
  */
 const scdAssetVersion = Date.now();
-if (/\/macro_index_tuning\/?$/.test(window.location.pathname)) {
+if (/\/admin_macro_index_tuning\/?$/.test(window.location.pathname)) {
   window.location.replace(
         `${window.location.pathname.replace(
-            /\/macro_index_tuning\/?$/,
-            '/start',
+            /\/admin_macro_index_tuning\/?$/,
+            '/setup',
         )}?setup=1#tune-indexes`,
     );
 } else {

@@ -5,54 +5,54 @@ const fs = require("fs");
 const path = require("path");
 
 const EXPECTED_STUDIO_FILES = [
-  "secure_networking_agentic_ops.xml",
-  "secure_networking_agentic_ops_executive_overview.xml",
-  "secure_networking_hmf_dlp_cloud_native_security.xml",
-  "secure_networking_hmf_sdwan_network_health_monitoring.xml",
-  "secure_networking_hmf_threat_detection_enforcement.xml",
-  "secure_networking_hybrid_mesh_firewalling.xml",
-  "secure_networking_scalable_network_segmentation.xml",
-  "secure_networking_secure_infrastructure.xml",
-  "secure_networking_secure_infrastructure_status.xml",
-  "secure_networking_segmentation_overview.xml",
-  "secure_networking_zta.xml",
-  "secure_networking_zta_authentication_policy_enforcement.xml",
-  "secure_networking_zta_detection_response.xml",
-  "secure_networking_zta_policy_management.xml",
-  "secure_networking_zta_ravpn_sessions_and_posture.xml",
-  "secure_networking_zta_user_activity_monitoring.xml",
-];
+  "sn_agentic_ops_operational_intelligence.xml",
+  "sn_agentic_ops_executive_assurance.xml",
+  "sn_hmf_dlp_cloud_native_security.xml",
+  "sn_hmf_sdwan_network_health.xml",
+  "sn_hmf_threat_detection_enforcement.xml",
+  "sn_hmf_enforcement.xml",
+  "sn_segmentation_readiness.xml",
+  "sn_secure_infrastructure_posture.xml",
+  "sn_secure_infrastructure_status.xml",
+  "sn_segmentation_operations.xml",
+  "sn_zta_posture.xml",
+  "sn_zta_authentication_policy_enforcement.xml",
+  "sn_zta_detection_response.xml",
+  "sn_zta_policy_management.xml",
+  "sn_zta_ravpn_sessions_and_posture.xml",
+  "sn_zta_user_activity_monitoring.xml",
+].sort();
 
 const TEMPLATED_MENU_FILES = [
-  "secure_networking_agentic_ops.xml",
-  "secure_networking_agentic_ops_executive_overview.xml",
-  "secure_networking_hmf_dlp_cloud_native_security.xml",
-  "secure_networking_hmf_sdwan_network_health_monitoring.xml",
-  "secure_networking_hmf_threat_detection_enforcement.xml",
-  "secure_networking_hybrid_mesh_firewalling.xml",
-  "secure_networking_scalable_network_segmentation.xml",
-  "secure_networking_secure_infrastructure.xml",
-  "secure_networking_secure_infrastructure_status.xml",
-  "secure_networking_segmentation_overview.xml",
-  "secure_networking_zta.xml",
-  "secure_networking_zta_authentication_policy_enforcement.xml",
-  "secure_networking_zta_detection_response.xml",
-  "secure_networking_zta_policy_management.xml",
-  "secure_networking_zta_ravpn_sessions_and_posture.xml",
-  "secure_networking_zta_user_activity_monitoring.xml",
-];
+  "sn_agentic_ops_operational_intelligence.xml",
+  "sn_agentic_ops_executive_assurance.xml",
+  "sn_hmf_dlp_cloud_native_security.xml",
+  "sn_hmf_sdwan_network_health.xml",
+  "sn_hmf_threat_detection_enforcement.xml",
+  "sn_hmf_enforcement.xml",
+  "sn_segmentation_readiness.xml",
+  "sn_secure_infrastructure_posture.xml",
+  "sn_secure_infrastructure_status.xml",
+  "sn_segmentation_operations.xml",
+  "sn_zta_posture.xml",
+  "sn_zta_authentication_policy_enforcement.xml",
+  "sn_zta_detection_response.xml",
+  "sn_zta_policy_management.xml",
+  "sn_zta_ravpn_sessions_and_posture.xml",
+  "sn_zta_user_activity_monitoring.xml",
+].sort();
 
 const MANAGED_STUDIO_FILES = [
-  "asset_inventory_v1.xml",
-  "building_v1.xml",
-  "it_health_v1.xml",
-  "netops_readiness_v1.xml",
+  "admin_asset_inventory.xml",
+  "workplace_building_intelligence.xml",
+  "netops_critical_systems_health.xml",
+  "netops_readiness.xml",
   ...EXPECTED_STUDIO_FILES,
-  "security_v1.xml",
-  "spaces_intelligence_v1.xml",
-  "statewide_exercise_v1.xml",
-  "statewide_exercise_v1_studio_modern.xml",
-  "workplace_spog_v1.xml",
+  "security_ops_resilience.xml",
+  "workplace_spaces_intelligence.xml",
+  "netops_catalyst_health.xml",
+  "netops_catalyst_operations.xml",
+  "workplace_operations_overview.xml",
 ].sort();
 
 const SIMPLE_TIME_PICKER = {
@@ -248,7 +248,8 @@ assert.match(
 
 const actualStudioFiles = fs
   .readdirSync(VIEWS_DIR)
-  .filter((fileName) => fileName.startsWith("secure_networking_") && fileName.endsWith(".xml"))
+  .filter((fileName) => fileName.startsWith("sn_") && fileName.endsWith(".xml"))
+  .filter((fileName) => fileName !== "sn_topology_canvas.xml")
   .filter((fileName) =>
     /<dashboard\s+version="2"/.test(fs.readFileSync(path.join(VIEWS_DIR, fileName), "utf8")),
   )
@@ -697,7 +698,7 @@ assert.match(
 
 const navSource = fs.readFileSync(NAV_PATH, "utf8");
 const menuDashboardFiles = [
-  ...navSource.matchAll(/<a href="dashboardbuilder#\/([^"]+)">/g),
+  ...navSource.matchAll(/<a href="dashboard_manager#\/([^"]+)">/g),
 ]
   .map(([, dashboardId]) => `${dashboardId}.xml`)
   .sort();
@@ -708,7 +709,7 @@ assert.deepEqual(
 );
 
 const menuDashboardLabels = Object.fromEntries(
-  [...navSource.matchAll(/<a href="dashboardbuilder#\/([^"]+)">([^<]+)<\/a>/g)].map(
+  [...navSource.matchAll(/<a href="dashboard_manager#\/([^"]+)">([^<]+)<\/a>/g)].map(
     ([, dashboardId, label]) => [dashboardId, label],
   ),
 );
@@ -745,35 +746,35 @@ for (const { fileName, xml, definition } of dashboardViews) {
 
 assert.deepEqual(
   {
-    secure_networking_zta: menuDashboardLabels.secure_networking_zta,
-    secure_networking_secure_infrastructure:
-      menuDashboardLabels.secure_networking_secure_infrastructure,
-    secure_networking_scalable_network_segmentation:
-      menuDashboardLabels.secure_networking_scalable_network_segmentation,
-    secure_networking_segmentation_overview:
-      menuDashboardLabels.secure_networking_segmentation_overview,
-    secure_networking_hybrid_mesh_firewalling:
-      menuDashboardLabels.secure_networking_hybrid_mesh_firewalling,
-    secure_networking_agentic_ops: menuDashboardLabels.secure_networking_agentic_ops,
-    secure_networking_agentic_ops_executive_overview:
-      menuDashboardLabels.secure_networking_agentic_ops_executive_overview,
+    sn_zta_posture: menuDashboardLabels.sn_zta_posture,
+    sn_secure_infrastructure_posture:
+      menuDashboardLabels.sn_secure_infrastructure_posture,
+    sn_segmentation_readiness:
+      menuDashboardLabels.sn_segmentation_readiness,
+    sn_segmentation_operations:
+      menuDashboardLabels.sn_segmentation_operations,
+    sn_hmf_enforcement:
+      menuDashboardLabels.sn_hmf_enforcement,
+    sn_agentic_ops_operational_intelligence: menuDashboardLabels.sn_agentic_ops_operational_intelligence,
+    sn_agentic_ops_executive_assurance:
+      menuDashboardLabels.sn_agentic_ops_executive_assurance,
   },
   {
-    secure_networking_zta: "Zero Trust Posture",
-    secure_networking_secure_infrastructure: "Infrastructure Posture",
-    secure_networking_scalable_network_segmentation:
+    sn_zta_posture: "Zero Trust Posture",
+    sn_secure_infrastructure_posture: "Infrastructure Posture",
+    sn_segmentation_readiness:
       "Segmentation Readiness",
-    secure_networking_segmentation_overview: "Segmentation Operations",
-    secure_networking_hybrid_mesh_firewalling: "Hybrid Mesh Enforcement",
-    secure_networking_agentic_ops: "Operational Intelligence",
-    secure_networking_agentic_ops_executive_overview: "Executive Assurance",
+    sn_segmentation_operations: "Segmentation Operations",
+    sn_hmf_enforcement: "Hybrid Mesh Enforcement",
+    sn_agentic_ops_operational_intelligence: "Operational Intelligence",
+    sn_agentic_ops_executive_assurance: "Executive Assurance",
   },
   "pillar overview links must use distinct role-specific labels",
 );
 
 const densityPilot = dashboardViews.find(
   ({ fileName }) =>
-    fileName === "secure_networking_zta_authentication_policy_enforcement.xml",
+    fileName === "sn_zta_authentication_policy_enforcement.xml",
 ).definition;
 assert.deepEqual(
   densityPilot.layout.globalInputs,

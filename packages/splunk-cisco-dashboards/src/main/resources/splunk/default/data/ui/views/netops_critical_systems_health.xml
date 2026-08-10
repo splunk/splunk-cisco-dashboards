@@ -1,6 +1,6 @@
 
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>IT - Critical Systems Health</label>
+    <label>NetOps - Critical Systems Health</label>
     <description>Network health, device status, compliance, inventory, and configuration</description>
     <definition><![CDATA[
 {

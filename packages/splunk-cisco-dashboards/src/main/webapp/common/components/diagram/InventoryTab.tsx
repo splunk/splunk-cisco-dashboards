@@ -36,7 +36,7 @@
  *          cascade rule: only models present in the
  *          source+type-filtered subset show up.
  *
- *   This mirrors the asset_inventory_v1 dashboard's filter
+ *   This mirrors the admin_asset_inventory dashboard's filter
  *   approach (multi-select + auto-population) — operators
  *   already know how to drive it from there.
  *

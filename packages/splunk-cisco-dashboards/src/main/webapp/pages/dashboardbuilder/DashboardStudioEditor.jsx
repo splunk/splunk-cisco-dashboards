@@ -1469,7 +1469,7 @@ const DashboardStudioEditor = ({
             window.location.assign(
                 `/app/${encodeURIComponent(
                     splunkApp || 'splunk-cisco-dashboards',
-                )}/dashboardbuilder#/${encodeURIComponent(cloneId)}/edit`,
+                )}/dashboard_manager#/${encodeURIComponent(cloneId)}/edit`,
             );
         } catch (error) {
             makeCreateToast(Toaster)({
@@ -1939,7 +1939,7 @@ const DashboardStudioEditor = ({
                         setTimeout(() => {
                             //navigate(`/${dashid}/edit`, { replace: true });
                             window.open(
-                                `/app/splunk-cisco-dashboards/dashboardbuilder#/${dashid}/edit`,
+                                `/app/splunk-cisco-dashboards/dashboard_manager#/${dashid}/edit`,
                                 '_self',
                             );
                         }, 500);
@@ -1958,7 +1958,7 @@ const DashboardStudioEditor = ({
             // open existing dashboard
             setOpenDashboardModal(false);
             window.open(
-                `/app/splunk-cisco-dashboards/dashboardbuilder#/${selectedOpenDashboard}/edit`,
+                `/app/splunk-cisco-dashboards/dashboard_manager#/${selectedOpenDashboard}/edit`,
                 '_self',
             );
             //navigate(`/${selectedOpenDashboard}/edit`, { replace: true });

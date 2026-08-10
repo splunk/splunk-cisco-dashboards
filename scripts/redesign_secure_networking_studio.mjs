@@ -14,7 +14,7 @@ const searchbasePath = path.join(appDefault, 'searchbase.conf');
 const writeChanges = process.argv.includes('--write');
 
 const dashboardCopy = {
-    'secure_networking_agentic_ops.xml': {
+    'sn_agentic_ops_operational_intelligence.xml': {
         purpose:
             'Coordinate telemetry readiness, path health, routing instability, and AI Defense signals.',
         audience: 'Security and network operations',
@@ -23,7 +23,7 @@ const dashboardCopy = {
         guidance:
             'Confirm feed health first, then investigate path quality, routing, and enforcement exceptions.',
     },
-    'secure_networking_agentic_ops_executive_overview.xml': {
+    'sn_agentic_ops_executive_assurance.xml': {
         purpose:
             'Summarize secure-networking posture, operational risk, and business-relevant outcomes.',
         audience: 'Executives, security leaders, and network leaders',
@@ -32,7 +32,7 @@ const dashboardCopy = {
         guidance:
             'Use KPIs for posture, trends for trajectory, and feed health to judge confidence.',
     },
-    'secure_networking_hmf_dlp_cloud_native_security.xml': {
+    'sn_hmf_dlp_cloud_native_security.xml': {
         purpose:
             'Expose data-loss risk and cloud-native workload controls in one operational view.',
         audience: 'Cloud security, SOC, and workload-security teams',
@@ -41,7 +41,7 @@ const dashboardCopy = {
         guidance:
             'Review severity patterns first, then investigate DLP findings and workload evidence.',
     },
-    'secure_networking_hmf_sdwan_network_health_monitoring.xml': {
+    'sn_hmf_sdwan_network_health.xml': {
         purpose:
             'Correlate WAN health, reachability, and service-impact signals across the mesh.',
         audience: 'Network operations and service-assurance teams',
@@ -50,7 +50,7 @@ const dashboardCopy = {
         guidance:
             'Use state distribution for posture, then move into site detail and geography.',
     },
-    'secure_networking_hmf_threat_detection_enforcement.xml': {
+    'sn_hmf_threat_detection_enforcement.xml': {
         purpose:
             'Track high-confidence detections and verify the controls enforcing policy.',
         audience: 'SOC, firewall, and cloud-security operations',
@@ -59,7 +59,7 @@ const dashboardCopy = {
         guidance:
             'Compare blocked volume and deny rate before reviewing gateway-specific evidence.',
     },
-    'secure_networking_hybrid_mesh_firewalling.xml': {
+    'sn_hmf_enforcement.xml': {
         purpose:
             'Unify firewall posture, enforcement, and workload protection across the hybrid mesh.',
         audience: 'Firewall, network-security, and SOC teams',
@@ -68,7 +68,7 @@ const dashboardCopy = {
         guidance:
             'Start with block volume and feed freshness, then compare trends and site coverage.',
     },
-    'secure_networking_scalable_network_segmentation.xml': {
+    'sn_segmentation_readiness.xml': {
         purpose:
             'Connect segmentation posture, trust boundaries, and enforcement coverage at scale.',
         audience: 'Network security, identity, and TrustSec operations',
@@ -77,7 +77,7 @@ const dashboardCopy = {
         guidance:
             'Read adoption breadth first, then investigate binding mix and site-level gaps.',
     },
-    'secure_networking_segmentation_overview.xml': {
+    'sn_segmentation_operations.xml': {
         purpose:
             'Summarize segment health, policy alignment, and areas needing investigation.',
         audience: 'Network security and segmentation owners',
@@ -86,7 +86,7 @@ const dashboardCopy = {
         guidance:
             'Start with binding distribution, then use site and device detail to locate gaps.',
     },
-    'secure_networking_secure_infrastructure.xml': {
+    'sn_secure_infrastructure_posture.xml': {
         purpose:
             'Unify infrastructure assurance, exposure, and operational control signals.',
         audience: 'Infrastructure, NetOps, and network-security teams',
@@ -95,7 +95,7 @@ const dashboardCopy = {
         guidance:
             'Use footprint and anomaly KPIs to orient, then review trends and detailed rollups.',
     },
-    'secure_networking_secure_infrastructure_status.xml': {
+    'sn_secure_infrastructure_status.xml': {
         purpose:
             'Track current infrastructure state, exceptions, and emerging operational risk.',
         audience: 'Network operations and wireless-security teams',
@@ -104,7 +104,7 @@ const dashboardCopy = {
         guidance:
             'Confirm the managed footprint, then review rogue containment and encryption exceptions.',
     },
-    'secure_networking_zta.xml': {
+    'sn_zta_posture.xml': {
         purpose:
             'Connect identity, posture, policy, and response signals across the access journey.',
         audience: 'Identity, network-security, and SOC teams',
@@ -113,7 +113,7 @@ const dashboardCopy = {
         guidance:
             'Compare authentication volume and failure pressure before investigating devices and policy.',
     },
-    'secure_networking_zta_authentication_policy_enforcement.xml': {
+    'sn_zta_authentication_policy_enforcement.xml': {
         purpose:
             'Validate authentication outcomes and verify access policy enforcement.',
         audience: 'Identity, NAC, and access-policy operations',
@@ -122,7 +122,7 @@ const dashboardCopy = {
         guidance:
             'Confirm enforcement footprint and latency, then investigate devices and policy hits.',
     },
-    'secure_networking_zta_detection_response.xml': {
+    'sn_zta_detection_response.xml': {
         purpose:
             'Surface access-related detections and the response actions that contain risk.',
         audience: 'SOC analysts and incident responders',
@@ -131,7 +131,7 @@ const dashboardCopy = {
         guidance:
             'Prioritize lifecycle and severity pressure, then open the supporting forensic evidence.',
     },
-    'secure_networking_zta_policy_management.xml': {
+    'sn_zta_policy_management.xml': {
         purpose:
             'Monitor access-policy coverage, change, and exceptions needing review.',
         audience: 'Identity-security and access-policy owners',
@@ -140,7 +140,7 @@ const dashboardCopy = {
         guidance:
             'Review decisions by application, then investigate denied identities and posture gaps.',
     },
-    'secure_networking_zta_ravpn_sessions_and_posture.xml': {
+    'sn_zta_ravpn_sessions_and_posture.xml': {
         purpose:
             'Connect remote-session health with endpoint posture and access risk.',
         audience: 'Remote-access, identity, and security operations',
@@ -149,7 +149,7 @@ const dashboardCopy = {
         guidance:
             'Review profile volume and connection pressure before opening failure and posture detail.',
     },
-    'secure_networking_zta_user_activity_monitoring.xml': {
+    'sn_zta_user_activity_monitoring.xml': {
         purpose:
             'Reveal unusual access behavior and the identities, devices, and resources involved.',
         audience: 'SOC, identity-threat, and access-security teams',

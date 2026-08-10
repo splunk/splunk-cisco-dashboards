@@ -192,7 +192,7 @@ const DashboardStudioDrilldownModal = ({
 
             setGenerationState({ type: 'success', message: `Created ${dashboardTitle}.` });
             window.open(
-                `/app/splunk-cisco-dashboards/dashboardbuilder#/${encodeURIComponent(
+                `/app/splunk-cisco-dashboards/dashboard_manager#/${encodeURIComponent(
                     dashboardId,
                 )}/edit`,
                 '_blank',

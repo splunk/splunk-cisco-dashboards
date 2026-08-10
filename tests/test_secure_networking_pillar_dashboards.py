@@ -11,7 +11,8 @@ APP_ROOT = ROOT / "packages" / "splunk-cisco-dashboards" / "src" / "main" / "res
 VIEWS = APP_ROOT / "default" / "data" / "ui" / "views"
 SEARCHBASE = APP_ROOT / "default" / "searchbase.conf"
 STORY_CONFIG = ROOT / "scripts" / "secure_networking_story_dashboards.json"
-PROFILE = VIEWS / "secure_networking_profile.xml"
+WORKSPACE = VIEWS / "workspace_secure_networking.xml"
+TOPOLOGY_CANVAS = VIEWS / "sn_topology_canvas.xml"
 
 CARD_COUNT = 6
 CARD_X = (20, 493, 966)
@@ -103,8 +104,8 @@ class SecureNetworkingPillarDashboardTest(unittest.TestCase):
         cls.searchbase = _searchbase_properties(cls.searchbase_text)
         cls.studio_paths = sorted(
             path
-            for path in VIEWS.glob("secure_networking_*.xml")
-            if path.name != PROFILE.name
+            for path in VIEWS.glob("sn_*.xml")
+            if path.name != TOPOLOGY_CANVAS.name
         )
 
     def test_story_config_is_authoritative_for_all_sixteen_studio_dashboards(self):
@@ -409,13 +410,13 @@ class SecureNetworkingPillarDashboardTest(unittest.TestCase):
                     [{"label": "overview", "layoutId": "layout_overview"}],
                 )
 
-    def test_legacy_secure_networking_profile_remains_classic_v11(self):
-        root = ET.parse(PROFILE).getroot()
+    def test_secure_networking_workspace_remains_classic_v11(self):
+        root = ET.parse(WORKSPACE).getroot()
         self.assertEqual(root.tag, "dashboard")
         self.assertEqual(root.attrib.get("version"), "1.1")
         self.assertEqual(root.attrib.get("theme"), "dark")
         self.assertIsNone(root.find("definition"))
-        self.assertNotIn("secure_networking_profile", self.stories)
+        self.assertNotIn("workspace_secure_networking", self.stories)
 
 
 if __name__ == "__main__":

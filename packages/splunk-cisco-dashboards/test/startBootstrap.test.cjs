@@ -30,43 +30,43 @@ const {
 } = require(bootstrapPath);
 
 assert.equal(
-  endpoint("/en-US/app/splunk-cisco-dashboards/start"),
+  endpoint("/en-US/app/splunk-cisco-dashboards/setup"),
   "/en-US/splunkd/__raw/servicesNS/nobody/splunk-cisco-dashboards/configs/conf-setup/install?output_mode=json",
 );
 assert.equal(
-  endpoint("/fr-FR/app/splunk-cisco-dashboards/start"),
+  endpoint("/fr-FR/app/splunk-cisco-dashboards/setup"),
   "/fr-FR/splunkd/__raw/servicesNS/nobody/splunk-cisco-dashboards/configs/conf-setup/install?output_mode=json",
 );
 assert.equal(
-  homeUrl("/de-DE/app/splunk-cisco-dashboards/start"),
-  "/de-DE/app/splunk-cisco-dashboards/secure_networking_profile",
+  homeUrl("/de-DE/app/splunk-cisco-dashboards/setup"),
+  "/de-DE/app/splunk-cisco-dashboards/workspace_secure_networking",
 );
 assert.equal(
-  tuningUrl("/de-DE/app/splunk-cisco-dashboards/start"),
-  "/de-DE/app/splunk-cisco-dashboards/start?setup=1#tune-indexes",
+  tuningUrl("/de-DE/app/splunk-cisco-dashboards/setup"),
+  "/de-DE/app/splunk-cisco-dashboards/setup?setup=1#tune-indexes",
 );
 assert.equal(isTuningHash("#tune-indexes"), true);
 assert.equal(isTuningHash("tune-indexes"), true);
 assert.equal(isTuningHash("#review-packages"), false);
 assert.equal(
-  appsEndpoint("/en-US/app/splunk-cisco-dashboards/start"),
+  appsEndpoint("/en-US/app/splunk-cisco-dashboards/setup"),
   "/en-US/splunkd/__raw/services/apps/local?count=0&output_mode=json",
 );
 assert.equal(
-  discoveryEndpoint("/en-US/app/splunk-cisco-dashboards/start"),
+  discoveryEndpoint("/en-US/app/splunk-cisco-dashboards/setup"),
   "/en-US/splunkd/__raw/servicesNS/nobody/splunk-cisco-dashboards/search/jobs/export",
 );
 assert.equal(localePrefix("/manager/apps/local"), "/en-US");
 assert.equal(
   appInstallUrl(
-    "/en-US/app/splunk-cisco-dashboards/start",
+    "/en-US/app/splunk-cisco-dashboards/setup",
     "Splunk_ML_Toolkit",
   ),
   "/en-US/manager/appinstall/Splunk_ML_Toolkit",
 );
 assert.equal(
   appInstallUrl(
-    "/fr-FR/app/splunk-cisco-dashboards/start",
+    "/fr-FR/app/splunk-cisco-dashboards/setup",
     "app id/with spaces",
   ),
   "/fr-FR/manager/appinstall/app%20id%2Fwith%20spaces",
@@ -397,11 +397,11 @@ const searchbaseSource = fs.readFileSync(
   "utf8",
 );
 const setupViewSource = fs.readFileSync(
-  path.join(viewsRoot, "start.xml"),
+  path.join(viewsRoot, "setup.xml"),
   "utf8",
 );
 const macroTuningViewSource = fs.readFileSync(
-  path.join(viewsRoot, "macro_index_tuning.xml"),
+  path.join(viewsRoot, "admin_macro_index_tuning.xml"),
   "utf8",
 );
 const macroTuningStyleSource = fs.readFileSync(
@@ -441,7 +441,7 @@ assert.match(macroTuningRenderSource, /fixedColorScheme: 'dark'/);
 assert.match(macroTuningSource, /Back to recommendations/);
 assert.match(macroTuningSource, /scd:setup-step/);
 assert.doesNotMatch(macroTuningSource, /Open full tuner/);
-assert.match(macroTuningBootstrapSource, /start.*setup=1#tune-indexes/s);
+assert.match(macroTuningBootstrapSource, /setup.*setup=1#tune-indexes/s);
 assert.match(macroTuningStyleSource, /scd-admin-dark/);
 assert.match(macroTuningStyleSource, /radial-gradient/);
 assert.match(macroTuningStyleSource, /scd-setup-action-bar/);
@@ -585,9 +585,9 @@ assert.equal(
   false,
 );
 for (const viewName of [
-  "executive_briefing_profile",
-  "insights_workspace",
-  "secure_networking_profile",
+  "workspace_executive_briefing",
+  "workspace_insights",
+  "workspace_secure_networking",
 ]) {
   const viewSource = fs.readFileSync(
     path.join(viewsRoot, `${viewName}.xml`),
@@ -606,9 +606,9 @@ for (const viewName of [
   assert.match(viewSource, /id="scan-root"/);
   assert.doesNotMatch(viewSource, /\btemplate=/);
 }
-assert.match(navSource, /name="secure_networking_profile"\s+default="true"/);
-assert.match(navSource, /name="executive_briefing_profile"/);
-assert.match(navSource, /<a href="start\?setup=1">Setup<\/a>/);
+assert.match(navSource, /name="workspace_secure_networking"\s+default="true"/);
+assert.match(navSource, /name="workspace_executive_briefing"/);
+assert.match(navSource, /<a href="setup\?setup=1">Setup<\/a>/);
 assert.doesNotMatch(
   navSource,
   /<a href="macro_index_tuning">Macro Index Tuning<\/a>/,
@@ -620,7 +620,7 @@ for (const dashboardGroup of [
   "Network &amp; IT Operations",
   "Security Operations",
   "Workplace Intelligence",
-  "Events &amp; Exercises",
+  "Catalyst Operations",
   "Visual Labs (Beta)",
   "Administration",
 ]) {
@@ -647,8 +647,8 @@ for (const legacyDashboardGroup of [
 }
 for (const betaDashboardLabel of [
   "Health Monitoring (Beta)",
-  "Secure Operations Glass (Beta)",
-  "Statewide Exercise (Beta)",
+  "Security Operations Overview (Beta)",
+  "Catalyst Operations (Beta)",
 ]) {
   assert.match(
     navSource,
@@ -658,36 +658,35 @@ for (const betaDashboardLabel of [
 }
 assert.match(
   navSource,
-  /name="spaces_intelligence_v1" label="Cisco Spaces — Intelligence"/,
+  /name="workplace_spaces_intelligence" label="Cisco Spaces — Intelligence"/,
 );
 assert.match(
   navSource,
-  /name="workplace_spog_v1" label="Workplace — Single Pane of Glass"/,
+  /name="workplace_operations_overview" label="Workplace — Single Pane of Glass"/,
 );
 const organizedDashboardGroups = {
-  "Executive Views": ["executive_briefing_profile"],
+  "Executive Views": ["workspace_executive_briefing"],
   "Network &amp; IT Operations": [
-    "it_health_v1",
-    "netops_readiness_v1",
-    "asset_inventory_v1",
-    "health_monitoring",
+    "netops_critical_systems_health",
+    "netops_readiness",
+    "netops_health_monitoring",
   ],
-  "Security Operations": ["security_v1", "secure_operations_glass"],
+  "Security Operations": ["security_ops_resilience", "security_ops_overview"],
   "Workplace Intelligence": [
-    "building_v1",
-    "spaces_intelligence_v1",
-    "workplace_spog_v1",
+    "workplace_building_intelligence",
+    "workplace_spaces_intelligence",
+    "workplace_operations_overview",
   ],
-  "Events &amp; Exercises": [
-    "statewide_exercise_v1",
-    "statewide_exercise_v1_studio_modern",
+  "Catalyst Operations": [
+    "netops_catalyst_health",
+    "netops_catalyst_operations",
   ],
   "Visual Labs (Beta)": [
     "searchbase_canvas",
     "network_diagram",
-    "topology_canvas_v1",
+    "sn_topology_canvas",
   ],
-  Administration: ["start"],
+  Administration: ["admin_asset_inventory", "setup"],
 };
 for (const [dashboardGroup, destinations] of Object.entries(
   organizedDashboardGroups,
@@ -747,11 +746,11 @@ async function runSetupGate(pathname, payload, responseOk = true) {
 
 (async () => {
   const unconfigured = await runSetupGate(
-    "/en-US/app/splunk-cisco-dashboards/security_v1",
+    "/en-US/app/splunk-cisco-dashboards/security_ops_resilience",
     { entry: [{ content: { is_configured: "0" } }] },
   );
   assert.deepEqual(unconfigured.redirects, [
-    "/en-US/app/splunk-cisco-dashboards/start",
+    "/en-US/app/splunk-cisco-dashboards/setup",
   ]);
   assert.equal(unconfigured.requests.length, 1);
   assert.equal(
@@ -761,26 +760,26 @@ async function runSetupGate(pathname, payload, responseOk = true) {
   assert.equal(unconfigured.gateResult, false);
 
   const configured = await runSetupGate(
-    "/en-US/app/splunk-cisco-dashboards/secure_networking_profile",
+    "/en-US/app/splunk-cisco-dashboards/workspace_secure_networking",
     { entry: [{ content: { is_configured: "1" } }] },
   );
   assert.deepEqual(configured.redirects, []);
   assert.equal(configured.gateResult, true);
 
   const setupView = await runSetupGate(
-    "/en-US/app/splunk-cisco-dashboards/start",
+    "/en-US/app/splunk-cisco-dashboards/setup",
     { entry: [{ content: { is_configured: "0" } }] },
   );
   assert.equal(setupView.requests.length, 0);
 
   const tuningView = await runSetupGate(
-    "/en-US/app/splunk-cisco-dashboards/macro_index_tuning",
+    "/en-US/app/splunk-cisco-dashboards/admin_macro_index_tuning",
     { entry: [{ content: { is_configured: "0" } }] },
   );
   assert.equal(tuningView.requests.length, 0);
 
   const failedRead = await runSetupGate(
-    "/en-US/app/splunk-cisco-dashboards/secure_networking_profile",
+    "/en-US/app/splunk-cisco-dashboards/workspace_secure_networking",
     null,
     false,
   );

@@ -1,6 +1,6 @@
 
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>Workplace — Single Pane of Glass</label>
+    <label>Workplace Operations Overview</label>
     <description></description>
     <definition><![CDATA[
 {

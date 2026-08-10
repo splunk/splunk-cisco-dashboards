@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <dashboard version="1.1" hideEdit="true" hideExport="true" hideTitle="true"
            script="health_monitoring_bootstrap.js">
-    <label>Health Monitoring Dashboard</label>
+    <label>NetOps - Health Monitoring</label>
     <row>
         <panel>
             <html>

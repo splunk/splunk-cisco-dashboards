@@ -1,6 +1,6 @@
 
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>Network Activation Report</label>
+    <label>NetOps - Catalyst Health</label>
     <description>Client health and Catalyst Center reports network activation operations.</description>
     <definition><![CDATA[
 {

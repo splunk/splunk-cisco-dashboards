@@ -61,7 +61,7 @@ import {
     type OperationPoint,
 } from './data';
 
-const VIEW_NAME = 'm365_activity_monitoring';
+const VIEW_NAME = 'workplace_m365_activity_monitoring';
 
 type IconComponent = React.ComponentType<{ className?: string }>;
 

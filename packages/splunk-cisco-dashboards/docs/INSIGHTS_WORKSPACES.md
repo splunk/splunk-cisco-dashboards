@@ -7,15 +7,15 @@ a Splunk restart.
 
 ## Runtime model
 
-- Canonical view: `default/data/ui/views/insights_workspace.xml`
-- Canonical URL: `insights_workspace?workspace=<workspace_id>`
+- Canonical view: `default/data/ui/views/workspace_insights.xml`
+- Canonical URL: `workspace_insights?workspace=<workspace_id>`
 - Config: `default/insights_workspaces.conf`
 - Runtime authoring writes: `local/insights_workspaces.conf`
 - React definitions and compatibility helpers:
   `common/config/insightsWorkspaces.ts`
 - Config REST persistence: `common/services/insightsWorkspaceService.ts`
 
-`secure_networking_profile` and `executive_briefing_profile` remain supported
+`workspace_secure_networking` and `workspace_executive_briefing` are supported
 as legacy URL aliases. Secure Networking is the default workspace when no
 `workspace` query parameter or legacy alias is present.
 

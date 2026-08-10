@@ -3,7 +3,7 @@
     User Guide view for splunk-cisco-dashboards.
 
     This view follows the same React-mounted Simple XML pattern as
-    macro_index_tuning.xml:
+    admin_macro_index_tuning.xml:
       - Simple XML owns only the Splunk view shell.
       - user_guide_bootstrap.js loads the webpack bundle.
       - the bundle mounts into #scan-root.

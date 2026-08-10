@@ -5,7 +5,7 @@ The generator deliberately keeps dashboard selection outside this module.  Suppl
 JSON object or a Python module containing ``DASHBOARD_STORIES`` with this shape::
 
     {
-        "secure_networking_example": {
+        "sn_example": {
             "label": "Example posture",
             "description": "Six signals that explain example posture.",
             "header_icon": "/static/app/.../example.svg",
@@ -467,9 +467,9 @@ def validate_story_config(
 ) -> None:
     """Validate one dashboard before rendering or writing any output."""
 
-    if not re.fullmatch(r"secure_networking_[a-z0-9_]+", dashboard_id):
+    if not re.fullmatch(r"sn_[a-z0-9_]+", dashboard_id):
         raise StoryConfigurationError(
-            f"dashboard id {dashboard_id!r} must begin with secure_networking_"
+            f"dashboard id {dashboard_id!r} must begin with sn_"
         )
     if not isinstance(config, Mapping):
         raise StoryConfigurationError(f"{dashboard_id} configuration must be an object")

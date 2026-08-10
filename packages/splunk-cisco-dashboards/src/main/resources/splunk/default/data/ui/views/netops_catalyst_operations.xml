@@ -1,11 +1,11 @@
 
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>Statewide Exercise - Modern Dashboard Studio</label>
-    <description>Modern Dashboard Studio JSON conversion of statewide_exercise_v1.xml with tabbed layout, refreshed searches, token filters, drilldown detail panels, and enterprise network monitoring visuals.</description>
+    <label>NetOps - Catalyst Operations</label>
+    <description>Modern Dashboard Studio JSON conversion of netops_catalyst_health.xml with tabbed layout, refreshed searches, token filters, drilldown detail panels, and enterprise network monitoring visuals.</description>
     <definition><![CDATA[
 {
 	"title": "Statewide Exercise - Modern Dashboard Studio",
-	"description": "Modern Dashboard Studio JSON conversion of statewide_exercise_v1.xml with tabbed layout, refreshed searches, token filters, drilldown detail panels, and enterprise network monitoring visuals.",
+	"description": "Modern Dashboard Studio JSON conversion of netops_catalyst_health.xml with tabbed layout, refreshed searches, token filters, drilldown detail panels, and enterprise network monitoring visuals.",
 	"inputs": {
 		"input_client_type": {
 			"options": {
@@ -158,7 +158,7 @@
 			"options": {
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
-				"markdown": "### Purpose\n\nThis Dashboard Studio definition modernizes `statewide_exercise_v1.xml` into a four-tab operational view for statewide network activation exercises.\n\n### Preserved searches\n\nAll SPL data sources embedded in the existing `statewide_exercise_v1.xml` CDATA definition are copied into this JSON. New `ds_mod_*` searches add tokenized filters, reusable base searches, 60-second refresh behavior, issue drilldowns, and the executive health distribution panels.\n\n### Data sources\n\n- `cisco:dnac:clienthealth`: wired and wireless health KPIs, client counts, 24-hour and 7-day trends.\n- `cisco:dnac:client`: SSID, OS, site, traffic, onboarding, and per-client detail tables.\n- `cisco:dnac:devicehealth`: device type KPIs, health distribution, inventory, and total fleet summary.\n- `cisco:dnac:issue`: active issue summaries and row-click detail panels.\n\n### Interaction model\n\n- Global time range controls dashboard searches through `$time_tok$`.\n- Refresh rate defaults to 60 seconds through `$refresh_tok$`.\n- Client Type and Site Filter tokens narrow client distribution/detail searches.\n- Selecting an issue row sets `$selected_issue$` and opens the Issue Detail panel. Use Close Details to clear the token.\n\n### Health color policy\n\n- `>=95%`: green `#4cbf7f`.\n- `80-95%`: yellow `#f0c243`.\n- `<80%`: red `#fa5762`.\n\n### Studio schema notes\n\nDashboard Studio source JSON uses `splunk.*` visualization type IDs. The old `viz.*` syntax is legacy and is migrated by Splunk when opened in current Studio. JSON does not support comments, so implementation notes are encoded here and in visualization descriptions to keep this definition importable."
+				"markdown": "### Purpose\n\nThis Dashboard Studio definition modernizes `netops_catalyst_health.xml` into a four-tab operational view for statewide network activation exercises.\n\n### Preserved searches\n\nAll SPL data sources embedded in the existing `netops_catalyst_health.xml` CDATA definition are copied into this JSON. New `ds_mod_*` searches add tokenized filters, reusable base searches, 60-second refresh behavior, issue drilldowns, and the executive health distribution panels.\n\n### Data sources\n\n- `cisco:dnac:clienthealth`: wired and wireless health KPIs, client counts, 24-hour and 7-day trends.\n- `cisco:dnac:client`: SSID, OS, site, traffic, onboarding, and per-client detail tables.\n- `cisco:dnac:devicehealth`: device type KPIs, health distribution, inventory, and total fleet summary.\n- `cisco:dnac:issue`: active issue summaries and row-click detail panels.\n\n### Interaction model\n\n- Global time range controls dashboard searches through `$time_tok$`.\n- Refresh rate defaults to 60 seconds through `$refresh_tok$`.\n- Client Type and Site Filter tokens narrow client distribution/detail searches.\n- Selecting an issue row sets `$selected_issue$` and opens the Issue Detail panel. Use Close Details to clear the token.\n\n### Health color policy\n\n- `>=95%`: green `#4cbf7f`.\n- `80-95%`: yellow `#f0c243`.\n- `<80%`: red `#fa5762`.\n\n### Studio schema notes\n\nDashboard Studio source JSON uses `splunk.*` visualization type IDs. The old `viz.*` syntax is legacy and is migrated by Splunk when opened in current Studio. JSON does not support comments, so implementation notes are encoded here and in visualization descriptions to keep this definition importable."
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,

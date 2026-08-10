@@ -45,13 +45,13 @@ assert.deepEqual(resolveAppVersions("development", "1.0.29"), {
 
 assert.equal(
   localePrefix(
-    "/en-US/app/splunk-cisco-dashboards/executive_briefing_profile",
+    "/en-US/app/splunk-cisco-dashboards/workspace_executive_briefing",
   ),
   "/en-US",
 );
 assert.equal(
   localePrefix(
-    "/de-DE/app/splunk-cisco-dashboards/executive_briefing_profile",
+    "/de-DE/app/splunk-cisco-dashboards/workspace_executive_briefing",
   ),
   "/de-DE",
 );

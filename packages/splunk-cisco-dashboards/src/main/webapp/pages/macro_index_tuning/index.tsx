@@ -34,8 +34,8 @@ import { splunkSearchAppUrl } from "@/common/lib/splunkSearchUrl";
 import timeParser from "../dashboardbuilder/custominput/timeparser";
 
 const APP_NAME = "splunk-cisco-dashboards";
-const APP_HOME_VIEW = "secure_networking_profile";
-const APP_SETUP_VIEW = "start";
+const APP_HOME_VIEW = "workspace_secure_networking";
+const APP_SETUP_VIEW = "setup";
 const CIM_APP_NAME = "Splunk_SA_CIM";
 const CISCO_SECURITY_APP_NAME = "CiscoSecurityCloud";
 const THOUSAND_EYES_APP_NAME = "ta_cisco_thousandeyes";
@@ -840,7 +840,7 @@ const isInitialSetupMode = (): boolean =>
   new URLSearchParams(window.location.search).get("setup") === "1";
 
 const isIntegratedSetupView = (): boolean =>
-  typeof window !== "undefined" && /\/start\/?$/.test(window.location.pathname);
+  typeof window !== "undefined" && /\/setup\/?$/.test(window.location.pathname);
 
 const isTrueConfigValue = (value: unknown): boolean =>
   value === true ||

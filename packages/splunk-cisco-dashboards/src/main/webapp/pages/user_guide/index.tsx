@@ -330,7 +330,7 @@ function GuideContents({
 
       <div className="scd-guide-toc-footer">
         <a
-          href={`${appUrl("start")}?setup=1#tune-indexes`}
+          href={`${appUrl("setup")}?setup=1#tune-indexes`}
           className="scd-guide-toc-quicklink"
         >
           Setup: Tune indexes →
@@ -394,43 +394,43 @@ function GuidePageToc({
 const dashboards = [
   {
     title: "Secure Networking",
-    view: "secure_networking_profile",
+    view: "workspace_secure_networking",
     summary:
       "Executive landing page with health KPIs, workspace-aware signal rail, topology, and summary tiles.",
   },
   {
     title: "Insights Workspaces",
-    view: "insights_workspace",
+    view: "workspace_insights",
     summary:
       "Reusable executive views that keep their own sections, tile choices, map placement, and theme.",
   },
   {
     title: "IT Health",
-    view: "it_health_v1",
+    view: "netops_critical_systems_health",
     summary:
       "Catalyst Center, ISE, ThousandEyes, device health, identity, and user experience.",
   },
   {
     title: "Security",
-    view: "security_v1",
+    view: "security_ops_resilience",
     summary:
       "Firewall, IPS, DNS, email, web, identity, endpoint, and security event visibility.",
   },
   {
     title: "Building Intelligence",
-    view: "building_v1",
+    view: "workplace_building_intelligence",
     summary:
       "Cisco Spaces, occupancy, building telemetry, wireless trust, and location intelligence.",
   },
   {
     title: "Cisco Spaces Intelligence",
-    view: "spaces_intelligence_v1",
+    view: "workplace_spaces_intelligence",
     summary:
       "Environmental, capacity, room, activation, visitor, and network impact analytics.",
   },
   {
     title: "Network Activation Report",
-    view: "statewide_exercise_v1",
+    view: "netops_catalyst_health",
     summary:
       "Event operations view for executive, client, device, traffic, and issue summaries.",
   },
@@ -626,10 +626,10 @@ const troubleshootingRows = [
 
 export default function UserGuidePage(): JSX.Element {
   const { theme, resolvedTheme, cycle: cycleTheme } = useTheme();
-  const setupUrl = `${appUrl("start")}?setup=1`;
+  const setupUrl = `${appUrl("setup")}?setup=1`;
   const setupTuningUrl = `${setupUrl}#tune-indexes`;
-  const workspaceUrl = appUrl("insights_workspace");
-  const secureNetworkingUrl = appUrl("secure_networking_profile");
+  const workspaceUrl = appUrl("workspace_insights");
+  const secureNetworkingUrl = appUrl("workspace_secure_networking");
   const scdMacrosUrl = managerUrl(APP_NAME, "data/macros");
   const cimMacrosUrl = managerUrl("Splunk_SA_CIM", "data/macros");
   const guideContentRef = useRef<HTMLDivElement | null>(null);
@@ -1135,9 +1135,9 @@ export default function UserGuidePage(): JSX.Element {
                   <p className="m-0">
                     <strong>Tune indexes</strong> is the third and final step of
                     the Setup workflow. Its React interface is loaded directly
-                    inside Setup; the legacy{" "}
+                    inside Setup; the standalone{" "}
                     <code className="rounded bg-slate-100 px-1 py-0.5">
-                      macro_index_tuning.xml
+                      admin_macro_index_tuning.xml
                     </code>
                     {" "}route redirects here so administrators have one setup
                     destination. The fast scan uses the{" "}

@@ -2,9 +2,9 @@ import React from 'react';
 
 const managerLinks = [
     {
-        id: 'dashboardbuilder',
+        id: 'dashboard_manager',
         label: 'Dashboard Manager',
-        href: '/app/splunk-cisco-dashboards/dashboardbuilder',
+        href: '/app/splunk-cisco-dashboards/dashboard_manager',
     },
 ];
 

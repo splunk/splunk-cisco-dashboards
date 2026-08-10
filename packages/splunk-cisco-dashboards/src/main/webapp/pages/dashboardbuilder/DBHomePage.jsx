@@ -212,7 +212,7 @@ const buildDashboardStudioPath = (dashboardId, mode = "view") => {
 };
 
 const buildDashboardStudioUrl = (dashboardId, mode = "view") =>
-  `/app/splunk-cisco-dashboards/dashboardbuilder#${buildDashboardStudioPath(
+  `/app/splunk-cisco-dashboards/dashboard_manager#${buildDashboardStudioPath(
     dashboardId,
     mode,
   )}`;

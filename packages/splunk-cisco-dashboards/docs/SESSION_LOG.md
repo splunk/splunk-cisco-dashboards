@@ -4779,7 +4779,7 @@ the diagram canvas:
 5. **Catalyst Center-aware filtering** — replace the simple type
    chips in the inventory panel with three cascading dropdowns
    (Management Source → Device Type → Model) that mirror the
-   `asset_inventory_v1` dashboard's filter UX. Selecting
+   `admin_asset_inventory` dashboard's filter UX. Selecting
    "Catalyst Center" as a source narrows the type and model
    options to just what Catalyst Center contributes.
 
@@ -7548,7 +7548,7 @@ perspective:
   Hovering the row turns the title sky-700 and slides the
   chevron right while fading in the ArrowUpRight — same hover
   language the old footer link used. Click opens
-  `/<locale>/app/splunk-cisco-dashboards/it_health_v1` in a new
+  `/<locale>/app/splunk-cisco-dashboards/netops_critical_systems_health` in a new
   tab. The bottom of the card is now a clean rounded edge, no
   divider, no link.
 - Short-viewport math: at 600px viewport height (the case
@@ -10800,7 +10800,7 @@ Cursor rule to be unambiguous + auditable.
 | `searchbase.conf` | 4 stanzas with `rename "All_Traffic.dvc" as …` / `rename "Cisco_Security.…" as …` | double-quoted | unquoted |
 | `searchbase.conf` | 2 explanation `<code>` blocks (lines 7466 + 9389) | `latest('connection.ssid')`, `avg('health.overallScore')` | unquoted forms |
 | `savedsearches.conf` | `[NetOps Alert - NRS Below Threshold]` line 389 | `stats avg('health.overallScore') as cha` + `rename "All_Traffic.dvc" as …` | unquoted forms (kept the `where 'health.overallScore'>=0` because where is class B) |
-| `data/ui/views/statewide_exercise_v1.xml` | 2 inline timechart queries | `by 'connection.ssid'` | `by connection.ssid` |
+| `data/ui/views/netops_catalyst_health.xml` | 2 inline timechart queries | `by 'connection.ssid'` | `by connection.ssid` |
 
 The `where 'health.overallScore'>=0` (line 389 of savedsearches.conf)
 was left intact — `where` is an expression evaluator (Class B) so
@@ -12745,7 +12745,7 @@ impact today; leaving the diff focused.
 section is filled in.
 
 **Files:**
-- `data/ui/views/it_health_v1.xml` (added 7 dataSources, 15 visualizations,
+- `data/ui/views/netops_critical_systems_health.xml` (added 7 dataSources, 15 visualizations,
   1 layout, 1 tab)
 - `app.conf` (build 60 → 61)
 
@@ -12948,7 +12948,7 @@ one that shows "Awaiting data."
 
 User chooses one of these for the next active thread:
 
-1. **Wire `it_health_v1.xml` panels** to consume the seven
+1. **Wire `netops_critical_systems_health.xml` panels** to consume the seven
    IT-Health ThousandEyes stanzas we added on 2026-05-11
    (`it_health_thousandeyes_network_latency`, `_loss`,
    `_jitter`, `_alerts_summary`, `_alerts_timeline`,
@@ -13134,7 +13134,7 @@ unit assumption was wrong and we should drop the `*1000`.
    test-name string in this stanza from
    `"TLH - BLA Connection"` to whatever the actual
    TLH↔AUB test is named. No other changes required.
-4. **Carryover from morning**: `it_health_v1.xml` panel
+4. **Carryover from morning**: `netops_critical_systems_health.xml` panel
    wiring; `/opt/10` drill-down regression diagnosis;
    `app.conf` / `macros.conf` / `props.conf` cleanup
    before next packaging.
@@ -13353,7 +13353,7 @@ deletions.
      fallbacks.
 3. **Carryovers from 2026-05-11 still pending**:
    - Wire IT Health ThousandEyes stanzas
-     (`it_health_thousandeyes_*`) into `it_health_v1.xml`.
+     (`it_health_thousandeyes_*`) into `netops_critical_systems_health.xml`.
    - KV-Store backed link/site capacity input (currently
      `localStorage`-only).
    - Drill-down regression on `/opt/10` — still need browser
@@ -13746,7 +13746,7 @@ Tailwind scope or the portal pattern changes.
 
 ### What we decided NOT to do (and why)
 
-- **Wire the seven new IT Health TE stanzas into `it_health_v1.xml`
+- **Wire the seven new IT Health TE stanzas into `netops_critical_systems_health.xml`
   this session.** Deferred to a follow-up PR. The stanzas exist
   and are picker-discoverable; wiring them is XML panel-layout
   work that's better isolated from today's tile / SPL / layout
@@ -13803,7 +13803,7 @@ Tailwind scope or the portal pattern changes.
 
 ### What's next
 
-- **Wire the seven new IT Health TE stanzas into `it_health_v1.xml`**
+- **Wire the seven new IT Health TE stanzas into `netops_critical_systems_health.xml`**
   as panels. Follow-up PR.
 - **Send the message to David** about ThousandEyes A2A test
   feasibility — needed for Wave 1 site-map work. (User to send;
@@ -13885,7 +13885,7 @@ live `index=dnac` shape — all carry it.
 
 ### Carryover bug fix found while auditing
 
-`it_health_v1.xml` &rarr; `ds_base_issues_ref` data source was using
+`netops_critical_systems_health.xml` &rarr; `ds_base_issues_ref` data source was using
 the same broken assumption as the deleted Group B stanzas: it
 projected `SiteName` / `SiteNameHierarchy` / `SiteType` from
 `cisco:dnac:issue` events that don't carry those fields. Every
@@ -15242,12 +15242,12 @@ User approved **Option A**.
    re-wired with no SPL changes — the stanzas already have the correct
    `tstats` queries.
 4. **5 in-stanza `<a href="/app/splunk-cisco-dashboards/user_experience">`
-   links rewritten** to point at `it_health_v1`, with anchor text
+   links rewritten** to point at `netops_critical_systems_health`, with anchor text
    updated to "IT Health dashboard (User Experience tab)".
 
 ### What we built
 
-**`it_health_v1.xml` — new tab `layout_user_experience`** (between
+**`netops_critical_systems_health.xml` — new tab `layout_user_experience`** (between
 Overview and Details & KPI Reference):
 
 | viz id | type | data source | what it shows |
@@ -15269,11 +15269,11 @@ Center Intelligence → About.
 
 ### Verification
 
-- **JSON well-formedness**: parsed `it_health_v1.xml` CDATA payload and
+- **JSON well-formedness**: parsed `netops_critical_systems_health.xml` CDATA payload and
   confirmed all 5 new viz items resolve to existing visualizations,
   all primary datasource references resolve, and the new layout's input
   reference (`input_global_trp`) resolves.
-- **XML well-formedness**: parsed `it_health_v1.xml`, `admin_guide_v1.xml`,
+- **XML well-formedness**: parsed `netops_critical_systems_health.xml`, `admin_guide_v1.xml`,
   and `nav/default.xml` — all OK.
 - **Live SPL validation** (against local Splunk on `https://localhost:8089`,
   app `splunk-cisco-dashboards`, `-24h..now`):
@@ -15290,7 +15290,7 @@ Center Intelligence → About.
 
 ### Files changed
 
-- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/data/ui/views/it_health_v1.xml`
+- `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/data/ui/views/netops_critical_systems_health.xml`
   — added 8 vizes, 6 datasources, 1 layout, 1 tab.
 - `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/data/ui/views/user_experience_v1.xml`
   — **deleted**.
@@ -15304,7 +15304,7 @@ Center Intelligence → About.
 - `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf`
   — 4 stanzas tagged `Requires_Cisco_ThousandEyes_DM`; 5 anchor links
   rewired from `/app/splunk-cisco-dashboards/user_experience` to
-  `/app/splunk-cisco-dashboards/it_health_v1` with anchor text updated.
+  `/app/splunk-cisco-dashboards/netops_critical_systems_health` with anchor text updated.
 
 ### What's next
 

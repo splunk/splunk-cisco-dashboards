@@ -1,7 +1,7 @@
 /**
  * Shared Simple XML bootstrap for the Executive Insights React experience.
  *
- * Both executive_briefing_profile.xml and secure_networking_profile.xml load
+ * Both workspace_executive_briefing.xml and workspace_secure_networking.xml load
  * this file and provide the same #scan-root mount for their selected profile.
  * Keeping this outside appserver/templates makes a first install immediately
  * usable without requiring Splunk Web to restart its Mako template loader.

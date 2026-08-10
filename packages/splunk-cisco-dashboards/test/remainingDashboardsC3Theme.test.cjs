@@ -33,56 +33,56 @@ const SECTION_FILL = "rgba(15,17,23,0.78)";
 const SECTION_STROKE = "rgba(65,74,86,0.52)";
 
 const DASHBOARDS = {
-  "asset_inventory_v1.xml": {
+  "admin_asset_inventory.xml": {
     digest: "937e127f71bce1243bad429ad3504bc67ab796e59806e8a20bf65854f44a98b8",
     dataSources: 25,
     visualizations: 41,
     tabs: 3,
     eventHandlers: 0,
   },
-  "building_v1.xml": {
+  "workplace_building_intelligence.xml": {
     digest: "50d8aa98718334abe6cb536cd470eaf0dfbdc69043505acd147ef4c716ef063a",
     dataSources: 25,
     visualizations: 52,
     tabs: 4,
     eventHandlers: 0,
   },
-  "netops_readiness_v1.xml": {
+  "netops_readiness.xml": {
     digest: "b118c5b2db4f20c66cea107bddb95dd386283803b40f5351b1c5f8beaa360f6e",
     dataSources: 29,
     visualizations: 79,
     tabs: 5,
     eventHandlers: 2,
   },
-  "security_v1.xml": {
+  "security_ops_resilience.xml": {
     digest: "ca2357ed96951cf30437d2d58aea2814c7b898942e376af412f31a221aeba42e",
     dataSources: 43,
     visualizations: 50,
     tabs: 3,
     eventHandlers: 0,
   },
-  "spaces_intelligence_v1.xml": {
+  "workplace_spaces_intelligence.xml": {
     digest: "47cb20787336662e68fda7774d8ba72fa9131ac8d0bd97441dd81a7a8dfdaf5b",
     dataSources: 58,
     visualizations: 76,
     tabs: 7,
     eventHandlers: 0,
   },
-  "statewide_exercise_v1.xml": {
+  "netops_catalyst_health.xml": {
     digest: "966e1c6e3c8874579ada047230ef851aa88e2814857073f8cb31551b66fe661d",
     dataSources: 77,
     visualizations: 106,
     tabs: 4,
     eventHandlers: 0,
   },
-  "statewide_exercise_v1_studio_modern.xml": {
+  "netops_catalyst_operations.xml": {
     digest: "67c63de0c20c503dbc3f0f195a0fcc9d576be9a6288d3d6af6e1f16221816e30",
     dataSources: 34,
     visualizations: 32,
     tabs: 4,
     eventHandlers: 2,
   },
-  "workplace_spog_v1.xml": {
+  "workplace_operations_overview.xml": {
     digest: "753fedb7c1ff37489fc349f5c421c5830fd9b31f8c2a1cc93a9bb9224b7b4891",
     dataSources: 9,
     visualizations: 32,
@@ -363,7 +363,7 @@ for (const [filename, baseline] of Object.entries(DASHBOARDS)) {
   );
 }
 
-for (const filename of ["secure_operations_glass.xml", "user_guide.xml"]) {
+for (const filename of ["security_ops_overview.xml", "user_guide.xml"]) {
   const xml = fs.readFileSync(path.join(VIEWS_DIR, filename), "utf8");
   assert.match(xml, /<dashboard\s+version="1\.1"\s+theme="dark"/);
   assert.match(xml, /color: #a6adb6; background: #0f1117;/);

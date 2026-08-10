@@ -1,5 +1,5 @@
 {
-  "secure_networking_agentic_ops": {
+  "sn_agentic_ops_operational_intelligence": {
     "label": "Agentic Ops",
     "description": "Coordinate telemetry readiness, path health, routing instability, and AI Defense signals.",
     "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/agentic-ops.svg",
@@ -38,7 +38,7 @@
       }
     ]
   },
-  "secure_networking_agentic_ops_executive_overview": {
+  "sn_agentic_ops_executive_assurance": {
     "label": "Executive Overview",
     "description": "Summarize secure-networking posture, operational risk, and business-relevant outcomes.",
     "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/agentic-ops.svg",
@@ -75,7 +75,7 @@
       }
     ]
   },
-  "secure_networking_hmf_dlp_cloud_native_security": {
+  "sn_hmf_dlp_cloud_native_security": {
     "label": "DLP and Cloud Native Security",
     "description": "Expose data-loss risk and cloud-native workload controls in one operational view.",
     "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/hybrid-mesh-firewalling.svg",
@@ -121,7 +121,7 @@
       }
     ]
   },
-  "secure_networking_hmf_sdwan_network_health_monitoring": {
+  "sn_hmf_sdwan_network_health": {
     "label": "SD-WAN and Network Health Monitoring",
     "description": "Correlate WAN health, reachability, and service-impact signals across the mesh.",
     "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/hybrid-mesh-firewalling.svg",
@@ -163,7 +163,7 @@
       }
     ]
   },
-  "secure_networking_hmf_threat_detection_enforcement": {
+  "sn_hmf_threat_detection_enforcement": {
     "label": "Threat Detection and Enforcement",
     "description": "Track high-confidence detections and verify the controls enforcing policy.",
     "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/hybrid-mesh-firewalling.svg",
@@ -204,7 +204,7 @@
       }
     ]
   },
-  "secure_networking_hybrid_mesh_firewalling": {
+  "sn_hmf_enforcement": {
     "label": "Hybrid Mesh Firewalling",
     "description": "Unify firewall posture, enforcement, and workload protection across the hybrid mesh.",
     "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/hybrid-mesh-firewalling.svg",
@@ -241,7 +241,7 @@
       }
     ]
   },
-  "secure_networking_scalable_network_segmentation": {
+  "sn_segmentation_readiness": {
     "label": "Scalable Network Segmentation",
     "description": "Connect segmentation posture, trust boundaries, and enforcement coverage at scale.",
     "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/segmentation.svg",
@@ -278,7 +278,7 @@
       }
     ]
   },
-  "secure_networking_secure_infrastructure": {
+  "sn_secure_infrastructure_posture": {
     "label": "Secure Infrastructure",
     "description": "Unify infrastructure assurance, exposure, and operational control signals.",
     "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/secure-infrastructure.svg",
@@ -315,7 +315,7 @@
       }
     ]
   },
-  "secure_networking_secure_infrastructure_status": {
+  "sn_secure_infrastructure_status": {
     "label": "Secure Infrastructure Status",
     "description": "Track current infrastructure state, exceptions, and emerging operational risk.",
     "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/secure-infrastructure.svg",
@@ -352,7 +352,7 @@
       }
     ]
   },
-  "secure_networking_segmentation_overview": {
+  "sn_segmentation_operations": {
     "label": "Segmentation Overview",
     "description": "Summarize segment health, policy alignment, and areas needing investigation.",
     "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/segmentation.svg",
@@ -389,7 +389,7 @@
       }
     ]
   },
-  "secure_networking_zta": {
+  "sn_zta_posture": {
     "label": "Zero Trust Access",
     "description": "Connect identity, posture, policy, and response signals across the access journey.",
     "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg",
@@ -426,7 +426,7 @@
       }
     ]
   },
-  "secure_networking_zta_authentication_policy_enforcement": {
+  "sn_zta_authentication_policy_enforcement": {
     "label": "Authentication and Policy Enforcement",
     "description": "Validate authentication outcomes and verify access policy enforcement.",
     "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg",
@@ -463,7 +463,7 @@
       }
     ]
   },
-  "secure_networking_zta_detection_response": {
+  "sn_zta_detection_response": {
     "label": "Detection & Response",
     "description": "Surface access-related detections and the response actions that contain risk.",
     "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg",
@@ -500,7 +500,7 @@
       }
     ]
   },
-  "secure_networking_zta_policy_management": {
+  "sn_zta_policy_management": {
     "label": "Policy Management",
     "description": "Monitor access-policy coverage, change, and exceptions needing review.",
     "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg",
@@ -537,7 +537,7 @@
       }
     ]
   },
-  "secure_networking_zta_ravpn_sessions_and_posture": {
+  "sn_zta_ravpn_sessions_and_posture": {
     "label": "Remote Access VPN (RaVPN) Sessions and Posture",
     "description": "Connect remote-session health with endpoint posture and access risk.",
     "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg",
@@ -574,7 +574,7 @@
       }
     ]
   },
-  "secure_networking_zta_user_activity_monitoring": {
+  "sn_zta_user_activity_monitoring": {
     "label": "User Activity Monitoring",
     "description": "Reveal unusual access behavior and the identities, devices, and resources involved.",
     "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg",

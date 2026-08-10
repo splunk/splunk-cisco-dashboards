@@ -32,9 +32,9 @@ const secureNetworkingStudioViews = fs
   .readdirSync(studioViewsPath)
   .filter(
     (fileName) =>
-      fileName.startsWith("secure_networking_") &&
+      fileName.startsWith("sn_") &&
       fileName.endsWith(".xml") &&
-      fileName !== "secure_networking_profile.xml",
+      fileName !== "sn_topology_canvas.xml",
   )
   .map((fileName) => ({
     fileName,

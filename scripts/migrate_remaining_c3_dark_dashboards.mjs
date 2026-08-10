@@ -20,14 +20,14 @@ const PALETTE_PATH = path.join(
 );
 
 const STUDIO_DASHBOARDS = [
-    'asset_inventory_v1.xml',
-    'building_v1.xml',
-    'netops_readiness_v1.xml',
-    'security_v1.xml',
-    'spaces_intelligence_v1.xml',
-    'statewide_exercise_v1.xml',
-    'statewide_exercise_v1_studio_modern.xml',
-    'workplace_spog_v1.xml',
+    'admin_asset_inventory.xml',
+    'workplace_building_intelligence.xml',
+    'netops_readiness.xml',
+    'security_ops_resilience.xml',
+    'workplace_spaces_intelligence.xml',
+    'netops_catalyst_health.xml',
+    'netops_catalyst_operations.xml',
+    'workplace_operations_overview.xml',
 ];
 
 const paletteSource = fs.readFileSync(PALETTE_PATH, 'utf8');

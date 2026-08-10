@@ -860,7 +860,7 @@ const PRIORITY_DRILLDOWN_LABEL = "Priority Drill-Down";
 const PRIORITY_DRILLDOWN_CTA = "Open dashboard";
 const PRIORITY_DRILLDOWN_STORAGE_KEY =
   "splunk-cisco-dashboards.priorityDrilldown.v1";
-const DEFAULT_PRIORITY_DRILLDOWN_VIEW = "statewide_exercise_v1";
+const DEFAULT_PRIORITY_DRILLDOWN_VIEW = "netops_catalyst_health";
 
 // App-local allow-list only. These are shipped views in this app, curated
 // from default/data/ui/nav/default.xml plus default/data/ui/views/*.xml.
@@ -868,58 +868,58 @@ const DEFAULT_PRIORITY_DRILLDOWN_VIEW = "statewide_exercise_v1";
 // intentionally excluded from the executive drill-down picker.
 const APP_PRIORITY_DRILLDOWNS: readonly AppPriorityDrilldown[] = [
   {
-    viewName: "statewide_exercise_v1",
+    viewName: "netops_catalyst_health",
     title: "Statewide Network Activation Report",
     description:
       "Client health, readiness, and activation signals across all sites.",
     timeToken: "time_tok",
   },
   {
-    viewName: "it_health_v1",
+    viewName: "netops_critical_systems_health",
     title: "IT Health",
     description:
       "Critical systems, network posture, device health, and compliance.",
     timeToken: "global_time",
   },
   {
-    viewName: "security_v1",
+    viewName: "security_ops_resilience",
     title: "Security Resilience",
     description: "Firewall, identity, XDR, IDS/IPS, DNS, and endpoint signals.",
     timeToken: "global_time",
   },
   {
-    viewName: "building_v1",
+    viewName: "workplace_building_intelligence",
     title: "Building Intelligence",
     description:
       "Cisco Spaces occupancy, wireless trust, and workplace telemetry.",
     timeToken: "global_time",
   },
   {
-    viewName: "health_monitoring",
+    viewName: "netops_health_monitoring",
     title: "Health Monitoring",
     description: "Operational health monitoring for sites and infrastructure.",
   },
   {
-    viewName: "netops_readiness_v1",
+    viewName: "netops_readiness",
     title: "NetOps Readiness",
     description: "Readiness, site posture, and field-operation validation.",
     timeToken: "global_time",
   },
   {
-    viewName: "spaces_intelligence_v1",
+    viewName: "workplace_spaces_intelligence",
     title: "Spaces Intelligence",
     description:
       "Cisco Spaces intelligence for locations, devices, and activity.",
     timeToken: "global_time",
   },
   {
-    viewName: "workplace_spog_v1",
+    viewName: "workplace_operations_overview",
     title: "Workplace Single Pane",
     description: "Unified workplace and collaboration operating view.",
     timeToken: "global_time",
   },
   {
-    viewName: "asset_inventory_v1",
+    viewName: "admin_asset_inventory",
     title: "Asset Inventory",
     description: "Asset inventory across Cisco and Splunk-connected sources.",
     timeToken: "time_tok",
@@ -930,7 +930,7 @@ const APP_PRIORITY_DRILLDOWNS: readonly AppPriorityDrilldown[] = [
     description: "Network diagram and topology-oriented operational context.",
   },
   {
-    viewName: "topology_canvas_v1",
+    viewName: "sn_topology_canvas",
     title: "Topology Canvas",
     description:
       "Interactive network topology canvas for site and device context.",
@@ -983,7 +983,7 @@ const clearPriorityDrilldownView = (): void => {
 // =============================================================================
 
 // Locale-aware URL builder for a sibling Splunk view inside this app
-// (e.g. statewide_exercise_v1). Mirrors splunkSearchAppUrl's locale
+// (e.g. netops_catalyst_health). Mirrors splunkSearchAppUrl's locale
 // detection so the URL stays valid in non-en-US Splunk installs.
 const splunkViewAppUrl = (
   viewName: string,
@@ -2194,7 +2194,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       const params = new URLSearchParams();
       params.set("workspace", nextWorkspaceId);
       window.location.assign(
-        `${splunkViewAppUrl("insights_workspace")}?${params.toString()}`,
+        `${splunkViewAppUrl("workspace_insights")}?${params.toString()}`,
       );
     },
     [insightsWorkspace.id],

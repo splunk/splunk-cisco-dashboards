@@ -161,7 +161,7 @@ const originalWindow = global.window;
 try {
   global.window = {
     location: {
-      pathname: "/en-US/app/splunk-cisco-dashboards/insights_workspace",
+      pathname: "/en-US/app/splunk-cisco-dashboards/workspace_insights",
       search: "?workspace=network_resilience_demo",
     },
   };
@@ -171,7 +171,7 @@ try {
   );
 
   global.window.location.pathname =
-    "/en-US/app/splunk-cisco-dashboards/executive_briefing_profile";
+    "/en-US/app/splunk-cisco-dashboards/workspace_executive_briefing";
   global.window.location.search = "";
   assert.equal(
     getWorkspaceFromLocation(PACKAGED_WORKSPACE_FALLBACKS).id,
@@ -179,7 +179,7 @@ try {
   );
 
   global.window.location.pathname =
-    "/en-US/app/splunk-cisco-dashboards/secure_networking_profile";
+    "/en-US/app/splunk-cisco-dashboards/workspace_secure_networking";
   assert.equal(
     getWorkspaceFromLocation(PACKAGED_WORKSPACE_FALLBACKS).id,
     "secure_networking",

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <dashboard version="1.1" theme="dark" hideEdit="true" hideExport="true" hideTitle="true"
            script="application.js,executive_insights_bootstrap.js">
-    <label>Splunk for Secure Networking</label>
+    <label>Executive Briefing Workspace</label>
     <row>
         <panel>
             <html>

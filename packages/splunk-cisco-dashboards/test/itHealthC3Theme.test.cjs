@@ -9,7 +9,7 @@ const VIEWS_DIR = path.resolve(
   __dirname,
   "../src/main/resources/splunk/default/data/ui/views",
 );
-const DASHBOARD_PATH = path.join(VIEWS_DIR, "it_health_v1.xml");
+const DASHBOARD_PATH = path.join(VIEWS_DIR, "netops_critical_systems_health.xml");
 const TEMPLATES_PATH = path.resolve(
   __dirname,
   "../src/main/resources/splunk/default/templates.conf",
@@ -90,7 +90,7 @@ const xml = fs.readFileSync(DASHBOARD_PATH, "utf8");
 const definitionMatch = xml.match(
   /<definition><!\[CDATA\[([\s\S]*?)\]\]><\/definition>/,
 );
-assert.ok(definitionMatch, "it_health_v1 must contain a Dashboard Studio definition");
+assert.ok(definitionMatch, "netops_critical_systems_health must contain a Dashboard Studio definition");
 const definition = JSON.parse(definitionMatch[1]);
 
 const templates = fs.readFileSync(TEMPLATES_PATH, "utf8");
@@ -111,7 +111,7 @@ assert.ok(sharedPalette.size >= 10, "the shared C3 visualization palette must be
 assert.match(
   xml,
   /<dashboard\s+version="2"\s+theme="dark"\s+stylesheet="application\.css">/,
-  "it_health_v1 must use the saved dark theme and shared Studio stylesheet",
+  "netops_critical_systems_health must use the saved dark theme and shared Studio stylesheet",
 );
 
 for (const [layoutId, layout] of Object.entries(definition.layout.layoutDefinitions)) {
@@ -194,7 +194,7 @@ for (const color of RETIRED_COLORS) {
   assert.equal(
     normalizedXml.includes(color),
     false,
-    `it_health_v1 must not retain retired light/legacy color ${color}`,
+    `netops_critical_systems_health must not retain retired light/legacy color ${color}`,
   );
 }
 
@@ -274,7 +274,7 @@ const actualDigest = crypto
 assert.equal(
   actualDigest,
   BEHAVIOR_DIGEST,
-  "it_health_v1 searches, tokens, inputs, tabs, layouts, visualizations, or interactions changed",
+  "netops_critical_systems_health searches, tokens, inputs, tabs, layouts, visualizations, or interactions changed",
 );
 
 assert.equal(Object.keys(definition.dataSources).length, 79);
