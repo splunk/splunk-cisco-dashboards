@@ -18,6 +18,17 @@ const SCD_SETUP_DISCOVERY_SEARCH = [
 
 const SCD_SETUP_DEPENDENCIES = [
   {
+    id: "searchbase",
+    name: "Searchbase App for Splunk",
+    appIds: ["searchbase"],
+    always: true,
+    importance: "mandatory",
+    splunkbase:
+      "https://splunkbase.splunk.com/apps/#/search/Searchbase%20App%20for%20Splunk/",
+    purpose:
+      "Mandatory foundation. Dashboards depend on its shared search catalog and will break without it.",
+  },
+  {
     id: "cim",
     name: "Splunk Common Information Model",
     appIds: ["Splunk_SA_CIM"],
@@ -25,16 +36,6 @@ const SCD_SETUP_DEPENDENCIES = [
     importance: "required",
     purpose:
       "Provides the normalized authentication and network fields shared by the dashboards.",
-  },
-  {
-    id: "searchbase",
-    name: "Searchbase App for Splunk",
-    appIds: ["searchbase"],
-    always: true,
-    importance: "required",
-    splunkbase:
-      "https://splunkbase.splunk.com/apps/#/search/Searchbase%20App%20for%20Splunk/",
-    purpose: "Supplies the shared search catalog used by this app.",
   },
   {
     id: "ai-toolkit",
@@ -244,8 +245,11 @@ function scdSetupIsTuningHash(hash) {
   return String(hash || "").replace(/^#/, "") === "tune-indexes";
 }
 
-function scdSetupManageAppsUrl(pathname) {
-  return `${scdSetupLocalePrefix(pathname)}/manager/system/apps/local`;
+function scdSetupManageAppsUrl(pathname, appId) {
+  const baseUrl = `${scdSetupLocalePrefix(pathname)}/manager/system/apps/local`;
+  return appId
+    ? `${baseUrl}?search=${encodeURIComponent(appId)}`
+    : baseUrl;
 }
 
 function scdSetupAppInstallUrl(pathname, appId) {
@@ -610,6 +614,70 @@ function scdSetupLink(className, text, href) {
   return link;
 }
 
+function scdSetupOpenManageApps(event, appId) {
+  if (
+    event.button !== 0 ||
+    event.metaKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.altKey
+  ) {
+    return;
+  }
+
+  event.preventDefault();
+  const url = scdSetupManageAppsUrl(window.location.pathname, appId);
+  const managerWindow = window.open(url, "_blank");
+  if (!managerWindow) {
+    window.location.assign(url);
+    return;
+  }
+
+  let attempts = 0;
+  const filterTimer = window.setInterval(() => {
+    attempts += 1;
+    try {
+      const filter = managerWindow.document.querySelector(
+        '[data-test-name="AppListing-AppsTableActions-FilterText"] input, input[placeholder="filter by app name"]',
+      );
+      if (filter) {
+        const valueSetter = Object.getOwnPropertyDescriptor(
+          managerWindow.HTMLInputElement.prototype,
+          "value",
+        )?.set;
+        if (valueSetter) {
+          valueSetter.call(filter, appId);
+        } else {
+          filter.value = appId;
+        }
+        filter.dispatchEvent(
+          new managerWindow.Event("input", { bubbles: true }),
+        );
+        filter.dispatchEvent(
+          new managerWindow.Event("change", { bubbles: true }),
+        );
+        filter.dispatchEvent(
+          new managerWindow.KeyboardEvent("keydown", {
+            bubbles: true,
+            code: "Enter",
+            key: "Enter",
+          }),
+        );
+        filter.focus();
+        managerWindow.opener = null;
+        window.clearInterval(filterTimer);
+        return;
+      }
+    } catch (_error) {
+      // The query parameter remains a useful fallback if the manager UI
+      // becomes inaccessible while it loads or changes implementation.
+    }
+    if (attempts >= 80 || managerWindow.closed) {
+      window.clearInterval(filterTimer);
+    }
+  }, 250);
+}
+
 function scdSetupShowError(root, message) {
   const alert = scdSetupElement("div", "scd-setup__alert", message);
   alert.setAttribute("role", "alert");
@@ -751,7 +819,7 @@ function scdSetupRenderPrerequisites(parent, prerequisites, appsError) {
   const renderPrerequisite = (prerequisite) => {
     const row = scdSetupElement(
       "article",
-      `scd-setup__requirement is-${prerequisite.status}`,
+      `scd-setup__requirement is-${prerequisite.status} is-${prerequisite.importance}`,
     );
     const status = scdSetupElement(
       "span",
@@ -761,9 +829,16 @@ function scdSetupRenderPrerequisites(parent, prerequisites, appsError) {
     const content = scdSetupElement("div", "scd-setup__requirement-copy");
     const heading = scdSetupElement("div", "scd-setup__requirement-heading");
     heading.appendChild(scdSetupElement("strong", "", prerequisite.name));
-    if (prerequisite.always && prerequisite.importance === "required") {
+    if (
+      prerequisite.always &&
+      ["mandatory", "required"].includes(prerequisite.importance)
+    ) {
       heading.appendChild(
-        scdSetupElement("span", "scd-setup__requirement-role", "Required"),
+        scdSetupElement(
+          "span",
+          "scd-setup__requirement-role",
+          prerequisite.importance === "mandatory" ? "Mandatory" : "Required",
+        ),
       );
     }
     content.appendChild(heading);
@@ -779,22 +854,27 @@ function scdSetupRenderPrerequisites(parent, prerequisites, appsError) {
       prerequisite.displayId || prerequisite.appIds[0] || prerequisite.id;
     row.appendChild(content);
     row.appendChild(status);
-    if (prerequisite.status === "update" && prerequisite.installedId) {
+    if (
+      ["installed", "update", "disabled"].includes(prerequisite.status) &&
+      prerequisite.installedId
+    ) {
       const link = scdSetupLink(
         "scd-setup__external",
-        "Update",
-        scdSetupAppInstallUrl(
-          window.location.pathname,
-          prerequisite.installedId,
-        ),
+        prerequisite.status === "update" ? "Update" : "Manage",
+        scdSetupManageAppsUrl(window.location.pathname, prerequisite.installedId),
       );
       link.setAttribute(
         "aria-label",
-        `Update ${prerequisite.name} in Manage Apps`,
+        `${prerequisite.status === "update" ? "Update" : "Manage"} ${
+          prerequisite.name
+        } in Manage Apps`,
       );
-      link.title = `Open ${prerequisite.name} in Manage Apps`;
+      link.title = `Open Manage Apps filtered to ${prerequisite.installedId}`;
       link.target = "_blank";
-      link.rel = "noopener noreferrer";
+      link.rel = "noreferrer";
+      link.addEventListener("click", (event) =>
+        scdSetupOpenManageApps(event, prerequisite.installedId),
+      );
       row.appendChild(link);
     } else if (prerequisite.splunkbase) {
       const link = scdSetupLink(
@@ -1124,7 +1204,7 @@ function scdSetupRenderPackageStep(root) {
     : prerequisites.filter(
         (item) =>
           item.always &&
-          item.importance === "required" &&
+          ["mandatory", "required"].includes(item.importance) &&
           ["missing", "disabled"].includes(item.status),
       );
   const readyCount = prerequisites.length - needsAttention;
@@ -1177,15 +1257,65 @@ function scdSetupRenderPackageStep(root) {
     ),
   );
   packagesHeader.appendChild(packagesCopy);
+  const packageActions = scdSetupElement(
+    "div",
+    "scd-setup__section-actions",
+  );
+  const refreshApps = scdSetupElement(
+    "button",
+    "scd-setup__package-action",
+    "Refresh status",
+  );
+  refreshApps.type = "button";
+  refreshApps.setAttribute("aria-label", "Refresh installed package status");
+  refreshApps.title = "Check installed apps again";
+  refreshApps.addEventListener("click", () => {
+    refreshApps.disabled = true;
+    refreshApps.textContent = "Checking…";
+    refreshApps.setAttribute("aria-busy", "true");
+    scdSetupLoadApps()
+      .then((entries) => {
+        state.appEntries = entries;
+        state.errors = { ...state.errors, apps: null };
+        state.packageRefreshMessage = `Package status refreshed at ${new Date().toLocaleTimeString(
+          [],
+          { hour: "numeric", minute: "2-digit" },
+        )}.`;
+      })
+      .catch((error) => {
+        state.appEntries = [];
+        state.errors = { ...state.errors, apps: error };
+        state.packageRefreshMessage =
+          "Package status could not be refreshed. Try again or contact a Splunk administrator.";
+      })
+      .then(() => {
+        scdSetupRenderPackageStep(root);
+        root
+          .querySelector('[aria-label="Refresh installed package status"]')
+          ?.focus?.();
+      });
+  });
+  packageActions.appendChild(refreshApps);
   const manageApps = scdSetupLink(
-    "scd-setup__secondary-link",
+    "scd-setup__package-action",
     "Manage Apps",
     scdSetupManageAppsUrl(window.location.pathname),
   );
   manageApps.target = "_blank";
   manageApps.rel = "noopener noreferrer";
-  packagesHeader.appendChild(manageApps);
+  packageActions.appendChild(manageApps);
+  packagesHeader.appendChild(packageActions);
   packages.appendChild(packagesHeader);
+  if (state.packageRefreshMessage) {
+    const refreshMessage = scdSetupElement(
+      "p",
+      `scd-setup__package-refresh-status${errors.apps ? " is-error" : ""}`,
+      state.packageRefreshMessage,
+    );
+    refreshMessage.setAttribute("role", "status");
+    refreshMessage.setAttribute("aria-live", "polite");
+    packages.appendChild(refreshMessage);
+  }
   scdSetupRenderPrerequisites(packages, prerequisites, errors.apps);
   main.appendChild(packages);
 
@@ -1438,6 +1568,8 @@ if (typeof module !== "undefined" && module.exports) {
     isOnDemand: scdSetupIsOnDemand,
     isTuningHash: scdSetupIsTuningHash,
     localePrefix: scdSetupLocalePrefix,
+    manageAppsUrl: scdSetupManageAppsUrl,
+    openManageApps: scdSetupOpenManageApps,
     parseExportRows: scdSetupParseExportRows,
     resolveCapabilities: scdSetupResolveCapabilities,
     resolvePrerequisites: scdSetupResolvePrerequisites,

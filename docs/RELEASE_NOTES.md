@@ -2,6 +2,10 @@
 
 ## 1.0.36
 
+- Setup package readiness can now refresh the installed-app inventory in place
+  after an install or upgrade. Installed packages open a focused Manage Apps
+  view, and Searchbase is presented first with an explicit mandatory
+  foundation treatment so its dashboard dependency is unmistakable.
 - Links in every Searchbase guidance metadata field now open in a new browser
   tab from both Insights Workspace and Dashboard Manager, with opener access
   disabled for safe external navigation.

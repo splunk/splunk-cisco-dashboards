@@ -21,6 +21,8 @@ const {
   isOnDemand,
   isTuningHash,
   localePrefix,
+  manageAppsUrl,
+  openManageApps,
   parseExportRows,
   resolveCapabilities,
   resolvePrerequisites,
@@ -64,6 +66,102 @@ assert.equal(
   ),
   "/en-US/manager/appinstall/Splunk_ML_Toolkit",
 );
+assert.equal(
+  manageAppsUrl("/en-US/app/splunk-cisco-dashboards/setup"),
+  "/en-US/manager/system/apps/local",
+);
+assert.equal(
+  manageAppsUrl(
+    "/fr-FR/app/splunk-cisco-dashboards/setup",
+    "Splunk_ML_Toolkit",
+  ),
+  "/fr-FR/manager/system/apps/local?search=Splunk_ML_Toolkit",
+);
+
+let manageAppsIntervalCallback;
+let manageAppsClearedTimer;
+let manageAppsOpenedUrl;
+let manageAppsPreventedDefault = false;
+const manageAppsFilterEvents = [];
+const manageAppsFilter = {
+  dispatchEvent(event) {
+    manageAppsFilterEvents.push([event.type, event.key || ""]);
+  },
+  focus() {
+    this.focused = true;
+  },
+};
+function ManageAppsEvent(type) {
+  this.type = type;
+}
+function ManageAppsInput() {}
+function ManageAppsKeyboardEvent(type, options) {
+  this.type = type;
+  this.key = options.key;
+}
+const manageAppsWindow = {
+  closed: false,
+  document: {
+    querySelector() {
+      return manageAppsFilter;
+    },
+  },
+  Event: ManageAppsEvent,
+  HTMLInputElement: ManageAppsInput,
+  KeyboardEvent: ManageAppsKeyboardEvent,
+  opener: {},
+};
+Object.defineProperty(manageAppsWindow.HTMLInputElement.prototype, "value", {
+  set(value) {
+    this.value = value;
+  },
+});
+global.window = {
+  clearInterval(timer) {
+    manageAppsClearedTimer = timer;
+  },
+  location: {
+    assign() {},
+    pathname: "/en-US/app/splunk-cisco-dashboards/setup",
+  },
+  open(url) {
+    manageAppsOpenedUrl = url;
+    return manageAppsWindow;
+  },
+  setInterval(callback) {
+    manageAppsIntervalCallback = callback;
+    return 42;
+  },
+};
+openManageApps(
+  {
+    altKey: false,
+    button: 0,
+    ctrlKey: false,
+    metaKey: false,
+    preventDefault() {
+      manageAppsPreventedDefault = true;
+    },
+    shiftKey: false,
+  },
+  "Splunk_ML_Toolkit",
+);
+manageAppsIntervalCallback();
+assert.equal(manageAppsPreventedDefault, true);
+assert.equal(
+  manageAppsOpenedUrl,
+  "/en-US/manager/system/apps/local?search=Splunk_ML_Toolkit",
+);
+assert.equal(manageAppsFilter.value, "Splunk_ML_Toolkit");
+assert.deepEqual(manageAppsFilterEvents, [
+  ["input", ""],
+  ["change", ""],
+  ["keydown", "Enter"],
+]);
+assert.equal(manageAppsFilter.focused, true);
+assert.equal(manageAppsWindow.opener, null);
+assert.equal(manageAppsClearedTimer, 42);
+delete global.window;
 assert.equal(
   appInstallUrl(
     "/fr-FR/app/splunk-cisco-dashboards/setup",
@@ -194,8 +292,8 @@ const prerequisites = resolvePrerequisites(
 assert.deepEqual(
   prerequisites.map((item) => item.id),
   [
-    "cim",
     "searchbase",
+    "cim",
     "ai-toolkit",
     "scientific-python",
     "dc-networking",
@@ -209,7 +307,7 @@ assert.equal(prerequisites.length, 9);
 assert.equal(prerequisites.find((item) => item.id === "cim").status, "missing");
 assert.equal(
   prerequisites.find((item) => item.id === "searchbase").importance,
-  "required",
+  "mandatory",
 );
 assert.equal(
   prerequisites.find((item) => item.id === "catalyst-app").status,
@@ -354,12 +452,14 @@ assert.match(bootstrapSource, /Splunk_SA_Scientific_Python_<os>/);
 assert.match(bootstrapSource, /AI analytics runtime/);
 assert.match(bootstrapSource, /scd-setup__requirement-suite/);
 assert.match(bootstrapSource, /scd-setup__requirement-role/);
+assert.match(bootstrapSource, /Refresh installed package status/);
+assert.match(bootstrapSource, /scdSetupOpenManageApps/);
 assert.match(bootstrapSource, /button\.disabled = Boolean\(buttonConfig\.disabled\)/);
 assert.match(
   bootstrapSource,
   /must be installed and enabled before index tuning/,
 );
-assert.match(bootstrapSource, /Update \$\{prerequisite\.name\} in Manage Apps/);
+assert.match(bootstrapSource, /Open Manage Apps filtered to/);
 const legacyOverviewTemplatePath = path.resolve(
   __dirname,
   "../src/main/resources/splunk/appserver/templates/overview.html",
