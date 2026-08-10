@@ -289,66 +289,99 @@ body {
     text-transform: uppercase;
 }
 
-.scd-setup__requirements {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+.scd-setup__package-table-wrap {
+    overflow: hidden;
     margin-top: 14px;
-}
-
-.scd-setup__requirement {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    align-items: center;
-    gap: 8px;
-    min-height: 57px;
-    padding: 8px 10px;
     border: 1px solid var(--scd-line);
-    border-left: 3px solid #718392;
-    border-radius: 6px;
-    background: #fbfcfd;
+    border-radius: 7px;
+    background: #fff;
 }
 
-.scd-setup__requirement.is-installed {
-    border-left-color: var(--scd-green);
+.scd-setup__package-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 11px;
 }
 
-.scd-setup__requirement.is-mandatory {
-    border-top-color: rgb(0 118 168 / 62%);
-    border-right-color: rgb(0 118 168 / 62%);
-    border-bottom-color: rgb(0 118 168 / 62%);
+.scd-setup__package-table th,
+.scd-setup__package-table td {
+    padding: 10px;
+    border-bottom: 1px solid var(--scd-line);
+    text-align: left;
+    vertical-align: top;
+}
+
+.scd-setup__package-table thead th {
+    background: #f4f7f9;
+    color: var(--scd-muted);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.scd-setup__package-table thead th:nth-child(1) {
+    width: 28%;
+}
+
+.scd-setup__package-table thead th:nth-child(2) {
+    width: 14%;
+}
+
+.scd-setup__package-table thead th:nth-child(3) {
+    width: 17%;
+}
+
+.scd-setup__package-table thead th:nth-child(4) {
+    width: 17%;
+}
+
+.scd-setup__package-table thead th:nth-child(5) {
+    width: 24%;
+}
+
+.scd-setup__package-table tbody:last-child tr:last-child td {
+    border-bottom: 0;
+}
+
+.scd-setup__package-row {
+    background: #fff;
+}
+
+.scd-setup__package-row:nth-child(even) {
+    background: #f9fbfc;
+}
+
+.scd-setup__package-row.is-mandatory {
     background: #eef8fc;
-    box-shadow: inset 0 0 0 1px rgb(0 118 168 / 8%);
 }
 
-.scd-setup__requirement.is-update,
-.scd-setup__requirement.is-verify {
-    border-left-color: var(--scd-amber);
+.scd-setup__package-row.is-installed .scd-setup__package-component {
+    box-shadow: inset 3px 0 0 var(--scd-green);
 }
 
-.scd-setup__requirement.is-missing,
-.scd-setup__requirement.is-disabled {
-    border-left-color: var(--scd-red);
+.scd-setup__package-row.is-update .scd-setup__package-component,
+.scd-setup__package-row.is-verify .scd-setup__package-component {
+    box-shadow: inset 3px 0 0 var(--scd-amber);
 }
 
-.scd-setup__requirement-copy {
-    min-width: 0;
+.scd-setup__package-row.is-missing .scd-setup__package-component,
+.scd-setup__package-row.is-disabled .scd-setup__package-component {
+    box-shadow: inset 3px 0 0 var(--scd-red);
 }
 
-.scd-setup__requirement-heading {
+.scd-setup__package-name {
     display: flex;
     min-width: 0;
     align-items: center;
-    gap: 6px;
+    flex-wrap: wrap;
+    gap: 5px;
 }
 
-.scd-setup__requirement-heading strong {
-    display: block;
-    overflow: hidden;
-    font-size: 12px;
-    line-height: 1.25;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.scd-setup__package-name strong {
+    font-size: 11px;
+    line-height: 1.35;
 }
 
 .scd-setup__requirement-role {
@@ -365,56 +398,43 @@ body {
     text-transform: uppercase;
 }
 
-.scd-setup__requirement.is-mandatory .scd-setup__requirement-role {
+.scd-setup__package-row.is-mandatory .scd-setup__requirement-role {
     border-color: rgb(0 118 168 / 48%);
     background: rgb(0 118 168 / 16%);
     color: #005d83;
 }
 
-.scd-setup__requirement-suite {
-    grid-column: 1 / -1;
-    overflow: hidden;
-    border: 1px solid var(--scd-line);
-    border-radius: 7px;
-    background: #f5f8fa;
+.scd-setup__package-group-heading {
+    background: #f4f7f9;
 }
 
-.scd-setup__requirement-suite-heading {
+.scd-setup__package-group-copy {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
     gap: 12px;
-    padding: 8px 10px;
-    border-bottom: 1px solid var(--scd-line);
 }
 
-.scd-setup__requirement-suite-heading strong {
+.scd-setup__package-group-copy strong {
     font-size: 11px;
     letter-spacing: 0.03em;
     text-transform: uppercase;
 }
 
-.scd-setup__requirement-suite-heading span {
+.scd-setup__package-group-copy span {
     color: var(--scd-muted);
     font-size: 10px;
+    font-weight: 400;
 }
 
-.scd-setup__requirement-suite-items {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    padding: 8px;
-}
-
-.scd-setup__requirement-suite .scd-setup__requirement {
-    min-height: 54px;
-    background: #fff;
-}
-
-.scd-setup__requirement-copy code {
+.scd-setup__package-id {
     display: block;
-    margin-top: 3px;
+    margin-top: 4px;
     overflow: hidden;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
     color: var(--scd-muted);
     font-family: "Splunk Platform Mono", "SFMono-Regular", Consolas, monospace;
     font-size: 9px;
@@ -422,14 +442,70 @@ body {
     white-space: nowrap;
 }
 
+.scd-setup__version-pill,
 .scd-setup__status {
-    padding: 3px 6px;
-    border-radius: 10px;
-    background: #edf2f5;
-    color: #38566a;
+    display: inline-flex;
+    min-height: 22px;
+    align-items: center;
+    padding: 3px 7px;
+    border: 1px solid #d6dfe5;
+    border-radius: 999px;
     font-size: 9px;
     font-weight: 700;
+    line-height: 1;
     white-space: nowrap;
+}
+
+.scd-setup__version-pill {
+    background: #edf2f5;
+    color: #38566a;
+}
+
+.scd-setup__version-pill.is-update {
+    border-color: #f0d48d;
+    background: #fff4d6;
+    color: #7a5000;
+}
+
+.scd-setup__package-subtle {
+    display: block;
+    margin-top: 4px;
+    color: var(--scd-muted);
+    font-size: 9px;
+    line-height: 1.35;
+}
+
+.scd-setup__package-purpose {
+    color: #445969;
+    line-height: 1.45;
+}
+
+.scd-setup__package-status-cell .scd-setup__external {
+    display: block;
+    width: max-content;
+    margin-top: 6px;
+    padding: 4px 8px;
+    border: 1px solid #b7ccda;
+    border-radius: 999px;
+    line-height: 1.15;
+}
+
+.scd-setup__package-status-cell .scd-setup__external:hover {
+    background: #edf3f6;
+    text-decoration: none;
+}
+
+.scd-setup__package-note {
+    margin: 0;
+    padding: 11px 10px 0;
+    color: var(--scd-muted);
+    font-size: 10px;
+    line-height: 1.45;
+}
+
+.scd-setup__status {
+    background: #edf2f5;
+    color: #38566a;
 }
 
 .is-installed .scd-setup__status {
@@ -834,7 +910,6 @@ body {
 @container setup-content (max-width: 620px) {
     .scd-setup__aside,
     .scd-setup__readiness,
-    .scd-setup__requirements,
     .scd-setup__capabilities {
         grid-template-columns: 1fr;
     }
@@ -843,8 +918,50 @@ body {
         width: 100%;
     }
 
-    .scd-setup__requirement-suite-items {
-        grid-template-columns: 1fr;
+    .scd-setup__package-table thead {
+        display: none;
+    }
+
+    .scd-setup__package-table,
+    .scd-setup__package-table tbody,
+    .scd-setup__package-table tr,
+    .scd-setup__package-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .scd-setup__package-row {
+        padding: 9px 10px;
+        border-bottom: 1px solid var(--scd-line);
+    }
+
+    .scd-setup__package-table .scd-setup__package-row td {
+        display: grid;
+        grid-template-columns: minmax(92px, 0.42fr) minmax(0, 1fr);
+        gap: 10px;
+        padding: 5px 0;
+        border-bottom: 0;
+    }
+
+    .scd-setup__package-table .scd-setup__package-row td::before {
+        color: var(--scd-muted);
+        content: attr(data-label);
+        font-size: 8px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .scd-setup__package-row.is-installed .scd-setup__package-component,
+    .scd-setup__package-row.is-update .scd-setup__package-component,
+    .scd-setup__package-row.is-verify .scd-setup__package-component,
+    .scd-setup__package-row.is-missing .scd-setup__package-component,
+    .scd-setup__package-row.is-disabled .scd-setup__package-component {
+        box-shadow: none;
+    }
+
+    .scd-setup__package-group-heading {
+        padding: 9px 10px;
     }
 }
 
@@ -876,7 +993,6 @@ body {
     }
 
     .scd-setup__steps,
-    .scd-setup__requirements,
     .scd-setup__capabilities,
     .scd-setup__aside,
     .scd-setup__readiness {
@@ -887,12 +1003,7 @@ body {
         width: 100%;
     }
 
-    .scd-setup__requirement-suite-items {
-        grid-template-columns: 1fr;
-    }
-
-    .scd-setup__section-heading,
-    .scd-setup__requirement {
+    .scd-setup__section-heading {
         align-items: start;
     }
 
@@ -900,12 +1011,8 @@ body {
         flex-direction: column;
     }
 
-    .scd-setup__requirement {
-        grid-template-columns: minmax(0, 1fr) auto;
-    }
-
-    .scd-setup__requirement .scd-setup__external {
-        display: none;
+    .scd-setup__section-actions {
+        flex-wrap: wrap;
     }
 }
 
@@ -986,38 +1093,39 @@ body {
     color: #94a3b8;
 }
 
-.scd-setup__requirement-copy code {
-    border: 1px solid rgb(65 74 86 / 54%);
-    background: rgb(15 23 35 / 88%);
-    color: #94a3b8;
-}
-
 .scd-setup__metric,
-.scd-setup__requirement,
-.scd-setup__requirement-suite,
 .scd-setup__capability,
 .scd-setup__impact {
     border-color: rgb(65 74 86 / 58%);
     background: rgb(26 35 48 / 82%);
 }
 
-.scd-setup__requirement-suite-heading {
-    border-color: rgb(65 74 86 / 58%);
-    background: rgb(15 23 35 / 52%);
+.scd-setup__package-table-wrap {
+    border-color: rgb(65 74 86 / 62%);
+    background: rgb(15 23 35 / 78%);
 }
 
-.scd-setup__requirement-suite .scd-setup__requirement {
-    background: rgb(26 35 48 / 82%);
+.scd-setup__package-table th,
+.scd-setup__package-table td {
+    border-color: rgb(65 74 86 / 55%);
 }
 
-.scd-setup__requirement.is-mandatory {
-    border-top-color: rgb(100 158 245 / 66%);
-    border-right-color: rgb(100 158 245 / 66%);
-    border-bottom-color: rgb(100 158 245 / 66%);
-    background: linear-gradient(145deg, rgb(21 43 63 / 96%), rgb(24 35 49 / 92%));
-    box-shadow:
-        0 3px 8px rgb(0 0 0 / 12%),
-        inset 0 0 0 1px rgb(100 158 245 / 8%);
+.scd-setup__package-table thead th,
+.scd-setup__package-group-heading {
+    background: rgb(15 23 35 / 92%);
+    color: #94a3b8;
+}
+
+.scd-setup__package-row {
+    background: rgb(26 35 48 / 72%);
+}
+
+.scd-setup__package-row:nth-child(even) {
+    background: rgb(30 41 59 / 48%);
+}
+
+.scd-setup__package-row.is-mandatory {
+    background: linear-gradient(90deg, rgb(21 48 70 / 98%), rgb(24 35 49 / 92%));
 }
 
 .scd-setup__requirement-role {
@@ -1026,10 +1134,40 @@ body {
     color: #67e8f9;
 }
 
-.scd-setup__requirement.is-mandatory .scd-setup__requirement-role {
+.scd-setup__package-row.is-mandatory .scd-setup__requirement-role {
     border-color: rgb(100 158 245 / 52%);
     background: rgb(100 158 245 / 18%);
     color: #a9c9ff;
+}
+
+.scd-setup__package-id,
+.scd-setup__package-subtle,
+.scd-setup__package-note,
+.scd-setup__package-purpose {
+    color: #94a3b8;
+}
+
+.scd-setup__version-pill {
+    border-color: rgb(100 116 139 / 62%);
+    background: rgb(51 65 85 / 72%);
+    color: #e1e6eb;
+}
+
+.scd-setup__version-pill.is-update {
+    border-color: rgb(245 158 11 / 36%);
+    background: rgb(245 158 11 / 16%);
+    color: #ffd166;
+}
+
+.scd-setup__package-status-cell .scd-setup__external {
+    border-color: rgb(100 116 139 / 72%);
+    background: rgb(26 35 48 / 88%);
+}
+
+.scd-setup__package-status-cell .scd-setup__external:hover {
+    border-color: #6ccfff;
+    background: rgb(30 41 59 / 96%);
+    color: #fff;
 }
 
 .scd-setup__package-action {
@@ -1078,23 +1216,27 @@ body {
 }
 
 .scd-setup__status {
+    border-color: rgb(100 116 139 / 62%);
     background: rgb(51 65 85 / 72%);
     color: #cbd5e1;
 }
 
 .is-installed .scd-setup__status {
+    border-color: rgb(16 185 129 / 34%);
     background: rgb(16 185 129 / 16%);
     color: #6ee7a8;
 }
 
 .is-update .scd-setup__status,
 .is-verify .scd-setup__status {
+    border-color: rgb(245 158 11 / 36%);
     background: rgb(245 158 11 / 16%);
     color: #ffd166;
 }
 
 .is-missing .scd-setup__status,
 .is-disabled .scd-setup__status {
+    border-color: rgb(239 68 68 / 36%);
     background: rgb(239 68 68 / 16%);
     color: #ff8a94;
 }

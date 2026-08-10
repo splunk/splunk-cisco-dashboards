@@ -553,6 +553,9 @@ function scdSetupResolvePrerequisites(rows, appEntries) {
       installedVersion &&
       updateVersion &&
       scdSetupCompareVersions(updateVersion, installedVersion) === 1;
+    const latestKnownVersion = hasUpdate
+      ? updateVersion
+      : installedVersion || updateVersion;
     const disabled =
       content.disabled === true ||
       content.disabled === 1 ||
@@ -574,6 +577,7 @@ function scdSetupResolvePrerequisites(rows, appEntries) {
       status,
       installedId: installed ? String(installed.name || "") : "",
       installedVersion,
+      latestKnownVersion,
       updateVersion: hasUpdate ? updateVersion : "",
       sourcetypes: sourcetypes.filter(
         (sourcetype) =>
@@ -690,22 +694,20 @@ function scdSetupFormatNumber(value) {
 
 function scdSetupStatusLabel(prerequisite) {
   if (prerequisite.status === "installed") {
-    return prerequisite.installedVersion
-      ? `Installed v${prerequisite.installedVersion}`
-      : "Installed";
+    return "Installed";
   }
   if (prerequisite.status === "update") {
-    return `Update to v${prerequisite.updateVersion}`;
+    return "Update available";
   }
   if (prerequisite.status === "disabled") {
-    return "Installed but disabled";
+    return "Disabled";
   }
   if (prerequisite.status === "verify") {
     return "Verify ingest tier";
   }
   return prerequisite.importance === "recommended"
-    ? "Not installed (optional)"
-    : "Not found on search head";
+    ? "Optional"
+    : "Not installed";
 }
 
 function scdSetupRenderStepper(parent, activeStep) {
@@ -815,19 +817,42 @@ function scdSetupRenderPrerequisites(parent, prerequisites, appsError) {
     parent.appendChild(warning);
   }
 
-  const list = scdSetupElement("div", "scd-setup__requirements");
+  const tableWrap = scdSetupElement(
+    "div",
+    "scd-setup__package-table-wrap",
+  );
+  const table = scdSetupElement("table", "scd-setup__package-table");
+  table.setAttribute("aria-label", "Installed package status");
+  const head = scdSetupElement("thead");
+  const headingRow = scdSetupElement("tr");
+  ["Component", "Installed here", "Latest known", "Status", "Purpose"].forEach(
+    (label) => {
+      const heading = scdSetupElement("th", "", label);
+      heading.scope = "col";
+      headingRow.appendChild(heading);
+    },
+  );
+  head.appendChild(headingRow);
+  table.appendChild(head);
+  const body = scdSetupElement("tbody");
+
+  const tableCell = (label, className) => {
+    const cell = scdSetupElement("td", className);
+    cell.setAttribute("data-label", label);
+    return cell;
+  };
+
   const renderPrerequisite = (prerequisite) => {
     const row = scdSetupElement(
-      "article",
-      `scd-setup__requirement is-${prerequisite.status} is-${prerequisite.importance}`,
+      "tr",
+      `scd-setup__package-row is-${prerequisite.status} is-${prerequisite.importance}`,
     );
-    const status = scdSetupElement(
-      "span",
-      "scd-setup__status",
-      scdSetupStatusLabel(prerequisite),
-    );
-    const content = scdSetupElement("div", "scd-setup__requirement-copy");
-    const heading = scdSetupElement("div", "scd-setup__requirement-heading");
+    row.title = prerequisite.purpose;
+    row.dataset.appId =
+      prerequisite.displayId || prerequisite.appIds[0] || prerequisite.id;
+
+    const component = tableCell("Component", "scd-setup__package-component");
+    const heading = scdSetupElement("div", "scd-setup__package-name");
     heading.appendChild(scdSetupElement("strong", "", prerequisite.name));
     if (
       prerequisite.always &&
@@ -841,19 +866,83 @@ function scdSetupRenderPrerequisites(parent, prerequisites, appsError) {
         ),
       );
     }
-    content.appendChild(heading);
-    content.appendChild(
+    component.appendChild(heading);
+    component.appendChild(
       scdSetupElement(
         "code",
-        "",
+        "scd-setup__package-id",
         prerequisite.displayId || prerequisite.appIds[0] || prerequisite.id,
       ),
     );
-    row.title = prerequisite.purpose;
-    row.dataset.appId =
-      prerequisite.displayId || prerequisite.appIds[0] || prerequisite.id;
-    row.appendChild(content);
-    row.appendChild(status);
+    row.appendChild(component);
+
+    const installed = tableCell(
+      "Installed here",
+      "scd-setup__package-version-cell",
+    );
+    if (prerequisite.installedVersion) {
+      installed.appendChild(
+        scdSetupElement(
+          "span",
+          "scd-setup__version-pill",
+          `v${prerequisite.installedVersion}`,
+        ),
+      );
+    } else {
+      installed.appendChild(
+        scdSetupElement(
+          "span",
+          "scd-setup__package-subtle",
+          prerequisite.status === "verify"
+            ? "Check ingest tier"
+            : "Not found by REST",
+        ),
+      );
+    }
+    row.appendChild(installed);
+
+    const latest = tableCell(
+      "Latest known",
+      "scd-setup__package-version-cell",
+    );
+    if (prerequisite.latestKnownVersion) {
+      latest.appendChild(
+        scdSetupElement(
+          "span",
+          `scd-setup__version-pill${
+            prerequisite.status === "update" ? " is-update" : ""
+          }`,
+          `v${prerequisite.latestKnownVersion}`,
+        ),
+      );
+      latest.appendChild(
+        scdSetupElement(
+          "span",
+          "scd-setup__package-subtle",
+          prerequisite.status === "update"
+            ? "Newer update cached"
+            : "No newer update cached",
+        ),
+      );
+    } else {
+      latest.appendChild(
+        scdSetupElement(
+          "span",
+          "scd-setup__package-subtle",
+          "Not available locally",
+        ),
+      );
+    }
+    row.appendChild(latest);
+
+    const statusCell = tableCell("Status", "scd-setup__package-status-cell");
+    statusCell.appendChild(
+      scdSetupElement(
+        "span",
+        "scd-setup__status",
+        scdSetupStatusLabel(prerequisite),
+      ),
+    );
     if (
       ["installed", "update", "disabled"].includes(prerequisite.status) &&
       prerequisite.installedId
@@ -875,18 +964,23 @@ function scdSetupRenderPrerequisites(parent, prerequisites, appsError) {
       link.addEventListener("click", (event) =>
         scdSetupOpenManageApps(event, prerequisite.installedId),
       );
-      row.appendChild(link);
+      statusCell.appendChild(link);
     } else if (prerequisite.splunkbase) {
       const link = scdSetupLink(
         "scd-setup__external",
-        "Package",
+        "View package",
         prerequisite.splunkbase,
       );
       link.setAttribute("aria-label", `View ${prerequisite.name} on Splunkbase`);
       link.target = "_blank";
       link.rel = "noopener noreferrer";
-      row.appendChild(link);
+      statusCell.appendChild(link);
     }
+    row.appendChild(statusCell);
+
+    const purpose = tableCell("Purpose", "scd-setup__package-purpose");
+    purpose.textContent = prerequisite.purpose;
+    row.appendChild(purpose);
     return row;
   };
 
@@ -896,48 +990,50 @@ function scdSetupRenderPrerequisites(parent, prerequisites, appsError) {
       return;
     }
     if (prerequisite.id === "ai-toolkit") {
-      const runtimeDependencies = prerequisites.filter((item) =>
-        aiRuntimeIds.has(item.id),
+      const groupRow = scdSetupElement(
+        "tr",
+        "scd-setup__package-group-row",
       );
-      const group = scdSetupElement(
-        "section",
-        "scd-setup__requirement-suite",
+      const groupHeading = scdSetupElement(
+        "th",
+        "scd-setup__package-group-heading",
       );
-      group.setAttribute("aria-labelledby", "scd-setup-ai-runtime-heading");
-      const groupHeader = scdSetupElement(
+      groupHeading.colSpan = 5;
+      groupHeading.scope = "rowgroup";
+      const groupCopy = scdSetupElement(
         "div",
-        "scd-setup__requirement-suite-heading",
+        "scd-setup__package-group-copy",
       );
-      groupHeader.appendChild(
-        scdSetupElement(
-          "strong",
-          "",
-          "AI analytics runtime",
-        ),
+      groupCopy.appendChild(
+        scdSetupElement("strong", "", "AI analytics runtime"),
       );
-      groupHeader.firstChild.id = "scd-setup-ai-runtime-heading";
-      groupHeader.appendChild(
+      groupCopy.appendChild(
         scdSetupElement(
           "span",
           "",
           "Toolkit and matching Python runtime",
         ),
       );
-      group.appendChild(groupHeader);
-      const groupItems = scdSetupElement(
-        "div",
-        "scd-setup__requirement-suite-items",
-      );
-      runtimeDependencies.forEach((item) => {
-        groupItems.appendChild(renderPrerequisite(item));
-      });
-      group.appendChild(groupItems);
-      list.appendChild(group);
+      groupHeading.appendChild(groupCopy);
+      groupRow.appendChild(groupHeading);
+      body.appendChild(groupRow);
+      prerequisites
+        .filter((item) => aiRuntimeIds.has(item.id))
+        .forEach((item) => body.appendChild(renderPrerequisite(item)));
       return;
     }
-    list.appendChild(renderPrerequisite(prerequisite));
+    body.appendChild(renderPrerequisite(prerequisite));
   });
-  parent.appendChild(list);
+  table.appendChild(body);
+  tableWrap.appendChild(table);
+  parent.appendChild(tableWrap);
+  parent.appendChild(
+    scdSetupElement(
+      "p",
+      "scd-setup__package-note",
+      "This live table checks the Splunk Web node rendering Setup. Manage and update actions open Manage Apps filtered to the exact technical package ID; refresh after any package change.",
+    ),
+  );
 }
 
 function scdSetupSetHeaderCopy(root, title, description) {
@@ -1246,14 +1342,16 @@ function scdSetupRenderPackageStep(root) {
   const packagesHeader = scdSetupElement("div", "scd-setup__section-heading");
   const packagesCopy = scdSetupElement("div");
   packagesCopy.appendChild(
-    scdSetupElement("p", "scd-setup__eyebrow", "RECOMMENDED APPS & ADD-ONS"),
+    scdSetupElement("p", "scd-setup__eyebrow", "LIVE ENVIRONMENT CHECK"),
   );
-  packagesCopy.appendChild(scdSetupElement("h2", "", "Package checklist"));
+  packagesCopy.appendChild(
+    scdSetupElement("h2", "", "Installed package status"),
+  );
   packagesCopy.appendChild(
     scdSetupElement(
       "p",
       "scd-setup__section-intro",
-      "Technical IDs remain visible so administrators can match deployment packages exactly.",
+      "Compare recommended package IDs and versions on this Splunk Web node. Refresh after installing or updating.",
     ),
   );
   packagesHeader.appendChild(packagesCopy);

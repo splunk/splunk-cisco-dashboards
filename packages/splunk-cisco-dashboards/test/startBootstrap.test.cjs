@@ -325,6 +325,11 @@ assert.equal(
   scientificPython.displayId,
   "Splunk_SA_Scientific_Python_<os>",
 );
+assert.equal(
+  prerequisites.find((item) => item.id === "dc-networking")
+    .latestKnownVersion,
+  "1.3.0",
+);
 
 const capabilityCoverage = resolveCapabilities([
   {
@@ -450,7 +455,10 @@ assert.doesNotMatch(bootstrapSource, /Open the full index macro tuner/);
 assert.match(bootstrapSource, /aria-current/);
 assert.match(bootstrapSource, /Splunk_SA_Scientific_Python_<os>/);
 assert.match(bootstrapSource, /AI analytics runtime/);
-assert.match(bootstrapSource, /scd-setup__requirement-suite/);
+assert.match(bootstrapSource, /scd-setup__package-table/);
+assert.match(bootstrapSource, /Installed package status/);
+assert.match(bootstrapSource, /Latest known/);
+assert.match(bootstrapSource, /This live table checks the Splunk Web node/);
 assert.match(bootstrapSource, /scd-setup__requirement-role/);
 assert.match(bootstrapSource, /Refresh installed package status/);
 assert.match(bootstrapSource, /scdSetupOpenManageApps/);
@@ -546,6 +554,8 @@ assert.match(macroTuningBootstrapSource, /setup.*setup=1#tune-indexes/s);
 assert.match(macroTuningStyleSource, /scd-admin-dark/);
 assert.match(macroTuningStyleSource, /c3-atmosphere\.svg/);
 assert.match(setupStyleSource, /c3-atmosphere\.svg/);
+assert.match(setupStyleSource, /\.scd-setup__package-table\s*\{/);
+assert.match(setupStyleSource, /content: attr\(data-label\)/);
 assert.match(macroTuningStyleSource, /scd-setup-action-bar/);
 assert.match(macroTuningStyleSource, /summary\[class\*='hover:bg-slate-'\]:hover/);
 assert.match(setupStyleSource, /@container setup-content \(max-width: 880px\)/);
