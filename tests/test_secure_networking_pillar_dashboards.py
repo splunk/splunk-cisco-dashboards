@@ -23,7 +23,6 @@ GRAPH_TYPES = {"splunk.area", "splunk.bar", "splunk.column", "splunk.pie"}
 LEGACY_TABLE_SEARCHES = {
     "executive_dashboard_data_source_status",
     "executive_dashboard_ds_device_health_current_drilldown",
-    "feed_monitor_all_feeds_health_matrix",
     "monitoring_sdwan_site_health_table",
     "network_nvm_endpoint_os_inventory",
     "overview_link_auburndale_tallahassee_health",
@@ -142,13 +141,26 @@ class SecureNetworkingPillarDashboardTest(unittest.TestCase):
             for target in card["targets"]
         }
 
-        self.assertEqual(len(LEGACY_TABLE_SEARCHES), 48)
+        self.assertEqual(len(LEGACY_TABLE_SEARCHES), 47)
         self.assertEqual(
             LEGACY_TABLE_SEARCHES - targets,
             {"secure_networking_zta_ravpn_connection_rate"},
         )
         self.assertIn("secure_networking_zta_ravpn_connection_rate", primaries)
         self.assertLessEqual(LEGACY_TABLE_SEARCHES, primaries | targets)
+
+    def test_five_pillar_studio_stories_do_not_dispatch_feed_monitors(self):
+        for dashboard_id, story in self.stories.items():
+            with self.subTest(dashboard_id=dashboard_id):
+                refs = [
+                    ref
+                    for card in story["cards"]
+                    for ref in (card["primary"], *card["targets"])
+                ]
+                self.assertFalse(
+                    any(ref.startswith("feed_monitor_") for ref in refs),
+                    f"{dashboard_id} must not use feed freshness searches",
+                )
 
     def test_each_dashboard_has_exact_six_card_story_contract(self):
         for dashboard_id, story in self.stories.items():

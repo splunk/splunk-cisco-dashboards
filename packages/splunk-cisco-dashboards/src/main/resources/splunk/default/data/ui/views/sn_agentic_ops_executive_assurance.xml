@@ -191,7 +191,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Fleet%20Device%20Health&target=Executive%20-%20Current%20Device%20Health%20Drilldown,Executive%20-%20Data%20Source%20Status,Feed%20Monitor%20-%20ALL%20Feeds%20-%20Consolidated%20Health%20Matrix"
+                        "url": "/drilldown?origin=Fleet%20Device%20Health&target=Executive%20-%20Current%20Device%20Health%20Drilldown,Executive%20-%20Data%20Source%20Status"
                     }
                 }
             ],

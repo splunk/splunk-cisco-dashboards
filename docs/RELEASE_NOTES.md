@@ -112,6 +112,10 @@
   distinct posture, readiness, enforcement, and operations labels. Menu names,
   Dashboard Studio titles, and visible header titles now stay synchronized
   across all 16 views, including the shortened Executive Assurance title.
+- Five-pillar Dashboard Studio stories no longer dispatch feed-freshness
+  monitors. Operational Intelligence now leads with ThousandEyes healthy and
+  degraded test counts, while Executive Assurance retains device-health and
+  data-source detail without linking to the consolidated freshness matrix.
 - Searchbase contextual drilldowns now use target stanza IDs instead of mutable
   `search_name` labels. All 401 shipped relationships were migrated and are
   validated for exact target existence, while existing local configuration and

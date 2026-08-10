@@ -1,15 +1,14 @@
 {
   "sn_agentic_ops_operational_intelligence": {
     "label": "Agentic Ops",
-    "description": "Coordinate telemetry readiness, path health, routing instability, and AI Defense signals.",
+    "description": "Coordinate test health, path quality, routing instability, and AI Defense signals.",
     "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/agentic-ops.svg",
     "cards": [
       {
-        "primary": "feed_monitor_thousandeyes_stream_staleness",
-        "targets": ["feed_monitor_all_feeds_health_matrix"],
-        "title": "ThousandEyes Feed Freshness",
-        "xField": "last_seen",
-        "graphFields": ["age_minutes"]
+        "primary": "secure_networking_thousandeyes_test_success_vs_failed",
+        "targets": ["secure_networking_thousandeyes_http_availability_by_test", "secure_networking_thousandeyes_http_trace_log"],
+        "title": "ThousandEyes Test Health",
+        "vizType": "area"
       },
       {
         "primary": "security_ai_defense_action_trend",
@@ -45,7 +44,7 @@
     "cards": [
       {
         "primary": "executive_dashboard_ds_device_health_trend_compare",
-        "targets": ["executive_dashboard_ds_device_health_current_drilldown", "executive_dashboard_data_source_status", "feed_monitor_all_feeds_health_matrix"],
+        "targets": ["executive_dashboard_ds_device_health_current_drilldown", "executive_dashboard_data_source_status"],
         "title": "Fleet Device Health"
       },
       {

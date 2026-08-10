@@ -1,10 +1,10 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
     <label>Agentic Ops - Operational Intelligence</label>
-    <description>Coordinate telemetry readiness, path health, routing instability, and AI Defense signals.</description>
+    <description>Coordinate test health, path quality, routing instability, and AI Defense signals.</description>
     <definition><![CDATA[
 {
     "title": "Operational Intelligence",
-    "description": "Coordinate telemetry readiness, path health, routing instability, and AI Defense signals.",
+    "description": "Coordinate test health, path quality, routing instability, and AI Defense signals.",
     "inputs": {
         "input_time_range": {
             "options": {
@@ -71,7 +71,7 @@
             "options": {
                 "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
-                "markdown": "# Operational Intelligence\nCoordinate telemetry readiness, path health, routing instability, and AI Defense signals\\."
+                "markdown": "# Operational Intelligence\nCoordinate test health, path quality, routing instability, and AI Defense signals\\."
             }
         },
         "viz_card_01_background": {
@@ -92,7 +92,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**ThousandEyes Feed Freshness**"
+                "markdown": "**ThousandEyes Test Health**"
             }
         },
         "viz_card_01_metadata": {
@@ -105,7 +105,7 @@
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
                 "customFontSize": 14,
-                "markdown": "Monitoring  •  ThousandEyes"
+                "markdown": "Network  •  Agentic Ops"
             }
         },
         "viz_card_01_description": {
@@ -118,7 +118,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Staleness monitor for the ThousandEyes OTel metric stream\\. Detects feed death within 30 minutes \\- the typical symptom of an OAuth2 token expiry, endpoint URL change after a TE platform upgrade, or HEC token rotation\\."
+                "markdown": "Summary of Cisco ThousandEyes test health — total tests monitored, healthy tests, and degraded tests — derived from network loss and HTTP availability metrics to provide the Agentic Ops visibility KPI\\."
             }
         },
         "viz_card_01_singlevalue": {
@@ -139,7 +139,7 @@
                 "trendDisplay": "percent",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"age_minutes\")",
+                "sparklineValues": "> primary | seriesByName(\"degraded_tests_trend\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "trendValue": "> sparklineValues | delta(-2)"
@@ -186,8 +186,8 @@
                 "showYMajorGridLines": true,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"last_seen\")",
-                "y": "> primary | seriesByName(\"age_minutes\")"
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"degraded_tests_trend\")"
             }
         },
         "viz_card_01_drilldown_trigger": {
@@ -196,7 +196,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=ThousandEyes%20Feed%20Freshness&target=Feed%20Monitor%20-%20ALL%20Feeds%20-%20Consolidated%20Health%20Matrix"
+                        "url": "/drilldown?origin=ThousandEyes%20Test%20Health&target=Secure%20Networking%20-%20ThousandEyes%20HTTP%20Availability%20by%20Test,Secure%20Networking%20-%20ThousandEyes%20HTTP%20Trace%20Log"
                     }
                 }
             ],
@@ -881,9 +881,9 @@
     },
     "dataSources": {
         "ds_story_01": {
-            "name": "Feed Monitor - ThousandEyes - Stream Staleness (Signal Rail KPI)",
+            "name": "Secure Networking - ThousandEyes Test Health Summary",
             "options": {
-                "ref": "feed_monitor_thousandeyes_stream_staleness",
+                "ref": "secure_networking_thousandeyes_test_success_vs_failed",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$"
