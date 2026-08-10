@@ -2,6 +2,11 @@
 
 ## 1.0.36
 
+- Insights workspace section drill-downs now open native dashboards through
+  Dashboard Manager, preserving its controlled search-dispatch runtime instead
+  of loading Dashboard Studio views directly. The contract covers every Secure
+  Networking pillar plus the IT Operations, Security Operations, and Workplace
+  sections available to alternate workspace presets.
 - Insights now uses `workspace_insights.xml` as its single dashboard shell.
   Secure Networking, Zero Trust Access Demo, Network Resilience Demo, Security
   Operations Demo, Executive Briefing, and future custom workspaces all select

@@ -87,6 +87,29 @@ assert.deepEqual(
   "Every workspace template must offer Secure Networking, SecOps, ITOps, digital experience, and executive sections",
 );
 assert.deepEqual(
+  Object.fromEntries(
+    WORKSPACE_SOURCES.secure_networking.sections.map(({ id, href }) => [
+      id,
+      href,
+    ]),
+  ),
+  {
+    zta: "dashboard_manager#/sn_zta_posture",
+    secure_infrastructure:
+      "dashboard_manager#/sn_secure_infrastructure_posture",
+    scalable_network_segmentation:
+      "dashboard_manager#/sn_segmentation_readiness",
+    hybrid_mesh_firewalling: "dashboard_manager#/sn_hmf_enforcement",
+    agentic_ops:
+      "dashboard_manager#/sn_agentic_ops_operational_intelligence",
+    it_health: "dashboard_manager#/netops_critical_systems_health",
+    security: "dashboard_manager#/secops_resilience",
+    building: "dashboard_manager#/workplace_building_intelligence",
+    custom: "dashboard_manager",
+  },
+  "Workspace dashboard links must use Dashboard Manager so searches dispatch through its runtime",
+);
+assert.deepEqual(
   PACKAGED_WORKSPACE_FALLBACKS[0].defaultVisibleSections,
   expectedSecureNetworkingSections.map(([id]) => id),
   "The built-in Secure Networking workspace must show all menu sections " +
