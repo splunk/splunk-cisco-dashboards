@@ -15,9 +15,9 @@ a Splunk restart.
   `common/config/insightsWorkspaces.ts`
 - Config REST persistence: `common/services/insightsWorkspaceService.ts`
 
-`workspace_secure_networking` and `workspace_executive_briefing` are supported
-as legacy URL aliases. Secure Networking is the default workspace when no
-`workspace` query parameter or legacy alias is present.
+Every packaged and custom workspace uses the canonical view with a `workspace`
+query parameter. Secure Networking is the default workspace when no parameter
+is present.
 
 ## Config schema
 
@@ -77,8 +77,7 @@ keeps customer workspaces upgrade-safe.
 - Network Resilience Demo — infrastructure, segmentation, firewalling, and
   service assurance.
 - Security Operations Demo — security, IT health, and executive signals.
-- Executive Briefing — the original executive workspace and storage-compatible
-  legacy experience.
+- Executive Briefing — the executive workspace with its existing storage keys.
 
 ## Searchbase compatibility
 

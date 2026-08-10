@@ -2,6 +2,11 @@
 
 ## 1.0.36
 
+- Insights now uses `workspace_insights.xml` as its single dashboard shell.
+  Secure Networking, Zero Trust Access Demo, Network Resilience Demo, Security
+  Operations Demo, Executive Briefing, and future custom workspaces all select
+  their config-driven preset through `?workspace=<workspace_id>`; the two
+  redundant named workspace views and their legacy route mappings are removed.
 - Dashboard view IDs and labels now follow one searchable naming convention:
   `sn_` for Secure Networking stories, `workspace_` for bootstrap-powered
   workspaces, and domain prefixes such as `netops_`, `security_ops_`,

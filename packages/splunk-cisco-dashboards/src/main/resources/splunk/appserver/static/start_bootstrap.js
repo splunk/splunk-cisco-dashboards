@@ -10,7 +10,7 @@
  * and is responsible for setting setup.conf is_configured=1.
  */
 const SCD_SETUP_APP = "splunk-cisco-dashboards";
-const SCD_SETUP_HOME_VIEW = "workspace_secure_networking";
+const SCD_SETUP_HOME_VIEW = "workspace_insights";
 const SCD_SETUP_DISCOVERY_SEARCH = [
   '| tstats count max(_time) AS latest WHERE index=* (sourcetype="cisco:*" OR sourcetype="meraki:*" OR sourcetype="WinEventLog:*" OR sourcetype="XmlWinEventLog:*" OR sourcetype="linux:*" OR sourcetype="nix:*") BY index sourcetype',
   "| sort - count",

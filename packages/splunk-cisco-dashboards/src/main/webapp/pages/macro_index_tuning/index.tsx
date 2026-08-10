@@ -34,7 +34,7 @@ import { splunkSearchAppUrl } from "@/common/lib/splunkSearchUrl";
 import timeParser from "../dashboardbuilder/custominput/timeparser";
 
 const APP_NAME = "splunk-cisco-dashboards";
-const APP_HOME_VIEW = "workspace_secure_networking";
+const APP_HOME_VIEW = "workspace_insights";
 const APP_SETUP_VIEW = "setup";
 const CIM_APP_NAME = "Splunk_SA_CIM";
 const CISCO_SECURITY_APP_NAME = "CiscoSecurityCloud";

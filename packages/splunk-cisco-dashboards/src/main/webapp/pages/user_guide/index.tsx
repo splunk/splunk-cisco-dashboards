@@ -394,7 +394,7 @@ function GuidePageToc({
 const dashboards = [
   {
     title: "Secure Networking",
-    view: "workspace_secure_networking",
+    view: "workspace_insights?workspace=secure_networking",
     summary:
       "Executive landing page with health KPIs, workspace-aware signal rail, topology, and summary tiles.",
   },
@@ -629,7 +629,7 @@ export default function UserGuidePage(): JSX.Element {
   const setupUrl = `${appUrl("setup")}?setup=1`;
   const setupTuningUrl = `${setupUrl}#tune-indexes`;
   const workspaceUrl = appUrl("workspace_insights");
-  const secureNetworkingUrl = appUrl("workspace_secure_networking");
+  const secureNetworkingUrl = `${appUrl("workspace_insights")}?workspace=secure_networking`;
   const scdMacrosUrl = managerUrl(APP_NAME, "data/macros");
   const cimMacrosUrl = managerUrl("Splunk_SA_CIM", "data/macros");
   const guideContentRef = useRef<HTMLDivElement | null>(null);

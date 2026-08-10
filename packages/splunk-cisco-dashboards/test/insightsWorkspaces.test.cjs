@@ -170,16 +170,13 @@ try {
     "network_resilience_demo",
   );
 
-  global.window.location.pathname =
-    "/en-US/app/splunk-cisco-dashboards/workspace_executive_briefing";
-  global.window.location.search = "";
+  global.window.location.search = "?workspace=executive";
   assert.equal(
     getWorkspaceFromLocation(PACKAGED_WORKSPACE_FALLBACKS).id,
     "executive",
   );
 
-  global.window.location.pathname =
-    "/en-US/app/splunk-cisco-dashboards/workspace_secure_networking";
+  global.window.location.search = "";
   assert.equal(
     getWorkspaceFromLocation(PACKAGED_WORKSPACE_FALLBACKS).id,
     "secure_networking",

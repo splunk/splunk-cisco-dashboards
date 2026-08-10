@@ -39,7 +39,7 @@ assert.equal(
 );
 assert.equal(
   homeUrl("/de-DE/app/splunk-cisco-dashboards/setup"),
-  "/de-DE/app/splunk-cisco-dashboards/workspace_secure_networking",
+  "/de-DE/app/splunk-cisco-dashboards/workspace_insights",
 );
 assert.equal(
   tuningUrl("/de-DE/app/splunk-cisco-dashboards/setup"),
@@ -584,11 +584,17 @@ assert.equal(
   fs.existsSync(path.join(viewsRoot, "secure_networking_overview.xml")),
   false,
 );
-for (const viewName of [
+for (const removedWorkspaceAlias of [
   "workspace_executive_briefing",
-  "workspace_insights",
   "workspace_secure_networking",
 ]) {
+  assert.equal(
+    fs.existsSync(path.join(viewsRoot, `${removedWorkspaceAlias}.xml`)),
+    false,
+    `${removedWorkspaceAlias} must not remain as a second workspace shell`,
+  );
+}
+for (const viewName of ["workspace_insights"]) {
   const viewSource = fs.readFileSync(
     path.join(viewsRoot, `${viewName}.xml`),
     "utf8",
@@ -606,8 +612,11 @@ for (const viewName of [
   assert.match(viewSource, /id="scan-root"/);
   assert.doesNotMatch(viewSource, /\btemplate=/);
 }
-assert.match(navSource, /name="workspace_secure_networking"\s+default="true"/);
-assert.match(navSource, /name="workspace_executive_briefing"/);
+assert.match(navSource, /name="workspace_insights"\s+default="true"/);
+assert.doesNotMatch(
+  navSource,
+  /workspace_(?:secure_networking|executive_briefing)/,
+);
 assert.match(navSource, /<a href="setup\?setup=1">Setup<\/a>/);
 assert.doesNotMatch(
   navSource,
@@ -616,7 +625,6 @@ assert.doesNotMatch(
 );
 for (const dashboardGroup of [
   "More Dashboards",
-  "Executive Views",
   "Network &amp; IT Operations",
   "Security Operations",
   "Workplace Intelligence",
@@ -665,7 +673,6 @@ assert.match(
   /name="workplace_operations_overview" label="Workplace — Single Pane of Glass"/,
 );
 const organizedDashboardGroups = {
-  "Executive Views": ["workspace_executive_briefing"],
   "Network &amp; IT Operations": [
     "netops_critical_systems_health",
     "netops_readiness",
@@ -760,7 +767,7 @@ async function runSetupGate(pathname, payload, responseOk = true) {
   assert.equal(unconfigured.gateResult, false);
 
   const configured = await runSetupGate(
-    "/en-US/app/splunk-cisco-dashboards/workspace_secure_networking",
+    "/en-US/app/splunk-cisco-dashboards/workspace_insights",
     { entry: [{ content: { is_configured: "1" } }] },
   );
   assert.deepEqual(configured.redirects, []);
@@ -779,7 +786,7 @@ async function runSetupGate(pathname, payload, responseOk = true) {
   assert.equal(tuningView.requests.length, 0);
 
   const failedRead = await runSetupGate(
-    "/en-US/app/splunk-cisco-dashboards/workspace_secure_networking",
+    "/en-US/app/splunk-cisco-dashboards/workspace_insights",
     null,
     false,
   );

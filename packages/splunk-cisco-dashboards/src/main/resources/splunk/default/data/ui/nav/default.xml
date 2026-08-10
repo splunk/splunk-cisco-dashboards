@@ -1,6 +1,6 @@
 <nav color="#049fd9" label="Splunk for Secure Networking">
     <view
-        name="workspace_secure_networking"
+        name="workspace_insights"
         default="true"
         label="Home"
         icon="house"
@@ -57,10 +57,6 @@
     <a href="user_guide" icon="organizernotebook">User Guide</a>
 
     <collection label="More Dashboards" icon="layout">
-        <!-- <collection label="Executive Views">
-            <view name="workspace_executive_briefing" label="Executive Briefing Workspace" />
-        </collection> -->
-
         <collection label="Network &amp; IT Operations">
             <a href="netops_critical_systems_health">IT Health</a>
             <a href="netops_readiness">NetOps Readiness</a>

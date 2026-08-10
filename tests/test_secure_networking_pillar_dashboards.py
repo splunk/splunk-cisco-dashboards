@@ -11,7 +11,7 @@ APP_ROOT = ROOT / "packages" / "splunk-cisco-dashboards" / "src" / "main" / "res
 VIEWS = APP_ROOT / "default" / "data" / "ui" / "views"
 SEARCHBASE = APP_ROOT / "default" / "searchbase.conf"
 STORY_CONFIG = ROOT / "scripts" / "secure_networking_story_dashboards.json"
-WORKSPACE = VIEWS / "workspace_secure_networking.xml"
+WORKSPACE = VIEWS / "workspace_insights.xml"
 TOPOLOGY_CANVAS = VIEWS / "sn_topology_canvas.xml"
 
 CARD_COUNT = 6
@@ -416,7 +416,7 @@ class SecureNetworkingPillarDashboardTest(unittest.TestCase):
         self.assertEqual(root.attrib.get("version"), "1.1")
         self.assertEqual(root.attrib.get("theme"), "dark")
         self.assertIsNone(root.find("definition"))
-        self.assertNotIn("workspace_secure_networking", self.stories)
+        self.assertNotIn("workspace_insights", self.stories)
 
 
 if __name__ == "__main__":
