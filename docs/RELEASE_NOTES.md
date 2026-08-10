@@ -2,6 +2,10 @@
 
 ## 1.0.36
 
+- Searchbase searches now directly cover Cisco Catalyst Add-on 3.2.44 current
+  and retained sourcetypes for Catalyst Center, ISE, SD-WAN, and NetFlow,
+  including discriminator fields for consolidated ISE policy records. The
+  documented runtime dependency now requires add-on version 3.2.44 or later.
 - Setup package readiness can now refresh the installed-app inventory in place
   after an install or upgrade. Installed packages open a focused Manage Apps
   view, and Searchbase is presented first with an explicit mandatory

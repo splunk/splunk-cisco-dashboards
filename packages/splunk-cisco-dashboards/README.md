@@ -2,6 +2,12 @@
 
 React-based Splunk app that ships four dashboards for Cisco data:
 
+## Runtime prerequisites
+
+- Cisco Catalyst Add-on for Splunk 3.2.44 or later. This version is required
+  for the current and retained sourcetype coverage used by the packaged
+  searches and accelerated data-model constraints.
+
 | View      | Purpose                                                                 | Stack                          |
 | --------- | ----------------------------------------------------------------------- | ------------------------------ |
 | Overview  | Executive Control Center — branded title/logo, three-section layout, regional map | TypeScript, Tailwind, Leaflet, Recharts, Motion |
