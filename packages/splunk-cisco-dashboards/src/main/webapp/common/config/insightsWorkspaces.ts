@@ -109,7 +109,7 @@ const CROSS_DOMAIN_SECTIONS: readonly WorkspaceSectionMeta[] = [
         id: 'security',
         title: 'Security Operations',
         linkText: 'Open Security Operations',
-        href: 'security_ops_resilience',
+        href: 'secops_resilience',
         icon: 'shield',
     },
     {

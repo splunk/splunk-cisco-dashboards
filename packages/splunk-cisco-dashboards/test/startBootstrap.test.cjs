@@ -678,7 +678,7 @@ const organizedDashboardGroups = {
     "netops_readiness",
     "netops_health_monitoring",
   ],
-  "Security Operations": ["security_ops_resilience", "security_ops_overview"],
+  "Security Operations": ["secops_resilience", "secops_overview"],
   "Workplace Intelligence": [
     "workplace_building_intelligence",
     "workplace_spaces_intelligence",
@@ -753,7 +753,7 @@ async function runSetupGate(pathname, payload, responseOk = true) {
 
 (async () => {
   const unconfigured = await runSetupGate(
-    "/en-US/app/splunk-cisco-dashboards/security_ops_resilience",
+    "/en-US/app/splunk-cisco-dashboards/secops_resilience",
     { entry: [{ content: { is_configured: "0" } }] },
   );
   assert.deepEqual(unconfigured.redirects, [

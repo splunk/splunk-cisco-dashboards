@@ -67,7 +67,7 @@
     "sn_zta_policy_management",
     "sn_zta_ravpn_sessions_and_posture",
     "sn_zta_user_activity_monitoring",
-    "security_ops_resilience",
+    "secops_resilience",
     "workplace_spaces_intelligence",
     "netops_catalyst_health",
     "netops_catalyst_operations",

@@ -9,10 +9,12 @@
   redundant named workspace views and their legacy route mappings are removed.
 - Dashboard view IDs and labels now follow one searchable naming convention:
   `sn_` for Secure Networking stories, `workspace_` for bootstrap-powered
-  workspaces, and domain prefixes such as `netops_`, `security_ops_`,
+  workspaces, and domain prefixes such as `netops_`, `secops_`,
   `workplace_`, and `admin_` elsewhere. Navigation, setup redirects,
   Dashboard Manager deep links, workspace routing, story generation, tests,
-  and Searchbase documentation now use the canonical names. Customer-specific
+  and Searchbase documentation now use the canonical names. Security
+  Operations routes deliberately pair `secops_` with the existing `netops_`
+  convention. Customer-specific
   exercise and activation-report wording has been replaced with reusable
   Catalyst health and operations labels.
 - Every native Dashboard Studio layout now uses the same borderless,

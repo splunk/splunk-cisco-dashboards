@@ -882,7 +882,7 @@ const APP_PRIORITY_DRILLDOWNS: readonly AppPriorityDrilldown[] = [
     timeToken: "global_time",
   },
   {
-    viewName: "security_ops_resilience",
+    viewName: "secops_resilience",
     title: "Security Resilience",
     description: "Firewall, identity, XDR, IDS/IPS, DNS, and endpoint signals.",
     timeToken: "global_time",

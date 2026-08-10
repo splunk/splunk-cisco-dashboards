@@ -54,7 +54,7 @@ const DASHBOARDS = {
     tabs: 5,
     eventHandlers: 2,
   },
-  "security_ops_resilience.xml": {
+  "secops_resilience.xml": {
     digest: "ca2357ed96951cf30437d2d58aea2814c7b898942e376af412f31a221aeba42e",
     dataSources: 43,
     visualizations: 50,
@@ -363,7 +363,7 @@ for (const [filename, baseline] of Object.entries(DASHBOARDS)) {
   );
 }
 
-for (const filename of ["security_ops_overview.xml", "user_guide.xml"]) {
+for (const filename of ["secops_overview.xml", "user_guide.xml"]) {
   const xml = fs.readFileSync(path.join(VIEWS_DIR, filename), "utf8");
   assert.match(xml, /<dashboard\s+version="1\.1"\s+theme="dark"/);
   assert.match(xml, /color: #a6adb6; background: #0f1117;/);

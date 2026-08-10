@@ -412,7 +412,7 @@ const dashboards = [
   },
   {
     title: "Security",
-    view: "security_ops_resilience",
+    view: "secops_resilience",
     summary:
       "Firewall, IPS, DNS, email, web, identity, endpoint, and security event visibility.",
   },

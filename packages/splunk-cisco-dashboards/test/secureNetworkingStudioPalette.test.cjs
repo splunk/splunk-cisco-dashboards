@@ -48,7 +48,7 @@ const MANAGED_STUDIO_FILES = [
   "netops_critical_systems_health.xml",
   "netops_readiness.xml",
   ...EXPECTED_STUDIO_FILES,
-  "security_ops_resilience.xml",
+  "secops_resilience.xml",
   "workplace_spaces_intelligence.xml",
   "netops_catalyst_health.xml",
   "netops_catalyst_operations.xml",

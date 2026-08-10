@@ -84,7 +84,7 @@ import {
     useSearchbaseRows,
 } from './search';
 
-const VIEW_NAME = 'security_ops_overview';
+const VIEW_NAME = 'secops_overview';
 
 type Theme = 'light' | 'dark';
 type TabId =

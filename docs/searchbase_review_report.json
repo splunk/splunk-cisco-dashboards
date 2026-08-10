@@ -32420,7 +32420,7 @@
         "rationale": "Uses tstats with Cisco_Catalyst_App; retained as the accelerated path."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_base_psirt</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_base_psirt</code>.</p>",
         "explanation": "<p>Added during dashboard/searchbase reconciliation so this dashboard SPL is discoverable and runnable as a standalone searchbase entry.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",
@@ -32468,7 +32468,7 @@
         "rationale": "Retained pending field-parity and live-result validation; no speculative Data Model conversion was applied."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_fw_trend</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_fw_trend</code>.</p>",
         "explanation": "<p>Added during dashboard/searchbase reconciliation so this dashboard SPL is discoverable and runnable as a standalone searchbase entry. Effective SPL combines Dashboard Studio chain data sources: ds_base_fw_ref -> ds_fw_trend.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",
@@ -32518,7 +32518,7 @@
         "rationale": "Retained pending field-parity and live-result validation; no speculative Data Model conversion was applied."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_identity_detail_trend</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_identity_detail_trend</code>.</p>",
         "explanation": "<p>Added during dashboard/searchbase reconciliation so this dashboard SPL is discoverable and runnable as a standalone searchbase entry.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",
@@ -32568,7 +32568,7 @@
         "rationale": "Retained pending field-parity and live-result validation; no speculative Data Model conversion was applied."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_kpi_sdwan</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_kpi_sdwan</code>.</p>",
         "explanation": "<p>Added during dashboard/searchbase reconciliation so this dashboard SPL is discoverable and runnable as a standalone searchbase entry. Effective SPL combines Dashboard Studio chain data sources: ds_sdwan_utd_trend -> ds_kpi_sdwan.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",
@@ -32618,7 +32618,7 @@
         "rationale": "Retained pending field-parity and live-result validation; no speculative Data Model conversion was applied."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_kpi_unauth</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_kpi_unauth</code>.</p>",
         "explanation": "<p>Added during dashboard/searchbase reconciliation so this dashboard SPL is discoverable and runnable as a standalone searchbase entry. Effective SPL combines Dashboard Studio chain data sources: ds_unauth_wireless_trend -> ds_kpi_unauth.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",
@@ -32668,7 +32668,7 @@
         "rationale": "Retained pending field-parity and live-result validation; no speculative Data Model conversion was applied."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_priv_trend</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_priv_trend</code>.</p>",
         "explanation": "<p>Added during dashboard/searchbase reconciliation so this dashboard SPL is discoverable and runnable as a standalone searchbase entry.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",
@@ -36925,7 +36925,7 @@
         "rationale": "Uses tstats with Authentication; retained as the accelerated path."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_failed_detail_users</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_failed_detail_users</code>.</p>",
         "explanation": "<p>Added during same-root dashboard/searchbase reconciliation. An existing searchbase entry used the same base source, but this dashboard uses distinct final SPL, so this standalone entry preserves the exact panel behavior.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",
@@ -36980,7 +36980,7 @@
         "rationale": "Uses tstats with Network_Traffic; retained as the accelerated path."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_fw_allowed_trend</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_fw_allowed_trend</code>.</p>",
         "explanation": "<p>Added during same-root dashboard/searchbase reconciliation. An existing searchbase entry used the same base source, but this dashboard uses distinct final SPL, so this standalone entry preserves the exact panel behavior.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",
@@ -37032,7 +37032,7 @@
         "rationale": "Uses tstats with Network_Traffic; retained as the accelerated path."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_fw_top_blocked</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_fw_top_blocked</code>.</p>",
         "explanation": "<p>Added during same-root dashboard/searchbase reconciliation. An existing searchbase entry used the same base source, but this dashboard uses distinct final SPL, so this standalone entry preserves the exact panel behavior.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",
@@ -37085,7 +37085,7 @@
         "rationale": "Retained pending field-parity and live-result validation; no speculative Data Model conversion was applied."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_ise_auth</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_ise_auth</code>.</p>",
         "explanation": "<p>Added during same-root dashboard/searchbase reconciliation. An existing searchbase entry used the same base source, but this dashboard uses distinct final SPL, so this standalone entry preserves the exact panel behavior.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",
@@ -37127,7 +37127,7 @@
         "rationale": "Retained pending field-parity and live-result validation; no speculative Data Model conversion was applied."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_ise_fail_trend</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_ise_fail_trend</code>.</p>",
         "explanation": "<p>Added during same-root dashboard/searchbase reconciliation. An existing searchbase entry used the same base source, but this dashboard uses distinct final SPL, so this standalone entry preserves the exact panel behavior.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",
@@ -37177,7 +37177,7 @@
         "rationale": "Retained pending field-parity and live-result validation; no speculative Data Model conversion was applied."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_kpi_email</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_kpi_email</code>.</p>",
         "explanation": "<p>Added during same-root dashboard/searchbase reconciliation. An existing searchbase entry used the same base source, but this dashboard uses distinct final SPL, so this standalone entry preserves the exact panel behavior. Effective SPL combines Dashboard Studio chain data sources: ds_email_threats_trend -> ds_kpi_email.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",
@@ -37229,7 +37229,7 @@
         "rationale": "Uses tstats with Authentication; retained as the accelerated path."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_kpi_failed</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_kpi_failed</code>.</p>",
         "explanation": "<p>Added during same-root dashboard/searchbase reconciliation. An existing searchbase entry used the same base source, but this dashboard uses distinct final SPL, so this standalone entry preserves the exact panel behavior. Effective SPL combines Dashboard Studio chain data sources: ds_failed_logons_trend -> ds_kpi_failed.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",
@@ -37281,7 +37281,7 @@
         "rationale": "Uses tstats with Network_Traffic; retained as the accelerated path."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_kpi_fw_allowed</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_kpi_fw_allowed</code>.</p>",
         "explanation": "<p>Added during same-root dashboard/searchbase reconciliation. An existing searchbase entry used the same base source, but this dashboard uses distinct final SPL, so this standalone entry preserves the exact panel behavior. Effective SPL combines Dashboard Studio chain data sources: ds_fw_allowed_trend -> ds_kpi_fw_allowed.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",
@@ -37333,7 +37333,7 @@
         "rationale": "Uses tstats with Network_Traffic; retained as the accelerated path."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_kpi_fw_blocked</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_kpi_fw_blocked</code>.</p>",
         "explanation": "<p>Added during same-root dashboard/searchbase reconciliation. An existing searchbase entry used the same base source, but this dashboard uses distinct final SPL, so this standalone entry preserves the exact panel behavior. Effective SPL combines Dashboard Studio chain data sources: ds_fw_blocked_trend -> ds_kpi_fw_blocked.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",
@@ -37385,7 +37385,7 @@
         "rationale": "Uses tstats with Cisco_Security; retained as the accelerated path."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_kpi_ids</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_kpi_ids</code>.</p>",
         "explanation": "<p>Added during same-root dashboard/searchbase reconciliation. An existing searchbase entry used the same base source, but this dashboard uses distinct final SPL, so this standalone entry preserves the exact panel behavior. Effective SPL combines Dashboard Studio chain data sources: ds_ids_trend -> ds_kpi_ids.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",
@@ -37439,7 +37439,7 @@
         "rationale": "Retained pending field-parity and live-result validation; no speculative Data Model conversion was applied."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_kpi_ise_fail</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_kpi_ise_fail</code>.</p>",
         "explanation": "<p>Added during same-root dashboard/searchbase reconciliation. An existing searchbase entry used the same base source, but this dashboard uses distinct final SPL, so this standalone entry preserves the exact panel behavior. Effective SPL combines Dashboard Studio chain data sources: ds_ise_fail_trend -> ds_kpi_ise_fail.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",
@@ -37491,7 +37491,7 @@
         "rationale": "Uses tstats with Authentication; retained as the accelerated path."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_kpi_lockouts</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_kpi_lockouts</code>.</p>",
         "explanation": "<p>Added during same-root dashboard/searchbase reconciliation. An existing searchbase entry used the same base source, but this dashboard uses distinct final SPL, so this standalone entry preserves the exact panel behavior. Effective SPL combines Dashboard Studio chain data sources: ds_lockouts_trend -> ds_kpi_lockouts.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",
@@ -37543,7 +37543,7 @@
         "rationale": "Uses tstats with Authentication; retained as the accelerated path."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_kpi_privileged</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_kpi_privileged</code>.</p>",
         "explanation": "<p>Added during same-root dashboard/searchbase reconciliation. An existing searchbase entry used the same base source, but this dashboard uses distinct final SPL, so this standalone entry preserves the exact panel behavior. Effective SPL combines Dashboard Studio chain data sources: ds_privileged_trend -> ds_kpi_privileged.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",
@@ -37593,7 +37593,7 @@
         "rationale": "Retained pending field-parity and live-result validation; no speculative Data Model conversion was applied."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_kpi_rogue</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_kpi_rogue</code>.</p>",
         "explanation": "<p>Added during same-root dashboard/searchbase reconciliation. An existing searchbase entry used the same base source, but this dashboard uses distinct final SPL, so this standalone entry preserves the exact panel behavior. Effective SPL combines Dashboard Studio chain data sources: ds_rogue_trend -> ds_kpi_rogue.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",
@@ -37645,7 +37645,7 @@
         "rationale": "Retained pending field-parity and live-result validation; no speculative Data Model conversion was applied."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_kpi_web</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_kpi_web</code>.</p>",
         "explanation": "<p>Added during same-root dashboard/searchbase reconciliation. An existing searchbase entry used the same base source, but this dashboard uses distinct final SPL, so this standalone entry preserves the exact panel behavior. Effective SPL combines Dashboard Studio chain data sources: ds_web_threats_trend -> ds_kpi_web.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",
@@ -37697,7 +37697,7 @@
         "rationale": "Uses tstats with Authentication; retained as the accelerated path."
       },
       "updated_metadata": {
-        "description": "<p>Effective Dashboard Studio search from <code>security_ops_resilience.xml</code> data source <code>ds_lockouts_trend</code>.</p>",
+        "description": "<p>Effective Dashboard Studio search from <code>secops_resilience.xml</code> data source <code>ds_lockouts_trend</code>.</p>",
         "explanation": "<p>Added during same-root dashboard/searchbase reconciliation. An existing searchbase entry used the same base source, but this dashboard uses distinct final SPL, so this standalone entry preserves the exact panel behavior.</p>",
         "solution": "<p>If this search returns no results, validate the dashboard time range, macro index tuning, source add-on field extractions, and any lookup dependencies used by the SPL.</p>",
         "related_info": "<ul><li><b>Dashboard Studio reconciliation</b><br>This hidden searchbase entry records the exact effective SPL used by a Dashboard Studio data source so the panel search is discoverable and runnable outside the dashboard.</li><li><b>Search provenance</b><br>The source dashboard and data source id are listed in the description; chained data-source composition, when present, is listed in the explanation.</li><li><b>Index macro dependency</b><br>Validate macro index tuning and source add-on field extractions before troubleshooting the SPL itself.</li></ul>",

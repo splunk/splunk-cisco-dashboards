@@ -64,8 +64,8 @@
         </collection>
 
         <collection label="Security Operations">
-            <a href="security_ops_resilience">Security</a>
-            <a href="security_ops_overview">Security Operations Overview (Beta)</a>
+            <a href="secops_resilience">Security</a>
+            <a href="secops_overview">Security Operations Overview (Beta)</a>
         </collection>
 
         <collection label="Workplace Intelligence">

@@ -23,7 +23,7 @@ const STUDIO_DASHBOARDS = [
     'admin_asset_inventory.xml',
     'workplace_building_intelligence.xml',
     'netops_readiness.xml',
-    'security_ops_resilience.xml',
+    'secops_resilience.xml',
     'workplace_spaces_intelligence.xml',
     'netops_catalyst_health.xml',
     'netops_catalyst_operations.xml',
