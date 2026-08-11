@@ -17,6 +17,7 @@ import React, {
     useSyncExternalStore,
 } from 'react';
 import Select from '@splunk/react-ui/Select';
+import Slider from '@splunk/react-ui/Slider';
 import {
     Circle,
     MapContainer,
@@ -2500,55 +2501,42 @@ export const usePersistedTopology = (
     };
 };
 
-/**
- * Topology animation level: governs the intensity of map animations
- * (marker entrance, link hover bumps, packet streams). Persisted in
- * localStorage so each operator's preference survives reloads.
- *
- *  - 'on'     : full effects (entrance bounce, marching dashes, packet streams)
- *  - 'subtle' : reduced effects (no entrance, slower packets, no bounce)
- *  - 'off'    : every keyframe halted; equivalent to honoring
- *               `prefers-reduced-motion` system-wide
- *
- * `prefers-reduced-motion: reduce` forces the effective level to 'off'
- * regardless of the stored preference. Stored preference is preserved so
- * the user gets their previous setting back if the OS preference flips.
- */
+/** Connector-trail motion is operator controlled and static by default. */
 type TopologyAnimationLevel = 'on' | 'subtle' | 'off';
 
-const TOPOLOGY_ANIMATION_LEVEL_KEY = 'florida-topology-animation-level.v2';
-const DEFAULT_TOPOLOGY_ANIMATION_LEVEL: TopologyAnimationLevel = 'subtle';
-const TOPOLOGY_ANIMATION_LEVELS: TopologyAnimationLevel[] = [
-    'on',
-    'subtle',
-    'off',
-];
+const TOPOLOGY_CONNECTOR_SPEED_KEY = 'florida-topology-connector-speed.v1';
+const DEFAULT_TOPOLOGY_CONNECTOR_SPEED = 0;
+const MIN_TOPOLOGY_CONNECTOR_SPEED = 0;
+const MAX_TOPOLOGY_CONNECTOR_SPEED = 2;
+const TOPOLOGY_CONNECTOR_SPEED_STEP = 0.25;
 
-const readStoredAnimationLevel = (): TopologyAnimationLevel => {
-    if (typeof window === 'undefined') return 'on';
+const sanitizeTopologyConnectorSpeed = (value: unknown): number => {
+    const numeric = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numeric)) return DEFAULT_TOPOLOGY_CONNECTOR_SPEED;
+    const clamped = Math.min(
+        MAX_TOPOLOGY_CONNECTOR_SPEED,
+        Math.max(MIN_TOPOLOGY_CONNECTOR_SPEED, numeric)
+    );
+    return Math.round(clamped / TOPOLOGY_CONNECTOR_SPEED_STEP) * TOPOLOGY_CONNECTOR_SPEED_STEP;
+};
+
+const readStoredConnectorSpeed = (): number => {
+    if (typeof window === 'undefined') return DEFAULT_TOPOLOGY_CONNECTOR_SPEED;
     try {
-        const stored = window.localStorage.getItem(
-            TOPOLOGY_ANIMATION_LEVEL_KEY
-        );
-        if (
-            stored === 'on' ||
-            stored === 'subtle' ||
-            stored === 'off'
-        ) {
-            return stored;
-        }
+        const stored = window.localStorage.getItem(TOPOLOGY_CONNECTOR_SPEED_KEY);
+        if (stored !== null) return sanitizeTopologyConnectorSpeed(stored);
     } catch {
         /* localStorage may be unavailable (private mode etc.) */
     }
-    return DEFAULT_TOPOLOGY_ANIMATION_LEVEL;
+    return DEFAULT_TOPOLOGY_CONNECTOR_SPEED;
 };
 
-const subscribeStoredAnimationLevel = (
+const subscribeStoredConnectorSpeed = (
     onChange: () => void
 ): (() => void) => {
     if (typeof window === 'undefined') return () => undefined;
     const handler = (event: StorageEvent) => {
-        if (event.key === TOPOLOGY_ANIMATION_LEVEL_KEY) onChange();
+        if (event.key === TOPOLOGY_CONNECTOR_SPEED_KEY) onChange();
     };
     window.addEventListener('storage', handler);
     return () => window.removeEventListener('storage', handler);
@@ -2568,16 +2556,24 @@ const subscribeReducedMotion = (onChange: () => void): (() => void) => {
     return () => mql.removeListener(onChange);
 };
 
-const useTopologyAnimationLevel = (): {
-    level: TopologyAnimationLevel; // effective level (after reduced-motion override)
-    storedLevel: TopologyAnimationLevel; // raw stored preference
-    setLevel: (next: TopologyAnimationLevel) => void;
+const topologyAnimationLevelForSpeed = (speed: number): TopologyAnimationLevel =>
+    speed <= 0 ? 'off' : speed < 1 ? 'subtle' : 'on';
+
+const topologyConnectorSpeedLabel = (speed: number): string =>
+    speed <= 0
+        ? 'Static'
+        : `${speed.toFixed(2).replace(/\.00$/, '').replace(/0$/, '')}×`;
+
+const useTopologyConnectorSpeed = (): {
+    speed: number; // effective speed (after reduced-motion override)
+    storedSpeed: number; // raw stored preference
+    setSpeed: (next: number) => void;
     reducedMotion: boolean;
 } => {
-    const storedLevel = useSyncExternalStore<TopologyAnimationLevel>(
-        subscribeStoredAnimationLevel,
-        readStoredAnimationLevel,
-        () => 'on'
+    const storedSpeed = useSyncExternalStore<number>(
+        subscribeStoredConnectorSpeed,
+        readStoredConnectorSpeed,
+        () => DEFAULT_TOPOLOGY_CONNECTOR_SPEED
     );
     const reducedMotion = useSyncExternalStore(
         subscribeReducedMotion,
@@ -2589,20 +2585,21 @@ const useTopologyAnimationLevel = (): {
         },
         () => false
     );
-    const setLevel = useCallback((next: TopologyAnimationLevel) => {
+    const setSpeed = useCallback((next: number) => {
         if (typeof window === 'undefined') return;
+        const sanitized = sanitizeTopologyConnectorSpeed(next);
         try {
             window.localStorage.setItem(
-                TOPOLOGY_ANIMATION_LEVEL_KEY,
-                next
+                TOPOLOGY_CONNECTOR_SPEED_KEY,
+                String(sanitized)
             );
             // `storage` events do not fire in the same tab, so dispatch
             // manually to nudge other useSyncExternalStore subscribers
             // mounted in the same window.
             window.dispatchEvent(
                 new StorageEvent('storage', {
-                    key: TOPOLOGY_ANIMATION_LEVEL_KEY,
-                    newValue: next,
+                    key: TOPOLOGY_CONNECTOR_SPEED_KEY,
+                    newValue: String(sanitized),
                 })
             );
         } catch {
@@ -2610,19 +2607,12 @@ const useTopologyAnimationLevel = (): {
         }
     }, []);
     return {
-        level: reducedMotion ? 'off' : storedLevel,
-        storedLevel,
-        setLevel,
+        speed: reducedMotion ? 0 : storedSpeed,
+        storedSpeed,
+        setSpeed,
         reducedMotion,
     };
 };
-
-const TOPOLOGY_ANIMATION_LEVEL_LABELS: Record<TopologyAnimationLevel, string> =
-    {
-        on: 'Animations: On',
-        subtle: 'Animations: Subtle',
-        off: 'Animations: Off',
-    };
 
 type TopologyRoleLegendMode = 'compact' | 'expanded';
 
@@ -4138,11 +4128,7 @@ interface TopologyLinkPathProps {
     target: TopologySite;
     isSelected: boolean;
     onSelect: (link: TopologyLink) => void;
-    /**
-     * Effective animation level. 'off' suppresses SMIL marching/breathing
-     * entirely; 'subtle' slows it; 'on' uses the original cadence.
-     */
-    animationLevel: TopologyAnimationLevel;
+    connectorSpeed: number;
 }
 
 /**
@@ -4165,7 +4151,7 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
     target,
     isSelected,
     onSelect,
-    animationLevel,
+    connectorSpeed,
 }) => {
     const positions = useMemo(
         () =>
@@ -4184,12 +4170,12 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
     // the line readable as "alive" without the eye-grabbing cadence of full.
     // Off level: skip SMIL injection entirely so the path is fully static.
     const flowSeconds =
-        animationLevel === 'off'
+        connectorSpeed <= 0
             ? null
-            : animationLevel === 'subtle' && profile.flowSeconds !== null
-            ? profile.flowSeconds * 1.4
-            : profile.flowSeconds;
-    const enableBreathe = animationLevel !== 'off' && profile.breathe;
+            : profile.flowSeconds === null
+            ? null
+            : profile.flowSeconds / connectorSpeed;
+    const enableBreathe = connectorSpeed > 0 && profile.breathe;
 
     useEffect(() => {
         const polyline = polylineRef.current;
@@ -4219,7 +4205,7 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
                 );
                 breathe.setAttribute(
                     'dur',
-                    animationLevel === 'subtle' ? '2.4s' : '1.4s'
+                    `${1.4 / connectorSpeed}s`
                 );
                 breathe.setAttribute('repeatCount', 'indefinite');
                 breathe.setAttribute('data-customer-topology-flow', 'breathe');
@@ -4238,7 +4224,7 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
                 ?.querySelectorAll('animate[data-customer-topology-flow]')
                 .forEach((node) => node.remove());
         };
-    }, [flowSeconds, enableBreathe, profile.opacity, animationLevel]);
+    }, [connectorSpeed, enableBreathe, flowSeconds, profile.opacity]);
 
     const handleClick = useCallback(
         (event: L.LeafletMouseEvent) => {
@@ -4409,6 +4395,7 @@ interface LinkPacketLayerProps {
         target: TopologySite;
     }>;
     animationLevel: TopologyAnimationLevel;
+    connectorSpeed: number;
 }
 
 const linkPacketPathD = (
@@ -4476,6 +4463,7 @@ const linkPacketPathD = (
 const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
     linkSegments,
     animationLevel,
+    connectorSpeed,
 }) => {
     const map = useMap();
     const groupRef = useRef<SVGGElement | null>(null);
@@ -4533,7 +4521,7 @@ const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
         const updateGeometry = () => {
             animationFrame = 0;
             const group = groupRef.current;
-            if (!group || animationLevel === 'off') return;
+            if (!group || connectorSpeed <= 0) return;
             const paths = new Map(
                 Array.from(
                     group.querySelectorAll<SVGPathElement>(
@@ -4567,7 +4555,7 @@ const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
             map.off('viewreset', scheduleGeometryUpdate);
             map.off('resize', scheduleGeometryUpdate);
         };
-    }, [animationLevel, linkSegments, map]);
+    }, [connectorSpeed, linkSegments, map]);
 
     // Step 3: imperatively rebuild the packet DOM whenever inputs change.
     // We blow away the previous children and rebuild — `<animateMotion>`
@@ -4582,7 +4570,7 @@ const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
         while (group.firstChild) {
             group.removeChild(group.firstChild);
         }
-        if (animationLevel === 'off') return;
+        if (connectorSpeed <= 0) return;
 
         const defs = document.createElementNS(SVG_NS, 'defs');
         group.appendChild(defs);
@@ -4604,7 +4592,7 @@ const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
             // Round-trip motion: one packet now travels source → target → source.
             // Doubling duration preserves the one-way speed operators already
             // reviewed while making the bidirectional circuit intent obvious.
-            const roundTripSeconds = profile.durationSeconds * 2;
+            const roundTripSeconds = (profile.durationSeconds * 2) / connectorSpeed;
 
             for (let i = 0; i < profile.count; i++) {
                 // Stagger packet starts so they appear evenly distributed
@@ -4642,7 +4630,7 @@ const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
                 group.appendChild(circle);
             }
         }
-    }, [linkSegments, animationLevel, map, version]);
+    }, [animationLevel, connectorSpeed, linkSegments, map, version]);
 
     return null;
 };
@@ -4895,6 +4883,7 @@ interface TopologyCommandViewProps {
     selected: SelectedTarget | null;
     spotlightSiteId?: string;
     animationLevel: TopologyAnimationLevel;
+    connectorSpeed: number;
     isDark: boolean;
     onSelectSite: (site: TopologySite) => void;
     onSelectLink: (link: TopologyLink) => void;
@@ -4911,6 +4900,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
     selected,
     spotlightSiteId,
     animationLevel,
+    connectorSpeed,
     isDark,
     onSelectSite,
     onSelectLink,
@@ -5185,8 +5175,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
             <style>{`
                 @keyframes scd-command-flow { to { stroke-dashoffset: -38; } }
                 @keyframes scd-command-pulse { 0%, 100% { opacity: .24; transform: scale(1); } 50% { opacity: .58; transform: scale(1.14); } }
-                .scd-command-flow--on { animation: scd-command-flow 1.8s linear infinite; }
-                .scd-command-flow--subtle { animation: scd-command-flow 4.6s linear infinite; }
+                .scd-command-flow { animation: scd-command-flow 1.8s linear infinite; }
                 .scd-command-pulse { transform-box: fill-box; transform-origin: center; animation: scd-command-pulse 2.4s ease-in-out infinite; }
             `}</style>
             <svg
@@ -5253,10 +5242,11 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
                                 strokeWidth={selectedLink ? 4.5 : 3}
                                 strokeDasharray="10 9"
                                 strokeLinecap="round"
-                                className={
-                                    animationLevel === 'off'
-                                        ? undefined
-                                        : `scd-command-flow--${animationLevel}`
+                                className={connectorSpeed > 0 ? 'scd-command-flow' : undefined}
+                                style={
+                                    connectorSpeed > 0
+                                        ? { animationDuration: `${1.8 / connectorSpeed}s` }
+                                        : undefined
                                 }
                                 filter={selectedLink ? 'url(#scd-command-glow)' : undefined}
                             />
@@ -5452,6 +5442,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     const [pickSiteId, setPickSiteId] = useState<string | null>(null);
     const [roleLegendMode, setRoleLegendMode] =
         useState<TopologyRoleLegendMode>(readStoredRoleLegendMode);
+    const [motionSettingsOpen, setMotionSettingsOpen] = useState(false);
     const [tilePresetId, setTilePresetId] = useState<TileLayerPreset['id']>(
         () => defaultTileLayerPresetId(isDark)
     );
@@ -5495,16 +5486,20 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         setTilePresetId(defaultTileLayerPresetId(isDark));
     }, [isDark]);
 
-    // Animation level (controls marker entrance, link hover, packet streams).
+    // Connector trails are static until the operator chooses a speed. The
+    // derived level keeps the existing reduced/full topology affordances in
+    // sync while the numeric value gives direct speed control.
     const {
-        level: animationLevel,
-        storedLevel: storedAnimationLevel,
-        setLevel: setAnimationLevel,
+        speed: connectorSpeed,
+        storedSpeed: storedConnectorSpeed,
+        setSpeed: setConnectorSpeed,
         reducedMotion,
-    } = useTopologyAnimationLevel();
+    } = useTopologyConnectorSpeed();
+    const animationLevel = topologyAnimationLevelForSpeed(connectorSpeed);
     const visualAnimationLevel: TopologyAnimationLevel = isEditorOpen
         ? 'off'
         : animationLevel;
+    const visualConnectorSpeed = isEditorOpen ? 0 : connectorSpeed;
 
     const setRoleLegendExpanded = useCallback((expanded: boolean) => {
         const next: TopologyRoleLegendMode = expanded ? 'expanded' : 'compact';
@@ -6572,6 +6567,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     selected={resolvedSelected}
                     spotlightSiteId={spotlightSite?.id}
                     animationLevel={visualAnimationLevel}
+                    connectorSpeed={visualConnectorSpeed}
                     isDark={isDark}
                     onSelectSite={selectSite}
                     onSelectLink={selectLink}
@@ -6620,13 +6616,14 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                             resolvedSelected.link.id === link.id
                         }
                         onSelect={selectLink}
-                        animationLevel={visualAnimationLevel}
+                        connectorSpeed={visualConnectorSpeed}
                     />
                 ))}
 
                 <LinkPacketLayer
                     linkSegments={linkSegments}
                     animationLevel={visualAnimationLevel}
+                    connectorSpeed={visualConnectorSpeed}
                 />
 
 
@@ -6845,55 +6842,102 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     <Pencil className="w-4 h-4" />
                 </button>
 
-                <button
-                    type="button"
-                    onClick={() => {
-                        const idx = TOPOLOGY_ANIMATION_LEVELS.indexOf(
-                            storedAnimationLevel
-                        );
-                        const nextIdx =
-                            (idx + 1) % TOPOLOGY_ANIMATION_LEVELS.length;
-                        setAnimationLevel(
-                            TOPOLOGY_ANIMATION_LEVELS[nextIdx]
-                        );
+                <div
+                    className="relative"
+                    onKeyDown={(event) => {
+                        if (event.key === 'Escape') setMotionSettingsOpen(false);
                     }}
-                    title={
-                        reducedMotion
-                            ? 'Animations forced off by your OS reduce-motion setting. Click to cycle preference (will apply when reduce-motion is disabled).'
-                            : `${TOPOLOGY_ANIMATION_LEVEL_LABELS[storedAnimationLevel]}. Click to cycle.`
-                    }
-                    aria-label={
-                        TOPOLOGY_ANIMATION_LEVEL_LABELS[animationLevel]
-                    }
-                    className={cn(
-                        'border p-2 rounded-lg shadow-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400 relative',
-                        buttonChrome,
-                        animationLevel === 'off' && 'opacity-60'
-                    )}
                 >
-                    <Sparkles
+                    <button
+                        type="button"
+                        onClick={() => setMotionSettingsOpen((open) => !open)}
+                        title={
+                            reducedMotion
+                                ? 'Connector motion is forced off by your OS reduce-motion setting.'
+                                : `Connector motion: ${topologyConnectorSpeedLabel(storedConnectorSpeed)}`
+                        }
+                        aria-label={`Configure connector motion. Current speed: ${topologyConnectorSpeedLabel(connectorSpeed)}`}
+                        aria-haspopup="dialog"
+                        aria-expanded={motionSettingsOpen}
                         className={cn(
-                            'w-4 h-4',
-                            animationLevel === 'on' && 'text-sky-500',
-                            animationLevel === 'subtle' && 'text-slate-400',
-                            animationLevel === 'off' && 'text-slate-500'
-                        )}
-                    />
-                    <span
-                        className={cn(
-                            'absolute -bottom-1 -right-1 px-1 py-0.5 rounded text-[7px] font-bold uppercase tracking-widest text-white shadow-sm',
-                            animationLevel === 'on' && 'bg-sky-500',
-                            animationLevel === 'subtle' && 'bg-slate-500',
-                            animationLevel === 'off' && 'bg-slate-700'
+                            'relative rounded-lg border p-2 shadow-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                            buttonChrome,
+                            connectorSpeed <= 0 && 'opacity-60'
                         )}
                     >
-                        {animationLevel === 'on'
-                            ? 'On'
-                            : animationLevel === 'subtle'
-                            ? 'Sub'
-                            : 'Off'}
-                    </span>
-                </button>
+                        <Sparkles
+                            className={cn(
+                                'h-4 w-4',
+                                connectorSpeed > 0 ? 'text-sky-500' : 'text-slate-500'
+                            )}
+                        />
+                        <span
+                            className={cn(
+                                'absolute -bottom-1 -right-1 rounded px-1 py-0.5 text-[7px] font-bold uppercase tracking-widest text-white shadow-sm',
+                                connectorSpeed > 0 ? 'bg-sky-500' : 'bg-slate-700'
+                            )}
+                        >
+                            {connectorSpeed > 0
+                                ? topologyConnectorSpeedLabel(connectorSpeed)
+                                : 'Off'}
+                        </span>
+                    </button>
+
+                    {motionSettingsOpen && (
+                        <OneCdGlassCard
+                            tag="section"
+                            className={cn(
+                                'absolute bottom-0 left-[calc(100%+0.75rem)] z-[1250] w-64 p-4 shadow-2xl',
+                                isDark ? 'text-slate-100' : 'text-slate-900'
+                            )}
+                            role="dialog"
+                            aria-labelledby="topology-connector-speed-label"
+                        >
+                            <div className="mb-3 flex items-start justify-between gap-3">
+                                <div>
+                                    <h5
+                                        id="topology-connector-speed-label"
+                                        className="text-sm font-bold"
+                                    >
+                                        Connector motion
+                                    </h5>
+                                    <p className="mt-1 text-xs leading-snug text-slate-400">
+                                        Controls the light trails on map connector lines.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setMotionSettingsOpen(false)}
+                                    aria-label="Close connector motion settings"
+                                    className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-500/10 hover:text-current focus:outline-none focus:ring-1 focus:ring-sky-400"
+                                >
+                                    <X className="h-3.5 w-3.5" />
+                                </button>
+                            </div>
+                            <Slider
+                                inputId="topology-connector-speed"
+                                labelledBy="topology-connector-speed-label"
+                                min={MIN_TOPOLOGY_CONNECTOR_SPEED}
+                                max={MAX_TOPOLOGY_CONNECTOR_SPEED}
+                                step={TOPOLOGY_CONNECTOR_SPEED_STEP}
+                                stepMarks="always"
+                                value={storedConnectorSpeed}
+                                displayValue={topologyConnectorSpeedLabel(storedConnectorSpeed)}
+                                minLabel="Static"
+                                maxLabel="2×"
+                                disabled={reducedMotion}
+                                onChange={(_event, { value }) => setConnectorSpeed(value)}
+                            />
+                            <p className="mt-3 text-xs leading-snug text-slate-400" aria-live="polite">
+                                {reducedMotion
+                                    ? 'Motion is disabled while your operating system requests reduced motion.'
+                                    : storedConnectorSpeed <= 0
+                                    ? 'Static by default.'
+                                    : `Connector trails are running at ${topologyConnectorSpeedLabel(storedConnectorSpeed)} speed.`}
+                            </p>
+                        </OneCdGlassCard>
+                    )}
+                </div>
             </div>
         </OneCdSurface>
     );

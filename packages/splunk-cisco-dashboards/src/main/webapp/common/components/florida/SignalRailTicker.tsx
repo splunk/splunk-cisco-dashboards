@@ -3,6 +3,7 @@ import Badge from '@splunk/react-ui/Badge';
 import { variables } from '@splunk/themes';
 import { Check, ExternalLink, Palette, Pause, Play, Settings2 } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
+import { C3_VISUALIZATION_COLORS } from '@/common/theme/c3VisualizationPalette';
 import type { MetricStatus } from '@/common/hooks/useMetric';
 import type {
     SignalTickerDensity,
@@ -245,11 +246,18 @@ type BadgeBackground = NonNullable<
     React.ComponentProps<typeof Badge>['backgroundColor']
 >;
 
+const STATUS_BADGE_COLOR: Record<SignalRailStatus, string> = {
+    healthy: C3_VISUALIZATION_COLORS.positive,
+    warning: C3_VISUALIZATION_COLORS.caution,
+    critical: C3_VISUALIZATION_COLORS.critical,
+    unknown: C3_VISUALIZATION_COLORS.info,
+};
+
 const STATUS_BADGE_BACKGROUND: Record<SignalRailStatus, BadgeBackground> = {
-    healthy: variables.severityColorNormal,
-    warning: variables.severityColorNotice,
-    critical: variables.severityColorAlert,
-    unknown: variables.severityColorInfo,
+    healthy: `color-mix(in srgb, ${STATUS_BADGE_COLOR.healthy} 50%, transparent)`,
+    warning: `color-mix(in srgb, ${STATUS_BADGE_COLOR.warning} 50%, transparent)`,
+    critical: `color-mix(in srgb, ${STATUS_BADGE_COLOR.critical} 50%, transparent)`,
+    unknown: `color-mix(in srgb, ${STATUS_BADGE_COLOR.unknown} 50%, transparent)`,
 };
 
 const isSignalRailVariant = (value: string | null): value is SignalRailVariant =>
@@ -338,8 +346,8 @@ const itemSizeClass = (
 ): string => {
     if (variant === 'one-cisco-glass') {
         return density === 'compact'
-            ? 'min-h-[72px] min-w-[230px] px-4 py-3'
-            : 'min-h-[92px] min-w-[250px] px-5 py-4';
+            ? 'min-h-[72px] min-w-0 px-4 py-3'
+            : 'min-h-[92px] min-w-0 px-5 py-4';
     }
     if (variant === 'bloomberg') {
         return density === 'compact'
@@ -456,6 +464,8 @@ const KpiItem: React.FC<KpiItemProps> = ({
                     <Badge
                         label={STATUS_LABEL[kpi.status]}
                         backgroundColor={STATUS_BADGE_BACKGROUND[kpi.status]}
+                        foregroundColor={variables.contentColorActive}
+                        style={{ border: `1px solid ${STATUS_BADGE_COLOR[kpi.status]}` }}
                     />
                 </span>
             </OneCdGlassCard>
@@ -755,7 +765,10 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
     }, []);
 
     const tickerRows = useMemo(() => splitRows(kpis, rows), [kpis, rows]);
-    const staticMode = durationSeconds <= 0;
+    // Aileen's 1CD status overview is a static set of glass cards. Motion
+    // belongs to the connector trails in the topology map, not this rail.
+    // Retain marquee support only for the optional legacy rail variants.
+    const staticMode = variant === 'one-cisco-glass' || durationSeconds <= 0;
     const effectivePaused = manualPaused || interactionPaused || durationSeconds <= 0;
     const activeOption = VARIANT_OPTIONS.find((option) => option.id === variant);
     const counts = useMemo(() => {
@@ -854,11 +867,15 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                     <div className="flex flex-wrap justify-end gap-2">
                         <Badge
                             label={`${counts.critical} Critical`}
-                            backgroundColor={variables.severityColorAlert}
+                            backgroundColor={STATUS_BADGE_BACKGROUND.critical}
+                            foregroundColor={variables.contentColorActive}
+                            style={{ border: `1px solid ${STATUS_BADGE_COLOR.critical}` }}
                         />
                         <Badge
                             label={`${counts.warning} Warning`}
-                            backgroundColor={variables.severityColorNotice}
+                            backgroundColor={STATUS_BADGE_BACKGROUND.warning}
+                            foregroundColor={variables.contentColorActive}
+                            style={{ border: `1px solid ${STATUS_BADGE_COLOR.warning}` }}
                         />
                     </div>
                 </div>
@@ -884,7 +901,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                             )}
                         >
                             {staticMode ? (
-                                <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(230px,1fr))] gap-3">
+                                <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3">
                                     {row.map((kpi) => (
                                         <KpiItem
                                             key={kpi.id}
@@ -923,7 +940,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                     data-open={pickerOpen}
                     ref={pickerRef}
                 >
-                    <button
+                    {variant !== 'one-cisco-glass' && <button
                         type="button"
                         onClick={() => setManualPaused((current) => !current)}
                         disabled={staticMode}
@@ -948,7 +965,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                         )}
                     >
                         {manualPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-                    </button>
+                    </button>}
                     <button
                         type="button"
                         onClick={() => setPickerOpen((current) => !current)}

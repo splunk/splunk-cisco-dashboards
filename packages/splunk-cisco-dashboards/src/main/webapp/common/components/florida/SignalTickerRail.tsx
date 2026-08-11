@@ -1163,7 +1163,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                         <div className="mt-4">
                             <div className="flex items-center justify-between gap-3">
                                 <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
-                                    Speed
+                                    Legacy ticker speed
                                 </span>
                                 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-black uppercase tracking-[0.12em] text-slate-500 dark:bg-slate-900 dark:text-slate-300">
                                     {config.speed === 0
@@ -1193,6 +1193,9 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                     <span>Static</span>
                                     <span>2×</span>
                                 </div>
+                                <p className="mt-2 text-xs leading-snug text-slate-400 dark:text-slate-500">
+                                    The 1CD glass status cards remain static. This speed applies only to optional legacy ticker styles.
+                                </p>
                             </div>
                         </div>
 

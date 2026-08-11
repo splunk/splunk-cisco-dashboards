@@ -260,14 +260,19 @@ assert.match(
 );
 assert.match(
   profile,
-  /resolvedTheme === "dark" && "dark scd-c3-atmosphere"/,
-  "The dark workspace must use the shared borderless C3 atmosphere",
+  /resolvedTheme === "dark" && "dark scd-one-cisco-spotlight-canvas"/,
+  "The Figma-led workspace must keep a neutral canvas for the SUI SpotLight preset",
 );
 assert.doesNotMatch(profile, /@splunk\/react-ui\/SpotLight/);
 assert.match(
   tailwindStyles,
-  /\.scd-c3-atmosphere[\s\S]*?background-color:\s*#0b1118[\s\S]*?c3-atmosphere\.svg/,
-  "The dark workspace must use the central atmospheric asset",
+  /\.scd-one-cisco-spotlight-canvas[\s\S]*?background-color:\s*#0b1118[\s\S]*?background-image:\s*none/,
+  "The dark workspace must not place the legacy custom gradient behind SUI SpotLight",
+);
+assert.match(
+  tailwindStyles,
+  /\.scd-signal-rail-ticker\[data-variant='one-cisco-glass'\][\s\S]*?background:\s*transparent/,
+  "The 1CD status rail must expose the SUI SpotLight instead of an opaque custom background",
 );
 assert.match(
   tailwindStyles,

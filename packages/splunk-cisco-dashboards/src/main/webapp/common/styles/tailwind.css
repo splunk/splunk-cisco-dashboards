@@ -179,6 +179,14 @@ body.scd-overview-active .panel-body,
     background-size: cover !important;
 }
 
+/* The Figma-led Insights Workspace uses the released SUI SpotLight presets
+ * for its atmosphere. Keep its canvas neutral so the preset is the visible
+ * gradient instead of layering it over the legacy custom SVG atmosphere. */
+#scan-root .scd-one-cisco-spotlight-canvas {
+    background-color: #0b1118 !important;
+    background-image: none !important;
+}
+
 #scan-root .scd-c3-surface.dark .scd-c3-toolbar {
     background:
         linear-gradient(180deg, rgb(19 26 35 / 98%), rgb(15 17 23 / 96%)) !important;
@@ -205,6 +213,15 @@ body.scd-overview-active .panel-body,
     border-color: var(--scd-c3-toolbar-border) !important;
     box-shadow: 0 3px 8px rgb(0 0 0 / 8%);
     backdrop-filter: blur(8px) saturate(106%);
+}
+
+#scan-root
+    .scd-c3-surface.dark
+    .scd-signal-rail-ticker[data-variant='one-cisco-glass'] {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none;
+    backdrop-filter: none;
 }
 
 /* C3 uses sentence-case page and card hierarchy. Preserve customer-supplied

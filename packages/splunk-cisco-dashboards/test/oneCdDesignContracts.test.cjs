@@ -28,6 +28,9 @@ const signalTickerRail = read(
 const signalTickerConfig = read(
   "../src/main/webapp/common/config/signalTicker.ts",
 );
+const tailwindStyles = read(
+  "../src/main/webapp/common/styles/tailwind.css",
+);
 const workspacesConf = read(
   "../src/main/resources/splunk/default/insights_workspaces.conf",
 );
@@ -51,6 +54,11 @@ assert.match(
   oneCdSurface,
   /\{ variables \} from '@splunk\/themes'/,
   "1CD surface styling must resolve through Splunk design tokens",
+);
+assert.match(
+  oneCdSurface,
+  /\[role='radio'\]\[aria-checked='true'\][\s\S]*?background-color: \$\{variables\.interactiveColorPrimary\}/,
+  "The demo RadioBar must retain SUI semantics while making its selected state unmistakable",
 );
 assert.match(
   dashboardSection,
@@ -89,8 +97,38 @@ assert.match(
 );
 assert.match(
   signalRail,
-  /staticMode \? \([\s\S]*?grid-cols-\[repeat\(auto-fit,minmax\(230px,1fr\)\)\][\s\S]*?<KpiItem/,
-  "A static Signal Rail must expose every KPI in a responsive grid",
+  /spotlight=\{variant === 'one-cisco-glass' \? 'page-top' : false\}/,
+  "The 1CD status overview must use the released SUI page-top SpotLight preset",
+);
+assert.match(
+  signalRail,
+  /color-mix\(in srgb, \$\{STATUS_BADGE_COLOR\.critical\} 50%, transparent\)/,
+  "Status badge fills must match the designer's 50% severity treatment",
+);
+assert.match(
+  signalRail,
+  /foregroundColor=\{variables\.contentColorActive\}/,
+  "Status badge text must use a readable SUI content token",
+);
+assert.match(
+  tailwindStyles,
+  /\.scd-one-cisco-spotlight-canvas[\s\S]*?background-image: none[\s\S]*?\.scd-signal-rail-ticker\[data-variant='one-cisco-glass'\][\s\S]*?background: transparent/,
+  "The SUI SpotLight preset must not be obscured by custom workspace or rail gradients",
+);
+assert.match(
+  signalRail,
+  /variant === 'one-cisco-glass' \|\| durationSeconds <= 0/,
+  "The 1CD status overview must remain static because motion belongs to map connectors",
+);
+assert.match(
+  signalRail,
+  /staticMode \? \([\s\S]*?grid-cols-\[repeat\(auto-fit,minmax\(180px,1fr\)\)\][\s\S]*?<KpiItem/,
+  "The static status overview must fit six KPIs in one responsive desktop row",
+);
+assert.match(
+  signalRail,
+  /<a[\s\S]*?aria-label=\{`Open \$\{label\} in Search`\}[\s\S]*?<ExternalLink/,
+  "Glass status cards must use the top-right icon link instead of making the whole card clickable",
 );
 assert.match(
   signalRail,
@@ -116,6 +154,31 @@ assert.equal(
   (workspacesConf.match(/^speed = 0$/gm) ?? []).length,
   5,
   "Every factory workspace must default the Signal Rail to static",
+);
+assert.match(
+  topologyMap,
+  /from '@splunk\/react-ui\/Slider'/,
+  "Connector motion speed must use the native SUI Slider",
+);
+assert.match(
+  topologyMap,
+  /DEFAULT_TOPOLOGY_CONNECTOR_SPEED = 0/,
+  "Topology connector trails must be static by default",
+);
+assert.match(
+  topologyMap,
+  /TOPOLOGY_CONNECTOR_SPEED_STEP = 0\.25/,
+  "Topology connector trails must expose quarter-speed control",
+);
+assert.match(
+  topologyMap,
+  /roundTripSeconds = \(profile\.durationSeconds \* 2\) \/ connectorSpeed/,
+  "Connector packet duration must respond directly to the selected speed",
+);
+assert.match(
+  workspacesConf,
+  /header_title = Secure Networking Operations[\s\S]*?header_subtitle = Live posture, policy, infrastructure, and connectivity/,
+  "The primary workspace title must summarize the operational area",
 );
 
 console.log("1CD design contracts passed");

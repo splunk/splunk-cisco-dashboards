@@ -84,7 +84,7 @@ assert.deepEqual(
 );
 
 const runtimeContracts = [
-    ['pages/executive_insights/index.tsx', /scd-c3-atmosphere/],
+    ['pages/executive_insights/index.tsx', /scd-one-cisco-spotlight-canvas/],
     ['pages/secure_operations_glass/index.tsx', /scd-c3-atmosphere/],
     ['pages/user_guide/index.tsx', /scd-c3-atmosphere/],
     ['pages/health_monitoring/HealthMonitoringDashboard.tsx', /scd-c3-atmosphere/],

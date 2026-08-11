@@ -4260,7 +4260,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         compactDensity && "scd-overview-compact",
         "bg-slate-50 text-slate-900",
         "dark:bg-slate-950 dark:text-slate-100",
-        resolvedTheme === "dark" && "dark scd-c3-atmosphere",
+        resolvedTheme === "dark" && "dark scd-one-cisco-spotlight-canvas",
       )}
     >
       {/* Header */}
@@ -4310,10 +4310,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             </div>
           ) : null}
           <div className="min-w-0">
-            <h1 className="text-base font-black text-sky-900 dark:text-sky-200 tracking-tight leading-none uppercase truncate">
+            <h1 className="truncate text-lg font-bold leading-none tracking-[-0.01em] text-slate-900 dark:text-slate-100">
               {effectiveTitle}
             </h1>
-            <p className="text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-[0.3em] mt-1 leading-none truncate">
+            <p className="mt-1 truncate text-xs font-medium leading-none text-slate-500 dark:text-slate-400">
               {effectiveSubtitle}
             </p>
           </div>

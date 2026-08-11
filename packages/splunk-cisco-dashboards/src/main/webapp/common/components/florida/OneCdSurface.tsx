@@ -100,6 +100,24 @@ interface OneCdRadioBarProps<T extends string = string> {
 const StyledRadioBar = styled(RadioBar)`
     position: relative;
     z-index: 1;
+
+    && [role='radio'] {
+        min-width: 56px;
+        justify-content: center;
+    }
+
+    && [role='radio'][aria-checked='true'] {
+        background-color: ${variables.interactiveColorPrimary} !important;
+        color: ${variables.contentColorInverted} !important;
+        font-weight: 700;
+        box-shadow:
+            inset 0 0 0 1px ${variables.focusColor},
+            0 0 12px ${variables.accentColor};
+    }
+
+    && [role='radio'][aria-checked='true'] * {
+        color: inherit !important;
+    }
 `;
 
 /** A controlled SUI RadioBar used for a small set of related surface views. */
