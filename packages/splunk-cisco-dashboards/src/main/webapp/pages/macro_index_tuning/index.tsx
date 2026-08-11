@@ -90,6 +90,7 @@ const FALLBACK_SCD_INDEX_MACRO_NAMES = [
   "index_spaces",
   "index_thousandeyes",
   "index_ucs",
+  "index_webex",
   "index_windows",
   "index_zeek",
 ] as const;

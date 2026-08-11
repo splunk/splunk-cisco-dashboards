@@ -37,6 +37,12 @@
   and retained sourcetypes for Catalyst Center, ISE, SD-WAN, and NetFlow,
   including discriminator fields for consolidated ISE policy records. The
   documented runtime dependency now requires add-on version 3.2.44 or later.
+- Secure Networking Searchbase now includes six Webex trend-and-detail
+  workflows for authentication, administrative changes, calling outcomes,
+  meeting media health, join time, and contact-center service levels. Direct
+  Webex Add-on data uses a dedicated index macro so deployments can tune its
+  index scope independently from Cisco Spaces Webex device telemetry, and
+  Setup now detects and tunes that macro from indexed Webex sourcetypes.
 - Setup package readiness can now refresh the installed-app inventory in place
   after an install or upgrade. Installed packages open a focused Manage Apps
   view, and Searchbase is presented first with an explicit mandatory

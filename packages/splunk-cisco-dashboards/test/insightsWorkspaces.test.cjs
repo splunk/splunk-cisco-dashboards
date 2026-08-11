@@ -399,8 +399,8 @@ for (const block of searchbaseBlocks) {
 }
 assert.equal(
   canonicalDrilldownCount,
-  402,
-  "The shipped catalogue must retain every migrated relationship plus the new ISE workflow target",
+  408,
+  "The shipped catalogue must retain every migrated relationship plus the ISE and Webex workflow targets",
 );
 
 const secureOverviewMappings = [];
