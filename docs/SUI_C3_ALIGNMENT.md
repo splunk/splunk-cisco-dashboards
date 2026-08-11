@@ -101,6 +101,31 @@ Authoritative public references:
 4. Treat formal C3 approval as a design-team review, not something inferred from
    package versions alone.
 
+## Agreed implementation backlog
+
+These items record approved design intent for later implementation. They are
+not claims about the current product behavior.
+
+### Signal trail motion controls
+
+- Default the signal trail to motionless.
+- Let the user enable motion explicitly and control its speed within a bounded
+  supported range, initially `0.25x` through `2x`.
+- Keep trail direction, status, and meaning fully understandable in the static
+  state; motion must never be the only signal.
+- Remember the user's selected speed, but keep the preference private,
+  workspace-scoped, and reversible. Disabling motion should preserve the last
+  selected speed for the next time it is enabled.
+- Respect the operating system or browser reduced-motion preference.
+- Apply the 1CD Sheen treatment only to paths that communicate real activity;
+  do not animate the trail as permanent ambient decoration.
+- Allow a demo operator to enable the trail and tune its speed for presentation
+  without changing the factory default.
+
+Implementation acceptance should cover the motionless default, the complete
+speed range, preference restoration, reduced-motion behavior, and equivalent
+static communication of direction and status.
+
 ## Verification
 
 ```sh

@@ -299,6 +299,9 @@ const hybridMeshTileIds = hybridMeshLayoutConf
   .match(/^tiles = (.+)$/m)?.[1]
   .split(",");
 assert.ok(hybridMeshTileIds, "Hybrid Mesh Firewalling must declare tile order");
+const hybridMeshVisibleCount = Number(
+  hybridMeshLayoutConf.match(/^visible_count = (\d+)$/m)?.[1],
+);
 const paloTrendTileIds = [
   "secure_networking_sgt_palo_alto_policy_effectiveness_trend",
   "secure_networking_sgt_palo_alto_traffic_trend",
@@ -321,8 +324,14 @@ for (const tileId of paloDetailTileIds) {
 }
 assert.match(
   hybridMeshLayoutConf,
-  /^visible_count = 5$/m,
-  "The two Palo Alto trend tiles must be visible in the shared layout",
+  /^visible_count = 3$/m,
+  "Hybrid Mesh Firewalling must ship with three visible factory tiles",
+);
+assert.ok(
+  hybridMeshTileIds
+    .slice(0, hybridMeshVisibleCount)
+    .includes("secure_networking_sgt_palo_alto_traffic_trend"),
+  "Palo Alto Traffic by SGT must be one of the three visible factory tiles",
 );
 
 const searchbaseConf = fs.readFileSync(

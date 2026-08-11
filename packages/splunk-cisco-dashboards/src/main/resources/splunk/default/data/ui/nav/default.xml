@@ -92,5 +92,6 @@
             <a href="admin_asset_inventory">Asset Inventory</a>
             <a href="setup?setup=1">Setup</a>
         </collection>
+        <a href="search" target="_blank" rel="noopener"></a>
     </collection>
 </nav>

@@ -14,6 +14,12 @@
   status-table pattern as the Cisco package guides, with installed and latest
   known versions, clear state pills, visible package purposes, exact technical
   IDs, and filtered Manage Apps actions in each row.
+- Hybrid Mesh Firewalling now includes Palo Alto Traffic by SGT among its
+  three factory-visible Insights Workspace tiles while retaining the full
+  nine-search section catalogue for operator expansion.
+- Setup index tuning now discovers Palo Alto <code>pan:*</code> sourcetypes
+  across deployment-specific indexes and maps them to <code>index_firewall</code>.
+  Macro source rows also retain readable dark hover and keyboard-focus states.
 - Links in every Searchbase guidance metadata field now open in a new browser
   tab from both Insights Workspace and Dashboard Manager, with opener access
   disabled for safe external navigation.

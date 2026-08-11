@@ -27,11 +27,13 @@ class PaloIseSgtSearchTest(unittest.TestCase):
 
     def test_macro_tuning_routes_palo_alto_to_firewall_indexes(self):
         tuning_search = self.searches[TUNING]["search"]
-        self.assertIn('sourcetype="pan:*"', tuning_search)
+        self.assertIn(')) OR sourcetype="pan:*" by index, sourcetype', tuning_search)
         self.assertIn(
             'match(sourcetype,"^pan:"), "index_firewall"',
             tuning_search,
         )
+        self.assertFalse(format_search(tuning_search)[1])
+        self.assertEqual(lint_search(tuning_search, stanza=TUNING), [])
 
     def test_searches_have_terminal_details_and_verified_sources(self):
         detail = self.searches[DETAIL]

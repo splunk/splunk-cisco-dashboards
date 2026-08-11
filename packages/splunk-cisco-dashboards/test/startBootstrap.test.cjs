@@ -558,6 +558,11 @@ assert.match(setupStyleSource, /\.scd-setup__package-table\s*\{/);
 assert.match(setupStyleSource, /content: attr\(data-label\)/);
 assert.match(macroTuningStyleSource, /scd-setup-action-bar/);
 assert.match(macroTuningStyleSource, /summary\[class\*='hover:bg-slate-'\]:hover/);
+assert.match(macroTuningSource, /scd-macro-group-toggle/);
+assert.match(
+  macroTuningStyleSource,
+  /\.scd-macro-group-toggle:hover,[\s\S]*\.scd-macro-group-toggle:focus-visible/,
+);
 assert.match(setupStyleSource, /@container setup-content \(max-width: 880px\)/);
 assert.match(macroTuningSource, /Review only what needs attention/);
 assert.match(macroTuningSource, /Balanced \(recommended\)/);

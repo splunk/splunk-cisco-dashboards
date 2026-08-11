@@ -2571,7 +2571,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 type="button"
                 onClick={() => toggleRowGroup(targetApp)}
                 aria-expanded={!isCollapsed}
-                className="flex h-9 w-full items-center gap-2 px-4 text-left text-xs font-bold uppercase tracking-wide text-slate-600 hover:bg-slate-200"
+                className="scd-macro-group-toggle flex h-9 w-full items-center gap-2 px-4 text-left text-xs font-bold uppercase tracking-wide text-slate-600 hover:bg-slate-200"
               >
                 {isCollapsed ? (
                   <ChevronRight size={15} className="shrink-0" />

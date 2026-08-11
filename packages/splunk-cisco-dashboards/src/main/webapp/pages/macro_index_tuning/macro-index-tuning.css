@@ -145,6 +145,17 @@
     background: rgb(30 41 59 / 52%);
 }
 
+#scan-root .scd-admin-dark .scd-macro-group-toggle:hover,
+#scan-root .scd-admin-dark .scd-macro-group-toggle:focus-visible {
+    background: rgb(30 41 59 / 98%) !important;
+    color: #ecf0f5 !important;
+}
+
+#scan-root .scd-admin-dark .scd-macro-group-toggle:focus-visible {
+    outline: 2px solid #649ef5;
+    outline-offset: -2px;
+}
+
 #scan-root .scd-admin-dark button[class*='bg-white'],
 #scan-root .scd-admin-dark a[class*='bg-white'] {
     border-color: rgb(100 116 139 / 68%) !important;
