@@ -263,7 +263,11 @@ assert.match(
   /resolvedTheme === "dark" && "dark scd-one-cisco-spotlight-canvas"/,
   "The Figma-led workspace must keep a neutral canvas for the SUI SpotLight preset",
 );
-assert.doesNotMatch(profile, /@splunk\/react-ui\/SpotLight/);
+assert.match(
+  profile,
+  /import SpotLight from "@splunk\/react-ui\/SpotLight";[\s\S]*?<SpotLight[\s\S]*?variant="page-top"/,
+  "The workspace must mount SUI SpotLight directly at the page level",
+);
 assert.match(
   tailwindStyles,
   /\.scd-one-cisco-spotlight-canvas[\s\S]*?background-color:\s*#0b1118[\s\S]*?background-image:\s*none/,

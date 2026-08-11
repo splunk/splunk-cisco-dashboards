@@ -9,8 +9,8 @@ const { renderToStaticMarkup } = require("react-dom/server");
 const read = (relativePath) =>
   fs.readFileSync(path.resolve(__dirname, relativePath), "utf8");
 
-const oneCdSurface = read(
-  "../src/main/webapp/common/components/florida/OneCdSurface.tsx",
+const oneCdPrimitives = read(
+  "../src/main/webapp/common/components/florida/OneCdPrimitives.tsx",
 );
 const dashboardSection = read(
   "../src/main/webapp/common/components/florida/DashboardSection.tsx",
@@ -58,35 +58,31 @@ const extractSvgPaths = (source) =>
   [...source.matchAll(/<path[^>]*\sd="([^"]+)"/g)].map((match) => match[1]);
 
 assert.match(
-  oneCdSurface,
-  /from '@splunk\/react-ui\/SpotLight'/,
-  "1CD atmosphere must use the released SUI SpotLight component",
+  profile,
+  /from "@splunk\/react-ui\/SpotLight"/,
+  "The Insights Workspace page must import the released SUI SpotLight component directly",
 );
 assert.match(
-  oneCdSurface,
+  oneCdPrimitives,
   /from '@splunk\/react-ui\/RadioBar'/,
   "Small related view choices must use the released SUI RadioBar component",
 );
 assert.match(
-  oneCdSurface,
+  oneCdPrimitives,
   /styled\(Card\)\.attrs\(\{ material: 'glass' as const \}\)/,
   "Glass overlays must use the SUI Card glass material instead of a CSS lookalike",
 );
 assert.match(
-  oneCdSurface,
+  oneCdPrimitives,
   /\{ variables \} from '@splunk\/themes'/,
   "1CD surface styling must resolve through Splunk design tokens",
 );
 assert.match(
-  oneCdSurface,
+  oneCdPrimitives,
   /\[role='radio'\]\[aria-checked='true'\][\s\S]*?background-color: \$\{variables\.interactiveColorPrimary\}/,
   "The demo RadioBar must retain SUI semantics while making its selected state unmistakable",
 );
-assert.match(
-  dashboardSection,
-  /spotlight=\{collapsed \? 'element' : false\}/,
-  "Collapsed metric panels must retain the designer's discovery spotlight",
-);
+assert.doesNotMatch(dashboardSection, /OneCdSurface|SpotLight|spotlight=/);
 assert.match(
   dashboardSection,
   /\{!collapsed && \([\s\S]{0,240}?absolute top-0 left-0 w-1\.5 h-full/,
@@ -148,10 +144,12 @@ assert.match(
   "Glass status cards must keep the subtitle-to-value spacing compact",
 );
 assert.match(
-  signalRail,
-  /spotlight=\{variant === 'one-cisco-glass' \? 'page-top' : false\}/,
-  "The 1CD status overview must use the released SUI page-top SpotLight preset",
+  profile,
+  /<SpotLight[\s\S]*?variant="page-top"[\s\S]*?intensity="low"[\s\S]*?scale=\{0\.5\}/,
+  "The Insights Workspace root must own the released SUI page-top SpotLight preset",
 );
+assert.doesNotMatch(signalRail, /OneCdSurface|SpotLight|spotlight=/);
+assert.doesNotMatch(topologyMap, /OneCdSurface|SpotLight|spotlight=/);
 assert.match(
   signalRail,
   /color-mix\(in srgb, \$\{STATUS_BADGE_COLOR\.critical\} 50%, transparent\)/,

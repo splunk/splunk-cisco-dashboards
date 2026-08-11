@@ -31,6 +31,7 @@ import React, {
 } from "react";
 import { createURL } from "@splunk/splunk-utils/url";
 import Select from "@splunk/react-ui/Select";
+import SpotLight from "@splunk/react-ui/SpotLight";
 import {
     Activity,
     RefreshCw,
@@ -76,7 +77,7 @@ import {
     type SuiIcon,
 } from '@/common/icons/SuiIcon';
 import { DashboardSection } from "@/common/components/florida/DashboardSection";
-import { OneCdRadioBar } from "@/common/components/florida/OneCdSurface";
+import { OneCdRadioBar } from "@/common/components/florida/OneCdPrimitives";
 import { MetricItem } from "@/common/components/florida/MetricItem";
 import { WorkspaceModalShell } from "@/common/components/florida/WorkspaceModalShell";
 import SearchbaseDrilldownGuidance, {
@@ -4261,13 +4262,19 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       ref={exportRef}
       style={dashboardShellStyle}
       className={cn(
-        "scd-overview-page scd-c3-surface flex w-full min-w-0 max-w-full flex-col overflow-hidden font-sans",
+        "scd-overview-page scd-c3-surface relative isolate flex w-full min-w-0 max-w-full flex-col overflow-hidden font-sans",
         compactDensity && "scd-overview-compact",
         "bg-slate-50 text-slate-900",
         "dark:bg-slate-950 dark:text-slate-100",
         resolvedTheme === "dark" && "dark scd-one-cisco-spotlight-canvas",
       )}
     >
+      <SpotLight
+        aria-hidden="true"
+        variant="page-top"
+        intensity="low"
+        scale={0.5}
+      />
       {/* Header */}
       <header className="scd-c3-toolbar h-14 flex-shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 flex items-center justify-between shadow-sm">
         {/*
