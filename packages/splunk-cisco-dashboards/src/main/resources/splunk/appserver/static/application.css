@@ -1,12 +1,12 @@
 /*
- * Splunk 10.4 limits Navigation XML to a fixed set of React icon names.
- * Replace those fallback glyphs with the five Secure Networking pillar SVGs
- * wherever the app shell loads application.css. The mask keeps Splunk's
- * native inactive, hover, selected, light, and dark colors.
+ * Splunk's navigation registry exposes ShieldKeyhole directly, but not the
+ * other four approved pillar icons available to the app through
+ * @splunk/react-icons. Replace only those four shell fallbacks with one
+ * unmodified copy of the matching outlined SUI vector at Splunk's native
+ * 24px rendered size. Splunk still owns inactive, hover, and selected color.
  */
 #root-nav-menu
     [data-test='nav-item'][aria-haspopup='true']:is(
-        [title='Zero Trust Access'],
         [title='Secure Infrastructure'],
         [title='Scalable Network Segmentation'],
         [title='Hybrid Mesh Firewalling'],
@@ -20,7 +20,6 @@
 
 #root-nav-menu
     [data-test='nav-item'][aria-haspopup='true']:is(
-        [title='Zero Trust Access'],
         [title='Secure Infrastructure'],
         [title='Scalable Network Segmentation'],
         [title='Hybrid Mesh Firewalling'],
@@ -34,7 +33,6 @@
 
 #root-nav-menu
     [data-test='nav-item'][aria-haspopup='true']:is(
-        [title='Zero Trust Access'],
         [title='Secure Infrastructure'],
         [title='Scalable Network Segmentation'],
         [title='Hybrid Mesh Firewalling'],
@@ -42,44 +40,30 @@
     )
     > span
     > span:first-child::before {
-    width: 26px;
-    height: 26px;
+    width: 24px;
+    height: 24px;
     display: block;
-    flex: 0 0 26px;
+    flex: 0 0 24px;
     content: '';
     background-color: currentColor;
-    -webkit-mask:
-        var(--scd-pillar-icon) center / contain no-repeat,
-        var(--scd-pillar-icon) calc(50% + 0.6px) center / contain no-repeat,
-        var(--scd-pillar-icon) calc(50% - 0.6px) center / contain no-repeat,
-        var(--scd-pillar-icon) center calc(50% + 0.6px) / contain no-repeat,
-        var(--scd-pillar-icon) center calc(50% - 0.6px) / contain no-repeat;
-    mask:
-        var(--scd-pillar-icon) center / contain no-repeat,
-        var(--scd-pillar-icon) calc(50% + 0.6px) center / contain no-repeat,
-        var(--scd-pillar-icon) calc(50% - 0.6px) center / contain no-repeat,
-        var(--scd-pillar-icon) center calc(50% + 0.6px) / contain no-repeat,
-        var(--scd-pillar-icon) center calc(50% - 0.6px) / contain no-repeat;
-}
-
-#root-nav-menu [title='Zero Trust Access'] {
-    --scd-pillar-icon: url('images/overview/secure-networking/zero-trust-access.svg');
+    -webkit-mask: var(--scd-pillar-icon) center / contain no-repeat;
+    mask: var(--scd-pillar-icon) center / contain no-repeat;
 }
 
 #root-nav-menu [title='Secure Infrastructure'] {
-    --scd-pillar-icon: url('images/overview/secure-networking/secure-infrastructure.svg');
+    --scd-pillar-icon: url('images/overview/secure-networking/sui-servers.svg');
 }
 
 #root-nav-menu [title='Scalable Network Segmentation'] {
-    --scd-pillar-icon: url('images/overview/secure-networking/segmentation.svg');
+    --scd-pillar-icon: url('images/overview/secure-networking/sui-node-model.svg');
 }
 
 #root-nav-menu [title='Hybrid Mesh Firewalling'] {
-    --scd-pillar-icon: url('images/overview/secure-networking/hybrid-mesh-firewalling.svg');
+    --scd-pillar-icon: url('images/overview/secure-networking/sui-wall-bricks.svg');
 }
 
 #root-nav-menu [title='Agentic Ops'] {
-    --scd-pillar-icon: url('images/overview/secure-networking/agentic-ops.svg');
+    --scd-pillar-icon: url('images/overview/secure-networking/sui-robot-face-wrench.svg');
 }
 
 /*

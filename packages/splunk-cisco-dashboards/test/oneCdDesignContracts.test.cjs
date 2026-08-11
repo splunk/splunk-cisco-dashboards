@@ -3,6 +3,8 @@
 const assert = require("assert").strict;
 const fs = require("fs");
 const path = require("path");
+const React = require("react");
+const { renderToStaticMarkup } = require("react-dom/server");
 
 const read = (relativePath) =>
   fs.readFileSync(path.resolve(__dirname, relativePath), "utf8");
@@ -34,6 +36,26 @@ const tailwindStyles = read(
 const workspacesConf = read(
   "../src/main/resources/splunk/default/insights_workspaces.conf",
 );
+const workspaceConfig = read(
+  "../src/main/webapp/common/config/insightsWorkspaces.ts",
+);
+const suiIcons = read("../src/main/webapp/common/icons/SuiIcon.tsx");
+const applicationStyles = read(
+  "../src/main/resources/splunk/appserver/static/application.css",
+);
+const navigation = read(
+  "../src/main/resources/splunk/default/data/ui/nav/default.xml",
+);
+
+const approvedPillarIcons = [
+  ["Zero Trust Access", "shield-keyhole", "ShieldKeyhole"],
+  ["Secure Infrastructure", "servers", "Servers"],
+  ["Scalable Network Segmentation", "node-model", "NodeModel"],
+  ["Hybrid Mesh Firewalling", "wall-bricks", "WallBricks"],
+  ["Agentic Ops", "robot-face-wrench", "RobotFaceWrench"],
+];
+const extractSvgPaths = (source) =>
+  [...source.matchAll(/<path[^>]*\sd="([^"]+)"/g)].map((match) => match[1]);
 
 assert.match(
   oneCdSurface,
@@ -190,5 +212,84 @@ assert.match(
   /header_title = Secure Networking Operations[\s\S]*?header_subtitle = Live posture, policy, infrastructure, and connectivity/,
   "The primary workspace title must summarize the operational area",
 );
+
+const secureNetworkingSectionConfig = workspaceConfig.match(
+  /const SECURE_NETWORKING_SECTIONS:[\s\S]*?\] as const;/,
+);
+assert.ok(
+  secureNetworkingSectionConfig,
+  "Secure Networking sections must retain a single explicit icon contract",
+);
+assert.doesNotMatch(
+  secureNetworkingSectionConfig[0],
+  /iconSrc:/,
+  "Workspace section headers must render the approved native SUI React icons",
+);
+
+assert.doesNotMatch(
+  applicationStyles,
+  /calc\(50%|width: 26px|height: 26px|flex: 0 0 26px/,
+  "Splunk navigation must not thicken or enlarge the approved SUI icons",
+);
+assert.match(
+  applicationStyles,
+  /width: 24px;[\s\S]{0,220}?mask: var\(--scd-pillar-icon\) center \/ contain no-repeat;/,
+  "Unsupported shell icons must use one centered SUI vector at Splunk's native rendered size",
+);
+assert.match(
+  navigation,
+  /<collection label="Zero Trust Access" icon="shieldkeyhole">/,
+  "Zero Trust Access must use the ShieldKeyhole icon exposed directly by Splunk navigation",
+);
+
+for (const [title, key, componentName] of approvedPillarIcons) {
+  assert.match(
+    secureNetworkingSectionConfig[0],
+    new RegExp(`title: '${title}'[\\s\\S]*?icon: '${key}'`),
+    `${title} must use ${componentName}`,
+  );
+  assert.match(
+    suiIcons,
+    new RegExp(
+      `import ${componentName}Icon from '@splunk/react-icons/${componentName}'`,
+    ),
+    `${componentName} must come directly from @splunk/react-icons`,
+  );
+  assert.match(
+    suiIcons,
+    new RegExp(
+      `export const ${componentName} = adaptSuiIcon\\(${componentName}Icon, '${componentName}'\\)`,
+    ),
+    `${componentName} must be exposed through the shared SUI icon adapter`,
+  );
+  assert.match(
+    profile,
+    new RegExp(`["']?${key}["']?: ${componentName}`),
+    `${title}'s workspace icon key must resolve to ${componentName}`,
+  );
+
+  if (title !== "Zero Trust Access") {
+    const assetName = `sui-${key}.svg`;
+    assert.match(
+      applicationStyles,
+      new RegExp(
+        `\\[title='${title}'\\][\\s\\S]{0,160}?${assetName.replace(".", "\\.")}`,
+      ),
+      `${title}'s Splunk navigation item must use the matching SUI vector`,
+    );
+    const staticAsset = read(
+      `../src/main/resources/splunk/appserver/static/images/overview/secure-networking/${assetName}`,
+    );
+    const Icon = require(`@splunk/react-icons/${componentName}`).default;
+    const reactMarkup = renderToStaticMarkup(
+      React.createElement(Icon, { variant: "outlined" }),
+    );
+    assert.deepEqual(
+      extractSvgPaths(staticAsset),
+      extractSvgPaths(reactMarkup),
+      `${title}'s Splunk navigation asset must preserve the official outlined SUI geometry`,
+    );
+  }
+}
 
 console.log("1CD design contracts passed");

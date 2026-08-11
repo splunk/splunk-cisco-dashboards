@@ -32,6 +32,11 @@ export type WorkspaceSectionIcon =
     | 'shield'
     | 'building'
     | 'sparkles'
+    | 'shield-keyhole'
+    | 'servers'
+    | 'node-model'
+    | 'wall-bricks'
+    | 'robot-face-wrench'
     | 'shield-check'
     | 'server-cog'
     | 'network'
@@ -94,9 +99,6 @@ export interface InsightsWorkspace {
     regionalView: WorkspaceRegionalView;
 }
 
-const SECURE_NETWORKING_IMAGE_ROOT =
-    '/static/app/splunk-cisco-dashboards/images/overview/secure-networking';
-
 const CROSS_DOMAIN_SECTIONS: readonly WorkspaceSectionMeta[] = [
     {
         id: 'it_health',
@@ -134,40 +136,35 @@ const SECURE_NETWORKING_SECTIONS: readonly WorkspaceSectionMeta[] = [
         title: 'Zero Trust Access',
         linkText: 'Open Zero Trust Access',
         href: 'dashboard_manager#/sn_zta_posture',
-        icon: 'shield-check',
-        iconSrc: `${SECURE_NETWORKING_IMAGE_ROOT}/zero-trust-access.svg`,
+        icon: 'shield-keyhole',
     },
     {
         id: 'secure_infrastructure',
         title: 'Secure Infrastructure',
         linkText: 'Open Secure Infrastructure',
         href: 'dashboard_manager#/sn_secure_infrastructure_posture',
-        icon: 'server-cog',
-        iconSrc: `${SECURE_NETWORKING_IMAGE_ROOT}/secure-infrastructure.svg`,
+        icon: 'servers',
     },
     {
         id: 'scalable_network_segmentation',
         title: 'Scalable Network Segmentation',
         linkText: 'Open Scalable Network Segmentation',
         href: 'dashboard_manager#/sn_segmentation_readiness',
-        icon: 'network',
-        iconSrc: `${SECURE_NETWORKING_IMAGE_ROOT}/segmentation.svg`,
+        icon: 'node-model',
     },
     {
         id: 'hybrid_mesh_firewalling',
         title: 'Hybrid Mesh Firewalling',
         linkText: 'Open Hybrid Mesh Firewalling',
         href: 'dashboard_manager#/sn_hmf_enforcement',
-        icon: 'firewall',
-        iconSrc: `${SECURE_NETWORKING_IMAGE_ROOT}/hybrid-mesh-firewalling.svg`,
+        icon: 'wall-bricks',
     },
     {
         id: 'agentic_ops',
         title: 'Agentic Ops',
         linkText: 'Open Agentic Ops',
         href: 'dashboard_manager#/sn_agentic_ops_operational_intelligence',
-        icon: 'bot',
-        iconSrc: `${SECURE_NETWORKING_IMAGE_ROOT}/agentic-ops.svg`,
+        icon: 'robot-face-wrench',
     },
 ] as const;
 

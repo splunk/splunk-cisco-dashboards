@@ -14,7 +14,10 @@
   from the released SUI <code>SpotLight</code> page-top preset rather than the
   legacy custom gradient, and severity badges use the mockup's 50% fills with
   token-driven readable text. Glass status cards now hug their title, subtitle,
-  and value content with tighter subtitle-to-value spacing.
+  and value content with tighter subtitle-to-value spacing. The five Secure
+  Networking pillars now use the team-approved Splunk React icons consistently
+  in the Splunk navigation rail and workspace section headers:
+  ShieldKeyhole, Servers, NodeModel, WallBricks, and RobotFaceWrench.
 - Insights Workspace no longer renders the floating Splunk copyright badge or
   the branded footer strip, returning that space to the operational canvas.
   Tile configuration now includes an admin-controlled `Use thresholds` switch;
