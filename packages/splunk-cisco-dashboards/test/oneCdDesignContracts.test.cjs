@@ -97,6 +97,16 @@ assert.match(
 );
 assert.match(
   signalRail,
+  /if \(variant === 'one-cisco-glass'\) \{[\s\S]{0,240}?'min-w-0 px-4 py-3'[\s\S]{0,120}?'min-w-0 px-5 py-4'/,
+  "Glass status cards must hug their content instead of imposing a minimum height",
+);
+assert.match(
+  signalRail,
+  /'scd-signal-rail-item flex flex-col gap-0 overflow-hidden'[\s\S]{0,1400}?className="mt-1\.5 flex items-end justify-between gap-3"/,
+  "Glass status cards must keep the subtitle-to-value spacing compact",
+);
+assert.match(
+  signalRail,
   /spotlight=\{variant === 'one-cisco-glass' \? 'page-top' : false\}/,
   "The 1CD status overview must use the released SUI page-top SpotLight preset",
 );

@@ -346,8 +346,8 @@ const itemSizeClass = (
 ): string => {
     if (variant === 'one-cisco-glass') {
         return density === 'compact'
-            ? 'min-h-[72px] min-w-0 px-4 py-3'
-            : 'min-h-[92px] min-w-0 px-5 py-4';
+            ? 'min-w-0 px-4 py-3'
+            : 'min-w-0 px-5 py-4';
     }
     if (variant === 'bloomberg') {
         return density === 'compact'
@@ -426,7 +426,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
             <OneCdGlassCard
                 tag="article"
                 className={cn(
-                    'scd-signal-rail-item flex flex-col justify-between overflow-hidden',
+                    'scd-signal-rail-item flex flex-col gap-0 overflow-hidden',
                     itemSizeClass(variant, density)
                 )}
                 data-status={kpi.status}
@@ -452,7 +452,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
                     </span>
                     {openLink}
                 </span>
-                <span className="mt-3 flex items-end justify-between gap-3">
+                <span className="mt-1.5 flex items-end justify-between gap-3">
                     <span
                         className={cn(
                             'font-black leading-none text-slate-950 dark:text-white',
