@@ -1,0 +1,1449 @@
+<dashboard version="2" theme="dark" stylesheet="application.css">
+    <label>Hybrid Mesh Firewalling - Hybrid Mesh Enforcement</label>
+    <description>Unify firewall posture, enforcement, and workload protection across the hybrid mesh.</description>
+    <definition><![CDATA[
+{
+    "title": "Hybrid Mesh Enforcement",
+    "description": "Unify firewall posture, enforcement, and workload protection across the hybrid mesh.",
+    "inputs": {
+        "input_time_range": {
+            "options": {
+                "defaultValue": "-24h,now,1h",
+                "showAdvanced": true,
+                "selections": [
+                    {
+                        "value": "-4h,now,30m",
+                        "label": "4h"
+                    },
+                    {
+                        "value": "-24h,now,1h",
+                        "label": "24h"
+                    },
+                    {
+                        "value": "-48h,now,2h",
+                        "label": "48h"
+                    },
+                    {
+                        "value": "-7d@d,now,1d",
+                        "label": "7d"
+                    },
+                    {
+                        "value": "-30d@d,now,1d",
+                        "label": "30d"
+                    }
+                ],
+                "token": "time_tok"
+            },
+            "title": "Time range",
+            "type": "input.simpleTimePicker"
+        }
+    },
+    "defaults": {
+        "visualizations": {
+            "global": {
+                "showLastUpdated": true,
+                "showProgressBar": true
+            }
+        }
+    },
+    "visualizations": {
+        "viz_header_bg": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#1c2738",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 10
+            }
+        },
+        "viz_header_icon": {
+            "type": "splunk.image",
+            "title": "Hybrid Mesh Enforcement",
+            "options": {
+                "preserveAspectRatio": true,
+                "src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/hybrid-mesh-firewalling.svg"
+            }
+        },
+        "viz_header": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "markdown": "# Hybrid Mesh Enforcement\nUnify firewall posture, enforcement, and workload protection across the hybrid mesh\\."
+            }
+        },
+        "viz_card_01_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_01_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Firewall Coverage**"
+            }
+        },
+        "viz_card_01_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Asset  •  Hybrid Mesh Firewalling"
+            }
+        },
+        "viz_card_01_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Total count of unique Cisco Firepower/FTD firewalls actively reporting to Cisco FMC, based on distinct Device UUIDs seen in FMC syslog, providing the on\\-premises firewall infrastructure footprint KPI\\."
+            }
+        },
+        "viz_card_01_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_01"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"firewall_count\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#049fd9",
+                        "to": 0
+                    },
+                    {
+                        "value": "#049fd9",
+                        "from": 0
+                    }
+                ]
+            }
+        },
+        "viz_card_01_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_01"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#fa5762"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"firewall_count\")"
+            }
+        },
+        "viz_card_01_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Firewall%20Coverage&target=Secure%20Networking%20-%20HMF%20Enforcement%20Coverage%20by%20Site"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_02_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_02_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Unified Block Activity**"
+            }
+        },
+        "viz_card_02_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Security  •  Hybrid Mesh Firewalling"
+            }
+        },
+        "viz_card_02_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Creates a unified block trend across Meraki security events, SD\\-WAN UTD, Secure Access firewall events, and Secure Firewall/ASA\\-style feeds\\."
+            }
+        },
+        "viz_card_02_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_02"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"BucketBlocks\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
+                    }
+                ]
+            }
+        },
+        "viz_card_02_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_02"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#fa5762",
+                    "#f0c243",
+                    "#4cbf7f",
+                    "#649ef5"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"BucketBlocks\")"
+            }
+        },
+        "viz_card_02_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Unified%20Block%20Activity&target=Secure%20Networking%20-%20FMC%20Blocked%20Connection%20Detail,Secure%20Networking%20-%20SSE%20Security%20Event%20Detail"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_03_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_03_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**FMC Enforcement Activity**"
+            }
+        },
+        "viz_card_03_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Security  •  Hybrid Mesh Firewalling"
+            }
+        },
+        "viz_card_03_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Hourly time\\-series trend of Cisco FMC firewall actions and advanced connection observations, enabling operators to correlate enforcement spikes with overall flow activity\\."
+            }
+        },
+        "viz_card_03_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_03"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"Block\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
+                    }
+                ]
+            }
+        },
+        "viz_card_03_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_03"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#fa5762",
+                    "#f0c243",
+                    "#4cbf7f",
+                    "#649ef5"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"Block\")"
+            }
+        },
+        "viz_card_03_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=FMC%20Enforcement%20Activity&target=Secure%20Networking%20-%20FMC%20Blocked%20Connection%20Detail,Secure%20Networking%20-%20FMC%20Top%20Policies%20by%20Action"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_04_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_04_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**DNS Security Activity**"
+            }
+        },
+        "viz_card_04_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Security  •  Hybrid Mesh Firewalling"
+            }
+        },
+        "viz_card_04_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Hourly trend of Cisco Umbrella/SSE DNS activity split by allow vs block actions, allowing operators to identify spikes in DNS blocking that may correspond to threat campaigns or policy enforcement events\\."
+            }
+        },
+        "viz_card_04_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_04"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"blocked\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
+                    }
+                ]
+            }
+        },
+        "viz_card_04_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_04"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#fa5762",
+                    "#f0c243",
+                    "#4cbf7f",
+                    "#649ef5"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"blocked\")"
+            }
+        },
+        "viz_card_04_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=DNS%20Security%20Activity&target=Secure%20Networking%20-%20SSE%20DNS%20Blocked%20Categories,Secure%20Networking%20-%20SSE%20Security%20Event%20Detail"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_05_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_05_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Third\\-Party Policy Effectiveness**"
+            }
+        },
+        "viz_card_05_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Security  •  Hybrid Mesh Firewalling"
+            }
+        },
+        "viz_card_05_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Trends Palo Alto allow, block, and other traffic decisions carrying correlated Cisco ISE SGT context, with the SGT and firewall\\-rule effectiveness rollup available as drill\\-down detail\\."
+            }
+        },
+        "viz_card_05_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_05"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"Blocked\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
+                    }
+                ]
+            }
+        },
+        "viz_card_05_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_05"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#4cbf7f",
+                    "#fa5762",
+                    "#a6adb6"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"Blocked\")"
+            }
+        },
+        "viz_card_05_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Third-Party%20Policy%20Effectiveness&target=Secure%20Networking%20-%20Palo%20Alto%20SGT%20Policy%20Effectiveness,Secure%20Networking%20-%20Palo%20Alto%20Traffic%20Correlated%20by%20SGT"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_06_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_06_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Data Protection Findings**"
+            }
+        },
+        "viz_card_06_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Security  •  Hybrid Mesh Firewalling"
+            }
+        },
+        "viz_card_06_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Tracks Secure Access DLP findings by severity over time and moves the full finding breakdown into the drill\\-down modal\\."
+            }
+        },
+        "viz_card_06_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_06"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "sparklineDisplay": "off",
+                "trendDisplay": "percent",
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineValues": "> primary | seriesByName(\"ElevatedFindings\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
+                    }
+                ]
+            }
+        },
+        "viz_card_06_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_06"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#fa5762",
+                    "#f0c243",
+                    "#649ef5",
+                    "#a6adb6"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"ElevatedFindings\")"
+            }
+        },
+        "viz_card_06_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Data%20Protection%20Findings&target=Secure%20Networking%20-%20Secure%20Access%20DLP%20Findings"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        }
+    },
+    "dataSources": {
+        "ds_story_01": {
+            "name": "Secure Networking - Infrastructure FMC Managed Firewall Count",
+            "options": {
+                "ref": "secure_networking_infra_fmc_firewall_count",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_02": {
+            "name": "Secure Networking - HMF Unified Blocks Trend",
+            "options": {
+                "ref": "secure_networking_hmf_unified_blocks_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_03": {
+            "name": "Secure Networking - FMC Firewall Activity Trend",
+            "options": {
+                "ref": "secure_networking_fmc_activity_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_04": {
+            "name": "Secure Networking - SSE DNS Activity Trend",
+            "options": {
+                "ref": "secure_networking_sse_dns_activity_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_05": {
+            "name": "Secure Networking - Palo Alto SGT Policy Effectiveness Trend",
+            "options": {
+                "ref": "secure_networking_sgt_palo_alto_policy_effectiveness_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_06": {
+            "name": "Secure Networking - Secure Access DLP Findings Trend",
+            "options": {
+                "ref": "secure_networking_secure_access_dlp_findings_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        }
+    },
+    "layout": {
+        "globalInputs": [],
+        "layoutDefinitions": {
+            "layout_overview": {
+                "options": {
+                    "backgroundColor": "#0f1117",
+                    "backgroundImage": {
+                        "sizeType": "contain",
+                        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxmaWx0ZXIgaWQ9ImMzLWJsdXIiIHg9Ii01MDAiIHk9Ii01MDAiIHdpZHRoPSIyOTIwIiBoZWlnaHQ9IjI1ODAiIGZpbHRlclVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgY29sb3ItaW50ZXJwb2xhdGlvbi1maWx0ZXJzPSJzUkdCIj48ZmVHYXVzc2lhbkJsdXIgc3RkRGV2aWF0aW9uPSIxNzUiLz48L2ZpbHRlcj48cmFkaWFsR3JhZGllbnQgaWQ9ImMzLWN5YW4tbmF2eSIgY3g9IjEzLjUiIGN5PSIxNDQxLjM2IiByPSI4NTEuNDkiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDAgMTQ0MS4zNikgc2NhbGUoMSAuNjE2NTUpIHRyYW5zbGF0ZSgwIC0xNDQxLjM2KSI+PHN0b3Agc3RvcC1jb2xvcj0iIzMwYWFjYyIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzBjMWE1NiIvPjwvcmFkaWFsR3JhZGllbnQ+PHJhZGlhbEdyYWRpZW50IGlkPSJjMy1ibHVlLXZpb2xldCIgY3g9IjI3My41IiBjeT0iMTQ0MS4zNiIgcj0iODUxLjQ5IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgZ3JhZGllbnRUcmFuc2Zvcm09InRyYW5zbGF0ZSgwIDE0NDEuMzYpIHNjYWxlKDEgLjYxNjU1KSB0cmFuc2xhdGUoMCAtMTQ0MS4zNikiPjxzdG9wIHN0b3AtY29sb3I9IiMyYzkzZTEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM4MDE0OGMiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSIjMGIxMTE4Ii8+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNjYyLjQgMCkiIG9wYWNpdHk9Ii43MiI+PHJlY3QgeD0iMTMuNSIgeT0iNDgzIiB3aWR0aD0iNTkzIiBoZWlnaHQ9IjE2OTciIGZpbGw9InVybCgjYzMtY3lhbi1uYXZ5KSIgZmlsdGVyPSJ1cmwoI2MzLWJsdXIpIiB0cmFuc2Zvcm09InJvdGF0ZSgtOTAgMzEwIDEzMzEuNSkiLz48cmVjdCB4PSIyNzMuNSIgeT0iNDgzIiB3aWR0aD0iNTkzIiBoZWlnaHQ9IjE2OTciIGZpbGw9InVybCgjYzMtYmx1ZS12aW9sZXQpIiBmaWx0ZXI9InVybCgjYzMtYmx1cikiIHRyYW5zZm9ybT0icm90YXRlKC05MCA1NzAgMTMzMS41KSIvPjwvZz48L3N2Zz4=",
+                        "x": 0,
+                        "y": 0
+                    },
+                    "display": "auto-scale",
+                    "height": 1128,
+                    "width": 1440
+                },
+                "structure": [
+                    {
+                        "item": "viz_header_bg",
+                        "position": {
+                            "x": 20,
+                            "y": 0,
+                            "w": 1400,
+                            "h": 104
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_header_icon",
+                        "position": {
+                            "x": 38,
+                            "y": 18,
+                            "w": 64,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_header",
+                        "position": {
+                            "x": 118,
+                            "y": 8,
+                            "w": 886,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "input_time_range",
+                        "position": {
+                            "x": 1034,
+                            "y": 12,
+                            "w": 370,
+                            "h": 80
+                        },
+                        "type": "input"
+                    },
+                    {
+                        "item": "viz_card_01_background",
+                        "position": {
+                            "x": 20,
+                            "y": 128,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_title",
+                        "position": {
+                            "x": 36,
+                            "y": 140,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_metadata",
+                        "position": {
+                            "x": 36,
+                            "y": 176,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_description",
+                        "position": {
+                            "x": 36,
+                            "y": 204,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_singlevalue",
+                        "position": {
+                            "x": 36,
+                            "y": 284,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_trend",
+                        "position": {
+                            "x": 36,
+                            "y": 376,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_drilldown_trigger",
+                        "position": {
+                            "x": 418,
+                            "y": 134,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_background",
+                        "position": {
+                            "x": 493,
+                            "y": 128,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_title",
+                        "position": {
+                            "x": 509,
+                            "y": 140,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_metadata",
+                        "position": {
+                            "x": 509,
+                            "y": 176,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_description",
+                        "position": {
+                            "x": 509,
+                            "y": 204,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_singlevalue",
+                        "position": {
+                            "x": 509,
+                            "y": 284,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_trend",
+                        "position": {
+                            "x": 509,
+                            "y": 376,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_drilldown_trigger",
+                        "position": {
+                            "x": 891,
+                            "y": 134,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_background",
+                        "position": {
+                            "x": 966,
+                            "y": 128,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_title",
+                        "position": {
+                            "x": 982,
+                            "y": 140,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_metadata",
+                        "position": {
+                            "x": 982,
+                            "y": 176,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_description",
+                        "position": {
+                            "x": 982,
+                            "y": 204,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_singlevalue",
+                        "position": {
+                            "x": 982,
+                            "y": 284,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_trend",
+                        "position": {
+                            "x": 982,
+                            "y": 376,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_drilldown_trigger",
+                        "position": {
+                            "x": 1364,
+                            "y": 134,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_background",
+                        "position": {
+                            "x": 20,
+                            "y": 624,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_title",
+                        "position": {
+                            "x": 36,
+                            "y": 636,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_metadata",
+                        "position": {
+                            "x": 36,
+                            "y": 672,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_description",
+                        "position": {
+                            "x": 36,
+                            "y": 700,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_singlevalue",
+                        "position": {
+                            "x": 36,
+                            "y": 780,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_trend",
+                        "position": {
+                            "x": 36,
+                            "y": 872,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_drilldown_trigger",
+                        "position": {
+                            "x": 418,
+                            "y": 630,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_background",
+                        "position": {
+                            "x": 493,
+                            "y": 624,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_title",
+                        "position": {
+                            "x": 509,
+                            "y": 636,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_metadata",
+                        "position": {
+                            "x": 509,
+                            "y": 672,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_description",
+                        "position": {
+                            "x": 509,
+                            "y": 700,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_singlevalue",
+                        "position": {
+                            "x": 509,
+                            "y": 780,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_trend",
+                        "position": {
+                            "x": 509,
+                            "y": 872,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_drilldown_trigger",
+                        "position": {
+                            "x": 891,
+                            "y": 630,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_background",
+                        "position": {
+                            "x": 966,
+                            "y": 624,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_title",
+                        "position": {
+                            "x": 982,
+                            "y": 636,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_metadata",
+                        "position": {
+                            "x": 982,
+                            "y": 672,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_description",
+                        "position": {
+                            "x": 982,
+                            "y": 700,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_singlevalue",
+                        "position": {
+                            "x": 982,
+                            "y": 780,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_trend",
+                        "position": {
+                            "x": 982,
+                            "y": 872,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_drilldown_trigger",
+                        "position": {
+                            "x": 1364,
+                            "y": 630,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    }
+                ],
+                "type": "absolute"
+            }
+        },
+        "options": {
+            "showTitleAndDescription": false,
+            "submitButton": false,
+            "submitOnDashboardLoad": true
+        },
+        "tabs": {
+            "items": [
+                {
+                    "label": "overview",
+                    "layoutId": "layout_overview"
+                }
+            ]
+        }
+    },
+    "applicationProperties": {
+        "collapseNavigation": false,
+        "hideEdit": true,
+        "hideExport": false
+    }
+}
+    ]]></definition>
+</dashboard>

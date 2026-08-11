@@ -26,6 +26,13 @@ import type { TimeRange } from '@/common/hooks/useMetric';
 export type SparklineVizType = 'area' | 'line' | 'column' | 'bar' | 'singlevalue';
 
 /**
+ * Compact mode removes chart chrome that would otherwise consume most of an
+ * H1 tile. Auto mode observes the rendered height so non-Overview callers get
+ * the same behavior without coupling the chart to a section-height label.
+ */
+export type SparklineDensity = 'auto' | 'compact' | 'detailed';
+
+/**
  * Mirrors Splunk Dashboard Studio v2's `dataValuesDisplay` option for
  * line/area/column visualizations.
  *
@@ -158,6 +165,8 @@ interface SparklineProps {
      * may override via `viz_options.dataValuesDisplay`.
      */
     dataValuesDisplay?: DataValuesDisplay;
+    /** Height-aware chart chrome. Defaults to automatic measurement. */
+    density?: SparklineDensity;
 }
 
 // ---------------------------------------------------------------------------
@@ -432,9 +441,34 @@ export const Sparkline: React.FC<SparklineProps> = ({
     onClick,
     title,
     dataValuesDisplay = 'minmax',
+    density = 'auto',
 }) => {
     const gradientId = `sparkline-gradient-${React.useId().replace(/:/g, '')}`;
+    const hostRef = React.useRef<HTMLDivElement>(null);
+    const [measuredHeight, setMeasuredHeight] = React.useState<number | null>(null);
+
+    React.useEffect(() => {
+        if (density !== 'auto') return undefined;
+        const host = hostRef.current;
+        if (!host) return undefined;
+        const updateHeight = () => {
+            const next = Math.round(host.getBoundingClientRect().height);
+            setMeasuredHeight((previous) => (previous === next ? previous : next));
+        };
+        updateHeight();
+        if (typeof ResizeObserver === 'undefined') {
+            window.addEventListener('resize', updateHeight);
+            return () => window.removeEventListener('resize', updateHeight);
+        }
+        const observer = new ResizeObserver(updateHeight);
+        observer.observe(host);
+        return () => observer.disconnect();
+    }, [density]);
+
     if (vizType === 'singlevalue') return null;
+    const compact =
+        density === 'compact' ||
+        (density === 'auto' && measuredHeight !== null && measuredHeight < 104);
     const hasPrevious = Array.isArray(previousData) && previousData.length > 0;
     const previousAligned = hasPrevious
         ? resampleSeries(previousData as number[], data.length)
@@ -458,14 +492,38 @@ export const Sparkline: React.FC<SparklineProps> = ({
     // NaN/Infinity doesn't anchor a marker on a non-renderable point.
     let peakPoint: (typeof chartData)[number] | null = null;
     let troughPoint: (typeof chartData)[number] | null = null;
+    let latestPoint: (typeof chartData)[number] | null = null;
     for (const point of chartData) {
         if (!Number.isFinite(point.value)) continue;
+        latestPoint = point;
         if (peakPoint === null || point.value > peakPoint.value) {
             peakPoint = point;
         }
         if (troughPoint === null || point.value < troughPoint.value) {
             troughPoint = point;
         }
+    }
+
+    // Pad the observed domain by a bounded amount so near-flat series remain
+    // visible without inventing movement. A minimum span avoids a flat value
+    // being glued to the chart edge; zero remains a meaningful floor for an
+    // all-zero, non-negative series.
+    const finiteDomainValues = [
+        ...data,
+        ...(previousAligned ?? []),
+    ].filter(Number.isFinite);
+    let valueDomain: [number, number] | ['auto', 'auto'] = ['auto', 'auto'];
+    if (finiteDomainValues.length > 0) {
+        const minimum = Math.min(...finiteDomainValues);
+        const maximum = Math.max(...finiteDomainValues);
+        const center = (minimum + maximum) / 2;
+        const minimumSpan = Math.max(1, Math.abs(center) * 0.05);
+        const span = Math.max(maximum - minimum, minimumSpan);
+        const padding = span * 0.08;
+        valueDomain = [
+            minimum >= 0 ? Math.max(0, minimum - padding) : minimum - padding,
+            maximum + padding,
+        ];
     }
 
     const interactiveProps = onClick
@@ -523,13 +581,13 @@ export const Sparkline: React.FC<SparklineProps> = ({
     const hiddenAxes = (
         <>
             <XAxis dataKey="index" type="number" hide domain={['dataMin', 'dataMax']} />
-            <YAxis hide type="number" domain={['auto', 'auto']} />
+            <YAxis hide type="number" domain={valueDomain} />
         </>
     );
     const hiddenAxesCategorical = (
         <>
             <XAxis dataKey="index" type="category" hide />
-            <YAxis hide type="number" domain={['auto', 'auto']} />
+            <YAxis hide type="number" domain={valueDomain} />
         </>
     );
 
@@ -539,7 +597,9 @@ export const Sparkline: React.FC<SparklineProps> = ({
     // both fit cleanly inside the chart area when minmax is active.
     // Side margins keep the path from kissing the tile edges and
     // clipping the active-dot ring.
-    const chartMargin = { top: 28, right: 12, bottom: 28, left: 12 };
+    const chartMargin = compact
+        ? { top: 6, right: 5, bottom: 6, left: 5 }
+        : { top: 28, right: 12, bottom: 28, left: 12 };
     // Decide which markers to render. `'off'` is empty, `'maxonly'`
     // preserves the historical single-peak behaviour, and `'minmax'`
     // (default) renders both endpoints — collapsing to the peak alone
@@ -548,7 +608,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
     // analogue of Splunk Studio's `dataValuesDisplay:"minmax"` for a
     // narrow sparkline canvas.
     const valueMarkers: React.ReactElement[] = [];
-    if (dataValuesDisplay !== 'off' && peakPoint) {
+    if (!compact && dataValuesDisplay !== 'off' && peakPoint) {
         valueMarkers.push(
             <ReferenceDot
                 key="peak"
@@ -594,11 +654,25 @@ export const Sparkline: React.FC<SparklineProps> = ({
             );
         }
     }
+    const compactEndpointMarker =
+        compact && latestPoint ? (
+            <ReferenceDot
+                key="latest"
+                x={latestPoint.index}
+                y={latestPoint.value}
+                r={2.75}
+                fill={color}
+                stroke="#ffffff"
+                strokeWidth={1}
+                isFront
+            />
+        ) : null;
     const gradientDefs = (
         <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor={color} stopOpacity={0.3} />
-                <stop offset="95%" stopColor={color} stopOpacity={0} />
+                <stop offset="0%" stopColor={color} stopOpacity={0.24} />
+                <stop offset="55%" stopColor={color} stopOpacity={0.08} />
+                <stop offset="100%" stopColor={color} stopOpacity={0} />
             </linearGradient>
         </defs>
     );
@@ -630,7 +704,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
                             <Cell
                                 key={`cell-${point.index}`}
                                 fill={point.index === peakPoint.index ? color : color}
-                                fillOpacity={point.index === peakPoint.index ? 1 : 0.55}
+                                fillOpacity={point.index === peakPoint.index ? 1 : 0.7}
                             />
                         ))}
                 </Bar>
@@ -689,7 +763,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
         // anchors at the right edge of the appropriate bar without
         // distorting either domain.
         const barValueMarkers: React.ReactElement[] = [];
-        if (dataValuesDisplay !== 'off' && peakPoint) {
+        if (!compact && dataValuesDisplay !== 'off' && peakPoint) {
             barValueMarkers.push(
                 <ReferenceDot
                     key="peak-bar"
@@ -735,7 +809,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
         }
         chartElement = (
             <ComposedChart data={chartData} layout="vertical" margin={chartMargin}>
-                <XAxis hide type="number" domain={['auto', 'auto']} />
+                <XAxis hide type="number" domain={valueDomain} />
                 <YAxis dataKey="index" type="category" hide />
                 {tooltipContent}
                 <Bar
@@ -749,7 +823,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
                             <Cell
                                 key={`cell-${point.index}`}
                                 fill={point.index === peakPoint.index ? color : color}
-                                fillOpacity={point.index === peakPoint.index ? 1 : 0.55}
+                                fillOpacity={point.index === peakPoint.index ? 1 : 0.7}
                             />
                         ))}
                 </Bar>
@@ -795,6 +869,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
                     activeDot={{ r: 3, stroke: color, strokeWidth: 1, fill: '#fff' }}
                 />
                 {valueMarkers}
+                {compactEndpointMarker}
             </LineChart>
         );
     } else if (hasPrevious) {
@@ -824,6 +899,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
                     activeDot={{ r: 3, stroke: color, strokeWidth: 1, fill: '#fff' }}
                 />
                 {valueMarkers}
+                {compactEndpointMarker}
             </ComposedChart>
         );
     } else {
@@ -843,6 +919,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
                     activeDot={{ r: 3, stroke: color, strokeWidth: 1, fill: '#fff' }}
                 />
                 {valueMarkers}
+                {compactEndpointMarker}
             </AreaChart>
         );
     }
@@ -869,7 +946,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
     const firstTime = resolvedTimestamps[0];
     const lastTime = resolvedTimestamps[resolvedTimestamps.length - 1];
     const showFooter =
-        Number.isFinite(firstTime) && Number.isFinite(lastTime);
+        !compact && Number.isFinite(firstTime) && Number.isFinite(lastTime);
     // Single-bucket searches (and 1-row tiles where we synthesise a
     // single timestamp) collapse to one centered label so we don't
     // print the same date twice.
@@ -877,7 +954,13 @@ export const Sparkline: React.FC<SparklineProps> = ({
     const footerJustify = sameTime ? 'justify-center' : 'justify-between';
 
     return (
-        <div {...interactiveProps}>
+        <div
+            ref={hostRef}
+            data-sparkline-density={compact ? 'compact' : 'detailed'}
+            aria-label={title ?? 'Trend over the selected time range'}
+            role={onClick ? undefined : 'img'}
+            {...interactiveProps}
+        >
             {/* Build 98 (2026-05-13): Theme-aware baseline / previous-period
               * overlay stroke. Declared as a CSS custom property here and
               * referenced via `stroke="var(--baseline-stroke)"` on the

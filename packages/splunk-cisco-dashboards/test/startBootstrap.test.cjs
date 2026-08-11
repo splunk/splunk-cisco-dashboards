@@ -19,48 +19,152 @@ const {
   homeUrl,
   isConfigured,
   isOnDemand,
+  isTuningHash,
   localePrefix,
+  manageAppsUrl,
+  openManageApps,
   parseExportRows,
+  resolveCapabilities,
   resolvePrerequisites,
+  resolveSkippedPackages,
   shouldRender,
   tuningUrl,
 } = require(bootstrapPath);
 
 assert.equal(
-  endpoint("/en-US/app/splunk-cisco-dashboards/start"),
+  endpoint("/en-US/app/splunk-cisco-dashboards/setup"),
   "/en-US/splunkd/__raw/servicesNS/nobody/splunk-cisco-dashboards/configs/conf-setup/install?output_mode=json",
 );
 assert.equal(
-  endpoint("/fr-FR/app/splunk-cisco-dashboards/start"),
+  endpoint("/fr-FR/app/splunk-cisco-dashboards/setup"),
   "/fr-FR/splunkd/__raw/servicesNS/nobody/splunk-cisco-dashboards/configs/conf-setup/install?output_mode=json",
 );
 assert.equal(
-  homeUrl("/de-DE/app/splunk-cisco-dashboards/start"),
-  "/de-DE/app/splunk-cisco-dashboards/secure_networking_profile",
+  homeUrl("/de-DE/app/splunk-cisco-dashboards/setup"),
+  "/de-DE/app/splunk-cisco-dashboards/workspace_insights",
 );
 assert.equal(
-  tuningUrl("/de-DE/app/splunk-cisco-dashboards/start"),
-  "/de-DE/app/splunk-cisco-dashboards/macro_index_tuning?setup=1",
+  tuningUrl("/de-DE/app/splunk-cisco-dashboards/setup"),
+  "/de-DE/app/splunk-cisco-dashboards/setup?setup=1#tune-indexes",
 );
+assert.equal(isTuningHash("#tune-indexes"), true);
+assert.equal(isTuningHash("tune-indexes"), true);
+assert.equal(isTuningHash("#review-packages"), false);
 assert.equal(
-  appsEndpoint("/en-US/app/splunk-cisco-dashboards/start"),
+  appsEndpoint("/en-US/app/splunk-cisco-dashboards/setup"),
   "/en-US/splunkd/__raw/services/apps/local?count=0&output_mode=json",
 );
 assert.equal(
-  discoveryEndpoint("/en-US/app/splunk-cisco-dashboards/start"),
+  discoveryEndpoint("/en-US/app/splunk-cisco-dashboards/setup"),
   "/en-US/splunkd/__raw/servicesNS/nobody/splunk-cisco-dashboards/search/jobs/export",
 );
 assert.equal(localePrefix("/manager/apps/local"), "/en-US");
 assert.equal(
   appInstallUrl(
-    "/en-US/app/splunk-cisco-dashboards/start",
+    "/en-US/app/splunk-cisco-dashboards/setup",
     "Splunk_ML_Toolkit",
   ),
   "/en-US/manager/appinstall/Splunk_ML_Toolkit",
 );
 assert.equal(
+  manageAppsUrl("/en-US/app/splunk-cisco-dashboards/setup"),
+  "/en-US/manager/system/apps/local",
+);
+assert.equal(
+  manageAppsUrl(
+    "/fr-FR/app/splunk-cisco-dashboards/setup",
+    "Splunk_ML_Toolkit",
+  ),
+  "/fr-FR/manager/system/apps/local?search=Splunk_ML_Toolkit",
+);
+
+let manageAppsIntervalCallback;
+let manageAppsClearedTimer;
+let manageAppsOpenedUrl;
+let manageAppsPreventedDefault = false;
+const manageAppsFilterEvents = [];
+const manageAppsFilter = {
+  dispatchEvent(event) {
+    manageAppsFilterEvents.push([event.type, event.key || ""]);
+  },
+  focus() {
+    this.focused = true;
+  },
+};
+function ManageAppsEvent(type) {
+  this.type = type;
+}
+function ManageAppsInput() {}
+function ManageAppsKeyboardEvent(type, options) {
+  this.type = type;
+  this.key = options.key;
+}
+const manageAppsWindow = {
+  closed: false,
+  document: {
+    querySelector() {
+      return manageAppsFilter;
+    },
+  },
+  Event: ManageAppsEvent,
+  HTMLInputElement: ManageAppsInput,
+  KeyboardEvent: ManageAppsKeyboardEvent,
+  opener: {},
+};
+Object.defineProperty(manageAppsWindow.HTMLInputElement.prototype, "value", {
+  set(value) {
+    this.value = value;
+  },
+});
+global.window = {
+  clearInterval(timer) {
+    manageAppsClearedTimer = timer;
+  },
+  location: {
+    assign() {},
+    pathname: "/en-US/app/splunk-cisco-dashboards/setup",
+  },
+  open(url) {
+    manageAppsOpenedUrl = url;
+    return manageAppsWindow;
+  },
+  setInterval(callback) {
+    manageAppsIntervalCallback = callback;
+    return 42;
+  },
+};
+openManageApps(
+  {
+    altKey: false,
+    button: 0,
+    ctrlKey: false,
+    metaKey: false,
+    preventDefault() {
+      manageAppsPreventedDefault = true;
+    },
+    shiftKey: false,
+  },
+  "Splunk_ML_Toolkit",
+);
+manageAppsIntervalCallback();
+assert.equal(manageAppsPreventedDefault, true);
+assert.equal(
+  manageAppsOpenedUrl,
+  "/en-US/manager/system/apps/local?search=Splunk_ML_Toolkit",
+);
+assert.equal(manageAppsFilter.value, "Splunk_ML_Toolkit");
+assert.deepEqual(manageAppsFilterEvents, [
+  ["input", ""],
+  ["change", ""],
+  ["keydown", "Enter"],
+]);
+assert.equal(manageAppsFilter.focused, true);
+assert.equal(manageAppsWindow.opener, null);
+assert.equal(manageAppsClearedTimer, 42);
+delete global.window;
+assert.equal(
   appInstallUrl(
-    "/fr-FR/app/splunk-cisco-dashboards/start",
+    "/fr-FR/app/splunk-cisco-dashboards/setup",
     "app id/with spaces",
   ),
   "/fr-FR/manager/appinstall/app%20id%2Fwith%20spaces",
@@ -153,6 +257,18 @@ const prerequisites = resolvePrerequisites(
       count: 5,
       latest: 0,
     },
+    {
+      index: "aci",
+      sourcetype: "cisco:dc:aci:class",
+      count: 25,
+      latest: 0,
+    },
+    {
+      index: "meraki",
+      sourcetype: "meraki:devices",
+      count: 12,
+      latest: 0,
+    },
   ],
   [
     {
@@ -176,27 +292,27 @@ const prerequisites = resolvePrerequisites(
 assert.deepEqual(
   prerequisites.map((item) => item.id),
   [
-    "dc-networking",
-    "catalyst-app",
-    "security-cloud",
     "searchbase",
+    "cim",
     "ai-toolkit",
     "scientific-python",
-    "meraki-ta",
-    "windows-ta",
-    "nix-ta",
+    "dc-networking",
+    "catalyst-app",
     "catalyst-ta",
-    "spaces-ta",
-    "thousandeyes-ta",
+    "security-cloud",
+    "meraki-ta",
   ],
 );
-assert.equal(prerequisites.length, 12);
-assert.equal(prerequisites[0].status, "update");
-assert.equal(prerequisites[1].status, "installed");
-const nix = prerequisites.find((item) => item.id === "nix-ta");
-assert.equal(nix.status, "installed");
-assert.equal(nix.installedId, "Splunk_TA_nix");
-assert.equal(nix.splunkbase, "https://splunkbase.splunk.com/app/833");
+assert.equal(prerequisites.length, 9);
+assert.equal(prerequisites.find((item) => item.id === "cim").status, "missing");
+assert.equal(
+  prerequisites.find((item) => item.id === "searchbase").importance,
+  "mandatory",
+);
+assert.equal(
+  prerequisites.find((item) => item.id === "catalyst-app").status,
+  "installed",
+);
 const scientificPython = prerequisites.find(
   (item) => item.id === "scientific-python",
 );
@@ -208,6 +324,63 @@ assert.equal(
 assert.equal(
   scientificPython.displayId,
   "Splunk_SA_Scientific_Python_<os>",
+);
+assert.equal(
+  prerequisites.find((item) => item.id === "dc-networking")
+    .latestKnownVersion,
+  "1.3.0",
+);
+
+const capabilityCoverage = resolveCapabilities([
+  {
+    index: "identity",
+    sourcetype: "cisco:ise:syslog",
+    count: 300,
+    latest: 0,
+  },
+  {
+    index: "network",
+    sourcetype: "cisco:dnac:devicehealth",
+    count: 200,
+    latest: 0,
+  },
+  {
+    index: "aci",
+    sourcetype: "cisco:dc:nexus9k:syslog",
+    count: 150,
+    latest: 0,
+  },
+  {
+    index: "meraki",
+    sourcetype: "meraki:devices",
+    count: 100,
+    latest: 0,
+  },
+]);
+assert.equal(
+  capabilityCoverage.find((item) => item.id === "identity").detected,
+  true,
+);
+assert.equal(
+  capabilityCoverage.find((item) => item.id === "enterprise-networking")
+    .detected,
+  true,
+);
+assert.equal(
+  capabilityCoverage.find((item) => item.id === "data-center").detected,
+  true,
+);
+assert.equal(
+  capabilityCoverage.find((item) => item.id === "meraki").detected,
+  true,
+);
+assert.equal(
+  capabilityCoverage.find((item) => item.id === "thousandeyes").detected,
+  false,
+);
+assert.equal(
+  resolveSkippedPackages([]).some((item) => item.id === "thousandeyes-ta"),
+  true,
 );
 
 const securityCloudPrerequisites = resolvePrerequisites(
@@ -237,13 +410,27 @@ const securityCloud = securityCloudPrerequisites.find(
 );
 assert.equal(securityCloud.status, "installed");
 assert.equal(securityCloud.splunkbase, "https://splunkbase.splunk.com/app/7404");
-assert.deepEqual(securityCloud.sourcetypes, []);
+assert.deepEqual(securityCloud.sourcetypes, [
+  "cisco:duo:user",
+  "cisco:sfw:estreamer",
+]);
 
-global.window = { $C: { FORM_KEY: "runtime-token" } };
+global.window = {
+  location: { port: "8000" },
+  $C: { FORM_KEY: "runtime-token" },
+};
 global.document = { cookie: "" };
 assert.equal(csrfToken(), "runtime-token");
-global.window = { $C: {} };
-global.document = { cookie: "splunkweb_csrf_token_8000=cookie%2Dtoken" };
+global.window = { location: { port: "8000" }, $C: {} };
+global.document = {
+  cookie:
+    "splunkweb_csrf_token_8003=wrong%2Dinstance; splunkweb_csrf_token_8000=cookie%2Dtoken",
+};
+assert.equal(csrfToken(), "cookie-token");
+global.window = {
+  location: { port: "8000" },
+  $C: { FORM_KEY: "stale-runtime-token" },
+};
 assert.equal(csrfToken(), "cookie-token");
 delete global.window;
 delete global.document;
@@ -257,8 +444,30 @@ const bootstrapSource = fs.readFileSync(bootstrapPath, "utf8");
 assert.match(bootstrapSource, /Splunk Cisco App Navigator/);
 assert.match(bootstrapSource, /https:\/\/splunkbase\.splunk\.com\/app\/8566/);
 assert.match(bootstrapSource, /scd-setup__disclosure/);
+assert.match(bootstrapSource, /Discover your Cisco environment/);
+assert.match(bootstrapSource, /sourcetype="meraki:\*"/);
+assert.match(bootstrapSource, /Next: review recommendations/);
+assert.match(bootstrapSource, /Next: tune index macros/);
+assert.match(bootstrapSource, /Packages skipped because data is absent/);
+assert.match(bootstrapSource, /scdSetupShowTuningStep/);
+assert.match(bootstrapSource, /pages\/macro_index_tuning\.js/);
+assert.doesNotMatch(bootstrapSource, /Open the full index macro tuner/);
+assert.match(bootstrapSource, /aria-current/);
 assert.match(bootstrapSource, /Splunk_SA_Scientific_Python_<os>/);
-assert.match(bootstrapSource, /Update \$\{prerequisite\.name\} in Manage Apps/);
+assert.match(bootstrapSource, /AI analytics runtime/);
+assert.match(bootstrapSource, /scd-setup__package-table/);
+assert.match(bootstrapSource, /Installed package status/);
+assert.match(bootstrapSource, /Latest known/);
+assert.match(bootstrapSource, /This live table checks the Splunk Web node/);
+assert.match(bootstrapSource, /scd-setup__requirement-role/);
+assert.match(bootstrapSource, /Refresh installed package status/);
+assert.match(bootstrapSource, /scdSetupOpenManageApps/);
+assert.match(bootstrapSource, /button\.disabled = Boolean\(buttonConfig\.disabled\)/);
+assert.match(
+  bootstrapSource,
+  /must be installed and enabled before index tuning/,
+);
+assert.match(bootstrapSource, /Open Manage Apps filtered to/);
 const legacyOverviewTemplatePath = path.resolve(
   __dirname,
   "../src/main/resources/splunk/appserver/templates/overview.html",
@@ -274,6 +483,7 @@ const navSource = fs.readFileSync(
   ),
   "utf8",
 );
+const activeNavSource = navSource.replace(/<!--[\s\S]*?-->/g, "");
 const dashboardBuilderTemplateSource = fs.readFileSync(
   path.resolve(
     __dirname,
@@ -295,6 +505,65 @@ const searchbaseSource = fs.readFileSync(
   ),
   "utf8",
 );
+const setupViewSource = fs.readFileSync(
+  path.join(viewsRoot, "setup.xml"),
+  "utf8",
+);
+const macroTuningViewSource = fs.readFileSync(
+  path.join(viewsRoot, "admin_macro_index_tuning.xml"),
+  "utf8",
+);
+const macroTuningStyleSource = fs.readFileSync(
+  path.resolve(
+    __dirname,
+    "../src/main/webapp/pages/macro_index_tuning/macro-index-tuning.css",
+  ),
+  "utf8",
+);
+const macroTuningRenderSource = fs.readFileSync(
+  path.resolve(
+    __dirname,
+    "../src/main/webapp/pages/macro_index_tuning/render.tsx",
+  ),
+  "utf8",
+);
+const setupStyleSource = fs.readFileSync(
+  path.resolve(
+    __dirname,
+    "../src/main/resources/splunk/appserver/static/start.css",
+  ),
+  "utf8",
+);
+const macroTuningBootstrapSource = fs.readFileSync(
+  path.resolve(
+    __dirname,
+    "../src/main/resources/splunk/appserver/static/macro_index_tuning_bootstrap.js",
+  ),
+  "utf8",
+);
+assert.match(setupViewSource, /<dashboard\b[^>]*\btheme="dark"/);
+assert.match(setupViewSource, /id="scan-root" hidden="hidden"/);
+assert.match(macroTuningViewSource, /<dashboard\b[^>]*\btheme="dark"/);
+assert.match(macroTuningSource, /scd-admin-dark scd-c3-atmosphere dark/);
+assert.doesNotMatch(macroTuningSource, /setTheme\("dark"\)/);
+assert.match(macroTuningRenderSource, /fixedColorScheme: 'dark'/);
+assert.match(macroTuningSource, /Back to recommendations/);
+assert.match(macroTuningSource, /scd:setup-step/);
+assert.doesNotMatch(macroTuningSource, /Open full tuner/);
+assert.match(macroTuningBootstrapSource, /setup.*setup=1#tune-indexes/s);
+assert.match(macroTuningStyleSource, /scd-admin-dark/);
+assert.match(macroTuningStyleSource, /c3-atmosphere\.svg/);
+assert.match(setupStyleSource, /c3-atmosphere\.svg/);
+assert.match(setupStyleSource, /\.scd-setup__package-table\s*\{/);
+assert.match(setupStyleSource, /content: attr\(data-label\)/);
+assert.match(macroTuningStyleSource, /scd-setup-action-bar/);
+assert.match(macroTuningStyleSource, /summary\[class\*='hover:bg-slate-'\]:hover/);
+assert.match(macroTuningSource, /scd-macro-group-toggle/);
+assert.match(
+  macroTuningStyleSource,
+  /\.scd-macro-group-toggle:hover,[\s\S]*\.scd-macro-group-toggle:focus-visible/,
+);
+assert.match(setupStyleSource, /@container setup-content \(max-width: 880px\)/);
 assert.match(macroTuningSource, /Review only what needs attention/);
 assert.match(macroTuningSource, /Balanced \(recommended\)/);
 assert.match(macroTuningSource, /Tune app-owned routing macros/);
@@ -305,7 +574,7 @@ assert.match(
   macroTuningSource,
   /Companion apps could not be verified, so their macro definitions are hidden/,
 );
-assert.match(macroTuningSource, /Macro tuning is optional during setup/);
+assert.match(macroTuningSource, /Nothing was marked complete/);
 assert.match(macroTuningSource, /row\.targetApp/);
 assert.match(macroTuningSource, /Cisco app macro coverage/);
 assert.match(macroTuningSource, /Dashboard index macros/);
@@ -315,6 +584,19 @@ assert.match(macroTuningSource, /externalAppMacroSummaries/);
 assert.match(macroTuningSource, /Open CIM macros/);
 assert.match(macroTuningSource, /Advanced tuning/);
 assert.match(macroTuningSource, /Save and finish setup/);
+assert.match(macroTuningSource, /Setup was not completed/);
+assert.match(macroTuningSource, /setupCimRowsToSave/);
+assert.match(macroTuningSource, /Tune detected CIM data-model macros/);
+assert.doesNotMatch(macroTuningSource, /properties\/macros/);
+assert.doesNotMatch(macroTuningSource, /could not remove its local/);
+assert.match(
+  macroTuningSource,
+  /\.\.\.setupExternalRowsToSave,[\s\S]*\.\.\.setupCimRowsToSave/,
+);
+assert.match(
+  macroTuningSource,
+  /Expand a product only when you need its model-level actions/,
+);
 assert.match(
   macroTuningSource,
   /Finish setup now and retry macro tuning later/,
@@ -419,11 +701,17 @@ assert.equal(
   fs.existsSync(path.join(viewsRoot, "secure_networking_overview.xml")),
   false,
 );
-for (const viewName of [
-  "executive_briefing_profile",
-  "insights_workspace",
-  "secure_networking_profile",
+for (const removedWorkspaceAlias of [
+  "workspace_executive_briefing",
+  "workspace_secure_networking",
 ]) {
+  assert.equal(
+    fs.existsSync(path.join(viewsRoot, `${removedWorkspaceAlias}.xml`)),
+    false,
+    `${removedWorkspaceAlias} must not remain as a second workspace shell`,
+  );
+}
+for (const viewName of ["workspace_insights"]) {
   const viewSource = fs.readFileSync(
     path.join(viewsRoot, `${viewName}.xml`),
     "utf8",
@@ -431,14 +719,154 @@ for (const viewName of [
   assert.match(viewSource, /<dashboard\b/);
   assert.match(
     viewSource,
+    /<dashboard\b[^>]*\btheme="dark"/,
+    `${viewName} must keep the Splunk page shell aligned with the shipped dark workspace theme`,
+  );
+  assert.match(
+    viewSource,
     /script="application\.js,executive_insights_bootstrap\.js"/,
   );
   assert.match(viewSource, /id="scan-root"/);
   assert.doesNotMatch(viewSource, /\btemplate=/);
 }
-assert.match(navSource, /name="secure_networking_profile"\s+default="true"/);
-assert.match(navSource, /name="executive_briefing_profile"/);
-assert.match(navSource, /<a href="start\?setup=1">Setup<\/a>/);
+assert.match(navSource, /name="workspace_insights"\s+default="true"/);
+assert.doesNotMatch(
+  navSource,
+  /workspace_(?:secure_networking|executive_briefing)/,
+);
+assert.match(navSource, /<a href="setup\?setup=1">Setup<\/a>/);
+assert.doesNotMatch(
+  navSource,
+  /<a href="macro_index_tuning">Macro Index Tuning<\/a>/,
+  "Macro Index Tuning should remain accessible from Setup instead of duplicating the navigation entry",
+);
+for (const dashboardGroup of [
+  "More",
+  "Network &amp; IT Operations",
+  "Security Operations",
+  "Workplace Intelligence",
+  "Catalyst Operations",
+  "Visual Labs (Beta)",
+  "Help &amp; Resources",
+  "Administration",
+]) {
+  assert.match(
+    navSource,
+    new RegExp(`label="${dashboardGroup.replace(/[()]/g, "\\$&")}"`),
+    `Navigation must include the ${dashboardGroup} group`,
+  );
+}
+for (const legacyDashboardGroup of [
+  "Other",
+  "Dashboards",
+  "More Dashboards",
+  "Core Dashboards",
+  "Operations",
+  "Workplace &amp; Collaboration",
+  "Event Ops",
+  "Concepts (Beta)",
+  "Admin &amp; Tools",
+]) {
+  assert.doesNotMatch(
+    navSource,
+    new RegExp(`label="${legacyDashboardGroup.replace(/[()]/g, "\\$&")}"`),
+    `Navigation must not retain the legacy ${legacyDashboardGroup} group`,
+  );
+}
+for (const betaDashboardLabel of [
+  "Health Monitoring (Beta)",
+  "Security Operations Overview (Beta)",
+  "Catalyst Operations (Beta)",
+]) {
+  assert.match(
+    navSource,
+    new RegExp(`>${betaDashboardLabel.replace(/[()]/g, "\\$&")}<`),
+    `${betaDashboardLabel} must remain visibly identified as beta`,
+  );
+}
+assert.match(
+  navSource,
+  /name="workplace_spaces_intelligence" label="Cisco Spaces — Intelligence"/,
+);
+assert.match(
+  navSource,
+  /name="workplace_operations_overview" label="Workplace — Single Pane of Glass"/,
+);
+assert.match(
+  activeNavSource,
+  /<collection label="More" icon="layout">\s*<a href="dashboard_manager">Dashboard Manager<\/a>\s*<divider\s*\/>/,
+  "Dashboard Manager must remain the first emphasized destination under More",
+);
+assert.equal(
+  (activeNavSource.match(/href="dashboard_manager"/g) ?? []).length,
+  1,
+  "Dashboard Manager must have one canonical navigation entry",
+);
+assert.doesNotMatch(
+  activeNavSource,
+  /<collection label="Dashboard Library">/,
+  "The optional native Dashboard Library must remain outside active navigation",
+);
+for (const [utilityGroup, destinations] of Object.entries({
+  "Help &amp; Resources": ["user_guide", "search"],
+})) {
+  const groupStart = activeNavSource.indexOf(`<collection label="${utilityGroup}">`);
+  const groupEnd = activeNavSource.indexOf("</collection>", groupStart);
+  assert.notEqual(groupStart, -1, `${utilityGroup} group must exist`);
+  assert.notEqual(groupEnd, -1, `${utilityGroup} group must be closed`);
+  const groupSource = activeNavSource.slice(groupStart, groupEnd);
+  for (const destination of destinations) {
+    assert.match(
+      groupSource,
+      new RegExp(`(?:href|name)="${destination}"`),
+      `${destination} must remain in ${utilityGroup}`,
+    );
+  }
+}
+const organizedDashboardGroups = {
+  "Network &amp; IT Operations": [
+    "netops_critical_systems_health",
+    "netops_readiness",
+    "netops_health_monitoring",
+  ],
+  "Security Operations": ["secops_resilience", "secops_overview"],
+  "Workplace Intelligence": [
+    "workplace_building_intelligence",
+    "workplace_spaces_intelligence",
+    "workplace_operations_overview",
+  ],
+  "Catalyst Operations": [
+    "netops_catalyst_health",
+    "netops_catalyst_operations",
+  ],
+  "Visual Labs (Beta)": [
+    "searchbase_canvas",
+    "network_diagram",
+    "sn_topology_canvas",
+  ],
+  Administration: ["admin_asset_inventory", "setup"],
+};
+for (const [dashboardGroup, destinations] of Object.entries(
+  organizedDashboardGroups,
+)) {
+  const groupStart = navSource.indexOf(`<collection label="${dashboardGroup}">`);
+  const groupEnd = navSource.indexOf("</collection>", groupStart);
+  assert.notEqual(groupStart, -1, `${dashboardGroup} group must exist`);
+  assert.notEqual(groupEnd, -1, `${dashboardGroup} group must be closed`);
+  const groupSource = navSource.slice(groupStart, groupEnd);
+  for (const destination of destinations) {
+    assert.match(
+      groupSource,
+      new RegExp(`(?:href|name)="${destination}(?:\\?setup=1)?"`),
+      `${destination} must remain in ${dashboardGroup}`,
+    );
+    assert.equal(
+      fs.existsSync(path.join(viewsRoot, `${destination}.xml`)),
+      true,
+      `${destination} must resolve to a shipped Splunk view`,
+    );
+  }
+}
 assert.doesNotMatch(navSource, /name="secure_networking_overview"/);
 assert.doesNotMatch(navSource, /name="overview"/);
 
@@ -476,11 +904,11 @@ async function runSetupGate(pathname, payload, responseOk = true) {
 
 (async () => {
   const unconfigured = await runSetupGate(
-    "/en-US/app/splunk-cisco-dashboards/security_v1",
+    "/en-US/app/splunk-cisco-dashboards/secops_resilience",
     { entry: [{ content: { is_configured: "0" } }] },
   );
   assert.deepEqual(unconfigured.redirects, [
-    "/en-US/app/splunk-cisco-dashboards/start",
+    "/en-US/app/splunk-cisco-dashboards/setup",
   ]);
   assert.equal(unconfigured.requests.length, 1);
   assert.equal(
@@ -490,26 +918,26 @@ async function runSetupGate(pathname, payload, responseOk = true) {
   assert.equal(unconfigured.gateResult, false);
 
   const configured = await runSetupGate(
-    "/en-US/app/splunk-cisco-dashboards/secure_networking_profile",
+    "/en-US/app/splunk-cisco-dashboards/workspace_insights",
     { entry: [{ content: { is_configured: "1" } }] },
   );
   assert.deepEqual(configured.redirects, []);
   assert.equal(configured.gateResult, true);
 
   const setupView = await runSetupGate(
-    "/en-US/app/splunk-cisco-dashboards/start",
+    "/en-US/app/splunk-cisco-dashboards/setup",
     { entry: [{ content: { is_configured: "0" } }] },
   );
   assert.equal(setupView.requests.length, 0);
 
   const tuningView = await runSetupGate(
-    "/en-US/app/splunk-cisco-dashboards/macro_index_tuning",
+    "/en-US/app/splunk-cisco-dashboards/admin_macro_index_tuning",
     { entry: [{ content: { is_configured: "0" } }] },
   );
   assert.equal(tuningView.requests.length, 0);
 
   const failedRead = await runSetupGate(
-    "/en-US/app/splunk-cisco-dashboards/secure_networking_profile",
+    "/en-US/app/splunk-cisco-dashboards/workspace_insights",
     null,
     false,
   );

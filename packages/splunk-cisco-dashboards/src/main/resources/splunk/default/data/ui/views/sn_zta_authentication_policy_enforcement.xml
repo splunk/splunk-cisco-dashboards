@@ -1,0 +1,1453 @@
+<dashboard version="2" theme="dark" stylesheet="application.css">
+    <label>Zero Trust Access - Authentication and Policy Enforcement</label>
+    <description>Validate authentication outcomes and verify access policy enforcement.</description>
+    <definition><![CDATA[
+{
+    "title": "Authentication and Policy Enforcement",
+    "description": "Validate authentication outcomes and verify access policy enforcement.",
+    "inputs": {
+        "input_time_range": {
+            "options": {
+                "defaultValue": "-24h,now,1h",
+                "showAdvanced": true,
+                "selections": [
+                    {
+                        "value": "-4h,now,30m",
+                        "label": "4h"
+                    },
+                    {
+                        "value": "-24h,now,1h",
+                        "label": "24h"
+                    },
+                    {
+                        "value": "-48h,now,2h",
+                        "label": "48h"
+                    },
+                    {
+                        "value": "-7d@d,now,1d",
+                        "label": "7d"
+                    },
+                    {
+                        "value": "-30d@d,now,1d",
+                        "label": "30d"
+                    }
+                ],
+                "token": "time_tok"
+            },
+            "title": "Time range",
+            "type": "input.simpleTimePicker"
+        }
+    },
+    "defaults": {
+        "visualizations": {
+            "global": {
+                "showLastUpdated": true,
+                "showProgressBar": true
+            }
+        }
+    },
+    "visualizations": {
+        "viz_header_bg": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#1c2738",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 10
+            }
+        },
+        "viz_header_icon": {
+            "type": "splunk.image",
+            "title": "Authentication and Policy Enforcement",
+            "options": {
+                "preserveAspectRatio": true,
+                "src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg"
+            }
+        },
+        "viz_header": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "markdown": "# Authentication and Policy Enforcement\nValidate authentication outcomes and verify access policy enforcement\\."
+            }
+        },
+        "viz_card_01_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_01_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Authentication Failure Rate**"
+            }
+        },
+        "viz_card_01_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Identity  •  Zero Trust Access"
+            }
+        },
+        "viz_card_01_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Tracks the Cisco ISE authentication failure rate over time, with the existing per\\-network\\-device table available as the operational drill\\-down\\."
+            }
+        },
+        "viz_card_01_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_01"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineDisplay": "off",
+                "sparklineValues": "> primary | seriesByName(\"Failure Rate %\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendDisplay": "percent",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
+                    }
+                ]
+            }
+        },
+        "viz_card_01_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_01"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#f7782f",
+                    "#f0c243",
+                    "#fa5762",
+                    "#649ef5"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"Failure Rate %\")"
+            }
+        },
+        "viz_card_01_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Authentication%20Failure%20Rate&target=Secure%20Networking%20-%20ZTA%20ISE%20Auth%20Failure%20Rate%20by%20Network%20Device"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_02_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_02_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Policy Family Activity**"
+            }
+        },
+        "viz_card_02_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Identity  •  Zero Trust Access"
+            }
+        },
+        "viz_card_02_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Trends ISE RADIUS and TACACS\\+ policy\\-set hit activity over time while retaining the policy\\-family inventory as a drill\\-down table\\."
+            }
+        },
+        "viz_card_02_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_02"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineDisplay": "off",
+                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendDisplay": "percent",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#049fd9",
+                        "to": 0
+                    },
+                    {
+                        "value": "#049fd9",
+                        "from": 0
+                    }
+                ]
+            }
+        },
+        "viz_card_02_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_02"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#049fd9",
+                    "#9ca6ff",
+                    "#9b5ff5",
+                    "#00bceb"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"RADIUS (Network Access)\")"
+            }
+        },
+        "viz_card_02_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Policy%20Family%20Activity&target=Secure%20Networking%20-%20ISE%20Policy%20Family%20Overview,Secure%20Networking%20-%20ISE%20Policy%20Hits%20by%20Network%20Device"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_03_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_03_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**RADIUS Outcomes**"
+            }
+        },
+        "viz_card_03_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Identity  •  Zero Trust Access"
+            }
+        },
+        "viz_card_03_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Tracks RADIUS authentication outcomes over time and moves the ISE host/site/network\\-device health table into the drill\\-down modal\\."
+            }
+        },
+        "viz_card_03_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_03"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineDisplay": "off",
+                "sparklineValues": "> primary | seriesByName(\"Failure\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendDisplay": "percent",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
+                    }
+                ]
+            }
+        },
+        "viz_card_03_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_03"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#fa5762",
+                    "#f7782f",
+                    "#f0c243",
+                    "#649ef5"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"Failure\")"
+            }
+        },
+        "viz_card_03_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=RADIUS%20Outcomes&target=Secure%20Networking%20-%20ZTA%20RADIUS%20Node%20Health%20by%20Site"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_04_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_04_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**RadSec Transport Activity**"
+            }
+        },
+        "viz_card_04_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Identity  •  Zero Trust Access"
+            }
+        },
+        "viz_card_04_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Trends observed RadSec/RADIUS\\-over\\-TLS authentication activity while retaining node\\-level transport evidence in the drill\\-down modal\\."
+            }
+        },
+        "viz_card_04_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_04"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineDisplay": "off",
+                "sparklineValues": "> primary | seriesByName(\"Failure\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendDisplay": "percent",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
+                    }
+                ]
+            }
+        },
+        "viz_card_04_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_04"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#fa5762",
+                    "#f7782f",
+                    "#f0c243",
+                    "#649ef5"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"Failure\")"
+            }
+        },
+        "viz_card_04_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=RadSec%20Transport%20Activity&target=Secure%20Networking%20-%20ZTA%20RadSec%20Evidence%20by%20Node"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_05_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_05_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Duo Policy Outcomes**"
+            }
+        },
+        "viz_card_05_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Identity  •  Zero Trust Access"
+            }
+        },
+        "viz_card_05_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Tracks Duo MFA authentication outcomes over time and keeps the application/factor breakdown as a drill\\-down table\\."
+            }
+        },
+        "viz_card_05_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_05"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineDisplay": "off",
+                "sparklineValues": "> primary | seriesByName(\"RiskyOutcomes\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendDisplay": "percent",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#4cbf7f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
+                    }
+                ]
+            }
+        },
+        "viz_card_05_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_05"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#f7782f",
+                    "#f0c243",
+                    "#fa5762",
+                    "#9b5ff5"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"RiskyOutcomes\")"
+            }
+        },
+        "viz_card_05_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Duo%20Policy%20Outcomes&target=Secure%20Networking%20-%20ZTA%20Duo%20Authentication%20Outcomes%20by%20Application,Secure%20Networking%20-%20ZTA%20Duo%20Admin%20Activity%20by%20Outcome"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_06_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_06_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**ISE Enforcement Footprint**"
+            }
+        },
+        "viz_card_06_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Asset  •  Zero Trust Access"
+            }
+        },
+        "viz_card_06_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Total count of unique network access devices \\(NADs\\) enforcing ISE policy, based on distinct device names seen in ISE syslog, providing the Zero Trust enforcement infrastructure footprint KPI\\."
+            }
+        },
+        "viz_card_06_singlevalue": {
+            "type": "splunk.singlevalue",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_06"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
+                "majorFontSize": 44,
+                "majorValue": "> sparklineValues | lastPoint()",
+                "shouldAbbreviateMajorValue": true,
+                "shouldAbbreviateTrendValue": true,
+                "showTrendIndicator": true,
+                "sparklineDisplay": "off",
+                "sparklineValues": "> primary | seriesByName(\"ise_device_count\")",
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+                "trendDisplay": "percent",
+                "trendFontSize": 28,
+                "trendValue": "> sparklineValues | delta(-2)"
+            },
+            "context": {
+                "trendColorEditorConfig": [
+                    {
+                        "value": "#f7782f",
+                        "to": -0.000001
+                    },
+                    {
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#4cbf7f",
+                        "from": 0.000001
+                    }
+                ]
+            }
+        },
+        "viz_card_06_trend": {
+            "type": "splunk.area",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_story_06"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#00bceb",
+                    "#049fd9",
+                    "#9ca6ff",
+                    "#4cbf7f"
+                ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"ise_device_count\")"
+            }
+        },
+        "viz_card_06_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=ISE%20Enforcement%20Footprint&target=Secure%20Networking%20-%20ZTA%20RADIUS%20Node%20Health%20by%20Site,Secure%20Networking%20-%20ZTA%20ISE%20Auth%20Failure%20Rate%20by%20Network%20Device"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        }
+    },
+    "dataSources": {
+        "ds_story_01": {
+            "name": "Secure Networking - ZTA ISE Authentication Failure Rate Trend",
+            "options": {
+                "ref": "secure_networking_zta_ise_auth_failure_rate_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_02": {
+            "name": "Secure Networking - ISE Policy Family Activity Trend",
+            "options": {
+                "ref": "secure_networking_zta_ise_policy_family_activity_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_03": {
+            "name": "Secure Networking - ZTA RADIUS Authentication Outcomes Trend",
+            "options": {
+                "ref": "secure_networking_zta_radius_auth_outcomes_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_04": {
+            "name": "Secure Networking - ZTA RadSec Activity Trend",
+            "options": {
+                "ref": "secure_networking_zta_radsec_activity_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_05": {
+            "name": "Secure Networking - ZTA Duo Authentication Outcomes Trend",
+            "options": {
+                "ref": "secure_networking_zta_duo_auth_outcomes_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        },
+        "ds_story_06": {
+            "name": "Secure Networking - Infrastructure ISE Network Device Count",
+            "options": {
+                "ref": "secure_networking_infra_ise_device_count",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            },
+            "type": "ds.searchbase"
+        }
+    },
+    "layout": {
+        "globalInputs": [],
+        "layoutDefinitions": {
+            "layout_overview": {
+                "options": {
+                    "backgroundColor": "#0f1117",
+                    "backgroundImage": {
+                        "sizeType": "contain",
+                        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxmaWx0ZXIgaWQ9ImMzLWJsdXIiIHg9Ii01MDAiIHk9Ii01MDAiIHdpZHRoPSIyOTIwIiBoZWlnaHQ9IjI1ODAiIGZpbHRlclVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgY29sb3ItaW50ZXJwb2xhdGlvbi1maWx0ZXJzPSJzUkdCIj48ZmVHYXVzc2lhbkJsdXIgc3RkRGV2aWF0aW9uPSIxNzUiLz48L2ZpbHRlcj48cmFkaWFsR3JhZGllbnQgaWQ9ImMzLWN5YW4tbmF2eSIgY3g9IjEzLjUiIGN5PSIxNDQxLjM2IiByPSI4NTEuNDkiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDAgMTQ0MS4zNikgc2NhbGUoMSAuNjE2NTUpIHRyYW5zbGF0ZSgwIC0xNDQxLjM2KSI+PHN0b3Agc3RvcC1jb2xvcj0iIzMwYWFjYyIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzBjMWE1NiIvPjwvcmFkaWFsR3JhZGllbnQ+PHJhZGlhbEdyYWRpZW50IGlkPSJjMy1ibHVlLXZpb2xldCIgY3g9IjI3My41IiBjeT0iMTQ0MS4zNiIgcj0iODUxLjQ5IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgZ3JhZGllbnRUcmFuc2Zvcm09InRyYW5zbGF0ZSgwIDE0NDEuMzYpIHNjYWxlKDEgLjYxNjU1KSB0cmFuc2xhdGUoMCAtMTQ0MS4zNikiPjxzdG9wIHN0b3AtY29sb3I9IiMyYzkzZTEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM4MDE0OGMiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSIjMGIxMTE4Ii8+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNjYyLjQgMCkiIG9wYWNpdHk9Ii43MiI+PHJlY3QgeD0iMTMuNSIgeT0iNDgzIiB3aWR0aD0iNTkzIiBoZWlnaHQ9IjE2OTciIGZpbGw9InVybCgjYzMtY3lhbi1uYXZ5KSIgZmlsdGVyPSJ1cmwoI2MzLWJsdXIpIiB0cmFuc2Zvcm09InJvdGF0ZSgtOTAgMzEwIDEzMzEuNSkiLz48cmVjdCB4PSIyNzMuNSIgeT0iNDgzIiB3aWR0aD0iNTkzIiBoZWlnaHQ9IjE2OTciIGZpbGw9InVybCgjYzMtYmx1ZS12aW9sZXQpIiBmaWx0ZXI9InVybCgjYzMtYmx1cikiIHRyYW5zZm9ybT0icm90YXRlKC05MCA1NzAgMTMzMS41KSIvPjwvZz48L3N2Zz4=",
+                        "x": 0,
+                        "y": 0
+                    },
+                    "display": "auto-scale",
+                    "height": 1128,
+                    "width": 1440
+                },
+                "structure": [
+                    {
+                        "item": "viz_header_bg",
+                        "position": {
+                            "x": 20,
+                            "y": 0,
+                            "w": 1400,
+                            "h": 104
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_header_icon",
+                        "position": {
+                            "x": 38,
+                            "y": 18,
+                            "w": 64,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_header",
+                        "position": {
+                            "x": 118,
+                            "y": 8,
+                            "w": 886,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "input_time_range",
+                        "position": {
+                            "x": 1034,
+                            "y": 12,
+                            "w": 370,
+                            "h": 80
+                        },
+                        "type": "input"
+                    },
+                    {
+                        "item": "viz_card_01_background",
+                        "position": {
+                            "x": 20,
+                            "y": 128,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_title",
+                        "position": {
+                            "x": 36,
+                            "y": 140,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_metadata",
+                        "position": {
+                            "x": 36,
+                            "y": 176,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_description",
+                        "position": {
+                            "x": 36,
+                            "y": 204,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_singlevalue",
+                        "position": {
+                            "x": 36,
+                            "y": 284,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_trend",
+                        "position": {
+                            "x": 36,
+                            "y": 376,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_drilldown_trigger",
+                        "position": {
+                            "x": 418,
+                            "y": 134,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_background",
+                        "position": {
+                            "x": 493,
+                            "y": 128,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_title",
+                        "position": {
+                            "x": 509,
+                            "y": 140,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_metadata",
+                        "position": {
+                            "x": 509,
+                            "y": 176,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_description",
+                        "position": {
+                            "x": 509,
+                            "y": 204,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_singlevalue",
+                        "position": {
+                            "x": 509,
+                            "y": 284,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_trend",
+                        "position": {
+                            "x": 509,
+                            "y": 376,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_drilldown_trigger",
+                        "position": {
+                            "x": 891,
+                            "y": 134,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_background",
+                        "position": {
+                            "x": 966,
+                            "y": 128,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_title",
+                        "position": {
+                            "x": 982,
+                            "y": 140,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_metadata",
+                        "position": {
+                            "x": 982,
+                            "y": 176,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_description",
+                        "position": {
+                            "x": 982,
+                            "y": 204,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_singlevalue",
+                        "position": {
+                            "x": 982,
+                            "y": 284,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_trend",
+                        "position": {
+                            "x": 982,
+                            "y": 376,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_drilldown_trigger",
+                        "position": {
+                            "x": 1364,
+                            "y": 134,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_background",
+                        "position": {
+                            "x": 20,
+                            "y": 624,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_title",
+                        "position": {
+                            "x": 36,
+                            "y": 636,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_metadata",
+                        "position": {
+                            "x": 36,
+                            "y": 672,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_description",
+                        "position": {
+                            "x": 36,
+                            "y": 700,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_singlevalue",
+                        "position": {
+                            "x": 36,
+                            "y": 780,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_trend",
+                        "position": {
+                            "x": 36,
+                            "y": 872,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_drilldown_trigger",
+                        "position": {
+                            "x": 418,
+                            "y": 630,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_background",
+                        "position": {
+                            "x": 493,
+                            "y": 624,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_title",
+                        "position": {
+                            "x": 509,
+                            "y": 636,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_metadata",
+                        "position": {
+                            "x": 509,
+                            "y": 672,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_description",
+                        "position": {
+                            "x": 509,
+                            "y": 700,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_singlevalue",
+                        "position": {
+                            "x": 509,
+                            "y": 780,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_trend",
+                        "position": {
+                            "x": 509,
+                            "y": 872,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_drilldown_trigger",
+                        "position": {
+                            "x": 891,
+                            "y": 630,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_background",
+                        "position": {
+                            "x": 966,
+                            "y": 624,
+                            "w": 453,
+                            "h": 476
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_title",
+                        "position": {
+                            "x": 982,
+                            "y": 636,
+                            "w": 377,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_metadata",
+                        "position": {
+                            "x": 982,
+                            "y": 672,
+                            "w": 421,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_description",
+                        "position": {
+                            "x": 982,
+                            "y": 700,
+                            "w": 421,
+                            "h": 68
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_singlevalue",
+                        "position": {
+                            "x": 982,
+                            "y": 780,
+                            "w": 421,
+                            "h": 88
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_trend",
+                        "position": {
+                            "x": 982,
+                            "y": 872,
+                            "w": 421,
+                            "h": 212
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_drilldown_trigger",
+                        "position": {
+                            "x": 1364,
+                            "y": 630,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    }
+                ],
+                "type": "absolute"
+            }
+        },
+        "options": {
+            "showTitleAndDescription": false,
+            "submitButton": false,
+            "submitOnDashboardLoad": true
+        },
+        "tabs": {
+            "items": [
+                {
+                    "label": "overview",
+                    "layoutId": "layout_overview"
+                }
+            ]
+        }
+    },
+    "applicationProperties": {
+        "collapseNavigation": false,
+        "hideEdit": true,
+        "hideExport": false
+    }
+}
+    ]]></definition>
+</dashboard>

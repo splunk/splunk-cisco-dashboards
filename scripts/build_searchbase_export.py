@@ -30,6 +30,7 @@ REPORT = EXPORT_DIR / "searchbase_export_report.txt"
 DROP_FIELDS = {
     "dispatch_context",
     "dispatch_context_force",
+    "drilldown_stanza_id",
     "drilldown_search_name",
     "drilldown_button_title",
 }

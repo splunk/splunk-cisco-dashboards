@@ -69,6 +69,7 @@ import type { SearchbaseRecord } from '@/common/services/searchbaseCatalogue';
 import { ThemeToggle } from '@/common/components/florida/ThemeToggle';
 import { useTheme } from '@/common/hooks/useTheme';
 import { splunkSearchAppUrl } from '@/common/lib/splunkSearchUrl';
+import { C3_SERIES_PALETTE } from '@/common/theme/c3VisualizationPalette';
 import {
     asNumber,
     formatNumber,
@@ -83,7 +84,7 @@ import {
     useSearchbaseRows,
 } from './search';
 
-const VIEW_NAME = 'secure_operations_glass';
+const VIEW_NAME = 'secops_overview';
 
 type Theme = 'light' | 'dark';
 type TabId =
@@ -188,8 +189,7 @@ const FILTER_OPTIONS: Record<FilterKey, string[]> = {
     host: ['Any'],
 };
 
-const LIGHT_COLORS = ['#00a6d2', '#6cc04a', '#f58220', '#7c5cff', '#e5534b'];
-const DARK_COLORS = ['#35cff5', '#8bd45b', '#ff9a4a', '#a88cff', '#ff6f68'];
+const CHART_COLORS = C3_SERIES_PALETTE;
 
 const titleFromPath = (): string => {
     if (typeof window === 'undefined') return VIEW_NAME;
@@ -652,14 +652,14 @@ const SearchChartPanel = ({
     );
     const labelKey = getLabelKey(filteredRows);
     const numericKeys = getNumericKeys(filteredRows).slice(0, 4);
-    const colors = context.theme === 'dark' ? DARK_COLORS : LIGHT_COLORS;
-    const axisColor = context.theme === 'dark' ? '#8fa2bd' : '#61728a';
-    const gridColor = context.theme === 'dark' ? '#1c2a3d' : '#dce5ef';
+    const colors = CHART_COLORS;
+    const axisColor = 'var(--glass-muted)';
+    const gridColor = 'var(--glass-border)';
     const tooltipStyle = {
-        background: context.theme === 'dark' ? '#101a29' : '#ffffff',
-        border: `1px solid ${context.theme === 'dark' ? '#28415d' : '#cbd8e6'}`,
+        background: 'var(--glass-panel-subtle)',
+        border: '1px solid var(--glass-border-strong)',
         borderRadius: 8,
-        color: context.theme === 'dark' ? '#e7f2ff' : '#16243a',
+        color: 'var(--glass-text)',
         fontSize: 12,
     };
 
@@ -2363,6 +2363,15 @@ const SecureOperationsGlassPage = (): JSX.Element => {
     const infoReturnFocusRef = useRef<HTMLElement | null>(null);
     const { catalogue, error: catalogueError } = useSearchbaseCatalogueMap();
 
+    useEffect(() => {
+        document.documentElement.classList.add('scd-overview-active');
+        document.body.classList.add('scd-overview-active');
+        return () => {
+            document.documentElement.classList.remove('scd-overview-active');
+            document.body.classList.remove('scd-overview-active');
+        };
+    }, []);
+
     const setFilter = useCallback((key: FilterKey, value: string): void => {
         setFilters((current) => ({ ...current, [key]: value }));
     }, []);
@@ -2411,7 +2420,12 @@ const SecureOperationsGlassPage = (): JSX.Element => {
     };
 
     return (
-        <div className="scd-glass" data-theme={resolvedTheme}>
+        <div
+            className={`scd-glass scd-overview-page scd-c3-surface ${resolvedTheme} ${
+                resolvedTheme === 'dark' ? 'scd-c3-atmosphere' : ''
+            }`}
+            data-theme={resolvedTheme}
+        >
             <header className="scd-glass-header">
                 <div className="scd-glass-title-block">
                     <div className="scd-glass-title-row">

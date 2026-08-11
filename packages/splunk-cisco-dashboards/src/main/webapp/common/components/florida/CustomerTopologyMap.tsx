@@ -17,6 +17,7 @@ import React, {
     useSyncExternalStore,
 } from 'react';
 import Select from '@splunk/react-ui/Select';
+import Slider from '@splunk/react-ui/Slider';
 import {
     Circle,
     MapContainer,
@@ -43,6 +44,7 @@ import {
     Link2,
     Loader2,
     MapPin,
+    Maximize2,
     MousePointer2,
     Pencil,
     Plus,
@@ -55,8 +57,14 @@ import {
     Terminal,
     Upload,
     X,
+    ZoomIn,
+    ZoomOut,
 } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
+import {
+    OneCdGlassCard,
+    OneCdSurface,
+} from './OneCdSurface';
 import {
     getSearchbaseCatalogue,
     plainTextFromHtml,
@@ -304,10 +312,10 @@ const STATUS_DOT_CLASS: Record<TopologyStatus, string> = {
 };
 
 const STATUS_STROKE: Record<TopologyStatus, string> = {
-    critical: '#ef4444',
-    warning: '#f59e0b',
-    stable: '#22c55e',
-    unknown: '#94a3b8',
+    critical: '#fa5762',
+    warning: '#f0c243',
+    stable: '#4cbf7f',
+    unknown: '#a6adb6',
 };
 
 type RoleBeaconChrome = { fill: string; halo: string; label: string };
@@ -2493,55 +2501,42 @@ export const usePersistedTopology = (
     };
 };
 
-/**
- * Topology animation level: governs the intensity of map animations
- * (marker entrance, link hover bumps, packet streams). Persisted in
- * localStorage so each operator's preference survives reloads.
- *
- *  - 'on'     : full effects (entrance bounce, marching dashes, packet streams)
- *  - 'subtle' : reduced effects (no entrance, slower packets, no bounce)
- *  - 'off'    : every keyframe halted; equivalent to honoring
- *               `prefers-reduced-motion` system-wide
- *
- * `prefers-reduced-motion: reduce` forces the effective level to 'off'
- * regardless of the stored preference. Stored preference is preserved so
- * the user gets their previous setting back if the OS preference flips.
- */
+/** Connector-trail motion is operator controlled and static by default. */
 type TopologyAnimationLevel = 'on' | 'subtle' | 'off';
 
-const TOPOLOGY_ANIMATION_LEVEL_KEY = 'florida-topology-animation-level.v2';
-const DEFAULT_TOPOLOGY_ANIMATION_LEVEL: TopologyAnimationLevel = 'subtle';
-const TOPOLOGY_ANIMATION_LEVELS: TopologyAnimationLevel[] = [
-    'on',
-    'subtle',
-    'off',
-];
+const TOPOLOGY_CONNECTOR_SPEED_KEY = 'florida-topology-connector-speed.v1';
+const DEFAULT_TOPOLOGY_CONNECTOR_SPEED = 0;
+const MIN_TOPOLOGY_CONNECTOR_SPEED = 0;
+const MAX_TOPOLOGY_CONNECTOR_SPEED = 2;
+const TOPOLOGY_CONNECTOR_SPEED_STEP = 0.25;
 
-const readStoredAnimationLevel = (): TopologyAnimationLevel => {
-    if (typeof window === 'undefined') return 'on';
+const sanitizeTopologyConnectorSpeed = (value: unknown): number => {
+    const numeric = typeof value === 'number' ? value : Number(value);
+    if (!Number.isFinite(numeric)) return DEFAULT_TOPOLOGY_CONNECTOR_SPEED;
+    const clamped = Math.min(
+        MAX_TOPOLOGY_CONNECTOR_SPEED,
+        Math.max(MIN_TOPOLOGY_CONNECTOR_SPEED, numeric)
+    );
+    return Math.round(clamped / TOPOLOGY_CONNECTOR_SPEED_STEP) * TOPOLOGY_CONNECTOR_SPEED_STEP;
+};
+
+const readStoredConnectorSpeed = (): number => {
+    if (typeof window === 'undefined') return DEFAULT_TOPOLOGY_CONNECTOR_SPEED;
     try {
-        const stored = window.localStorage.getItem(
-            TOPOLOGY_ANIMATION_LEVEL_KEY
-        );
-        if (
-            stored === 'on' ||
-            stored === 'subtle' ||
-            stored === 'off'
-        ) {
-            return stored;
-        }
+        const stored = window.localStorage.getItem(TOPOLOGY_CONNECTOR_SPEED_KEY);
+        if (stored !== null) return sanitizeTopologyConnectorSpeed(stored);
     } catch {
         /* localStorage may be unavailable (private mode etc.) */
     }
-    return DEFAULT_TOPOLOGY_ANIMATION_LEVEL;
+    return DEFAULT_TOPOLOGY_CONNECTOR_SPEED;
 };
 
-const subscribeStoredAnimationLevel = (
+const subscribeStoredConnectorSpeed = (
     onChange: () => void
 ): (() => void) => {
     if (typeof window === 'undefined') return () => undefined;
     const handler = (event: StorageEvent) => {
-        if (event.key === TOPOLOGY_ANIMATION_LEVEL_KEY) onChange();
+        if (event.key === TOPOLOGY_CONNECTOR_SPEED_KEY) onChange();
     };
     window.addEventListener('storage', handler);
     return () => window.removeEventListener('storage', handler);
@@ -2561,16 +2556,24 @@ const subscribeReducedMotion = (onChange: () => void): (() => void) => {
     return () => mql.removeListener(onChange);
 };
 
-const useTopologyAnimationLevel = (): {
-    level: TopologyAnimationLevel; // effective level (after reduced-motion override)
-    storedLevel: TopologyAnimationLevel; // raw stored preference
-    setLevel: (next: TopologyAnimationLevel) => void;
+const topologyAnimationLevelForSpeed = (speed: number): TopologyAnimationLevel =>
+    speed <= 0 ? 'off' : speed < 1 ? 'subtle' : 'on';
+
+const topologyConnectorSpeedLabel = (speed: number): string =>
+    speed <= 0
+        ? 'Static'
+        : `${speed.toFixed(2).replace(/\.00$/, '').replace(/0$/, '')}×`;
+
+const useTopologyConnectorSpeed = (): {
+    speed: number; // effective speed (after reduced-motion override)
+    storedSpeed: number; // raw stored preference
+    setSpeed: (next: number) => void;
     reducedMotion: boolean;
 } => {
-    const storedLevel = useSyncExternalStore<TopologyAnimationLevel>(
-        subscribeStoredAnimationLevel,
-        readStoredAnimationLevel,
-        () => 'on'
+    const storedSpeed = useSyncExternalStore<number>(
+        subscribeStoredConnectorSpeed,
+        readStoredConnectorSpeed,
+        () => DEFAULT_TOPOLOGY_CONNECTOR_SPEED
     );
     const reducedMotion = useSyncExternalStore(
         subscribeReducedMotion,
@@ -2582,20 +2585,21 @@ const useTopologyAnimationLevel = (): {
         },
         () => false
     );
-    const setLevel = useCallback((next: TopologyAnimationLevel) => {
+    const setSpeed = useCallback((next: number) => {
         if (typeof window === 'undefined') return;
+        const sanitized = sanitizeTopologyConnectorSpeed(next);
         try {
             window.localStorage.setItem(
-                TOPOLOGY_ANIMATION_LEVEL_KEY,
-                next
+                TOPOLOGY_CONNECTOR_SPEED_KEY,
+                String(sanitized)
             );
             // `storage` events do not fire in the same tab, so dispatch
             // manually to nudge other useSyncExternalStore subscribers
             // mounted in the same window.
             window.dispatchEvent(
                 new StorageEvent('storage', {
-                    key: TOPOLOGY_ANIMATION_LEVEL_KEY,
-                    newValue: next,
+                    key: TOPOLOGY_CONNECTOR_SPEED_KEY,
+                    newValue: String(sanitized),
                 })
             );
         } catch {
@@ -2603,19 +2607,12 @@ const useTopologyAnimationLevel = (): {
         }
     }, []);
     return {
-        level: reducedMotion ? 'off' : storedLevel,
-        storedLevel,
-        setLevel,
+        speed: reducedMotion ? 0 : storedSpeed,
+        storedSpeed,
+        setSpeed,
         reducedMotion,
     };
 };
-
-const TOPOLOGY_ANIMATION_LEVEL_LABELS: Record<TopologyAnimationLevel, string> =
-    {
-        on: 'Animations: On',
-        subtle: 'Animations: Subtle',
-        off: 'Animations: Off',
-    };
 
 type TopologyRoleLegendMode = 'compact' | 'expanded';
 
@@ -2708,10 +2705,10 @@ const topologyAnimationCss = `
             drop-shadow(0 0 4px currentColor)
             drop-shadow(0 0 12px currentColor);
     }
-    .customer-topology-link--critical { color: #ef4444; }
-    .customer-topology-link--warning  { color: #f59e0b; }
-    .customer-topology-link--stable   { color: #22c55e; }
-    .customer-topology-link--unknown  { color: #94a3b8; }
+    .customer-topology-link--critical { color: #fa5762; }
+    .customer-topology-link--warning  { color: #f0c243; }
+    .customer-topology-link--stable   { color: #4cbf7f; }
+    .customer-topology-link--unknown  { color: #a6adb6; }
     .customer-topology-alert-ring {
         animation: customer-topology-pulse 2.6s ease-in-out infinite;
     }
@@ -2944,10 +2941,10 @@ const topologyAnimationCss = `
     .customer-topology-packet {
         animation: customer-topology-packet-glow 1.6s ease-in-out infinite;
     }
-    .customer-topology-packet--critical { color: #ef4444; }
-    .customer-topology-packet--warning  { color: #f59e0b; }
-    .customer-topology-packet--stable   { color: #22c55e; }
-    .customer-topology-packet--unknown  { color: #94a3b8; }
+    .customer-topology-packet--critical { color: #fa5762; }
+    .customer-topology-packet--warning  { color: #f0c243; }
+    .customer-topology-packet--stable   { color: #4cbf7f; }
+    .customer-topology-packet--unknown  { color: #a6adb6; }
     /* Subtle level: slow the packet glow but keep packets visible */
     .customer-topology-anim--subtle .customer-topology-packet {
         animation-duration: 2.6s;
@@ -3957,17 +3954,17 @@ const linkFlowProfile = (link: TopologyLink): LinkFlowProfile => {
  * being mistaken for healthy, warning, or critical search results.
  */
 const STATUS_RING_COLOR: Record<TopologyStatus, string> = {
-    critical: '#ef4444',
-    warning: '#f59e0b',
-    stable: '#10b981',
-    unknown: '#94a3b8',
+    critical: '#fa5762',
+    warning: '#f0c243',
+    stable: '#4cbf7f',
+    unknown: '#a6adb6',
 };
 
 const STATUS_HALO_RGBA: Record<TopologyStatus, string> = {
-    critical: 'rgba(239, 68, 68, 0.45)',
-    warning: 'rgba(245, 158, 11, 0.40)',
-    stable: 'rgba(16, 185, 129, 0.32)',
-    unknown: 'rgba(148, 163, 184, 0.28)',
+    critical: 'rgba(250, 87, 98, 0.45)',
+    warning: 'rgba(240, 194, 67, 0.40)',
+    stable: 'rgba(76, 191, 127, 0.32)',
+    unknown: 'rgba(166, 173, 182, 0.28)',
 };
 
 const STATUS_MARKER_SPEED: Record<TopologyStatus, string> = {
@@ -4131,11 +4128,7 @@ interface TopologyLinkPathProps {
     target: TopologySite;
     isSelected: boolean;
     onSelect: (link: TopologyLink) => void;
-    /**
-     * Effective animation level. 'off' suppresses SMIL marching/breathing
-     * entirely; 'subtle' slows it; 'on' uses the original cadence.
-     */
-    animationLevel: TopologyAnimationLevel;
+    connectorSpeed: number;
 }
 
 /**
@@ -4158,7 +4151,7 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
     target,
     isSelected,
     onSelect,
-    animationLevel,
+    connectorSpeed,
 }) => {
     const positions = useMemo(
         () =>
@@ -4177,12 +4170,12 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
     // the line readable as "alive" without the eye-grabbing cadence of full.
     // Off level: skip SMIL injection entirely so the path is fully static.
     const flowSeconds =
-        animationLevel === 'off'
+        connectorSpeed <= 0
             ? null
-            : animationLevel === 'subtle' && profile.flowSeconds !== null
-            ? profile.flowSeconds * 1.4
-            : profile.flowSeconds;
-    const enableBreathe = animationLevel !== 'off' && profile.breathe;
+            : profile.flowSeconds === null
+            ? null
+            : profile.flowSeconds / connectorSpeed;
+    const enableBreathe = connectorSpeed > 0 && profile.breathe;
 
     useEffect(() => {
         const polyline = polylineRef.current;
@@ -4212,7 +4205,7 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
                 );
                 breathe.setAttribute(
                     'dur',
-                    animationLevel === 'subtle' ? '2.4s' : '1.4s'
+                    `${1.4 / connectorSpeed}s`
                 );
                 breathe.setAttribute('repeatCount', 'indefinite');
                 breathe.setAttribute('data-customer-topology-flow', 'breathe');
@@ -4231,7 +4224,7 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
                 ?.querySelectorAll('animate[data-customer-topology-flow]')
                 .forEach((node) => node.remove());
         };
-    }, [flowSeconds, enableBreathe, profile.opacity, animationLevel]);
+    }, [connectorSpeed, enableBreathe, flowSeconds, profile.opacity]);
 
     const handleClick = useCallback(
         (event: L.LeafletMouseEvent) => {
@@ -4355,7 +4348,7 @@ const packetProfile = (
             count: subtle ? 1 : 2,
             durationSeconds: subtle ? 8.0 : 6.5,
             radius: subtle ? 2.2 : 2.4,
-            fill: '#94a3b8',
+            fill: '#a6adb6',
             statusClass: 'customer-topology-packet--unknown',
             opacity: subtle ? 0.35 : 0.45,
         };
@@ -4366,7 +4359,7 @@ const packetProfile = (
                 count: subtle ? 2 : 3,
                 durationSeconds: subtle ? 2.4 : 1.6,
                 radius: subtle ? 3.2 : 3.6,
-                fill: '#ef4444',
+                fill: '#fa5762',
                 statusClass: 'customer-topology-packet--critical',
                 opacity: 0.95,
             };
@@ -4375,7 +4368,7 @@ const packetProfile = (
                 count: subtle ? 2 : 4,
                 durationSeconds: subtle ? 4.4 : 3.2,
                 radius: subtle ? 2.8 : 3.0,
-                fill: '#f59e0b',
+                fill: '#f0c243',
                 statusClass: 'customer-topology-packet--warning',
                 opacity: 0.92,
             };
@@ -4388,7 +4381,7 @@ const packetProfile = (
                 count: subtle ? 3 : 5,
                 durationSeconds: subtle ? 5.5 : 4.5,
                 radius: subtle ? 2.8 : 3.2,
-                fill: '#22c55e',
+                fill: '#4cbf7f',
                 statusClass: 'customer-topology-packet--stable',
                 opacity: subtle ? 0.85 : 0.95,
             };
@@ -4402,6 +4395,7 @@ interface LinkPacketLayerProps {
         target: TopologySite;
     }>;
     animationLevel: TopologyAnimationLevel;
+    connectorSpeed: number;
 }
 
 const linkPacketPathD = (
@@ -4469,6 +4463,7 @@ const linkPacketPathD = (
 const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
     linkSegments,
     animationLevel,
+    connectorSpeed,
 }) => {
     const map = useMap();
     const groupRef = useRef<SVGGElement | null>(null);
@@ -4526,7 +4521,7 @@ const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
         const updateGeometry = () => {
             animationFrame = 0;
             const group = groupRef.current;
-            if (!group || animationLevel === 'off') return;
+            if (!group || connectorSpeed <= 0) return;
             const paths = new Map(
                 Array.from(
                     group.querySelectorAll<SVGPathElement>(
@@ -4560,7 +4555,7 @@ const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
             map.off('viewreset', scheduleGeometryUpdate);
             map.off('resize', scheduleGeometryUpdate);
         };
-    }, [animationLevel, linkSegments, map]);
+    }, [connectorSpeed, linkSegments, map]);
 
     // Step 3: imperatively rebuild the packet DOM whenever inputs change.
     // We blow away the previous children and rebuild — `<animateMotion>`
@@ -4575,7 +4570,7 @@ const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
         while (group.firstChild) {
             group.removeChild(group.firstChild);
         }
-        if (animationLevel === 'off') return;
+        if (connectorSpeed <= 0) return;
 
         const defs = document.createElementNS(SVG_NS, 'defs');
         group.appendChild(defs);
@@ -4597,7 +4592,7 @@ const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
             // Round-trip motion: one packet now travels source → target → source.
             // Doubling duration preserves the one-way speed operators already
             // reviewed while making the bidirectional circuit intent obvious.
-            const roundTripSeconds = profile.durationSeconds * 2;
+            const roundTripSeconds = (profile.durationSeconds * 2) / connectorSpeed;
 
             for (let i = 0; i < profile.count; i++) {
                 // Stagger packet starts so they appear evenly distributed
@@ -4635,7 +4630,7 @@ const LinkPacketLayer: React.FC<LinkPacketLayerProps> = ({
                 group.appendChild(circle);
             }
         }
-    }, [linkSegments, animationLevel, map, version]);
+    }, [animationLevel, connectorSpeed, linkSegments, map, version]);
 
     return null;
 };
@@ -4848,16 +4843,47 @@ type SelectedTarget =
 
 type TopologySurfaceMode = 'command' | 'geo';
 
+const TOPOLOGY_SURFACE_OPTIONS: readonly [TopologySurfaceMode, string][] = [
+    ['command', 'Command'],
+    ['geo', 'Geo'],
+];
+
 interface CommandPoint {
     x: number;
     y: number;
 }
+
+interface CommandViewport extends CommandPoint {
+    scale: number;
+}
+
+const COMMAND_VIEWBOX_WIDTH = 1000;
+const COMMAND_VIEWBOX_HEIGHT = 620;
+const COMMAND_MIN_SCALE = 1;
+const COMMAND_MAX_SCALE = 4;
+const COMMAND_ZOOM_STEP = 1.32;
+const COMMAND_PAN_STEP = 54;
+const COMMAND_FIT_VIEWPORT: CommandViewport = Object.freeze({
+    x: 0,
+    y: 0,
+    scale: COMMAND_MIN_SCALE,
+});
+
+const clampCommandViewport = ({ x, y, scale }: CommandViewport): CommandViewport => {
+    const boundedScale = Math.min(COMMAND_MAX_SCALE, Math.max(COMMAND_MIN_SCALE, scale));
+    return {
+        scale: boundedScale,
+        x: Math.min(0, Math.max(COMMAND_VIEWBOX_WIDTH * (1 - boundedScale), x)),
+        y: Math.min(0, Math.max(COMMAND_VIEWBOX_HEIGHT * (1 - boundedScale), y)),
+    };
+};
 
 interface TopologyCommandViewProps {
     topology: CustomerTopology;
     selected: SelectedTarget | null;
     spotlightSiteId?: string;
     animationLevel: TopologyAnimationLevel;
+    connectorSpeed: number;
     isDark: boolean;
     onSelectSite: (site: TopologySite) => void;
     onSelectLink: (link: TopologyLink) => void;
@@ -4874,10 +4900,233 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
     selected,
     spotlightSiteId,
     animationLevel,
+    connectorSpeed,
     isDark,
     onSelectSite,
     onSelectLink,
 }) => {
+    const svgRef = useRef<SVGSVGElement | null>(null);
+    const viewportGroupRef = useRef<SVGGElement | null>(null);
+    const viewportRef = useRef<CommandViewport>(COMMAND_FIT_VIEWPORT);
+    const pendingViewportRef = useRef<CommandViewport>(COMMAND_FIT_VIEWPORT);
+    const viewportFrameRef = useRef<number | null>(null);
+    const zoomLabelRef = useRef<HTMLSpanElement | null>(null);
+    const zoomInButtonRef = useRef<HTMLButtonElement | null>(null);
+    const zoomOutButtonRef = useRef<HTMLButtonElement | null>(null);
+    const panRef = useRef<{
+        pointerId: number;
+        point: CommandPoint;
+    } | null>(null);
+
+    const scheduleViewport = useCallback((candidate: CommandViewport) => {
+        const bounded = clampCommandViewport(candidate);
+        viewportRef.current = bounded;
+        pendingViewportRef.current = bounded;
+
+        if (viewportFrameRef.current !== null) {
+            return;
+        }
+        viewportFrameRef.current = window.requestAnimationFrame(() => {
+            viewportFrameRef.current = null;
+            const next = pendingViewportRef.current;
+            viewportGroupRef.current?.setAttribute(
+                'transform',
+                `translate(${next.x} ${next.y}) scale(${next.scale})`
+            );
+            if (zoomLabelRef.current) {
+                zoomLabelRef.current.textContent = `${Math.round(next.scale * 100)}%`;
+            }
+            if (zoomInButtonRef.current) {
+                zoomInButtonRef.current.disabled = next.scale >= COMMAND_MAX_SCALE - 0.001;
+            }
+            if (zoomOutButtonRef.current) {
+                zoomOutButtonRef.current.disabled = next.scale <= COMMAND_MIN_SCALE + 0.001;
+            }
+            if (svgRef.current) {
+                let cursor = 'zoom-in';
+                if (panRef.current !== null) {
+                    cursor = 'grabbing';
+                } else if (next.scale > COMMAND_MIN_SCALE + 0.001) {
+                    cursor = 'grab';
+                }
+                svgRef.current.style.cursor = cursor;
+            }
+        });
+    }, []);
+
+    const commandPointFromClient = useCallback((clientX: number, clientY: number) => {
+        const { current: svg } = svgRef;
+        if (!svg) {
+            return { x: COMMAND_VIEWBOX_WIDTH / 2, y: COMMAND_VIEWBOX_HEIGHT / 2 };
+        }
+
+        const matrix = svg.getScreenCTM();
+        if (matrix) {
+            const point = svg.createSVGPoint();
+            point.x = clientX;
+            point.y = clientY;
+            const local = point.matrixTransform(matrix.inverse());
+            return { x: local.x, y: local.y };
+        }
+
+        const bounds = svg.getBoundingClientRect();
+        return {
+            x: ((clientX - bounds.left) / Math.max(1, bounds.width)) * COMMAND_VIEWBOX_WIDTH,
+            y: ((clientY - bounds.top) / Math.max(1, bounds.height)) * COMMAND_VIEWBOX_HEIGHT,
+        };
+    }, []);
+
+    const zoomAtPoint = useCallback(
+        (factor: number, anchor: CommandPoint) => {
+            const { current } = viewportRef;
+            const nextScale = Math.min(
+                COMMAND_MAX_SCALE,
+                Math.max(COMMAND_MIN_SCALE, current.scale * factor)
+            );
+            if (Math.abs(nextScale - current.scale) < 0.001) {
+                return;
+            }
+            scheduleViewport({
+                scale: nextScale,
+                x: anchor.x - ((anchor.x - current.x) / current.scale) * nextScale,
+                y: anchor.y - ((anchor.y - current.y) / current.scale) * nextScale,
+            });
+        },
+        [scheduleViewport]
+    );
+
+    const zoomAtCenter = useCallback(
+        (factor: number) =>
+            zoomAtPoint(factor, {
+                x: COMMAND_VIEWBOX_WIDTH / 2,
+                y: COMMAND_VIEWBOX_HEIGHT / 2,
+            }),
+        [zoomAtPoint]
+    );
+
+    useEffect(() => {
+        const { current: svg } = svgRef;
+        if (!svg) {
+            return undefined;
+        }
+
+        const handleWheel = (event: WheelEvent) => {
+            event.preventDefault();
+            const factor = Math.min(1.22, Math.max(0.82, Math.exp(-event.deltaY * 0.0016)));
+            zoomAtPoint(factor, commandPointFromClient(event.clientX, event.clientY));
+        };
+        svg.addEventListener('wheel', handleWheel, { passive: false });
+        return () => svg.removeEventListener('wheel', handleWheel);
+    }, [commandPointFromClient, zoomAtPoint]);
+
+    useEffect(() => {
+        scheduleViewport(COMMAND_FIT_VIEWPORT);
+        return () => {
+            if (viewportFrameRef.current !== null) {
+                window.cancelAnimationFrame(viewportFrameRef.current);
+                viewportFrameRef.current = null;
+            }
+        };
+    }, [scheduleViewport]);
+
+    const beginPan = useCallback(
+        (event: React.PointerEvent<SVGSVGElement>) => {
+            if (
+                event.button !== 0 ||
+                viewportRef.current.scale <= COMMAND_MIN_SCALE + 0.001 ||
+                (event.target as Element).closest('[data-command-interactive="true"]')
+            ) {
+                return;
+            }
+            event.preventDefault();
+            event.currentTarget.focus({ preventScroll: true });
+            event.currentTarget.setPointerCapture(event.pointerId);
+            panRef.current = {
+                pointerId: event.pointerId,
+                point: commandPointFromClient(event.clientX, event.clientY),
+            };
+            const svg = event.currentTarget;
+            svg.style.cursor = 'grabbing';
+        },
+        [commandPointFromClient]
+    );
+
+    const continuePan = useCallback(
+        (event: React.PointerEvent<SVGSVGElement>) => {
+            const pan = panRef.current;
+            if (!pan || pan.pointerId !== event.pointerId) {
+                return;
+            }
+            event.preventDefault();
+            const point = commandPointFromClient(event.clientX, event.clientY);
+            const { current } = viewportRef;
+            scheduleViewport({
+                ...current,
+                x: current.x + point.x - pan.point.x,
+                y: current.y + point.y - pan.point.y,
+            });
+            panRef.current = { ...pan, point };
+        },
+        [commandPointFromClient, scheduleViewport]
+    );
+
+    const endPan = useCallback((event: React.PointerEvent<SVGSVGElement>) => {
+        if (panRef.current?.pointerId !== event.pointerId) {
+            return;
+        }
+        panRef.current = null;
+        const svg = event.currentTarget;
+        if (svg.hasPointerCapture(event.pointerId)) {
+            svg.releasePointerCapture(event.pointerId);
+        }
+        svg.style.cursor =
+            viewportRef.current.scale > COMMAND_MIN_SCALE + 0.001 ? 'grab' : 'zoom-in';
+    }, []);
+
+    const handleCommandKeyDown = useCallback(
+        (event: React.KeyboardEvent<SVGSVGElement>) => {
+            if (event.target !== event.currentTarget) {
+                return;
+            }
+            const { current } = viewportRef;
+            switch (event.key) {
+                case '+':
+                case '=':
+                    event.preventDefault();
+                    zoomAtCenter(COMMAND_ZOOM_STEP);
+                    break;
+                case '-':
+                case '_':
+                    event.preventDefault();
+                    zoomAtCenter(1 / COMMAND_ZOOM_STEP);
+                    break;
+                case '0':
+                    event.preventDefault();
+                    scheduleViewport(COMMAND_FIT_VIEWPORT);
+                    break;
+                case 'ArrowLeft':
+                    event.preventDefault();
+                    scheduleViewport({ ...current, x: current.x + COMMAND_PAN_STEP });
+                    break;
+                case 'ArrowRight':
+                    event.preventDefault();
+                    scheduleViewport({ ...current, x: current.x - COMMAND_PAN_STEP });
+                    break;
+                case 'ArrowUp':
+                    event.preventDefault();
+                    scheduleViewport({ ...current, y: current.y + COMMAND_PAN_STEP });
+                    break;
+                case 'ArrowDown':
+                    event.preventDefault();
+                    scheduleViewport({ ...current, y: current.y - COMMAND_PAN_STEP });
+                    break;
+                default:
+                    break;
+            }
+        },
+        [scheduleViewport, zoomAtCenter]
+    );
+
     const points = useMemo(() => {
         const degree = new Map(topology.sites.map((site) => [site.id, 0]));
         for (const link of topology.links) {
@@ -4926,17 +5175,31 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
             <style>{`
                 @keyframes scd-command-flow { to { stroke-dashoffset: -38; } }
                 @keyframes scd-command-pulse { 0%, 100% { opacity: .24; transform: scale(1); } 50% { opacity: .58; transform: scale(1.14); } }
-                .scd-command-flow--on { animation: scd-command-flow 1.8s linear infinite; }
-                .scd-command-flow--subtle { animation: scd-command-flow 4.6s linear infinite; }
+                .scd-command-flow { animation: scd-command-flow 1.8s linear infinite; }
                 .scd-command-pulse { transform-box: fill-box; transform-origin: center; animation: scd-command-pulse 2.4s ease-in-out infinite; }
             `}</style>
             <svg
+                ref={svgRef}
                 viewBox="0 0 1000 620"
                 preserveAspectRatio="xMidYMid meet"
-                className="h-full w-full"
+                className="h-full w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-sky-400"
                 role="group"
-                aria-label="Interactive site and path topology"
+                tabIndex={0}
+                aria-label="Interactive site and path topology. Scroll or use plus and minus to zoom, drag to pan, and press zero to fit."
+                style={{ touchAction: 'none', cursor: 'zoom-in' }}
+                onPointerDown={beginPan}
+                onPointerMove={continuePan}
+                onPointerUp={endPan}
+                onPointerCancel={endPan}
+                onDoubleClick={(event) =>
+                    zoomAtPoint(
+                        COMMAND_ZOOM_STEP,
+                        commandPointFromClient(event.clientX, event.clientY)
+                    )
+                }
+                onKeyDown={handleCommandKeyDown}
             >
+                <title>Scroll to zoom, drag to pan, or use the map controls.</title>
                 <defs>
                     <pattern id="scd-command-grid" width="32" height="32" patternUnits="userSpaceOnUse">
                         <path
@@ -4952,6 +5215,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
                         <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
                     </filter>
                 </defs>
+                <g ref={viewportGroupRef}>
                 <rect width="1000" height="620" fill="url(#scd-command-grid)" />
                 <circle cx="500" cy="310" r="116" fill="none" stroke={isDark ? '#38bdf8' : '#0284c7'} strokeOpacity="0.12" />
                 <circle cx="500" cy="310" r="214" fill="none" stroke={isDark ? '#38bdf8' : '#0284c7'} strokeOpacity="0.08" strokeDasharray="4 10" />
@@ -4978,10 +5242,11 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
                                 strokeWidth={selectedLink ? 4.5 : 3}
                                 strokeDasharray="10 9"
                                 strokeLinecap="round"
-                                className={
-                                    animationLevel === 'off'
-                                        ? undefined
-                                        : `scd-command-flow--${animationLevel}`
+                                className={connectorSpeed > 0 ? 'scd-command-flow' : undefined}
+                                style={
+                                    connectorSpeed > 0
+                                        ? { animationDuration: `${1.8 / connectorSpeed}s` }
+                                        : undefined
                                 }
                                 filter={selectedLink ? 'url(#scd-command-glow)' : undefined}
                             />
@@ -4993,6 +5258,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
                                 className="cursor-pointer focus:outline-none"
                                 role="button"
                                 tabIndex={0}
+                                data-command-interactive="true"
                                 aria-label={`${link.name}, ${link.status} path`}
                                 onClick={() => onSelectLink(link)}
                                 onKeyDown={(event) => {
@@ -5021,6 +5287,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
                             role="button"
                             tabIndex={0}
                             aria-label={`${site.name}, ${topologyRoleLabel(site.role)}, ${site.status}`}
+                            data-command-interactive="true"
                             className="cursor-pointer focus:outline-none"
                             onClick={() => onSelectSite(site)}
                             onKeyDown={(event) => {
@@ -5053,7 +5320,59 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
                         </g>
                     );
                 })}
+                </g>
             </svg>
+
+            <div
+                className={cn(
+                    'absolute right-3 top-14 z-[1050] inline-flex items-center rounded-lg border p-1 shadow-xl backdrop-blur-xl',
+                    isDark
+                        ? 'border-slate-700/80 bg-slate-950/72 text-slate-200'
+                        : 'border-sky-200/80 bg-white/82 text-slate-700'
+                )}
+                role="group"
+                aria-label="Command topology zoom controls"
+            >
+                <button
+                    ref={zoomOutButtonRef}
+                    type="button"
+                    onClick={() => zoomAtCenter(1 / COMMAND_ZOOM_STEP)}
+                    title="Zoom out"
+                    aria-label="Zoom out command topology"
+                    className="rounded-md p-1.5 transition-colors hover:bg-sky-500/15 focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                    <ZoomOut className="h-4 w-4" />
+                </button>
+                <span
+                    ref={zoomLabelRef}
+                    className="min-w-[48px] px-1 text-center text-[10px] font-black tabular-nums tracking-wide"
+                    aria-live="polite"
+                >
+                    100%
+                </span>
+                <button
+                    ref={zoomInButtonRef}
+                    type="button"
+                    onClick={() => zoomAtCenter(COMMAND_ZOOM_STEP)}
+                    title="Zoom in"
+                    aria-label="Zoom in command topology"
+                    className="rounded-md p-1.5 transition-colors hover:bg-sky-500/15 focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                    <ZoomIn className="h-4 w-4" />
+                </button>
+                <span
+                    className={cn('mx-1 h-5 w-px', isDark ? 'bg-slate-700' : 'bg-sky-200')}
+                />
+                <button
+                    type="button"
+                    onClick={() => scheduleViewport(COMMAND_FIT_VIEWPORT)}
+                    title="Fit topology"
+                    aria-label="Fit command topology to view"
+                    className="rounded-md p-1.5 transition-colors hover:bg-sky-500/15 focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-400"
+                >
+                    <Maximize2 className="h-4 w-4" />
+                </button>
+            </div>
 
             <div className={cn(
                 'pointer-events-none absolute bottom-3 right-3 grid grid-cols-3 gap-1 rounded-lg border p-1.5 shadow-xl backdrop-blur-xl',
@@ -5123,6 +5442,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     const [pickSiteId, setPickSiteId] = useState<string | null>(null);
     const [roleLegendMode, setRoleLegendMode] =
         useState<TopologyRoleLegendMode>(readStoredRoleLegendMode);
+    const [motionSettingsOpen, setMotionSettingsOpen] = useState(false);
     const [tilePresetId, setTilePresetId] = useState<TileLayerPreset['id']>(
         () => defaultTileLayerPresetId(isDark)
     );
@@ -5166,16 +5486,20 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         setTilePresetId(defaultTileLayerPresetId(isDark));
     }, [isDark]);
 
-    // Animation level (controls marker entrance, link hover, packet streams).
+    // Connector trails are static until the operator chooses a speed. The
+    // derived level keeps the existing reduced/full topology affordances in
+    // sync while the numeric value gives direct speed control.
     const {
-        level: animationLevel,
-        storedLevel: storedAnimationLevel,
-        setLevel: setAnimationLevel,
+        speed: connectorSpeed,
+        storedSpeed: storedConnectorSpeed,
+        setSpeed: setConnectorSpeed,
         reducedMotion,
-    } = useTopologyAnimationLevel();
+    } = useTopologyConnectorSpeed();
+    const animationLevel = topologyAnimationLevelForSpeed(connectorSpeed);
     const visualAnimationLevel: TopologyAnimationLevel = isEditorOpen
         ? 'off'
         : animationLevel;
+    const visualConnectorSpeed = isEditorOpen ? 0 : connectorSpeed;
 
     const setRoleLegendExpanded = useCallback((expanded: boolean) => {
         const next: TopologyRoleLegendMode = expanded ? 'expanded' : 'compact';
@@ -6192,7 +6516,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     };
 
     return (
-        <div
+        <OneCdSurface
             className={cn(
                 'relative w-full h-full min-h-[320px] overflow-hidden border rounded-xl shadow-inner group',
                 `customer-topology-anim--${visualAnimationLevel}`,
@@ -6200,6 +6524,10 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     ? 'bg-slate-900 border-slate-800'
                     : 'bg-slate-100 border-slate-200'
             )}
+            spotlight="element"
+            spotlightIntensity="low"
+            spotlightInset={{ left: '18%', bottom: '-44%' }}
+            spotlightScale={{ x: 0.65, y: 0.42 }}
         >
             <style>{topologyAnimationCss}</style>
 
@@ -6239,6 +6567,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     selected={resolvedSelected}
                     spotlightSiteId={spotlightSite?.id}
                     animationLevel={visualAnimationLevel}
+                    connectorSpeed={visualConnectorSpeed}
                     isDark={isDark}
                     onSelectSite={selectSite}
                     onSelectLink={selectLink}
@@ -6287,13 +6616,14 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                             resolvedSelected.link.id === link.id
                         }
                         onSelect={selectLink}
-                        animationLevel={visualAnimationLevel}
+                        connectorSpeed={visualConnectorSpeed}
                     />
                 ))}
 
                 <LinkPacketLayer
                     linkSegments={linkSegments}
                     animationLevel={visualAnimationLevel}
+                    connectorSpeed={visualConnectorSpeed}
                 />
 
 
@@ -6342,39 +6672,29 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             </MapContainer>
             )}
 
-            <div
-                className={cn(
-                    'absolute right-3 top-3 z-[1100] inline-flex rounded-lg border p-1 shadow-lg backdrop-blur-xl',
-                    isDark
-                        ? 'border-slate-700/80 bg-slate-950/70'
-                        : 'border-sky-200/80 bg-white/80'
-                )}
-                role="tablist"
-                aria-label="Connectivity presentation"
+            <OneCdGlassCard
+                tag="div"
+                className="absolute right-3 top-3 z-[1100] inline-flex p-1.5"
             >
-                {([
-                    ['command', 'Command'],
-                    ['geo', 'Geo'],
-                ] as const).map(([mode, label]) => (
-                    <button
-                        key={mode}
-                        type="button"
-                        role="tab"
-                        aria-selected={surfaceMode === mode}
-                        onClick={() => setSurfaceMode(mode)}
-                        className={cn(
-                            'rounded-md px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-400',
-                            surfaceMode === mode
-                                ? 'bg-sky-500 text-white shadow-sm'
-                                : isDark
-                                ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-                                : 'text-slate-500 hover:bg-sky-50 hover:text-sky-800'
-                        )}
-                    >
-                        {label}
-                    </button>
-                ))}
-            </div>
+                <Select
+                    inline
+                    appearance="subtle"
+                    labelText="Connectivity presentation"
+                    value={surfaceMode}
+                    onChange={(_event, { value }) =>
+                        setSurfaceMode(value as TopologySurfaceMode)
+                    }
+                    style={{ width: 136 }}
+                >
+                    {TOPOLOGY_SURFACE_OPTIONS.map(([value, label]) => (
+                        <Select.Option
+                            key={value}
+                            label={`View: ${label}`}
+                            value={value}
+                        />
+                    ))}
+                </Select>
+            </OneCdGlassCard>
 
             <SelectionCard
                 selected={resolvedSelected}
@@ -6417,10 +6737,11 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
 
             <div className="absolute bottom-6 left-4 z-[1000] space-y-3 pointer-events-auto">
                 {roleLegendExpanded ? (
-                    <div
+                    <OneCdGlassCard
+                        tag="aside"
                         className={cn(
-                            'border p-3 rounded-xl shadow-xl max-w-[190px] transition-all',
-                            overlayChrome
+                            'p-3 max-w-[190px] transition-all',
+                            isDark ? 'text-slate-100' : 'text-slate-900'
                         )}
                     >
                         <div className="mb-3 flex items-center justify-between gap-3">
@@ -6453,7 +6774,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                                 />
                             ))}
                         </div>
-                    </div>
+                    </OneCdGlassCard>
                 ) : (
                     <button
                         type="button"
@@ -6521,57 +6842,104 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     <Pencil className="w-4 h-4" />
                 </button>
 
-                <button
-                    type="button"
-                    onClick={() => {
-                        const idx = TOPOLOGY_ANIMATION_LEVELS.indexOf(
-                            storedAnimationLevel
-                        );
-                        const nextIdx =
-                            (idx + 1) % TOPOLOGY_ANIMATION_LEVELS.length;
-                        setAnimationLevel(
-                            TOPOLOGY_ANIMATION_LEVELS[nextIdx]
-                        );
+                <div
+                    className="relative"
+                    onKeyDown={(event) => {
+                        if (event.key === 'Escape') setMotionSettingsOpen(false);
                     }}
-                    title={
-                        reducedMotion
-                            ? 'Animations forced off by your OS reduce-motion setting. Click to cycle preference (will apply when reduce-motion is disabled).'
-                            : `${TOPOLOGY_ANIMATION_LEVEL_LABELS[storedAnimationLevel]}. Click to cycle.`
-                    }
-                    aria-label={
-                        TOPOLOGY_ANIMATION_LEVEL_LABELS[animationLevel]
-                    }
-                    className={cn(
-                        'border p-2 rounded-lg shadow-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400 relative',
-                        buttonChrome,
-                        animationLevel === 'off' && 'opacity-60'
-                    )}
                 >
-                    <Sparkles
+                    <button
+                        type="button"
+                        onClick={() => setMotionSettingsOpen((open) => !open)}
+                        title={
+                            reducedMotion
+                                ? 'Connector motion is forced off by your OS reduce-motion setting.'
+                                : `Connector motion: ${topologyConnectorSpeedLabel(storedConnectorSpeed)}`
+                        }
+                        aria-label={`Configure connector motion. Current speed: ${topologyConnectorSpeedLabel(connectorSpeed)}`}
+                        aria-haspopup="dialog"
+                        aria-expanded={motionSettingsOpen}
                         className={cn(
-                            'w-4 h-4',
-                            animationLevel === 'on' && 'text-sky-500',
-                            animationLevel === 'subtle' && 'text-slate-400',
-                            animationLevel === 'off' && 'text-slate-500'
-                        )}
-                    />
-                    <span
-                        className={cn(
-                            'absolute -bottom-1 -right-1 px-1 py-0.5 rounded text-[7px] font-bold uppercase tracking-widest text-white shadow-sm',
-                            animationLevel === 'on' && 'bg-sky-500',
-                            animationLevel === 'subtle' && 'bg-slate-500',
-                            animationLevel === 'off' && 'bg-slate-700'
+                            'relative rounded-lg border p-2 shadow-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                            buttonChrome,
+                            connectorSpeed <= 0 && 'opacity-60'
                         )}
                     >
-                        {animationLevel === 'on'
-                            ? 'On'
-                            : animationLevel === 'subtle'
-                            ? 'Sub'
-                            : 'Off'}
-                    </span>
-                </button>
+                        <Sparkles
+                            className={cn(
+                                'h-4 w-4',
+                                connectorSpeed > 0 ? 'text-sky-500' : 'text-slate-500'
+                            )}
+                        />
+                        <span
+                            className={cn(
+                                'absolute -bottom-1 -right-1 rounded px-1 py-0.5 text-[7px] font-bold uppercase tracking-widest text-white shadow-sm',
+                                connectorSpeed > 0 ? 'bg-sky-500' : 'bg-slate-700'
+                            )}
+                        >
+                            {connectorSpeed > 0
+                                ? topologyConnectorSpeedLabel(connectorSpeed)
+                                : 'Off'}
+                        </span>
+                    </button>
+
+                    {motionSettingsOpen && (
+                        <OneCdGlassCard
+                            tag="section"
+                            className={cn(
+                                'absolute bottom-0 left-[calc(100%+0.75rem)] z-[1250] w-64 p-4 shadow-2xl',
+                                isDark ? 'text-slate-100' : 'text-slate-900'
+                            )}
+                            role="dialog"
+                            aria-labelledby="topology-connector-speed-label"
+                        >
+                            <div className="mb-3 flex items-start justify-between gap-3">
+                                <div>
+                                    <h5
+                                        id="topology-connector-speed-label"
+                                        className="text-sm font-bold"
+                                    >
+                                        Connector motion
+                                    </h5>
+                                    <p className="mt-1 text-xs leading-snug text-slate-400">
+                                        Controls the light trails on map connector lines.
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setMotionSettingsOpen(false)}
+                                    aria-label="Close connector motion settings"
+                                    className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-500/10 hover:text-current focus:outline-none focus:ring-1 focus:ring-sky-400"
+                                >
+                                    <X className="h-3.5 w-3.5" />
+                                </button>
+                            </div>
+                            <Slider
+                                inputId="topology-connector-speed"
+                                labelledBy="topology-connector-speed-label"
+                                min={MIN_TOPOLOGY_CONNECTOR_SPEED}
+                                max={MAX_TOPOLOGY_CONNECTOR_SPEED}
+                                step={TOPOLOGY_CONNECTOR_SPEED_STEP}
+                                stepMarks="always"
+                                value={storedConnectorSpeed}
+                                displayValue={topologyConnectorSpeedLabel(storedConnectorSpeed)}
+                                minLabel="Static"
+                                maxLabel="2×"
+                                disabled={reducedMotion}
+                                onChange={(_event, { value }) => setConnectorSpeed(value)}
+                            />
+                            <p className="mt-3 text-xs leading-snug text-slate-400" aria-live="polite">
+                                {reducedMotion
+                                    ? 'Motion is disabled while your operating system requests reduced motion.'
+                                    : storedConnectorSpeed <= 0
+                                    ? 'Static by default.'
+                                    : `Connector trails are running at ${topologyConnectorSpeedLabel(storedConnectorSpeed)} speed.`}
+                            </p>
+                        </OneCdGlassCard>
+                    )}
+                </div>
             </div>
-        </div>
+        </OneCdSurface>
     );
 };
 

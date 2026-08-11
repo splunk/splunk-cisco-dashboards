@@ -1,6 +1,6 @@
 <nav color="#049fd9" label="Splunk for Secure Networking">
     <view
-        name="secure_networking_profile"
+        name="workspace_insights"
         default="true"
         label="Home"
         icon="house"
@@ -12,99 +12,86 @@
         primary navigation structure.
     -->
     <collection label="Zero Trust Access" icon="shieldkeyhole">
-        <!-- <a href="dashboardbuilder#/secure_networking_zta">Overview</a> -->
-        <!-- <divider /> -->
-        <a href="dashboardbuilder#/secure_networking_zta_authentication_policy_enforcement">Authentication and Policy Enforcement</a>
-        <a href="dashboardbuilder#/secure_networking_zta_policy_management">Policy Management</a>
-        <a href="dashboardbuilder#/secure_networking_zta_user_activity_monitoring">User Activity Monitoring</a>
-        <a href="dashboardbuilder#/secure_networking_zta_detection_response">Detection &amp; Response</a>
-        <a href="dashboardbuilder#/secure_networking_zta_ravpn_sessions_and_posture">Remote Access VPN (RaVPN) Sessions and Posture</a>
+        <a href="dashboard_manager#/sn_zta_posture">Zero Trust Posture</a>
+        <divider />
+        <a href="dashboard_manager#/sn_zta_authentication_policy_enforcement">Authentication and Policy Enforcement</a>
+        <a href="dashboard_manager#/sn_zta_policy_management">Policy Management</a>
+        <a href="dashboard_manager#/sn_zta_user_activity_monitoring">User Activity Monitoring</a>
+        <a href="dashboard_manager#/sn_zta_detection_response">Detection &amp; Response</a>
+        <a href="dashboard_manager#/sn_zta_ravpn_sessions_and_posture">Remote Access VPN (RaVPN) Sessions and Posture</a>
     </collection>
 
     <collection label="Secure Infrastructure" icon="layerstriple">
-        <!-- <a href="dashboardbuilder#/secure_networking_secure_infrastructure">Overview</a> -->
-        <!-- <divider /> -->
-        <a href="dashboardbuilder#/secure_networking_secure_infrastructure_status">Secure Infrastructure Status</a>
-        <!-- <view
-            name="secure_networking_secure_infrastructure"
-            label="Overview"
-        /> -->
+        <a href="dashboard_manager#/sn_secure_infrastructure_posture">Infrastructure Posture</a>
+        <divider />
+        <a href="dashboard_manager#/sn_secure_infrastructure_status">Secure Infrastructure Status</a>
     </collection>
 
     <collection label="Scalable Network Segmentation" icon="nodetopology">
-        <!-- <a href="dashboardbuilder#/secure_networking_scalable_network_segmentation">Overview</a> -->
-        <!-- <divider /> -->
-        <a href="dashboardbuilder#/secure_networking_segmentation_overview">Segmentation Overview</a>
-        <!-- <view
-            name="secure_networking_scalable_network_segmentation"
-            label="Overview"
-        /> -->
+        <a href="dashboard_manager#/sn_segmentation_readiness">Segmentation Readiness</a>
+        <divider />
+        <a href="dashboard_manager#/sn_segmentation_operations">Segmentation Operations</a>
     </collection>
 
     <collection label="Hybrid Mesh Firewalling" icon="forwarderuniversal">
-        <!-- <a href="dashboardbuilder#/secure_networking_hybrid_mesh_firewalling">Overview</a> -->
-        <!-- <divider /> -->
-        <a href="dashboardbuilder#/secure_networking_hmf_sdwan_network_health_monitoring">SD-WAN and Network Health Monitoring</a>
-        <a href="dashboardbuilder#/secure_networking_hmf_threat_detection_enforcement">Threat Detection and Enforcement</a>
-        <a href="dashboardbuilder#/secure_networking_hmf_dlp_cloud_native_security">DLP and Cloud Native Security</a>
-        <!-- <view
-            name="secure_networking_hybrid_mesh_firewalling"
-            label="Overview"
-        /> -->
+        <a href="dashboard_manager#/sn_hmf_enforcement">Hybrid Mesh Enforcement</a>
+        <divider />
+        <a href="dashboard_manager#/sn_hmf_sdwan_network_health">SD-WAN and Network Health Monitoring</a>
+        <a href="dashboard_manager#/sn_hmf_threat_detection_enforcement">Threat Detection and Enforcement</a>
+        <a href="dashboard_manager#/sn_hmf_dlp_cloud_native_security">DLP and Cloud Native Security</a>
     </collection>
 
     <collection label="Agentic Ops" icon="pulse">
-        <!-- <a href="dashboardbuilder#/secure_networking_agentic_ops">Overview</a> -->
-        <!-- <divider /> -->
-        <a href="dashboardbuilder#/secure_networking_agentic_ops_executive_overview">Executive Overview</a>
-        <!-- <view name="secure_networking_agentic_ops" label="Overview" /> -->
-    </collection>
-
-    <collection label="Dashboards" icon="chartcolumnpanel">
-        <a href="dashboardbuilder">Dashboard Manager</a>
+        <a href="dashboard_manager#/sn_agentic_ops_operational_intelligence">Operational Intelligence</a>
         <divider />
-        <view name="dashboards" label="Native Dashboards" />
-        <view name="reports" label="Reports" />
+        <a href="dashboard_manager#/sn_agentic_ops_executive_assurance">Executive Assurance</a>
     </collection>
 
-    <a href="user_guide" icon="organizernotebook">User Guide</a>
+    <collection label="More" icon="layout">
+        <a href="dashboard_manager">Dashboard Manager</a>
+        <divider />
+        <!-- <collection label="Dashboard Library">
+            <view name="dashboards" label="Native Dashboards" />
+            <view name="reports" label="Reports" />
+        </collection> -->
 
-    <collection label="Other" icon="layout">
-        <collection label="Core Dashboards">
-            <view name="executive_briefing_profile" label="Executive Briefing" />
-            <a href="it_health_v1">IT Health</a>
-            <a href="security_v1">Security</a>
-            <a href="building_v1">Building Intelligence</a>
+        <collection label="Network &amp; IT Operations">
+            <a href="netops_critical_systems_health">IT Health</a>
+            <a href="netops_readiness">NetOps Readiness</a>
+            <a href="netops_health_monitoring">Health Monitoring (Beta)</a>
         </collection>
 
-        <collection label="Operations">
-            <a href="netops_readiness_v1">NetOps Readiness</a>
-            <a href="asset_inventory_v1">Asset Inventory</a>
+        <collection label="Security Operations">
+            <a href="secops_resilience">Security</a>
+            <a href="secops_overview">Security Operations Overview (Beta)</a>
         </collection>
 
-        <collection label="Workplace &amp; Collaboration">
-            <view name="spaces_intelligence_v1" label="Spaces Intelligence" />
-            <view name="workplace_spog_v1" label="Workplace SPOG" />
+        <collection label="Workplace Intelligence">
+            <a href="workplace_building_intelligence">Building Intelligence</a>
+            <view name="workplace_spaces_intelligence" label="Cisco Spaces — Intelligence" />
+            <view name="workplace_operations_overview" label="Workplace — Single Pane of Glass" />
         </collection>
 
-        <collection label="Event Ops">
-            <a href="statewide_exercise_v1">Network Activation Report</a>
+        <collection label="Catalyst Operations">
+            <a href="netops_catalyst_health">Catalyst Health</a>
+            <a href="netops_catalyst_operations">Catalyst Operations (Beta)</a>
         </collection>
 
-        <collection label="Concepts (Beta)">
+        <collection label="Visual Labs (Beta)">
             <a href="searchbase_canvas">Searchbase Canvas</a>
             <a href="network_diagram">Network Diagram</a>
-            <a href="topology_canvas_v1">Topology Canvas</a>
-            <a href="statewide_exercise_v1_studio_modern">Statewide Exercise</a>
-            <a href="health_monitoring">Health Monitoring</a>
-            <a href="secure_operations_glass">Secure Operations Glass</a>
+            <a href="sn_topology_canvas">Topology Canvas</a>
         </collection>
 
-        <collection label="Admin &amp; Tools">
-            <a href="start?setup=1">Setup</a>
-            <a href="macro_index_tuning">Macro Index Tuning</a>
+        <collection label="Help &amp; Resources">
+            <a href="user_guide">User Guide</a>
+            <a href="search">Search</a>
         </collection>
+
+        <collection label="Administration">
+            <a href="admin_asset_inventory">Asset Inventory</a>
+            <a href="setup?setup=1">Setup</a>
+        </collection>
+        <a href="search" target="_blank" rel="noopener"></a>
     </collection>
-
-    <a href="search" icon="magnifier">Search</a>
 </nav>

@@ -15,10 +15,12 @@ interface WorkspaceModalShellProps {
     onClose: () => void;
     onOpenInSearch?: () => void;
     openInSearchHref?: string;
+    openInSearchbaseHref?: string;
     onOpenDetailTable?: () => void;
     detailTableTitle?: string;
     headerMeta?: React.ReactNode;
     wide?: boolean;
+    renderInDocumentBody?: boolean;
     contentClassName?: string;
     children: React.ReactNode;
 }
@@ -49,9 +51,40 @@ const DESKTOP_DIALOG_BREAKPOINT = 720;
 const DIALOG_VIEWPORT_GUTTER = 32;
 const MIN_RESIZABLE_WIDTH = 640;
 const MIN_RESIZABLE_HEIGHT = 360;
+const BACKDROP_OPACITY_STORAGE_KEY =
+    'splunk-cisco-dashboards.workspaceModal.backdropOpacity';
+const DEFAULT_BACKDROP_OPACITY = 16;
+const MIN_BACKDROP_OPACITY = 0;
+const MAX_BACKDROP_OPACITY = 100;
 
 const clamp = (value: number, min: number, max: number): number =>
     Math.min(Math.max(value, Math.min(min, max)), max);
+
+const normalizeBackdropOpacity = (value: number): number =>
+    Math.round(clamp(value, MIN_BACKDROP_OPACITY, MAX_BACKDROP_OPACITY));
+
+const readBackdropOpacity = (): number => {
+    if (typeof window === 'undefined') return DEFAULT_BACKDROP_OPACITY;
+    try {
+        const stored = window.localStorage.getItem(BACKDROP_OPACITY_STORAGE_KEY);
+        if (stored === null) return DEFAULT_BACKDROP_OPACITY;
+        const parsed = Number(stored);
+        return Number.isFinite(parsed)
+            ? normalizeBackdropOpacity(parsed)
+            : DEFAULT_BACKDROP_OPACITY;
+    } catch {
+        return DEFAULT_BACKDROP_OPACITY;
+    }
+};
+
+const writeBackdropOpacity = (value: number): void => {
+    if (typeof window === 'undefined') return;
+    try {
+        window.localStorage.setItem(BACKDROP_OPACITY_STORAGE_KEY, String(value));
+    } catch {
+        // Storage may be unavailable in hardened browser contexts.
+    }
+};
 
 const getDialogBounds = (): DialogSize => ({
     width: Math.max(320, window.innerWidth - DIALOG_VIEWPORT_GUTTER),
@@ -93,15 +126,18 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
     onClose,
     onOpenInSearch,
     openInSearchHref,
+    openInSearchbaseHref,
     onOpenDetailTable,
     detailTableTitle,
     headerMeta,
     wide = false,
+    renderInDocumentBody = false,
     contentClassName,
     children,
 }) => {
     const generatedTitleId = React.useId();
     const generatedSubtitleId = React.useId();
+    const generatedBackdropOpacityId = React.useId();
     const titleId = providedTitleId ?? generatedTitleId;
     const dialogRef = React.useRef<HTMLDivElement>(null);
     const onCloseRef = React.useRef(onClose);
@@ -111,6 +147,7 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
     const [dialogSize, setDialogSize] = React.useState<DialogSize | null>(() =>
         isResizable ? getAutoDetailSize(wide) : null
     );
+    const [backdropOpacity, setBackdropOpacity] = React.useState(readBackdropOpacity);
 
     onCloseRef.current = onClose;
 
@@ -207,7 +244,9 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
 
     const portalTarget =
         typeof document !== 'undefined'
-            ? document.getElementById('scan-root') ?? document.body
+            ? renderInDocumentBody
+                ? document.body
+                : document.getElementById('scan-root') ?? document.body
             : null;
 
     React.useEffect(() => {
@@ -289,6 +328,25 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
         };
     }, [isOpen, isResizable, resetAutoSize, wide]);
 
+    React.useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        const onStorage = (event: StorageEvent) => {
+            if (event.key !== BACKDROP_OPACITY_STORAGE_KEY) return;
+            setBackdropOpacity(readBackdropOpacity());
+        };
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+    }, []);
+
+    const updateBackdropOpacity = React.useCallback(
+        (event: React.FormEvent<HTMLInputElement>) => {
+            const next = normalizeBackdropOpacity(Number(event.currentTarget.value));
+            setBackdropOpacity(next);
+            writeBackdropOpacity(next);
+        },
+        []
+    );
+
     if (!isOpen || !portalTarget) {
         return null;
     }
@@ -323,10 +381,29 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
         );
     }
 
-    return createPortal(
+    const searchbaseAction = openInSearchbaseHref ? (
+        <a
+            href={openInSearchbaseHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Open ${title} in Searchbase`}
+            aria-label={`Open ${title} in Searchbase`}
+            className={ACTION_CLASS}
+        >
+            Searchbase
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+        </a>
+    ) : null;
+
+    const modalLayer = (
         <div
-            className="fixed inset-0 z-[1900] flex items-center justify-center bg-slate-950/[0.16] p-4 backdrop-blur-[2px] max-[719px]:items-end max-[719px]:p-0 max-[719px]:pt-4"
-            style={{ zIndex: 1900 }}
+            className="fixed inset-0 z-[1900] flex items-center justify-center p-4 backdrop-blur-[2px] max-[719px]:items-end max-[719px]:p-0 max-[719px]:pt-4"
+            data-workspace-modal-backdrop="true"
+            data-backdrop-opacity={backdropOpacity}
+            style={{
+                zIndex: 1900,
+                backgroundColor: `rgba(2, 6, 23, ${backdropOpacity / 100})`,
+            }}
         >
             <button
                 type="button"
@@ -378,7 +455,33 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                     </div>
                     <div className="flex flex-shrink-0 items-center gap-2">
                         {headerMeta && <div className="hidden items-center gap-2 lg:flex">{headerMeta}</div>}
+                        <label
+                            htmlFor={generatedBackdropOpacityId}
+                            title="Adjust workspace dimming behind the dialog"
+                            className="hidden h-8 items-center gap-2 rounded-[6px] border border-white/[0.1] bg-slate-950/[0.2] px-2 text-[11px] font-semibold text-[#a8bacb] min-[720px]:flex"
+                        >
+                            <span>Backdrop</span>
+                            <input
+                                id={generatedBackdropOpacityId}
+                                type="range"
+                                min={MIN_BACKDROP_OPACITY}
+                                max={MAX_BACKDROP_OPACITY}
+                                step={1}
+                                value={backdropOpacity}
+                                onInput={updateBackdropOpacity}
+                                aria-label="Backdrop opacity"
+                                aria-valuetext={`${backdropOpacity}% opaque`}
+                                className="h-1.5 w-20 cursor-pointer accent-sky-400"
+                            />
+                            <output
+                                htmlFor={generatedBackdropOpacityId}
+                                className="w-8 text-right font-mono text-[10px] text-[#d8e5f0]"
+                            >
+                                {backdropOpacity}%
+                            </output>
+                        </label>
                         {searchAction}
+                        {searchbaseAction}
                         {onOpenDetailTable && (
                             <button
                                 type="button"
@@ -453,7 +556,17 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                     </>
                 )}
             </div>
-        </div>,
+        </div>
+    );
+
+    return createPortal(
+        renderInDocumentBody ? (
+            <div id="scan-root" data-workspace-modal-portal="document">
+                {modalLayer}
+            </div>
+        ) : (
+            modalLayer
+        ),
         portalTarget
     );
 };

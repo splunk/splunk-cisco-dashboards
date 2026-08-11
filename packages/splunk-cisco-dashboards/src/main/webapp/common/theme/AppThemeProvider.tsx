@@ -17,6 +17,7 @@ import {
 interface AppThemeProviderProps {
     children: React.ReactNode;
     initialColorScheme?: ResolvedTheme;
+    fixedColorScheme?: ResolvedTheme;
 }
 
 const token = (theme: Record<string, unknown>, name: string, fallback = ''): string => {
@@ -91,10 +92,18 @@ function ThemeTokenBridge({ children }: { children: React.ReactNode }): JSX.Elem
 export default function AppThemeProvider({
     children,
     initialColorScheme = 'light',
+    fixedColorScheme,
 }: AppThemeProviderProps): JSX.Element {
-    const [colorScheme, setColorScheme] = useState<ResolvedTheme>(initialColorScheme);
+    const [colorScheme, setColorScheme] = useState<ResolvedTheme>(
+        fixedColorScheme || initialColorScheme
+    );
 
     useEffect(() => {
+        if (fixedColorScheme) {
+            setColorScheme(fixedColorScheme);
+            return undefined;
+        }
+
         let active = true;
 
         const refresh = async () => {
@@ -114,7 +123,7 @@ export default function AppThemeProvider({
             window.removeEventListener(THEME_CHANGE_EVENT, refresh);
             window.removeEventListener('storage', handleStorage);
         };
-    }, []);
+    }, [fixedColorScheme]);
 
     return (
         <SplunkThemeProvider

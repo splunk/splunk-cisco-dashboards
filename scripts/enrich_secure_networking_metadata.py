@@ -298,8 +298,23 @@ def set_field(body: str, key: str, value: str, after: str) -> str:
     )
 
 
+def remove_field(body: str, key: str) -> str:
+    return re.sub(rf"(?m)^{re.escape(key)}\s*=.*\n?", "", body)
+
+
 def enrich(content: str) -> tuple[str, int]:
     changed = 0
+    stanza_id_by_search_name: dict[str, str] = {}
+    for stanza in STANZA_PATTERN.finditer(content):
+        stanza_id = stanza.group("name")
+        search_name = parse_fields(stanza.group("body")).get("search_name", "")
+        if not search_name:
+            continue
+        if search_name in stanza_id_by_search_name:
+            raise ValueError(
+                f"Cannot resolve drilldowns: duplicate search_name {search_name!r}"
+            )
+        stanza_id_by_search_name[search_name] = stanza_id
 
     def replace(match: re.Match[str]) -> str:
         nonlocal changed
@@ -324,19 +339,24 @@ def enrich(content: str) -> tuple[str, int]:
             merge_viz_options(name, fields),
             after="default_viz",
         )
-        target = DRILLDOWNS.get(name)
-        if target:
+        target_search_name = DRILLDOWNS.get(name)
+        if target_search_name:
+            target_stanza_id = stanza_id_by_search_name.get(target_search_name)
+            if not target_stanza_id:
+                raise ValueError(
+                    f"Cannot resolve drilldown target {target_search_name!r} for {name}"
+                )
             next_body = set_field(
-                next_body,
-                "drilldown_search_name",
-                target,
+                remove_field(next_body, "drilldown_search_name"),
+                "drilldown_stanza_id",
+                target_stanza_id,
                 after="viz_options",
             )
             next_body = set_field(
                 next_body,
                 "drilldown_button_title",
                 DRILLDOWN_BUTTONS[fields.get("default_viz", "splunk.table")],
-                after="drilldown_search_name",
+                after="drilldown_stanza_id",
             )
         if next_body == body:
             return match.group(0)

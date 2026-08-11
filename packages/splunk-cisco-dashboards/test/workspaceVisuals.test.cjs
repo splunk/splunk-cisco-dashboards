@@ -26,6 +26,9 @@ const signalRail = read(
 const signalTickerRail = read(
   "../src/main/webapp/common/components/florida/SignalTickerRail.tsx",
 );
+const signalTickerHook = read(
+  "../src/main/webapp/common/hooks/usePersistedSignalTicker.ts",
+);
 const tailwindStyles = read(
   "../src/main/webapp/common/styles/tailwind.css",
 );
@@ -33,6 +36,17 @@ const workspacesConf = read(
   "../src/main/resources/splunk/default/insights_workspaces.conf",
 );
 const profile = read("../src/main/webapp/pages/executive_insights/index.tsx");
+const profileRender = read(
+  "../src/main/webapp/pages/executive_insights/render.tsx",
+);
+const rawRender = read("../src/main/webapp/common/render-raw.tsx");
+const kpiPicker = read(
+  "../src/main/webapp/common/components/florida/KpiPickerPanel.tsx",
+);
+const metricHook = read("../src/main/webapp/common/hooks/useMetric.ts");
+const tileConfigService = read(
+  "../src/main/webapp/common/services/searchbaseTileConfigService.ts",
+);
 const metricItem = read(
   "../src/main/webapp/common/components/florida/MetricItem.tsx",
 );
@@ -47,6 +61,12 @@ const sparkline = read(
 );
 const dashboardSection = read(
   "../src/main/webapp/common/components/florida/DashboardSection.tsx",
+);
+const sectionPresentation = read(
+  "../src/main/webapp/common/hooks/usePersistedSectionPresentation.ts",
+);
+const c3VisualizationPalette = read(
+  "../src/main/webapp/common/theme/c3VisualizationPalette.ts",
 );
 
 assert.match(
@@ -132,6 +152,36 @@ assert.match(
 );
 assert.match(
   topologyMap,
+  /const COMMAND_MIN_SCALE = 1;[\s\S]*?const COMMAND_MAX_SCALE = 4;/,
+  "Command topology zoom must stay bounded between fit and four times magnification",
+);
+assert.match(
+  topologyMap,
+  /requestAnimationFrame[\s\S]*?viewportGroupRef\.current\?\.setAttribute\([\s\S]*?'transform'/,
+  "Command topology navigation must animate one SVG viewport transform instead of rerendering every node",
+);
+assert.match(
+  topologyMap,
+  /addEventListener\('wheel', handleWheel, \{ passive: false \}\)/,
+  "Command topology must support cursor-anchored wheel and trackpad zoom",
+);
+assert.match(
+  topologyMap,
+  /onPointerDown=\{beginPan\}[\s\S]*?onPointerMove=\{continuePan\}[\s\S]*?onPointerUp=\{endPan\}/,
+  "Command topology must support pointer panning",
+);
+assert.match(
+  topologyMap,
+  /aria-label="Zoom out command topology"[\s\S]*?aria-live="polite"[\s\S]*?aria-label="Zoom in command topology"[\s\S]*?aria-label="Fit command topology to view"/,
+  "Command topology must expose accessible zoom, percentage, and fit controls",
+);
+assert.match(
+  topologyMap,
+  /case '0':[\s\S]*?scheduleViewport\(COMMAND_FIT_VIEWPORT\)/,
+  "Command topology keyboard navigation must include a fit shortcut",
+);
+assert.match(
+  topologyMap,
   /\['geo', 'Geo'\]/,
   "The geographic topology must remain available as an explicit presentation",
 );
@@ -139,6 +189,11 @@ assert.match(
   topologyMap,
   /name: 'Secure Network Command Map',[\s\S]*subtitle: 'Live sites, trust paths, and policy-enforcement health'/,
   "Secure Networking must ship its own command-map title and decision-oriented subtitle",
+);
+assert.match(
+  topologyMap,
+  /const STATUS_STROKE:[\s\S]*?critical: '#fa5762',[\s\S]*?warning: '#f0c243',[\s\S]*?stable: '#4cbf7f',[\s\S]*?unknown: '#a6adb6'/,
+  "Topology status links and beacons must use the shared C3 operational palette",
 );
 const roleChromeBlock = topologyMap.match(
   /const TOPOLOGY_ROLE_CHROME:[\s\S]*?= \{([\s\S]*?)\n\};\n\nconst CUSTOM_ROLE_SWATCHES/,
@@ -179,6 +234,103 @@ assert.match(
   "Dark command-bar SUI selectors must keep their labels and carets visible in either Splunk theme",
 );
 assert.match(
+  profile,
+  /scd-overview-page scd-c3-surface/,
+  "The overview must opt into the C3-inspired content surface",
+);
+assert.doesNotMatch(
+  profile,
+  /Splunk Field Solutions · Insights Workspace|scd-c3-footer/,
+  "Insights Workspace must not reserve a branded footer strip",
+);
+assert.match(
+  rawRender,
+  /showCopyrightMark\?: boolean;[\s\S]*options\.showCopyrightMark !== false && <CopyrightMark \/>/,
+  "Raw page mounts must allow a surface to suppress the shared copyright mark",
+);
+assert.match(
+  profileRender,
+  /mountPageRaw\(ExecutiveInsightsPage, \{ showCopyrightMark: false \}\);/,
+  "Insights Workspace must suppress the floating copyright mark",
+);
+assert.match(
+  dashboardSection,
+  /scd-c3-panel bg-white dark:bg-slate-900/,
+  "Dashboard sections must use the shared C3 panel treatment",
+);
+assert.match(
+  profile,
+  /resolvedTheme === "dark" && "dark scd-one-cisco-spotlight-canvas"/,
+  "The Figma-led workspace must keep a neutral canvas for the SUI SpotLight preset",
+);
+assert.doesNotMatch(profile, /@splunk\/react-ui\/SpotLight/);
+assert.match(
+  tailwindStyles,
+  /\.scd-one-cisco-spotlight-canvas[\s\S]*?background-color:\s*#0b1118[\s\S]*?background-image:\s*none/,
+  "The dark workspace must not place the legacy custom gradient behind SUI SpotLight",
+);
+assert.match(
+  tailwindStyles,
+  /\.scd-signal-rail-ticker\[data-variant='one-cisco-glass'\][\s\S]*?background:\s*transparent/,
+  "The 1CD status rail must expose the SUI SpotLight instead of an opaque custom background",
+);
+assert.match(
+  tailwindStyles,
+  /\.scd-c3-surface\.dark \.scd-c3-panel[\s\S]*?rgb\(19 26 35 \/ 98%\)[\s\S]*?backdrop-filter: blur\(8px\)/,
+  "C3 panels must remain readable, mostly opaque surfaces above the atmospheric canvas",
+);
+for (const color of [
+  "#649ef5",
+  "#4cbf7f",
+  "#f0c243",
+  "#fa5762",
+  "#9ca6ff",
+  "#9b5ff5",
+  "#049fd9",
+  "#00bceb",
+  "#f7782f",
+]) {
+  assert.ok(
+    c3VisualizationPalette.includes(color),
+    `The shared C3 visualization palette must include ${color}`,
+  );
+}
+assert.match(
+  metricItem,
+  /healthy: C3_VISUALIZATION_COLORS\.positive,[\s\S]*?warning: C3_VISUALIZATION_COLORS\.caution,[\s\S]*?critical: C3_VISUALIZATION_COLORS\.critical/,
+  "Metric status charts must use the shared C3 operational palette",
+);
+assert.match(
+  kpiPicker,
+  /<Switch[\s\S]*?appearance="toggle"[\s\S]*?selected=\{thresholdsEnabled\}[\s\S]*?>[\s\S]*?Use thresholds[\s\S]*?<\/Switch>/,
+  "Tile configuration must expose an accessible threshold on/off control",
+);
+assert.match(
+  kpiPicker,
+  /thresholds\.enabled = thresholdsEnabled/,
+  "Threshold enablement changes must be included in the shared tile-config patch",
+);
+assert.match(
+  tileConfigService,
+  /thresholds\.enabled !== undefined \? \{ enabled: thresholds\.enabled \} : \{\}/,
+  "Shared searchbase persistence must save an explicit threshold enabled state",
+);
+assert.match(
+  profile,
+  /const enabled = readOverviewBoolean\(raw, "enabled"\);[\s\S]*?enabled: enabled \?\? fallback\?\.enabled/,
+  "Workspace metric parsing must preserve the shared threshold enabled state",
+);
+assert.equal(
+  (metricHook.match(/thresholds\.enabled === false/g) ?? []).length,
+  2,
+  "Disabled thresholds must suppress both status classification and threshold-band text",
+);
+assert.match(
+  sparkline,
+  /offset="0%"[\s\S]*?stopOpacity=\{0\.24\}[\s\S]*?offset="55%"[\s\S]*?stopOpacity=\{0\.08\}[\s\S]*?offset="100%"[\s\S]*?stopOpacity=\{0\}/,
+  "Area sparklines must use the restrained C3 graduated fill",
+);
+assert.match(
   tailwindStyles,
   /\.scd-toolbar-select\[data-test='select'\] \{[\s\S]*?border-color: transparent !important;[\s\S]*?background: transparent !important;[\s\S]*?box-shadow: none !important;/,
   "Command-bar selectors must remain borderless on the dark dashboard header",
@@ -210,8 +362,8 @@ assert.match(
 );
 assert.match(
   profile,
-  /<ThemeToggle theme=\{theme\} onCycle=\{cycleTheme\} iconOnly \/>/,
-  "The crowded overview header must use the compact icon-only theme control",
+  /<ThemeToggle[\s\S]*?theme=\{theme\}[\s\S]*?onCycle=\{cycleTheme\}[\s\S]*?className=\{iconBtnClass\}[\s\S]*?iconOnly/,
+  "The crowded overview header must use the compact theme control with explicit toolbar contrast",
 );
 assert.doesNotMatch(
   profile,
@@ -240,18 +392,38 @@ assert.match(
 );
 assert.match(
   signalRail,
-  /relative z-\[90\] flex shrink-0 items-center gap-1[\s\S]*?lg:opacity-0[\s\S]*?lg:group-hover\/signal-rail:opacity-100[\s\S]*?lg:group-focus-within\/signal-rail:opacity-100/,
-  "Signal Rail controls must reveal on desktop hover or keyboard focus",
+  /#scan-root \.scd-signal-rail-ticker:hover \.scd-signal-rail-controls,[\s\S]*?#scan-root \.scd-signal-rail-ticker:focus-within \.scd-signal-rail-controls,[\s\S]*?opacity: 1 !important;[\s\S]*?pointer-events: auto;/,
+  "Signal Rail controls must reveal only on rail hover or keyboard focus",
 );
 assert.match(
   signalRail,
-  /relative z-\[90\] flex shrink-0 items-center gap-1/,
-  "Signal Rail controls must reserve layout space instead of covering KPI content",
+  /scd-signal-rail-controls absolute right-2 top-1\/2 z-\[90\]/,
+  "Signal Rail controls must float outside the marquee's flex layout",
 );
 assert.doesNotMatch(
   signalRail,
-  /absolute right-1\.5 top-1\/2 z-\[90\]/,
-  "Signal Rail controls must not be absolutely positioned over the marquee",
+  /relative z-\[90\] flex shrink-0 items-center/,
+  "Hidden Signal Rail controls must not reserve space or cover signal tiles",
+);
+assert.match(
+  signalRail,
+  /#scan-root \.scd-signal-rail-controls\[data-open='true'\][\s\S]*?opacity: 1 !important;[\s\S]*?pointer-events: auto;/,
+  "Signal Rail controls must remain available while the style picker is open",
+);
+assert.match(
+  signalRail,
+  /data-open=\{pickerOpen\}/,
+  "Signal Rail controls must expose the style picker's open state to the scoped CSS",
+);
+assert.match(
+  signalRail,
+  /border border-transparent bg-transparent shadow-none/,
+  "Signal Rail control buttons must use transparent chrome over signal tiles",
+);
+assert.match(
+  signalRail,
+  /data-signal-rail-controls="true"/,
+  "Signal Rail controls must expose a stable live-verification hook",
 );
 assert.match(
   signalRail,
@@ -294,6 +466,21 @@ assert.match(
   "Signal Rail settings must expose a tile font-size control",
 );
 assert.match(
+  signalTickerHook,
+  /isWorkspaceDefault[\s\S]*?signalTickerConfigsEqual\(config, defaultConfig\)/,
+  "Signal Rail persistence must expose whether the active settings match the workspace default",
+);
+assert.match(
+  signalTickerRail,
+  /disabled=\{isWorkspaceDefault\}[\s\S]*?'Using workspace default'[\s\S]*?'Restore workspace default'/,
+  "Signal Rail settings must distinguish the no-op default state from an available restore action",
+);
+assert.match(
+  profile,
+  /isWorkspaceDefault=\{signalTickerIsWorkspaceDefault\}/,
+  "The workspace profile must pass the persisted default-state result into Signal Rail settings",
+);
+assert.match(
   sortableMetricCard,
   /group\/tile-actions/,
   "Tile reorder and hide controls must use a dedicated action-corner hover target",
@@ -310,8 +497,53 @@ assert.match(
 );
 assert.match(
   profile,
-  /compactHeight=\{isCompactHeight\}/,
+  /compactHeight=\{renderCompactHeight\}/,
   "The H1 height control must activate compact section rendering",
+);
+assert.match(
+  sparkline,
+  /data-sparkline-density=\{compact \? 'compact' : 'detailed'\}/,
+  "Sparklines must expose their adaptive compact or detailed presentation",
+);
+assert.match(
+  sparkline,
+  /compact[\s\S]*?top: 6[\s\S]*?bottom: 6[\s\S]*?!compact && Number\.isFinite\(firstTime\)/,
+  "Compact H1 sparklines must reclaim plot height from labels and timestamp chrome",
+);
+assert.match(
+  sparkline,
+  /const minimumSpan = Math\.max\(1, Math\.abs\(center\) \* 0\.05\)/,
+  "Sparkline domains must retain a bounded minimum range for near-flat data",
+);
+assert.match(
+  dashboardSection,
+  /aria-expanded=\{!collapsed\}[\s\S]*?aria-controls=\{sectionBodyId\}/,
+  "Section collapse controls must expose their state and controlled region",
+);
+assert.match(
+  dashboardSection,
+  /collapsed && 'hidden'/,
+  "Collapsed sections must hide mounted content instead of unmounting live searches",
+);
+assert.match(
+  dashboardSection,
+  /aria-pressed=\{focused\}/,
+  "Section focus controls must expose their pressed state",
+);
+assert.match(
+  profile,
+  /focusedSection === section[\s\S]*?collapsedSections\[section\] \|\| focusedSection/,
+  "Focusing one section must temporarily collapse its siblings",
+);
+assert.match(
+  profile,
+  /!isSectionFocused &&[\s\S]*?compactDensity \|\| renderCompactHeight/,
+  "Focused sections must restore detailed chart presentation",
+);
+assert.match(
+  sectionPresentation,
+  /sectionPresentation\.v1[\s\S]*?workspaceStorageKey\(/,
+  "Collapsed section preferences must stay private to the active workspace",
 );
 
 console.log("✓ Workspace topology, signal rail, and drilldown affordance tests passed");

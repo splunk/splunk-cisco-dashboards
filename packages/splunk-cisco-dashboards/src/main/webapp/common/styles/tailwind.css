@@ -110,6 +110,7 @@
 html.scd-overview-active,
 body.scd-overview-active {
     max-width: 100%;
+    min-width: 0;
     overflow-x: hidden;
 }
 
@@ -131,6 +132,113 @@ body.scd-overview-active .panel-body,
 #scan-root .scd-signal-rail-ticker {
     width: 100%;
     max-width: 100%;
+}
+
+/* Shared C3 presentation tokens for React-mounted operational surfaces. The
+ * Dashboard Studio definitions consume the same values from
+ * c3VisualizationPalette.ts and the shared c3-atmosphere template. */
+#scan-root {
+    --scd-c3-canvas: #0f1117;
+    --scd-c3-panel: #131a23;
+    --scd-c3-secondary: #1c2738;
+    --scd-c3-text: #ecf0f5;
+    --scd-c3-muted: #a6adb6;
+    --scd-c3-info: #649ef5;
+    --scd-c3-cyan: #049fd9;
+    --scd-c3-cyan-bright: #00bceb;
+    --scd-c3-positive: #4cbf7f;
+    --scd-c3-caution: #f0c243;
+    --scd-c3-orange: #f7782f;
+    --scd-c3-critical: #fa5762;
+    --scd-c3-lavender: #9ca6ff;
+    --scd-c3-purple: #9b5ff5;
+    --scd-c3-panel-border: rgb(65 74 86 / 64%);
+    --scd-c3-toolbar-border: rgb(65 74 86 / 52%);
+    --scd-c3-accent-stroke: rgb(100 158 245 / 28%);
+}
+
+/*
+ * Cisco Cloud Control-inspired content surface.
+ *
+ * C3 does not use a flat dark fill. Every dark dashboard shell consumes the
+ * same borderless atmospheric asset, then keeps mostly opaque operational
+ * panels above it so contrast and dense telemetry remain dependable.
+ * Light mode retains the standard SUI page foundation.
+ */
+#scan-root .scd-overview-page.scd-c3-surface.dark {
+    position: relative;
+    background-color: #0b1118;
+    isolation: isolate;
+}
+
+#scan-root .scd-c3-atmosphere {
+    background-color: #0b1118 !important;
+    background-image: url('/static/app/splunk-cisco-dashboards/c3-atmosphere.svg') !important;
+    background-position: center top !important;
+    background-repeat: no-repeat !important;
+    background-size: cover !important;
+}
+
+/* The Figma-led Insights Workspace uses the released SUI SpotLight presets
+ * for its atmosphere. Keep its canvas neutral so the preset is the visible
+ * gradient instead of layering it over the legacy custom SVG atmosphere. */
+#scan-root .scd-one-cisco-spotlight-canvas {
+    background-color: #0b1118 !important;
+    background-image: none !important;
+}
+
+#scan-root .scd-c3-surface.dark .scd-c3-toolbar {
+    background:
+        linear-gradient(180deg, rgb(19 26 35 / 98%), rgb(15 17 23 / 96%)) !important;
+    border-color: var(--scd-c3-toolbar-border) !important;
+    box-shadow:
+        0 3px 8px rgb(0 0 0 / 8%),
+        inset 0 1px 0 rgb(255 255 255 / 3%) !important;
+    backdrop-filter: blur(10px) saturate(108%);
+}
+
+#scan-root .scd-c3-surface.dark .scd-c3-panel {
+    background:
+        linear-gradient(145deg, rgb(19 26 35 / 98%), rgb(17 24 32 / 96%)) !important;
+    border-color: var(--scd-c3-panel-border) !important;
+    box-shadow:
+        0 3px 8px rgb(0 0 0 / 8%),
+        inset 0 1px 0 rgb(255 255 255 / 3%) !important;
+    backdrop-filter: blur(8px) saturate(106%);
+}
+
+#scan-root .scd-c3-surface.dark .scd-signal-rail-ticker {
+    background:
+        linear-gradient(180deg, rgb(19 26 35 / 97%), rgb(15 17 23 / 94%)) !important;
+    border-color: var(--scd-c3-toolbar-border) !important;
+    box-shadow: 0 3px 8px rgb(0 0 0 / 8%);
+    backdrop-filter: blur(8px) saturate(106%);
+}
+
+#scan-root
+    .scd-c3-surface.dark
+    .scd-signal-rail-ticker[data-variant='one-cisco-glass'] {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none;
+    backdrop-filter: none;
+}
+
+/* C3 uses sentence-case page and card hierarchy. Preserve customer-supplied
+ * wording instead of forcing the primary structural headings to uppercase. */
+#scan-root .scd-c3-surface .scd-c3-toolbar h1,
+#scan-root .scd-c3-surface .scd-c3-toolbar p,
+#scan-root .scd-c3-surface .scd-c3-panel h2 {
+    text-transform: none;
+}
+
+#scan-root .scd-c3-surface .scd-c3-toolbar h1,
+#scan-root .scd-c3-surface .scd-c3-panel h2 {
+    letter-spacing: -0.01em;
+}
+
+#scan-root .scd-c3-surface .scd-c3-toolbar p {
+    letter-spacing: 0.06em;
 }
 
 #scan-root .scd-signal-rail-ticker {

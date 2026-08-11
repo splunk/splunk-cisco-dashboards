@@ -23,6 +23,8 @@ import {
     Wifi,
 } from '@/common/icons/SuiIcon';
 import { APP_VERSION_LABEL } from "@/common/lib/buildInfo";
+import { ThemeToggle } from '@/common/components/florida/ThemeToggle';
+import { useTheme } from '@/common/hooks/useTheme';
 
 import "./user-guide.css";
 
@@ -328,10 +330,10 @@ function GuideContents({
 
       <div className="scd-guide-toc-footer">
         <a
-          href={appUrl("macro_index_tuning")}
+          href={`${appUrl("setup")}?setup=1#tune-indexes`}
           className="scd-guide-toc-quicklink"
         >
-          Macro Index Tuning →
+          Setup: Tune indexes →
         </a>
         <a
           href={appUrl("searchbase_canvas")}
@@ -392,43 +394,43 @@ function GuidePageToc({
 const dashboards = [
   {
     title: "Secure Networking",
-    view: "secure_networking_profile",
+    view: "workspace_insights?workspace=secure_networking",
     summary:
       "Executive landing page with health KPIs, workspace-aware signal rail, topology, and summary tiles.",
   },
   {
     title: "Insights Workspaces",
-    view: "insights_workspace",
+    view: "workspace_insights",
     summary:
       "Reusable executive views that keep their own sections, tile choices, map placement, and theme.",
   },
   {
     title: "IT Health",
-    view: "it_health_v1",
+    view: "netops_critical_systems_health",
     summary:
       "Catalyst Center, ISE, ThousandEyes, device health, identity, and user experience.",
   },
   {
     title: "Security",
-    view: "security_v1",
+    view: "secops_resilience",
     summary:
       "Firewall, IPS, DNS, email, web, identity, endpoint, and security event visibility.",
   },
   {
     title: "Building Intelligence",
-    view: "building_v1",
+    view: "workplace_building_intelligence",
     summary:
       "Cisco Spaces, occupancy, building telemetry, wireless trust, and location intelligence.",
   },
   {
     title: "Cisco Spaces Intelligence",
-    view: "spaces_intelligence_v1",
+    view: "workplace_spaces_intelligence",
     summary:
       "Environmental, capacity, room, activation, visitor, and network impact analytics.",
   },
   {
     title: "Network Activation Report",
-    view: "statewide_exercise_v1",
+    view: "netops_catalyst_health",
     summary:
       "Event operations view for executive, client, device, traffic, and issue summaries.",
   },
@@ -602,7 +604,7 @@ const supportMacros = [
 const troubleshootingRows = [
   [
     "Panels are empty",
-    "Run Macro Index Tuning first, verify the time range, then open the panel in Search.",
+    "Open Setup, run Tune indexes, verify the time range, then open the panel in Search.",
   ],
   [
     "Searches are slow",
@@ -623,10 +625,11 @@ const troubleshootingRows = [
 ];
 
 export default function UserGuidePage(): JSX.Element {
-  const macroTuningUrl = appUrl("macro_index_tuning");
-  const setupUrl = `${appUrl("start")}?setup=1`;
-  const workspaceUrl = appUrl("insights_workspace");
-  const secureNetworkingUrl = appUrl("secure_networking_profile");
+  const { theme, resolvedTheme, cycle: cycleTheme } = useTheme();
+  const setupUrl = `${appUrl("setup")}?setup=1`;
+  const setupTuningUrl = `${setupUrl}#tune-indexes`;
+  const workspaceUrl = appUrl("workspace_insights");
+  const secureNetworkingUrl = `${appUrl("workspace_insights")}?workspace=secure_networking`;
   const scdMacrosUrl = managerUrl(APP_NAME, "data/macros");
   const cimMacrosUrl = managerUrl("Splunk_SA_CIM", "data/macros");
   const guideContentRef = useRef<HTMLDivElement | null>(null);
@@ -643,6 +646,15 @@ export default function UserGuidePage(): JSX.Element {
   const [searchStatus, setSearchStatus] = useState("");
   const [searchMatches, setSearchMatches] = useState(0);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
+
+  useEffect(() => {
+    document.documentElement.classList.add("scd-overview-active");
+    document.body.classList.add("scd-overview-active");
+    return () => {
+      document.documentElement.classList.remove("scd-overview-active");
+      document.body.classList.remove("scd-overview-active");
+    };
+  }, []);
 
   const clearSearchClasses = useCallback(() => {
     matchesRef.current.forEach((node) => {
@@ -882,7 +894,12 @@ export default function UserGuidePage(): JSX.Element {
   }, []);
 
   return (
-    <main className="scd-user-guide min-h-screen bg-slate-100 text-slate-900">
+    <main
+      className={`scd-user-guide scd-overview-page scd-c3-surface min-h-screen ${resolvedTheme} ${
+        resolvedTheme === "dark" ? "scd-c3-atmosphere" : ""
+      }`}
+      data-theme={resolvedTheme}
+    >
       <div className="scd-guide-layout">
         <GuideContents
           activeSection={activeSection}
@@ -908,15 +925,22 @@ export default function UserGuidePage(): JSX.Element {
                   Splunk App for Secure Networking
                 </h1>
               </div>
-              <button
-                type="button"
-                onClick={exportPdf}
-                title="Open the browser print dialog to save this guide as PDF"
-                className="scd-guide-no-print inline-flex h-11 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-bold text-sky-700 shadow-sm hover:border-sky-400 hover:bg-sky-50"
-              >
-                <Download size={17} />
-                Export PDF
-              </button>
+              <div className="scd-guide-no-print flex items-center gap-2">
+                <ThemeToggle
+                  theme={theme}
+                  onCycle={cycleTheme}
+                  className="scd-guide-theme-toggle"
+                />
+                <button
+                  type="button"
+                  onClick={exportPdf}
+                  title="Open the browser print dialog to save this guide as PDF"
+                  className="inline-flex h-11 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-bold text-sky-700 shadow-sm hover:border-sky-400 hover:bg-sky-50"
+                >
+                  <Download size={17} />
+                  Export PDF
+                </button>
+              </div>
             </div>
 
             <p className="mt-5 max-w-4xl text-lg leading-8 text-slate-700">
@@ -934,9 +958,9 @@ export default function UserGuidePage(): JSX.Element {
               </span>
             </div>
             <div className="scd-guide-no-print mt-5 flex flex-wrap gap-2">
-              <GuideLink href={macroTuningUrl}>
+              <GuideLink href={setupTuningUrl}>
                 <SlidersHorizontal size={15} />
-                Macro Index Tuning
+                Setup: Tune indexes
               </GuideLink>
               <GuideLink
                 href={searchUrl(
@@ -1087,9 +1111,9 @@ export default function UserGuidePage(): JSX.Element {
                   <PlayCircle size={15} />
                   Open Guided Setup
                 </GuideLink>
-                <GuideLink href={macroTuningUrl}>
+                <GuideLink href={setupTuningUrl}>
                   <SlidersHorizontal size={15} />
-                  Open Macro Index Tuning
+                  Open Tune indexes
                 </GuideLink>
                 <GuideLink
                   href={searchUrl(
@@ -1104,19 +1128,21 @@ export default function UserGuidePage(): JSX.Element {
 
             <Section
               id="macro-tuning"
-              title="Macro Index Tuning"
+              title="Setup: Tune Indexes"
               kicker="The most important setup step. It maps your real indexes to the macros the dashboards and data models use."
               icon={<SlidersHorizontal size={19} />}
             >
               <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
                 <div className="space-y-4 text-sm leading-6 text-slate-700">
                   <p className="m-0">
-                    The <strong>Macro Index Tuning</strong> dashboard is a React
-                    view mounted by{" "}
+                    <strong>Tune indexes</strong> is the third and final step of
+                    the Setup workflow. Its React interface is loaded directly
+                    inside Setup; the standalone{" "}
                     <code className="rounded bg-slate-100 px-1 py-0.5">
-                      macro_index_tuning.xml
+                      admin_macro_index_tuning.xml
                     </code>
-                    . The fast scan uses the{" "}
+                    {" "}route redirects here so administrators have one setup
+                    destination. The fast scan uses the{" "}
                     <code className="rounded bg-slate-100 px-1 py-0.5">
                       admin_macro_index_tuning
                     </code>
@@ -1351,7 +1377,11 @@ iseval = 0`}</CodeBlock>
                   Use executive workspaces for a concise briefing and a deeper
                   operational workspace for troubleshooting. The map can sit
                   beside, above, or below the tile grid, or be hidden when it
-                  is not useful to the audience.
+                  is not useful to the audience. Sections start expanded and
+                  can be collapsed to a KPI and health summary or focused to
+                  use the available metrics pane. Compact H1 sparklines keep
+                  the trend visible; focus restores full labels and chart
+                  detail without changing the shared factory layout.
                 </InfoCard>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
@@ -1440,8 +1470,8 @@ iseval = 0`}</CodeBlock>
                 </InfoCard>
                 <InfoCard title="Dashboard Studio and React">
                   Most operational dashboards are Dashboard Studio XML. Utility
-                  pages such as Macro Index Tuning and this guide are React
-                  bundles mounted inside Simple XML shells.
+                  experiences such as Setup's Tune indexes step and this guide
+                  use React bundles mounted inside Simple XML shells.
                 </InfoCard>
               </div>
             </Section>
@@ -1454,7 +1484,7 @@ iseval = 0`}</CodeBlock>
             >
               <div className="grid gap-4 md:grid-cols-3">
                 <InfoCard title="After index changes">
-                  Rerun Macro Index Tuning and save updated macros before
+                  Open Setup, rerun Tune indexes, and save updated macros before
                   troubleshooting individual panels.
                 </InfoCard>
                 <InfoCard title="After add-on changes">
@@ -1540,8 +1570,8 @@ iseval = 0`}</CodeBlock>
                         {APP_VERSION_LABEL}
                       </td>
                       <td className="px-3 py-3 text-slate-700">
-                        Secure Networking dashboard clarity, guided setup,
-                        workspace customization, Searchbase navigation, and
+                        Six-card Secure Networking KPI stories, guided setup,
+                        workspace customization, Searchbase drilldowns, and
                         site-connectivity improvements.
                       </td>
                       <td className="px-3 py-3 text-slate-700">
@@ -1555,24 +1585,18 @@ iseval = 0`}</CodeBlock>
 
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <InfoCard title="Secure Networking dashboards">
-                  All 16 Secure Networking Dashboard Studio views now use a
-                  Cisco-inspired dark-mode hierarchy with purpose-led headers,
-                  compact audience and source context, decision-oriented
-                  section guidance, and visible Searchbase-derived
-                  descriptions on all 131 data panels. Existing searches,
-                  tokens, drilldowns, and data-source references are preserved.
-                  The five pillar dashboards share the Insights Workspace dark
-                  palette, including slate surfaces and text, sky accents, and
-                  the same semantic status colors used by the home dashboard.
-                  Panel rows are now compact, and Dashboard Manager view mode
-                  provides Studio-style Display, zoom, JSON export, and clone
-                  controls without giving up Searchbase-backed rendering.
-                  The 13 single-value KPIs across Executive Overview, Threat
-                  Detection and Enforcement, Authentication and Policy
-                  Enforcement, and Secure Infrastructure Status now include
-                  time-bucketed sparklines and percent trends. SD-WAN site
-                  mapping, the Segmentation binding pie, and ISE RADIUS latency
-                  formatting are also corrected for their live result shapes.
+                  All 16 Secure Networking Dashboard Studio views now use the
+                  same clean dark three-by-two layout. Each dashboard tells a
+                  six-KPI story from footprint through outcome: every card has
+                  a concise explanation, a current value, a trend or
+                  categorical graph, and a quiet Searchbase category and
+                  sub-category label. Supporting tables and graphs move into
+                  ordered in-dashboard drilldowns, so operators can move from
+                  what changed to why it changed without leaving the dashboard.
+                  Each value and graph pair shares one search, limiting the
+                  initial canvas to six searches while details dispatch only
+                  when opened. Dashboard Manager view mode still provides
+                  Studio-style Display, zoom, JSON export, and clone controls.
                 </InfoCard>
                 <InfoCard title="Guided setup and performance readiness">
                   Setup now brings package checks, index macro discovery, data
@@ -1585,7 +1609,11 @@ iseval = 0`}</CodeBlock>
                 <InfoCard title="Insights Workspaces">
                   Workspaces now own their layout and presentation choices,
                   including sections, tiles, signal rail, map configuration,
-                  and theme. Signal Rail defaults are centrally managed, with
+                  and theme. Secure Networking visualizations use the same
+                  restrained operational palette and layered dark atmosphere
+                  observed in Cisco Cloud Control, while Splunk&apos;s 1CD theme
+                  customizer remains the component foundation. Signal Rail
+                  defaults are centrally managed, with
                   private account-and-workspace overrides for each signed-in
                   user. Headers prioritize the workspace title with compact
                   range and refresh controls, responsive health status, and
@@ -1594,13 +1622,34 @@ iseval = 0`}</CodeBlock>
                   comfortable density, offer small, standard, and large KPI
                   text, and use the full width without a fixed label block.
                   Tile drag and remove controls appear only from the top-left
-                  action corner. A template helps create the initial workspace
-                  but does not constrain future customization.
+                  action corner. Sections can collapse to a status summary or
+                  enter a temporary focus view; compact charts automatically
+                  trade static labels for plotting room and restore full detail
+                  when focused. A template helps create the initial workspace
+                  but does not constrain future customization. Detail
+                  drilldowns size short result tables to their rows, cap long
+                  tables with an internal scroller, and dedicate the remaining
+                  dialog height to Searchbase guidance. Search and Searchbase
+                  links sit together in detail headers, while Configure Tile
+                  keeps View in Searchbase and Test in Search attached to the
+                  currently bound search.
                 </InfoCard>
                 <InfoCard title="Dashboard Studio editing">
                   Dashboard Manager confirmation dialogs now use the edited
                   dashboard&apos;s saved light or dark theme, even when it differs
                   from the signed-in user&apos;s Splunk appearance preference.
+                  Internal Dashboard Studio drilldown links now open supporting
+                  Searchbase searches inside Dashboard Manager with the active
+                  dashboard time range. Their triggers use the same
+                  open-details-panel icon as the home dashboard, and
+                  multi-target links use Back/Forward navigation while
+                  dispatching only the visible search. Each detail includes
+                  the active search&apos;s category, sub-category, description,
+                  explanation, solution, related information, and available
+                  actions. Main canvases contain six KPI cards instead of
+                  detail tables; supporting tables remain available inside the
+                  drilldown. The Searchbase catalogue action describes adding
+                  reusable searches instead of visualizations.
                 </InfoCard>
                 <InfoCard title="Searchbase and tile selection">
                   Searchbase Canvas distinguishes failed searches from other

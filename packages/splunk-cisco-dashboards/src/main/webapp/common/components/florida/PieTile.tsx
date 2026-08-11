@@ -14,6 +14,7 @@ import { ExternalLink, Maximize2, PanelRightOpen, Settings2 } from '@/common/ico
 import { ChartFocusDialog } from './ChartFocusDialog';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
 import { cn } from '@/common/lib/utils';
+import { C3_SERIES_PALETTE } from '@/common/theme/c3VisualizationPalette';
 import type { DataSource, NoDataReason } from '@/common/hooks/useMetric';
 
 interface PieTileProps {
@@ -53,17 +54,6 @@ const ChartLoadingState: React.FC = () => (
         Loading chart…
     </div>
 );
-
-const COMPOSITION_FALLBACK_COLORS = [
-    '#0ea5e9',
-    '#8b5cf6',
-    '#f59e0b',
-    '#10b981',
-    '#f43f5e',
-    '#6366f1',
-    '#14b8a6',
-    '#ec4899',
-];
 
 const coerceNumber = (raw: unknown): number => {
     if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
@@ -166,7 +156,7 @@ export const PieTile: React.FC<PieTileProps> = ({
             (c) => typeof c === 'string' && /^#[0-9a-f]{3,8}$/i.test(c.trim())
         );
         if (fromOptions.length > 0) return fromOptions.map((c) => c.trim());
-        return COMPOSITION_FALLBACK_COLORS;
+        return C3_SERIES_PALETTE;
     }, [seriesColors]);
 
     // Dashboard Studio visualizations consume columnar search results rather
@@ -212,12 +202,12 @@ export const PieTile: React.FC<PieTileProps> = ({
             showXMajorGridLines: false,
             showYMajorGridLines: false,
             seriesColors: colors,
-            backgroundColor: isDark ? '#0f172a' : '#ffffff',
+            backgroundColor: isDark ? '#131a23' : '#ffffff',
         }),
         [colors, isDark]
     );
     const focusStudioOptions = useMemo(
-        () => ({ ...studioOptions, backgroundColor: '#0e1a2b' }),
+        () => ({ ...studioOptions, backgroundColor: '#131a23' }),
         [studioOptions]
     );
     return (

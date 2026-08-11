@@ -47,6 +47,7 @@ import {
     Check,
     CheckCircle2,
     ChevronDown,
+    ChevronLeft,
     ChevronRight,
     AlertCircle,
     ClipboardCheck,
@@ -56,7 +57,7 @@ import {
     ArrowUpDown,
     Layers3,
     Shield,
-    ShieldCheck,
+    ShieldKeyhole,
     Plus,
     Eye,
     EyeOff,
@@ -67,16 +68,20 @@ import {
     PanelRight,
     PanelTop,
     Sparkles,
-    ServerCog,
-    Network,
-    BrickWall,
-    Bot,
+    Servers,
+    NodeModel,
+    WallBricks,
+    RobotFaceWrench,
     Building2,
     type SuiIcon,
 } from '@/common/icons/SuiIcon';
 import { DashboardSection } from "@/common/components/florida/DashboardSection";
+import { OneCdRadioBar } from "@/common/components/florida/OneCdSurface";
 import { MetricItem } from "@/common/components/florida/MetricItem";
 import { WorkspaceModalShell } from "@/common/components/florida/WorkspaceModalShell";
+import SearchbaseDrilldownGuidance, {
+  type SearchbaseDrilldownMetadata,
+} from "@/common/components/florida/SearchbaseDrilldownGuidance";
 import { TableTile } from "@/common/components/florida/TableTile";
 import { BarBreakdownTile } from "@/common/components/florida/BarBreakdownTile";
 import { PieTile } from "@/common/components/florida/PieTile";
@@ -153,6 +158,7 @@ import { usePersistedSectionHiddenTiles } from "@/common/hooks/usePersistedSecti
 import { usePersistedSectionLayout } from "@/common/hooks/usePersistedSectionLayout";
 import { usePersistedSectionTileOrder } from "@/common/hooks/usePersistedSectionTileOrder";
 import { usePersistedSectionHeights } from "@/common/hooks/usePersistedSectionHeights";
+import { usePersistedSectionPresentation } from "@/common/hooks/usePersistedSectionPresentation";
 import {
   getDefaultSignalTickerConfig,
   usePersistedSignalTicker,
@@ -500,6 +506,7 @@ const parseOverviewThresholds = (
   fallback?: MetricThresholds,
 ): MetricThresholds | undefined => {
   if (!isRecord(raw)) return fallback;
+  const enabled = readOverviewBoolean(raw, "enabled");
   const warning = readOverviewNumber(raw, "warning");
   const critical = readOverviewNumber(raw, "critical");
   const directionRaw = readOverviewString(raw, "direction", 32);
@@ -507,9 +514,15 @@ const parseOverviewThresholds = (
     directionRaw === "lower_is_better" || directionRaw === "higher_is_better"
       ? directionRaw
       : fallback?.direction;
-  if (warning === undefined && critical === undefined && !direction)
+  if (
+    enabled === undefined &&
+    warning === undefined &&
+    critical === undefined &&
+    !direction
+  )
     return fallback;
   return {
+    enabled: enabled ?? fallback?.enabled,
     warning: warning ?? fallback?.warning,
     critical: critical ?? fallback?.critical,
     direction: direction ?? "higher_is_better",
@@ -824,11 +837,16 @@ const SECTION_ICON_COMPONENTS: Record<WorkspaceSectionIcon, SuiIcon> = {
   shield: Shield,
   building: Building2,
   sparkles: Sparkles,
-  "shield-check": ShieldCheck,
-  "server-cog": ServerCog,
-  network: Network,
-  firewall: BrickWall,
-  bot: Bot,
+  "shield-keyhole": ShieldKeyhole,
+  servers: Servers,
+  "node-model": NodeModel,
+  "wall-bricks": WallBricks,
+  "robot-face-wrench": RobotFaceWrench,
+  "shield-check": ShieldKeyhole,
+  "server-cog": Servers,
+  network: NodeModel,
+  firewall: WallBricks,
+  bot: RobotFaceWrench,
 };
 
 // Cisco's technical SVGs are authored for much larger canvases, where their
@@ -855,7 +873,7 @@ const PRIORITY_DRILLDOWN_LABEL = "Priority Drill-Down";
 const PRIORITY_DRILLDOWN_CTA = "Open dashboard";
 const PRIORITY_DRILLDOWN_STORAGE_KEY =
   "splunk-cisco-dashboards.priorityDrilldown.v1";
-const DEFAULT_PRIORITY_DRILLDOWN_VIEW = "statewide_exercise_v1";
+const DEFAULT_PRIORITY_DRILLDOWN_VIEW = "netops_catalyst_health";
 
 // App-local allow-list only. These are shipped views in this app, curated
 // from default/data/ui/nav/default.xml plus default/data/ui/views/*.xml.
@@ -863,58 +881,58 @@ const DEFAULT_PRIORITY_DRILLDOWN_VIEW = "statewide_exercise_v1";
 // intentionally excluded from the executive drill-down picker.
 const APP_PRIORITY_DRILLDOWNS: readonly AppPriorityDrilldown[] = [
   {
-    viewName: "statewide_exercise_v1",
+    viewName: "netops_catalyst_health",
     title: "Statewide Network Activation Report",
     description:
       "Client health, readiness, and activation signals across all sites.",
     timeToken: "time_tok",
   },
   {
-    viewName: "it_health_v1",
+    viewName: "netops_critical_systems_health",
     title: "IT Health",
     description:
       "Critical systems, network posture, device health, and compliance.",
     timeToken: "global_time",
   },
   {
-    viewName: "security_v1",
+    viewName: "secops_resilience",
     title: "Security Resilience",
     description: "Firewall, identity, XDR, IDS/IPS, DNS, and endpoint signals.",
     timeToken: "global_time",
   },
   {
-    viewName: "building_v1",
+    viewName: "workplace_building_intelligence",
     title: "Building Intelligence",
     description:
       "Cisco Spaces occupancy, wireless trust, and workplace telemetry.",
     timeToken: "global_time",
   },
   {
-    viewName: "health_monitoring",
+    viewName: "netops_health_monitoring",
     title: "Health Monitoring",
     description: "Operational health monitoring for sites and infrastructure.",
   },
   {
-    viewName: "netops_readiness_v1",
+    viewName: "netops_readiness",
     title: "NetOps Readiness",
     description: "Readiness, site posture, and field-operation validation.",
     timeToken: "global_time",
   },
   {
-    viewName: "spaces_intelligence_v1",
+    viewName: "workplace_spaces_intelligence",
     title: "Spaces Intelligence",
     description:
       "Cisco Spaces intelligence for locations, devices, and activity.",
     timeToken: "global_time",
   },
   {
-    viewName: "workplace_spog_v1",
+    viewName: "workplace_operations_overview",
     title: "Workplace Single Pane",
     description: "Unified workplace and collaboration operating view.",
     timeToken: "global_time",
   },
   {
-    viewName: "asset_inventory_v1",
+    viewName: "admin_asset_inventory",
     title: "Asset Inventory",
     description: "Asset inventory across Cisco and Splunk-connected sources.",
     timeToken: "time_tok",
@@ -925,7 +943,7 @@ const APP_PRIORITY_DRILLDOWNS: readonly AppPriorityDrilldown[] = [
     description: "Network diagram and topology-oriented operational context.",
   },
   {
-    viewName: "topology_canvas_v1",
+    viewName: "sn_topology_canvas",
     title: "Topology Canvas",
     description:
       "Interactive network topology canvas for site and device context.",
@@ -978,7 +996,7 @@ const clearPriorityDrilldownView = (): void => {
 // =============================================================================
 
 // Locale-aware URL builder for a sibling Splunk view inside this app
-// (e.g. statewide_exercise_v1). Mirrors splunkSearchAppUrl's locale
+// (e.g. netops_catalyst_health). Mirrors splunkSearchAppUrl's locale
 // detection so the URL stays valid in non-en-US Splunk installs.
 const splunkViewAppUrl = (
   viewName: string,
@@ -1024,6 +1042,14 @@ const splunkSearchAppUrl = (
   return `/${locale}/app/${resolveSearchAppName(appName)}/search?${params.toString()}`;
 };
 
+const splunkSearchbaseEditUrl = (stanzaId: string): string => {
+  const path =
+    typeof window !== "undefined" ? window.location.pathname : "/en-US";
+  const localeMatch = path.match(/^\/([a-z]{2}-[A-Z]{2})\//);
+  const locale = localeMatch ? localeMatch[1] : "en-US";
+  return `/${locale}/app/searchbase/start#/edit/${encodeURIComponent(stanzaId)}#search-spl`;
+};
+
 type MetricDetailTableColumnKind = "text" | "status" | "metric";
 
 interface MetricDetailTableColumn {
@@ -1035,9 +1061,9 @@ interface MetricDetailTableColumn {
   truncate?: boolean;
 }
 
-interface MetricDetailTableConfig {
-  title: string;
-  buttonTitle: string;
+interface MetricDetailTableTargetConfig {
+  searchbaseId: string;
+  metadata: SearchbaseDrilldownMetadata;
   subtitle: (range: TimeRange) => string;
   spl: string;
   dispatchContext?: string;
@@ -1049,6 +1075,12 @@ interface MetricDetailTableConfig {
   availableStatus?: string;
   unavailableStatus?: string;
   columns: MetricDetailTableColumn[];
+}
+
+interface MetricDetailTableConfig {
+  title: string;
+  buttonTitle: string;
+  targets: MetricDetailTableTargetConfig[];
 }
 
 const DETAIL_TABLE_COLUMN_KINDS = new Set<MetricDetailTableColumnKind>([
@@ -1169,6 +1201,7 @@ const interpolateDetailSubtitle = (
 const buildMetricDetailTableConfig = (
   source: SearchbaseRecord | null,
   searchbaseByName: Map<string, SearchbaseRecord> | null | undefined,
+  searchbaseById: Map<string, SearchbaseRecord> | null | undefined,
   searchbaseDrilldowns: SearchbaseDrilldownMap,
 ): MetricDetailTableConfig | null => {
   const userDrilldown =
@@ -1179,47 +1212,80 @@ const buildMetricDetailTableConfig = (
     )
       ? searchbaseDrilldowns[source.searchName]
       : undefined;
-  const drilldownName =
+  const drilldownNames =
     userDrilldown === null
-      ? ""
-      : (userDrilldown ?? source?.drilldownSearchName)?.trim();
-  if (!source || !drilldownName || !searchbaseByName) return null;
-  const detail = searchbaseByName.get(drilldownName);
-  if (!detail?.search) return null;
-  const options = detail.vizOptions;
-  const columns = parseDetailTableColumns(options?.columns);
-  const subtitleTemplate =
-    readDetailStringOption(options, "modalSubtitle") ??
-    "Detail table for {searchName} over {rangeLabel}.";
-  const tag = `detail_table_${detail.id || detail.searchName}`.replace(
-    /[^A-Za-z0-9_]+/g,
-    "_",
-  );
+      ? []
+      : userDrilldown !== undefined
+        ? [userDrilldown.trim()].filter(Boolean)
+        : source?.drilldownSearchNames?.length
+          ? source.drilldownSearchNames
+          : [source?.drilldownSearchName?.trim() ?? ""].filter(Boolean);
+  if (!source || drilldownNames.length === 0) return null;
+  // Stanza ids are canonical; friendly names remain a compatibility alias
+  // for existing local/searchbase.conf and browser-persisted overrides.
+  const seen = new Set<string>();
+  const details = drilldownNames
+    .map(
+      (drilldownName) =>
+        searchbaseById?.get(drilldownName) ??
+        searchbaseByName?.get(drilldownName),
+    )
+    .filter((detail): detail is SearchbaseRecord => {
+      if (!detail?.search || seen.has(detail.id)) return false;
+      seen.add(detail.id);
+      return true;
+    });
+  if (details.length === 0) return null;
+  const primaryOptions = details[0].vizOptions;
   return {
     title:
-      readDetailStringOption(options, "modalTitle") ??
-      `${source.searchName} Details`,
+      readDetailStringOption(primaryOptions, "modalTitle") ??
+      `Drill down: ${source.searchName}`,
     buttonTitle:
       source.drilldownButtonTitle ??
-      readDetailStringOption(options, "buttonTitle") ??
-      `View ${source.searchName} detail table`,
-    subtitle: (range) =>
-      interpolateDetailSubtitle(subtitleTemplate, source, detail, range),
-    spl: detail.search,
-    dispatchContext: detail.dispatchContext,
-    tag,
-    rowKeyField:
-      readDetailStringOption(options, "rowKeyField") ?? columns[0]?.field ?? "",
-    emptyMessage:
-      readDetailStringOption(options, "emptyMessage") ??
-      "No detail rows returned for this time range.",
-    errorMessage:
-      readDetailStringOption(options, "errorMessage") ??
-      `Unable to load ${detail.searchName}.`,
-    statusField: readDetailStringOption(options, "statusField"),
-    availableStatus: readDetailStringOption(options, "availableStatus"),
-    unavailableStatus: readDetailStringOption(options, "unavailableStatus"),
-    columns,
+      readDetailStringOption(primaryOptions, "buttonTitle") ??
+      `View ${source.searchName} detail`,
+    targets: details.map((detail) => {
+      const options = detail.vizOptions;
+      const columns = parseDetailTableColumns(options?.columns);
+      const subtitleTemplate =
+        readDetailStringOption(options, "modalSubtitle") ??
+        "Supporting Searchbase results and guidance for {rangeLabel}.";
+      const tag = `detail_table_${detail.id || detail.searchName}`.replace(
+        /[^A-Za-z0-9_]+/g,
+        "_",
+      );
+      return {
+        searchbaseId: detail.id,
+        metadata: {
+          title: detail.searchName,
+          category: detail.category,
+          subCategory: detail.subCategory,
+          description: detail.description,
+          explanation: detail.explanation,
+          solution: detail.solution,
+          relatedInfo: detail.relatedInfo,
+          executionPlan: detail.executionPlan,
+        },
+        subtitle: (range: TimeRange) =>
+          interpolateDetailSubtitle(subtitleTemplate, source, detail, range),
+        spl: detail.search,
+        dispatchContext: detail.dispatchContext,
+        tag,
+        rowKeyField:
+          readDetailStringOption(options, "rowKeyField") ?? columns[0]?.field ?? "",
+        emptyMessage:
+          readDetailStringOption(options, "emptyMessage") ??
+          "No detail rows returned for this time range.",
+        errorMessage:
+          readDetailStringOption(options, "errorMessage") ??
+          `Unable to load ${detail.searchName}.`,
+        statusField: readDetailStringOption(options, "statusField"),
+        availableStatus: readDetailStringOption(options, "availableStatus"),
+        unavailableStatus: readDetailStringOption(options, "unavailableStatus"),
+        columns,
+      };
+    }),
   };
 };
 
@@ -1450,9 +1516,10 @@ const MetricCard: React.FC<MetricCardProps> = ({
       buildMetricDetailTableConfig(
         sbRecord,
         searchbaseByName,
+        searchbaseById,
         searchbaseDrilldowns,
       ),
-    [sbRecord, searchbaseByName, searchbaseDrilldowns],
+    [sbRecord, searchbaseById, searchbaseByName, searchbaseDrilldowns],
   );
   const openDetailTable =
     detailTableConfig && onOpenDetailTable
@@ -1760,7 +1827,11 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
       // dump it into a hover popover too.
       descriptionFootnote={undefined}
       thresholdLines={thresholdLines}
-      thresholdNote={effective.thresholdNote}
+      thresholdNote={
+        effective.thresholds?.enabled === false
+          ? undefined
+          : effective.thresholdNote
+      }
       infoAnchor={infoAnchor}
       // `displayValue` (string broadcast from the search) wins
       // over the numeric `value` when present. Status, threshold,
@@ -1803,12 +1874,9 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
       // the existing one regardless of what the searchbase
       // entry asked for.
       dataValuesDisplay={
-        hidePeak
-          ? "off"
-          : compactDensity && dataValuesDisplay === "minmax"
-            ? "maxonly"
-            : dataValuesDisplay
+        hidePeak ? "off" : dataValuesDisplay
       }
+      sparklineDensity={compactDensity ? "compact" : "detailed"}
       status={result.status}
       source={result.source}
       onOpenInSearch={drilldownSpl ? handleClick : undefined}
@@ -2165,7 +2233,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       const params = new URLSearchParams();
       params.set("workspace", nextWorkspaceId);
       window.location.assign(
-        `${splunkViewAppUrl("insights_workspace")}?${params.toString()}`,
+        `${splunkViewAppUrl("workspace_insights")}?${params.toString()}`,
       );
     },
     [insightsWorkspace.id],
@@ -2526,6 +2594,47 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     availableSections,
   });
 
+  // Collapsed state is a private, workspace-scoped preference. Focus is
+  // deliberately transient: a reload always returns to the user's expanded /
+  // collapsed layout instead of reopening an investigation-only view.
+  const {
+    collapsed: collapsedSections,
+    setCollapsed: setSectionCollapsed,
+    resetAll: resetAllSectionPresentation,
+  } = usePersistedSectionPresentation({
+    workspaceId: insightsWorkspace.id,
+    availableSections,
+  });
+  const [focusedSection, setFocusedSection] = useState<SectionId | null>(null);
+
+  useEffect(() => {
+    setFocusedSection(null);
+  }, [insightsWorkspace.id]);
+
+  const toggleSectionFocus = useCallback(
+    (section: SectionId) => {
+      setFocusedSection((current) => (current === section ? null : section));
+    },
+    [],
+  );
+
+  const toggleSectionCollapsed = useCallback(
+    (section: SectionId) => {
+      if (focusedSection === section) {
+        setFocusedSection(null);
+        setSectionCollapsed(section, true);
+        return;
+      }
+      if (focusedSection && focusedSection !== section) {
+        setFocusedSection(null);
+        setSectionCollapsed(section, false);
+        return;
+      }
+      setSectionCollapsed(section, !collapsedSections[section]);
+    },
+    [collapsedSections, focusedSection, setSectionCollapsed],
+  );
+
   // ------------------------------ Section tile-order preference ------------------------------
   //
   // Companion to the count preference: the user can drag tiles
@@ -2658,8 +2767,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         if (cancelled) return;
         const drilldownNames = new Set<string>();
         for (const entry of list) {
-          const name = entry.drilldownSearchName?.trim();
-          if (name) drilldownNames.add(name);
+          for (const rawName of entry.drilldownSearchNames ?? []) {
+            const name = rawName.trim();
+            if (name) drilldownNames.add(name);
+          }
         }
         setSignalTickerDrilldownSearchNames(drilldownNames);
       })
@@ -2679,6 +2790,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     config: signalTickerConfig,
     setConfig: setSignalTickerConfig,
     resetAll: resetSignalTickerConfig,
+    isWorkspaceDefault: signalTickerIsWorkspaceDefault,
     itemCount: signalTickerItemCount,
     persistenceStatus: signalTickerPersistenceStatus,
     persistenceError: signalTickerPersistenceError,
@@ -2688,14 +2800,17 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     if (!visibleSearchbaseCatalogue) return [];
     const fallbackDrilldownNames = new Set<string>();
     for (const entry of visibleSearchbaseCatalogue) {
-      const name = entry.drilldownSearchName?.trim();
-      if (name) fallbackDrilldownNames.add(name);
+      for (const rawName of entry.drilldownSearchNames ?? []) {
+        const name = rawName.trim();
+        if (name) fallbackDrilldownNames.add(name);
+      }
     }
     const drilldownNames =
       signalTickerDrilldownSearchNames ?? fallbackDrilldownNames;
     return visibleSearchbaseCatalogue
       .filter((entry) => {
-        const isDrilldownSearch = drilldownNames.has(entry.searchName);
+        const isDrilldownSearch =
+          drilldownNames.has(entry.id) || drilldownNames.has(entry.searchName);
         const isTableSearch =
           entry.defaultViz?.trim().toLowerCase() === "splunk.table";
         return (
@@ -3675,7 +3790,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           thresholds: patch.thresholds,
           dataMapping: patch.dataMapping,
           searchRebind: toStanzaId ? { toStanzaId } : undefined,
-          drilldownSearchName: patch.drilldownSearchName,
+          drilldownSearchNames: patch.drilldownSearchNames,
         });
         setSearchbaseRefreshToken((n) => n + 1);
         setFactoryTileConfigStatus("saved");
@@ -3787,6 +3902,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   //                                      into profile sections
   //   • sectionHiddenTiles.v1         — per-user hidden factory tiles
   //   • sectionHeights.v1             — vertical room per section
+  //   • sectionPresentation.v1        — collapsed state per section
   //   • sectionTileOrder.v1           — drag-to-reorder preference
   //   • customerTopology.v4           — retired per-browser map payload
   //   • scd_overview_split_pct        — tiles ↔ map splitter position
@@ -3818,6 +3934,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     resetAllSectionTileAdditions();
     resetAllSectionHiddenTiles();
     resetAllSectionHeights();
+    resetAllSectionPresentation();
     resetAllSectionTileOrder();
     resetSignalTickerConfig();
     clearCustomerTopologyStorage();
@@ -3826,6 +3943,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     setMapPosition(MAP_POS_DEFAULT);
     setMapVisible(MAP_VISIBLE_DEFAULT);
     setSelectedPriorityDrilldownView(DEFAULT_PRIORITY_DRILLDOWN_VIEW);
+    setFocusedSection(null);
     clearPriorityDrilldownView();
     setAddTileSection(null);
     if (typeof window !== "undefined" && window.localStorage) {
@@ -3847,6 +3965,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     resetAllSectionTileAdditions,
     resetAllSectionHiddenTiles,
     resetAllSectionHeights,
+    resetAllSectionPresentation,
     resetAllSectionTileOrder,
     resetSignalTickerConfig,
     SPLIT_KEY,
@@ -4142,15 +4261,15 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       ref={exportRef}
       style={dashboardShellStyle}
       className={cn(
-        "scd-overview-page flex w-full min-w-0 max-w-full flex-col overflow-hidden font-sans",
+        "scd-overview-page scd-c3-surface flex w-full min-w-0 max-w-full flex-col overflow-hidden font-sans",
         compactDensity && "scd-overview-compact",
         "bg-slate-50 text-slate-900",
         "dark:bg-slate-950 dark:text-slate-100",
-        resolvedTheme === "dark" && "dark",
+        resolvedTheme === "dark" && "dark scd-one-cisco-spotlight-canvas",
       )}
     >
       {/* Header */}
-      <header className="h-14 flex-shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 flex items-center justify-between shadow-sm">
+      <header className="scd-c3-toolbar h-14 flex-shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 flex items-center justify-between shadow-sm">
         {/*
          * The branding cluster (logo + title/subtitle + edit
          * pencil) is the hover-trigger group. The pencil sits
@@ -4196,10 +4315,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             </div>
           ) : null}
           <div className="min-w-0">
-            <h1 className="text-base font-black text-sky-900 dark:text-sky-200 tracking-tight leading-none uppercase truncate">
+            <h1 className="truncate text-lg font-bold leading-none tracking-[-0.01em] text-slate-900 dark:text-slate-100">
               {effectiveTitle}
             </h1>
-            <p className="text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-[0.3em] mt-1 leading-none truncate">
+            <p className="mt-1 truncate text-xs font-medium leading-none text-slate-500 dark:text-slate-400">
               {effectiveSubtitle}
             </p>
           </div>
@@ -4369,7 +4488,12 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           >
             <Sparkles className="w-4 h-4" />
           </button>
-          <ThemeToggle theme={theme} onCycle={cycleTheme} iconOnly />
+          <ThemeToggle
+            theme={theme}
+            onCycle={cycleTheme}
+            className={iconBtnClass}
+            iconOnly
+          />
           <button
             type="button"
             onClick={toggleMapVisibility}
@@ -4489,7 +4613,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       {signalTickerConfig.showPriorityDrilldown ? (
         <div
           data-testid="priority-drilldown-row"
-          className="group flex-shrink-0 relative block border-b border-sky-200 dark:border-sky-800/60 bg-white hover:bg-sky-50/80 dark:bg-slate-900 dark:hover:bg-sky-950/30 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-inset"
+          className="scd-c3-toolbar group flex-shrink-0 relative block border-b border-sky-200 dark:border-sky-800/60 bg-white hover:bg-sky-50/80 dark:bg-slate-900 dark:hover:bg-sky-950/30 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-inset"
         >
           <div
             aria-hidden="true"
@@ -4673,16 +4797,22 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               const estimatedTileRows = wrapTiles
                 ? Math.ceil(visibleCount / SECTION_WRAPPED_TILE_COLUMNS)
                 : 1;
+              const isSectionFocused = focusedSection === section;
+              const isSectionCollapsed = isSectionFocused
+                ? false
+                : Boolean(collapsedSections[section] || focusedSection);
               const heightLevel =
                 sectionHeights[section] ?? sectionHeightBounds.defaultLevel;
               const isCompactHeight =
                 heightLevel === sectionHeightBounds.minLevel;
-              const baseMinHeight = isCompactHeight
+              const renderCompactHeight =
+                isCompactHeight && !isSectionFocused;
+              const baseMinHeight = renderCompactHeight
                 ? SECTION_HEIGHT_H1_BASE_PX
                 : compactDensity
                   ? SECTION_HEIGHT_COMPACT_BASE_PX
                   : SECTION_HEIGHT_BASE_PX;
-              const wrappedRowStep = isCompactHeight
+              const wrappedRowStep = renderCompactHeight
                 ? SECTION_WRAPPED_H1_TILE_ROW_STEP_PX
                 : SECTION_WRAPPED_TILE_ROW_STEP_PX;
               const sectionMinHeight =
@@ -4706,6 +4836,37 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               const orderedIds = getSectionTileOrder(section, canonicalIds);
               const visibleIds = orderedIds.slice(0, visibleCount);
               const byId = new Map(allSectionMetrics.map((m) => [m.id, m]));
+              const sectionStatuses = visibleIds
+                .map((id) => statuses[id])
+                .filter((status): status is MetricStatus => Boolean(status));
+              const criticalCount = sectionStatuses.filter(
+                (status) => status === "critical",
+              ).length;
+              const warningCount = sectionStatuses.filter(
+                (status) => status === "warning",
+              ).length;
+              const healthyCount = sectionStatuses.filter(
+                (status) => status === "healthy",
+              ).length;
+              const explicitUnknownCount = sectionStatuses.filter(
+                (status) => status === "unknown",
+              ).length;
+              const unresolvedCount = Math.max(
+                0,
+                visibleCount - sectionStatuses.length,
+              );
+              const collapsedSummary = {
+                kpiCount: visibleCount,
+                healthyCount,
+                warningCount,
+                criticalCount,
+                unknownCount: explicitUnknownCount + unresolvedCount,
+              };
+              let sectionFlexGrow = heightLevel;
+              if (isSectionCollapsed) sectionFlexGrow = 0;
+              if (isSectionFocused) {
+                sectionFlexGrow = sectionHeightBounds.maxLevel;
+              }
 
               // Drag handler scoped to this section: dnd-kit
               // emits the dragged id and the id it was
@@ -4737,9 +4898,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   // floor that triggers metric-column
                   // scrolling on short screens.
                   style={{
-                    flexGrow: heightLevel,
+                    flexGrow: sectionFlexGrow,
                     flexShrink: 0,
-                    minHeight: sectionMinHeight,
+                    minHeight: isSectionCollapsed ? 42 : sectionMinHeight,
                   }}
                   height={{
                     value: heightLevel,
@@ -4749,7 +4910,12 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                     label: `${meta.title} height`,
                   }}
                   wrapTiles={wrapTiles}
-                  compactHeight={isCompactHeight}
+                  compactHeight={renderCompactHeight}
+                  collapsed={isSectionCollapsed}
+                  focused={isSectionFocused}
+                  collapsedSummary={collapsedSummary}
+                  onToggleCollapsed={() => toggleSectionCollapsed(section)}
+                  onToggleFocus={() => toggleSectionFocus(section)}
                   tileCount={
                     sectionMaxAvailable > 0
                       ? {
@@ -4823,7 +4989,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                               wrapTiles
                                 ? cn(
                                     "min-w-[240px] md:min-w-[250px]",
-                                    isCompactHeight
+                                    renderCompactHeight
                                       ? "min-h-[124px]"
                                       : "min-h-[148px]",
                                   )
@@ -4847,7 +5013,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                               searchbaseById={searchbaseById}
                               searchbaseDrilldowns={searchbaseDrilldowns}
                               compactDensity={
-                                compactDensity || isCompactHeight
+                                !isSectionFocused &&
+                                (compactDensity || renderCompactHeight)
                               }
                               isDark={resolvedTheme === "dark"}
                               onOpenDetailTable={setActiveDetailTable}
@@ -4970,9 +5137,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               data-map-position={mapPosition}
               style={verticalMapStyle}
             >
-              <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-col overflow-hidden">
-                <div className="flex items-center justify-between mb-2 flex-shrink-0">
-                  <div>
+              <div className="scd-c3-panel flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-col overflow-hidden">
+                <div className="mb-2 flex flex-shrink-0 flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-[12rem] flex-1">
                     <h2 className="text-base font-bold text-sky-900 dark:text-sky-200 uppercase tracking-wide leading-none">
                       {topologyHeaderName}
                     </h2>
@@ -4980,7 +5147,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                       {topologyHeaderSubtitle}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-shrink-0 items-center gap-2">
                     <MapPositionToggle
                       value={mapPosition}
                       onChange={setMapPosition}
@@ -5110,10 +5277,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         </div>
       </main>
 
-      <footer className="flex-shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-1 text-center text-[8.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] leading-none">
-        Splunk Field Solutions · Insights Workspace
-      </footer>
-
       <HelpOverlay
         open={helpOpen}
         onClose={closeHelp}
@@ -5231,6 +5394,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         onIncludeTableSearchesChange={setSignalTickerIncludeTableSearches}
         onChange={setSignalTickerConfig}
         onReset={resetSignalTickerConfig}
+        isWorkspaceDefault={signalTickerIsWorkspaceDefault}
         persistenceStatus={signalTickerPersistenceStatus}
         persistenceError={signalTickerPersistenceError}
         onClose={() => setSignalTickerEditorOpen(false)}
@@ -5726,8 +5890,10 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   const drilldownSearchNames = useMemo(() => {
     const names = new Set<string>();
     for (const record of addableRecords) {
-      const name = record.drilldownSearchName?.trim();
-      if (name) names.add(name.toLowerCase());
+      for (const rawName of record.drilldownSearchNames ?? []) {
+        const name = rawName.trim();
+        if (name) names.add(name.toLowerCase());
+      }
     }
     return names;
   }, [addableRecords]);
@@ -6664,46 +6830,22 @@ interface RegionalViewToggleProps {
   onChange: (next: RegionalView) => void;
 }
 
+const REGIONAL_VIEW_OPTIONS = [
+  { value: "map", label: "Map" },
+  { value: "table", label: "Table" },
+] as const;
+
 const RegionalViewToggle: React.FC<RegionalViewToggleProps> = ({
   value,
   onChange,
-}) => {
-  const baseClass =
-    "px-3 py-1 text-xs font-bold transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400";
-  const activeClass =
-    "bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-sky-600 dark:text-sky-300";
-  const inactiveClass =
-    "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300";
-  return (
-    <div
-      role="tablist"
-      aria-label="Topology view"
-      className="flex bg-slate-100 dark:bg-slate-800/60 p-1 rounded-md"
-    >
-      <button
-        type="button"
-        role="tab"
-        aria-selected={value === "map"}
-        onClick={() => onChange("map")}
-        className={cn(baseClass, value === "map" ? activeClass : inactiveClass)}
-      >
-        MAP
-      </button>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={value === "table"}
-        onClick={() => onChange("table")}
-        className={cn(
-          baseClass,
-          value === "table" ? activeClass : inactiveClass,
-        )}
-      >
-        TABLE
-      </button>
-    </div>
-  );
-};
+}) => (
+  <OneCdRadioBar
+    ariaLabel="Topology view"
+    options={REGIONAL_VIEW_OPTIONS}
+    value={value}
+    onChange={onChange}
+  />
+);
 
 // =============================================================================
 // Metric detail-table modal
@@ -6876,9 +7018,14 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
   range,
   refreshToken,
 }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const activeConfig = config.targets[activeIndex] ?? config.targets[0];
+  const targetKey = config.targets
+    .map((target) => target.searchbaseId)
+    .join("\u0000");
   const [rows, setRows] = useState<Array<Record<string, string>>>([]);
   const [tableColumns, setTableColumns] = useState<MetricDetailTableColumn[]>(
-    config.columns,
+    activeConfig.columns,
   );
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
@@ -6887,25 +7034,37 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
   );
 
   useEffect(() => {
+    setActiveIndex(0);
+  }, [targetKey]);
+
+  useEffect(() => {
+    if (activeIndex >= config.targets.length) setActiveIndex(0);
+  }, [activeIndex, config.targets.length]);
+
+  useEffect(() => {
     let cancelled = false;
+    const controller = new AbortController();
     setLoading(true);
     setRows([]);
-    setTableColumns(config.columns);
+    setTableColumns(activeConfig.columns);
     setErrorMessage("");
+    setSortState(null);
 
     runSearch({
-      spl: config.spl,
+      spl: activeConfig.spl,
       earliestTime: range.earliest,
       latestTime: range.latest,
-      tag: config.tag,
-      appContext: config.dispatchContext,
+      tag: activeConfig.tag,
+      appContext: activeConfig.dispatchContext,
+      count: 1000,
+      signal: controller.signal,
     })
       .then((res) => {
         if (cancelled) return;
         const rawRows = (res?.results ?? []) as Array<Record<string, unknown>>;
         const columns =
-          config.columns.length > 0
-            ? config.columns
+          activeConfig.columns.length > 0
+            ? activeConfig.columns
             : inferDetailTableColumns(rawRows);
         const nextRows = rawRows.map((row) => {
           const detailRow: Record<string, string> = {};
@@ -6921,11 +7080,17 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
         setTableColumns(columns);
         setRows(nextRows);
       })
-      .catch(() => {
+      .catch((error: unknown) => {
+        if (
+          cancelled ||
+          (error instanceof Error && error.name === "AbortError")
+        ) {
+          return;
+        }
         if (!cancelled) {
           setRows([]);
-          setTableColumns(config.columns);
-          setErrorMessage(config.errorMessage);
+          setTableColumns(activeConfig.columns);
+          setErrorMessage(activeConfig.errorMessage);
         }
       })
       .finally(() => {
@@ -6934,15 +7099,16 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
-  }, [config, range.earliest, range.latest, refreshToken]);
+  }, [activeConfig, range.earliest, range.latest, refreshToken]);
 
-  const availableStatus = config.availableStatus ?? "Available";
-  const unavailableStatus = config.unavailableStatus ?? "Unavailable";
-  const titleId = `${config.tag}-title`;
-  const statusField = config.statusField;
+  const availableStatus = activeConfig.availableStatus ?? "Available";
+  const unavailableStatus = activeConfig.unavailableStatus ?? "Unavailable";
+  const titleId = `${activeConfig.tag}-title`;
+  const statusField = activeConfig.statusField;
   const displayColumns =
-    tableColumns.length > 0 ? tableColumns : config.columns;
+    tableColumns.length > 0 ? tableColumns : activeConfig.columns;
   const columnCount = Math.max(displayColumns.length, 1);
   const sortedRows = useMemo(() => {
     if (!sortState) return rows;
@@ -6978,21 +7144,47 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
     : 0;
   const unavailableCount = statusField ? rows.length - availableCount : 0;
   const searchUrl = splunkSearchAppUrl(
-    config.spl,
+    activeConfig.spl,
     range,
-    config.dispatchContext,
+    activeConfig.dispatchContext,
   );
+  const searchbaseUrl = splunkSearchbaseEditUrl(activeConfig.searchbaseId);
+  const activeClassification = [
+    activeConfig.metadata.category,
+    activeConfig.metadata.subCategory,
+  ].filter(Boolean);
+  const canGoBack = activeIndex > 0;
+  const canGoForward = activeIndex < config.targets.length - 1;
+  const showTarget = (nextIndex: number) => {
+    const boundedIndex = Math.max(
+      0,
+      Math.min(config.targets.length - 1, nextIndex),
+    );
+    const nextConfig = config.targets[boundedIndex];
+    if (!nextConfig || boundedIndex === activeIndex) return;
+    // Clear the current result in the same render as the navigation change so
+    // rows from the previous search never flash under the next target's title.
+    setRows([]);
+    setTableColumns(nextConfig.columns);
+    setErrorMessage("");
+    setSortState(null);
+    setLoading(true);
+    setActiveIndex(boundedIndex);
+  };
+  const showPrevious = () => showTarget(activeIndex - 1);
+  const showNext = () => showTarget(activeIndex + 1);
 
   return (
     <WorkspaceModalShell
       variant="detail"
       title={config.title}
-      subtitle={config.subtitle(range)}
+      subtitle={activeConfig.subtitle(range)}
       titleId={titleId}
       onClose={onClose}
       openInSearchHref={searchUrl}
+      openInSearchbaseHref={searchbaseUrl}
       wide={displayColumns.length > 5}
-      contentClassName="overflow-auto bg-slate-950/[0.28]"
+      contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950/[0.28]"
       headerMeta={
         statusField ? (
           <>
@@ -7008,7 +7200,57 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
         ) : undefined
       }
     >
-          <table className="w-full min-w-[860px] bg-transparent text-sm">
+      <div
+        className="flex shrink-0 items-center border-b border-white/[0.1] bg-slate-950/[0.28] px-4 py-2.5"
+        data-detail-search-summary="true"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-bold text-[#edf5fb]">
+            {activeConfig.metadata.title}
+          </div>
+          {activeClassification.length > 0 && (
+            <div className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#7890a6]">
+              {activeClassification.join(" • ")}
+            </div>
+          )}
+        </div>
+        {config.targets.length > 1 && (
+          <nav
+            className="ml-4 inline-flex flex-shrink-0 items-center gap-2"
+            aria-label="Drilldown search navigation"
+          >
+            <button
+              type="button"
+              disabled={!canGoBack}
+              onClick={showPrevious}
+              className="inline-flex items-center gap-1 rounded border border-white/[0.12] bg-slate-900/70 px-2 py-1 text-xs font-bold text-slate-200 transition-colors hover:border-sky-400/60 hover:text-sky-200 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              <ChevronLeft className="h-3 w-3" aria-hidden="true" />
+              Back
+            </button>
+            <span
+              className="min-w-[4.5rem] text-center text-xs font-bold tabular-nums text-slate-400"
+              aria-live="polite"
+            >
+              {activeIndex + 1} / {config.targets.length}
+            </span>
+            <button
+              type="button"
+              disabled={!canGoForward}
+              onClick={showNext}
+              className="inline-flex items-center gap-1 rounded border border-white/[0.12] bg-slate-900/70 px-2 py-1 text-xs font-bold text-slate-200 transition-colors hover:border-sky-400/60 hover:text-sky-200 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              Forward
+              <ChevronRight className="h-3 w-3" aria-hidden="true" />
+            </button>
+          </nav>
+        )}
+      </div>
+      <div
+        className="min-h-[154px] max-h-[min(46vh,520px)] shrink overflow-auto overscroll-contain"
+        data-detail-results-region="content-aware"
+      >
+        <table className="w-full min-w-[860px] bg-transparent text-sm">
             <thead className="sticky top-0 z-10 border-b border-white/[0.1] bg-slate-950/[0.72] backdrop-blur-xl">
               <tr className="text-left text-xs font-bold text-[#8ea3b8]">
                 {displayColumns.map((column, index) => {
@@ -7069,7 +7311,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
                   columnCount={columnCount}
                   kind="loading"
                   title="Loading details"
-                  message={`Running ${config.title.toLowerCase()} for the selected time range.`}
+                  message={`Running ${activeConfig.metadata.title.toLowerCase()} for the selected time range.`}
                 />
               ) : errorMessage ? (
                 <MetricDetailTableStateRow
@@ -7083,14 +7325,14 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
                   columnCount={columnCount}
                   kind="empty"
                   title="No results in this time range"
-                  message={`${config.emptyMessage} Try a wider range or open the query in Search.`}
+                  message={`${activeConfig.emptyMessage} Try a wider range or open the query in Search.`}
                 />
               ) : (
                 sortedRows.map((row, rowIndex) => {
                   const rowStatus = statusField ? row[statusField] : "";
                   const rowIsAvailable = rowStatus === availableStatus;
                   const rowKey =
-                    (config.rowKeyField && row[config.rowKeyField]) ||
+                    (activeConfig.rowKeyField && row[activeConfig.rowKeyField]) ||
                     displayColumns
                       .map((column) => row[column.field])
                       .join("|") ||
@@ -7152,7 +7394,12 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
                 })
               )}
             </tbody>
-          </table>
+        </table>
+      </div>
+      <SearchbaseDrilldownGuidance
+        metadata={activeConfig.metadata}
+        appearance="workspace"
+      />
     </WorkspaceModalShell>
   );
 };

@@ -140,6 +140,25 @@ find "${TMP_DIR}" -name "* copy" -delete
 rm -rf "${TMP_DIR}/${APP_NAME}/local"
 rm -f  "${TMP_DIR}/${APP_NAME}/metadata/local.meta"
 
+# A watch-linked Splunk instance can also write mutable lookup CSVs into
+# stage/lookups. Package only lookup files that exist in the source resource
+# tree; generated live CSVs must remain instance state and must not leak into
+# release tarballs beside their packaged *.csv.default seeds.
+PACKAGED_LOOKUPS="${TMP_DIR}/${APP_NAME}/lookups"
+removed_runtime_lookups=0
+if [[ -d "$PACKAGED_LOOKUPS" ]]; then
+  while IFS= read -r -d '' lookup_path; do
+    lookup_name="$(basename "$lookup_path")"
+    if [[ ! -f "${SPLUNK_RESOURCES_DIR}/lookups/${lookup_name}" ]]; then
+      rm -f "$lookup_path"
+      removed_runtime_lookups=$((removed_runtime_lookups + 1))
+    fi
+  done < <(find "$PACKAGED_LOOKUPS" -maxdepth 1 -type f -name '*.csv' -print0)
+fi
+if [[ "$removed_runtime_lookups" -gt 0 ]]; then
+  echo "[package] removed ${removed_runtime_lookups} runtime lookup CSV(s) from package staging"
+fi
+
 # Revert app-wide export = system → export = none for Splunkbase packaging.
 # Preserve stanza-specific exports such as macros/dnac_site_normalize%281%29,
 # which must remain system-visible so callers outside this app can use them.

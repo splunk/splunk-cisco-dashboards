@@ -107,7 +107,7 @@ export = none
 
 # Overview tile settings that must read the same for every viewer
 # (Thresholds, Data Mapping, Drilldown) live in searchbase.conf's
-# viz_options / drilldown_search_name fields. Deliberately narrower
+# viz_options / drilldown_stanza_ids fields. Deliberately narrower
 # than the app-wide default above: only the `admin` role (which holds
 # `admin_all_objects` by default) may write here. Splunk's ACL model
 # also lets any user explicitly granted the `admin_all_objects`

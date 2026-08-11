@@ -43,7 +43,11 @@ FIELD_ORDER_BEFORE_VIZ = [
 ]
 
 VIZ_FIELDS = ("default_viz", "viz_options")
-EXTRA_AFTER_VIZ = ("drilldown_search_name", "drilldown_button_title")
+EXTRA_AFTER_VIZ = (
+    "drilldown_stanza_id",
+    "drilldown_search_name",
+    "drilldown_button_title",
+)
 PROSE_FIELDS = ("description", "explanation", "solution", "related_info")
 
 REQUIRED_FOR_GAP_REPORT = (

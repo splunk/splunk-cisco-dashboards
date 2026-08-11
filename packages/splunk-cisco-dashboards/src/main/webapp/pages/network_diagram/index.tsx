@@ -756,7 +756,7 @@ const NetworkDiagramPage: React.FC = () => {
                 // care of body / text base colours; the rest of the
                 // tree was already authored with `dark:` variants
                 // for the Cyber-NOC palette.
-                resolvedTheme === 'dark' && 'dark'
+                resolvedTheme === 'dark' && 'dark scd-c3-atmosphere'
             )}
         >
             <DiagramHeader

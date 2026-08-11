@@ -38,6 +38,23 @@
 }
 
 #scan-root .scd-glass[data-theme="dark"] {
+    --glass-accent: var(--scd-c3-info);
+    --glass-accent-strong: var(--scd-c3-cyan-bright);
+    --glass-accent-text: var(--scd-c3-info);
+    --glass-accent-soft: rgb(100 158 245 / 14%);
+    --glass-bg: var(--scd-c3-canvas);
+    --glass-panel: var(--scd-c3-panel);
+    --glass-panel-subtle: var(--scd-c3-secondary);
+    --glass-panel-strong: rgb(100 158 245 / 10%);
+    --glass-border: var(--scd-c3-toolbar-border);
+    --glass-border-strong: var(--scd-c3-accent-stroke);
+    --glass-text: var(--scd-c3-text);
+    --glass-muted: var(--scd-c3-muted);
+    --glass-faint: rgb(166 173 182 / 72%);
+    --glass-good: var(--scd-c3-positive);
+    --glass-warning: var(--scd-c3-caution);
+    --glass-critical: var(--scd-c3-critical);
+    --glass-info: var(--scd-c3-info);
     --glass-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
@@ -893,7 +910,7 @@
 }
 
 #scan-root .scd-glass[data-theme="dark"] .scd-glass-leaflet-map {
-    background: #101a29;
+    background: var(--scd-c3-canvas);
 }
 
 #scan-root .scd-glass-leaflet-map .leaflet-tile-pane {
@@ -1045,8 +1062,8 @@
 }
 
 #scan-root .scd-glass-map-marker {
-    --map-marker: #8193a8;
-    --map-marker-soft: rgba(129, 147, 168, 0.28);
+    --map-marker: var(--scd-c3-muted);
+    --map-marker-soft: rgb(166 173 182 / 28%);
     align-items: center;
     cursor: pointer;
     display: flex;
@@ -1094,7 +1111,11 @@
     align-items: center;
     background:
         radial-gradient(circle at 32% 22%, rgba(255, 255, 255, 0.85), transparent 32%),
-        linear-gradient(145deg, var(--map-marker), color-mix(in srgb, var(--map-marker) 68%, #17243a));
+        linear-gradient(
+            145deg,
+            var(--map-marker),
+            color-mix(in srgb, var(--map-marker) 68%, var(--scd-c3-secondary))
+        );
     border: 3px solid rgba(255, 255, 255, 0.96);
     border-radius: 999px;
     box-shadow:

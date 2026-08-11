@@ -12,12 +12,14 @@ import {
 } from '@/common/icons/SuiIcon';
 import {
     Sparkline,
+    type SparklineDensity,
     type SparklineVizType,
     type DataValuesDisplay,
 } from './Sparkline';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
 import { WorkspaceModalShell } from './WorkspaceModalShell';
 import { cn } from '@/common/lib/utils';
+import { C3_VISUALIZATION_COLORS } from '@/common/theme/c3VisualizationPalette';
 import type {
     MetricStatus,
     DataSource,
@@ -136,14 +138,16 @@ interface MetricItemProps {
      * both the period low and high without per-stanza configuration.
      */
     dataValuesDisplay?: DataValuesDisplay;
+    /** Compact H1 charts hide static labels; focused charts restore detail. */
+    sparklineDensity?: SparklineDensity;
     className?: string;
 }
 
 const STATUS_TEXT_COLOR: Record<MetricStatus, string> = {
-    healthy: 'text-sky-600 dark:text-sky-300',
-    warning: 'text-amber-500 dark:text-amber-300',
-    critical: 'text-red-600 dark:text-red-400',
-    unknown: 'text-sky-600 dark:text-sky-300',
+    healthy: 'text-[#2e7d5b] dark:text-[#4cbf7f]',
+    warning: 'text-[#9a6a00] dark:text-[#f0c243]',
+    critical: 'text-[#c73543] dark:text-[#fa5762]',
+    unknown: 'text-[#3273b8] dark:text-[#649ef5]',
 };
 
 // Change-arrow + delta-percent pill color. Historically this was a
@@ -155,9 +159,9 @@ const STATUS_TEXT_COLOR: Record<MetricStatus, string> = {
 // status-aware color so the headline number, the trend arrow, and
 // the trend-percent pill all read the same story at a glance.
 const STATUS_TREND_COLOR: Record<MetricStatus, string> = {
-    healthy: 'text-sky-600 dark:text-sky-300',
-    warning: 'text-amber-500 dark:text-amber-300',
-    critical: 'text-red-600 dark:text-red-400',
+    healthy: 'text-[#2e7d5b] dark:text-[#4cbf7f]',
+    warning: 'text-[#9a6a00] dark:text-[#f0c243]',
+    critical: 'text-[#c73543] dark:text-[#fa5762]',
     unknown: 'text-slate-400 dark:text-slate-500',
 };
 
@@ -178,23 +182,21 @@ const STATUS_TREND_COLOR: Record<MetricStatus, string> = {
 //   the headline icon was correctly green-checked. Operator flagged
 //   on 2026-05-18 ("I changed the threshold to not alarm until we
 //   hit 20k blocks, the chart below is still orange"). Mapping
-//   healthy to a positive sky tone makes the chart palette tracked
-//   to the threshold status, never the brand, and keeps the three
+//   healthy to C3's positive green makes the chart palette track
+//   threshold status, never the brand, and keeps the three
 //   signals (headline number / trend arrow / chart) in sync. Brand
 //   color is still honoured upstream (singlevalue tile background,
 //   tile accent edge) so the resting-state identity isn't lost.
 //
-// Hex values mirror the Tailwind tokens used by the matching text
-// classes (`text-sky-600`, `text-amber-500`, `text-red-600`) so the
-// chart and the headline visibly match without a separate palette
-// to govern.
+// Values come from the shared C3 visualization palette so custom React
+// charts use the same operational semantics as the 1CD surfaces around them.
 const STATUS_VIZ_COLOR: Partial<Record<MetricStatus, string>> = {
-    healthy: '#0ea5e9',
-    warning: '#f59e0b',
-    critical: '#dc2626',
+    healthy: C3_VISUALIZATION_COLORS.positive,
+    warning: C3_VISUALIZATION_COLORS.caution,
+    critical: C3_VISUALIZATION_COLORS.critical,
 };
 
-const MOCK_VIZ_COLOR = '#94a3b8';
+const MOCK_VIZ_COLOR = C3_VISUALIZATION_COLORS.neutral;
 const MOCK_HEADLINE_COLOR = 'text-slate-500 dark:text-slate-400';
 const MOCK_DATA_HELP =
     'Sample data shown until live results are available. Bind this tile to a Splunk search to see real values.';
@@ -277,7 +279,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     previousLabel,
     sparkTimestamps,
     timeRange,
-    color = '#0ea5e9',
+    color = C3_VISUALIZATION_COLORS.info,
     status = 'unknown',
     source,
     onOpenInSearch,
@@ -292,6 +294,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     rangeLabel,
     vizType = 'area',
     dataValuesDisplay,
+    sparklineDensity = 'auto',
     className,
 }) => {
     const [isFocusOpen, setIsFocusOpen] = React.useState(false);
@@ -598,7 +601,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                     // bubble (Alan flagged in the 2026-05-14
                     // review).
                     data-tile-control="true"
-                    className="flex-1 min-h-[72px] max-h-28 mt-2 pt-1 opacity-80 hover:opacity-100 transition-opacity overflow-hidden"
+                    className="flex-1 min-h-[72px] max-h-28 mt-2 pt-1 opacity-[0.92] hover:opacity-100 transition-opacity overflow-hidden"
                 >
                     {/* Sparkline is intentionally NOT wired to the
                         drilldown click. The ExternalLink icon next to
@@ -614,6 +617,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                         color={isMock ? MOCK_VIZ_COLOR : STATUS_VIZ_COLOR[status] ?? color}
                         vizType={vizType}
                         dataValuesDisplay={dataValuesDisplay}
+                        density={sparklineDensity}
                         previousData={previousData}
                         previousLabel={previousLabel}
                         timestamps={sparkTimestamps}
@@ -725,6 +729,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                         color={focusChartColor}
                         vizType={vizType}
                         dataValuesDisplay={dataValuesDisplay}
+                        density="detailed"
                         previousData={previousData}
                         previousLabel={previousLabel}
                         timestamps={sparkTimestamps}

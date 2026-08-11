@@ -212,7 +212,7 @@ const buildDashboardStudioPath = (dashboardId, mode = "view") => {
 };
 
 const buildDashboardStudioUrl = (dashboardId, mode = "view") =>
-  `/app/splunk-cisco-dashboards/dashboardbuilder#${buildDashboardStudioPath(
+  `/app/splunk-cisco-dashboards/dashboard_manager#${buildDashboardStudioPath(
     dashboardId,
     mode,
   )}`;
@@ -413,6 +413,8 @@ export default function DBHomePage() {
       JSON.stringify(jsonDefinition),
       dashboardTitle,
       dashboardDescription,
+      "",
+      "dark",
     ).then((response) => {
       if (response.status >= 200 && response.status <= 299) {
         console.log(response);
@@ -1040,6 +1042,7 @@ export default function DBHomePage() {
           >
             <DashboardStudioEditor
               openID={selectedDash.title}
+              initialDashboard={selectedDash}
               actionMenus={actionMenus}
               preset={customPresets}
               embededMode={true}

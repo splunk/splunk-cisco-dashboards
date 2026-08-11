@@ -53,6 +53,16 @@ export interface SignalTickerPreferencePatch {
 
 export const MAX_SIGNAL_TICKER_ITEMS = 24;
 
+/**
+ * Signal speed remains stored on the historic 0..10 scale so existing user
+ * preferences keep their meaning. The editor presents that scale as a more
+ * useful 0.25x..2x multiplier and writes quarter-speed increments.
+ */
+export const MIN_SIGNAL_TICKER_SPEED = 0;
+export const MAX_SIGNAL_TICKER_SPEED = 10;
+export const NORMAL_SIGNAL_TICKER_SPEED = 5;
+export const SIGNAL_TICKER_SPEED_STEP = 1.25;
+
 const ID_PATTERN = /^[a-z0-9_]{1,80}$/;
 const SEARCH_NAME_PATTERN = /^[\w\s\-.:()<>/&]+$/;
 const FIELD_NAME_PATTERN = /^[A-Za-z_][\w.]{0,63}$/;
@@ -62,7 +72,7 @@ export const DEFAULT_SIGNAL_TICKER_CONFIG: SignalTickerConfig = {
     enabled: true,
     showPriorityDrilldown: false,
     rows: 1,
-    speed: 5,
+    speed: 0,
     density: 'comfortable',
     fontSize: 'standard',
     items: [
@@ -397,7 +407,7 @@ const LEGACY_SPEED_MAP: Record<string, SignalTickerSpeed> = {
 };
 
 const clampSpeed = (value: number): SignalTickerSpeed =>
-    Math.min(10, Math.max(0, Math.round(value)));
+    Math.min(MAX_SIGNAL_TICKER_SPEED, Math.max(MIN_SIGNAL_TICKER_SPEED, value));
 
 const parseSpeed = (raw: unknown): SignalTickerSpeed | undefined => {
     if (typeof raw === 'number' && Number.isFinite(raw)) {

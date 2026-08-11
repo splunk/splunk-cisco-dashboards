@@ -23,7 +23,11 @@ import {
 
 export {
     DEFAULT_SIGNAL_TICKER_CONFIG,
+    MAX_SIGNAL_TICKER_SPEED,
     MAX_SIGNAL_TICKER_ITEMS,
+    MIN_SIGNAL_TICKER_SPEED,
+    NORMAL_SIGNAL_TICKER_SPEED,
+    SIGNAL_TICKER_SPEED_STEP,
     getDefaultSignalTickerConfig,
     makeSignalTickerItemId,
     sanitizeSignalTickerConfig,
@@ -133,6 +137,7 @@ export interface UsePersistedSignalTickerResult {
     config: SignalTickerConfig;
     setConfig: (config: SignalTickerConfig) => void;
     resetAll: () => void;
+    isWorkspaceDefault: boolean;
     itemCount: number;
     persistenceStatus: SignalTickerPersistenceStatus;
     persistenceError?: string;
@@ -386,11 +391,16 @@ export const usePersistedSignalTicker = (
     }, [defaultConfig, legacyStorageKey, persistNow, userStorageKey]);
 
     const itemCount = useMemo(() => config.items.length, [config.items.length]);
+    const isWorkspaceDefault = useMemo(
+        () => signalTickerConfigsEqual(config, defaultConfig),
+        [config, defaultConfig]
+    );
 
     return {
         config,
         setConfig,
         resetAll,
+        isWorkspaceDefault,
         itemCount,
         persistenceStatus,
         persistenceError,

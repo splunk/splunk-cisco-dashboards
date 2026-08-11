@@ -12,4 +12,4 @@ import "@/common/styles/tailwind.css";
 // Both profile views are restart-safe Simple XML shells. The URL selects the
 // Executive Briefing or Secure Networking profile inside Executive Insights;
 // Splunk Web supplies the shared #scan-root rendering boundary.
-mountPageRaw(ExecutiveInsightsPage);
+mountPageRaw(ExecutiveInsightsPage, { showCopyrightMark: false });

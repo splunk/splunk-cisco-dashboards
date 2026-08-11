@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<view
+    template="splunk-cisco-dashboards:/templates/dashboardbuilder.html"
+    type="html"
+    isDashboard="False"
+>
+    <label>Dashboard Manager</label>
+</view>

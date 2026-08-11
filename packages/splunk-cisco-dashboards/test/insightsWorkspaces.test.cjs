@@ -87,6 +87,29 @@ assert.deepEqual(
   "Every workspace template must offer Secure Networking, SecOps, ITOps, digital experience, and executive sections",
 );
 assert.deepEqual(
+  Object.fromEntries(
+    WORKSPACE_SOURCES.secure_networking.sections.map(({ id, href }) => [
+      id,
+      href,
+    ]),
+  ),
+  {
+    zta: "dashboard_manager#/sn_zta_posture",
+    secure_infrastructure:
+      "dashboard_manager#/sn_secure_infrastructure_posture",
+    scalable_network_segmentation:
+      "dashboard_manager#/sn_segmentation_readiness",
+    hybrid_mesh_firewalling: "dashboard_manager#/sn_hmf_enforcement",
+    agentic_ops:
+      "dashboard_manager#/sn_agentic_ops_operational_intelligence",
+    it_health: "dashboard_manager#/netops_critical_systems_health",
+    security: "dashboard_manager#/secops_resilience",
+    building: "dashboard_manager#/workplace_building_intelligence",
+    custom: "dashboard_manager",
+  },
+  "Workspace dashboard links must use Dashboard Manager so searches dispatch through its runtime",
+);
+assert.deepEqual(
   PACKAGED_WORKSPACE_FALLBACKS[0].defaultVisibleSections,
   expectedSecureNetworkingSections.map(([id]) => id),
   "The built-in Secure Networking workspace must show all menu sections " +
@@ -105,8 +128,8 @@ assert.deepEqual(
   [
     {
       id: "secure_networking",
-      headerTitle: "Splunk for Secure Networking",
-      headerSubtitle: "Secure Networking Executive Insights",
+      headerTitle: "Secure Networking Operations",
+      headerSubtitle: "Live posture, policy, infrastructure, and connectivity",
     },
     {
       id: "zero_trust_access_demo",
@@ -161,7 +184,7 @@ const originalWindow = global.window;
 try {
   global.window = {
     location: {
-      pathname: "/en-US/app/splunk-cisco-dashboards/insights_workspace",
+      pathname: "/en-US/app/splunk-cisco-dashboards/workspace_insights",
       search: "?workspace=network_resilience_demo",
     },
   };
@@ -170,16 +193,13 @@ try {
     "network_resilience_demo",
   );
 
-  global.window.location.pathname =
-    "/en-US/app/splunk-cisco-dashboards/executive_briefing_profile";
-  global.window.location.search = "";
+  global.window.location.search = "?workspace=executive";
   assert.equal(
     getWorkspaceFromLocation(PACKAGED_WORKSPACE_FALLBACKS).id,
     "executive",
   );
 
-  global.window.location.pathname =
-    "/en-US/app/splunk-cisco-dashboards/secure_networking_profile";
+  global.window.location.search = "";
   assert.equal(
     getWorkspaceFromLocation(PACKAGED_WORKSPACE_FALLBACKS).id,
     "secure_networking",
@@ -279,6 +299,9 @@ const hybridMeshTileIds = hybridMeshLayoutConf
   .match(/^tiles = (.+)$/m)?.[1]
   .split(",");
 assert.ok(hybridMeshTileIds, "Hybrid Mesh Firewalling must declare tile order");
+const hybridMeshVisibleCount = Number(
+  hybridMeshLayoutConf.match(/^visible_count = (\d+)$/m)?.[1],
+);
 const paloTrendTileIds = [
   "secure_networking_sgt_palo_alto_policy_effectiveness_trend",
   "secure_networking_sgt_palo_alto_traffic_trend",
@@ -301,8 +324,14 @@ for (const tileId of paloDetailTileIds) {
 }
 assert.match(
   hybridMeshLayoutConf,
-  /^visible_count = 5$/m,
-  "The two Palo Alto trend tiles must be visible in the shared layout",
+  /^visible_count = 3$/m,
+  "Hybrid Mesh Firewalling must ship with three visible factory tiles",
+);
+assert.ok(
+  hybridMeshTileIds
+    .slice(0, hybridMeshVisibleCount)
+    .includes("secure_networking_sgt_palo_alto_traffic_trend"),
+  "Palo Alto Traffic by SGT must be one of the three visible factory tiles",
 );
 
 const searchbaseConf = fs.readFileSync(
@@ -336,6 +365,44 @@ const searchbaseStanza = (stanzaId) =>
     .split(/(?=^\[)/m)
     .find((block) => block.startsWith(`[${stanzaId}]`));
 
+const searchbaseBlocks = searchbaseConf.split(/(?=^\[)/m);
+const searchbaseStanzaIds = new Set(
+  searchbaseBlocks
+    .map((block) => block.match(/^\[([^\]]+)\]/)?.[1])
+    .filter(Boolean),
+);
+const drilldownTargetsForBlock = (block) => {
+  const plural = block.match(/^drilldown_stanza_ids = (.+)$/m)?.[1];
+  if (plural) {
+    return [...new Set(plural.split(",").map((target) => target.trim()).filter(Boolean))];
+  }
+  const singular = block.match(/^drilldown_stanza_id = (.+)$/m)?.[1];
+  return singular ? [singular.trim()] : [];
+};
+assert.doesNotMatch(
+  searchbaseConf,
+  /^drilldown_search_name = /m,
+  "Shipped Searchbase defaults must use stanza-id drilldown references",
+);
+let canonicalDrilldownCount = 0;
+for (const block of searchbaseBlocks) {
+  const sourceId = block.match(/^\[([^\]]+)\]/)?.[1];
+  if (!sourceId) continue;
+  for (const targetId of drilldownTargetsForBlock(block)) {
+    canonicalDrilldownCount += 1;
+    assert.ok(
+      searchbaseStanzaIds.has(targetId),
+      `${sourceId} must resolve drilldown stanza ${targetId}`,
+    );
+    assert.notEqual(sourceId, targetId, `${sourceId} must not drill into itself`);
+  }
+}
+assert.equal(
+  canonicalDrilldownCount,
+  408,
+  "The shipped catalogue must retain every migrated relationship plus the ISE and Webex workflow targets",
+);
+
 const secureOverviewMappings = [];
 for (const block of searchbaseConf.split(/(?=^\[)/m)) {
   const stanzaId = block.match(/^\[([^\]]+)\]/)?.[1];
@@ -353,13 +420,32 @@ for (const block of searchbaseConf.split(/(?=^\[)/m)) {
   }
 }
 
-const intentionallyCategoricalSecureOverviewStanzas = new Set([
-  "secure_networking_sdwan_apps_health_breakdown",
-  "secure_networking_ip_sgt_bindings_by_group",
-  "secure_networking_sgt_fmc_blocks_by_sgt",
-  "secure_networking_fmc_top_rules_hit",
-  "secure_networking_fmc_top_url_categories_blocked",
-]);
+const assertNumericThresholds = (thresholds, label) => {
+  assert.ok(thresholds, `${label} must define numeric thresholds`);
+  assert.ok(
+    Number.isFinite(thresholds.warning),
+    `${label} must define a finite warning threshold`,
+  );
+  assert.ok(
+    Number.isFinite(thresholds.critical),
+    `${label} must define a finite critical threshold`,
+  );
+  assert.ok(
+    ["higher_is_better", "lower_is_better"].includes(thresholds.direction),
+    `${label} must define a supported threshold direction`,
+  );
+  if (thresholds.direction === "higher_is_better") {
+    assert.ok(
+      thresholds.critical < thresholds.warning,
+      `${label} higher-is-better critical must be below warning`,
+    );
+  } else {
+    assert.ok(
+      thresholds.warning < thresholds.critical,
+      `${label} lower-is-better warning must be below critical`,
+    );
+  }
+};
 
 for (const tileId of secureNetworkingLayoutTileIds) {
   const mappings = secureOverviewMappings.filter(
@@ -373,20 +459,19 @@ for (const tileId of secureNetworkingLayoutTileIds) {
 
   const { block, overview, stanzaId, vizOptions } = mappings[0];
   const thresholds = overview.thresholds ?? vizOptions.thresholds;
-  const hasNumericThresholds =
-    Number.isFinite(thresholds?.warning) &&
-    Number.isFinite(thresholds?.critical) &&
-    ["higher_is_better", "lower_is_better"].includes(thresholds?.direction);
-  const hasQualitativeThreshold =
-    typeof overview.thresholdNote === "string" &&
-    overview.thresholdNote.trim().length > 0;
+  assertNumericThresholds(thresholds, `${tileId} (${stanzaId})`);
   assert.ok(
-    hasNumericThresholds || hasQualitativeThreshold,
-    `${tileId} must define numeric thresholds or deliberate qualitative threshold guidance`,
+    typeof overview.thresholdNote === "string" &&
+      overview.thresholdNote.trim().length > 0,
+    `${tileId} must retain explanatory threshold guidance`,
   );
 
   const defaultViz = block.match(/^default_viz = (.+)$/m)?.[1] ?? "";
-  if (defaultViz === "splunk.table") continue;
+  assert.match(
+    defaultViz,
+    /^splunk\.(line|area|column)$/,
+    `${tileId} (${stanzaId}) must use a trend visualization`,
+  );
   const valueField = overview.valueField ?? vizOptions.valueField;
   assert.ok(
     typeof valueField === "string" && valueField.trim().length > 0,
@@ -399,72 +484,121 @@ for (const tileId of secureNetworkingLayoutTileIds) {
     searchStart === -1
       ? ""
       : block.slice(searchStart + searchPrefix.length).trimEnd();
-  if (!intentionallyCategoricalSecureOverviewStanzas.has(stanzaId)) {
-    assert.match(
-      search,
-      /\| timechart /i,
-      tileId + " (" + stanzaId + ") must expose a timechart trend",
-    );
-  }
-  const isTimeSeries =
-    /^splunk\.(line|area|column)$/.test(defaultViz) &&
-    /\| timechart /i.test(search);
-  if (isTimeSeries) {
-    const sparkDataField = overview.sparkDataField ?? vizOptions.sparkDataField;
-    assert.ok(
-      typeof sparkDataField === "string" && sparkDataField.trim().length > 0,
-      `${tileId} (${stanzaId}) must bind an explicit sparkDataField`,
-    );
-  }
-
-  const drilldownSearchName = block.match(
-    /^drilldown_search_name = (.+)$/m,
-  )?.[1];
+  assert.match(
+    search,
+    /\| timechart /i,
+    tileId + " (" + stanzaId + ") must expose a timechart trend",
+  );
+  assert.match(
+    search,
+    /\| timechart fixedrange=false cont=false bins=(?:48|60)\b/i,
+    `${tileId} (${stanzaId}) must cap its timechart at 48 or 60 buckets`,
+  );
+  const sparkDataField = overview.sparkDataField ?? vizOptions.sparkDataField;
   assert.ok(
-    drilldownSearchName,
+    typeof sparkDataField === "string" && sparkDataField.trim().length > 0,
+    `${tileId} (${stanzaId}) must bind an explicit sparkDataField`,
+  );
+
+  const drilldownStanzaIds = drilldownTargetsForBlock(block);
+  assert.ok(
+    drilldownStanzaIds.length > 0,
     `${tileId} (${stanzaId}) must declare its detail drilldown search`,
   );
-  const drilldownMatches = searchbaseConf
-    .split(/(?=^\[)/m)
-    .filter(
-      (candidate) =>
-        candidate.match(/^search_name = (.+)$/m)?.[1] === drilldownSearchName,
+  for (const drilldownStanzaId of drilldownStanzaIds) {
+    const drilldownMatches = searchbaseConf
+      .split(/(?=^\[)/m)
+      .filter(
+        (candidate) =>
+          candidate.match(/^\[([^\]]+)\]/)?.[1] === drilldownStanzaId,
+      );
+    assert.equal(
+      drilldownMatches.length,
+      1,
+      `${tileId} must resolve ${drilldownStanzaId} to exactly one Searchbase stanza`,
     );
-  assert.equal(
-    drilldownMatches.length,
-    1,
-    `${tileId} must resolve ${drilldownSearchName} to exactly one Searchbase stanza`,
+    assert.match(
+      drilldownMatches[0],
+      /^default_viz = splunk\.table$/m,
+      `${tileId} drilldown must use a detail-table visualization`,
+    );
+    assert.match(
+      drilldownMatches[0],
+      /^search = .+$/m,
+      `${tileId} drilldown must contain executable SPL`,
+    );
+  }
+}
+
+const secureMapFooters = [];
+for (const block of searchbaseConf.split(/(?=^\[)/m)) {
+  const stanzaId = block.match(/^\[([^\]]+)\]/)?.[1];
+  const rawVizOptions = block.match(/^viz_options = (.+)$/m)?.[1];
+  if (!stanzaId || !rawVizOptions) continue;
+  const vizOptions = JSON.parse(rawVizOptions);
+  if (vizOptions.mapFooter?.id) {
+    secureMapFooters.push({ stanzaId, mapFooter: vizOptions.mapFooter });
+  }
+}
+assert.deepEqual(
+  secureMapFooters.map(({ mapFooter }) => mapFooter.id).sort(),
+  ["map_inter_site_latency", "map_site_link_availability"],
+  "The Secure Networking command map must expose exactly two footer KPIs",
+);
+for (const { stanzaId, mapFooter } of secureMapFooters) {
+  assertNumericThresholds(mapFooter.thresholds, `${mapFooter.id} (${stanzaId})`);
+  assert.ok(
+    typeof mapFooter.thresholdNote === "string" &&
+      mapFooter.thresholdNote.trim().length > 0,
+    `${mapFooter.id} must retain explanatory threshold guidance`,
   );
-  assert.match(
-    drilldownMatches[0],
-    /^default_viz = splunk\.table$/m,
-    `${tileId} drilldown must use a detail-table visualization`,
-  );
-  assert.match(
-    drilldownMatches[0],
-    /^search = .+$/m,
-    `${tileId} drilldown must contain executable SPL`,
+}
+
+const secureSignalRailBlock = conf
+  .split(/(?=^\[)/m)
+  .find((block) => block.startsWith("[signal_rail.secure_networking]"));
+assert.ok(secureSignalRailBlock, "expected Secure Networking Signal Rail");
+const secureSignalItemIds = secureSignalRailBlock
+  .match(/^items = (.+)$/m)?.[1]
+  .split(",");
+assert.equal(
+  secureSignalItemIds?.length,
+  6,
+  "Secure Networking Signal Rail must expose six thresholded KPIs",
+);
+for (const itemId of secureSignalItemIds ?? []) {
+  const block = conf
+    .split(/(?=^\[)/m)
+    .find((candidate) => candidate.startsWith(`[signal_item.${itemId}]`));
+  assert.ok(block, `expected signal item ${itemId}`);
+  assertNumericThresholds(
+    {
+      warning: Number(block.match(/^threshold_warning = (.+)$/m)?.[1]),
+      critical: Number(block.match(/^threshold_critical = (.+)$/m)?.[1]),
+      direction: block.match(/^threshold_direction = (.+)$/m)?.[1],
+    },
+    `signal_item.${itemId}`,
   );
 }
 
 const paloTrendDrilldownPairs = [
   [
     "secure_networking_sgt_palo_alto_policy_effectiveness_trend",
-    "Secure Networking - Palo Alto SGT Policy Effectiveness",
+    "secure_networking_sgt_palo_alto_policy_effectiveness",
   ],
   [
     "secure_networking_sgt_palo_alto_traffic_trend",
-    "Secure Networking - Palo Alto Traffic Correlated by SGT",
+    "secure_networking_sgt_palo_alto_traffic_detail",
   ],
 ];
-for (const [trendId, drilldownName] of paloTrendDrilldownPairs) {
+for (const [trendId, drilldownStanzaId] of paloTrendDrilldownPairs) {
   const block = searchbaseStanza(trendId);
   assert.ok(block, `expected ${trendId}`);
   assert.match(block, /^sub_category = Hybrid Mesh Firewalling$/m);
   assert.match(block, /\| timechart /);
   assert.match(
     block,
-    new RegExp(`^drilldown_search_name = ${drilldownName}$`, "m"),
+    new RegExp(`^drilldown_stanza_id = ${drilldownStanzaId}$`, "m"),
     `${trendId} must drill into its corresponding table search`,
   );
 }
@@ -475,7 +609,7 @@ for (const detailId of paloDetailTileIds) {
   assert.match(block, /^default_viz = splunk\.table$/m);
   assert.doesNotMatch(
     block,
-    /^drilldown_search_name = /m,
+    /^drilldown_(?:stanza_id|search_name) = /m,
     `${detailId} must terminate its trend drilldown`,
   );
 }

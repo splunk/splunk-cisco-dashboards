@@ -1,0 +1,619 @@
+{
+  "sn_agentic_ops_operational_intelligence": {
+    "label": "Agentic Ops",
+    "description": "Coordinate test health, path quality, routing instability, and AI Defense signals.",
+    "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/agentic-ops.svg",
+    "cards": [
+      {
+        "primary": "secure_networking_thousandeyes_test_success_vs_failed",
+        "targets": ["secure_networking_thousandeyes_http_availability_by_test", "secure_networking_thousandeyes_http_trace_log"],
+        "title": "ThousandEyes Test Health",
+        "vizType": "area"
+      },
+      {
+        "primary": "security_ai_defense_action_trend",
+        "targets": ["security_ai_defense_top_blocked_policies", "security_ai_defense_recent_blocked_prompts"],
+        "title": "AI Defense Policy Outcomes"
+      },
+      {
+        "primary": "secure_networking_thousandeyes_latency_by_agent_trend",
+        "targets": ["secure_networking_thousandeyes_latency_by_agent"],
+        "title": "Path Latency by Agent"
+      },
+      {
+        "primary": "secure_networking_thousandeyes_network_loss_trend",
+        "targets": ["secure_networking_thousandeyes_latency_by_agent", "secure_networking_thousandeyes_http_trace_log"],
+        "title": "Network Loss"
+      },
+      {
+        "primary": "secure_networking_thousandeyes_http_availability_by_test_trend",
+        "targets": ["secure_networking_thousandeyes_http_availability_by_test", "secure_networking_thousandeyes_http_trace_log"],
+        "title": "Application Availability"
+      },
+      {
+        "primary": "secure_networking_thousandeyes_bgp_path_changes_trend",
+        "targets": ["secure_networking_thousandeyes_bgp_path_change_detail"],
+        "title": "BGP Path Instability"
+      }
+    ]
+  },
+  "sn_agentic_ops_executive_assurance": {
+    "label": "Executive Overview",
+    "description": "Summarize secure-networking posture, operational risk, and business-relevant outcomes.",
+    "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/agentic-ops.svg",
+    "cards": [
+      {
+        "primary": "executive_dashboard_ds_device_health_trend_compare",
+        "targets": ["executive_dashboard_ds_device_health_current_drilldown", "executive_dashboard_data_source_status"],
+        "title": "Fleet Device Health"
+      },
+      {
+        "primary": "it_critical_systems_site_link_availability_pct_trend",
+        "targets": ["overview_link_auburndale_tallahassee_health", "overview_link_state_drilldown"],
+        "title": "Site Connectivity"
+      },
+      {
+        "primary": "overview_ap_health",
+        "targets": ["overview_ap_health_drilldown", "overview_topology_overview"],
+        "title": "Wireless Availability"
+      },
+      {
+        "primary": "secure_networking_zta_ise_auth_failure_rate_trend",
+        "targets": ["secure_networking_zta_ise_auth_by_device_fail_rate", "secure_networking_zta_failure_reasons_by_site"],
+        "title": "Identity Friction"
+      },
+      {
+        "primary": "secure_networking_hmf_unified_blocks_trend",
+        "targets": ["secure_networking_fmc_blocked_connection_detail", "secure_networking_sse_security_event_detail"],
+        "title": "Enforcement Pressure"
+      },
+      {
+        "primary": "secure_networking_thousandeyes_http_availability_by_test_trend",
+        "targets": ["secure_networking_thousandeyes_http_availability_by_test"],
+        "title": "Application Reachability"
+      }
+    ]
+  },
+  "sn_hmf_dlp_cloud_native_security": {
+    "label": "DLP and Cloud Native Security",
+    "description": "Expose data-loss risk and cloud-native workload controls in one operational view.",
+    "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/hybrid-mesh-firewalling.svg",
+    "cards": [
+      {
+        "primary": "secure_networking_secure_access_dlp_findings_trend",
+        "targets": ["secure_networking_secure_access_dlp_findings"],
+        "title": "Data Loss Findings"
+      },
+      {
+        "primary": "security_microseg_tetration_alerts_by_severity_type",
+        "targets": ["secure_networking_segmentation_secure_workload_alerts_by_type"],
+        "title": "Workload Alert Pressure",
+        "categoryField": "Alert Category",
+        "graphFields": ["Alerts"]
+      },
+      {
+        "primary": "security_multicloud_defense_action_breakdown_kpi",
+        "targets": ["security_multicloud_defense_waf_findings", "security_multicloud_defense_gateway_health_table"],
+        "title": "Cloud Enforcement Rate"
+      },
+      {
+        "primary": "security_isovalent_alerts_by_severity",
+        "targets": ["security_isovalent_top_alert_rules"],
+        "title": "Runtime Detection Severity",
+        "categoryField": "Severity",
+        "graphFields": ["Alerts"]
+      },
+      {
+        "primary": "network_intelligence_blocked_vs_allowed",
+        "targets": ["security_resilience_ds_base_fw"],
+        "title": "Network Security Decisions",
+        "categoryField": "Decision",
+        "graphFields": ["Connections"]
+      },
+      {
+        "primary": "secure_networking_cloud_native_security_activity",
+        "targets": ["secure_networking_segmentation_secure_workload_alerts_by_type", "security_multicloud_defense_waf_findings", "security_isovalent_top_alert_rules"],
+        "title": "Cloud Security Activity",
+        "vizType": "bar",
+        "categoryField": "Provider",
+        "graphFields": ["Events"]
+      }
+    ]
+  },
+  "sn_hmf_sdwan_network_health": {
+    "label": "SD-WAN and Network Health Monitoring",
+    "description": "Correlate WAN health, reachability, and service-impact signals across the mesh.",
+    "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/hybrid-mesh-firewalling.svg",
+    "cards": [
+      {
+        "primary": "monitoring_sdwan_site_state_summary",
+        "targets": ["monitoring_sdwan_site_health_table", "monitoring_sdwan_site_health_map"],
+        "title": "Site Health",
+        "categoryField": "State",
+        "graphFields": ["Sites"]
+      },
+      {
+        "primary": "monitoring_sdwan_circuit_state_summary",
+        "targets": ["monitoring_sdwan_site_health_table"],
+        "title": "Circuit Availability",
+        "valueField": "WindowTotal",
+        "categoryField": "State",
+        "graphFields": ["Circuits"]
+      },
+      {
+        "primary": "monitoring_sdwan_tunnel_health_poor_trend",
+        "targets": ["secure_networking_sdwan_tunnel_health_log"],
+        "title": "Degraded Tunnels"
+      },
+      {
+        "primary": "secure_networking_sdwan_apps_health_breakdown",
+        "targets": ["secure_networking_sdwan_site_view"],
+        "title": "Application Health"
+      },
+      {
+        "primary": "secure_networking_thousandeyes_network_loss_trend",
+        "targets": ["secure_networking_thousandeyes_latency_by_agent", "secure_networking_sdwan_tunnel_health_log"],
+        "title": "Path Loss"
+      },
+      {
+        "primary": "secure_networking_thousandeyes_bgp_path_changes_trend",
+        "targets": ["secure_networking_thousandeyes_bgp_path_change_detail"],
+        "title": "Routing Stability"
+      }
+    ]
+  },
+  "sn_hmf_threat_detection_enforcement": {
+    "label": "Threat Detection and Enforcement",
+    "description": "Track high-confidence detections and verify the controls enforcing policy.",
+    "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/hybrid-mesh-firewalling.svg",
+    "cards": [
+      {
+        "primary": "network_intelligence_blocked_vs_allowed",
+        "targets": ["security_resilience_ds_base_fw", "secure_networking_fmc_blocked_connection_detail"],
+        "title": "Firewall Decisions",
+        "categoryField": "Decision",
+        "graphFields": ["Connections"]
+      },
+      {
+        "primary": "security_resilience_cloud_fw_blocked",
+        "targets": ["secure_networking_sse_security_event_detail"],
+        "title": "Cloud Firewall Blocks"
+      },
+      {
+        "primary": "security_multicloud_defense_action_breakdown_kpi",
+        "targets": ["security_multicloud_defense_waf_findings", "security_multicloud_defense_gateway_health_table"],
+        "title": "Multicloud Deny Rate"
+      },
+      {
+        "primary": "security_isovalent_alerts_by_severity",
+        "targets": ["security_isovalent_top_alert_rules"],
+        "title": "Runtime Alerts",
+        "categoryField": "Severity",
+        "graphFields": ["Alerts"]
+      },
+      {
+        "primary": "security_resilience_sdwan_utd_ips_trend_by_priority",
+        "targets": ["security_resilience_sdwan_utd_top_signatures"],
+        "title": "Branch IPS Pressure"
+      },
+      {
+        "primary": "secure_networking_hmf_unified_blocks_trend",
+        "targets": ["secure_networking_fmc_blocked_connection_detail", "secure_networking_sse_security_event_detail", "xdr_incident_status_severity_pressure", "xdr_incident_global_risk_leaderboard"],
+        "title": "Unified Enforcement"
+      }
+    ]
+  },
+  "sn_hmf_enforcement": {
+    "label": "Hybrid Mesh Firewalling",
+    "description": "Unify firewall posture, enforcement, and workload protection across the hybrid mesh.",
+    "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/hybrid-mesh-firewalling.svg",
+    "cards": [
+      {
+        "primary": "secure_networking_infra_fmc_firewall_count",
+        "targets": ["secure_networking_hmf_enforcement_coverage_by_site"],
+        "title": "Firewall Coverage"
+      },
+      {
+        "primary": "secure_networking_hmf_unified_blocks_trend",
+        "targets": ["secure_networking_fmc_blocked_connection_detail", "secure_networking_sse_security_event_detail"],
+        "title": "Unified Block Activity"
+      },
+      {
+        "primary": "secure_networking_fmc_activity_trend",
+        "targets": ["secure_networking_fmc_blocked_connection_detail", "secure_networking_fmc_top_policies_by_action"],
+        "title": "FMC Enforcement Activity"
+      },
+      {
+        "primary": "secure_networking_sse_dns_activity_trend",
+        "targets": ["secure_networking_sse_dns_blocked_categories", "secure_networking_sse_security_event_detail"],
+        "title": "DNS Security Activity"
+      },
+      {
+        "primary": "secure_networking_sgt_palo_alto_policy_effectiveness_trend",
+        "targets": ["secure_networking_sgt_palo_alto_policy_effectiveness", "secure_networking_sgt_palo_alto_traffic_detail"],
+        "title": "Third-Party Policy Effectiveness"
+      },
+      {
+        "primary": "secure_networking_secure_access_dlp_findings_trend",
+        "targets": ["secure_networking_secure_access_dlp_findings"],
+        "title": "Data Protection Findings"
+      }
+    ]
+  },
+  "sn_segmentation_readiness": {
+    "label": "Scalable Network Segmentation",
+    "description": "Connect segmentation posture, trust boundaries, and enforcement coverage at scale.",
+    "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/segmentation.svg",
+    "cards": [
+      {
+        "primary": "secure_networking_trustsec_hardware_inventory_trend",
+        "targets": ["secure_networking_trustsec_hardware_readiness", "secure_networking_segmentation_status_rollup"],
+        "title": "TrustSec Readiness"
+      },
+      {
+        "primary": "secure_networking_sgt_total_assignments_count",
+        "targets": ["secure_networking_sgt_distribution_by_site_device", "secure_networking_excessive_mac_per_port", "secure_networking_ot_iot_device_visibility"],
+        "title": "Active SGT Assignments"
+      },
+      {
+        "primary": "secure_networking_sgt_unique_count",
+        "targets": ["secure_networking_sgt_distribution_by_site_device", "secure_networking_sgt_by_site"],
+        "title": "Security Groups in Use"
+      },
+      {
+        "primary": "secure_networking_sgt_binding_activity_trend",
+        "targets": ["secure_networking_sgt_binding_inventory", "secure_networking_ip_sgt_bindings_by_group"],
+        "title": "IP-SGT Binding Activity"
+      },
+      {
+        "primary": "secure_networking_sgacl_enforcement_activity_trend",
+        "targets": ["secure_networking_sgacl_deny_pairs", "secure_networking_sgacl_policy_matrix"],
+        "title": "SGACL Enforcement"
+      },
+      {
+        "primary": "secure_networking_sgt_fmc_blocks_by_sgt",
+        "targets": ["secure_networking_fmc_sgt_correlated_events"],
+        "title": "SGT-Enforced Blocks"
+      }
+    ]
+  },
+  "sn_secure_infrastructure_posture": {
+    "label": "Secure Infrastructure",
+    "description": "Unify infrastructure assurance, exposure, and operational control signals.",
+    "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/secure-infrastructure.svg",
+    "cards": [
+      {
+        "primary": "secure_networking_dc_health_signals_trend",
+        "targets": ["secure_networking_dc_anomalies_by_severity", "secure_networking_secure_infra_status_rollup"],
+        "title": "Data Center Health"
+      },
+      {
+        "primary": "secure_networking_dc_advisory_count",
+        "targets": ["secure_networking_dc_security_advisory_detail", "secure_networking_psirt_exposure_by_site_family", "secure_networking_intersight_advisory_exposure"],
+        "title": "Security Exposure"
+      },
+      {
+        "primary": "secure_networking_meraki_ap_count",
+        "targets": ["secure_networking_site_inventory_rollup", "secure_networking_catalyst_center_software_version_inventory"],
+        "title": "Managed Wireless Estate"
+      },
+      {
+        "primary": "secure_networking_meraki_rogue_ap_containment_trend",
+        "targets": ["secure_networking_meraki_rogue_ap_containment", "secure_networking_meraki_ssid_encryption_breakdown"],
+        "title": "Wireless Containment"
+      },
+      {
+        "primary": "secure_networking_zta_duo_auth_outcomes_trend",
+        "targets": ["secure_networking_infra_duo_blocked_posture_identity", "secure_networking_infra_duo_application_access"],
+        "title": "Identity and Posture"
+      },
+      {
+        "primary": "secure_networking_infra_secure_endpoint_incident_trend",
+        "targets": ["secure_networking_infra_secure_endpoint_incidents"],
+        "title": "Endpoint Risk"
+      }
+    ]
+  },
+  "sn_secure_infrastructure_status": {
+    "label": "Secure Infrastructure Status",
+    "description": "Track current infrastructure state, exceptions, and emerging operational risk.",
+    "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/secure-infrastructure.svg",
+    "cards": [
+      {
+        "primary": "secure_networking_meraki_ap_count",
+        "targets": ["secure_networking_site_inventory_rollup"],
+        "title": "Access Point Estate"
+      },
+      {
+        "primary": "secure_networking_meraki_wireless_client_count",
+        "targets": ["secure_networking_meraki_top_clients_by_bandwidth"],
+        "title": "Wireless Demand"
+      },
+      {
+        "primary": "secure_networking_meraki_rogue_ap_containment_trend",
+        "targets": ["secure_networking_meraki_rogue_ap_containment"],
+        "title": "Rogue AP Containment"
+      },
+      {
+        "primary": "secure_networking_meraki_ssid_encryption_trend",
+        "targets": ["secure_networking_meraki_ssid_encryption_breakdown"],
+        "title": "SSID Encryption Posture"
+      },
+      {
+        "primary": "secure_networking_meraki_alerts_trend",
+        "targets": ["secure_networking_meraki_active_alerts_worklist", "secure_networking_meraki_active_alerts_triage"],
+        "title": "Active Network Alerts"
+      },
+      {
+        "primary": "secure_networking_fmc_activity_trend",
+        "targets": ["secure_networking_fmc_blocked_connection_detail", "executive_dashboard_data_source_status"],
+        "title": "Firewall Activity"
+      }
+    ]
+  },
+  "sn_segmentation_operations": {
+    "label": "Segmentation Overview",
+    "description": "Summarize segment health, policy alignment, and areas needing investigation.",
+    "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/segmentation.svg",
+    "cards": [
+      {
+        "primary": "secure_networking_sgt_site_activity_trend",
+        "targets": ["secure_networking_sgt_by_site"],
+        "title": "SGT Activity by Site"
+      },
+      {
+        "primary": "secure_networking_sgt_device_activity_trend",
+        "targets": ["secure_networking_sgt_distribution_by_site_device"],
+        "title": "SGT Activity by Device"
+      },
+      {
+        "primary": "secure_networking_sgt_binding_activity_trend",
+        "targets": ["secure_networking_sgt_binding_inventory", "secure_networking_ip_sgt_bindings_by_group"],
+        "title": "Binding Activity"
+      },
+      {
+        "primary": "secure_networking_sgacl_enforcement_activity_trend",
+        "targets": ["secure_networking_sgacl_deny_pairs", "secure_networking_sgacl_policy_matrix"],
+        "title": "Policy Enforcement"
+      },
+      {
+        "primary": "secure_networking_router_segmentation_feature_trend",
+        "targets": ["secure_networking_router_segmentation_feature_evidence"],
+        "title": "Segmentation Feature Evidence"
+      },
+      {
+        "primary": "secure_networking_trustsec_hardware_inventory_trend",
+        "targets": ["secure_networking_trustsec_hardware_readiness"],
+        "title": "Hardware Readiness"
+      }
+    ]
+  },
+  "sn_zta_posture": {
+    "label": "Zero Trust Access",
+    "description": "Connect identity, posture, policy, and response signals across the access journey.",
+    "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg",
+    "cards": [
+      {
+        "primary": "secure_networking_zta_auth_outcome_trend",
+        "targets": ["secure_networking_zta_failure_reasons_by_site", "secure_networking_zta_ise_auth_by_device_fail_rate"],
+        "title": "Authentication Outcomes"
+      },
+      {
+        "primary": "secure_networking_zta_ise_auth_failure_rate_trend",
+        "targets": ["secure_networking_zta_ise_auth_by_device_fail_rate"],
+        "title": "Authentication Friction"
+      },
+      {
+        "primary": "secure_networking_zta_ztna_connection_status_trend",
+        "targets": ["secure_networking_zta_ztna_app_access_summary", "secure_networking_zta_ztna_blocked_access_reasons"],
+        "title": "Private Access Status"
+      },
+      {
+        "primary": "secure_networking_zta_ravpn_connection_rate",
+        "targets": ["secure_networking_zta_ravpn_sessions_by_profile", "secure_networking_zta_ravpn_failure_reasons", "secure_networking_zta_ravpn_posture_alerts"],
+        "title": "Remote Access Health"
+      },
+      {
+        "primary": "secure_networking_zta_duo_auth_outcomes_trend",
+        "targets": ["secure_networking_zta_duo_auth_outcomes_by_application", "secure_networking_infra_duo_blocked_posture_identity"],
+        "title": "MFA Outcomes"
+      },
+      {
+        "primary": "secure_networking_zta_user_activity_source_trend",
+        "targets": ["secure_networking_zta_user_activity_cross_source"],
+        "title": "Cross-Control User Activity"
+      }
+    ]
+  },
+  "sn_zta_authentication_policy_enforcement": {
+    "label": "Authentication and Policy Enforcement",
+    "description": "Validate authentication outcomes and verify access policy enforcement.",
+    "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg",
+    "cards": [
+      {
+        "primary": "secure_networking_zta_ise_auth_failure_rate_trend",
+        "targets": ["secure_networking_zta_ise_auth_by_device_fail_rate"],
+        "title": "Authentication Failure Rate"
+      },
+      {
+        "primary": "secure_networking_zta_ise_policy_family_activity_trend",
+        "targets": ["secure_networking_ise_policy_family_overview", "secure_networking_ise_policy_hits_by_device"],
+        "title": "Policy Family Activity"
+      },
+      {
+        "primary": "secure_networking_zta_radius_auth_outcomes_trend",
+        "targets": ["secure_networking_zta_radius_node_health_by_site"],
+        "title": "RADIUS Outcomes"
+      },
+      {
+        "primary": "secure_networking_zta_radsec_activity_trend",
+        "targets": ["secure_networking_zta_radsec_evidence_by_node"],
+        "title": "RadSec Transport Activity"
+      },
+      {
+        "primary": "secure_networking_zta_duo_auth_outcomes_trend",
+        "targets": ["secure_networking_zta_duo_auth_outcomes_by_application", "secure_networking_zta_duo_admin_activity_by_outcome"],
+        "title": "Duo Policy Outcomes"
+      },
+      {
+        "primary": "secure_networking_infra_ise_device_count",
+        "targets": ["secure_networking_zta_radius_node_health_by_site", "secure_networking_zta_ise_auth_by_device_fail_rate"],
+        "title": "ISE Enforcement Footprint"
+      }
+    ]
+  },
+  "sn_zta_detection_response": {
+    "label": "Detection & Response",
+    "description": "Surface access-related detections and the response actions that contain risk.",
+    "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg",
+    "cards": [
+      {
+        "primary": "secure_networking_zta_xdr_incident_status_severity_trend",
+        "targets": ["xdr_incident_status_severity_pressure"],
+        "title": "Incident Status and Severity"
+      },
+      {
+        "primary": "secure_networking_zta_xdr_risk_pressure_trend",
+        "targets": ["xdr_incident_global_risk_leaderboard"],
+        "title": "Incident Risk Pressure"
+      },
+      {
+        "primary": "secure_networking_zta_aa_internal_service_pressure_trend",
+        "targets": ["xdr_aa_forensic_network_internal_service_pressure"],
+        "title": "Internal Service Pressure"
+      },
+      {
+        "primary": "secure_networking_zta_aa_external_egress_trend",
+        "targets": ["xdr_aa_forensic_network_external_egress_watch"],
+        "title": "External Egress Activity"
+      },
+      {
+        "primary": "secure_networking_zta_aa_file_source_hotspot_trend",
+        "targets": ["xdr_aa_forensic_files_network_source_hotspots"],
+        "title": "File Source Hotspots"
+      },
+      {
+        "primary": "secure_networking_zta_aa_detection_severity_trend",
+        "targets": ["xdr_aa_forensic_detections_engine_severity_pressure"],
+        "title": "Detection Severity"
+      }
+    ]
+  },
+  "sn_zta_policy_management": {
+    "label": "Policy Management",
+    "description": "Monitor access-policy coverage, change, and exceptions needing review.",
+    "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg",
+    "cards": [
+      {
+        "primary": "secure_networking_zta_ise_policy_family_activity_trend",
+        "targets": ["secure_networking_ise_policy_family_overview", "secure_networking_ise_policy_hits_by_device"],
+        "title": "Policy Family Activity"
+      },
+      {
+        "primary": "secure_networking_zta_radius_auth_outcomes_trend",
+        "targets": ["secure_networking_zta_ise_enforcement_by_domain", "secure_networking_zta_radius_node_health_by_site"],
+        "title": "RADIUS Enforcement"
+      },
+      {
+        "primary": "secure_networking_zta_radsec_activity_trend",
+        "targets": ["secure_networking_zta_radsec_evidence_by_node"],
+        "title": "Secure Transport Activity"
+      },
+      {
+        "primary": "secure_networking_zta_duo_auth_outcomes_trend",
+        "targets": ["secure_networking_zta_duo_auth_outcomes_by_application", "secure_networking_infra_duo_blocked_posture_identity"],
+        "title": "MFA Policy Outcomes"
+      },
+      {
+        "primary": "secure_networking_zta_blocked_access_reason_trend",
+        "targets": ["secure_networking_zta_ztna_blocked_access_reasons"],
+        "title": "ZTNA Denial Reasons"
+      },
+      {
+        "primary": "secure_networking_sgacl_enforcement_activity_trend",
+        "targets": ["secure_networking_sgacl_policy_matrix", "secure_networking_sgacl_deny_pairs"],
+        "title": "SGACL Enforcement"
+      }
+    ]
+  },
+  "sn_zta_ravpn_sessions_and_posture": {
+    "label": "Remote Access VPN (RaVPN) Sessions and Posture",
+    "description": "Connect remote-session health with endpoint posture and access risk.",
+    "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg",
+    "cards": [
+      {
+        "primary": "secure_networking_zta_ravpn_active_clients_sessions_trend",
+        "targets": ["secure_networking_zta_ravpn_sessions_by_profile"],
+        "title": "Active Clients and Sessions"
+      },
+      {
+        "primary": "secure_networking_zta_ravpn_connection_rate",
+        "targets": ["secure_networking_zta_ravpn_sessions_by_profile", "secure_networking_zta_ravpn_failure_reasons"],
+        "title": "Connection Outcomes"
+      },
+      {
+        "primary": "secure_networking_zta_ravpn_profile_activity_trend",
+        "targets": ["secure_networking_zta_ravpn_sessions_by_profile"],
+        "title": "Profile Activity"
+      },
+      {
+        "primary": "secure_networking_zta_ravpn_region_activity_trend",
+        "targets": ["secure_networking_zta_ravpn_sessions_by_profile"],
+        "title": "Regional Activity"
+      },
+      {
+        "primary": "secure_networking_zta_ravpn_failure_reason_trend",
+        "targets": ["secure_networking_zta_ravpn_failure_reasons"],
+        "title": "Failure Reasons"
+      },
+      {
+        "primary": "secure_networking_zta_ravpn_posture_outcome_trend",
+        "targets": ["secure_networking_zta_ravpn_posture_alerts"],
+        "title": "Posture Outcomes"
+      }
+    ]
+  },
+  "sn_zta_user_activity_monitoring": {
+    "label": "User Activity Monitoring",
+    "description": "Reveal unusual access behavior and the identities, devices, and resources involved.",
+    "header_icon": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg",
+    "cards": [
+      {
+        "primary": "secure_networking_zta_user_activity_source_trend",
+        "targets": ["secure_networking_zta_user_activity_cross_source", "secure_networking_infra_duo_application_access"],
+        "title": "Cross-Source Identity Activity"
+      },
+      {
+        "primary": "secure_networking_zta_ztna_connection_status_trend",
+        "targets": ["secure_networking_zta_ztna_app_access_summary"],
+        "title": "Private Application Access"
+      },
+      {
+        "primary": "secure_networking_zta_blocked_access_reason_trend",
+        "targets": ["secure_networking_zta_ztna_blocked_access_reasons"],
+        "title": "Access Denial Causes"
+      },
+      {
+        "primary": "secure_networking_zta_duo_auth_outcomes_trend",
+        "targets": ["secure_networking_zta_duo_auth_outcomes_by_application", "secure_networking_infra_duo_blocked_posture_identity"],
+        "title": "MFA Activity"
+      },
+      {
+        "primary": "network_nvm_top_users_by_egress",
+        "targets": ["network_nvm_top_destination_hosts", "network_nvm_endpoint_os_inventory"],
+        "title": "User Egress Concentration",
+        "vizType": "bar",
+        "categoryField": "User",
+        "graphFields": ["Bytes Out"]
+      },
+      {
+        "primary": "network_nvm_top_processes_by_flow_volume",
+        "targets": ["network_nvm_top_destination_hosts", "network_nvm_endpoint_os_inventory", "secure_networking_infra_secure_endpoint_incidents"],
+        "title": "Process Flow Concentration",
+        "vizType": "bar",
+        "categoryField": "Process",
+        "graphFields": ["Bytes Out"]
+      }
+    ]
+  }
+}

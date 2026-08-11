@@ -11,6 +11,10 @@ import CardLayout from '@splunk/react-ui/CardLayout';
 import Card from '@splunk/react-ui/Card';
 import { cloneDeep, isEqual } from 'lodash-es';
 
+export const C3_DEFAULT_BACKGROUND_NAME = 'background://c3-atmosphere';
+export const C3_DEFAULT_BACKGROUND_DATA =
+    'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxmaWx0ZXIgaWQ9ImMzLWJsdXIiIHg9Ii01MDAiIHk9Ii01MDAiIHdpZHRoPSIyOTIwIiBoZWlnaHQ9IjI1ODAiIGZpbHRlclVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgY29sb3ItaW50ZXJwb2xhdGlvbi1maWx0ZXJzPSJzUkdCIj48ZmVHYXVzc2lhbkJsdXIgc3RkRGV2aWF0aW9uPSIxNzUiLz48L2ZpbHRlcj48cmFkaWFsR3JhZGllbnQgaWQ9ImMzLWN5YW4tbmF2eSIgY3g9IjEzLjUiIGN5PSIxNDQxLjM2IiByPSI4NTEuNDkiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDAgMTQ0MS4zNikgc2NhbGUoMSAuNjE2NTUpIHRyYW5zbGF0ZSgwIC0xNDQxLjM2KSI+PHN0b3Agc3RvcC1jb2xvcj0iIzMwYWFjYyIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzBjMWE1NiIvPjwvcmFkaWFsR3JhZGllbnQ+PHJhZGlhbEdyYWRpZW50IGlkPSJjMy1ibHVlLXZpb2xldCIgY3g9IjI3My41IiBjeT0iMTQ0MS4zNiIgcj0iODUxLjQ5IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgZ3JhZGllbnRUcmFuc2Zvcm09InRyYW5zbGF0ZSgwIDE0NDEuMzYpIHNjYWxlKDEgLjYxNjU1KSB0cmFuc2xhdGUoMCAtMTQ0MS4zNikiPjxzdG9wIHN0b3AtY29sb3I9IiMyYzkzZTEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM4MDE0OGMiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSIjMGIxMTE4Ii8+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNjYyLjQgMCkiIG9wYWNpdHk9Ii43MiI+PHJlY3QgeD0iMTMuNSIgeT0iNDgzIiB3aWR0aD0iNTkzIiBoZWlnaHQ9IjE2OTciIGZpbGw9InVybCgjYzMtY3lhbi1uYXZ5KSIgZmlsdGVyPSJ1cmwoI2MzLWJsdXIpIiB0cmFuc2Zvcm09InJvdGF0ZSgtOTAgMzEwIDEzMzEuNSkiLz48cmVjdCB4PSIyNzMuNSIgeT0iNDgzIiB3aWR0aD0iNTkzIiBoZWlnaHQ9IjE2OTciIGZpbGw9InVybCgjYzMtYmx1ZS12aW9sZXQpIiBmaWx0ZXI9InVybCgjYzMtYmx1cikiIHRyYW5zZm9ybT0icm90YXRlKC05MCA1NzAgMTMzMS41KSIvPjwvZz48L3N2Zz4=';
+
 export function ImageBase64Encoder({ setNewBG }) {
     const [base64, setBase64] = useState(undefined);
     const [dragActive, setDragActive] = useState(false);
@@ -88,7 +92,7 @@ const BackgroundButton = (props) => {
     const [newBG, setNewBG] = useState(undefined);
     const [displayError, setDisplayError] = useState(false);
     const [backgrounds, setBackgrounds] = useState([]);
-    const [selectedBG, setSelectedBG] = useState();
+    const [selectedBG, setSelectedBG] = useState(C3_DEFAULT_BACKGROUND_NAME);
 
     const refreshBackgrounds = () => {
         getBackgrounds().then((response) => {
@@ -129,10 +133,14 @@ const BackgroundButton = (props) => {
     const applyNewBG = () => {
         const { dashboardApi } = props;
         let def = cloneDeep(dashboardApi.getDefinition());
+        const selectedBackground = backgrounds.find((bg) => bg.name === selectedBG);
+        if (!selectedBackground) {
+            return;
+        }
         const bgConf = {
             backgroundImage: {
                 sizeType: 'cover',
-                src: backgrounds.find((bg) => bg.name == selectedBG)?.content.data,
+                src: selectedBackground.content.data,
                 x: 0,
                 y: 0,
             },
@@ -175,12 +183,22 @@ const BackgroundButton = (props) => {
                     >
                         {backgrounds
                             .filter((bg) => bg.name.includes('background://'))
+                            .sort(
+                                (left, right) =>
+                                    Number(right.name === C3_DEFAULT_BACKGROUND_NAME) -
+                                    Number(left.name === C3_DEFAULT_BACKGROUND_NAME),
+                            )
                             .map((bg) => (
                                 <Card
                                     key={bg.name}
                                     style={{
                                         cursor: 'pointer',
+                                        outline:
+                                            selectedBG === bg.name ? '2px solid #0ea5e9' : undefined,
+                                        outlineOffset: selectedBG === bg.name ? 2 : undefined,
                                     }}
+                                    aria-label={`Select ${bg.content.name}`}
+                                    aria-pressed={selectedBG === bg.name}
                                     onClick={() => {
                                         setSelectedBG(bg.name);
                                     }}
@@ -188,6 +206,7 @@ const BackgroundButton = (props) => {
                                     <Card.Body style={{ padding: 5 }}>
                                         <img
                                             title={bg.content.name}
+                                            alt={`${bg.content.name} dashboard background`}
                                             src={bg.content.data}
                                             style={{ display: 'block', width: 240 }}
                                         ></img>
@@ -220,7 +239,7 @@ const BackgroundButton = (props) => {
                                     applyNewBG();
                                 }}
                                 appearance="primary"
-                                disabled={selectedBG == undefined}
+                                disabled={!backgrounds.some((bg) => bg.name === selectedBG)}
                             ></Button>
                             <Button
                                 label="Cancel"
@@ -277,6 +296,7 @@ const BackgroundButton = (props) => {
                 <Button
                     style={{ maxWidth: 32 }}
                     appearance="subtle"
+                    aria-label="Choose dashboard background or theme"
                     icon={
                         <Palette
                             width={20}

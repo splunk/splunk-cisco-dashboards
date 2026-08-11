@@ -32,6 +32,11 @@ export type WorkspaceSectionIcon =
     | 'shield'
     | 'building'
     | 'sparkles'
+    | 'shield-keyhole'
+    | 'servers'
+    | 'node-model'
+    | 'wall-bricks'
+    | 'robot-face-wrench'
     | 'shield-check'
     | 'server-cog'
     | 'network'
@@ -94,36 +99,33 @@ export interface InsightsWorkspace {
     regionalView: WorkspaceRegionalView;
 }
 
-const SECURE_NETWORKING_IMAGE_ROOT =
-    '/static/app/splunk-cisco-dashboards/images/overview/secure-networking';
-
 const CROSS_DOMAIN_SECTIONS: readonly WorkspaceSectionMeta[] = [
     {
         id: 'it_health',
         title: 'IT Operations',
         linkText: 'Open IT Operations',
-        href: 'it_health_v1',
+        href: 'dashboard_manager#/netops_critical_systems_health',
         icon: 'activity',
     },
     {
         id: 'security',
         title: 'Security Operations',
         linkText: 'Open Security Operations',
-        href: 'security_v1',
+        href: 'dashboard_manager#/secops_resilience',
         icon: 'shield',
     },
     {
         id: 'building',
         title: 'Digital Experience',
         linkText: 'Open Digital Experience',
-        href: 'building_v1',
+        href: 'dashboard_manager#/workplace_building_intelligence',
         icon: 'building',
     },
     {
         id: 'custom',
         title: 'Executive Command Signals',
         linkText: 'Open dashboard builder',
-        href: 'dashboardbuilder',
+        href: 'dashboard_manager',
         icon: 'sparkles',
     },
 ] as const;
@@ -133,41 +135,36 @@ const SECURE_NETWORKING_SECTIONS: readonly WorkspaceSectionMeta[] = [
         id: 'zta',
         title: 'Zero Trust Access',
         linkText: 'Open Zero Trust Access',
-        href: 'dashboardbuilder#/secure_networking_zta',
-        icon: 'shield-check',
-        iconSrc: `${SECURE_NETWORKING_IMAGE_ROOT}/zero-trust-access.svg`,
+        href: 'dashboard_manager#/sn_zta_posture',
+        icon: 'shield-keyhole',
     },
     {
         id: 'secure_infrastructure',
         title: 'Secure Infrastructure',
         linkText: 'Open Secure Infrastructure',
-        href: 'secure_networking_secure_infrastructure',
-        icon: 'server-cog',
-        iconSrc: `${SECURE_NETWORKING_IMAGE_ROOT}/secure-infrastructure.svg`,
+        href: 'dashboard_manager#/sn_secure_infrastructure_posture',
+        icon: 'servers',
     },
     {
         id: 'scalable_network_segmentation',
         title: 'Scalable Network Segmentation',
         linkText: 'Open Scalable Network Segmentation',
-        href: 'secure_networking_scalable_network_segmentation',
-        icon: 'network',
-        iconSrc: `${SECURE_NETWORKING_IMAGE_ROOT}/segmentation.svg`,
+        href: 'dashboard_manager#/sn_segmentation_readiness',
+        icon: 'node-model',
     },
     {
         id: 'hybrid_mesh_firewalling',
         title: 'Hybrid Mesh Firewalling',
         linkText: 'Open Hybrid Mesh Firewalling',
-        href: 'secure_networking_hybrid_mesh_firewalling',
-        icon: 'firewall',
-        iconSrc: `${SECURE_NETWORKING_IMAGE_ROOT}/hybrid-mesh-firewalling.svg`,
+        href: 'dashboard_manager#/sn_hmf_enforcement',
+        icon: 'wall-bricks',
     },
     {
         id: 'agentic_ops',
         title: 'Agentic Ops',
         linkText: 'Open Agentic Ops',
-        href: 'secure_networking_agentic_ops',
-        icon: 'bot',
-        iconSrc: `${SECURE_NETWORKING_IMAGE_ROOT}/agentic-ops.svg`,
+        href: 'dashboard_manager#/sn_agentic_ops_operational_intelligence',
+        icon: 'robot-face-wrench',
     },
 ] as const;
 
@@ -349,10 +346,9 @@ export const PACKAGED_WORKSPACE_FALLBACKS: readonly InsightsWorkspace[] = [
         id: 'secure_networking',
         label: 'Secure Networking',
         sourceWorkspace: 'secure_networking',
-        headerTitle: 'Splunk for Secure Networking',
-        headerSubtitle: 'Secure Networking Executive Insights',
+        headerTitle: 'Secure Networking Operations',
+        headerSubtitle: 'Live posture, policy, infrastructure, and connectivity',
         hideDefaultLogo: true,
-        legacyViewNames: ['secure_networking_profile'],
         isBuiltIn: true,
         sortOrder: 10,
     }),
@@ -401,7 +397,6 @@ export const PACKAGED_WORKSPACE_FALLBACKS: readonly InsightsWorkspace[] = [
         sourceWorkspace: 'executive',
         headerTitle: 'Global Operations Command',
         headerSubtitle: 'Enterprise health, risk, and experience at decision speed',
-        legacyViewNames: ['executive_briefing_profile'],
         isBuiltIn: true,
         sortOrder: 50,
     }),

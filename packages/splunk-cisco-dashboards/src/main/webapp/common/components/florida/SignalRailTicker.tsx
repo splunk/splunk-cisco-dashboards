@@ -1,16 +1,21 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Badge from '@splunk/react-ui/Badge';
+import { variables } from '@splunk/themes';
 import { Check, ExternalLink, Palette, Pause, Play, Settings2 } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
+import { C3_VISUALIZATION_COLORS } from '@/common/theme/c3VisualizationPalette';
 import type { MetricStatus } from '@/common/hooks/useMetric';
 import type {
     SignalTickerDensity,
     SignalTickerFontSize,
     SignalTickerRows,
 } from '@/common/hooks/usePersistedSignalTicker';
+import { OneCdGlassCard, OneCdSurface } from './OneCdSurface';
 
 export type SignalRailStatus = MetricStatus;
 export type SignalRailDeltaDirection = 'up' | 'down' | 'flat';
 export type SignalRailVariant =
+    | 'one-cisco-glass'
     | 'original'
     | 'bloomberg'
     | 'cisco-blue-gradient'
@@ -41,7 +46,7 @@ interface SignalRailTickerProps {
 }
 
 const STORAGE_KEY = 'signalRailVariant';
-const DEFAULT_VARIANT: SignalRailVariant = 'original';
+const DEFAULT_VARIANT: SignalRailVariant = 'one-cisco-glass';
 
 const VARIANT_OPTIONS: Array<{
     id: SignalRailVariant;
@@ -49,6 +54,13 @@ const VARIANT_OPTIONS: Array<{
     description: string;
     swatchClassName: string;
 }> = [
+    {
+        id: 'one-cisco-glass',
+        label: 'One Cisco Glass',
+        description: '1CD spotlight with SUI glass status cards',
+        swatchClassName:
+            'border border-sky-200/70 bg-gradient-to-br from-white/80 via-sky-100/55 to-violet-200/55',
+    },
     {
         id: 'original',
         label: 'Original',
@@ -96,6 +108,24 @@ const signalRailTickerCss = `
 }
 .scd-signal-rail-marquee-track[data-paused='true'] {
     animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+    .scd-signal-rail-marquee-track {
+        animation: none !important;
+        transform: none !important;
+    }
+}
+#scan-root .scd-signal-rail-controls {
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(0.25rem, -50%);
+}
+#scan-root .scd-signal-rail-ticker:hover .scd-signal-rail-controls,
+#scan-root .scd-signal-rail-ticker:focus-within .scd-signal-rail-controls,
+#scan-root .scd-signal-rail-controls[data-open='true'] {
+    opacity: 1 !important;
+    pointer-events: auto;
+    transform: translate(0, -50%) !important;
 }
 .scd-signal-rail-cisco {
     background: linear-gradient(135deg, #0d2b5e 0%, #1749a0 52%, #0d4f8a 100%);
@@ -212,7 +242,26 @@ const STATUS_COLOR = {
     },
 } satisfies Record<SignalRailStatus, Record<string, string>>;
 
+type BadgeBackground = NonNullable<
+    React.ComponentProps<typeof Badge>['backgroundColor']
+>;
+
+const STATUS_BADGE_COLOR: Record<SignalRailStatus, string> = {
+    healthy: C3_VISUALIZATION_COLORS.positive,
+    warning: C3_VISUALIZATION_COLORS.caution,
+    critical: C3_VISUALIZATION_COLORS.critical,
+    unknown: C3_VISUALIZATION_COLORS.info,
+};
+
+const STATUS_BADGE_BACKGROUND: Record<SignalRailStatus, BadgeBackground> = {
+    healthy: `color-mix(in srgb, ${STATUS_BADGE_COLOR.healthy} 50%, transparent)`,
+    warning: `color-mix(in srgb, ${STATUS_BADGE_COLOR.warning} 50%, transparent)`,
+    critical: `color-mix(in srgb, ${STATUS_BADGE_COLOR.critical} 50%, transparent)`,
+    unknown: `color-mix(in srgb, ${STATUS_BADGE_COLOR.unknown} 50%, transparent)`,
+};
+
 const isSignalRailVariant = (value: string | null): value is SignalRailVariant =>
+    value === 'one-cisco-glass' ||
     value === 'original' ||
     value === 'bloomberg' ||
     value === 'cisco-blue-gradient' ||
@@ -287,13 +336,19 @@ const passClass = (variant: SignalRailVariant, density: SignalTickerDensity): st
         variant === 'cisco-blue-gradient' && 'gap-0',
         variant === 'telemetry-constellation' && 'gap-4',
         variant === 'original' && 'gap-3',
-        variant === 'minimal-enterprise' && 'gap-4'
+        variant === 'minimal-enterprise' && 'gap-4',
+        variant === 'one-cisco-glass' && 'gap-3'
     );
 
 const itemSizeClass = (
     variant: SignalRailVariant,
     density: SignalTickerDensity
 ): string => {
+    if (variant === 'one-cisco-glass') {
+        return density === 'compact'
+            ? 'min-w-0 px-4 py-3'
+            : 'min-w-0 px-5 py-4';
+    }
     if (variant === 'bloomberg') {
         return density === 'compact'
             ? 'h-[62px] min-w-[280px] px-7'
@@ -365,6 +420,57 @@ const KpiItem: React.FC<KpiItemProps> = ({
                 <ExternalLink className="h-3 w-3 stroke-[2.5px]" />
             </a>
         ) : null;
+
+    if (variant === 'one-cisco-glass') {
+        return (
+            <OneCdGlassCard
+                tag="article"
+                className={cn(
+                    'scd-signal-rail-item flex flex-col gap-0 overflow-hidden',
+                    itemSizeClass(variant, density)
+                )}
+                data-status={kpi.status}
+            >
+                <span className="flex min-w-0 items-start justify-between gap-3">
+                    <span className="min-w-0">
+                        <span
+                            className={cn(
+                                'block truncate font-bold text-slate-950 dark:text-white',
+                                fontSizeClass(fontSize, 'text-xs', 'text-sm', 'text-base')
+                            )}
+                        >
+                            {label}
+                        </span>
+                        <span
+                            className={cn(
+                                'mt-1 block truncate text-slate-500 dark:text-slate-300',
+                                fontSizeClass(fontSize, 'text-[10px]', 'text-xs', 'text-sm')
+                            )}
+                        >
+                            {category}
+                        </span>
+                    </span>
+                    {openLink}
+                </span>
+                <span className="mt-1.5 flex items-end justify-between gap-3">
+                    <span
+                        className={cn(
+                            'font-black leading-none text-slate-950 dark:text-white',
+                            fontSizeClass(fontSize, 'text-[24px]', 'text-[30px]', 'text-[34px]')
+                        )}
+                    >
+                        {valueText(kpi)}
+                    </span>
+                    <Badge
+                        label={STATUS_LABEL[kpi.status]}
+                        backgroundColor={STATUS_BADGE_BACKGROUND[kpi.status]}
+                        foregroundColor={variables.contentColorActive}
+                        style={{ border: `1px solid ${STATUS_BADGE_COLOR[kpi.status]}` }}
+                    />
+                </span>
+            </OneCdGlassCard>
+        );
+    }
 
     if (variant === 'bloomberg') {
         return (
@@ -659,6 +765,10 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
     }, []);
 
     const tickerRows = useMemo(() => splitRows(kpis, rows), [kpis, rows]);
+    // Aileen's 1CD status overview is a static set of glass cards. Motion
+    // belongs to the connector trails in the topology map, not this rail.
+    // Retain marquee support only for the optional legacy rail variants.
+    const staticMode = variant === 'one-cisco-glass' || durationSeconds <= 0;
     const effectivePaused = manualPaused || interactionPaused || durationSeconds <= 0;
     const activeOption = VARIANT_OPTIONS.find((option) => option.id === variant);
     const counts = useMemo(() => {
@@ -671,6 +781,18 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
         for (const kpi of kpis) map[kpi.status] += 1;
         return map;
     }, [kpis]);
+
+    const controlButtonClassName = cn(
+        'flex items-center justify-center rounded-md border border-transparent bg-transparent shadow-none transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
+        density === 'compact' ? 'h-8 w-8' : 'h-9 w-9',
+        variant === 'bloomberg'
+            ? 'text-blue-300 hover:bg-blue-400/15 hover:text-white'
+            : variant === 'telemetry-constellation'
+            ? 'text-cyan-200 hover:bg-cyan-300/15 hover:text-white'
+            : variant === 'cisco-blue-gradient'
+            ? 'text-white/85 hover:bg-white/15 hover:text-white'
+            : 'text-slate-500 hover:bg-sky-500/10 hover:text-sky-700 dark:text-slate-300 dark:hover:bg-sky-300/10 dark:hover:text-sky-200'
+    );
 
     const renderPass = (row: SignalRailKpi[], pass: number) => (
         <div
@@ -694,9 +816,14 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
     if (kpis.length === 0) return null;
 
     return (
-        <section
+        <OneCdSurface
+            as="section"
+            spotlight={variant === 'one-cisco-glass' ? 'page-top' : false}
+            spotlightIntensity="low"
             className={cn(
                 'scd-signal-rail-ticker group/signal-rail relative z-40 w-full min-w-0 max-w-full flex-shrink-0 overflow-visible border-b',
+                variant === 'one-cisco-glass' &&
+                    'border-transparent bg-transparent px-3 py-3 text-slate-950 dark:text-white',
                 variant === 'original' &&
                     'border-slate-200 bg-white/[0.82] px-1.5 py-1 dark:border-slate-800 dark:bg-slate-950/95',
                 variant === 'bloomberg' &&
@@ -742,47 +869,77 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                     {tickerRows.map((row, rowIndex) => (
                         <div
                             key={`row-${rowIndex}`}
-                            className="w-full min-w-0 max-w-full overflow-hidden py-0.5"
+                            className={cn(
+                                'w-full min-w-0 max-w-full py-0.5',
+                                staticMode ? 'overflow-visible' : 'overflow-hidden'
+                            )}
                         >
-                            <div
-                                className="scd-signal-rail-marquee-track flex"
-                                data-paused={effectivePaused}
-                                style={{
-                                    animationDuration: `${durationSeconds > 0 ? durationSeconds : 60}s`,
-                                }}
-                            >
-                                {[0, 1].map((pass) => renderPass(row, pass))}
-                            </div>
+                            {staticMode ? (
+                                <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3">
+                                    {row.map((kpi) => (
+                                        <KpiItem
+                                            key={kpi.id}
+                                            kpi={kpi}
+                                            variant={variant}
+                                            density={density}
+                                            fontSize={fontSize}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div
+                                    className="scd-signal-rail-marquee-track flex"
+                                    data-paused={effectivePaused}
+                                    style={{ animationDuration: `${durationSeconds}s` }}
+                                >
+                                    {[0, 1].map((pass) => renderPass(row, pass))}
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
 
                 <div
                     className={cn(
-                        'relative z-[90] flex shrink-0 items-center gap-1 transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none lg:pointer-events-none lg:translate-x-1 lg:opacity-0 lg:group-hover/signal-rail:pointer-events-auto lg:group-hover/signal-rail:translate-x-0 lg:group-hover/signal-rail:opacity-100 lg:group-focus-within/signal-rail:pointer-events-auto lg:group-focus-within/signal-rail:translate-x-0 lg:group-focus-within/signal-rail:opacity-100'
+                        'scd-signal-rail-controls absolute right-2 top-1/2 z-[90] flex items-center gap-0.5 rounded-xl border p-1 shadow-lg transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none',
+                        variant === 'bloomberg'
+                            ? 'border-blue-300/15 bg-[#070b14]/35'
+                            : variant === 'telemetry-constellation'
+                            ? 'border-cyan-300/20 bg-slate-950/30 shadow-[0_0_18px_rgba(34,211,238,0.1)]'
+                            : variant === 'cisco-blue-gradient'
+                            ? 'border-white/15 bg-slate-950/20'
+                            : 'border-slate-300/30 bg-white/35 dark:border-slate-600/30 dark:bg-slate-950/30'
                     )}
+                    data-signal-rail-controls="true"
+                    data-open={pickerOpen}
                     ref={pickerRef}
                 >
-                    <button
+                    {variant !== 'one-cisco-glass' && <button
                         type="button"
                         onClick={() => setManualPaused((current) => !current)}
+                        disabled={staticMode}
                         aria-pressed={manualPaused}
-                        aria-label={manualPaused ? 'Resume signal rail' : 'Pause signal rail'}
-                        title={manualPaused ? 'Resume signal rail' : 'Pause signal rail'}
+                        aria-label={
+                            staticMode
+                                ? 'Signal rail is static; configure speed to enable motion'
+                                : manualPaused
+                                ? 'Resume signal rail'
+                                : 'Pause signal rail'
+                        }
+                        title={
+                            staticMode
+                                ? 'Static by default — configure speed to enable motion'
+                                : manualPaused
+                                ? 'Resume signal rail'
+                                : 'Pause signal rail'
+                        }
                         className={cn(
-                            'flex items-center justify-center rounded-lg border shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
-                            density === 'compact' ? 'h-9 w-9' : 'h-10 w-10',
-                            variant === 'bloomberg'
-                                ? 'border-[#1e2d4a] bg-[#070b14] text-blue-300 hover:text-white'
-                                : variant === 'telemetry-constellation'
-                                ? 'border-cyan-300/25 bg-slate-950/80 text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.14)] hover:bg-cyan-950/70 hover:text-white'
-                                : variant === 'cisco-blue-gradient'
-                                ? 'border-white/20 bg-white/10 text-white hover:bg-white/[0.18]'
-                                : 'border-slate-200 bg-white text-slate-500 hover:bg-sky-50 hover:text-sky-700 dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-sky-200'
+                            controlButtonClassName,
+                            staticMode && 'cursor-not-allowed opacity-45'
                         )}
                     >
                         {manualPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-                    </button>
+                    </button>}
                     <button
                         type="button"
                         onClick={() => setPickerOpen((current) => !current)}
@@ -790,17 +947,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                         aria-expanded={pickerOpen}
                         aria-label={`Ticker style: ${activeOption?.label ?? 'Original'}`}
                         title={`Ticker style: ${activeOption?.label ?? 'Original'}`}
-                        className={cn(
-                            'flex items-center justify-center rounded-lg border shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
-                            density === 'compact' ? 'h-9 w-9' : 'h-10 w-10',
-                            variant === 'bloomberg'
-                                ? 'border-[#1e2d4a] bg-[#070b14] text-blue-300 hover:text-white'
-                                : variant === 'telemetry-constellation'
-                                ? 'border-cyan-300/25 bg-slate-950/80 text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.14)] hover:bg-cyan-950/70 hover:text-white'
-                                : variant === 'cisco-blue-gradient'
-                                ? 'border-white/20 bg-white/10 text-white hover:bg-white/[0.18]'
-                                : 'border-slate-200 bg-white text-slate-500 hover:bg-sky-50 hover:text-sky-700 dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-sky-200'
-                        )}
+                        className={controlButtonClassName}
                     >
                         <Palette className="h-4 w-4" />
                     </button>
@@ -810,17 +957,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                             onClick={onOpenEditor}
                             aria-label="Configure signal rail"
                             title="Configure signal rail"
-                            className={cn(
-                                'flex items-center justify-center rounded-lg border shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
-                                density === 'compact' ? 'h-9 w-9' : 'h-10 w-10',
-                                variant === 'bloomberg'
-                                    ? 'border-[#1e2d4a] bg-[#070b14] text-blue-300 hover:text-white'
-                                    : variant === 'telemetry-constellation'
-                                    ? 'border-cyan-300/25 bg-slate-950/80 text-cyan-200 shadow-[0_0_18px_rgba(34,211,238,0.14)] hover:bg-cyan-950/70 hover:text-white'
-                                    : variant === 'cisco-blue-gradient'
-                                    ? 'border-white/20 bg-white/10 text-white hover:bg-white/[0.18]'
-                                    : 'border-slate-200 bg-white text-slate-500 hover:bg-sky-50 hover:text-sky-700 dark:border-slate-800 dark:bg-slate-900/95 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-sky-200'
-                            )}
+                            className={controlButtonClassName}
                         >
                             <Settings2 className="h-4 w-4" />
                         </button>
@@ -838,7 +975,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                                         Ticker style
                                     </p>
                                     <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                                        Choose one of five rail treatments
+                                        Choose a rail treatment
                                     </p>
                                 </div>
                                 <span className="rounded-full bg-sky-50 px-2 py-1 text-xs font-black uppercase tracking-[0.1em] text-sky-700 dark:bg-sky-950/50 dark:text-sky-200">
@@ -919,7 +1056,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                     </span>
                 </div>
             )}
-        </section>
+        </OneCdSurface>
     );
 };
 

@@ -23,6 +23,9 @@
     --scd-guide-accent-soft: #e8f0fb;
     --scd-guide-border: #e2e2e5;
     --scd-guide-border-strong: #d2d2d7;
+    --scd-guide-control-bg: #ffffff;
+    --scd-guide-link-fg: #424245;
+    --scd-guide-focus-ring: rgba(10, 102, 194, 0.16);
     --scd-guide-left-width: 300px;
     --scd-guide-right-width: 360px;
     --scd-guide-gap: 24px;
@@ -95,10 +98,10 @@
 
 #scan-root .scd-guide-search-input-wrap {
     align-items: center;
-    background: #ffffff;
+    background: var(--scd-guide-control-bg);
     border: 1px solid var(--scd-guide-border-strong);
     border-radius: 7px;
-    color: #94a3b8;
+    color: var(--scd-guide-fg-muted);
     display: flex;
     gap: 7px;
     padding: 0 9px;
@@ -106,7 +109,7 @@
 
 #scan-root .scd-guide-search-input-wrap:focus-within {
     border-color: var(--scd-guide-accent);
-    box-shadow: 0 0 0 2px rgba(10, 102, 194, 0.16);
+    box-shadow: 0 0 0 2px var(--scd-guide-focus-ring);
 }
 
 #scan-root .scd-guide-search-input {
@@ -143,7 +146,7 @@
 }
 
 #scan-root .scd-guide-search-button {
-    background: #ffffff;
+    background: var(--scd-guide-control-bg);
     border: 1px solid var(--scd-guide-border-strong);
     border-radius: 6px;
     color: var(--scd-guide-accent);
@@ -198,7 +201,7 @@
     border: 0;
     border-left: 3px solid transparent;
     border-radius: 8px;
-    color: #424245;
+    color: var(--scd-guide-link-fg);
     cursor: pointer;
     display: flex;
     font: inherit;
@@ -230,7 +233,7 @@
 
 #scan-root .scd-guide-toc-chip {
     align-items: center;
-    background: #ffffff;
+    background: var(--scd-guide-control-bg);
     border: 1px solid var(--scd-guide-border);
     border-radius: 5px;
     color: var(--scd-guide-fg-muted);
@@ -276,7 +279,7 @@
 #scan-root .scd-guide-page-toc {
     align-self: start;
     box-sizing: border-box;
-    color: #424245;
+    color: var(--scd-guide-link-fg);
     max-height: calc(100vh - 174px);
     overflow-y: auto;
     padding: 10px 0 18px;
@@ -397,6 +400,130 @@
     box-shadow:
         0 0 0 2px #38bdf8,
         0 0 0 5px rgba(56, 189, 248, 0.15);
+}
+
+/* The guide keeps its existing three-column information architecture and
+ * interactions, while the saved dark preference uses the same C3 canvas,
+ * operational surfaces, and semantic colors as the rest of the app. */
+#scan-root .scd-user-guide[data-theme="dark"] {
+    color: var(--scd-c3-text);
+}
+
+#scan-root .scd-user-guide[data-theme="dark"] .scd-guide-layout {
+    --scd-guide-page-bg: transparent;
+    --scd-guide-panel-bg: var(--scd-c3-panel);
+    --scd-guide-fg: var(--scd-c3-text);
+    --scd-guide-fg-muted: var(--scd-c3-muted);
+    --scd-guide-accent: var(--scd-c3-info);
+    --scd-guide-accent-soft: rgb(100 158 245 / 14%);
+    --scd-guide-border: var(--scd-c3-toolbar-border);
+    --scd-guide-border-strong: var(--scd-c3-accent-stroke);
+    --scd-guide-control-bg: var(--scd-c3-secondary);
+    --scd-guide-link-fg: var(--scd-c3-muted);
+    --scd-guide-focus-ring: rgb(100 158 245 / 24%);
+    --scd-guide-shadow:
+        0 3px 8px rgb(0 0 0 / 18%),
+        inset 0 1px 0 rgb(255 255 255 / 3%);
+}
+
+#scan-root .scd-user-guide[data-theme="dark"] .bg-white {
+    background-color: var(--scd-c3-panel) !important;
+}
+
+#scan-root .scd-user-guide[data-theme="dark"] .bg-slate-50,
+#scan-root .scd-user-guide[data-theme="dark"] .bg-slate-100 {
+    background-color: var(--scd-c3-secondary) !important;
+}
+
+#scan-root .scd-user-guide[data-theme="dark"] .bg-sky-50,
+#scan-root .scd-user-guide[data-theme="dark"] .hover\:bg-sky-50:hover {
+    background-color: rgb(100 158 245 / 14%) !important;
+}
+
+#scan-root .scd-user-guide[data-theme="dark"] .bg-amber-50 {
+    background-color: rgb(240 194 67 / 13%) !important;
+}
+
+#scan-root .scd-user-guide[data-theme="dark"] .text-slate-950,
+#scan-root .scd-user-guide[data-theme="dark"] .text-slate-900,
+#scan-root .scd-user-guide[data-theme="dark"] .text-slate-800 {
+    color: var(--scd-c3-text) !important;
+}
+
+#scan-root .scd-user-guide[data-theme="dark"] .text-slate-700,
+#scan-root .scd-user-guide[data-theme="dark"] .text-slate-600,
+#scan-root .scd-user-guide[data-theme="dark"] .text-slate-500,
+#scan-root .scd-user-guide[data-theme="dark"] .text-slate-400 {
+    color: var(--scd-c3-muted) !important;
+}
+
+#scan-root .scd-user-guide[data-theme="dark"] .text-sky-600,
+#scan-root .scd-user-guide[data-theme="dark"] .text-sky-700,
+#scan-root .scd-user-guide[data-theme="dark"] .text-sky-800,
+#scan-root .scd-user-guide[data-theme="dark"] .hover\:text-sky-700:hover {
+    color: var(--scd-c3-info) !important;
+}
+
+#scan-root .scd-user-guide[data-theme="dark"] .text-emerald-700 {
+    color: var(--scd-c3-positive) !important;
+}
+
+#scan-root .scd-user-guide[data-theme="dark"] .text-amber-950 {
+    color: var(--scd-c3-caution) !important;
+}
+
+#scan-root .scd-user-guide[data-theme="dark"] .text-red-600 {
+    color: var(--scd-c3-critical) !important;
+}
+
+#scan-root .scd-user-guide[data-theme="dark"] .border-slate-100,
+#scan-root .scd-user-guide[data-theme="dark"] .border-slate-200,
+#scan-root .scd-user-guide[data-theme="dark"] .border-slate-300 {
+    border-color: var(--scd-c3-toolbar-border) !important;
+}
+
+#scan-root .scd-user-guide[data-theme="dark"] .border-sky-100,
+#scan-root .scd-user-guide[data-theme="dark"] .border-sky-300,
+#scan-root .scd-user-guide[data-theme="dark"] .border-sky-400,
+#scan-root .scd-user-guide[data-theme="dark"] .border-sky-500,
+#scan-root .scd-user-guide[data-theme="dark"] .hover\:border-sky-300:hover,
+#scan-root .scd-user-guide[data-theme="dark"] .hover\:border-sky-400:hover,
+#scan-root .scd-user-guide[data-theme="dark"] .hover\:border-sky-500:hover {
+    border-color: var(--scd-c3-accent-stroke) !important;
+}
+
+#scan-root .scd-user-guide[data-theme="dark"] .border-amber-200 {
+    border-color: rgb(240 194 67 / 34%) !important;
+}
+
+#scan-root .scd-user-guide[data-theme="dark"] .scd-guide-search-match {
+    background: rgb(240 194 67 / 24%);
+    box-shadow: 0 0 0 2px rgb(240 194 67 / 24%);
+}
+
+#scan-root .scd-user-guide[data-theme="dark"] .scd-guide-search-current {
+    background: rgb(100 158 245 / 28%);
+    box-shadow:
+        0 0 0 2px var(--scd-c3-info),
+        0 0 0 5px rgb(100 158 245 / 18%);
+}
+
+#scan-root .scd-user-guide .scd-guide-theme-toggle {
+    min-height: 44px;
+}
+
+#scan-root .scd-user-guide[data-theme="dark"] .scd-guide-theme-toggle {
+    background: var(--scd-c3-secondary) !important;
+    border: 1px solid var(--scd-c3-toolbar-border) !important;
+    color: var(--scd-c3-text) !important;
+}
+
+#scan-root .scd-user-guide[data-theme="dark"] .scd-guide-theme-toggle:hover,
+#scan-root .scd-user-guide[data-theme="dark"] .scd-guide-theme-toggle:focus-visible {
+    background: rgb(100 158 245 / 14%) !important;
+    border-color: var(--scd-c3-info) !important;
+    outline: 2px solid var(--scd-c3-info);
+    outline-offset: 2px;
 }
 
 @media (max-width: 1540px) {

@@ -384,7 +384,7 @@ const DashboardContent: React.FC = () => {
             className={cn(
                 'h-screen min-h-[720px] overflow-hidden font-sans',
                 theme === 'dark'
-                    ? 'dark bg-slate-950 text-slate-100'
+                    ? 'dark scd-c3-atmosphere bg-slate-950 text-slate-100'
                     : 'bg-slate-100 text-slate-900'
             )}
         >

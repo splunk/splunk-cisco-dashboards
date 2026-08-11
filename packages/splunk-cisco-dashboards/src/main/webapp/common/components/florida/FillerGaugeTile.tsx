@@ -14,6 +14,7 @@ import {
     type GaugeRange,
 } from './canvasVizOptions';
 import type { DataSource, NoDataReason } from '@/common/hooks/useMetric';
+import { C3_VISUALIZATION_COLORS } from '@/common/theme/c3VisualizationPalette';
 
 export interface FillerGaugeTileProps {
     label: string;
@@ -82,7 +83,7 @@ export const FillerGaugeTile: React.FC<FillerGaugeTileProps> = ({
     thresholdNote,
     value,
     unit = '',
-    accentColor = '#0ea5e9',
+    accentColor = C3_VISUALIZATION_COLORS.info,
     vizOptions,
     source,
     onOpenInSearch,

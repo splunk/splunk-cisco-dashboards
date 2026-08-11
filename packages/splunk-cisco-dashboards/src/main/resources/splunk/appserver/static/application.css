@@ -1,12 +1,12 @@
 /*
- * Splunk 10.4 limits Navigation XML to a fixed set of React icon names.
- * Replace those fallback glyphs with the five Secure Networking pillar SVGs
- * wherever the app shell loads application.css. The mask keeps Splunk's
- * native inactive, hover, selected, light, and dark colors.
+ * Splunk's navigation registry exposes ShieldKeyhole directly, but not the
+ * other four approved pillar icons available to the app through
+ * @splunk/react-icons. Replace only those four shell fallbacks with one
+ * unmodified copy of the matching outlined SUI vector at Splunk's native
+ * 24px rendered size. Splunk still owns inactive, hover, and selected color.
  */
 #root-nav-menu
     [data-test='nav-item'][aria-haspopup='true']:is(
-        [title='Zero Trust Access'],
         [title='Secure Infrastructure'],
         [title='Scalable Network Segmentation'],
         [title='Hybrid Mesh Firewalling'],
@@ -20,7 +20,6 @@
 
 #root-nav-menu
     [data-test='nav-item'][aria-haspopup='true']:is(
-        [title='Zero Trust Access'],
         [title='Secure Infrastructure'],
         [title='Scalable Network Segmentation'],
         [title='Hybrid Mesh Firewalling'],
@@ -34,7 +33,6 @@
 
 #root-nav-menu
     [data-test='nav-item'][aria-haspopup='true']:is(
-        [title='Zero Trust Access'],
         [title='Secure Infrastructure'],
         [title='Scalable Network Segmentation'],
         [title='Hybrid Mesh Firewalling'],
@@ -42,42 +40,148 @@
     )
     > span
     > span:first-child::before {
-    width: 26px;
-    height: 26px;
+    width: 24px;
+    height: 24px;
     display: block;
-    flex: 0 0 26px;
+    flex: 0 0 24px;
     content: '';
     background-color: currentColor;
-    -webkit-mask:
-        var(--scd-pillar-icon) center / contain no-repeat,
-        var(--scd-pillar-icon) calc(50% + 0.6px) center / contain no-repeat,
-        var(--scd-pillar-icon) calc(50% - 0.6px) center / contain no-repeat,
-        var(--scd-pillar-icon) center calc(50% + 0.6px) / contain no-repeat,
-        var(--scd-pillar-icon) center calc(50% - 0.6px) / contain no-repeat;
-    mask:
-        var(--scd-pillar-icon) center / contain no-repeat,
-        var(--scd-pillar-icon) calc(50% + 0.6px) center / contain no-repeat,
-        var(--scd-pillar-icon) calc(50% - 0.6px) center / contain no-repeat,
-        var(--scd-pillar-icon) center calc(50% + 0.6px) / contain no-repeat,
-        var(--scd-pillar-icon) center calc(50% - 0.6px) / contain no-repeat;
-}
-
-#root-nav-menu [title='Zero Trust Access'] {
-    --scd-pillar-icon: url('images/overview/secure-networking/zero-trust-access.svg');
+    -webkit-mask: var(--scd-pillar-icon) center / contain no-repeat;
+    mask: var(--scd-pillar-icon) center / contain no-repeat;
 }
 
 #root-nav-menu [title='Secure Infrastructure'] {
-    --scd-pillar-icon: url('images/overview/secure-networking/secure-infrastructure.svg');
+    --scd-pillar-icon: url('images/overview/secure-networking/sui-servers.svg');
 }
 
 #root-nav-menu [title='Scalable Network Segmentation'] {
-    --scd-pillar-icon: url('images/overview/secure-networking/segmentation.svg');
+    --scd-pillar-icon: url('images/overview/secure-networking/sui-node-model.svg');
 }
 
 #root-nav-menu [title='Hybrid Mesh Firewalling'] {
-    --scd-pillar-icon: url('images/overview/secure-networking/hybrid-mesh-firewalling.svg');
+    --scd-pillar-icon: url('images/overview/secure-networking/sui-wall-bricks.svg');
 }
 
 #root-nav-menu [title='Agentic Ops'] {
-    --scd-pillar-icon: url('images/overview/secure-networking/agentic-ops.svg');
+    --scd-pillar-icon: url('images/overview/secure-networking/sui-robot-face-wrench.svg');
+}
+
+/*
+ * Dashboard Studio renders visualization descriptions as a single, clipped
+ * line by default. Keep the native title/description contract, but allow up
+ * to three readable lines and let the visualization resize into the remaining
+ * panel height. This applies to the five pillar dashboards and their detail
+ * dashboards without introducing separate markup visualizations.
+ */
+[data-test='DashboardLayoutContainer'] [data-test='corner-radius-container'] > .styled-fullscreen {
+    display: flex;
+    flex-direction: column;
+}
+
+[data-test='DashboardLayoutContainer'] [data-test='viz-title-description-container'] {
+    flex: 0 0 auto;
+    height: auto;
+    min-height: 40px;
+    max-height: 80px;
+    overflow: hidden;
+}
+
+[data-test='DashboardLayoutContainer'] [data-test='viz-description'] {
+    display: -webkit-box;
+    overflow: hidden;
+    white-space: normal;
+    text-overflow: clip;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+}
+
+[data-test='DashboardLayoutContainer'] [data-test='viz-size-wrapper'] {
+    flex: 1 1 0;
+    min-height: 0;
+    height: auto !important;
+}
+
+/*
+ * Managed Studio template: let every native Studio Dashboard Manager canvas
+ * consume the space beside Splunk's navigation rail instead of preserving its
+ * configured min-content width. The host can then scale the header, cards,
+ * charts, and type together. Keep this isolated through the exact route
+ * allowlist maintained by dashboard.js.
+ */
+body.scd-managed-studio-template
+    > [role='main']
+    > div:has(#collection_container.dashboardbuilderview) {
+    flex: 1 1 0;
+    min-width: 900px;
+    width: 0;
+}
+
+body.scd-managed-studio-template #collection_container.dashboardbuilderview {
+    width: 100%;
+    min-width: 0;
+}
+
+body.scd-managed-studio-template
+    [data-test='DashboardLayoutContainer'],
+body.scd-managed-studio-template
+    [data-test='DashboardLayoutContainer'] * {
+    font-family: Inter, system-ui, sans-serif !important;
+}
+
+/*
+ * Keep the template's compact time-range control aligned with the dark header.
+ * Dashboard Studio writes light-theme colors inline, so these selectors stay
+ * route-scoped and use the selected button's inline color only as a state hook.
+ */
+body.scd-managed-studio-template #input_time_range {
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+body.scd-managed-studio-template #input_time_range > button {
+    background-color: #131a23 !important;
+    border-color: rgba(100, 158, 245, 0.28) !important;
+    color: #ecf0f5 !important;
+}
+
+body.scd-managed-studio-template #input_time_range > button:hover,
+body.scd-managed-studio-template #input_time_range > button[value='advancedTR'] {
+    background: #1c2738 !important;
+    color: #a6adb6 !important;
+}
+
+body.scd-managed-studio-template
+    #input_time_range
+    > button:not([value='advancedTR'])[style*='rgb(204, 204, 204)'] {
+    background: #049fd9 !important;
+    border-color: #00bceb !important;
+    color: #ecf0f5 !important;
+}
+
+body.scd-managed-studio-template
+    #input_time_range
+    > button:not([value='advancedTR'])[style*='rgb(204, 204, 204)']:hover,
+body.scd-managed-studio-template
+    #input_time_range
+    > button:not([value='advancedTR'])[style*='rgb(204, 204, 204)']:focus,
+body.scd-managed-studio-template
+    #input_time_range
+    > button:not([value='advancedTR'])[style*='rgb(204, 204, 204)']:active {
+    background: #049fd9 !important;
+    background-color: #049fd9 !important;
+    border-color: #00bceb !important;
+    color: #ecf0f5 !important;
+}
+
+body.scd-managed-studio-template #input_time_range > button:first-child {
+    border-radius: 6px 0 0 6px;
+}
+
+body.scd-managed-studio-template #input_time_range > button:last-child {
+    border-radius: 0 6px 6px 0;
+}
+
+body.scd-managed-studio-template #input_time_range svg {
+    color: currentColor;
+    fill: currentColor;
 }

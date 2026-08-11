@@ -34,6 +34,8 @@ export type MetricStatus = 'healthy' | 'warning' | 'critical' | 'unknown';
 export type DataSource = 'live' | 'mock' | 'loading';
 
 export interface MetricThresholds {
+    /** Explicitly disables threshold-derived status while preserving the configured bands. */
+    enabled?: boolean;
     /** Headline value at which the metric flips to warning. */
     warning?: number;
     /** Headline value at which the metric flips to critical. */
@@ -93,7 +95,7 @@ export const deriveThresholdLines = (
     thresholds?: MetricThresholds,
     unit?: string
 ): ThresholdLine[] | undefined => {
-    if (!thresholds) return undefined;
+    if (!thresholds || thresholds.enabled === false) return undefined;
     const { warning, critical, direction } = thresholds;
     if (warning === undefined && critical === undefined) return undefined;
     const fmt = (n: number) => formatThresholdNumber(n, unit);
@@ -417,7 +419,9 @@ export const computeStatus = (
     value: number,
     thresholds?: MetricThresholds
 ): MetricStatus => {
-    if (!thresholds || !Number.isFinite(value)) return 'unknown';
+    if (!thresholds || thresholds.enabled === false || !Number.isFinite(value)) {
+        return 'unknown';
+    }
     const { warning, critical, direction } = thresholds;
     if (direction === 'higher_is_better') {
         if (critical !== undefined && value < critical) return 'critical';
@@ -957,12 +961,11 @@ export const useMetric = (
             .catch((err) => {
                 if (cancelled || isAbortError(err)) return;
                 const failure = classifySearchDispatchError(err);
-                console.error('[useMetric] dispatch failed', {
-                    stanzaId: cfg.id,
-                    httpStatus: failure.httpStatus,
-                    reason: failure.reason,
-                    message: failure.message,
-                });
+                console.error(
+                    `[useMetric] dispatch failed stanzaId=${cfg.id} ` +
+                        `httpStatus=${failure.httpStatus ?? 'none'} reason=${failure.reason} ` +
+                        `message=${failure.message}`,
+                );
                 debugLog(cfg.id, 'dispatch threw', {
                     error: failure.message,
                     httpStatus: failure.httpStatus,

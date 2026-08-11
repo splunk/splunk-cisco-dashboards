@@ -341,7 +341,12 @@ def clean_title(title: str, dashboard_label: str) -> str:
     cleaned = TOKEN.sub("", title)
     cleaned = re.sub(r'["\[\]]', "", cleaned)
     cleaned = re.sub(r"\s+([:;,])", r"\1", cleaned)
-    cleaned = re.sub(r"(?:\s*[-:]\s*)+$", "", cleaned)
+    suffix_start = len(cleaned)
+    while suffix_start and (
+        cleaned[suffix_start - 1].isspace() or cleaned[suffix_start - 1] in "-:"
+    ):
+        suffix_start -= 1
+    cleaned = cleaned[:suffix_start]
     cleaned = re.sub(r"\s+", " ", cleaned).strip(" -:")
     return cleaned or dashboard_label
 

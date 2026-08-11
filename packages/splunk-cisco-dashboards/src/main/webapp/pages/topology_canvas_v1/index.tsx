@@ -23,9 +23,19 @@ import React from 'react';
 import { Layers, Sparkles } from '@/common/icons/SuiIcon';
 import { TopologyCanvas } from '@/common/components/topology/TopologyCanvas';
 import { fetchAllEdges } from '@/common/components/topology/edgeFetchers';
+import { useTheme } from '@/common/hooks/useTheme';
+import { cn } from '@/common/lib/utils';
 
-const TopologyCanvasPage: React.FC = () => (
-    <div className="flex flex-col w-full h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+const TopologyCanvasPage: React.FC = () => {
+    const { resolvedTheme } = useTheme();
+
+    return (
+        <div
+            className={cn(
+                'flex flex-col w-full h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100',
+                resolvedTheme === 'dark' && 'dark scd-c3-atmosphere'
+            )}
+        >
         <header className="flex items-center justify-between gap-4 px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
             <div className="flex items-center gap-3 min-w-0">
                 <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 flex-shrink-0">
@@ -53,7 +63,8 @@ const TopologyCanvasPage: React.FC = () => (
         <main className="flex-1 min-h-0 p-4">
             <TopologyCanvas fetchEdges={fetchAllEdges} className="h-full" />
         </main>
-    </div>
-);
+        </div>
+    );
+};
 
 export default TopologyCanvasPage;

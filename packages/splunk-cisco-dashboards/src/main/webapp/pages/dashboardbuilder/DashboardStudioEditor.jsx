@@ -87,7 +87,7 @@ import { unstable_splunk1cdThemeCustomizer } from '@splunk/themes';
 import useSplunkTheme from '@splunk/themes/useSplunkTheme';
 import { isVersionLower, getServerInfo } from '../../common/lib/splunk';
 import Paintbrush from '@splunk/react-icons/Paintbrush';
-import BackgroundButton from './BackgroundButton';
+import BackgroundButton, { C3_DEFAULT_BACKGROUND_DATA } from './BackgroundButton';
 import SpaceManagerButton from './SpaceManager/SpaceManagerButton';
 import useDashboardStore from '../../common/state/dashboardStore';
 import createSEIIconRegistry from '../../common/udf/IconProviders/createSEIIconRegistry';
@@ -96,6 +96,15 @@ import {
     resolveSearchbaseDefinitionForNativeStudio,
 } from './searchbaseDefinitionUtils';
 import { repairSearchbaseTimeQueryParameters } from './dashboardTimeUtils';
+import { syncSplunkShellTheme } from '../../common/theme/splunkShellTheme';
+import DashboardStudioDrilldownModal from './DashboardStudioDrilldownModal';
+import {
+    DEFAULT_DASHBOARD_DRILLDOWN_TIME_RANGE,
+    getDashboardDrilldownInitialTimeRange,
+    normalizeDashboardDrilldownIcons,
+    parseDashboardDrilldownTimeRange,
+    parseDashboardDrilldownUrl,
+} from '../../common/lib/dashboardDrilldown';
 
 const ENABLE_EXPERIMENTAL_SPACE_MANAGER = false;
 const DASHBOARD_STUDIO_HEIGHT = 1200;
@@ -256,6 +265,13 @@ export const initialDefinition = {
             width: 2000,
             height: 960,
             display: 'auto',
+            backgroundColor: '#080d15',
+            backgroundImage: {
+                sizeType: 'cover',
+                src: C3_DEFAULT_BACKGROUND_DATA,
+                x: 0,
+                y: 0,
+            },
         },
         structure: [],
         globalInputs: ['input_global_trp'],
@@ -869,6 +885,10 @@ const DashboardStudioEditor = ({
     const [openDashboardModal, setOpenDashboardModal] = useState(false);
     const [openConvertModal, setOpenConvertModal] = useState(false);
     const [openBackToManagerModal, setOpenBackToManagerModal] = useState(false);
+    const [dashboardDrilldown, setDashboardDrilldown] = useState(null);
+    const [dashboardDrilldownTimeRange, setDashboardDrilldownTimeRange] = useState(
+        DEFAULT_DASHBOARD_DRILLDOWN_TIME_RANGE,
+    );
     const [activeModeId, setActiveModeId] = useState('create');
     const [gridLayout, setGridLayout] = useState('absolute');
     const [dashboardTitle, setDashboardTitle] = useState('');
@@ -883,7 +903,28 @@ const DashboardStudioEditor = ({
         dashboardBuilderColorScheme,
     );
     const hasThemedPortalModal =
-        openConvertModal || openBackToManagerModal || openDashboardModal;
+        openConvertModal || openBackToManagerModal || openDashboardModal || Boolean(dashboardDrilldown);
+    const runtimeDashboardDefinition = useMemo(() => {
+        if (!currentDashboard?.data) {
+            return undefined;
+        }
+
+        return normalizeDashboardDrilldownIcons(JSON.parse(currentDashboard.data));
+    }, [currentDashboard?.data]);
+
+    useEffect(() => {
+        if (runtimeDashboardDefinition) {
+            setDashboardDrilldownTimeRange(
+                getDashboardDrilldownInitialTimeRange(runtimeDashboardDefinition),
+            );
+        }
+        setDashboardDrilldown(null);
+    }, [runtimeDashboardDefinition]);
+
+    useEffect(
+        () => syncSplunkShellTheme(dashboardColorScheme),
+        [dashboardColorScheme],
+    );
 
     // Splunk React UI mounts modal backdrops in a portal outside the Dashboard
     // Studio root. Mark the document while one of our dialogs is open so the
@@ -903,6 +944,14 @@ const DashboardStudioEditor = ({
         document.body.classList.add(activePortalThemeClass);
         return () => document.body.classList.remove(activePortalThemeClass);
     }, [dashboardColorScheme, hasThemedPortalModal]);
+
+    useEffect(() => {
+        document.body.classList.toggle(
+            'dashboard-builder-drilldown-open',
+            Boolean(dashboardDrilldown),
+        );
+        return () => document.body.classList.remove('dashboard-builder-drilldown-open');
+    }, [dashboardDrilldown]);
 
     const editorTheme =
         dashboardColorScheme === 'dark' ? prismaDarkTheme : prismaLightTheme;
@@ -939,6 +988,7 @@ const DashboardStudioEditor = ({
     const [showEditContextNotice, setShowEditContextNotice] = useState(false);
     const previousDashModeRef = useRef();
     const [serverInfo, setServerInfo] = useState();
+    const hideDashboardEdit = editedDefinition?.applicationProperties?.hideEdit ?? true;
 
     const dashboardUsesSearchbase = useMemo(() => {
         if (editedDefinition) {
@@ -1084,7 +1134,9 @@ const DashboardStudioEditor = ({
                                 ),
                             ),
                             author: response.entry[0].content['eai:userName'],
-                            app: response.entry[0].content['eai:appName'],
+                            app:
+                                response.entry[0].acl?.app ||
+                                response.entry[0].content['eai:appName'],
                             title: response.entry[0].name,
                             label: response.entry[0].content['label'],
                             description: response.entry[0].content['description'],
@@ -1346,6 +1398,12 @@ const DashboardStudioEditor = ({
     }, [apiRef]);
 
     useEffect(() => {
+        if ((dashMode ?? 'view') === 'view' && isDashboardMounted) {
+            apiRef?.collapseToolbar?.();
+        }
+    }, [apiRef, dashID, dashMode, isDashboardMounted]);
+
+    useEffect(() => {
         const dashboardApi = dashboardApiElem.current ?? apiRef;
         const definition = dashboardApi?.getDefinition?.();
 
@@ -1411,7 +1469,7 @@ const DashboardStudioEditor = ({
             window.location.assign(
                 `/app/${encodeURIComponent(
                     splunkApp || 'splunk-cisco-dashboards',
-                )}/dashboardbuilder#/${encodeURIComponent(cloneId)}/edit`,
+                )}/dashboard_manager#/${encodeURIComponent(cloneId)}/edit`,
             );
         } catch (error) {
             makeCreateToast(Toaster)({
@@ -1440,7 +1498,7 @@ const DashboardStudioEditor = ({
                         onClone={handleCloneDashboard}
                         onExportJson={handleExportDashboardJson}
                     />
-                    <ModeSwitch key="modeSwitch" />
+                    {!hideDashboardEdit && <ModeSwitch key="modeSwitch" />}
                 </ItemGroup>,
             ],
             edit: [
@@ -1522,6 +1580,7 @@ const DashboardStudioEditor = ({
             handleCloneDashboard,
             handleExportDashboardJson,
             handleSaveClick,
+            hideDashboardEdit,
             isDirty,
             setIsCodeEditable,
             showClose,
@@ -1545,15 +1604,47 @@ const DashboardStudioEditor = ({
 
     const handleDashboardEvent = useCallback(
         (lifecycleEvent) => {
+            if (
+                lifecycleEvent.type === 'input.change' &&
+                typeof lifecycleEvent.payload?.value === 'string' &&
+                lifecycleEvent.payload.value.includes(',')
+            ) {
+                setDashboardDrilldownTimeRange((currentTimeRange) =>
+                    parseDashboardDrilldownTimeRange(
+                        lifecycleEvent.payload.value,
+                        currentTimeRange,
+                    ),
+                );
+            }
             onDashboardEvent(lifecycleEvent, true);
         },
         [onDashboardEvent],
     );
 
-    const dashboardCorePlugin = {
-        onInitialize: handleDashboardInitialization,
-        onEventTrigger: handleDashboardEvent,
-    };
+    const handleDashboardLinkToUrl = useCallback(
+        (event) => {
+            const parsedDrilldown = parseDashboardDrilldownUrl(event?.url);
+            if (!parsedDrilldown) {
+                return;
+            }
+
+            event.preventDefault?.();
+            setDashboardDrilldown({
+                ...parsedDrilldown,
+                timeRange: dashboardDrilldownTimeRange,
+            });
+        },
+        [dashboardDrilldownTimeRange],
+    );
+
+    const dashboardCorePlugin = useMemo(
+        () => ({
+            onInitialize: handleDashboardInitialization,
+            onEventTrigger: handleDashboardEvent,
+            onLinkToUrl: handleDashboardLinkToUrl,
+        }),
+        [handleDashboardInitialization, handleDashboardEvent, handleDashboardLinkToUrl],
+    );
 
     useEffect(() => {
         if (
@@ -1773,17 +1864,10 @@ const DashboardStudioEditor = ({
                         readOnly
                             ? []
                             : toolbarMenus[
-                                  dashMode
-	                                      ? dashboardApiElem.current
-	                                          ? Object.values(
-	                                                dashboardApiElem.current.getDefinition()
-	                                                    .dataSources,
-	                                            ).some((ds) => ds.type === 'ds.searchbase')
-	                                              ? `editconvert`
-	                                              : dashMode
-	                                          : dashMode
-	                                      : 'view'
-	                              ]
+                                  dashMode === 'edit' && dashboardUsesSearchbase
+                                      ? 'editconvert'
+                                      : dashMode || 'view'
+                              ]
                     }
                     actionMenus={actionMenus[dashMode ? dashMode : 'view']}
                     dashboardApiRef={(apiRef) => {
@@ -1835,44 +1919,46 @@ const DashboardStudioEditor = ({
             jsonDefinition.title = dashboardTitle;
             jsonDefinition.layout.type = gridLayout;
 
-            addDash(dashid, JSON.stringify(jsonDefinition), dashboardTitle).then((response) => {
-                if (response.status >= 200 && response.status <= 299) {
-                    console.log(response);
-                    syncDashboardManagerNavigation([
-                        ...dashboards,
-                        {
-                            title: dashid,
-                            label: dashboardTitle,
-                            definition: {
-                                title: dashboardTitle,
+            addDash(dashid, JSON.stringify(jsonDefinition), dashboardTitle, '', '', 'dark').then(
+                (response) => {
+                    if (response.status >= 200 && response.status <= 299) {
+                        console.log(response);
+                        syncDashboardManagerNavigation([
+                            ...dashboards,
+                            {
+                                title: dashid,
+                                label: dashboardTitle,
+                                definition: {
+                                    title: dashboardTitle,
+                                },
                             },
-                        },
-                    ]).catch((error) => {
-                        console.warn('Unable to sync Dashboard Manager navigation.', error);
-                    });
-                    setOpenDashboardModal(false);
-                    setTimeout(() => {
-                        //navigate(`/${dashid}/edit`, { replace: true });
-                        window.open(
-                            `/app/splunk-cisco-dashboards/dashboardbuilder#/${dashid}/edit`,
-                            '_self',
-                        );
-                    }, 500);
-                } else {
-                    console.log(response);
-                    makeCreateToast(Toaster)({
-                        message: `An error occurred while creating the new dashboard. ${getSplunkResponseErrorMessage(
-                            response,
-                        )}`,
-                        type: TOAST_TYPES.ERROR,
-                    });
-                }
-            });
+                        ]).catch((error) => {
+                            console.warn('Unable to sync Dashboard Manager navigation.', error);
+                        });
+                        setOpenDashboardModal(false);
+                        setTimeout(() => {
+                            //navigate(`/${dashid}/edit`, { replace: true });
+                            window.open(
+                                `/app/splunk-cisco-dashboards/dashboard_manager#/${dashid}/edit`,
+                                '_self',
+                            );
+                        }, 500);
+                    } else {
+                        console.log(response);
+                        makeCreateToast(Toaster)({
+                            message: `An error occurred while creating the new dashboard. ${getSplunkResponseErrorMessage(
+                                response,
+                            )}`,
+                            type: TOAST_TYPES.ERROR,
+                        });
+                    }
+                },
+            );
         } else {
             // open existing dashboard
             setOpenDashboardModal(false);
             window.open(
-                `/app/splunk-cisco-dashboards/dashboardbuilder#/${selectedOpenDashboard}/edit`,
+                `/app/splunk-cisco-dashboards/dashboard_manager#/${selectedOpenDashboard}/edit`,
                 '_self',
             );
             //navigate(`/${selectedOpenDashboard}/edit`, { replace: true });
@@ -2215,6 +2301,22 @@ const DashboardStudioEditor = ({
                     <Button appearance="secondary" label="Cancel" onClick={goBackOrClose} />
                 </Modal.Footer>
             </Modal>
+            <DashboardStudioDrilldownModal
+                open={Boolean(dashboardDrilldown)}
+                origin={dashboardDrilldown?.origin || ''}
+                targetIds={dashboardDrilldown?.targetIds || []}
+                ownerApp={currentDashboard?.app}
+                timeRange={
+                    dashboardDrilldown?.timeRange || DEFAULT_DASHBOARD_DRILLDOWN_TIME_RANGE
+                }
+                preset={preset}
+                featureFlags={featureFlags}
+                iconRegistry={iconRegistry}
+                timezone={timezone}
+                colorScheme={dashboardColorScheme}
+                modalThemeStyle={dashboardBuilderModalThemeStyle}
+                onRequestClose={() => setDashboardDrilldown(null)}
+            />
             </SplunkThemeProvider>
             {currentDashboard == undefined ? (
                 <></>
@@ -2243,7 +2345,7 @@ const DashboardStudioEditor = ({
                             timezone={timezone}
                             preset={preset}
                             mapTileConfig={mapTileConfig}
-                            initialDefinition={JSON.parse(currentDashboard.data)} // definition with attached handler
+                            initialDefinition={runtimeDashboardDefinition}
                             onDefinitionChange={handleDefinitionChange}
                             initialMode={dashMode ? dashMode : 'view'}
                             initialTokenBinding={tokens} // takes initial token

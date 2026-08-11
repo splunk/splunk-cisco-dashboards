@@ -11,6 +11,7 @@ DETAIL = "secure_networking_sgt_palo_alto_traffic_detail"
 ROLLUP = "secure_networking_sgt_palo_alto_policy_effectiveness"
 POLICY_TREND = "secure_networking_sgt_palo_alto_policy_effectiveness_trend"
 TRAFFIC_TREND = "secure_networking_sgt_palo_alto_traffic_trend"
+TUNING = "admin_macro_index_tuning"
 FIREWALL_RATIO = "network_intelligence_ftd_action_ratio_trend"
 FIREWALL_RATIO_DM = "network_intelligence_zeek_conn_blocked_ratio_trend_dm"
 
@@ -24,6 +25,16 @@ class PaloIseSgtSearchTest(unittest.TestCase):
     def test_firewall_macro_covers_palo_alto(self):
         self.assertIn("pan:*", self.macros["index_firewall"]["description"])
 
+    def test_macro_tuning_routes_palo_alto_to_firewall_indexes(self):
+        tuning_search = self.searches[TUNING]["search"]
+        self.assertIn(')) OR sourcetype="pan:*" by index, sourcetype', tuning_search)
+        self.assertIn(
+            'match(sourcetype,"^pan:"), "index_firewall"',
+            tuning_search,
+        )
+        self.assertFalse(format_search(tuning_search)[1])
+        self.assertEqual(lint_search(tuning_search, stanza=TUNING), [])
+
     def test_searches_have_terminal_details_and_verified_sources(self):
         detail = self.searches[DETAIL]
         rollup = self.searches[ROLLUP]
@@ -35,7 +46,11 @@ class PaloIseSgtSearchTest(unittest.TestCase):
                 fields = self.searches[stanza_id]
                 search = fields["search"]
                 self.assertIn('`index_firewall` sourcetype="pan:traffic"', search)
-                self.assertIn('`index_identity` sourcetype="cisco:ise:syslog"', search)
+                self.assertIn(
+                    '`index_identity` (sourcetype="cisco:ise:syslog" OR '
+                    'sourcetype="cisco:ise" OR sourcetype="Cisco:ISE:Syslog")',
+                    search,
+                )
                 self.assertIn("| multisearch ", search)
                 self.assertIn("eventstats", search)
                 self.assertNotIn("| join ", search)

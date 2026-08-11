@@ -4,7 +4,7 @@
  */
 (function scdSetupGate() {
   const app = "splunk-cisco-dashboards";
-  const setupViews = new Set(["start", "macro_index_tuning"]);
+  const setupViews = new Set(["setup", "admin_macro_index_tuning"]);
   const parts = window.location.pathname.split("/").filter(Boolean);
   const appIndex = parts.indexOf(app);
   const currentView = appIndex >= 0 ? parts[appIndex + 1] || "" : "";
@@ -41,7 +41,7 @@
         value === "1" || value === 1 || value === true || value === "true";
       if (!configured) {
         window.location.replace(
-          `${locale}/app/${encodeURIComponent(app)}/start`,
+          `${locale}/app/${encodeURIComponent(app)}/setup`,
         );
       }
       return configured;

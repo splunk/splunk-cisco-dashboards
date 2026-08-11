@@ -233,7 +233,7 @@ const InsightKpiButton = (props) => {
         <Tooltip
             content={
                 <div className="dashboardbuilder-searchbase-toolbar-tooltip">
-                    <strong>Add visualizations from Searchbase</strong>
+                    <strong>Add Searchbase searches</strong>
                     <span>
                         Browse the Cisco Searchbase catalogue and add reusable, centrally managed
                         searches to this dashboard.
@@ -248,7 +248,7 @@ const InsightKpiButton = (props) => {
                     }
                 }}
                 appearance="primary"
-                ariaLabel="Add visualizations from Searchbase"
+                ariaLabel="Add Searchbase searches"
                 className="dashboardbuilder-searchbase-toolbar-control"
                 label="Add Searchbase"
                 icon={
