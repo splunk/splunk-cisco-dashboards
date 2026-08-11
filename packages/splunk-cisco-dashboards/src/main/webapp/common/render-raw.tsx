@@ -14,6 +14,7 @@ const MAX_RETRIES = 100;
 
 interface MountPageRawOptions {
     fixedColorScheme?: ResolvedTheme;
+    showCopyrightMark?: boolean;
 }
 
 export default function mountPageRaw(
@@ -41,7 +42,7 @@ export default function mountPageRaw(
                 <AppThemeProvider fixedColorScheme={options.fixedColorScheme}>
                     <>
                         <PageComponent />
-                        <CopyrightMark />
+                        {options.showCopyrightMark !== false && <CopyrightMark />}
                     </>
                 </AppThemeProvider>
             </React.StrictMode>

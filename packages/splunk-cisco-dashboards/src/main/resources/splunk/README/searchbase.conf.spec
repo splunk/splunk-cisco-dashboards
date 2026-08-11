@@ -127,27 +127,34 @@ search_name = <string>
 search_origin = <string>
 * Default: searchbase
 
-drilldown_stanza_id = <string>
-* Optional stanza name (the value inside `[stanza_name]`) of another Searchbase
-  entry to use as this search's contextual drilldown. Overview renders
-  table-shaped drilldowns as a modal by dispatching the target stanza's
-  `search` over the current dashboard time range.
+drilldown_stanza_ids = <comma-separated-list>
+* Optional ordered list of stanza names (the values inside `[stanza_name]`) to
+  use as this search's contextual drilldown workflow. Insights Workspace
+  exposes Back/Forward navigation when more than one target resolves and
+  dispatches only the active target over the current dashboard time range.
+* Duplicate targets are removed and at most 24 targets are retained.
 * The referenced stanza should normally use `default_viz = splunk.table` and
   provide table column metadata in `viz_options`.
+* No default.
+
+drilldown_stanza_id = <string>
+* Compatibility field for one canonical target stanza id. Existing
+  configuration remains supported, but new configuration and admin writes use
+  `drilldown_stanza_ids`.
 * No default.
 
 drilldown_search_name = <string>
 * Deprecated compatibility field containing a target stanza's friendly
   `search_name`. Existing `local/searchbase.conf` overrides remain supported,
-  but new configuration and admin writes must use `drilldown_stanza_id`.
+  but new configuration and admin writes must use `drilldown_stanza_ids`.
 * When both keys are present and non-empty, the legacy key wins so an existing
-  local override is not masked by a newly shipped default stanza id. New admin
-  writes set `drilldown_stanza_id` and clear this key.
+  local override is not masked by newly shipped default stanza ids. New admin
+  writes set `drilldown_stanza_ids` and clear both compatibility keys.
 * No default.
 
 drilldown_button_title = <string>
 * Optional tooltip / accessible label for the tile-level drilldown affordance.
-* Used only when `drilldown_stanza_id` or legacy `drilldown_search_name` is set.
+* Used only when a canonical or legacy drilldown target is set.
 * No default.
 
 search_post = <string>
@@ -211,7 +218,7 @@ viz_options = <viz-options-json>
   * dataValuesDisplay: string.
   * majorColor / singleValueColor / unit: single-value display hints.
 * Table drilldown modal keys, read when another stanza references this stanza
-  through `drilldown_stanza_id` (or legacy `drilldown_search_name`):
+  through `drilldown_stanza_ids` (or a compatibility key):
   * modalTitle: string title shown in the modal header.
   * modalSubtitle: string subtitle. Supports `{rangeLabel}`, `{RangeLabel}`,
     `{searchName}`, and `{drilldownSearchName}` tokens.

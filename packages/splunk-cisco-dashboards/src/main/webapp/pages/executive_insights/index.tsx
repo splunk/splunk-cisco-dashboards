@@ -47,6 +47,7 @@ import {
     Check,
     CheckCircle2,
     ChevronDown,
+    ChevronLeft,
     ChevronRight,
     AlertCircle,
     ClipboardCheck,
@@ -504,6 +505,7 @@ const parseOverviewThresholds = (
   fallback?: MetricThresholds,
 ): MetricThresholds | undefined => {
   if (!isRecord(raw)) return fallback;
+  const enabled = readOverviewBoolean(raw, "enabled");
   const warning = readOverviewNumber(raw, "warning");
   const critical = readOverviewNumber(raw, "critical");
   const directionRaw = readOverviewString(raw, "direction", 32);
@@ -511,9 +513,15 @@ const parseOverviewThresholds = (
     directionRaw === "lower_is_better" || directionRaw === "higher_is_better"
       ? directionRaw
       : fallback?.direction;
-  if (warning === undefined && critical === undefined && !direction)
+  if (
+    enabled === undefined &&
+    warning === undefined &&
+    critical === undefined &&
+    !direction
+  )
     return fallback;
   return {
+    enabled: enabled ?? fallback?.enabled,
     warning: warning ?? fallback?.warning,
     critical: critical ?? fallback?.critical,
     direction: direction ?? "higher_is_better",
@@ -1047,11 +1055,9 @@ interface MetricDetailTableColumn {
   truncate?: boolean;
 }
 
-interface MetricDetailTableConfig {
-  title: string;
+interface MetricDetailTableTargetConfig {
   searchbaseId: string;
   metadata: SearchbaseDrilldownMetadata;
-  buttonTitle: string;
   subtitle: (range: TimeRange) => string;
   spl: string;
   dispatchContext?: string;
@@ -1063,6 +1069,12 @@ interface MetricDetailTableConfig {
   availableStatus?: string;
   unavailableStatus?: string;
   columns: MetricDetailTableColumn[];
+}
+
+interface MetricDetailTableConfig {
+  title: string;
+  buttonTitle: string;
+  targets: MetricDetailTableTargetConfig[];
 }
 
 const DETAIL_TABLE_COLUMN_KINDS = new Set<MetricDetailTableColumnKind>([
@@ -1194,62 +1206,80 @@ const buildMetricDetailTableConfig = (
     )
       ? searchbaseDrilldowns[source.searchName]
       : undefined;
-  const drilldownName =
+  const drilldownNames =
     userDrilldown === null
-      ? ""
-      : (userDrilldown ?? source?.drilldownSearchName)?.trim();
-  if (!source || !drilldownName) return null;
+      ? []
+      : userDrilldown !== undefined
+        ? [userDrilldown.trim()].filter(Boolean)
+        : source?.drilldownSearchNames?.length
+          ? source.drilldownSearchNames
+          : [source?.drilldownSearchName?.trim() ?? ""].filter(Boolean);
+  if (!source || drilldownNames.length === 0) return null;
   // Stanza ids are canonical; friendly names remain a compatibility alias
   // for existing local/searchbase.conf and browser-persisted overrides.
-  const detail =
-    searchbaseById?.get(drilldownName) ??
-    searchbaseByName?.get(drilldownName);
-  if (!detail?.search) return null;
-  const options = detail.vizOptions;
-  const columns = parseDetailTableColumns(options?.columns);
-  const subtitleTemplate =
-    readDetailStringOption(options, "modalSubtitle") ??
-    "Supporting Searchbase results and guidance for {rangeLabel}.";
-  const tag = `detail_table_${detail.id || detail.searchName}`.replace(
-    /[^A-Za-z0-9_]+/g,
-    "_",
-  );
+  const seen = new Set<string>();
+  const details = drilldownNames
+    .map(
+      (drilldownName) =>
+        searchbaseById?.get(drilldownName) ??
+        searchbaseByName?.get(drilldownName),
+    )
+    .filter((detail): detail is SearchbaseRecord => {
+      if (!detail?.search || seen.has(detail.id)) return false;
+      seen.add(detail.id);
+      return true;
+    });
+  if (details.length === 0) return null;
+  const primaryOptions = details[0].vizOptions;
   return {
     title:
-      readDetailStringOption(options, "modalTitle") ??
+      readDetailStringOption(primaryOptions, "modalTitle") ??
       `Drill down: ${source.searchName}`,
-    searchbaseId: detail.id,
-    metadata: {
-      title: detail.searchName,
-      category: detail.category,
-      subCategory: detail.subCategory,
-      description: detail.description,
-      explanation: detail.explanation,
-      solution: detail.solution,
-      relatedInfo: detail.relatedInfo,
-      executionPlan: detail.executionPlan,
-    },
     buttonTitle:
       source.drilldownButtonTitle ??
-      readDetailStringOption(options, "buttonTitle") ??
-      `View ${source.searchName} detail table`,
-    subtitle: (range) =>
-      interpolateDetailSubtitle(subtitleTemplate, source, detail, range),
-    spl: detail.search,
-    dispatchContext: detail.dispatchContext,
-    tag,
-    rowKeyField:
-      readDetailStringOption(options, "rowKeyField") ?? columns[0]?.field ?? "",
-    emptyMessage:
-      readDetailStringOption(options, "emptyMessage") ??
-      "No detail rows returned for this time range.",
-    errorMessage:
-      readDetailStringOption(options, "errorMessage") ??
-      `Unable to load ${detail.searchName}.`,
-    statusField: readDetailStringOption(options, "statusField"),
-    availableStatus: readDetailStringOption(options, "availableStatus"),
-    unavailableStatus: readDetailStringOption(options, "unavailableStatus"),
-    columns,
+      readDetailStringOption(primaryOptions, "buttonTitle") ??
+      `View ${source.searchName} detail`,
+    targets: details.map((detail) => {
+      const options = detail.vizOptions;
+      const columns = parseDetailTableColumns(options?.columns);
+      const subtitleTemplate =
+        readDetailStringOption(options, "modalSubtitle") ??
+        "Supporting Searchbase results and guidance for {rangeLabel}.";
+      const tag = `detail_table_${detail.id || detail.searchName}`.replace(
+        /[^A-Za-z0-9_]+/g,
+        "_",
+      );
+      return {
+        searchbaseId: detail.id,
+        metadata: {
+          title: detail.searchName,
+          category: detail.category,
+          subCategory: detail.subCategory,
+          description: detail.description,
+          explanation: detail.explanation,
+          solution: detail.solution,
+          relatedInfo: detail.relatedInfo,
+          executionPlan: detail.executionPlan,
+        },
+        subtitle: (range: TimeRange) =>
+          interpolateDetailSubtitle(subtitleTemplate, source, detail, range),
+        spl: detail.search,
+        dispatchContext: detail.dispatchContext,
+        tag,
+        rowKeyField:
+          readDetailStringOption(options, "rowKeyField") ?? columns[0]?.field ?? "",
+        emptyMessage:
+          readDetailStringOption(options, "emptyMessage") ??
+          "No detail rows returned for this time range.",
+        errorMessage:
+          readDetailStringOption(options, "errorMessage") ??
+          `Unable to load ${detail.searchName}.`,
+        statusField: readDetailStringOption(options, "statusField"),
+        availableStatus: readDetailStringOption(options, "availableStatus"),
+        unavailableStatus: readDetailStringOption(options, "unavailableStatus"),
+        columns,
+      };
+    }),
   };
 };
 
@@ -1791,7 +1821,11 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
       // dump it into a hover popover too.
       descriptionFootnote={undefined}
       thresholdLines={thresholdLines}
-      thresholdNote={effective.thresholdNote}
+      thresholdNote={
+        effective.thresholds?.enabled === false
+          ? undefined
+          : effective.thresholdNote
+      }
       infoAnchor={infoAnchor}
       // `displayValue` (string broadcast from the search) wins
       // over the numeric `value` when present. Status, threshold,
@@ -2727,8 +2761,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         if (cancelled) return;
         const drilldownNames = new Set<string>();
         for (const entry of list) {
-          const name = entry.drilldownSearchName?.trim();
-          if (name) drilldownNames.add(name);
+          for (const rawName of entry.drilldownSearchNames ?? []) {
+            const name = rawName.trim();
+            if (name) drilldownNames.add(name);
+          }
         }
         setSignalTickerDrilldownSearchNames(drilldownNames);
       })
@@ -2758,8 +2794,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     if (!visibleSearchbaseCatalogue) return [];
     const fallbackDrilldownNames = new Set<string>();
     for (const entry of visibleSearchbaseCatalogue) {
-      const name = entry.drilldownSearchName?.trim();
-      if (name) fallbackDrilldownNames.add(name);
+      for (const rawName of entry.drilldownSearchNames ?? []) {
+        const name = rawName.trim();
+        if (name) fallbackDrilldownNames.add(name);
+      }
     }
     const drilldownNames =
       signalTickerDrilldownSearchNames ?? fallbackDrilldownNames;
@@ -3746,7 +3784,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           thresholds: patch.thresholds,
           dataMapping: patch.dataMapping,
           searchRebind: toStanzaId ? { toStanzaId } : undefined,
-          drilldownSearchName: patch.drilldownSearchName,
+          drilldownSearchNames: patch.drilldownSearchNames,
         });
         setSearchbaseRefreshToken((n) => n + 1);
         setFactoryTileConfigStatus("saved");
@@ -5223,10 +5261,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         </div>
       </main>
 
-      <footer className="scd-c3-footer flex-shrink-0 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-1 text-center text-[8.5px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] leading-none">
-        Splunk Field Solutions · Insights Workspace
-      </footer>
-
       <HelpOverlay
         open={helpOpen}
         onClose={closeHelp}
@@ -5840,8 +5874,10 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   const drilldownSearchNames = useMemo(() => {
     const names = new Set<string>();
     for (const record of addableRecords) {
-      const name = record.drilldownSearchName?.trim();
-      if (name) names.add(name.toLowerCase());
+      for (const rawName of record.drilldownSearchNames ?? []) {
+        const name = rawName.trim();
+        if (name) names.add(name.toLowerCase());
+      }
     }
     return names;
   }, [addableRecords]);
@@ -6990,9 +7026,14 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
   range,
   refreshToken,
 }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const activeConfig = config.targets[activeIndex] ?? config.targets[0];
+  const targetKey = config.targets
+    .map((target) => target.searchbaseId)
+    .join("\u0000");
   const [rows, setRows] = useState<Array<Record<string, string>>>([]);
   const [tableColumns, setTableColumns] = useState<MetricDetailTableColumn[]>(
-    config.columns,
+    activeConfig.columns,
   );
   const [loading, setLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
@@ -7001,19 +7042,28 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
   );
 
   useEffect(() => {
+    setActiveIndex(0);
+  }, [targetKey]);
+
+  useEffect(() => {
+    if (activeIndex >= config.targets.length) setActiveIndex(0);
+  }, [activeIndex, config.targets.length]);
+
+  useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
     setLoading(true);
     setRows([]);
-    setTableColumns(config.columns);
+    setTableColumns(activeConfig.columns);
     setErrorMessage("");
+    setSortState(null);
 
     runSearch({
-      spl: config.spl,
+      spl: activeConfig.spl,
       earliestTime: range.earliest,
       latestTime: range.latest,
-      tag: config.tag,
-      appContext: config.dispatchContext,
+      tag: activeConfig.tag,
+      appContext: activeConfig.dispatchContext,
       count: 1000,
       signal: controller.signal,
     })
@@ -7021,8 +7071,8 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
         if (cancelled) return;
         const rawRows = (res?.results ?? []) as Array<Record<string, unknown>>;
         const columns =
-          config.columns.length > 0
-            ? config.columns
+          activeConfig.columns.length > 0
+            ? activeConfig.columns
             : inferDetailTableColumns(rawRows);
         const nextRows = rawRows.map((row) => {
           const detailRow: Record<string, string> = {};
@@ -7047,8 +7097,8 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
         }
         if (!cancelled) {
           setRows([]);
-          setTableColumns(config.columns);
-          setErrorMessage(config.errorMessage);
+          setTableColumns(activeConfig.columns);
+          setErrorMessage(activeConfig.errorMessage);
         }
       })
       .finally(() => {
@@ -7059,14 +7109,14 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
       cancelled = true;
       controller.abort();
     };
-  }, [config, range.earliest, range.latest, refreshToken]);
+  }, [activeConfig, range.earliest, range.latest, refreshToken]);
 
-  const availableStatus = config.availableStatus ?? "Available";
-  const unavailableStatus = config.unavailableStatus ?? "Unavailable";
-  const titleId = `${config.tag}-title`;
-  const statusField = config.statusField;
+  const availableStatus = activeConfig.availableStatus ?? "Available";
+  const unavailableStatus = activeConfig.unavailableStatus ?? "Unavailable";
+  const titleId = `${activeConfig.tag}-title`;
+  const statusField = activeConfig.statusField;
   const displayColumns =
-    tableColumns.length > 0 ? tableColumns : config.columns;
+    tableColumns.length > 0 ? tableColumns : activeConfig.columns;
   const columnCount = Math.max(displayColumns.length, 1);
   const sortedRows = useMemo(() => {
     if (!sortState) return rows;
@@ -7102,21 +7152,41 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
     : 0;
   const unavailableCount = statusField ? rows.length - availableCount : 0;
   const searchUrl = splunkSearchAppUrl(
-    config.spl,
+    activeConfig.spl,
     range,
-    config.dispatchContext,
+    activeConfig.dispatchContext,
   );
-  const searchbaseUrl = splunkSearchbaseEditUrl(config.searchbaseId);
+  const searchbaseUrl = splunkSearchbaseEditUrl(activeConfig.searchbaseId);
   const activeClassification = [
-    config.metadata.category,
-    config.metadata.subCategory,
+    activeConfig.metadata.category,
+    activeConfig.metadata.subCategory,
   ].filter(Boolean);
+  const canGoBack = activeIndex > 0;
+  const canGoForward = activeIndex < config.targets.length - 1;
+  const showTarget = (nextIndex: number) => {
+    const boundedIndex = Math.max(
+      0,
+      Math.min(config.targets.length - 1, nextIndex),
+    );
+    const nextConfig = config.targets[boundedIndex];
+    if (!nextConfig || boundedIndex === activeIndex) return;
+    // Clear the current result in the same render as the navigation change so
+    // rows from the previous search never flash under the next target's title.
+    setRows([]);
+    setTableColumns(nextConfig.columns);
+    setErrorMessage("");
+    setSortState(null);
+    setLoading(true);
+    setActiveIndex(boundedIndex);
+  };
+  const showPrevious = () => showTarget(activeIndex - 1);
+  const showNext = () => showTarget(activeIndex + 1);
 
   return (
     <WorkspaceModalShell
       variant="detail"
       title={config.title}
-      subtitle={config.subtitle(range)}
+      subtitle={activeConfig.subtitle(range)}
       titleId={titleId}
       onClose={onClose}
       openInSearchHref={searchUrl}
@@ -7142,9 +7212,9 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
         className="flex shrink-0 items-center border-b border-white/[0.1] bg-slate-950/[0.28] px-4 py-2.5"
         data-detail-search-summary="true"
       >
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-bold text-[#edf5fb]">
-            {config.metadata.title}
+            {activeConfig.metadata.title}
           </div>
           {activeClassification.length > 0 && (
             <div className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#7890a6]">
@@ -7152,6 +7222,37 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
             </div>
           )}
         </div>
+        {config.targets.length > 1 && (
+          <nav
+            className="ml-4 inline-flex flex-shrink-0 items-center gap-2"
+            aria-label="Drilldown search navigation"
+          >
+            <button
+              type="button"
+              disabled={!canGoBack}
+              onClick={showPrevious}
+              className="inline-flex items-center gap-1 rounded border border-white/[0.12] bg-slate-900/70 px-2 py-1 text-xs font-bold text-slate-200 transition-colors hover:border-sky-400/60 hover:text-sky-200 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              <ChevronLeft className="h-3 w-3" aria-hidden="true" />
+              Back
+            </button>
+            <span
+              className="min-w-[4.5rem] text-center text-xs font-bold tabular-nums text-slate-400"
+              aria-live="polite"
+            >
+              {activeIndex + 1} / {config.targets.length}
+            </span>
+            <button
+              type="button"
+              disabled={!canGoForward}
+              onClick={showNext}
+              className="inline-flex items-center gap-1 rounded border border-white/[0.12] bg-slate-900/70 px-2 py-1 text-xs font-bold text-slate-200 transition-colors hover:border-sky-400/60 hover:text-sky-200 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              Forward
+              <ChevronRight className="h-3 w-3" aria-hidden="true" />
+            </button>
+          </nav>
+        )}
       </div>
       <div
         className="min-h-[154px] max-h-[min(46vh,520px)] shrink overflow-auto overscroll-contain"
@@ -7218,7 +7319,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
                   columnCount={columnCount}
                   kind="loading"
                   title="Loading details"
-                  message={`Running ${config.title.toLowerCase()} for the selected time range.`}
+                  message={`Running ${activeConfig.metadata.title.toLowerCase()} for the selected time range.`}
                 />
               ) : errorMessage ? (
                 <MetricDetailTableStateRow
@@ -7232,14 +7333,14 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
                   columnCount={columnCount}
                   kind="empty"
                   title="No results in this time range"
-                  message={`${config.emptyMessage} Try a wider range or open the query in Search.`}
+                  message={`${activeConfig.emptyMessage} Try a wider range or open the query in Search.`}
                 />
               ) : (
                 sortedRows.map((row, rowIndex) => {
                   const rowStatus = statusField ? row[statusField] : "";
                   const rowIsAvailable = rowStatus === availableStatus;
                   const rowKey =
-                    (config.rowKeyField && row[config.rowKeyField]) ||
+                    (activeConfig.rowKeyField && row[activeConfig.rowKeyField]) ||
                     displayColumns
                       .map((column) => row[column.field])
                       .join("|") ||
@@ -7304,7 +7405,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
         </table>
       </div>
       <SearchbaseDrilldownGuidance
-        metadata={config.metadata}
+        metadata={activeConfig.metadata}
         appearance="workspace"
       />
     </WorkspaceModalShell>

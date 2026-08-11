@@ -207,19 +207,11 @@ body.scd-overview-active .panel-body,
     backdrop-filter: blur(8px) saturate(106%);
 }
 
-#scan-root .scd-c3-surface.dark .scd-c3-footer {
-    background: rgb(15 17 23 / 88%) !important;
-    border-color: var(--scd-c3-toolbar-border) !important;
-    color: rgb(148 163 184 / 72%) !important;
-    backdrop-filter: blur(12px);
-}
-
 /* C3 uses sentence-case page and card hierarchy. Preserve customer-supplied
  * wording instead of forcing the primary structural headings to uppercase. */
 #scan-root .scd-c3-surface .scd-c3-toolbar h1,
 #scan-root .scd-c3-surface .scd-c3-toolbar p,
-#scan-root .scd-c3-surface .scd-c3-panel h2,
-#scan-root .scd-c3-surface .scd-c3-footer {
+#scan-root .scd-c3-surface .scd-c3-panel h2 {
     text-transform: none;
 }
 

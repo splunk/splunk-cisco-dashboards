@@ -210,7 +210,7 @@ export default function DropdownWithSearch({
 
     const drilldownSearchNames = new Set(
         searches
-            .flatMap((search) => [search.drilldownSearchName])
+            .flatMap((search) => search.drilldownSearchNames || [search.drilldownSearchName])
             .filter(Boolean)
             .map(normalizeSearchKey),
     );
@@ -270,7 +270,7 @@ export default function DropdownWithSearch({
             plainTextFromHtml(search.description || ''),
             plainTextFromHtml(search.explanation || ''),
             search.search,
-            search.drilldownSearchName,
+            ...(search.drilldownSearchNames || [search.drilldownSearchName]),
             search.defaultViz,
             ...(search.tags || []),
         ]

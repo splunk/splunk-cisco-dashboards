@@ -149,7 +149,7 @@ assert.match(
 );
 assert.match(
   profile,
-  /data-detail-search-summary="true"\s*>\s*<div className="min-w-0">/,
+  /data-detail-search-summary="true"\s*>\s*<div className="min-w-0 flex-1">/,
   "The non-interactive detail summary must not show a misleading search icon",
 );
 assert.match(
@@ -161,6 +161,16 @@ assert.match(
   kpiPicker,
   /data-current-search-actions="true"[\s\S]*View in Searchbase[\s\S]*Test in Search/,
   "Configure Tile must keep the bound search's learning and test actions permanently visible",
+);
+assert.match(
+  kpiPicker,
+  /DRILLDOWN_TARGET_LIMIT = 24[\s\S]*useState<string\[\]>\(\[\]\)[\s\S]*Navigation order/,
+  "Configure Tile must author an ordered and bounded multi-search drilldown workflow",
+);
+assert.match(
+  kpiPicker,
+  /drilldownSearchNames: drilldownChanged \? nextDrilldowns : undefined/,
+  "Configure Tile must persist the complete ordered drilldown target list",
 );
 for (const stateTitle of [
   "Loading details",
@@ -199,13 +209,23 @@ assert.match(
 );
 assert.match(
   profile,
-  /<SearchbaseDrilldownGuidance[\s\S]*metadata=\{config\.metadata\}[\s\S]*appearance="workspace"/,
+  /<SearchbaseDrilldownGuidance[\s\S]*metadata=\{activeConfig\.metadata\}[\s\S]*appearance="workspace"/,
   "Insights Workspace must use the same Searchbase guidance contract",
 );
 assert.match(
   profile,
-  /\{config\.metadata\.title\}[\s\S]*activeClassification\.join\(" • "\)/,
+  /\{activeConfig\.metadata\.title\}[\s\S]*activeClassification\.join\(" • "\)/,
   "Workspace drilldowns must identify the active target and its category metadata",
+);
+assert.match(
+  profile,
+  /aria-label="Drilldown search navigation"[\s\S]*Back[\s\S]*\{activeIndex \+ 1\} \/ \{config\.targets\.length\}[\s\S]*Forward/,
+  "Insights Workspace must expose Dashboard Manager-style Back and Forward target navigation",
+);
+assert.match(
+  profile,
+  /const activeConfig = config\.targets\[activeIndex\][\s\S]*runSearch\(\{[\s\S]*spl: activeConfig\.spl/,
+  "Insights Workspace must dispatch only the active drilldown target",
 );
 for (const metadataField of [
   "description",

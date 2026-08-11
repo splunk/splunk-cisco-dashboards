@@ -36,6 +36,17 @@ const workspacesConf = read(
   "../src/main/resources/splunk/default/insights_workspaces.conf",
 );
 const profile = read("../src/main/webapp/pages/executive_insights/index.tsx");
+const profileRender = read(
+  "../src/main/webapp/pages/executive_insights/render.tsx",
+);
+const rawRender = read("../src/main/webapp/common/render-raw.tsx");
+const kpiPicker = read(
+  "../src/main/webapp/common/components/florida/KpiPickerPanel.tsx",
+);
+const metricHook = read("../src/main/webapp/common/hooks/useMetric.ts");
+const tileConfigService = read(
+  "../src/main/webapp/common/services/searchbaseTileConfigService.ts",
+);
 const metricItem = read(
   "../src/main/webapp/common/components/florida/MetricItem.tsx",
 );
@@ -227,6 +238,21 @@ assert.match(
   /scd-overview-page scd-c3-surface/,
   "The overview must opt into the C3-inspired content surface",
 );
+assert.doesNotMatch(
+  profile,
+  /Splunk Field Solutions · Insights Workspace|scd-c3-footer/,
+  "Insights Workspace must not reserve a branded footer strip",
+);
+assert.match(
+  rawRender,
+  /showCopyrightMark\?: boolean;[\s\S]*options\.showCopyrightMark !== false && <CopyrightMark \/>/,
+  "Raw page mounts must allow a surface to suppress the shared copyright mark",
+);
+assert.match(
+  profileRender,
+  /mountPageRaw\(ExecutiveInsightsPage, \{ showCopyrightMark: false \}\);/,
+  "Insights Workspace must suppress the floating copyright mark",
+);
 assert.match(
   dashboardSection,
   /scd-c3-panel bg-white dark:bg-slate-900/,
@@ -268,6 +294,31 @@ assert.match(
   metricItem,
   /healthy: C3_VISUALIZATION_COLORS\.positive,[\s\S]*?warning: C3_VISUALIZATION_COLORS\.caution,[\s\S]*?critical: C3_VISUALIZATION_COLORS\.critical/,
   "Metric status charts must use the shared C3 operational palette",
+);
+assert.match(
+  kpiPicker,
+  /<Switch[\s\S]*?appearance="toggle"[\s\S]*?selected=\{thresholdsEnabled\}[\s\S]*?>[\s\S]*?Use thresholds[\s\S]*?<\/Switch>/,
+  "Tile configuration must expose an accessible threshold on/off control",
+);
+assert.match(
+  kpiPicker,
+  /thresholds\.enabled = thresholdsEnabled/,
+  "Threshold enablement changes must be included in the shared tile-config patch",
+);
+assert.match(
+  tileConfigService,
+  /thresholds\.enabled !== undefined \? \{ enabled: thresholds\.enabled \} : \{\}/,
+  "Shared searchbase persistence must save an explicit threshold enabled state",
+);
+assert.match(
+  profile,
+  /const enabled = readOverviewBoolean\(raw, "enabled"\);[\s\S]*?enabled: enabled \?\? fallback\?\.enabled/,
+  "Workspace metric parsing must preserve the shared threshold enabled state",
+);
+assert.equal(
+  (metricHook.match(/thresholds\.enabled === false/g) ?? []).length,
+  2,
+  "Disabled thresholds must suppress both status classification and threshold-band text",
 );
 assert.match(
   sparkline,

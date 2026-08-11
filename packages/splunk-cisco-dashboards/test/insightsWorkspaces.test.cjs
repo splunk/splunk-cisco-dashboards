@@ -371,6 +371,14 @@ const searchbaseStanzaIds = new Set(
     .map((block) => block.match(/^\[([^\]]+)\]/)?.[1])
     .filter(Boolean),
 );
+const drilldownTargetsForBlock = (block) => {
+  const plural = block.match(/^drilldown_stanza_ids = (.+)$/m)?.[1];
+  if (plural) {
+    return [...new Set(plural.split(",").map((target) => target.trim()).filter(Boolean))];
+  }
+  const singular = block.match(/^drilldown_stanza_id = (.+)$/m)?.[1];
+  return singular ? [singular.trim()] : [];
+};
 assert.doesNotMatch(
   searchbaseConf,
   /^drilldown_search_name = /m,
@@ -379,19 +387,20 @@ assert.doesNotMatch(
 let canonicalDrilldownCount = 0;
 for (const block of searchbaseBlocks) {
   const sourceId = block.match(/^\[([^\]]+)\]/)?.[1];
-  const targetId = block.match(/^drilldown_stanza_id = (.+)$/m)?.[1];
-  if (!sourceId || !targetId) continue;
-  canonicalDrilldownCount += 1;
-  assert.ok(
-    searchbaseStanzaIds.has(targetId),
-    `${sourceId} must resolve drilldown stanza ${targetId}`,
-  );
-  assert.notEqual(sourceId, targetId, `${sourceId} must not drill into itself`);
+  if (!sourceId) continue;
+  for (const targetId of drilldownTargetsForBlock(block)) {
+    canonicalDrilldownCount += 1;
+    assert.ok(
+      searchbaseStanzaIds.has(targetId),
+      `${sourceId} must resolve drilldown stanza ${targetId}`,
+    );
+    assert.notEqual(sourceId, targetId, `${sourceId} must not drill into itself`);
+  }
 }
 assert.equal(
   canonicalDrilldownCount,
-  401,
-  "The shipped catalogue must retain every migrated drilldown relationship",
+  402,
+  "The shipped catalogue must retain every migrated relationship plus the new ISE workflow target",
 );
 
 const secureOverviewMappings = [];
@@ -491,34 +500,34 @@ for (const tileId of secureNetworkingLayoutTileIds) {
     `${tileId} (${stanzaId}) must bind an explicit sparkDataField`,
   );
 
-  const drilldownStanzaId = block.match(
-    /^drilldown_stanza_id = (.+)$/m,
-  )?.[1];
+  const drilldownStanzaIds = drilldownTargetsForBlock(block);
   assert.ok(
-    drilldownStanzaId,
+    drilldownStanzaIds.length > 0,
     `${tileId} (${stanzaId}) must declare its detail drilldown search`,
   );
-  const drilldownMatches = searchbaseConf
-    .split(/(?=^\[)/m)
-    .filter(
-      (candidate) =>
-        candidate.match(/^\[([^\]]+)\]/)?.[1] === drilldownStanzaId,
+  for (const drilldownStanzaId of drilldownStanzaIds) {
+    const drilldownMatches = searchbaseConf
+      .split(/(?=^\[)/m)
+      .filter(
+        (candidate) =>
+          candidate.match(/^\[([^\]]+)\]/)?.[1] === drilldownStanzaId,
+      );
+    assert.equal(
+      drilldownMatches.length,
+      1,
+      `${tileId} must resolve ${drilldownStanzaId} to exactly one Searchbase stanza`,
     );
-  assert.equal(
-    drilldownMatches.length,
-    1,
-    `${tileId} must resolve ${drilldownStanzaId} to exactly one Searchbase stanza`,
-  );
-  assert.match(
-    drilldownMatches[0],
-    /^default_viz = splunk\.table$/m,
-    `${tileId} drilldown must use a detail-table visualization`,
-  );
-  assert.match(
-    drilldownMatches[0],
-    /^search = .+$/m,
-    `${tileId} drilldown must contain executable SPL`,
-  );
+    assert.match(
+      drilldownMatches[0],
+      /^default_viz = splunk\.table$/m,
+      `${tileId} drilldown must use a detail-table visualization`,
+    );
+    assert.match(
+      drilldownMatches[0],
+      /^search = .+$/m,
+      `${tileId} drilldown must contain executable SPL`,
+    );
+  }
 }
 
 const secureMapFooters = [];

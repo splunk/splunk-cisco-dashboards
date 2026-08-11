@@ -705,7 +705,8 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         () =>
             new Set(
                 catalogue
-                    .map((entry) => entry.drilldownSearchName?.trim().toLowerCase())
+                    .flatMap((entry) => entry.drilldownSearchNames ?? [])
+                    .map((name) => name.trim().toLowerCase())
                     .filter((name): name is string => Boolean(name))
             ),
         [catalogue]

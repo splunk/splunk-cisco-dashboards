@@ -82,6 +82,7 @@ const DEFAULT_EXECUTIVE_WORKSPACE_STANZA_IDS = [
 ] as const;
 
 const STANZA_ID_PATTERN = /^[A-Za-z0-9_][A-Za-z0-9_.:-]{0,255}$/;
+const DRILLDOWN_TARGET_LIMIT = 24;
 
 const entryWorkspace = (entry: Record<string, unknown>): WorkspaceSourceId => {
     const raw = entry.workspace ?? entry.profile;
@@ -111,6 +112,7 @@ const withWorkspace = (
 };
 
 export interface TileThresholdsPatch {
+    enabled?: boolean;
     warning?: number;
     critical?: number;
     direction?: 'higher_is_better' | 'lower_is_better';
@@ -348,6 +350,7 @@ export const saveTileThresholds = async (
         ...entry,
         thresholds: {
             ...(entry.thresholds && typeof entry.thresholds === 'object' ? entry.thresholds : {}),
+            ...(thresholds.enabled !== undefined ? { enabled: thresholds.enabled } : {}),
             ...(thresholds.warning !== undefined ? { warning: thresholds.warning } : {}),
             ...(thresholds.critical !== undefined ? { critical: thresholds.critical } : {}),
             ...(thresholds.direction ? { direction: thresholds.direction } : {}),
@@ -422,16 +425,30 @@ export const saveTileSearchBinding = async (
 };
 
 /**
- * Admin save: stanza ids are canonical. Clearing the legacy key is required
- * because Splunk merges default/local config by key; otherwise an older local
- * `drilldown_search_name` override would continue to win after this write.
+ * Admin save: the ordered stanza-id list is canonical. Clearing both
+ * compatibility keys is required because Splunk merges default/local config
+ * by key; otherwise an older local override or shipped singular default could
+ * continue to win after this write.
  */
-export const saveTileDrilldown = async (
+export const saveTileDrilldowns = async (
     stanzaId: string,
-    drilldownStanzaId: string | null
+    drilldownStanzaIds: readonly string[] | null
 ): Promise<void> => {
+    const normalizedIds: string[] = [];
+    const seen = new Set<string>();
+    for (const rawId of drilldownStanzaIds ?? []) {
+        const targetId = rawId.trim();
+        if (!STANZA_ID_PATTERN.test(targetId)) {
+            throw new SearchbaseTileConfigError(`Invalid drilldown stanza id: ${rawId}`);
+        }
+        if (seen.has(targetId)) continue;
+        seen.add(targetId);
+        normalizedIds.push(targetId);
+        if (normalizedIds.length >= DRILLDOWN_TARGET_LIMIT) break;
+    }
     await writeStanzaKeys(stanzaId, {
-        drilldown_stanza_id: drilldownStanzaId ?? '',
+        drilldown_stanza_ids: normalizedIds.join(','),
+        drilldown_stanza_id: '',
         drilldown_search_name: '',
     });
     clearSearchbaseCache();
@@ -447,8 +464,8 @@ export interface FactoryTileConfigPatch {
     dataMapping?: TileDataMappingPatch;
     /** Present only when the admin picked a different search entirely. */
     searchRebind?: { toStanzaId: string };
-    /** `undefined` = don't touch; `null` = clear; string = target stanza id. */
-    drilldownSearchName?: string | null;
+    /** `undefined` = don't touch; `null` = clear; array = ordered target stanza ids. */
+    drilldownSearchNames?: string[] | null;
 }
 
 /**
@@ -487,8 +504,8 @@ export const saveFactoryTileConfig = async (patch: FactoryTileConfigPatch): Prom
         }
     }
 
-    if (patch.drilldownSearchName !== undefined) {
-        await saveTileDrilldown(ownerStanzaId, patch.drilldownSearchName);
+    if (patch.drilldownSearchNames !== undefined) {
+        await saveTileDrilldowns(ownerStanzaId, patch.drilldownSearchNames);
     }
 };
 

@@ -2,6 +2,17 @@
 
 ## 1.0.36
 
+- Insights Workspace no longer renders the floating Splunk copyright badge or
+  the branded footer strip, returning that space to the operational canvas.
+  Tile configuration now includes an admin-controlled `Use thresholds` switch;
+  disabling it removes threshold-derived colours, status icons, and threshold
+  guidance while preserving the warning and critical bands for later use.
+- Insights Workspace tiles can now attach an ordered workflow of up to 24
+  Searchbase drill-down searches. Detail dialogs match Dashboard Manager with
+  accessible Back/Forward navigation, update Search and Searchbase actions for
+  the active target, cancel the previous dispatch when moving, and run only one
+  supporting search at a time. Existing single-target configuration remains
+  compatible.
 - Searchbase searches now directly cover Cisco Catalyst Add-on 3.2.44 current
   and retained sourcetypes for Catalyst Center, ISE, SD-WAN, and NetFlow,
   including discriminator fields for consolidated ISE policy records. The
