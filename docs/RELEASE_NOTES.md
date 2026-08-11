@@ -2,6 +2,12 @@
 
 ## 1.0.36
 
+- Insights Workspace now begins its Figma-led Cisco shared-design-language
+  refresh with SUI glass status cards, restrained SpotLight depth, native
+  RadioBar and Select view controls, and token-driven map overlays. Signal
+  Rail motion now defaults to static, honors reduced-motion preferences, and
+  exposes reversible quarter-step speed control from 0.25× through 2× while
+  retaining existing per-user settings.
 - Insights Workspace no longer renders the floating Splunk copyright badge or
   the branded footer strip, returning that space to the operational canvas.
   Tile configuration now includes an admin-controlled `Use thresholds` switch;

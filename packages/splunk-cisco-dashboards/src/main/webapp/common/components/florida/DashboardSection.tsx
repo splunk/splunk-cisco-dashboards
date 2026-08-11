@@ -11,6 +11,7 @@ import {
     Plus,
 } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
+import { OneCdSurface } from './OneCdSurface';
 
 interface TileCountControlConfig {
     /** Currently visible tile count. */
@@ -330,7 +331,7 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
     );
 
     return (
-        <div
+        <OneCdSurface
             // `min-h-[180px]` is the legibility floor for a row of
             // tiles after the bottom drill-down footer was removed
             // (was 220px when the footer existed; -36px footer chrome
@@ -354,6 +355,10 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
             )}
             data-section-density={compactHeight ? 'compact' : 'standard'}
             data-section-state={sectionState}
+            spotlight={collapsed ? 'element' : false}
+            spotlightIntensity="low"
+            spotlightInset={{ left: '-18%', top: '-48%' }}
+            spotlightScale={{ x: 0.42, y: 0.2 }}
             style={style}
         >
             <div className="absolute top-0 left-0 w-1.5 h-full bg-sky-100 dark:bg-sky-900/40 group-hover:bg-sky-600 dark:group-hover:bg-sky-500 transition-colors" />
@@ -490,6 +495,6 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
             >
                 {children}
             </div>
-        </div>
+        </OneCdSurface>
     );
 };

@@ -23,7 +23,11 @@ import {
 
 export {
     DEFAULT_SIGNAL_TICKER_CONFIG,
+    MAX_SIGNAL_TICKER_SPEED,
     MAX_SIGNAL_TICKER_ITEMS,
+    MIN_SIGNAL_TICKER_SPEED,
+    NORMAL_SIGNAL_TICKER_SPEED,
+    SIGNAL_TICKER_SPEED_STEP,
     getDefaultSignalTickerConfig,
     makeSignalTickerItemId,
     sanitizeSignalTickerConfig,

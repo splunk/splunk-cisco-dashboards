@@ -76,6 +76,7 @@ import {
     type SuiIcon,
 } from '@/common/icons/SuiIcon';
 import { DashboardSection } from "@/common/components/florida/DashboardSection";
+import { OneCdRadioBar } from "@/common/components/florida/OneCdSurface";
 import { MetricItem } from "@/common/components/florida/MetricItem";
 import { WorkspaceModalShell } from "@/common/components/florida/WorkspaceModalShell";
 import SearchbaseDrilldownGuidance, {
@@ -5122,8 +5123,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               style={verticalMapStyle}
             >
               <div className="scd-c3-panel flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-col overflow-hidden">
-                <div className="flex items-center justify-between mb-2 flex-shrink-0">
-                  <div>
+                <div className="mb-2 flex flex-shrink-0 flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-[12rem] flex-1">
                     <h2 className="text-base font-bold text-sky-900 dark:text-sky-200 uppercase tracking-wide leading-none">
                       {topologyHeaderName}
                     </h2>
@@ -5131,7 +5132,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                       {topologyHeaderSubtitle}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-shrink-0 items-center gap-2">
                     <MapPositionToggle
                       value={mapPosition}
                       onChange={setMapPosition}
@@ -6814,46 +6815,22 @@ interface RegionalViewToggleProps {
   onChange: (next: RegionalView) => void;
 }
 
+const REGIONAL_VIEW_OPTIONS = [
+  { value: "map", label: "Map" },
+  { value: "table", label: "Table" },
+] as const;
+
 const RegionalViewToggle: React.FC<RegionalViewToggleProps> = ({
   value,
   onChange,
-}) => {
-  const baseClass =
-    "px-3 py-1 text-xs font-bold transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400";
-  const activeClass =
-    "bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-sky-600 dark:text-sky-300";
-  const inactiveClass =
-    "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300";
-  return (
-    <div
-      role="tablist"
-      aria-label="Topology view"
-      className="flex bg-slate-100 dark:bg-slate-800/60 p-1 rounded-md"
-    >
-      <button
-        type="button"
-        role="tab"
-        aria-selected={value === "map"}
-        onClick={() => onChange("map")}
-        className={cn(baseClass, value === "map" ? activeClass : inactiveClass)}
-      >
-        MAP
-      </button>
-      <button
-        type="button"
-        role="tab"
-        aria-selected={value === "table"}
-        onClick={() => onChange("table")}
-        className={cn(
-          baseClass,
-          value === "table" ? activeClass : inactiveClass,
-        )}
-      >
-        TABLE
-      </button>
-    </div>
-  );
-};
+}) => (
+  <OneCdRadioBar
+    ariaLabel="Topology view"
+    options={REGIONAL_VIEW_OPTIONS}
+    value={value}
+    onChange={onChange}
+  />
+);
 
 // =============================================================================
 // Metric detail-table modal

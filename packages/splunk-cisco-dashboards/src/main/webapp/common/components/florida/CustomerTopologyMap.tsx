@@ -61,6 +61,10 @@ import {
 } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 import {
+    OneCdGlassCard,
+    OneCdSurface,
+} from './OneCdSurface';
+import {
     getSearchbaseCatalogue,
     plainTextFromHtml,
     type SearchbaseRecord,
@@ -4851,6 +4855,11 @@ type SelectedTarget =
 
 type TopologySurfaceMode = 'command' | 'geo';
 
+const TOPOLOGY_SURFACE_OPTIONS: readonly [TopologySurfaceMode, string][] = [
+    ['command', 'Command'],
+    ['geo', 'Geo'],
+];
+
 interface CommandPoint {
     x: number;
     y: number;
@@ -6512,7 +6521,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     };
 
     return (
-        <div
+        <OneCdSurface
             className={cn(
                 'relative w-full h-full min-h-[320px] overflow-hidden border rounded-xl shadow-inner group',
                 `customer-topology-anim--${visualAnimationLevel}`,
@@ -6520,6 +6529,10 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     ? 'bg-slate-900 border-slate-800'
                     : 'bg-slate-100 border-slate-200'
             )}
+            spotlight="element"
+            spotlightIntensity="low"
+            spotlightInset={{ left: '18%', bottom: '-44%' }}
+            spotlightScale={{ x: 0.65, y: 0.42 }}
         >
             <style>{topologyAnimationCss}</style>
 
@@ -6662,39 +6675,29 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             </MapContainer>
             )}
 
-            <div
-                className={cn(
-                    'absolute right-3 top-3 z-[1100] inline-flex rounded-lg border p-1 shadow-lg backdrop-blur-xl',
-                    isDark
-                        ? 'border-slate-700/80 bg-slate-950/70'
-                        : 'border-sky-200/80 bg-white/80'
-                )}
-                role="tablist"
-                aria-label="Connectivity presentation"
+            <OneCdGlassCard
+                tag="div"
+                className="absolute right-3 top-3 z-[1100] inline-flex p-1.5"
             >
-                {([
-                    ['command', 'Command'],
-                    ['geo', 'Geo'],
-                ] as const).map(([mode, label]) => (
-                    <button
-                        key={mode}
-                        type="button"
-                        role="tab"
-                        aria-selected={surfaceMode === mode}
-                        onClick={() => setSurfaceMode(mode)}
-                        className={cn(
-                            'rounded-md px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-400',
-                            surfaceMode === mode
-                                ? 'bg-sky-500 text-white shadow-sm'
-                                : isDark
-                                ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-                                : 'text-slate-500 hover:bg-sky-50 hover:text-sky-800'
-                        )}
-                    >
-                        {label}
-                    </button>
-                ))}
-            </div>
+                <Select
+                    inline
+                    appearance="subtle"
+                    labelText="Connectivity presentation"
+                    value={surfaceMode}
+                    onChange={(_event, { value }) =>
+                        setSurfaceMode(value as TopologySurfaceMode)
+                    }
+                    style={{ width: 136 }}
+                >
+                    {TOPOLOGY_SURFACE_OPTIONS.map(([value, label]) => (
+                        <Select.Option
+                            key={value}
+                            label={`View: ${label}`}
+                            value={value}
+                        />
+                    ))}
+                </Select>
+            </OneCdGlassCard>
 
             <SelectionCard
                 selected={resolvedSelected}
@@ -6737,10 +6740,11 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
 
             <div className="absolute bottom-6 left-4 z-[1000] space-y-3 pointer-events-auto">
                 {roleLegendExpanded ? (
-                    <div
+                    <OneCdGlassCard
+                        tag="aside"
                         className={cn(
-                            'border p-3 rounded-xl shadow-xl max-w-[190px] transition-all',
-                            overlayChrome
+                            'p-3 max-w-[190px] transition-all',
+                            isDark ? 'text-slate-100' : 'text-slate-900'
                         )}
                     >
                         <div className="mb-3 flex items-center justify-between gap-3">
@@ -6773,7 +6777,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                                 />
                             ))}
                         </div>
-                    </div>
+                    </OneCdGlassCard>
                 ) : (
                     <button
                         type="button"
@@ -6891,7 +6895,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     </span>
                 </button>
             </div>
-        </div>
+        </OneCdSurface>
     );
 };
 

@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Badge from '@splunk/react-ui/Badge';
+import { variables } from '@splunk/themes';
 import { Check, ExternalLink, Palette, Pause, Play, Settings2 } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 import type { MetricStatus } from '@/common/hooks/useMetric';
@@ -7,10 +9,12 @@ import type {
     SignalTickerFontSize,
     SignalTickerRows,
 } from '@/common/hooks/usePersistedSignalTicker';
+import { OneCdGlassCard, OneCdSurface } from './OneCdSurface';
 
 export type SignalRailStatus = MetricStatus;
 export type SignalRailDeltaDirection = 'up' | 'down' | 'flat';
 export type SignalRailVariant =
+    | 'one-cisco-glass'
     | 'original'
     | 'bloomberg'
     | 'cisco-blue-gradient'
@@ -41,7 +45,7 @@ interface SignalRailTickerProps {
 }
 
 const STORAGE_KEY = 'signalRailVariant';
-const DEFAULT_VARIANT: SignalRailVariant = 'original';
+const DEFAULT_VARIANT: SignalRailVariant = 'one-cisco-glass';
 
 const VARIANT_OPTIONS: Array<{
     id: SignalRailVariant;
@@ -49,6 +53,13 @@ const VARIANT_OPTIONS: Array<{
     description: string;
     swatchClassName: string;
 }> = [
+    {
+        id: 'one-cisco-glass',
+        label: 'One Cisco Glass',
+        description: '1CD spotlight with SUI glass status cards',
+        swatchClassName:
+            'border border-sky-200/70 bg-gradient-to-br from-white/80 via-sky-100/55 to-violet-200/55',
+    },
     {
         id: 'original',
         label: 'Original',
@@ -96,6 +107,12 @@ const signalRailTickerCss = `
 }
 .scd-signal-rail-marquee-track[data-paused='true'] {
     animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+    .scd-signal-rail-marquee-track {
+        animation: none !important;
+        transform: none !important;
+    }
 }
 #scan-root .scd-signal-rail-controls {
     opacity: 0;
@@ -224,7 +241,19 @@ const STATUS_COLOR = {
     },
 } satisfies Record<SignalRailStatus, Record<string, string>>;
 
+type BadgeBackground = NonNullable<
+    React.ComponentProps<typeof Badge>['backgroundColor']
+>;
+
+const STATUS_BADGE_BACKGROUND: Record<SignalRailStatus, BadgeBackground> = {
+    healthy: variables.severityColorNormal,
+    warning: variables.severityColorNotice,
+    critical: variables.severityColorAlert,
+    unknown: variables.severityColorInfo,
+};
+
 const isSignalRailVariant = (value: string | null): value is SignalRailVariant =>
+    value === 'one-cisco-glass' ||
     value === 'original' ||
     value === 'bloomberg' ||
     value === 'cisco-blue-gradient' ||
@@ -299,13 +328,19 @@ const passClass = (variant: SignalRailVariant, density: SignalTickerDensity): st
         variant === 'cisco-blue-gradient' && 'gap-0',
         variant === 'telemetry-constellation' && 'gap-4',
         variant === 'original' && 'gap-3',
-        variant === 'minimal-enterprise' && 'gap-4'
+        variant === 'minimal-enterprise' && 'gap-4',
+        variant === 'one-cisco-glass' && 'gap-3'
     );
 
 const itemSizeClass = (
     variant: SignalRailVariant,
     density: SignalTickerDensity
 ): string => {
+    if (variant === 'one-cisco-glass') {
+        return density === 'compact'
+            ? 'min-h-[72px] min-w-[230px] px-4 py-3'
+            : 'min-h-[92px] min-w-[250px] px-5 py-4';
+    }
     if (variant === 'bloomberg') {
         return density === 'compact'
             ? 'h-[62px] min-w-[280px] px-7'
@@ -377,6 +412,55 @@ const KpiItem: React.FC<KpiItemProps> = ({
                 <ExternalLink className="h-3 w-3 stroke-[2.5px]" />
             </a>
         ) : null;
+
+    if (variant === 'one-cisco-glass') {
+        return (
+            <OneCdGlassCard
+                tag="article"
+                className={cn(
+                    'scd-signal-rail-item flex flex-col justify-between overflow-hidden',
+                    itemSizeClass(variant, density)
+                )}
+                data-status={kpi.status}
+            >
+                <span className="flex min-w-0 items-start justify-between gap-3">
+                    <span className="min-w-0">
+                        <span
+                            className={cn(
+                                'block truncate font-bold text-slate-950 dark:text-white',
+                                fontSizeClass(fontSize, 'text-xs', 'text-sm', 'text-base')
+                            )}
+                        >
+                            {label}
+                        </span>
+                        <span
+                            className={cn(
+                                'mt-1 block truncate text-slate-500 dark:text-slate-300',
+                                fontSizeClass(fontSize, 'text-[10px]', 'text-xs', 'text-sm')
+                            )}
+                        >
+                            {category}
+                        </span>
+                    </span>
+                    {openLink}
+                </span>
+                <span className="mt-3 flex items-end justify-between gap-3">
+                    <span
+                        className={cn(
+                            'font-black leading-none text-slate-950 dark:text-white',
+                            fontSizeClass(fontSize, 'text-[24px]', 'text-[30px]', 'text-[34px]')
+                        )}
+                    >
+                        {valueText(kpi)}
+                    </span>
+                    <Badge
+                        label={STATUS_LABEL[kpi.status]}
+                        backgroundColor={STATUS_BADGE_BACKGROUND[kpi.status]}
+                    />
+                </span>
+            </OneCdGlassCard>
+        );
+    }
 
     if (variant === 'bloomberg') {
         return (
@@ -671,6 +755,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
     }, []);
 
     const tickerRows = useMemo(() => splitRows(kpis, rows), [kpis, rows]);
+    const staticMode = durationSeconds <= 0;
     const effectivePaused = manualPaused || interactionPaused || durationSeconds <= 0;
     const activeOption = VARIANT_OPTIONS.find((option) => option.id === variant);
     const counts = useMemo(() => {
@@ -718,9 +803,14 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
     if (kpis.length === 0) return null;
 
     return (
-        <section
+        <OneCdSurface
+            as="section"
+            spotlight={variant === 'one-cisco-glass' ? 'page-top' : false}
+            spotlightIntensity="low"
             className={cn(
                 'scd-signal-rail-ticker group/signal-rail relative z-40 w-full min-w-0 max-w-full flex-shrink-0 overflow-visible border-b',
+                variant === 'one-cisco-glass' &&
+                    'border-transparent bg-transparent px-3 py-3 text-slate-950 dark:text-white',
                 variant === 'original' &&
                     'border-slate-200 bg-white/[0.82] px-1.5 py-1 dark:border-slate-800 dark:bg-slate-950/95',
                 variant === 'bloomberg' &&
@@ -751,6 +841,28 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
             }}
         >
             <style>{signalRailTickerCss}</style>
+            {variant === 'one-cisco-glass' && (
+                <div className="relative z-[75] mb-3 flex items-center justify-between gap-3 px-1">
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300">
+                            Live operations
+                        </p>
+                        <h2 className="mt-0.5 text-lg font-black tracking-tight">
+                            Status overview
+                        </h2>
+                    </div>
+                    <div className="flex flex-wrap justify-end gap-2">
+                        <Badge
+                            label={`${counts.critical} Critical`}
+                            backgroundColor={variables.severityColorAlert}
+                        />
+                        <Badge
+                            label={`${counts.warning} Warning`}
+                            backgroundColor={variables.severityColorNotice}
+                        />
+                    </div>
+                </div>
+            )}
             <div
                 className={cn(
                     'relative z-[70] flex w-full min-w-0 max-w-full items-center overflow-visible',
@@ -766,17 +878,32 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                     {tickerRows.map((row, rowIndex) => (
                         <div
                             key={`row-${rowIndex}`}
-                            className="w-full min-w-0 max-w-full overflow-hidden py-0.5"
+                            className={cn(
+                                'w-full min-w-0 max-w-full py-0.5',
+                                staticMode ? 'overflow-visible' : 'overflow-hidden'
+                            )}
                         >
-                            <div
-                                className="scd-signal-rail-marquee-track flex"
-                                data-paused={effectivePaused}
-                                style={{
-                                    animationDuration: `${durationSeconds > 0 ? durationSeconds : 60}s`,
-                                }}
-                            >
-                                {[0, 1].map((pass) => renderPass(row, pass))}
-                            </div>
+                            {staticMode ? (
+                                <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(230px,1fr))] gap-3">
+                                    {row.map((kpi) => (
+                                        <KpiItem
+                                            key={kpi.id}
+                                            kpi={kpi}
+                                            variant={variant}
+                                            density={density}
+                                            fontSize={fontSize}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div
+                                    className="scd-signal-rail-marquee-track flex"
+                                    data-paused={effectivePaused}
+                                    style={{ animationDuration: `${durationSeconds}s` }}
+                                >
+                                    {[0, 1].map((pass) => renderPass(row, pass))}
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
@@ -799,10 +926,26 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                     <button
                         type="button"
                         onClick={() => setManualPaused((current) => !current)}
+                        disabled={staticMode}
                         aria-pressed={manualPaused}
-                        aria-label={manualPaused ? 'Resume signal rail' : 'Pause signal rail'}
-                        title={manualPaused ? 'Resume signal rail' : 'Pause signal rail'}
-                        className={controlButtonClassName}
+                        aria-label={
+                            staticMode
+                                ? 'Signal rail is static; configure speed to enable motion'
+                                : manualPaused
+                                ? 'Resume signal rail'
+                                : 'Pause signal rail'
+                        }
+                        title={
+                            staticMode
+                                ? 'Static by default — configure speed to enable motion'
+                                : manualPaused
+                                ? 'Resume signal rail'
+                                : 'Pause signal rail'
+                        }
+                        className={cn(
+                            controlButtonClassName,
+                            staticMode && 'cursor-not-allowed opacity-45'
+                        )}
                     >
                         {manualPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
                     </button>
@@ -841,7 +984,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                                         Ticker style
                                     </p>
                                     <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                                        Choose one of five rail treatments
+                                        Choose a rail treatment
                                     </p>
                                 </div>
                                 <span className="rounded-full bg-sky-50 px-2 py-1 text-xs font-black uppercase tracking-[0.1em] text-sky-700 dark:bg-sky-950/50 dark:text-sky-200">
@@ -922,7 +1065,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                     </span>
                 </div>
             )}
-        </section>
+        </OneCdSurface>
     );
 };
 

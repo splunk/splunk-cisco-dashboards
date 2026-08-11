@@ -29,6 +29,10 @@ import {
     type TimeRange,
 } from '@/common/hooks/useMetric';
 import {
+    MAX_SIGNAL_TICKER_SPEED,
+    MIN_SIGNAL_TICKER_SPEED,
+    NORMAL_SIGNAL_TICKER_SPEED,
+    SIGNAL_TICKER_SPEED_STEP,
     makeSignalTickerItemId,
     type SignalTickerConfig,
     type SignalTickerDensity,
@@ -43,9 +47,6 @@ import {
     type SignalRailDeltaDirection,
     type SignalRailKpi,
 } from './SignalRailTicker';
-
-const MIN_SIGNAL_SPEED = 0;
-const MAX_SIGNAL_SPEED = 10;
 
 const ALL_CATEGORIES = '__all__';
 const ALL_SUB_CATEGORIES = '__all_sub__';
@@ -529,8 +530,12 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
     const fontSize = config.fontSize ?? 'standard';
     const durationSeconds = useMemo(() => {
         if (paused || config.speed <= 0) return 0;
-        const clamped = Math.min(MAX_SIGNAL_SPEED, Math.max(MIN_SIGNAL_SPEED, config.speed));
-        return Math.max(24, Math.round(96 - clamped * 7.2));
+        const clamped = Math.min(
+            MAX_SIGNAL_TICKER_SPEED,
+            Math.max(MIN_SIGNAL_TICKER_SPEED, config.speed)
+        );
+        const multiplier = clamped / NORMAL_SIGNAL_TICKER_SPEED;
+        return Math.round(60 / multiplier);
     }, [config.speed, paused]);
     const tickerKpis = useMemo<SignalRailKpi[]>(
         () =>
@@ -1162,16 +1167,19 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                 </span>
                                 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-black uppercase tracking-[0.12em] text-slate-500 dark:bg-slate-900 dark:text-slate-300">
                                     {config.speed === 0
-                                        ? 'Paused'
-                                        : `${config.speed}/10`}
+                                        ? 'Static'
+                                        : `${(config.speed / NORMAL_SIGNAL_TICKER_SPEED)
+                                              .toFixed(2)
+                                              .replace(/\.00$/, '')
+                                              .replace(/0$/, '')}×`}
                                 </span>
                             </div>
                             <div className="mt-3 rounded-lg border border-slate-200 bg-white px-3 py-2.5 dark:border-slate-800 dark:bg-slate-950">
                                 <input
                                     type="range"
-                                    min={MIN_SIGNAL_SPEED}
-                                    max={MAX_SIGNAL_SPEED}
-                                    step={1}
+                                    min={MIN_SIGNAL_TICKER_SPEED}
+                                    max={MAX_SIGNAL_TICKER_SPEED}
+                                    step={SIGNAL_TICKER_SPEED_STEP}
                                     value={config.speed}
                                     onChange={(event) =>
                                         updateConfig({
@@ -1182,8 +1190,8 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                     aria-label="Signal rail speed"
                                 />
                                 <div className="mt-1 flex justify-between text-xs font-black uppercase tracking-[0.14em] text-slate-400">
-                                    <span>0</span>
-                                    <span>10</span>
+                                    <span>Static</span>
+                                    <span>2×</span>
                                 </div>
                             </div>
                         </div>
