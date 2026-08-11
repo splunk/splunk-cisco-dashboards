@@ -4845,13 +4845,23 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               const warningCount = sectionStatuses.filter(
                 (status) => status === "warning",
               ).length;
-              const collapsedSummary = [
-                `${visibleCount} KPI${visibleCount === 1 ? "" : "s"}`,
-                criticalCount > 0 ? `${criticalCount} critical` : null,
-                warningCount > 0 ? `${warningCount} warning` : null,
-              ]
-                .filter(Boolean)
-                .join(" · ");
+              const healthyCount = sectionStatuses.filter(
+                (status) => status === "healthy",
+              ).length;
+              const explicitUnknownCount = sectionStatuses.filter(
+                (status) => status === "unknown",
+              ).length;
+              const unresolvedCount = Math.max(
+                0,
+                visibleCount - sectionStatuses.length,
+              );
+              const collapsedSummary = {
+                kpiCount: visibleCount,
+                healthyCount,
+                warningCount,
+                criticalCount,
+                unknownCount: explicitUnknownCount + unresolvedCount,
+              };
               let sectionFlexGrow = heightLevel;
               if (isSectionCollapsed) sectionFlexGrow = 0;
               if (isSectionFocused) {

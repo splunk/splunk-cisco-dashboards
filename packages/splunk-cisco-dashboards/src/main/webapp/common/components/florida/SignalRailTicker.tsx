@@ -854,32 +854,6 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
             }}
         >
             <style>{signalRailTickerCss}</style>
-            {variant === 'one-cisco-glass' && (
-                <div className="relative z-[75] mb-3 flex items-center justify-between gap-3 px-1">
-                    <div>
-                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300">
-                            Live operations
-                        </p>
-                        <h2 className="mt-0.5 text-lg font-black tracking-tight">
-                            Status overview
-                        </h2>
-                    </div>
-                    <div className="flex flex-wrap justify-end gap-2">
-                        <Badge
-                            label={`${counts.critical} Critical`}
-                            backgroundColor={STATUS_BADGE_BACKGROUND.critical}
-                            foregroundColor={variables.contentColorActive}
-                            style={{ border: `1px solid ${STATUS_BADGE_COLOR.critical}` }}
-                        />
-                        <Badge
-                            label={`${counts.warning} Warning`}
-                            backgroundColor={STATUS_BADGE_BACKGROUND.warning}
-                            foregroundColor={variables.contentColorActive}
-                            style={{ border: `1px solid ${STATUS_BADGE_COLOR.warning}` }}
-                        />
-                    </div>
-                </div>
-            )}
             <div
                 className={cn(
                     'relative z-[70] flex w-full min-w-0 max-w-full items-center overflow-visible',

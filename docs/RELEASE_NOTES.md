@@ -5,12 +5,16 @@
 - Insights Workspace now begins its Figma-led Cisco shared-design-language
   refresh with SUI glass status cards, restrained SpotLight depth, native
   RadioBar and Select view controls, and token-driven map overlays. The 1CD
-  status overview remains static and fits all six factory KPIs in one desktop
-  row; motion belongs to the map connector trails, which default to static,
+  glass KPI row remains static and fits all six factory KPIs in one desktop
+  row without repeating the top command bar; motion belongs to the map
+  connector trails, which default to static,
   honor reduced-motion preferences, and expose reversible quarter-step speed
   control from 0.25× through 2×. Glass-card navigation is limited to the
   explicit top-right icon, and the primary workspace now uses the descriptive
-  Secure Networking Operations title. The status atmosphere now comes directly
+  Secure Networking Operations title. Collapsed sections now remove the
+  decorative edge beside their approved icon and replace the gray text summary
+  with compact SUI KPI and severity badges using the mockup's semantic colors.
+  The status atmosphere now comes directly
   from the released SUI <code>SpotLight</code> page-top preset rather than the
   legacy custom gradient, and severity badges use the mockup's 50% fills with
   token-driven readable text. Glass status cards now hug their title, subtitle,

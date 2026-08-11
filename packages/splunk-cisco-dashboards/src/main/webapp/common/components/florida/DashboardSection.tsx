@@ -1,4 +1,6 @@
 import React from 'react';
+import Badge from '@splunk/react-ui/Badge';
+import { variables } from '@splunk/themes';
 import {
     ChevronDown,
     ChevronRight,
@@ -11,6 +13,7 @@ import {
     Plus,
 } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
+import { C3_VISUALIZATION_COLORS } from '@/common/theme/c3VisualizationPalette';
 import { OneCdSurface } from './OneCdSurface';
 
 interface TileCountControlConfig {
@@ -45,6 +48,14 @@ interface HeaderActionConfig {
     label: string;
     title?: string;
     disabled?: boolean;
+}
+
+interface CollapsedSummaryConfig {
+    kpiCount: number;
+    healthyCount: number;
+    warningCount: number;
+    criticalCount: number;
+    unknownCount: number;
 }
 
 interface DashboardSectionProps {
@@ -86,10 +97,86 @@ interface DashboardSectionProps {
     /** True while this section owns the metrics pane's focused presentation. */
     focused?: boolean;
     /** Compact KPI/status summary shown while the section is collapsed. */
-    collapsedSummary?: string;
+    collapsedSummary?: CollapsedSummaryConfig;
     onToggleCollapsed?: () => void;
     onToggleFocus?: () => void;
 }
+
+type SummaryTone = 'info' | 'healthy' | 'warning' | 'critical';
+type BadgeBackground = NonNullable<
+    React.ComponentProps<typeof Badge>['backgroundColor']
+>;
+
+const SUMMARY_BADGE_COLOR: Record<SummaryTone, string> = {
+    info: C3_VISUALIZATION_COLORS.info,
+    healthy: C3_VISUALIZATION_COLORS.positive,
+    warning: C3_VISUALIZATION_COLORS.caution,
+    critical: C3_VISUALIZATION_COLORS.critical,
+};
+
+const SUMMARY_BADGE_BACKGROUND: Record<SummaryTone, BadgeBackground> = {
+    info: `color-mix(in srgb, ${SUMMARY_BADGE_COLOR.info} 28%, transparent)`,
+    healthy: `color-mix(in srgb, ${SUMMARY_BADGE_COLOR.healthy} 50%, transparent)`,
+    warning: `color-mix(in srgb, ${SUMMARY_BADGE_COLOR.warning} 50%, transparent)`,
+    critical: `color-mix(in srgb, ${SUMMARY_BADGE_COLOR.critical} 50%, transparent)`,
+};
+
+const CollapsedSummaryBadges: React.FC<CollapsedSummaryConfig> = ({
+    kpiCount,
+    healthyCount,
+    warningCount,
+    criticalCount,
+    unknownCount,
+}) => {
+    const items: Array<{ label: string; tone: SummaryTone }> = [
+        {
+            label: `${kpiCount} KPI${kpiCount === 1 ? '' : 's'}`,
+            tone: 'info',
+        },
+    ];
+    if (criticalCount > 0) {
+        items.push({
+            label: `${criticalCount} Critical`,
+            tone: 'critical',
+        });
+    }
+    if (warningCount > 0) {
+        items.push({
+            label: `${warningCount} Warning`,
+            tone: 'warning',
+        });
+    }
+    if (criticalCount === 0 && warningCount === 0) {
+        if (unknownCount > 0) {
+            items.push({
+                label: `${unknownCount} Updating`,
+                tone: 'info',
+            });
+        } else if (healthyCount > 0) {
+            items.push({ label: 'Healthy', tone: 'healthy' });
+        }
+    }
+
+    return (
+        <span
+            className="inline-flex min-w-0 flex-shrink-0 items-center gap-1"
+            aria-label={`${kpiCount} KPIs: ${healthyCount} healthy, ${warningCount} warning, ${criticalCount} critical, ${unknownCount} updating`}
+            data-collapsed-status-summary="true"
+        >
+            {items.map((item) => (
+                <Badge
+                    key={`${item.tone}-${item.label}`}
+                    label={item.label}
+                    backgroundColor={SUMMARY_BADGE_BACKGROUND[item.tone]}
+                    foregroundColor={variables.contentColorActive}
+                    style={{
+                        border: `1px solid ${SUMMARY_BADGE_COLOR[item.tone]}`,
+                    }}
+                />
+            ))}
+        </span>
+    );
+};
 
 const TileCountPill: React.FC<TileCountControlConfig> = ({
     value,
@@ -361,7 +448,9 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
             spotlightScale={{ x: 0.42, y: 0.2 }}
             style={style}
         >
-            <div className="absolute top-0 left-0 w-1.5 h-full bg-sky-100 dark:bg-sky-900/40 group-hover:bg-sky-600 dark:group-hover:bg-sky-500 transition-colors" />
+            {!collapsed && (
+                <div className="absolute top-0 left-0 w-1.5 h-full bg-sky-100 dark:bg-sky-900/40 group-hover:bg-sky-600 dark:group-hover:bg-sky-500 transition-colors" />
+            )}
 
             <div
                 className={cn(
@@ -372,9 +461,7 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
                 <div className="flex min-w-0 items-center gap-2">
                     {titleNode}
                     {collapsed && collapsedSummary && (
-                        <span className="truncate rounded-full border border-slate-200/90 bg-slate-50/80 px-2 py-0.5 text-[10px] font-bold tracking-wide text-slate-500 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-300">
-                            {collapsedSummary}
-                        </span>
+                        <CollapsedSummaryBadges {...collapsedSummary} />
                     )}
                 </div>
                 <div className="flex items-center gap-1.5">

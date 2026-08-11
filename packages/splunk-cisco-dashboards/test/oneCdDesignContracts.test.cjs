@@ -88,6 +88,21 @@ assert.match(
   "Collapsed metric panels must retain the designer's discovery spotlight",
 );
 assert.match(
+  dashboardSection,
+  /\{!collapsed && \([\s\S]{0,240}?absolute top-0 left-0 w-1\.5 h-full/,
+  "The section edge accent must disappear when the compact header is collapsed",
+);
+assert.match(
+  dashboardSection,
+  /data-collapsed-status-summary="true"[\s\S]{0,1200}?<Badge/,
+  "Collapsed sections must summarize KPI health with native SUI badges",
+);
+assert.match(
+  dashboardSection,
+  /SUMMARY_BADGE_COLOR\.healthy\} 50%, transparent\)[\s\S]*?SUMMARY_BADGE_COLOR\.warning\} 50%, transparent\)[\s\S]*?SUMMARY_BADGE_COLOR\.critical\} 50%, transparent\)/,
+  "Collapsed severity badges must use the designer's 50% semantic fills",
+);
+assert.match(
   topologyMap,
   /<Select[\s\S]*?labelText="Connectivity presentation"[\s\S]*?setSurfaceMode\(value as TopologySurfaceMode\)/,
   "The in-map connectivity presentation must use the compact SUI Select requested by the design",
@@ -115,7 +130,12 @@ assert.match(
 assert.match(
   signalRail,
   /<OneCdGlassCard[\s\S]*?tag="article"[\s\S]*?<Badge/,
-  "Status overview KPIs must use SUI glass cards and badges",
+  "The live KPI row must use SUI glass cards and badges",
+);
+assert.doesNotMatch(
+  signalRail,
+  /Live operations|Status overview/,
+  "The KPI row must not repeat the top bar with a second overview heading",
 );
 assert.match(
   signalRail,
