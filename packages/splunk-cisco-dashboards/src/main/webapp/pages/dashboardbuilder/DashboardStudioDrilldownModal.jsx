@@ -5,8 +5,8 @@ import WaitSpinner from '@splunk/react-ui/WaitSpinner';
 import { DashboardContextProvider } from '@splunk/dashboard-context';
 import { DashboardCore } from '@splunk/dashboard-core';
 import DOMPurify from 'dompurify';
-import SearchbaseDrilldownGuidance from '../../common/components/florida/SearchbaseDrilldownGuidance';
-import { WorkspaceModalShell } from '../../common/components/florida/WorkspaceModalShell';
+import SearchbaseDrilldownGuidance from '../../common/components/workspace/SearchbaseDrilldownGuidance';
+import { WorkspaceModalShell } from '../../common/components/workspace/WorkspaceModalShell';
 import {
     ChevronLeft,
     ChevronRight,

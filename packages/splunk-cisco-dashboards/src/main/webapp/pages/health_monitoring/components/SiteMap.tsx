@@ -4,7 +4,7 @@ import {
     CustomerTopologyMap,
     CUSTOMER_TOPOLOGY,
     TopologySiteTable,
-} from '@/common/components/florida/CustomerTopologyMap';
+} from '@/common/components/workspace/CustomerTopologyMap';
 import { cn } from '@/common/lib/utils';
 
 interface SiteMapProps {

@@ -11,7 +11,7 @@ const topologyConfig = read(
   "../src/main/webapp/common/config/workspaceTopologies.ts",
 );
 const topologyMap = read(
-  "../src/main/webapp/common/components/florida/CustomerTopologyMap.tsx",
+  "../src/main/webapp/common/components/workspace/CustomerTopologyMap.tsx",
 );
 const persistence = read(
   "../src/main/webapp/common/services/customerTopologyPersistenceService.ts",
@@ -21,10 +21,10 @@ const tickerPersistence = read(
   "../src/main/webapp/common/services/signalTickerPreferenceService.ts",
 );
 const signalRail = read(
-  "../src/main/webapp/common/components/florida/SignalRailTicker.tsx",
+  "../src/main/webapp/common/components/workspace/SignalRailTicker.tsx",
 );
 const signalTickerRail = read(
-  "../src/main/webapp/common/components/florida/SignalTickerRail.tsx",
+  "../src/main/webapp/common/components/workspace/SignalTickerRail.tsx",
 );
 const signalTickerHook = read(
   "../src/main/webapp/common/hooks/usePersistedSignalTicker.ts",
@@ -41,32 +41,32 @@ const profileRender = read(
 );
 const rawRender = read("../src/main/webapp/common/render-raw.tsx");
 const kpiPicker = read(
-  "../src/main/webapp/common/components/florida/KpiPickerPanel.tsx",
+  "../src/main/webapp/common/components/workspace/KpiPickerPanel.tsx",
 );
 const metricHook = read("../src/main/webapp/common/hooks/useMetric.ts");
 const tileConfigService = read(
   "../src/main/webapp/common/services/searchbaseTileConfigService.ts",
 );
 const metricItem = read(
-  "../src/main/webapp/common/components/florida/MetricItem.tsx",
+  "../src/main/webapp/common/components/workspace/MetricItem.tsx",
 );
 const tileActionMenu = read(
-  "../src/main/webapp/common/components/florida/TileActionMenu.tsx",
+  "../src/main/webapp/common/components/workspace/TileActionMenu.tsx",
 );
 const workspaceManager = read(
-  "../src/main/webapp/common/components/florida/WorkspaceManager.tsx",
+  "../src/main/webapp/common/components/workspace/WorkspaceManager.tsx",
 );
 const infoTooltip = read(
-  "../src/main/webapp/common/components/florida/InfoTooltip.tsx",
+  "../src/main/webapp/common/components/workspace/InfoTooltip.tsx",
 );
 const sortableMetricCard = read(
-  "../src/main/webapp/common/components/florida/SortableMetricCard.tsx",
+  "../src/main/webapp/common/components/workspace/SortableMetricCard.tsx",
 );
 const sparkline = read(
-  "../src/main/webapp/common/components/florida/Sparkline.tsx",
+  "../src/main/webapp/common/components/workspace/Sparkline.tsx",
 );
 const dashboardSection = read(
-  "../src/main/webapp/common/components/florida/DashboardSection.tsx",
+  "../src/main/webapp/common/components/workspace/DashboardSection.tsx",
 );
 const sectionPresentation = read(
   "../src/main/webapp/common/hooks/usePersistedSectionPresentation.ts",

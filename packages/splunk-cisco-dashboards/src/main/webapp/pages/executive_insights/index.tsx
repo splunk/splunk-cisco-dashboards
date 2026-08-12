@@ -79,36 +79,36 @@ import {
     Building2,
     type SuiIcon,
 } from '@/common/icons/SuiIcon';
-import { DashboardSection } from "@/common/components/florida/DashboardSection";
-import { OneCdRadioBar } from "@/common/components/florida/OneCdPrimitives";
-import { MetricItem } from "@/common/components/florida/MetricItem";
-import { WorkspaceModalShell } from "@/common/components/florida/WorkspaceModalShell";
+import { DashboardSection } from "@/common/components/workspace/DashboardSection";
+import { OneCdRadioBar } from "@/common/components/workspace/OneCdPrimitives";
+import { MetricItem } from "@/common/components/workspace/MetricItem";
+import { WorkspaceModalShell } from "@/common/components/workspace/WorkspaceModalShell";
 import SearchbaseDrilldownGuidance, {
   type SearchbaseDrilldownMetadata,
-} from "@/common/components/florida/SearchbaseDrilldownGuidance";
-import { TableTile } from "@/common/components/florida/TableTile";
-import { BarBreakdownTile } from "@/common/components/florida/BarBreakdownTile";
-import { PieTile } from "@/common/components/florida/PieTile";
-import { SingleValueRadialTile } from "@/common/components/florida/SingleValueRadialTile";
-import { FillerGaugeTile } from "@/common/components/florida/FillerGaugeTile";
-import { MarkerGaugeTile } from "@/common/components/florida/MarkerGaugeTile";
+} from "@/common/components/workspace/SearchbaseDrilldownGuidance";
+import { TableTile } from "@/common/components/workspace/TableTile";
+import { BarBreakdownTile } from "@/common/components/workspace/BarBreakdownTile";
+import { PieTile } from "@/common/components/workspace/PieTile";
+import { SingleValueRadialTile } from "@/common/components/workspace/SingleValueRadialTile";
+import { FillerGaugeTile } from "@/common/components/workspace/FillerGaugeTile";
+import { MarkerGaugeTile } from "@/common/components/workspace/MarkerGaugeTile";
 import {
   sparklineVizTypeFromSplunkViz,
   normalizeDataValuesDisplay,
   type SparklineVizType,
-} from "@/common/components/florida/Sparkline";
+} from "@/common/components/workspace/Sparkline";
 import {
   isFillerGaugeViz,
   isMarkerGaugeViz,
   isPieViz,
   isSingleValueRadialViz,
-} from "@/common/components/florida/canvasVizPredicates";
+} from "@/common/components/workspace/canvasVizPredicates";
 import {
   CustomerTopologyMap,
   clearCustomerTopologyStorage,
   TopologySiteTable,
   usePersistedTopology,
-} from "@/common/components/florida/CustomerTopologyMap";
+} from "@/common/components/workspace/CustomerTopologyMap";
 import { getWorkspaceTopology } from "@/common/config/workspaceTopologies";
 import {
   DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES,
@@ -118,14 +118,14 @@ import {
   SignalTickerEditor,
   SignalTickerRail,
   type SignalTickerMetricDefaults,
-} from "@/common/components/florida/SignalTickerRail";
-import { HelpOverlay } from "@/common/components/florida/HelpOverlay";
-import { InfoTooltip } from "@/common/components/florida/InfoTooltip";
+} from "@/common/components/workspace/SignalTickerRail";
+import { HelpOverlay } from "@/common/components/workspace/HelpOverlay";
+import { InfoTooltip } from "@/common/components/workspace/InfoTooltip";
 import {
   KpiPickerPanel,
   type KpiPickerContext,
   type FactoryTileConfigApplyPatch,
-} from "@/common/components/florida/KpiPickerPanel";
+} from "@/common/components/workspace/KpiPickerPanel";
 import {
   useMetric,
   useKpi,
@@ -188,8 +188,8 @@ import {
 } from "@/common/hooks/useBrandingOverride";
 import { resolveAppVersions } from "@/common/lib/appVersion";
 import { APP_VERSION_LABEL } from "@/common/lib/buildInfo";
-import { SortableMetricCard } from "@/common/components/florida/SortableMetricCard";
-import { WorkspaceManager } from "@/common/components/florida/WorkspaceManager";
+import { SortableMetricCard } from "@/common/components/workspace/SortableMetricCard";
+import { WorkspaceManager } from "@/common/components/workspace/WorkspaceManager";
 import {
   DndContext,
   PointerSensor,

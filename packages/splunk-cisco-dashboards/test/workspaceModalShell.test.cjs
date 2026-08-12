@@ -8,19 +8,19 @@ const read = (relativePath) =>
   fs.readFileSync(path.resolve(__dirname, relativePath), "utf8");
 
 const shell = read(
-  "../src/main/webapp/common/components/florida/WorkspaceModalShell.tsx",
+  "../src/main/webapp/common/components/workspace/WorkspaceModalShell.tsx",
 );
 const metricItem = read(
-  "../src/main/webapp/common/components/florida/MetricItem.tsx",
+  "../src/main/webapp/common/components/workspace/MetricItem.tsx",
 );
 const chartFocus = read(
-  "../src/main/webapp/common/components/florida/ChartFocusDialog.tsx",
+  "../src/main/webapp/common/components/workspace/ChartFocusDialog.tsx",
 );
 const searchbaseGuidance = read(
-  "../src/main/webapp/common/components/florida/SearchbaseDrilldownGuidance.tsx",
+  "../src/main/webapp/common/components/workspace/SearchbaseDrilldownGuidance.tsx",
 );
 const kpiPicker = read(
-  "../src/main/webapp/common/components/florida/KpiPickerPanel.tsx",
+  "../src/main/webapp/common/components/workspace/KpiPickerPanel.tsx",
 );
 const dashboardManagerDrilldown = read(
   "../src/main/webapp/pages/dashboardbuilder/DashboardStudioDrilldownModal.jsx",

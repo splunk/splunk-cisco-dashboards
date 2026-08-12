@@ -6,7 +6,7 @@ const path = require("path");
 
 const pieTilePath = path.resolve(
   __dirname,
-  "../src/main/webapp/common/components/florida/PieTile.tsx",
+  "../src/main/webapp/common/components/workspace/PieTile.tsx",
 );
 const profilePath = path.resolve(
   __dirname,
@@ -14,15 +14,15 @@ const profilePath = path.resolve(
 );
 const chartFocusPath = path.resolve(
   __dirname,
-  "../src/main/webapp/common/components/florida/ChartFocusDialog.tsx",
+  "../src/main/webapp/common/components/workspace/ChartFocusDialog.tsx",
 );
 const modalShellPath = path.resolve(
   __dirname,
-  "../src/main/webapp/common/components/florida/WorkspaceModalShell.tsx",
+  "../src/main/webapp/common/components/workspace/WorkspaceModalShell.tsx",
 );
 const barBreakdownPath = path.resolve(
   __dirname,
-  "../src/main/webapp/common/components/florida/BarBreakdownTile.tsx",
+  "../src/main/webapp/common/components/workspace/BarBreakdownTile.tsx",
 );
 
 const pieTile = fs.readFileSync(pieTilePath, "utf8");

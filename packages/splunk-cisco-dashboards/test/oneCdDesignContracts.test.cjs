@@ -8,22 +8,22 @@ const read = (relativePath) =>
   fs.readFileSync(path.resolve(__dirname, relativePath), "utf8");
 
 const oneCdPrimitives = read(
-  "../src/main/webapp/common/components/florida/OneCdPrimitives.tsx",
+  "../src/main/webapp/common/components/workspace/OneCdPrimitives.tsx",
 );
 const dashboardSection = read(
-  "../src/main/webapp/common/components/florida/DashboardSection.tsx",
+  "../src/main/webapp/common/components/workspace/DashboardSection.tsx",
 );
 const topologyMap = read(
-  "../src/main/webapp/common/components/florida/CustomerTopologyMap.tsx",
+  "../src/main/webapp/common/components/workspace/CustomerTopologyMap.tsx",
 );
 const profile = read(
   "../src/main/webapp/pages/executive_insights/index.tsx",
 );
 const signalRail = read(
-  "../src/main/webapp/common/components/florida/SignalRailTicker.tsx",
+  "../src/main/webapp/common/components/workspace/SignalRailTicker.tsx",
 );
 const signalTickerRail = read(
-  "../src/main/webapp/common/components/florida/SignalTickerRail.tsx",
+  "../src/main/webapp/common/components/workspace/SignalTickerRail.tsx",
 );
 const signalTickerConfig = read(
   "../src/main/webapp/common/config/signalTicker.ts",

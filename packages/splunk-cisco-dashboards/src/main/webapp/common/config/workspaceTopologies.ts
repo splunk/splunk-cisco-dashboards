@@ -1,6 +1,6 @@
 import type { CustomerTopology, TopologyLink, TopologySite } from '@/common/types';
 import type { WorkspaceId } from './insightsWorkspaces';
-import { CUSTOMER_TOPOLOGY } from '@/common/components/florida/CustomerTopologyMap';
+import { CUSTOMER_TOPOLOGY } from '@/common/components/workspace/CustomerTopologyMap';
 
 const site = (
     id: string,
