@@ -2,6 +2,9 @@
 
 ## 1.0.36
 
+- Secure Networking catalogue searches now keep explicit aggregate grains
+  without global post-aggregation sorts, preserving complete grouped results
+  while satisfying the repository's SPL scalability policy.
 - Insights Workspace detailed sparklines now retain enough plot height for
   honest trend variation, extrema labels, and timestamps instead of collapsing
   into a horizontal line. Add Search drawers also open with their catalogue
