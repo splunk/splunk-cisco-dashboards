@@ -42,7 +42,7 @@ export const ChartFocusDialog: React.FC<ChartFocusDialogProps> = ({
             onOpenInSearch={onOpenInSearch}
             onOpenDetailTable={onOpenDetailTable}
             detailTableTitle={detailTableTitle}
-            contentClassName="overflow-y-auto bg-[#0e1a2b] p-5"
+            contentClassName="overflow-y-auto sui-bg-section p-5"
         >
             {children}
         </WorkspaceModalShell>

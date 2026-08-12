@@ -2,8 +2,6 @@ import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import CopyrightMark from '@/common/components/CopyrightMark';
 import AppThemeProvider from '@/common/theme/AppThemeProvider';
-import type { ResolvedTheme } from '@/common/theme/themePreference';
-import '@/common/styles/splunkShellTheme.css';
 
 /**
  * Mount helper for custom dashboard surfaces. These pages may own their
@@ -13,7 +11,6 @@ import '@/common/styles/splunkShellTheme.css';
 const MAX_RETRIES = 100;
 
 interface MountPageRawOptions {
-    fixedColorScheme?: ResolvedTheme;
     showCopyrightMark?: boolean;
 }
 
@@ -39,7 +36,7 @@ export default function mountPageRaw(
         }
         reactRoot.render(
             <React.StrictMode>
-                <AppThemeProvider fixedColorScheme={options.fixedColorScheme}>
+                <AppThemeProvider>
                     <>
                         <PageComponent />
                         {options.showCopyrightMark !== false && <CopyrightMark />}

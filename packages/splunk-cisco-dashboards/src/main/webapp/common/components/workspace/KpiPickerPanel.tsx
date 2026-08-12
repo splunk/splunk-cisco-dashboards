@@ -430,7 +430,7 @@ const highlightMatch = (text: string, query: string): React.ReactNode => {
         re.test(part) ? (
             <mark
                 key={idx}
-                className="bg-sky-200 dark:bg-sky-700/60 text-inherit rounded-sm px-0.5"
+                className="sui-bg-info sui-bg-accent text-inherit rounded-sm px-0.5"
             >
                 {part}
             </mark>
@@ -611,17 +611,17 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
                     }
                 }}
                 className={cn(
-                    'flex w-full cursor-pointer flex-wrap items-center gap-1 rounded-lg border bg-white transition-shadow dark:bg-slate-950',
+                    'flex w-full cursor-pointer flex-wrap items-center gap-1 rounded-lg border  transition-shadow sui-bg-page',
                     open
-                        ? 'border-sky-400 ring-2 ring-sky-400/25'
-                        : 'border-slate-200 dark:border-slate-800',
+                        ? 'sui-border-info ring-2 sui-focus-ring'
+                        : 'sui-border-weak',
                     compact
                         ? 'min-h-[32px] px-1.5 py-1 text-xs'
                         : 'min-h-[42px] px-2 py-1.5 text-sm'
                 )}
             >
                 {isAllApps ? (
-                    <span className="min-w-0 flex-1 truncate font-semibold text-slate-700 dark:text-slate-100">
+                    <span className="min-w-0 flex-1 truncate font-semibold  sui-color-active">
                         All apps ({appOptions.length})
                     </span>
                 ) : (
@@ -631,7 +631,7 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
                             <span
                                 key={app}
                                 className={cn(
-                                    'inline-flex max-w-full items-center gap-1 rounded-full bg-sky-500 font-bold text-white',
+                                    'inline-flex max-w-full items-center gap-1 rounded-full sui-bg-accent font-bold sui-color-active',
                                     compact
                                         ? 'py-0.5 pl-1.5 pr-0.5 text-xs'
                                         : 'py-0.5 pl-2 pr-1 text-xs uppercase tracking-wide'
@@ -651,7 +651,7 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
                                     }}
                                     title={`Remove ${searchbaseAppLabel(app, appLabelsById)} app filter`}
                                     aria-label={`Remove ${searchbaseAppLabel(app, appLabelsById)} app filter`}
-                                    className="rounded-full p-0.5 hover:bg-sky-700/40"
+                                    className="rounded-full p-0.5 sui-hover-bg-accent"
                                 >
                                     <X className={compact ? 'h-2 w-2' : 'h-2.5 w-2.5'} />
                                 </button>
@@ -660,13 +660,13 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
                     })
                 )}
                 {!isAllApps && selectedList.length === 0 && (
-                    <span className="min-w-0 flex-1 truncate font-semibold text-slate-500 dark:text-slate-400">
+                    <span className="min-w-0 flex-1 truncate font-semibold  sui-color-default">
                         No matching apps selected
                     </span>
                 )}
                 <ChevronDown
                     className={cn(
-                        'ml-auto shrink-0 text-slate-400',
+                        'ml-auto shrink-0 sui-color-default',
                         compact ? 'h-3 w-3' : 'h-4 w-4'
                     )}
                 />
@@ -679,7 +679,7 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
                     aria-label={ariaLabel}
                     aria-multiselectable="true"
                     className={cn(
-                        'absolute left-0 right-0 top-full z-30 mt-1 max-h-64 overflow-auto rounded-lg border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900',
+                        'absolute left-0 right-0 top-full z-30 mt-1 max-h-64 overflow-auto rounded-lg border   shadow-xl sui-border-weak sui-bg-section',
                         compact && 'rounded-md'
                     )}
                 >
@@ -692,24 +692,24 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
                             'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left transition-colors focus:outline-none',
                             compact ? 'text-xs' : 'text-xs',
                             isAllApps
-                                ? 'bg-sky-50 dark:bg-sky-900/30'
-                                : 'hover:bg-sky-50 dark:hover:bg-sky-900/30'
+                                ? 'sui-bg-info'
+                                : 'sui-hover-bg-info'
                         )}
                     >
-                        <span className="flex min-w-0 items-center gap-2 truncate font-semibold text-slate-700 dark:text-slate-200">
+                        <span className="flex min-w-0 items-center gap-2 truncate font-semibold  sui-color-active">
                             <span
                                 className={cn(
                                     'flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border',
                                     isAllApps
-                                        ? 'border-sky-500 bg-sky-500 text-white'
-                                        : 'border-slate-300 dark:border-slate-700'
+                                        ? 'sui-border-info sui-bg-accent sui-color-active'
+                                        : 'sui-border-default'
                                 )}
                             >
                                 {isAllApps && <Check className="h-3 w-3" />}
                             </span>
                             <span className="truncate">All apps</span>
                         </span>
-                        <span className="shrink-0 text-xs font-bold text-slate-400 dark:text-slate-500">
+                        <span className="shrink-0 text-xs font-bold  sui-color-muted">
                             {appOptions.length}
                         </span>
                     </button>
@@ -727,17 +727,17 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
                                     'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left transition-colors focus:outline-none',
                                     compact ? 'text-xs' : 'text-xs',
                                     selected
-                                        ? 'bg-sky-50 dark:bg-sky-900/30'
-                                        : 'hover:bg-sky-50 dark:hover:bg-sky-900/30'
+                                        ? 'sui-bg-info'
+                                        : 'sui-hover-bg-info'
                                 )}
                             >
-                                <span className="flex min-w-0 items-center gap-2 truncate text-slate-700 dark:text-slate-200">
+                                <span className="flex min-w-0 items-center gap-2 truncate  sui-color-active">
                                     <span
                                         className={cn(
                                             'flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border',
                                             selected
-                                                ? 'border-sky-500 bg-sky-500 text-white'
-                                                : 'border-slate-300 dark:border-slate-700'
+                                                ? 'sui-border-info sui-bg-accent sui-color-active'
+                                                : 'sui-border-default'
                                         )}
                                     >
                                         {selected && <Check className="h-3 w-3" />}
@@ -746,7 +746,7 @@ const AppMultiSelect: React.FC<AppMultiSelectProps> = ({
                                         {searchbaseAppLabel(app, appLabelsById)}
                                     </span>
                                 </span>
-                                <span className="shrink-0 text-xs font-bold text-slate-400 dark:text-slate-500">
+                                <span className="shrink-0 text-xs font-bold  sui-color-muted">
                                     {count}
                                 </span>
                             </button>
@@ -2126,7 +2126,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 '  • Section heights and the signal rail selection\n' +
                 '  • Your saved map position and visibility\n' +
                 '  • The map ↔ tiles splitter position\n\n' +
-                'Published workspace layouts, tile configuration, map topology, header branding, and your light/dark theme preference will be kept.\n\n' +
+                'Published workspace layouts, tile configuration, map topology, and header branding will be kept.\n\n' +
                 'This action cannot be undone.'
         );
         if (!ok) return;
@@ -2166,7 +2166,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         <>
             {/* Backdrop — click outside to dismiss. */}
             <div
-                className="fixed inset-0 z-[1500] bg-slate-950/30 backdrop-blur-sm"
+                className="fixed inset-0 z-[1500] sui-bg-page backdrop-blur-sm"
                 onClick={onClose}
                 aria-hidden="true"
             />
@@ -2176,17 +2176,17 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 role="dialog"
                 aria-modal="true"
                 aria-label={`Configure ${context.defaultLabel}`}
-                className="fixed top-0 right-0 z-[1600] h-full w-full sm:w-[520px] xl:w-[560px] max-w-[calc(100vw-12px)] bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col"
+                className="fixed top-0 right-0 z-[1600] h-full w-full sm:w-[520px] xl:w-[560px] max-w-[calc(100vw-12px)]  sui-bg-section border-l  sui-border-weak shadow-2xl flex flex-col"
             >
                 {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
+                <div className="flex items-center justify-between px-4 py-3 border-b  sui-border-weak flex-shrink-0">
                     <div className="flex items-center gap-2">
-                        <Settings2 className="w-4 h-4 text-sky-600 dark:text-sky-300" />
+                        <Settings2 className="w-4 h-4  sui-color-info" />
                         <div>
-                            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 leading-none">
+                            <p className="text-xs font-bold uppercase tracking-widest  sui-color-muted leading-none">
                                 Configure tile
                             </p>
-                            <p className="text-sm font-bold text-slate-800 dark:text-slate-100 leading-tight">
+                            <p className="text-sm font-bold  sui-color-active leading-tight">
                                 {context.defaultLabel}
                             </p>
                         </div>
@@ -2209,8 +2209,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             className={cn(
                                 'p-1.5 rounded transition-colors',
                                 selectedEntry
-                                    ? 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
-                                    : 'text-slate-300 dark:text-slate-700 cursor-not-allowed'
+                                    ? 'sui-color-default  sui-hover-color-active  sui-hover-bg-overlay'
+                                    : 'sui-color-default cursor-not-allowed'
                             )}
                         >
                             {detailsCollapsed ? (
@@ -2224,7 +2224,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             onClick={onClose}
                             title="Close (Esc)"
                             aria-label="Close picker"
-                            className="p-1.5 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            className="p-1.5 rounded sui-color-default  sui-hover-color-active  sui-hover-bg-overlay transition-colors"
                         >
                             <X className="w-4 h-4" />
                         </button>
@@ -2234,7 +2234,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 {/* Filters — search box + facet dropdowns + tag chips */}
                 <div className="px-4 pt-3 pb-2 flex-shrink-0 space-y-2">
                     <label className="relative block">
-                        <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <Search className="w-4 h-4 absolute left-2.5 top-1/2 -translate-y-1/2 sui-color-default" />
                         <input
                             ref={searchInputRef}
                             type="text"
@@ -2242,7 +2242,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             onChange={(e) => setQuery(e.target.value)}
                             placeholder="Filter by name, description, or tag…"
                             maxLength={120}
-                            className="w-full pl-8 pr-2.5 py-1.5 text-[12px] rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                            className="w-full pl-8 pr-2.5 py-1.5  rounded-md border  sui-border-default  sui-bg-popup  sui-color-active focus:outline-none focus:ring-2 sui-focus-ring"
                         />
                     </label>
 
@@ -2261,7 +2261,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             aria-expanded={filtersOpen}
                             aria-controls="kpi-picker-filters"
                             title={filtersOpen ? 'Hide filters' : 'Show filters (App, Category, Sub-cat, Tags)'}
-                            className="flex items-center gap-1.5 px-1.5 py-1 -ml-1.5 rounded text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+                            className="flex items-center gap-1.5 px-1.5 py-1 -ml-1.5 rounded text-xs font-bold uppercase tracking-widest  sui-color-default  sui-hover-color-active  sui-hover-bg-overlay transition-colors"
                         >
                             {filtersOpen ? (
                                 <ChevronDown className="w-3 h-3" />
@@ -2271,7 +2271,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             <span>Filters</span>
                             {activeFilterCount > 0 && (
                                 <span
-                                    className="ml-1 px-1.5 py-px rounded-full bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 text-xs tracking-normal normal-case font-semibold"
+                                    className="ml-1 px-1.5 py-px rounded-full  sui-bg-info  sui-color-info text-xs tracking-normal normal-case font-semibold"
                                     title={`${activeFilterCount} active filter${activeFilterCount === 1 ? '' : 's'}`}
                                 >
                                     {activeFilterCount} active
@@ -2282,7 +2282,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             {loadState === 'idle' && (
                                 <span
                                     title="Searchbase stanzas matching the current app, visibility, category, sub-category, tag, and text filters"
-                                    className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-black uppercase tracking-wider text-sky-700 shadow-sm dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-200"
+                                    className="inline-flex items-center rounded-full border   px-2.5 py-1 text-xs font-black uppercase tracking-wider  shadow-sm sui-border-info sui-bg-info sui-color-info"
                                 >
                                     {availableSearchLabel}
                                 </span>
@@ -2292,7 +2292,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     type="button"
                                     onClick={handleClearFacets}
                                     title="Reset every filter to its default"
-                                    className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200"
+                                    className="text-xs font-bold uppercase tracking-widest   sui-color-muted sui-hover-color-active"
                                 >
                                     Clear filters
                                 </button>
@@ -2303,14 +2303,14 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                     {filtersOpen && (
                         <div
                             id="kpi-picker-filters"
-                            className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-900/50"
+                            className="space-y-3 rounded-lg border   p-3 sui-border-weak sui-bg-section"
                         >
                             {/* App facet — defaults to this app's namespace
                                 so each picker open starts scoped to vetted
                                 dashboard-pack searches. */}
                             <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
                                 <span
-                                    className="text-xs font-black uppercase tracking-[0.18em] text-slate-400"
+                                    className="text-xs font-black uppercase tracking-[0.18em] sui-color-default"
                                     title="Splunk app the search belongs to"
                                 >
                                     App
@@ -2327,40 +2327,40 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             </div>
 
                             <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-start">
-                                <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                                <span className="text-xs font-black uppercase tracking-[0.18em] sui-color-default">
                                     Visibility
                                 </span>
                                 <div className="grid grid-cols-3 gap-2">
-                                    <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                    <label className="flex min-h-[58px] items-center gap-2 rounded-lg border   px-2.5 py-2 text-xs font-bold leading-snug  sui-border-weak sui-bg-page sui-color-active">
                                         <input
                                             type="checkbox"
                                             checked={includeHiddenSearches}
                                             onChange={(e) =>
                                                 setIncludeHiddenSearches(e.target.checked)
                                             }
-                                            className="h-4 w-4 shrink-0 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900"
+                                            className="h-4 w-4 shrink-0 rounded  sui-color-info sui-focus-ring sui-border-default sui-bg-section"
                                         />
                                         <span>Show hidden searches</span>
                                     </label>
-                                    <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                    <label className="flex min-h-[58px] items-center gap-2 rounded-lg border   px-2.5 py-2 text-xs font-bold leading-snug  sui-border-weak sui-bg-page sui-color-active">
                                         <input
                                             type="checkbox"
                                             checked={includeDrilldownSearches}
                                             onChange={(e) =>
                                                 setIncludeDrilldownSearches(e.target.checked)
                                             }
-                                            className="h-4 w-4 shrink-0 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900"
+                                            className="h-4 w-4 shrink-0 rounded  sui-color-info sui-focus-ring sui-border-default sui-bg-section"
                                         />
                                         <span>Show drill-down searches</span>
                                     </label>
-                                    <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                    <label className="flex min-h-[58px] items-center gap-2 rounded-lg border   px-2.5 py-2 text-xs font-bold leading-snug  sui-border-weak sui-bg-page sui-color-active">
                                         <input
                                             type="checkbox"
                                             checked={includeTableSearches}
                                             onChange={(e) =>
                                                 setIncludeTableSearches(e.target.checked)
                                             }
-                                            className="h-4 w-4 shrink-0 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900"
+                                            className="h-4 w-4 shrink-0 rounded  sui-color-info sui-focus-ring sui-border-default sui-bg-section"
                                         />
                                         <span>Show table searches</span>
                                     </label>
@@ -2369,13 +2369,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
                             {categories.length > 1 && (
                                 <label className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
-                                    <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                                    <span className="text-xs font-black uppercase tracking-[0.18em] sui-color-default">
                                         Category
                                     </span>
                                     <select
                                         value={selectedCategory}
                                         onChange={(e) => setSelectedCategory(e.target.value)}
-                                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-950"
+                                        className="w-full rounded-lg border   px-3 py-2 text-sm font-semibold  outline-none sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-weak sui-bg-page sui-color-active sui-focus-ring"
                                     >
                                         <option value={ALL_CATEGORIES}>All categories</option>
                                         {categories.map((c) => (
@@ -2390,7 +2390,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             {selectedCategory !== ALL_CATEGORIES &&
                                 subCategories.length > 0 && (
                                     <label className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
-                                        <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                                        <span className="text-xs font-black uppercase tracking-[0.18em] sui-color-default">
                                             Sub-cat
                                         </span>
                                         <select
@@ -2398,7 +2398,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             onChange={(e) =>
                                                 setSelectedSubCategory(e.target.value)
                                             }
-                                            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-950"
+                                            className="w-full rounded-lg border   px-3 py-2 text-sm font-semibold  outline-none sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-weak sui-bg-page sui-color-active sui-focus-ring"
                                         >
                                             <option value={ALL_SUB_CATEGORIES}>
                                                 All sub-categories ({subCategories.length})
@@ -2414,7 +2414,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
                             {(allTagsWithCounts.length > 0 || activeTags.size > 0) && (
                                 <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-start">
-                                    <span className="pt-2 text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                                    <span className="pt-2 text-xs font-black uppercase tracking-[0.18em] sui-color-default">
                                         Tags
                                     </span>
                                     <div className="relative" ref={tagSelectRef}>
@@ -2424,19 +2424,19 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 tagInputRef.current?.focus();
                                             }}
                                             className={cn(
-                                                'flex min-h-[42px] cursor-text flex-wrap items-center gap-1 rounded-lg border bg-white px-2 py-1.5 transition-shadow dark:bg-slate-950',
+                                                'flex min-h-[42px] cursor-text flex-wrap items-center gap-1 rounded-lg border  px-2 py-1.5 transition-shadow sui-bg-page',
                                                 tagDropdownOpen
-                                                    ? 'border-sky-400 ring-2 ring-sky-400/25'
-                                                    : 'border-slate-200 dark:border-slate-800'
+                                                    ? 'sui-border-info ring-2 sui-focus-ring'
+                                                    : 'sui-border-weak'
                                             )}
                                         >
-                                            <Tag className="ml-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                                            <Tag className="ml-0.5 h-3.5 w-3.5 shrink-0 sui-color-default" />
                                             {Array.from(activeTags).map((tag) => {
                                                 const count = tagCountByName.get(tag) ?? 0;
                                                 return (
                                                     <span
                                                         key={tag}
-                                                        className="inline-flex items-center gap-1 rounded-full bg-sky-500 py-0.5 pl-2 pr-1 text-xs font-bold uppercase tracking-wide text-white"
+                                                        className="inline-flex items-center gap-1 rounded-full sui-bg-accent py-0.5 pl-2 pr-1 text-xs font-bold uppercase tracking-wide sui-color-active"
                                                     >
                                                         {tag}
                                                         {count > 0 && (
@@ -2452,7 +2452,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                             }}
                                                             title={`Remove ${tag} filter`}
                                                             aria-label={`Remove ${tag} filter`}
-                                                            className="rounded-full p-0.5 hover:bg-sky-700/40"
+                                                            className="rounded-full p-0.5 sui-hover-bg-accent"
                                                         >
                                                             <X className="h-2.5 w-2.5" />
                                                         </button>
@@ -2476,7 +2476,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 }
                                                 maxLength={64}
                                                 aria-label="Filter results by tag"
-                                                className="min-w-[120px] flex-1 border-0 bg-transparent py-1 text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100"
+                                                className="min-w-[120px] flex-1 border-0 sui-bg-transparent py-1 text-sm  outline-none  sui-color-active"
                                             />
                                         </div>
 
@@ -2484,10 +2484,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             <div
                                                 role="listbox"
                                                 aria-label="Available tags"
-                                                className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-auto rounded-lg border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900"
+                                                className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-auto rounded-lg border   shadow-xl sui-border-weak sui-bg-section"
                                             >
                                                 {tagDropdownOptions.length === 0 ? (
-                                                    <p className="px-3 py-2 text-xs italic text-slate-400 dark:text-slate-500">
+                                                    <p className="px-3 py-2 text-xs italic  sui-color-muted">
                                                         {tagFilter.trim()
                                                             ? `No more tags match "${tagFilter.trim()}".`
                                                             : activeTags.size > 0
@@ -2511,19 +2511,19 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                     className={cn(
                                                                         'flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs transition-colors focus:outline-none',
                                                                         isFirstTyped
-                                                                            ? 'bg-sky-50 dark:bg-sky-900/30'
-                                                                            : 'hover:bg-sky-50 dark:hover:bg-sky-900/30'
+                                                                            ? 'sui-bg-info'
+                                                                            : 'sui-hover-bg-info'
                                                                     )}
                                                                 >
-                                                                    <span className="flex min-w-0 items-center gap-1.5 truncate text-slate-700 dark:text-slate-200">
-                                                                        <Tag className="h-3 w-3 shrink-0 text-slate-400" />
+                                                                    <span className="flex min-w-0 items-center gap-1.5 truncate  sui-color-active">
+                                                                        <Tag className="h-3 w-3 shrink-0 sui-color-default" />
                                                                         <span className="truncate">
                                                                             {tagFilter.trim()
                                                                                 ? highlightMatch(tag, tagFilter)
                                                                                 : tag}
                                                                         </span>
                                                                     </span>
-                                                                    <span className="shrink-0 text-xs font-bold text-slate-400 dark:text-slate-500">
+                                                                    <span className="shrink-0 text-xs font-bold  sui-color-muted">
                                                                         {count}
                                                                     </span>
                                                                 </button>
@@ -2533,7 +2533,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                             allTagsWithCounts.length -
                                                                 activeTags.size >
                                                                 tagDropdownOptions.length && (
-                                                                <p className="border-t border-slate-100 px-3 py-1.5 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500">
+                                                                <p className="border-t  px-3 py-1.5 text-xs  sui-border-weak sui-color-muted">
                                                                     Top{' '}
                                                                     {tagDropdownOptions.length}{' '}
                                                                     of{' '}
@@ -2571,27 +2571,27 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                     // row of two siblings instead of nested buttons
                     // (nested <button> isn't valid HTML and Safari
                     // refuses the click).
-                    <div className="mx-2 mb-1 rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1 dark:border-emerald-800 dark:bg-emerald-950/30 flex-shrink-0">
+                    <div className="mx-2 mb-1 rounded-md border   px-2 py-1 sui-border-positive sui-bg-positive flex-shrink-0">
                         <div className="flex items-center gap-2">
                             <button
                                 type="button"
                                 onClick={jumpToCurrent}
                                 title={`Scroll to "${currentBoundEntry.searchName}" and select it`}
-                                className="flex-1 min-w-0 flex items-center gap-2 text-left hover:opacity-80 focus:outline-none focus:ring-1 focus:ring-emerald-400 rounded"
+                                className="flex-1 min-w-0 flex items-center gap-2 text-left hover:opacity-80 focus:outline-none focus:ring-1 sui-focus-ring rounded"
                             >
-                                <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-emerald-500 text-white text-xs font-black flex-shrink-0">
+                                <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full sui-bg-positive sui-color-active text-xs font-black flex-shrink-0">
                                     ✓
                                 </span>
-                                <span className="text-xs font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400 flex-shrink-0">
+                                <span className="text-xs font-black uppercase tracking-widest  sui-color-positive flex-shrink-0">
                                     Bound:
                                 </span>
                                 <span
-                                    className="flex-1 text-xs font-bold text-slate-800 dark:text-slate-100 truncate min-w-0"
+                                    className="flex-1 text-xs font-bold  sui-color-active truncate min-w-0"
                                     title={currentBoundEntry.searchName}
                                 >
                                     {currentBoundEntry.searchName}
                                 </span>
-                                <span className="text-xs font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-300 flex-shrink-0">
+                                <span className="text-xs font-bold uppercase tracking-widest  sui-color-positive flex-shrink-0">
                                     Jump to
                                 </span>
                             </button>
@@ -2600,13 +2600,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 onClick={() => setBoundDismissed(true)}
                                 title="Dismiss this strip (gives the result list more room — reopens next time you open the picker)"
                                 aria-label="Dismiss currently-bound strip"
-                                className="p-0.5 rounded text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 flex-shrink-0 transition-colors focus:outline-none focus:ring-1 focus:ring-emerald-400"
+                                className="p-0.5 rounded  sui-color-positive  sui-hover-bg-positive flex-shrink-0 transition-colors focus:outline-none focus:ring-1 sui-focus-ring"
                             >
                                 <X className="w-3 h-3" />
                             </button>
                         </div>
                         <div
-                            className="mt-1 flex items-center gap-2 border-t border-emerald-200 pt-1 pl-5 dark:border-emerald-900/70"
+                            className="mt-1 flex items-center gap-2 border-t  pt-1 pl-5 sui-border-positive"
                             data-current-search-actions="true"
                         >
                             {currentBoundSearchbaseUrl && (
@@ -2615,7 +2615,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     title={`Open ${currentBoundEntry.id} in Searchbase`}
-                                    className="inline-flex items-center gap-1 rounded px-1 py-0.5 text-xs font-bold uppercase tracking-widest text-emerald-700 hover:bg-emerald-100 focus:outline-none focus:ring-1 focus:ring-emerald-400 dark:text-emerald-300 dark:hover:bg-emerald-900/40"
+                                    className="inline-flex items-center gap-1 rounded px-1 py-0.5 text-xs font-bold uppercase tracking-widest   focus:outline-none focus:ring-1 sui-focus-ring sui-color-positive sui-hover-bg-positive"
                                 >
                                     View in Searchbase
                                     <ExternalLink className="w-2.5 h-2.5" />
@@ -2631,7 +2631,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         )
                                     }
                                     title="Run the currently bound SPL in Search (new tab)"
-                                    className="inline-flex items-center gap-1 rounded px-1 py-0.5 text-xs font-bold uppercase tracking-widest text-emerald-700 hover:bg-emerald-100 focus:outline-none focus:ring-1 focus:ring-emerald-400 dark:text-emerald-300 dark:hover:bg-emerald-900/40"
+                                    className="inline-flex items-center gap-1 rounded px-1 py-0.5 text-xs font-bold uppercase tracking-widest   focus:outline-none focus:ring-1 sui-focus-ring sui-color-positive sui-hover-bg-positive"
                                 >
                                     <Play className="w-2.5 h-2.5" />
                                     Test in Search
@@ -2645,7 +2645,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 {/* List of searchbase entries */}
                 <div ref={listScrollRef} className="flex-1 min-h-0 overflow-auto px-2 pb-2">
                     {loadState === 'loading' && (
-                        <div className="flex items-center justify-center gap-2 py-8 text-slate-400 dark:text-slate-500">
+                        <div className="flex items-center justify-center gap-2 py-8  sui-color-muted">
                             <Loader2 className="w-4 h-4 animate-spin" />
                             <span className="text-xs font-bold uppercase tracking-widest">
                                 Loading searchbase.conf
@@ -2654,17 +2654,17 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                     )}
 
                     {loadState === 'error' && (
-                        <div className="px-3 py-4 mx-2 rounded-md border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-xs">
+                        <div className="px-3 py-4 mx-2 rounded-md border  sui-border-negative  sui-bg-negative  sui-color-negative text-xs">
                             <p className="font-bold mb-1">Couldn't load searchbase.conf.</p>
                             <p className="break-words font-mono text-xs">{errorMsg}</p>
                         </div>
                     )}
 
                     {loadState === 'idle' && (
-                        <div className="mx-1 mb-1 flex items-center justify-between gap-2 px-2 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                        <div className="mx-1 mb-1 flex items-center justify-between gap-2 px-2 text-xs font-bold uppercase tracking-widest  sui-color-muted">
                             <span
                                 title={`${browseVisibleEntries.length.toLocaleString()} searches are in the current app and visibility scope before category, tag, and text filters`}
-                                className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-black uppercase tracking-wider text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-200"
+                                className="inline-flex items-center rounded-full border   px-2 py-0.5 text-xs font-black uppercase tracking-wider  sui-border-info sui-bg-info sui-color-info"
                             >
                                 {availableSearchLabel}
                             </span>
@@ -2677,7 +2677,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                     )}
 
                     {loadState === 'idle' && filtered.length === 0 && (
-                        <div className="px-3 py-8 text-center text-slate-400 dark:text-slate-500 text-xs">
+                        <div className="px-3 py-8 text-center  sui-color-muted text-xs">
                             No searches match the current filters.
                         </div>
                     )}
@@ -2709,12 +2709,12 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         //   isSelected (clicked, pending Apply)  → blue
                                         //   isCurrent  (the live binding)         → emerald left rail
                                         //   neither                              → transparent
-                                        'w-full text-left mx-1 my-0.5 px-2.5 py-1.5 rounded-md border transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400',
+                                        'w-full text-left mx-1 my-0.5 px-2.5 py-1.5 rounded-md border transition-colors focus:outline-none focus:ring-2 sui-focus-ring',
                                         isSelected
-                                            ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-400 dark:border-sky-700'
+                                            ? 'sui-bg-info  sui-border-info'
                                             : isCurrent
-                                              ? 'bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800'
-                                              : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                                              ? 'sui-bg-positive  sui-border-positive'
+                                              : 'sui-border-transparent  sui-hover-bg-overlay'
                                     )}
                                 >
                                     <div className="flex items-start gap-2">
@@ -2722,10 +2722,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             className={cn(
                                                 'mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0',
                                                 isSelected
-                                                    ? 'bg-sky-500'
+                                                    ? 'sui-bg-accent'
                                                     : isCurrent
-                                                      ? 'bg-emerald-500'
-                                                      : 'bg-slate-300 dark:bg-slate-600'
+                                                      ? 'sui-bg-positive'
+                                                      : 'sui-bg-floating'
                                             )}
                                         />
                                         {/* Viz hint: small Splunk-Studio glyph showing
@@ -2742,16 +2742,16 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             className={cn(
                                                 'mt-0.5',
                                                 isSelected
-                                                    ? 'text-sky-600 dark:text-sky-400'
+                                                    ? 'sui-color-info'
                                                     : isCurrent
-                                                      ? 'text-emerald-600 dark:text-emerald-400'
-                                                      : 'text-slate-400 dark:text-slate-500'
+                                                      ? 'sui-color-positive'
+                                                      : 'sui-color-default sui-color-muted'
                                             )}
                                         />
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 <span
-                                                    className="text-xs font-bold text-slate-800 dark:text-slate-100 break-words line-clamp-2 select-text cursor-text"
+                                                    className="text-xs font-bold  sui-color-active break-words line-clamp-2 select-text cursor-text"
                                                     title={entry.searchName}
                                                 >
                                                     {highlightMatch(entry.searchName, query)}
@@ -2773,23 +2773,23 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                 : 'Show description'
                                                         }
                                                         className={cn(
-                                                            'inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                                            'inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded border transition-colors focus:outline-none focus:ring-1 sui-focus-ring',
                                                             descExpanded
-                                                                ? 'border-sky-300 bg-sky-50 text-sky-700 dark:border-sky-700 dark:bg-sky-950/40 dark:text-sky-200'
-                                                                : 'border-transparent text-slate-400 hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700 dark:text-slate-500 dark:hover:border-sky-800 dark:hover:bg-sky-950/40 dark:hover:text-sky-200'
+                                                                ? 'sui-border-info sui-bg-info sui-color-info'
+                                                                : 'sui-border-transparent     sui-color-muted sui-hover-border-info sui-hover-bg-info sui-hover-color-info'
                                                         )}
                                                     >
                                                         <Info className="w-3 h-3" />
                                                     </button>
                                                 )}
                                                 {isCurrent && (
-                                                    <span className="inline-flex items-center gap-0.5 text-xs font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-400 flex-shrink-0">
-                                                        <span className="inline-block w-1 h-1 rounded-full bg-emerald-500" />
+                                                    <span className="inline-flex items-center gap-0.5 text-xs font-black uppercase tracking-widest  sui-color-positive flex-shrink-0">
+                                                        <span className="inline-block w-1 h-1 rounded-full sui-bg-positive" />
                                                         Current
                                                     </span>
                                                 )}
                                                 {isInUse && !isCurrent && (
-                                                    <span className="text-xs font-black uppercase tracking-widest text-amber-600 dark:text-amber-400 flex-shrink-0">
+                                                    <span className="text-xs font-black uppercase tracking-widest  sui-color-warning flex-shrink-0">
                                                         In use
                                                     </span>
                                                 )}
@@ -2797,7 +2797,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             {(entry.category || entry.tags.length > 0) && (
                                                 <div className="mt-1 flex flex-wrap items-center gap-1">
                                                     {entry.category && (
-                                                        <span className="inline-flex items-center px-1.5 py-px rounded-sm text-xs font-black uppercase tracking-widest bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300">
+                                                        <span className="inline-flex items-center px-1.5 py-px rounded-sm text-xs font-black uppercase tracking-widest  sui-bg-info  sui-color-info">
                                                             {entry.category}
                                                             {entry.subCategory ? (
                                                                 <span className="opacity-70 ml-1">
@@ -2809,20 +2809,20 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                     {entry.tags.slice(0, 4).map((t) => (
                                                         <span
                                                             key={t}
-                                                            className="inline-flex items-center px-1.5 py-px rounded-sm text-xs font-bold tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                                                            className="inline-flex items-center px-1.5 py-px rounded-sm text-xs font-bold tracking-wide  sui-bg-popup  sui-color-default"
                                                         >
                                                             {t}
                                                         </span>
                                                     ))}
                                                     {entry.tags.length > 4 && (
-                                                        <span className="text-xs font-bold text-slate-400 dark:text-slate-500">
+                                                        <span className="text-xs font-bold  sui-color-muted">
                                                             +{entry.tags.length - 4}
                                                         </span>
                                                     )}
                                                     {(entry.drilldownSearchNames?.length ?? 0) > 0 && (
                                                         <span
                                                             title={`Attached drilldowns: ${entry.drilldownSearchNames?.join(', ')}`}
-                                                            className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-sm text-xs font-black uppercase tracking-widest bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300"
+                                                            className="inline-flex items-center gap-0.5 px-1.5 py-px rounded-sm text-xs font-black uppercase tracking-widest  sui-bg-positive  sui-color-positive"
                                                         >
                                                             <Table2 className="w-2.5 h-2.5" />
                                                             {entry.drilldownSearchNames?.length ?? 0}{' '}
@@ -2834,7 +2834,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 </div>
                                             )}
                                             {plainDesc && descExpanded && (
-                                                <p className="mt-2 rounded-md border border-sky-100 bg-sky-50/70 px-2 py-1.5 text-xs leading-relaxed text-slate-600 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-slate-300">
+                                                <p className="mt-2 rounded-md border   px-2 py-1.5 text-xs leading-relaxed  sui-border-info sui-bg-info sui-color-default">
                                                     {highlightMatch(plainDesc, query)}
                                                 </p>
                                             )}
@@ -2856,7 +2856,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                   * primary actions stay anchored. */}
                 <div
                     className={cn(
-                        'border-t border-slate-200 dark:border-slate-800 flex-shrink-0',
+                        'border-t  sui-border-weak flex-shrink-0',
                         detailsCollapsed
                             ? 'px-3 py-2 max-h-[118px] overflow-hidden'
                             : 'px-4 py-3 space-y-2.5 max-h-[48%] overflow-auto'
@@ -2869,12 +2869,12 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     splunkViz={selectedEntry.defaultViz}
                                     size={14}
                                     showTooltip={false}
-                                    className="mt-0.5 text-sky-600 dark:text-sky-400 flex-shrink-0"
+                                    className="mt-0.5  sui-color-info flex-shrink-0"
                                 />
                                 <div className="min-w-0 flex-1">
                                     <div className="mb-0.5 flex min-w-0 items-center gap-1.5">
                                         {selectedEntry.category && (
-                                            <span className="inline-flex max-w-[45%] items-center truncate rounded-sm bg-sky-100 px-1.5 py-px text-xs font-black uppercase tracking-widest text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
+                                            <span className="inline-flex max-w-[45%] items-center truncate rounded-sm  px-1.5 py-px text-xs font-black uppercase tracking-widest  sui-bg-info sui-color-info">
                                                 {selectedEntry.category}
                                                 {selectedEntry.subCategory ? (
                                                     <span className="ml-1 truncate opacity-70">
@@ -2883,12 +2883,12 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 ) : null}
                                             </span>
                                         )}
-                                        <span className="ml-auto inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                                        <span className="ml-auto inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest  sui-color-default">
                                             {resolveVizMapping(selectedEntry.defaultViz).label}
                                         </span>
                                     </div>
                                     <p
-                                        className="truncate text-[12px] font-bold leading-snug text-slate-800 dark:text-slate-100"
+                                        className="truncate  font-bold leading-snug  sui-color-active"
                                         title={selectedEntry.searchName}
                                     >
                                         {selectedEntry.searchName}
@@ -2900,7 +2900,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 title={`Open ${selectedEntry.id} in Searchbase`}
-                                                className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-sky-600 hover:text-sky-800 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5 dark:text-sky-300 dark:hover:text-sky-100"
+                                                className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest   focus:outline-none focus:ring-1 sui-focus-ring rounded px-1 py-0.5 sui-color-info sui-hover-color-info"
                                             >
                                                 Searchbase
                                                 <ExternalLink className="w-2.5 h-2.5" />
@@ -2916,7 +2916,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                     )
                                                 }
                                                 title="Run this exact SPL in Search (new tab)"
-                                                className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-sky-600 hover:text-sky-800 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5 dark:text-sky-300 dark:hover:text-sky-100"
+                                                className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest   focus:outline-none focus:ring-1 sui-focus-ring rounded px-1 py-0.5 sui-color-info sui-hover-color-info"
                                             >
                                                 <Play className="w-2.5 h-2.5" />
                                                 Test
@@ -2928,7 +2928,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     type="button"
                                     onClick={() => setDetailsCollapsed(false)}
                                     title="Open tile options"
-                                    className="inline-flex flex-shrink-0 self-start -mt-0.5 items-center gap-1 rounded px-1.5 py-1 text-xs font-bold uppercase tracking-widest text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                                    className="inline-flex flex-shrink-0 self-start -mt-0.5 items-center gap-1 rounded px-1.5 py-1 text-xs font-bold uppercase tracking-widest  transition-colors   focus:outline-none focus:ring-1 sui-focus-ring sui-color-default sui-hover-bg-overlay sui-hover-color-active"
                                 >
                                     <Settings2 className="w-3 h-3" />
                                     Options
@@ -2956,7 +2956,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     so nothing is silently clipped. */}
                                 <div className="flex flex-wrap items-center gap-1.5 mb-1">
                                     {selectedEntry.category && (
-                                        <span className="inline-flex items-center px-1.5 py-px rounded-sm text-xs font-black uppercase tracking-widest bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300">
+                                        <span className="inline-flex items-center px-1.5 py-px rounded-sm text-xs font-black uppercase tracking-widest  sui-bg-info  sui-color-info">
                                             {selectedEntry.category}
                                             {selectedEntry.subCategory ? (
                                                 <span className="opacity-70 ml-1">
@@ -2968,7 +2968,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     {selectedEntry.tags.map((t) => (
                                         <span
                                             key={t}
-                                            className="inline-flex items-center px-1.5 py-px rounded-sm text-xs font-bold tracking-wide bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                                            className="inline-flex items-center px-1.5 py-px rounded-sm text-xs font-bold tracking-wide  sui-bg-popup  sui-color-default"
                                         >
                                             {t}
                                         </span>
@@ -2978,12 +2978,12 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         category/tag chips that
                                         accumulate on the same wrap
                                         line. */}
-                                    <span className="ml-auto inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                                    <span className="ml-auto inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest  sui-color-default">
                                         <VizIcon
                                             splunkViz={selectedEntry.defaultViz}
                                             size={12}
                                             showTooltip={false}
-                                            className="text-sky-600 dark:text-sky-400"
+                                            className="sui-color-info"
                                         />
                                         {resolveVizMapping(selectedEntry.defaultViz).label}
                                     </span>
@@ -2991,14 +2991,14 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         type="button"
                                         onClick={() => setDetailsCollapsed(true)}
                                         title="Collapse options and focus the search list"
-                                        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-bold uppercase tracking-widest text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                                        className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-bold uppercase tracking-widest  transition-colors   focus:outline-none focus:ring-1 sui-focus-ring sui-color-default sui-hover-bg-overlay sui-hover-color-active"
                                     >
                                         <Maximize2 className="w-3 h-3" />
                                         Collapse
                                     </button>
                                 </div>
                                 <p
-                                    className="select-text cursor-text text-[12px] font-bold text-slate-800 dark:text-slate-100 break-words leading-snug"
+                                    className="select-text cursor-text  font-bold  sui-color-active break-words leading-snug"
                                     title="Drag to select part of the search name for copying."
                                 >
                                     {selectedEntry.searchName}
@@ -3010,7 +3010,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             title={`Open ${selectedEntry.id} in Searchbase`}
-                                            className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-sky-600 dark:text-sky-300 hover:text-sky-800 dark:hover:text-sky-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                            className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest  sui-color-info  sui-hover-color-info focus:outline-none focus:ring-1 sui-focus-ring rounded px-1 py-0.5"
                                         >
                                             View in Searchbase
                                             <ExternalLink className="w-2.5 h-2.5" />
@@ -3026,7 +3026,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 )
                                             }
                                             title="Run this exact SPL in Search (new tab)"
-                                            className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-sky-600 dark:text-sky-300 hover:text-sky-800 dark:hover:text-sky-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                            className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest  sui-color-info  sui-hover-color-info focus:outline-none focus:ring-1 sui-focus-ring rounded px-1 py-0.5"
                                         >
                                             <Play className="w-2.5 h-2.5" />
                                             Test in Search
@@ -3034,7 +3034,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         </button>
                                     )}
                                     {drilldownDraftSearchNames.length > 0 && (
-                                        <span className="inline-flex items-center gap-1 rounded px-1 py-0.5 text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-300">
+                                        <span className="inline-flex items-center gap-1 rounded px-1 py-0.5 text-xs font-bold uppercase tracking-widest  sui-color-positive">
                                             <Table2 className="w-2.5 h-2.5" />
                                             {drilldownDraftSearchNames.length}{' '}
                                             {drilldownDraftSearchNames.length === 1
@@ -3045,8 +3045,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 </div>
                             </div>
 
-                            <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/60 overflow-hidden">
-                                <div className="flex items-center justify-between gap-2 px-2.5 py-2 bg-slate-50 dark:bg-slate-900/80">
+                            <div className="rounded-md border  sui-border-default  sui-bg-section overflow-hidden">
+                                <div className="flex items-center justify-between gap-2 px-2.5 py-2  sui-bg-section">
                                     <button
                                         type="button"
                                         onClick={() => setDataMappingOpen((p) => !p)}
@@ -3057,17 +3057,17 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 ? 'Hide data mapping fields'
                                                 : 'Show data mapping fields'
                                         }
-                                        className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
+                                        className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs font-black uppercase tracking-wider  sui-color-active  sui-hover-color-info focus:outline-none focus:ring-1 sui-focus-ring rounded px-0.5 py-0.5"
                                     >
-                                        <Settings2 className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400 flex-shrink-0" />
+                                        <Settings2 className="w-3.5 h-3.5  sui-color-info flex-shrink-0" />
                                         <span className="flex-shrink-0">Data mapping</span>
-                                        <span className="min-w-0 truncate text-xs font-semibold normal-case tracking-normal text-slate-400 dark:text-slate-500">
+                                        <span className="min-w-0 truncate text-xs font-semibold normal-case tracking-normal  sui-color-muted">
                                             {valueField ? `value: ${valueField}` : 'auto value'}
                                             {labelOverride.trim() ? ' · custom label' : ''}
                                         </span>
                                         <ChevronRight
                                             className={cn(
-                                                'w-3 h-3 ml-auto text-slate-400 dark:text-slate-500 transition-transform flex-shrink-0',
+                                                'w-3 h-3 ml-auto  sui-color-muted transition-transform flex-shrink-0',
                                                 dataMappingOpen && 'rotate-90'
                                             )}
                                         />
@@ -3077,11 +3077,11 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 {dataMappingOpen && (
                                     <div
                                         id="kpi-picker-data-mapping-block"
-                                        className="border-t border-slate-200 dark:border-slate-800 p-2.5"
+                                        className="border-t  sui-border-weak p-2.5"
                                     >
                                         <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
+                                    <label className="block text-xs font-bold uppercase tracking-widest  sui-color-muted mb-1">
                                         Value field
                                     </label>
                                     <input
@@ -3103,20 +3103,20 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         }
                                         className={cn(
                                             'disabled:opacity-50 disabled:cursor-not-allowed',
-                                            'w-full px-2 py-1 text-xs rounded border focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100',
+                                            'w-full px-2 py-1 text-xs rounded border focus:outline-none focus:ring-2 sui-focus-ring  sui-bg-popup  sui-color-active',
                                             fieldNameValid
-                                                ? 'border-slate-200 dark:border-slate-700'
-                                                : 'border-red-400 dark:border-red-600'
+                                                ? 'sui-border-weak sui-border-default'
+                                                : 'sui-border-negative'
                                         )}
                                     />
                                     {!canManageFactoryConfig && (
-                                        <p className="mt-0.5 flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                                        <p className="mt-0.5 flex items-center gap-1 text-xs font-bold uppercase tracking-wide  sui-color-warning">
                                             <Lock className="w-2.5 h-2.5" />
                                             Org-wide — requires admin
                                         </p>
                                     )}
                                     {!fieldNameValid && (
-                                        <p className="mt-0.5 text-xs text-red-600 dark:text-red-400">
+                                        <p className="mt-0.5 text-xs  sui-color-negative">
                                             Letters / digits / underscores / dot only.
                                         </p>
                                     )}
@@ -3130,7 +3130,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         Hidden when no aliases parse out. */}
                                     {fieldNameValid && splFieldSuggestions.length > 0 && (
                                         <div className="mt-1 flex flex-wrap gap-1">
-                                            <span className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 self-center">
+                                            <span className="text-xs font-bold uppercase tracking-widest  sui-color-muted self-center">
                                                 Use:
                                             </span>
                                             {splFieldSuggestions.map((name) => {
@@ -3144,8 +3144,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                         className={cn(
                                                             'inline-flex items-center px-1.5 py-px rounded font-mono text-xs border transition-colors',
                                                             isPicked
-                                                                ? 'bg-sky-500 text-white border-sky-500'
-                                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-sky-100 dark:hover:bg-sky-900/40 hover:border-sky-400'
+                                                                ? 'sui-bg-accent sui-color-active sui-border-info'
+                                                                : 'sui-bg-section sui-bg-popup  sui-color-default  sui-border-default  sui-hover-bg-info sui-hover-border-info'
                                                         )}
                                                     >
                                                         {name}
@@ -3158,13 +3158,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         valueField &&
                                         splFieldSuggestions.length > 0 &&
                                         !splFieldSuggestions.includes(valueField) && (
-                                            <p className="mt-0.5 text-xs text-amber-600 dark:text-amber-400">
+                                            <p className="mt-0.5 text-xs  sui-color-warning">
                                                 "{valueField}" doesn't match any column emitted by this SPL.
                                             </p>
                                         )}
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
+                                    <label className="block text-xs font-bold uppercase tracking-widest  sui-color-muted mb-1">
                                         Label override
                                     </label>
                                     <input
@@ -3180,7 +3180,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 ? undefined
                                                 : 'Org-wide setting — requires admin to change'
                                         }
-                                        className="w-full px-2 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="w-full px-2 py-1 text-xs rounded border  sui-border-default  sui-bg-popup  sui-color-active focus:outline-none focus:ring-2 sui-focus-ring disabled:opacity-50 disabled:cursor-not-allowed"
                                     />
                                 </div>
                             </div>
@@ -3188,7 +3188,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 )}
                             </div>
 
-                            <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-2.5">
+                            <div className="rounded-md border  sui-border-default  sui-bg-section p-2.5">
                                 <div className="flex items-center justify-between gap-2">
                                     <button
                                         type="button"
@@ -3200,11 +3200,11 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 ? 'Hide drilldown details'
                                                 : 'Show attached drilldown details'
                                         }
-                                        className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
+                                        className="flex min-w-0 flex-1 items-center gap-1.5 text-left text-xs font-black uppercase tracking-wider  sui-color-active  sui-hover-color-info focus:outline-none focus:ring-1 sui-focus-ring rounded px-0.5 py-0.5"
                                     >
-                                        <Table2 className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400 flex-shrink-0" />
+                                        <Table2 className="w-3.5 h-3.5  sui-color-info flex-shrink-0" />
                                         <span className="flex-shrink-0">Drilldown</span>
-                                        <span className="min-w-0 truncate text-xs font-semibold normal-case tracking-normal text-slate-400 dark:text-slate-500">
+                                        <span className="min-w-0 truncate text-xs font-semibold normal-case tracking-normal  sui-color-muted">
                                             {drilldownDraftSearchNames.length > 0
                                                 ? `${drilldownDraftSearchNames.length} search${
                                                       drilldownDraftSearchNames.length === 1
@@ -3215,7 +3215,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         </span>
                                         <ChevronRight
                                             className={cn(
-                                                'w-3 h-3 ml-auto text-slate-400 dark:text-slate-500 transition-transform flex-shrink-0',
+                                                'w-3 h-3 ml-auto  sui-color-muted transition-transform flex-shrink-0',
                                                 drilldownOpen && 'rotate-90'
                                             )}
                                         />
@@ -3225,21 +3225,21 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 {drilldownOpen && (
                                     <div
                                         id="kpi-picker-drilldown-block"
-                                        className="mt-2 border-t border-slate-200 dark:border-slate-800 pt-2"
+                                        className="mt-2 border-t  sui-border-weak pt-2"
                                     >
                                         <div className="space-y-2">
-                                            <div className="rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5">
+                                            <div className="rounded border  sui-border-default  sui-bg-section px-2 py-1.5">
                                                 {selectedDrilldownEntries.length > 0 ? (
                                                     <div className="space-y-1.5">
                                                         <div className="flex items-center justify-between gap-2">
-                                                            <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                                                            <p className="text-xs font-bold  sui-color-default">
                                                                 Navigation order
                                                             </p>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setDrilldownDraftSearchNames([])}
                                                                 title="Remove every drilldown binding"
-                                                                className="inline-flex flex-shrink-0 items-center gap-1 rounded px-1 py-0.5 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-rose-600 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:text-slate-400 dark:hover:text-rose-300"
+                                                                className="inline-flex flex-shrink-0 items-center gap-1 rounded px-1 py-0.5 text-xs font-bold uppercase tracking-widest   focus:outline-none focus:ring-1 sui-focus-ring sui-color-default sui-hover-color-negative"
                                                             >
                                                                 <X className="w-2.5 h-2.5" />
                                                                 Clear all
@@ -3253,13 +3253,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                 return (
                                                                     <div
                                                                         key={target}
-                                                                        className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5 dark:border-slate-700 dark:bg-slate-800/50"
+                                                                        className="rounded border   px-2 py-1.5 sui-border-default sui-bg-popup"
                                                                     >
                                                                         <div className="flex items-start gap-2">
-                                                                            <span className="inline-flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full bg-sky-100 px-1 text-xs font-black text-sky-700 dark:bg-sky-950/60 dark:text-sky-300">
+                                                                            <span className="inline-flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full  px-1 text-xs font-black  sui-bg-info sui-color-info">
                                                                                 {index + 1}
                                                                             </span>
-                                                                            <p className="min-w-0 flex-1 text-xs font-bold leading-snug text-slate-700 dark:text-slate-200">
+                                                                            <p className="min-w-0 flex-1 text-xs font-bold leading-snug  sui-color-active">
                                                                                 {entry?.searchName ?? target}
                                                                             </p>
                                                                             <button
@@ -3276,7 +3276,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                                 }
                                                                                 title={`Remove ${entry?.searchName ?? target}`}
                                                                                 aria-label={`Remove drilldown search ${entry?.searchName ?? target}`}
-                                                                                className="flex-shrink-0 rounded p-0.5 text-slate-400 hover:text-rose-600 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:hover:text-rose-300"
+                                                                                className="flex-shrink-0 rounded p-0.5 sui-color-default  focus:outline-none focus:ring-1 sui-focus-ring sui-hover-color-negative"
                                                                             >
                                                                                 <X className="h-3 w-3" />
                                                                             </button>
@@ -3290,7 +3290,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                                         href={searchbaseUrl}
                                                                                         target="_blank"
                                                                                         rel="noopener noreferrer"
-                                                                                        className="inline-flex items-center gap-1 rounded text-xs font-bold uppercase tracking-widest text-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-400 dark:text-emerald-300"
+                                                                                        className="inline-flex items-center gap-1 rounded text-xs font-bold uppercase tracking-widest  focus:outline-none focus:ring-1 sui-focus-ring sui-color-positive"
                                                                                     >
                                                                                         Searchbase
                                                                                         <ExternalLink className="h-2.5 w-2.5" />
@@ -3306,7 +3306,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                                                     entry.dispatchContext
                                                                                                 )
                                                                                             }
-                                                                                            className="inline-flex items-center gap-1 rounded text-xs font-bold uppercase tracking-widest text-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-400 dark:text-emerald-300"
+                                                                                            className="inline-flex items-center gap-1 rounded text-xs font-bold uppercase tracking-widest  focus:outline-none focus:ring-1 sui-focus-ring sui-color-positive"
                                                                                         >
                                                                                             <Play className="h-2.5 w-2.5" />
                                                                                             Test
@@ -3320,14 +3320,14 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                         )}
                                                     </div>
                                                 ) : (
-                                                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                                    <p className="text-xs font-semibold  sui-color-default">
                                                         No drilldown attached.
                                                     </p>
                                                 )}
                                             </div>
 
                                             <label className="relative block">
-                                                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                                                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5  sui-color-muted" />
                                                 <input
                                                     type="text"
                                                     value={drilldownQuery}
@@ -3335,7 +3335,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                         setDrilldownQuery(e.target.value)
                                                     }
                                                     placeholder="Search Searchbase drilldowns..."
-                                                    className="w-full pl-7 pr-2 py-1.5 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                                                    className="w-full pl-7 pr-2 py-1.5 text-xs rounded border  sui-border-default  sui-bg-section    sui-color-muted focus:outline-none focus:ring-2 sui-focus-ring"
                                                 />
                                             </label>
 
@@ -3353,7 +3353,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                 ? 'Hide drilldown filters'
                                                                 : 'Show drilldown filters'
                                                         }
-                                                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-slate-100 dark:bg-slate-800/80 text-xs font-black uppercase tracking-widest text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400"
+                                                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded  sui-bg-popup text-xs font-black uppercase tracking-widest  sui-color-active  sui-hover-color-info focus:outline-none focus:ring-1 sui-focus-ring"
                                                     >
                                                         <ChevronDown
                                                             className={cn(
@@ -3365,7 +3365,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                         Filters
                                                         {drilldownActiveFilterCount > 0 && (
                                                             <span
-                                                                className="ml-1 px-1.5 py-px rounded-full bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300 text-xs tracking-normal normal-case font-semibold"
+                                                                className="ml-1 px-1.5 py-px rounded-full  sui-bg-info  sui-color-info text-xs tracking-normal normal-case font-semibold"
                                                                 title={`${drilldownActiveFilterCount} active drilldown filter${drilldownActiveFilterCount === 1 ? '' : 's'}`}
                                                             >
                                                                 {drilldownActiveFilterCount} active
@@ -3377,7 +3377,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                             type="button"
                                                             onClick={handleClearDrilldownFacets}
                                                             title="Reset every drilldown filter to its default"
-                                                            className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200"
+                                                            className="text-xs font-bold uppercase tracking-widest   sui-color-muted sui-hover-color-active"
                                                         >
                                                             Clear filters
                                                         </button>
@@ -3387,11 +3387,11 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 {drilldownFiltersOpen && (
                                                     <div
                                                         id="kpi-picker-drilldown-filters"
-                                                        className="space-y-2 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2"
+                                                        className="space-y-2 rounded-md border  sui-border-default  sui-bg-section p-2"
                                                     >
                                                         <div className="flex items-center gap-2">
                                                             <span
-                                                                className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16"
+                                                                className="text-xs font-bold uppercase tracking-widest  sui-color-muted flex-shrink-0 w-16"
                                                                 title="Splunk app the drilldown search belongs to"
                                                             >
                                                                 App
@@ -3418,7 +3418,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
                                                         {drilldownCategories.length > 1 && (
                                                             <div className="flex items-center gap-2">
-                                                                <span className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16">
+                                                                <span className="text-xs font-bold uppercase tracking-widest  sui-color-muted flex-shrink-0 w-16">
                                                                     Category
                                                                 </span>
                                                                 <select
@@ -3430,7 +3430,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                             e.target.value
                                                                         )
                                                                     }
-                                                                    className="flex-1 px-2 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                                                                    className="flex-1 px-2 py-1 text-xs rounded border  sui-border-default  sui-bg-popup  sui-color-active focus:outline-none focus:ring-2 sui-focus-ring"
                                                                 >
                                                                     <option
                                                                         value={ALL_CATEGORIES}
@@ -3455,7 +3455,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                             ALL_CATEGORIES &&
                                                             drilldownSubCategories.length > 0 && (
                                                                 <div className="flex items-center gap-2">
-                                                                    <span className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex-shrink-0 w-16">
+                                                                    <span className="text-xs font-bold uppercase tracking-widest  sui-color-muted flex-shrink-0 w-16">
                                                                         Sub-cat
                                                                     </span>
                                                                     <select
@@ -3467,7 +3467,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                                 e.target.value
                                                                             )
                                                                         }
-                                                                        className="flex-1 px-2 py-1 text-xs rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                                                                        className="flex-1 px-2 py-1 text-xs rounded border  sui-border-default  sui-bg-popup  sui-color-active focus:outline-none focus:ring-2 sui-focus-ring"
                                                                     >
                                                                         <option
                                                                             value={
@@ -3514,13 +3514,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                         drilldownTagInputRef.current?.focus();
                                                                     }}
                                                                     className={cn(
-                                                                        'flex flex-wrap items-center gap-1 px-1.5 py-1 rounded-md border bg-white dark:bg-slate-800 cursor-text transition-shadow',
+                                                                        'flex flex-wrap items-center gap-1 px-1.5 py-1 rounded-md border  sui-bg-popup cursor-text transition-shadow',
                                                                         drilldownTagDropdownOpen
-                                                                            ? 'border-sky-400 ring-2 ring-sky-400/40'
-                                                                            : 'border-slate-200 dark:border-slate-700'
+                                                                            ? 'sui-border-info ring-2 sui-focus-ring'
+                                                                            : 'sui-border-weak sui-border-default'
                                                                     )}
                                                                 >
-                                                                    <Tag className="w-3 h-3 text-slate-400 flex-shrink-0 ml-0.5" />
+                                                                    <Tag className="w-3 h-3 sui-color-default flex-shrink-0 ml-0.5" />
                                                                     {Array.from(
                                                                         drilldownActiveTags
                                                                     ).map((tag) => {
@@ -3531,7 +3531,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                         return (
                                                                             <span
                                                                                 key={tag}
-                                                                                className="inline-flex items-center gap-1 pl-1.5 pr-0.5 py-0.5 rounded-full bg-sky-500 text-white text-xs font-bold uppercase tracking-wider"
+                                                                                className="inline-flex items-center gap-1 pl-1.5 pr-0.5 py-0.5 rounded-full sui-bg-accent sui-color-active text-xs font-bold uppercase tracking-wider"
                                                                             >
                                                                                 {tag}
                                                                                 {count > 0 && (
@@ -3551,7 +3551,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                                     }}
                                                                                     title={`Remove ${tag} drilldown filter`}
                                                                                     aria-label={`Remove ${tag} drilldown filter`}
-                                                                                    className="p-0.5 rounded-full hover:bg-sky-700/40"
+                                                                                    className="p-0.5 rounded-full sui-hover-bg-accent"
                                                                                 >
                                                                                     <X className="w-2 h-2" />
                                                                                 </button>
@@ -3586,7 +3586,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                         }
                                                                         maxLength={64}
                                                                         aria-label="Filter drilldown results by tag"
-                                                                        className="flex-1 min-w-[80px] bg-transparent border-0 outline-none text-xs text-slate-700 dark:text-slate-100 placeholder:text-slate-400 py-0.5"
+                                                                        className="flex-1 min-w-[80px] sui-bg-transparent border-0 outline-none text-xs   sui-color-default py-0.5"
                                                                     />
                                                                 </div>
 
@@ -3594,11 +3594,11 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                     <div
                                                                         role="listbox"
                                                                         aria-label="Available drilldown tags"
-                                                                        className="absolute left-0 right-0 top-full mt-1 z-30 max-h-56 overflow-auto rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-xl"
+                                                                        className="absolute left-0 right-0 top-full mt-1 z-30 max-h-56 overflow-auto rounded-md border  sui-border-default  sui-bg-section shadow-xl"
                                                                     >
                                                                         {drilldownTagDropdownOptions.length ===
                                                                         0 ? (
-                                                                            <p className="px-2 py-2 text-xs italic text-slate-400 dark:text-slate-500">
+                                                                            <p className="px-2 py-2 text-xs italic  sui-color-muted">
                                                                                 {drilldownTagFilter.trim()
                                                                                     ? `No more tags match "${drilldownTagFilter.trim()}".`
                                                                                     : drilldownActiveTags.size >
@@ -3638,12 +3638,12 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                                                 className={cn(
                                                                                                     'w-full flex items-center justify-between gap-2 px-2 py-1 text-left text-xs focus:outline-none transition-colors',
                                                                                                     isFirstTyped
-                                                                                                        ? 'bg-sky-50 dark:bg-sky-900/30'
-                                                                                                        : 'hover:bg-sky-50 dark:hover:bg-sky-900/30'
+                                                                                                        ? 'sui-bg-info'
+                                                                                                        : 'sui-hover-bg-info'
                                                                                                 )}
                                                                                             >
-                                                                                                <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-200 truncate min-w-0">
-                                                                                                    <Tag className="w-2.5 h-2.5 flex-shrink-0 text-slate-400" />
+                                                                                                <span className="flex items-center gap-1.5  sui-color-active truncate min-w-0">
+                                                                                                    <Tag className="w-2.5 h-2.5 flex-shrink-0 sui-color-default" />
                                                                                                     <span className="truncate">
                                                                                                         {drilldownTagFilter.trim()
                                                                                                             ? highlightMatch(
@@ -3653,7 +3653,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                                                             : tag}
                                                                                                     </span>
                                                                                                 </span>
-                                                                                                <span className="text-xs font-bold text-slate-400 dark:text-slate-500 flex-shrink-0">
+                                                                                                <span className="text-xs font-bold  sui-color-muted flex-shrink-0">
                                                                                                     {
                                                                                                         count
                                                                                                     }
@@ -3666,7 +3666,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                                     drilldownAllTagsWithCounts.length -
                                                                                         drilldownActiveTags.size >
                                                                                         drilldownTagDropdownOptions.length && (
-                                                                                        <p className="px-2 py-1 text-xs text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-800">
+                                                                                        <p className="px-2 py-1 text-xs  sui-color-muted border-t  sui-border-weak">
                                                                                             Top{' '}
                                                                                             {
                                                                                                 drilldownTagDropdownOptions.length
@@ -3687,7 +3687,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 )}
                                             </div>
 
-                                            <div className="flex items-center justify-between gap-2 px-1 text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                                            <div className="flex items-center justify-between gap-2 px-1 text-xs font-bold uppercase tracking-widest  sui-color-muted">
                                                 <span>
                                                     {drilldownCandidates.length.toLocaleString()}{' '}
                                                     {drilldownCandidates.length === 1
@@ -3702,7 +3702,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
                                             <div className="max-h-72 overflow-auto space-y-1 pr-1">
                                                 {drilldownCandidates.length === 0 ? (
-                                                    <p className="px-1 py-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                                    <p className="px-1 py-1 text-xs font-semibold  sui-color-default">
                                                         No matching Searchbase entries.
                                                     </p>
                                                 ) : (
@@ -3740,10 +3740,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                 }
                                                                 title={`${isPicked ? 'Remove' : 'Add'} ${entry.searchName} ${isPicked ? 'from' : 'to'} the drilldown workflow`}
                                                                 className={cn(
-                                                                    'w-full text-left rounded border px-2 py-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400',
+                                                                    'w-full text-left rounded border px-2 py-1.5 transition-colors focus:outline-none focus:ring-2 sui-focus-ring',
                                                                     isPicked
-                                                                        ? 'border-sky-400 bg-sky-50 dark:border-sky-600 dark:bg-sky-950/40'
-                                                                        : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-sky-300 dark:hover:border-sky-700'
+                                                                        ? 'sui-border-info sui-bg-info'
+                                                                        : 'sui-border-weak sui-border-default  sui-bg-section  sui-hover-border-info'
                                                                 )}
                                                             >
                                                                 <span className="flex items-center gap-1.5">
@@ -3753,9 +3753,9 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                         }
                                                                         size={12}
                                                                         showTooltip={false}
-                                                                        className="text-sky-600 dark:text-sky-300 flex-shrink-0"
+                                                                        className="sui-color-info flex-shrink-0"
                                                                     />
-                                                                    <span className="min-w-0 flex-1 truncate text-[10.5px] font-bold text-slate-700 dark:text-slate-200">
+                                                                    <span className="min-w-0 flex-1 truncate  font-bold  sui-color-active">
                                                                         {highlightMatch(
                                                                             entry.searchName,
                                                                             drilldownQuery
@@ -3766,8 +3766,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                             'flex-shrink-0 rounded-sm px-1 py-px text-xs font-black uppercase tracking-widest',
                                                                             entry.defaultViz ===
                                                                                 'splunk.table'
-                                                                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300'
-                                                                                : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                                                                                ? 'sui-bg-positive sui-color-positive'
+                                                                                : 'sui-bg-section  sui-bg-popup sui-color-default'
                                                                         )}
                                                                     >
                                                                         {entry.defaultViz ===
@@ -3777,7 +3777,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                     </span>
                                                                 </span>
                                                                 {description && (
-                                                                    <span className="mt-0.5 block line-clamp-2 text-[9.5px] leading-snug text-slate-500 dark:text-slate-400">
+                                                                    <span className="mt-0.5 block line-clamp-2  leading-snug  sui-color-default">
                                                                         {description}
                                                                     </span>
                                                                 )}
@@ -3804,7 +3804,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                               * before the sparkline path, so this list
                               * only exposes renderer families the
                               * overview page can actually draw. */}
-                            <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-2.5">
+                            <div className="rounded-md border  sui-border-default  sui-bg-section p-2.5">
                                 <div className="flex items-center justify-between gap-2">
                                     <button
                                         type="button"
@@ -3816,21 +3816,21 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 ? 'Hide the chart style picker'
                                                 : 'Show the chart style picker (override how this tile renders)'
                                         }
-                                        className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
+                                        className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider  sui-color-active  sui-hover-color-info focus:outline-none focus:ring-1 sui-focus-ring rounded px-0.5 py-0.5"
                                     >
-                                        <BarChart3 className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
+                                        <BarChart3 className="w-3.5 h-3.5  sui-color-info" />
                                         Chart style
                                         {vizOverrideInput && (
                                             <span
                                                 title="This tile has a custom chart style applied (different from the searchbase default)"
-                                                className="ml-1 inline-flex items-center px-1 py-px rounded-sm bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 text-xs font-bold tracking-wide normal-case"
+                                                className="ml-1 inline-flex items-center px-1 py-px rounded-sm  sui-bg-info  sui-color-info text-xs font-bold tracking-wide normal-case"
                                             >
                                                 custom
                                             </span>
                                         )}
                                         <ChevronRight
                                             className={cn(
-                                                'w-3 h-3 ml-1 text-slate-400 dark:text-slate-500 transition-transform',
+                                                'w-3 h-3 ml-1  sui-color-muted transition-transform',
                                                 chartStyleOpen && 'rotate-90'
                                             )}
                                         />
@@ -3840,7 +3840,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             type="button"
                                             onClick={() => setVizOverrideInput(null)}
                                             title="Restore the chart style to the searchbase default for this tile (still has to be applied)"
-                                            className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                            className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest   sui-color-default sui-hover-color-active focus:outline-none focus:ring-1 sui-focus-ring rounded px-1 py-0.5"
                                         >
                                             <RotateCcw className="w-2.5 h-2.5" />
                                             Reset to default
@@ -3848,9 +3848,9 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     )}
                                 </div>
                                 {chartStyleOpen && (
-                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-snug">
+                                <p className="mt-1 text-xs  sui-color-default leading-snug">
                                     Override how this tile renders. {' '}
-                                    <span className="text-slate-400 dark:text-slate-500">
+                                    <span className="sui-color-default sui-color-muted">
                                         Default uses the searchbase{' '}
                                         <code className="font-mono">default_viz</code>
                                         {selectedEntry?.defaultViz ? (
@@ -3864,7 +3864,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 </p>
                                 )}
                                 {chartStyleOpen && (
-                                <div id="kpi-picker-chart-style-block" className="mt-2 flex flex-wrap gap-1 p-0.5 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                                <div id="kpi-picker-chart-style-block" className="mt-2 flex flex-wrap gap-1 p-0.5 rounded border  sui-border-default  sui-bg-section">
                                     {CHART_STYLE_OPTIONS.map((opt) => {
                                         const active = vizOverrideInput === opt.v;
                                         return (
@@ -3874,10 +3874,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 onClick={() => setVizOverrideInput(opt.v)}
                                                 title={opt.hint}
                                                 className={cn(
-                                                    'inline-flex min-w-[64px] items-center justify-center gap-1 px-1.5 py-1 text-xs font-bold uppercase tracking-wider rounded transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400',
+                                                    'inline-flex min-w-[64px] items-center justify-center gap-1 px-1.5 py-1 text-xs font-bold uppercase tracking-wider rounded transition-colors focus:outline-none focus:ring-1 sui-focus-ring',
                                                     active
-                                                        ? 'bg-sky-500 text-white'
-                                                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                                        ? 'sui-bg-accent sui-color-active'
+                                                        : 'sui-color-default  sui-hover-bg-overlay'
                                                 )}
                                                 aria-pressed={active}
                                             >
@@ -3886,7 +3886,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                         splunkViz={opt.splunkViz}
                                                         size={11}
                                                         showTooltip={false}
-                                                        className={active ? 'text-white' : undefined}
+                                                        className={active ? 'sui-color-active' : undefined}
                                                     />
                                                 )}
                                                 {opt.label}
@@ -3925,7 +3925,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                               * future flip of the shipped default flows
                               * through automatically for any tile the
                               * user hasn't customised. */}
-                            <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-2.5">
+                            <div className="rounded-md border  sui-border-default  sui-bg-section p-2.5">
                                 <div className="flex items-center justify-between gap-2">
                                     <button
                                         type="button"
@@ -3937,21 +3937,21 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 ? 'Hide the display chrome toggles'
                                                 : 'Show the display chrome toggles (hide peak labels, delta pill, comparison overlay)'
                                         }
-                                        className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
+                                        className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider  sui-color-active  sui-hover-color-info focus:outline-none focus:ring-1 sui-focus-ring rounded px-0.5 py-0.5"
                                     >
-                                        <Eye className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
+                                        <Eye className="w-3.5 h-3.5  sui-color-info" />
                                         Display
                                         {displayCustomised && (
                                             <span
                                                 title="This tile has display chrome hidden (different from the shipped defaults)"
-                                                className="ml-1 inline-flex items-center px-1 py-px rounded-sm bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 text-xs font-bold tracking-wide normal-case"
+                                                className="ml-1 inline-flex items-center px-1 py-px rounded-sm  sui-bg-info  sui-color-info text-xs font-bold tracking-wide normal-case"
                                             >
                                                 custom
                                             </span>
                                         )}
                                         <ChevronRight
                                             className={cn(
-                                                'w-3 h-3 ml-1 text-slate-400 dark:text-slate-500 transition-transform',
+                                                'w-3 h-3 ml-1  sui-color-muted transition-transform',
                                                 displayOpen && 'rotate-90'
                                             )}
                                         />
@@ -3961,7 +3961,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             type="button"
                                             onClick={handleResetDisplay}
                                             title="Restore the peak / delta / overlay visibility to the shipped defaults for this tile (still has to be applied)"
-                                            className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                            className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest   sui-color-default sui-hover-color-active focus:outline-none focus:ring-1 sui-focus-ring rounded px-1 py-0.5"
                                         >
                                             <RotateCcw className="w-2.5 h-2.5" />
                                             Reset to default
@@ -3969,9 +3969,9 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     )}
                                 </div>
                                 {displayOpen && (
-                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-snug">
+                                <p className="mt-1 text-xs  sui-color-default leading-snug">
                                     Hide the decoration around the headline value. {' '}
-                                    <span className="text-slate-400 dark:text-slate-500">
+                                    <span className="sui-color-default sui-color-muted">
                                         To collapse the chart entirely, use {' '}
                                         <span className="font-bold">Chart style → Single</span> {' '}
                                         above.
@@ -3983,21 +3983,21 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     {/* Peak callout toggle. */}
                                     <label
                                         className={cn(
-                                            'flex items-start gap-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 cursor-pointer transition-colors',
-                                            'hover:border-sky-300 dark:hover:border-sky-700'
+                                            'flex items-start gap-2 rounded border  sui-border-default  sui-bg-section px-2 py-1.5 cursor-pointer transition-colors',
+                                            'sui-hover-border-info'
                                         )}
                                     >
                                         <input
                                             type="checkbox"
                                             checked={hidePeakInput}
                                             onChange={(e) => setHidePeakInput(e.target.checked)}
-                                            className="mt-0.5 h-3 w-3 rounded border-slate-300 dark:border-slate-600 text-sky-500 focus:ring-1 focus:ring-sky-400 flex-shrink-0"
+                                            className="mt-0.5 h-3 w-3 rounded  sui-border-default sui-color-info focus:ring-1 sui-focus-ring flex-shrink-0"
                                         />
                                         <span className="flex-1 min-w-0">
-                                            <span className="block text-xs font-bold text-slate-700 dark:text-slate-200 leading-tight">
+                                            <span className="block text-xs font-bold  sui-color-active leading-tight">
                                                 Hide peak labels
                                             </span>
-                                            <span className="block mt-0.5 text-[9.5px] text-slate-500 dark:text-slate-400 leading-snug">
+                                            <span className="block mt-0.5   sui-color-default leading-snug">
                                                 Removes the min / peak bubbles on the
                                                 sparkline. Useful when the headline value is
                                                 what matters and the highs / lows distract.
@@ -4008,21 +4008,21 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     {/* Delta-vs-previous toggle. */}
                                     <label
                                         className={cn(
-                                            'flex items-start gap-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 cursor-pointer transition-colors',
-                                            'hover:border-sky-300 dark:hover:border-sky-700'
+                                            'flex items-start gap-2 rounded border  sui-border-default  sui-bg-section px-2 py-1.5 cursor-pointer transition-colors',
+                                            'sui-hover-border-info'
                                         )}
                                     >
                                         <input
                                             type="checkbox"
                                             checked={hideDeltaInput}
                                             onChange={(e) => setHideDeltaInput(e.target.checked)}
-                                            className="mt-0.5 h-3 w-3 rounded border-slate-300 dark:border-slate-600 text-sky-500 focus:ring-1 focus:ring-sky-400 flex-shrink-0"
+                                            className="mt-0.5 h-3 w-3 rounded  sui-border-default sui-color-info focus:ring-1 sui-focus-ring flex-shrink-0"
                                         />
                                         <span className="flex-1 min-w-0">
-                                            <span className="block text-xs font-bold text-slate-700 dark:text-slate-200 leading-tight">
+                                            <span className="block text-xs font-bold  sui-color-active leading-tight">
                                                 Hide delta vs previous
                                             </span>
-                                            <span className="block mt-0.5 text-[9.5px] text-slate-500 dark:text-slate-400 leading-snug">
+                                            <span className="block mt-0.5   sui-color-default leading-snug">
                                                 Removes the ↑ / ↓ percentage pill next to the
                                                 headline. Pick this when the absolute number
                                                 speaks for itself and the period-over-period
@@ -4034,21 +4034,21 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     {/* Previous-period overlay toggle (Build 1203). */}
                                     <label
                                         className={cn(
-                                            'flex items-start gap-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1.5 cursor-pointer transition-colors',
-                                            'hover:border-sky-300 dark:hover:border-sky-700'
+                                            'flex items-start gap-2 rounded border  sui-border-default  sui-bg-section px-2 py-1.5 cursor-pointer transition-colors',
+                                            'sui-hover-border-info'
                                         )}
                                     >
                                         <input
                                             type="checkbox"
                                             checked={hideOverlayInput}
                                             onChange={(e) => setHideOverlayInput(e.target.checked)}
-                                            className="mt-0.5 h-3 w-3 rounded border-slate-300 dark:border-slate-600 text-sky-500 focus:ring-1 focus:ring-sky-400 flex-shrink-0"
+                                            className="mt-0.5 h-3 w-3 rounded  sui-border-default sui-color-info focus:ring-1 sui-focus-ring flex-shrink-0"
                                         />
                                         <span className="flex-1 min-w-0">
-                                            <span className="block text-xs font-bold text-slate-700 dark:text-slate-200 leading-tight">
+                                            <span className="block text-xs font-bold  sui-color-active leading-tight">
                                                 Hide comparison overlay
                                             </span>
-                                            <span className="block mt-0.5 text-[9.5px] text-slate-500 dark:text-slate-400 leading-snug">
+                                            <span className="block mt-0.5   sui-color-default leading-snug">
                                                 Removes the dashed previous-period / baseline
                                                 line from the sparkline canvas. The trend stays;
                                                 the side-by-side comparison goes away.
@@ -4071,12 +4071,12 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                   * and Chart style customisations
                                   * remain per-tile by design. */}
                                 {displayOpen && context?.sectionId && onApplyDisplayToSection && (
-                                    <div className="mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+                                    <div className="mt-2 pt-2 border-t  sui-border-default">
                                         <button
                                             type="button"
                                             onClick={handleApplyDisplayToSection}
                                             title="Write these Display settings to every tile in this section. Other tile customisations (search binding, value field, chart style, thresholds) are left untouched."
-                                            className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-sky-600 hover:text-sky-800 dark:text-sky-400 dark:hover:text-sky-200 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                            className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider   sui-color-info sui-hover-color-info focus:outline-none focus:ring-1 sui-focus-ring rounded px-1 py-0.5"
                                         >
                                             <Eye className="w-3 h-3" />
                                             Apply to all tiles in {context.sectionLabel || 'section'}
@@ -4120,7 +4120,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                               * preview). The "Reset to default" link
                               * surfaces only when the user has changed
                               * something away from the shipped default. */}
-                            <div className="rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-2.5">
+                            <div className="rounded-md border  sui-border-default  sui-bg-section p-2.5">
                                 <div className="flex items-center justify-between gap-2">
                                     <button
                                         type="button"
@@ -4132,28 +4132,28 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                 ? 'Hide the thresholds form'
                                                 : 'Show the thresholds form (set custom warning / critical bands for this tile)'
                                         }
-                                        className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 hover:text-sky-700 dark:hover:text-sky-300 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-0.5 py-0.5"
+                                        className="inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider  sui-color-active  sui-hover-color-info focus:outline-none focus:ring-1 sui-focus-ring rounded px-0.5 py-0.5"
                                     >
-                                        <Gauge className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
+                                        <Gauge className="w-3.5 h-3.5  sui-color-info" />
                                         Thresholds
                                         {!thresholdsEnabled ? (
                                             <span
                                                 title="Threshold-derived status colours and icons are disabled for this tile"
-                                                className="ml-1 inline-flex items-center px-1 py-px rounded-sm bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold tracking-wide normal-case"
+                                                className="ml-1 inline-flex items-center px-1 py-px rounded-sm  sui-bg-floating  sui-color-default text-xs font-bold tracking-wide normal-case"
                                             >
                                                 off
                                             </span>
                                         ) : thresholdsCustomised ? (
                                             <span
                                                 title="This tile has custom thresholds applied (different from the shipped defaults)"
-                                                className="ml-1 inline-flex items-center px-1 py-px rounded-sm bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 text-xs font-bold tracking-wide normal-case"
+                                                className="ml-1 inline-flex items-center px-1 py-px rounded-sm  sui-bg-info  sui-color-info text-xs font-bold tracking-wide normal-case"
                                             >
                                                 custom
                                             </span>
                                         ) : null}
                                         <ChevronRight
                                             className={cn(
-                                                'w-3 h-3 ml-1 text-slate-400 dark:text-slate-500 transition-transform',
+                                                'w-3 h-3 ml-1  sui-color-muted transition-transform',
                                                 thresholdsOpen && 'rotate-90'
                                             )}
                                         />
@@ -4163,7 +4163,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             type="button"
                                             onClick={handleResetThresholds}
                                             title="Restore warning / critical / direction to the shipped defaults for this tile (still has to be applied)"
-                                            className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-400 rounded px-1 py-0.5"
+                                            className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest   sui-color-default sui-hover-color-active focus:outline-none focus:ring-1 sui-focus-ring rounded px-1 py-0.5"
                                         >
                                             <RotateCcw className="w-2.5 h-2.5" />
                                             Reset to default
@@ -4178,7 +4178,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     expanded so the collapsed state
                                     remains a single compact row. */}
                                 {thresholdsOpen && (
-                                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-snug">
+                                    <p className="mt-1 text-xs  sui-color-default leading-snug">
                                         Set the warning and critical bands used to colour the
                                         headline value and status icon, or turn them off for a
                                         neutral tile.
@@ -4186,7 +4186,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 )}
 
                                 {thresholdsOpen && !canManageFactoryConfig && (
-                                    <p className="mt-1 flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                                    <p className="mt-1 flex items-center gap-1 text-xs font-bold uppercase tracking-wide  sui-color-warning">
                                         <Lock className="w-2.5 h-2.5" />
                                         Org-wide setting — requires admin to change
                                     </p>
@@ -4197,7 +4197,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                         id="kpi-picker-thresholds-block"
                                         className="mt-2 space-y-2"
                                     >
-                                        <div className="rounded border border-slate-200 bg-white px-2 py-1.5 dark:border-slate-700 dark:bg-slate-800">
+                                        <div className="rounded border   px-2 py-1.5 sui-border-default sui-bg-popup">
                                             <Switch
                                                 appearance="toggle"
                                                 selected={thresholdsEnabled}
@@ -4211,7 +4211,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             </Switch>
                                             <p
                                                 id="kpi-picker-thresholds-enabled-help"
-                                                className="mt-1 text-xs text-slate-500 dark:text-slate-400"
+                                                className="mt-1 text-xs  sui-color-default"
                                             >
                                                 Off removes threshold-based colours and status icons
                                                 while preserving these bands for later.
@@ -4226,10 +4226,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             way the bands work for inverted
                                             metrics). */}
                                         <div>
-                                            <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
+                                            <label className="block text-xs font-bold uppercase tracking-widest  sui-color-muted mb-1">
                                                 Direction
                                             </label>
-                                            <div className="grid grid-cols-2 gap-1 p-0.5 rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
+                                            <div className="grid grid-cols-2 gap-1 p-0.5 rounded border  sui-border-default  sui-bg-section">
                                                 {(
                                                     [
                                                         {
@@ -4263,10 +4263,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                     : 'Org-wide setting — requires admin to change'
                                                             }
                                                             className={cn(
-                                                                'px-2 py-1 text-xs font-bold uppercase tracking-wider rounded transition-colors focus:outline-none focus:ring-1 focus:ring-sky-400 disabled:opacity-50 disabled:cursor-not-allowed',
+                                                                'px-2 py-1 text-xs font-bold uppercase tracking-wider rounded transition-colors focus:outline-none focus:ring-1 sui-focus-ring disabled:opacity-50 disabled:cursor-not-allowed',
                                                                 active
-                                                                    ? 'bg-sky-500 text-white'
-                                                                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                                                                    ? 'sui-bg-accent sui-color-active'
+                                                                    : 'sui-color-default  sui-hover-bg-overlay'
                                                             )}
                                                             aria-pressed={active}
                                                         >
@@ -4284,7 +4284,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             see what the tile shipped with. */}
                                         <div className="grid grid-cols-2 gap-2">
                                             <div>
-                                                <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
+                                                <label className="block text-xs font-bold uppercase tracking-widest  sui-color-muted mb-1">
                                                     Warning
                                                 </label>
                                                 <input
@@ -4313,20 +4313,20 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                     }
                                                     className={cn(
                                                         'disabled:opacity-50 disabled:cursor-not-allowed',
-                                                        'w-full px-2 py-1 text-xs rounded border focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100',
+                                                        'w-full px-2 py-1 text-xs rounded border focus:outline-none focus:ring-2 sui-focus-ring  sui-bg-popup  sui-color-active',
                                                         warningInputValid
-                                                            ? 'border-slate-200 dark:border-slate-700'
-                                                            : 'border-red-400 dark:border-red-600'
+                                                            ? 'sui-border-weak sui-border-default'
+                                                            : 'sui-border-negative'
                                                     )}
                                                 />
-                                                <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
+                                                <p className="mt-0.5 text-xs  sui-color-muted">
                                                     {def?.warning !== undefined
                                                         ? `default: ${formatThresholdNumber(def.warning, context.thresholdUnit)}`
                                                         : 'no shipped default'}
                                                 </p>
                                             </div>
                                             <div>
-                                                <label className="block text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
+                                                <label className="block text-xs font-bold uppercase tracking-widest  sui-color-muted mb-1">
                                                     Critical
                                                 </label>
                                                 <input
@@ -4355,13 +4355,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                     }
                                                     className={cn(
                                                         'disabled:opacity-50 disabled:cursor-not-allowed',
-                                                        'w-full px-2 py-1 text-xs rounded border focus:outline-none focus:ring-2 focus:ring-sky-400 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-100',
+                                                        'w-full px-2 py-1 text-xs rounded border focus:outline-none focus:ring-2 sui-focus-ring  sui-bg-popup  sui-color-active',
                                                         criticalInputValid
-                                                            ? 'border-slate-200 dark:border-slate-700'
-                                                            : 'border-red-400 dark:border-red-600'
+                                                            ? 'sui-border-weak sui-border-default'
+                                                            : 'sui-border-negative'
                                                     )}
                                                 />
-                                                <p className="mt-0.5 text-xs text-slate-400 dark:text-slate-500">
+                                                <p className="mt-0.5 text-xs  sui-color-muted">
                                                     {def?.critical !== undefined
                                                         ? `default: ${formatThresholdNumber(def.critical, context.thresholdUnit)}`
                                                         : 'no shipped default'}
@@ -4375,7 +4375,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             colour, so we surface the issue
                                             but don't gate Apply on it. */}
                                         {thresholdRelationshipWarning && (
-                                            <p className="text-xs text-amber-600 dark:text-amber-400">
+                                            <p className="text-xs  sui-color-warning">
                                                 ⚠ {thresholdRelationshipWarning}
                                             </p>
                                         )}
@@ -4387,8 +4387,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             with the same `MetricThresholds`
                                             tuple. */}
                                         {previewLines && previewLines.length > 0 && (
-                                            <div className="rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 px-2 py-1.5">
-                                                <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
+                                            <div className="rounded border  sui-border-default  sui-bg-section px-2 py-1.5">
+                                                <p className="text-xs font-bold uppercase tracking-widest  sui-color-muted mb-1">
                                                     Preview
                                                 </p>
                                                 <ul className="space-y-0.5">
@@ -4401,17 +4401,17 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                                                 className={cn(
                                                                     'inline-block w-1.5 h-1.5 rounded-full flex-shrink-0',
                                                                     row.tone === 'healthy' &&
-                                                                        'bg-emerald-500',
+                                                                        'sui-bg-positive',
                                                                     row.tone === 'warning' &&
-                                                                        'bg-amber-500',
+                                                                        'sui-bg-warning',
                                                                     row.tone === 'critical' &&
-                                                                        'bg-red-500'
+                                                                        'sui-bg-negative'
                                                                 )}
                                                             />
-                                                            <span className="font-bold text-slate-700 dark:text-slate-200">
+                                                            <span className="font-bold  sui-color-active">
                                                                 {row.label}
                                                             </span>
-                                                            <span className="font-mono text-slate-500 dark:text-slate-400">
+                                                            <span className="font-mono  sui-color-default">
                                                                 {row.value}
                                                             </span>
                                                         </li>
@@ -4429,12 +4429,12 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                             tell them what the runtime
                                             behaviour will be. */}
                                         {!thresholdsEnabled ? (
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 italic">
+                                            <p className="text-xs  sui-color-default italic">
                                                 Threshold status is off — the headline uses its
                                                 neutral colour and no status icon.
                                             </p>
                                         ) : !previewLines ? (
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 italic">
+                                            <p className="text-xs  sui-color-default italic">
                                                 No thresholds set — the headline will render in the
                                                 neutral colour with no status icon.
                                             </p>
@@ -4445,20 +4445,20 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                         </>
                         )
                     ) : (
-                        <p className="text-xs text-slate-400 dark:text-slate-500 italic">
+                        <p className="text-xs  sui-color-muted italic">
                             Pick a search above to preview SPL and apply.
                         </p>
                     )}
                 </div>
 
                 {/* Footer: actions */}
-                <div className="border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 px-3 py-2.5 flex-shrink-0">
+                <div className="border-t  sui-border-weak flex items-center justify-between gap-2 px-3 py-2.5 flex-shrink-0">
                     <div className="flex items-center gap-2 min-w-0 overflow-hidden">
                         <button
                             type="button"
                             onClick={handleResetThisTile}
                             title="Restore this tile to its default saved search"
-                            className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 flex-shrink-0"
+                            className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider   sui-color-default sui-hover-color-active flex-shrink-0"
                         >
                             <RotateCcw className="w-3 h-3" />
                             Reset tile
@@ -4470,7 +4470,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     destructive one stands apart. */}
                                 <span
                                     aria-hidden="true"
-                                    className="w-px h-3 bg-slate-200 dark:bg-slate-700 flex-shrink-0"
+                                    className="w-px h-3  sui-bg-floating flex-shrink-0"
                                 />
                                 <button
                                     type="button"
@@ -4482,7 +4482,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     // catches misclicks before
                                     // anything is wiped.
                                     title="Wipe tile, layout, and map customisations; keep header branding"
-                                    className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 flex-shrink-0"
+                                    className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider   sui-color-negative sui-hover-color-negative flex-shrink-0"
                                 >
                                     <RotateCcw className="w-3 h-3" />
                                     Factory reset
@@ -4493,7 +4493,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             <>
                                 <span
                                     aria-hidden="true"
-                                    className="w-px h-3 bg-slate-200 dark:bg-slate-700 flex-shrink-0"
+                                    className="w-px h-3  sui-bg-floating flex-shrink-0"
                                 />
                                 <button
                                     type="button"
@@ -4503,10 +4503,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                     className={cn(
                                         'inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider flex-shrink-0',
                                         workspaceLayoutStatus === 'error'
-                                            ? 'text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300'
+                                            ? 'sui-color-negative sui-hover-color-negative'
                                             : workspaceLayoutStatus === 'saved'
-                                              ? 'text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 dark:hover:text-emerald-300'
-                                              : 'text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300',
+                                              ? 'sui-color-positive sui-hover-color-positive'
+                                              : 'sui-color-info sui-hover-color-info',
                                         workspaceLayoutStatus === 'saving' &&
                                             'opacity-60 cursor-wait'
                                     )}
@@ -4525,7 +4525,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors"
+                            className="px-3 py-1 text-xs font-bold uppercase tracking-wider  sui-color-default  sui-hover-bg-overlay rounded transition-colors"
                         >
                             Cancel
                         </button>
@@ -4536,8 +4536,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             className={cn(
                                 'px-3 py-1 text-xs font-black uppercase tracking-wider rounded transition-colors',
                                 canApply
-                                    ? 'bg-sky-500 hover:bg-sky-600 text-white'
-                                    : 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
+                                    ? 'sui-bg-accent sui-hover-bg-accent sui-color-active'
+                                    : 'sui-bg-popup sui-color-default cursor-not-allowed'
                             )}
                         >
                             Apply

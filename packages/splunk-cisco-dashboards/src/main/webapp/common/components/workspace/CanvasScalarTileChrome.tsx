@@ -3,7 +3,7 @@
  *
  * The header renders up to three rows in this fixed order:
  *
- *   1. TITLE — bold uppercase tile label plus the action buttons
+ *   1. TITLE — bold sentence-case tile label plus the action buttons
  *      (info, open-in-search, drilldown, configure).
  *   2. MEANING SUBTITLE (optional) — a short "what does this measure"
  *      sentence sourced upstream from `record.explanation` (with
@@ -72,19 +72,19 @@ export const CanvasScalarTileChrome: React.FC<CanvasScalarTileChromeProps> = ({
     >
         {source === 'loading' && (
             <span
-                className="absolute top-1 right-2 w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"
+                className="absolute top-1 right-2 w-1.5 h-1.5 rounded-full sui-bg-warning animate-pulse"
                 title="Loading saved search…"
             />
         )}
         {source === 'live' && (
             <span
-                className="absolute top-1 right-2 w-1.5 h-1.5 rounded-full bg-emerald-500"
+                className="absolute top-1 right-2 w-1.5 h-1.5 rounded-full sui-bg-positive"
                 title="Wired to saved search (live)"
             />
         )}
 
         <div data-tile-control="true" className="flex flex-col mb-0.5">
-            <span className="text-[12px] font-bold text-slate-800 dark:text-slate-100 tracking-tight leading-tight uppercase flex items-center gap-1">
+            <span className="sui-color-default font-bold sui-color-active tracking-tight leading-tight flex items-center gap-1">
                 <span className="flex items-center gap-1 min-w-0 truncate">{label}</span>
                 <span className="ml-auto flex items-center gap-0.5 flex-shrink-0">
                     {description && (
@@ -109,14 +109,14 @@ export const CanvasScalarTileChrome: React.FC<CanvasScalarTileChromeProps> = ({
             </span>
             {meaningSubtitle && (
                 <span
-                    className="text-[10.5px] text-slate-500 dark:text-slate-400 font-medium tracking-tight leading-snug truncate"
+                    className="sui-color-default font-medium tracking-tight leading-snug truncate"
                     title={meaningSubtitle}
                 >
                     {meaningSubtitle}
                 </span>
             )}
             {subLabel && (
-                <span className="text-[9.5px] text-slate-400 dark:text-slate-500 font-medium tracking-tight leading-tight line-clamp-1 min-h-[12px]">
+                <span className="sui-color-default  sui-color-muted font-medium tracking-tight leading-tight line-clamp-1 min-h-[12px]">
                     {subLabel}
                 </span>
             )}

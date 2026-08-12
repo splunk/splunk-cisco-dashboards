@@ -91,47 +91,47 @@ const accentClasses = (
     //
     // Build 109: the diagram canvas runs the dark Cyber-NOC
     // theme; the operations canvas runs the light theme. Tailwind
-    // `dark:` modifiers cover both — but we shifted the dark
+    // Semantic theme tokens cover both color schemes; this app currently fixes dark mode.
     // shades to sit cleanly on the `#0b0f1a` canvas (more saturated
     // borders, more opaque tints) without making the light theme
     // look "off".
     switch (accent) {
         case 'sky-500':
             return {
-                border: 'border-sky-400/60 dark:border-sky-500/70',
-                tint: 'bg-sky-50/60 dark:bg-sky-950/40',
-                pill: 'bg-sky-500/10 text-sky-700 dark:text-sky-300',
+                border: 'sui-border-info',
+                tint: 'sui-bg-info',
+                pill: 'sui-bg-accent  sui-color-info',
             };
         case 'emerald-500':
             return {
-                border: 'border-emerald-400/60 dark:border-emerald-500/70',
-                tint: 'bg-emerald-50/60 dark:bg-emerald-950/40',
-                pill: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+                border: 'sui-border-positive',
+                tint: 'sui-bg-positive',
+                pill: 'sui-bg-positive  sui-color-positive',
             };
         case 'amber-500':
             return {
-                border: 'border-amber-400/60 dark:border-amber-500/70',
-                tint: 'bg-amber-50/60 dark:bg-amber-950/40',
-                pill: 'bg-amber-500/10 text-amber-700 dark:text-amber-300',
+                border: 'sui-border-warning',
+                tint: 'sui-bg-warning',
+                pill: 'sui-bg-warning  sui-color-warning',
             };
         case 'rose-500':
             return {
-                border: 'border-rose-400/60 dark:border-rose-500/70',
-                tint: 'bg-rose-50/60 dark:bg-rose-950/40',
-                pill: 'bg-rose-500/10 text-rose-700 dark:text-rose-300',
+                border: 'sui-border-negative',
+                tint: 'sui-bg-negative',
+                pill: 'sui-bg-negative  sui-color-negative',
             };
         case 'violet-500':
             return {
-                border: 'border-violet-400/60 dark:border-violet-500/70',
-                tint: 'bg-violet-50/60 dark:bg-violet-950/40',
-                pill: 'bg-violet-500/10 text-violet-700 dark:text-violet-300',
+                border: 'sui-border-info',
+                tint: 'sui-bg-info',
+                pill: 'sui-bg-accent  sui-color-info',
             };
         case 'slate-500':
         default:
             return {
-                border: 'border-slate-400/60 dark:border-slate-600/70',
-                tint: 'bg-slate-50/60 dark:bg-slate-900/60',
-                pill: 'bg-slate-500/10 text-slate-700 dark:text-slate-300',
+                border: 'sui-border-default',
+                tint: 'sui-bg-page sui-bg-section',
+                pill: 'sui-bg-floating  sui-color-default',
             };
     }
 };
@@ -158,7 +158,7 @@ export const RegionGroupNode: React.FC<{
                 // separate highlight overlay and survives the
                 // dark-mode swap.
                 isHovered &&
-                    'border-solid !border-sky-500 ring-2 ring-sky-400/60 dark:ring-sky-300/40 bg-sky-50/80 dark:bg-sky-950/60 shadow-lg shadow-sky-500/20'
+                    'border-solid sui-important-border-info ring-2 sui-focus-ring sui-bg-info shadow-lg sui-shadow-overlay'
             )}
             style={{ width: '100%', height: '100%' }}
         >
@@ -175,8 +175,8 @@ export const RegionGroupNode: React.FC<{
                 isVisible={selected === true}
                 minWidth={REGION_MIN_WIDTH}
                 minHeight={REGION_MIN_HEIGHT}
-                lineClassName="!border-sky-500/50"
-                handleClassName="!bg-sky-500 !border-white !w-2.5 !h-2.5"
+                lineClassName="sui-important-border-info"
+                handleClassName="sui-important-bg-accent sui-important-border-strong !w-2.5 !h-2.5"
             />
             <div
                 className={cn(
@@ -188,7 +188,7 @@ export const RegionGroupNode: React.FC<{
             >
                 <div className="flex items-center gap-1.5 min-w-0">
                     <Layers className="w-3 h-3 flex-shrink-0 opacity-70" aria-hidden />
-                    <span className="truncate text-slate-700 dark:text-slate-200">
+                    <span className="truncate  sui-color-active">
                         {data.label}
                     </span>
                 </div>

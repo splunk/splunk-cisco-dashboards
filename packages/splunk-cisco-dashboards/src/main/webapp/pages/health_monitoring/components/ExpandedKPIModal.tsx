@@ -56,7 +56,7 @@ export const ExpandedKPIModal: React.FC<ExpandedKPIModalProps> = ({
 
     return createPortal(
         <div
-            className="fixed inset-0 z-[9998] flex items-center justify-center bg-slate-950/58 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-[9998] flex items-center justify-center sui-bg-page p-4 backdrop-blur-sm"
             onMouseDown={(event) => {
                 if (event.target === event.currentTarget) onClose();
             }}
@@ -64,15 +64,15 @@ export const ExpandedKPIModal: React.FC<ExpandedKPIModalProps> = ({
             aria-modal="true"
             aria-label={`${kpi.title} expanded view`}
         >
-            <div className="flex max-h-[92vh] w-[min(920px,96vw)] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-900 shadow-2xl dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
-                <header className="flex items-center justify-between border-b border-slate-200 px-7 py-5 dark:border-slate-800">
+            <div className="flex max-h-[92vh] w-[min(920px,96vw)] flex-col overflow-hidden rounded-xl border    shadow-2xl sui-border-default sui-bg-page sui-color-active">
+                <header className="flex items-center justify-between border-b  px-7 py-5 sui-border-weak">
                     <div className="flex min-w-0 items-center gap-3">
                         {Icon && <Icon className={cn('h-7 w-7 flex-shrink-0', tone.text)} />}
                         <div className="min-w-0">
                             <h2 className="truncate text-2xl font-black tracking-tight">
                                 {kpi.title}
                             </h2>
-                            <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">
+                            <p className="mt-1 text-sm font-semibold  sui-color-default">
                                 {kpi.app} / {kpi.category} / {kpi.subCategory}
                             </p>
                         </div>
@@ -82,7 +82,7 @@ export const ExpandedKPIModal: React.FC<ExpandedKPIModalProps> = ({
                         aria-label="Close expanded KPI"
                         title="Close"
                         {...getInteractiveControlProps(() => onClose())}
-                        className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-white"
+                        className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg sui-color-muted transition   focus:outline-none focus-visible:ring-2 sui-focus-visible-ring sui-hover-bg-overlay sui-hover-color-active"
                     >
                         <X className="h-5 w-5" />
                     </button>
@@ -90,8 +90,8 @@ export const ExpandedKPIModal: React.FC<ExpandedKPIModalProps> = ({
 
                 <div className="overflow-y-auto p-7">
                     <div className="grid gap-4 md:grid-cols-3">
-                        <div className="rounded-xl bg-slate-50 p-5 dark:bg-slate-900/80">
-                            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                        <div className="rounded-xl  p-5 sui-bg-section">
+                            <p className="text-sm font-semibold  sui-color-default">
                                 Current Value
                             </p>
                             <div className="mt-2 flex items-baseline gap-2">
@@ -99,14 +99,14 @@ export const ExpandedKPIModal: React.FC<ExpandedKPIModalProps> = ({
                                     {kpi.valueLabel ?? kpi.value.toLocaleString()}
                                 </span>
                                 {kpi.unit && (
-                                    <span className="text-sm font-semibold text-slate-500">
+                                    <span className="text-sm font-semibold sui-color-muted">
                                         {kpi.unit}
                                     </span>
                                 )}
                             </div>
                         </div>
-                        <div className="rounded-xl bg-slate-50 p-5 dark:bg-slate-900/80">
-                            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                        <div className="rounded-xl  p-5 sui-bg-section">
+                            <p className="text-sm font-semibold  sui-color-default">
                                 Trend
                             </p>
                             <p className={cn('mt-3 inline-flex items-center gap-1 text-2xl font-black', tone.text)}>
@@ -118,14 +118,14 @@ export const ExpandedKPIModal: React.FC<ExpandedKPIModalProps> = ({
                                 {Math.abs(kpi.trend)}%
                             </p>
                         </div>
-                        <div className="rounded-xl bg-slate-50 p-5 dark:bg-slate-900/80">
-                            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                        <div className="rounded-xl  p-5 sui-bg-section">
+                            <p className="text-sm font-semibold  sui-color-default">
                                 Progress
                             </p>
                             <p className="mt-2 text-4xl font-black tracking-tight">
                                 {kpi.progress}%
                             </p>
-                            <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                            <div className="mt-3 h-2 overflow-hidden rounded-full  sui-bg-floating">
                                 <div
                                     className={cn('h-full rounded-full', tone.progress)}
                                     style={{ width: `${kpi.progress}%` }}
@@ -134,13 +134,13 @@ export const ExpandedKPIModal: React.FC<ExpandedKPIModalProps> = ({
                         </div>
                     </div>
 
-                    <div className="mt-6 rounded-xl border border-sky-200 bg-sky-50/80 p-5 text-sky-950 dark:border-sky-800/80 dark:bg-sky-950/35 dark:text-sky-100">
+                    <div className="mt-6 rounded-xl border   p-5  sui-border-info sui-bg-info sui-color-info">
                         <p className="text-sm font-black">Description</p>
                         <p className="mt-2 text-sm leading-6">{kpi.description}</p>
                     </div>
 
-                    <div className="mt-6 rounded-xl bg-slate-50 p-5 dark:bg-slate-900/70">
-                        <p className="text-sm font-black text-slate-700 dark:text-slate-200">
+                    <div className="mt-6 rounded-xl  p-5 sui-bg-section">
+                        <p className="text-sm font-black  sui-color-active">
                             Thresholds
                         </p>
                         <div className="mt-5 grid gap-4 sm:grid-cols-3">
@@ -153,16 +153,16 @@ export const ExpandedKPIModal: React.FC<ExpandedKPIModalProps> = ({
                                         className={cn(
                                             'rounded-full border px-3 py-1 text-xs font-semibold',
                                             threshold.label === 'Healthy' &&
-                                                'border-emerald-300 bg-emerald-100 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-900/35 dark:text-emerald-300',
+                                                'sui-border-positive sui-bg-positive sui-color-positive',
                                             threshold.label === 'Warning' &&
-                                                'border-amber-300 bg-amber-100 text-amber-700 dark:border-amber-700 dark:bg-amber-900/35 dark:text-amber-300',
+                                                'sui-border-warning sui-bg-warning sui-color-warning',
                                             threshold.label === 'Critical' &&
-                                                'border-red-300 bg-red-100 text-red-700 dark:border-red-700 dark:bg-red-900/35 dark:text-red-300'
+                                                'sui-border-negative sui-bg-negative sui-color-negative'
                                         )}
                                     >
                                         {threshold.label}
                                     </span>
-                                    <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                                    <span className="text-sm font-semibold  sui-color-default">
                                         {threshold.value}
                                     </span>
                                 </div>
@@ -170,11 +170,11 @@ export const ExpandedKPIModal: React.FC<ExpandedKPIModalProps> = ({
                         </div>
                     </div>
 
-                    <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950">
-                        <p className="mb-5 text-base font-black text-slate-900 dark:text-white">
+                    <div className="mt-6 rounded-xl border   p-5 sui-border-weak sui-bg-page">
+                        <p className="mb-5 text-base font-black  sui-color-active">
                             Historical Data
                         </p>
-                        <div className="h-[310px] text-slate-500">
+                        <div className="h-[310px] sui-color-muted">
                             <KPIChart kpi={kpi} showGrid showAxes />
                         </div>
                     </div>

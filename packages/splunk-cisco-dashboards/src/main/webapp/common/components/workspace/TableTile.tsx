@@ -147,10 +147,10 @@ const NoDataState: React.FC<{
     }
     return (
         <div className="flex flex-col items-start mb-1">
-            <span className="text-2xl font-black tracking-tighter leading-none text-slate-400 dark:text-slate-500">
+            <span className="text-2xl font-black tracking-tighter leading-none  sui-color-muted">
                 —
             </span>
-            <span className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5 leading-tight">
+            <span className="text-xs font-medium  sui-color-muted mt-0.5 leading-tight">
                 {subtext}
             </span>
         </div>
@@ -244,10 +244,10 @@ export const TableTile: React.FC<TableTileProps> = ({
                     className={cn(
                         'absolute top-1 right-2 w-1.5 h-1.5 rounded-full',
                         source === 'live'
-                            ? 'bg-emerald-500'
+                            ? 'sui-bg-positive'
                             : source === 'loading'
-                            ? 'bg-amber-400 animate-pulse'
-                            : 'bg-slate-300'
+                            ? 'sui-bg-warning animate-pulse'
+                            : 'sui-bg-floating'
                     )}
                     title={
                         source === 'live'
@@ -269,7 +269,7 @@ export const TableTile: React.FC<TableTileProps> = ({
                 data-tile-control="true"
                 className="flex flex-col mb-1"
             >
-                <span className="text-[12px] font-bold text-slate-800 dark:text-slate-100 tracking-tight leading-tight uppercase flex items-center gap-1">
+                <span className="sui-color-default font-bold sui-color-active tracking-tight leading-tight flex items-center gap-1">
                     <span className="flex items-center gap-1 min-w-0 truncate">
                         {label}
                     </span>
@@ -295,7 +295,7 @@ export const TableTile: React.FC<TableTileProps> = ({
                     </span>
                 </span>
                 {subLabel && (
-                    <span className="text-[9.5px] text-slate-400 dark:text-slate-500 font-medium tracking-tight leading-tight line-clamp-1 min-h-[12px]">
+                    <span className="sui-color-default  sui-color-muted font-medium tracking-tight leading-tight line-clamp-1 min-h-[12px]">
                         {subLabel}
                     </span>
                 )}
@@ -316,11 +316,11 @@ export const TableTile: React.FC<TableTileProps> = ({
                         // (hovering rows is content-reading
                         // intent, not drag intent).
                         data-tile-control="true"
-                        className="overflow-y-auto overflow-x-auto rounded border border-slate-200/60 dark:border-slate-700/60"
+                        className="overflow-y-auto overflow-x-auto rounded border  sui-border-default"
                         style={{ maxHeight: `${bodyHeightPx}px` }}
                     >
                         <table className="w-full text-xs leading-tight border-collapse">
-                            <thead className="bg-slate-50/80 dark:bg-slate-800/40 sticky top-0 z-10">
+                            <thead className="sui-bg-page sui-bg-popup sticky top-0 z-10">
                                 <tr>
                                     {columns.map((col, idx) => {
                                         const isSorted =
@@ -344,7 +344,7 @@ export const TableTile: React.FC<TableTileProps> = ({
                                                         : 'none'
                                                 }
                                                 className={cn(
-                                                    'p-0 font-semibold text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400 whitespace-nowrap border-b border-slate-200 dark:border-slate-700',
+                                                    'p-0 font-semibold text-xs uppercase tracking-wide  sui-color-default whitespace-nowrap border-b  sui-border-default',
                                                     alignRight
                                                         ? 'text-right'
                                                         : 'text-left'
@@ -357,19 +357,19 @@ export const TableTile: React.FC<TableTileProps> = ({
                                                     title={`Sort by ${col}`}
                                                     className={cn(
                                                         'group inline-flex w-full items-center gap-0.5 px-2 py-1 transition-colors rounded-sm',
-                                                        'hover:bg-slate-100/90 dark:hover:bg-slate-700/50',
-                                                        'focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-0',
+                                                        'sui-hover-bg-section sui-hover-bg-floating',
+                                                        'focus:outline-none focus:ring-2 sui-focus-ring focus:ring-offset-0',
                                                         alignRight
                                                             ? 'justify-end'
                                                             : 'justify-start',
                                                         isSorted &&
-                                                            'text-sky-700 dark:text-sky-300'
+                                                            'sui-color-info'
                                                     )}
                                                 >
                                                     <span>{col}</span>
                                                     <SortIcon
                                                         className={cn(
-                                                            'h-2.5 w-2.5 flex-shrink-0 stroke-[2.5px]',
+                                                            'h-2.5 w-2.5 flex-shrink-0 sui-stroke-default',
                                                             isSorted
                                                                 ? 'opacity-100'
                                                                 : 'opacity-0 group-hover:opacity-40'
@@ -386,7 +386,7 @@ export const TableTile: React.FC<TableTileProps> = ({
                                 {displayRows.map((row, rowIdx) => (
                                     <tr
                                         key={rowIdx}
-                                        className="border-t border-slate-100 dark:border-slate-800 hover:bg-slate-50/60 dark:hover:bg-slate-800/30 transition-colors"
+                                        className="border-t  sui-border-weak  sui-hover-bg-overlay transition-colors"
                                     >
                                         {columns.map((col, colIdx) => {
                                             const raw = row[col];
@@ -396,7 +396,7 @@ export const TableTile: React.FC<TableTileProps> = ({
                                                 <td
                                                     key={col}
                                                     className={cn(
-                                                        'px-2 py-1 text-slate-700 dark:text-slate-300 max-w-[160px] overflow-hidden text-ellipsis whitespace-nowrap',
+                                                        'px-2 py-1  sui-color-default max-w-[160px] overflow-hidden text-ellipsis whitespace-nowrap',
                                                         numeric
                                                             ? 'text-right tabular-nums font-medium'
                                                             : 'text-left'
@@ -412,7 +412,7 @@ export const TableTile: React.FC<TableTileProps> = ({
                             </tbody>
                         </table>
                     </div>
-                    <div className="flex items-baseline justify-between text-xs text-slate-400 dark:text-slate-500 mt-1 px-1 leading-tight">
+                    <div className="flex items-baseline justify-between text-xs  sui-color-muted mt-1 px-1 leading-tight">
                         <span className="tabular-nums">
                             {truncated
                                 ? `${rows.length} of ${reportedTotal} rows`

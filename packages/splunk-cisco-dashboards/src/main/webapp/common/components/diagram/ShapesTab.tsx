@@ -841,14 +841,14 @@ const ShapeTile: React.FC<ShapeTileSpec> = ({ id, label, description }) => {
             title={description}
             className={cn(
                 'group flex flex-col items-center justify-center gap-1 p-2 rounded-lg cursor-grab active:cursor-grabbing select-none',
-                'border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900',
-                'hover:border-sky-400 hover:shadow-md hover:bg-sky-50/50 dark:hover:bg-sky-950/30',
+                'border  sui-border-weak  sui-bg-section',
+                'sui-hover-border-info hover:shadow-md  sui-hover-bg-info',
                 'transition-all duration-150'
             )}
         >
             <div
                 className={cn(
-                    'flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:text-sky-600 dark:group-hover:text-sky-400',
+                    'flex items-center justify-center  sui-color-default  sui-group-hover-color-info',
                     'w-10 h-10'
                 )}
             >
@@ -858,16 +858,16 @@ const ShapeTile: React.FC<ShapeTileSpec> = ({ id, label, description }) => {
                     // A typographic "T" reads as "text" at a glance,
                     // matching the affordance of design-tool text
                     // tools (Figma, Sketch, Visio).
-                    <div className="w-9 h-7 rounded border border-slate-300 dark:border-slate-600 flex items-center justify-center text-[14px] font-serif font-semibold text-slate-500 dark:text-slate-400">
+                    <div className="w-9 h-7 rounded border  sui-border-default flex items-center justify-center  font-serif font-semibold  sui-color-default">
                         T
                     </div>
                 ) : (
-                    <div className="w-9 h-7 rounded border-2 border-dashed border-slate-400 dark:border-slate-500 flex items-center justify-center text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    <div className="w-9 h-7 rounded border-2 border-dashed  sui-border-strong flex items-center justify-center text-xs uppercase tracking-wider  sui-color-muted">
                         Region
                     </div>
                 )}
             </div>
-            <div className="text-xs font-medium text-slate-700 dark:text-slate-200 text-center leading-tight">
+            <div className="text-xs font-medium  sui-color-active text-center leading-tight">
                 {label}
             </div>
         </div>
@@ -897,14 +897,14 @@ const CustomStencilTile: React.FC<{ asset: CustomStencilAsset }> = ({ asset }) =
             title={asset.label}
             className={cn(
                 'group flex flex-col items-center justify-center gap-1 p-2 rounded-lg cursor-grab active:cursor-grabbing select-none',
-                'border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900',
-                'hover:border-sky-400 hover:shadow-md hover:bg-sky-50/50 dark:hover:bg-sky-950/30',
+                'border  sui-border-weak  sui-bg-section',
+                'sui-hover-border-info hover:shadow-md  sui-hover-bg-info',
                 'transition-all duration-150'
             )}
         >
             <div
                 className={cn(
-                    'flex items-center justify-center text-slate-700 dark:text-slate-300 group-hover:text-sky-600 dark:group-hover:text-sky-400',
+                    'flex items-center justify-center  sui-color-default  sui-group-hover-color-info',
                     isWide ? 'h-10 w-full px-1' : 'w-10 h-10'
                 )}
             >
@@ -918,7 +918,7 @@ const CustomStencilTile: React.FC<{ asset: CustomStencilAsset }> = ({ asset }) =
                     draggable={false}
                 />
             </div>
-            <div className="text-xs font-medium text-slate-700 dark:text-slate-200 text-center leading-tight">
+            <div className="text-xs font-medium  sui-color-active text-center leading-tight">
                 {asset.label}
             </div>
         </div>
@@ -940,15 +940,15 @@ const CategoryDrawer: React.FC<CategoryDrawerProps> = ({
     onToggle,
     children,
 }) => (
-    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900/70">
+    <div className="overflow-hidden rounded-lg border   sui-border-weak sui-bg-section">
         <button
             type="button"
             aria-expanded={open}
             onClick={onToggle}
             className={cn(
                 'flex w-full items-center justify-between gap-2 px-2.5 py-2 text-left',
-                'text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400',
-                'hover:bg-slate-50 hover:text-sky-700 dark:hover:bg-slate-800/70 dark:hover:text-sky-300'
+                'text-xs font-semibold uppercase tracking-wider  sui-color-default',
+                'sui-hover-bg-page  sui-hover-bg-overlay sui-hover-color-info'
             )}
         >
             <span className="flex min-w-0 items-center gap-1.5">
@@ -960,12 +960,12 @@ const CategoryDrawer: React.FC<CategoryDrawerProps> = ({
                 />
                 <span className="truncate">{label}</span>
             </span>
-            <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-xs font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+            <span className="rounded-full  px-1.5 py-0.5 text-xs font-bold  sui-bg-popup sui-color-default">
                 {count}
             </span>
         </button>
         {open ? (
-            <div className="grid grid-cols-2 gap-2 border-t border-slate-100 p-2 dark:border-slate-800">
+            <div className="grid grid-cols-2 gap-2 border-t  p-2 sui-border-weak">
                 {children}
             </div>
         ) : null}
@@ -1099,7 +1099,7 @@ export const ShapesTab: React.FC = () => {
         <div className="flex flex-col gap-3 p-3">
             <div className="flex gap-2">
                 <div className="relative min-w-0 flex-1">
-                    <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                    <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 sui-color-default" />
                     <input
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
@@ -1107,9 +1107,9 @@ export const ShapesTab: React.FC = () => {
                         placeholder="Search shapes..."
                         aria-label="Search shapes"
                         className={cn(
-                            'h-8 w-full rounded-md border border-slate-200 bg-white pl-8 pr-8 text-xs text-slate-700 outline-none',
-                            'placeholder:text-slate-400 focus:border-sky-400 focus:ring-2 focus:ring-sky-100',
-                            'dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:focus:ring-sky-950'
+                            'h-8 w-full rounded-md border sui-border-weak sui-bg-section pl-8 pr-8 text-xs sui-color-default outline-none',
+                            'sui-color-default sui-focus-border-info focus:ring-2 sui-focus-ring',
+                            'sui-border-weak sui-bg-page sui-color-active sui-focus-ring'
                         )}
                     />
                     {query ? (
@@ -1117,7 +1117,7 @@ export const ShapesTab: React.FC = () => {
                             type="button"
                             onClick={() => setQuery('')}
                             aria-label="Clear shape search"
-                            className="absolute right-1.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                            className="absolute right-1.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded sui-color-default   sui-hover-bg-overlay sui-hover-color-active"
                         >
                             <X className="h-3.5 w-3.5" />
                         </button>
@@ -1136,7 +1136,7 @@ export const ShapesTab: React.FC = () => {
                     type="button"
                     onClick={handleImportClick}
                     title="Import stencil ZIP, SVG, PNG, or Visio package"
-                    className="flex h-8 items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2 text-xs font-medium text-slate-600 hover:border-sky-400 hover:text-sky-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                    className="flex h-8 items-center gap-1.5 rounded-md border   px-2 text-xs font-medium  sui-hover-border-info sui-hover-color-info sui-border-weak sui-bg-section sui-color-default"
                 >
                     <Upload className="h-3.5 w-3.5" />
                     Import
@@ -1146,24 +1146,24 @@ export const ShapesTab: React.FC = () => {
                         type="button"
                         onClick={handleClearCustomStencils}
                         title="Clear custom stencils"
-                        className="flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-400 hover:border-rose-300 hover:text-rose-500 dark:border-slate-800 dark:bg-slate-900"
+                        className="flex h-8 w-8 items-center justify-center rounded-md border   sui-color-default sui-hover-border-negative sui-hover-color-negative sui-border-weak sui-bg-section"
                     >
                         <Trash2 className="h-3.5 w-3.5" />
                     </button>
                 ) : null}
             </div>
             {importMessage ? (
-                <div className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                <div className="rounded-md border   px-2 py-1 text-xs  sui-border-weak sui-bg-section sui-color-default">
                     {importMessage}
                 </div>
             ) : null}
-            <div className="rounded-md border border-sky-100 bg-sky-50/60 px-2 py-1.5 text-xs leading-snug text-slate-600 dark:border-sky-950 dark:bg-sky-950/20 dark:text-slate-300">
+            <div className="rounded-md border   px-2 py-1.5 text-xs leading-snug  sui-border-info sui-bg-info sui-color-default">
                 Need Cisco device artwork? Download stencil ZIPs from{' '}
                 <a
                     href={CISCO_VISIO_STENCIL_LIBRARY_URL}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-0.5 font-medium text-sky-700 hover:text-sky-800 dark:text-sky-300 dark:hover:text-sky-200"
+                    className="inline-flex items-center gap-0.5 font-medium   sui-color-info sui-hover-color-info"
                 >
                     Cisco&apos;s Visio stencil library
                     <ExternalLink className="h-3 w-3" />
@@ -1172,7 +1172,7 @@ export const ShapesTab: React.FC = () => {
                 browser-readable SVG/PNG media. EMF/WMF-only stencils need
                 conversion first.
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug">
+            <p className="text-xs  sui-color-default leading-snug">
                 {normalizedQuery ? (
                     <>
                         {filteredTiles.length + filteredCustomStencils.length}{' '}
@@ -1184,7 +1184,7 @@ export const ShapesTab: React.FC = () => {
                 ) : (
                     <>
                         Drag any shape onto the canvas. Use{' '}
-                        <span className="font-medium text-slate-700 dark:text-slate-200">
+                        <span className="font-medium  sui-color-active">
                             Region / Site
                         </span>{' '}
                         to draw a labelled container, then drop devices inside it.
@@ -1196,8 +1196,8 @@ export const ShapesTab: React.FC = () => {
                     type="button"
                     onClick={toggleAllCategories}
                     className={cn(
-                        'self-start rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-500',
-                        'hover:border-sky-300 hover:text-sky-700 dark:border-slate-800 dark:text-slate-400 dark:hover:border-sky-900 dark:hover:text-sky-300'
+                        'self-start rounded-md border sui-border-weak px-2 py-1 text-xs font-semibold sui-color-muted',
+                        'sui-hover-border-info  sui-border-weak sui-color-default sui-hover-border-info sui-hover-color-info'
                     )}
                 >
                     {allVisibleExpanded ? 'Collapse all' : 'Expand all'}
@@ -1205,14 +1205,14 @@ export const ShapesTab: React.FC = () => {
             ) : null}
             {filteredTiles.length === 0 ? (
                 filteredCustomStencils.length === 0 ? (
-                    <div className="rounded-md border border-dashed border-slate-200 px-3 py-5 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+                    <div className="rounded-md border border-dashed  px-3 py-5 text-center text-xs  sui-border-weak sui-color-default">
                         No shapes match that search.
                     </div>
                 ) : null
             ) : null}
             {filteredCustomStencils.length > 0 ? (
                 <div className="flex flex-col gap-1.5">
-                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-0.5">
+                    <div className="text-xs font-semibold uppercase tracking-wider  sui-color-muted px-0.5">
                         Custom Stencils
                     </div>
                     <div className="grid grid-cols-2 gap-2">

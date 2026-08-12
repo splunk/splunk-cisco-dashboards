@@ -4520,11 +4520,6 @@ body.dashboardbuilder-navigation-hidden header[class*='HeaderStyles__HeaderWrapp
 body.dashboardbuilder-navigation-hidden nav[class*='NavPanelStyles__NavPanelWrapper'] {
     display: none !important;
 }
-.dashboardbuilderview-light,
-.dashboard-manager-page-light,
-.dashboard-builder-themed-modal-light {
-    color-scheme: light;
-}
 .dashboardbuilderview-dark,
 .dashboard-manager-page-dark,
 .dashboard-builder-themed-modal-dark {
@@ -5561,10 +5556,6 @@ body.dashboard-builder-modal-portal-dark
     [class*='ModalLayerStyles__StyledClickAwayOverlay'] {
     background: rgba(2, 6, 23, 0.72) !important;
 }
-body.dashboard-builder-modal-portal-light
-    [class*='ModalLayerStyles__StyledClickAwayOverlay'] {
-    background: rgba(15, 23, 42, 0.32) !important;
-}
 body.dashboard-builder-drilldown-open
     [class*='ModalLayerStyles__StyledClickAwayOverlay'] {
     z-index: 100002 !important;
@@ -5674,11 +5665,6 @@ body.dashboard-builder-drilldown-open .dashboard-builder-drilldown-modal {
     border-color: rgba(148, 163, 184, 0.38);
     background: rgba(15, 23, 42, 0.82);
     color: #cbd5e1;
-}
-.dashboard-builder-themed-modal-light .dashboard-builder-drilldown-classification {
-    border-color: #cbd5e1;
-    background: #f8fafc;
-    color: #475569;
 }
 .dashboard-builder-drilldown-result-shell {
     position: relative;
@@ -5855,11 +5841,6 @@ body.dashboard-builder-drilldown-open .dashboard-builder-drilldown-modal {
 .dashboard-builder-themed-modal-dark .dashboard-builder-drilldown-metadata-block p,
 .dashboard-builder-themed-modal-dark .dashboard-builder-drilldown-metadata-block li {
     color: #cbd5e1 !important;
-}
-.dashboard-builder-themed-modal-light .dashboard-builder-drilldown-metadata-block,
-.dashboard-builder-themed-modal-light .dashboard-builder-drilldown-metadata-block p,
-.dashboard-builder-themed-modal-light .dashboard-builder-drilldown-metadata-block li {
-    color: #334155 !important;
 }
 .dashboard-builder-drilldown-metadata-block ul,
 .dashboard-builder-drilldown-metadata-block ol {

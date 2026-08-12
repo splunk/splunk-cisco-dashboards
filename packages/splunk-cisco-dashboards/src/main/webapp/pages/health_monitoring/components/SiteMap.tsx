@@ -8,7 +8,6 @@ import {
 import { cn } from '@/common/lib/utils';
 
 interface SiteMapProps {
-    isDark: boolean;
     earliestTime: string;
     latestTime: string;
 }
@@ -22,7 +21,7 @@ const RegionalViewToggle: React.FC<{
     <div
         role="tablist"
         aria-label="Topology view"
-        className="flex rounded-md bg-slate-100 p-1 dark:bg-slate-800/60"
+        className="flex rounded-md  p-1 sui-bg-popup"
     >
         {([
             { value: 'map', label: 'Map', Icon: Map },
@@ -37,10 +36,10 @@ const RegionalViewToggle: React.FC<{
                     aria-selected={active}
                     onClick={() => onChange(option.value)}
                     className={cn(
-                        'inline-flex h-8 items-center gap-1.5 rounded px-3 text-xs font-black uppercase tracking-wider transition focus:outline-none focus:ring-1 focus:ring-sky-400',
+                        'inline-flex h-8 items-center gap-1.5 rounded px-3 text-xs font-black uppercase tracking-wider transition focus:outline-none focus:ring-1 sui-focus-ring',
                         active
-                            ? 'border border-slate-200 bg-white text-sky-600 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-sky-300'
-                            : 'text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200'
+                            ? 'border    shadow-sm sui-border-default sui-bg-section sui-color-info'
+                            : 'sui-color-default  sui-color-muted sui-hover-color-active'
                     )}
                 >
                     <option.Icon className="h-3.5 w-3.5" />
@@ -52,20 +51,19 @@ const RegionalViewToggle: React.FC<{
 );
 
 export const SiteMap: React.FC<SiteMapProps> = ({
-    isDark,
     earliestTime,
     latestTime,
 }) => {
     const [view, setView] = useState<RegionalView>('map');
 
     return (
-        <aside className="flex h-full min-h-0 w-full flex-col rounded-xl border border-slate-200 bg-white/78 p-3 shadow-[0_18px_55px_-38px_rgba(15,23,42,0.7)] backdrop-blur-xl dark:border-slate-700/80 dark:bg-slate-900/74">
+        <aside className="flex h-full min-h-0 w-full flex-col rounded-xl border   p-3 sui-shadow-overlay backdrop-blur-xl sui-border-default sui-bg-section">
             <div className="mb-2 flex items-start justify-between gap-4 px-1">
                 <div className="min-w-0">
-                    <h2 className="truncate text-[17px] font-black uppercase tracking-wide text-sky-900 dark:text-sky-200">
+                    <h2 className="truncate  font-black uppercase tracking-wide  sui-color-info">
                         Customer Site Connectivity
                     </h2>
-                    <p className="mt-1 truncate text-xs font-semibold text-slate-400 dark:text-slate-500">
+                    <p className="mt-1 truncate text-xs font-semibold  sui-color-muted">
                         Editable customer site connectivity
                     </p>
                 </div>
@@ -75,7 +73,6 @@ export const SiteMap: React.FC<SiteMapProps> = ({
                 {view === 'map' ? (
                     <CustomerTopologyMap
                         topology={CUSTOMER_TOPOLOGY}
-                        isDark={isDark}
                         earliestTime={earliestTime}
                         latestTime={latestTime}
                     />

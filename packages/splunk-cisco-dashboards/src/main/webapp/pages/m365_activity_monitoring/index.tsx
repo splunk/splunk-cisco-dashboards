@@ -100,12 +100,12 @@ interface CustomTooltipProps {
 }
 
 const toneClasses: Record<MetricTone, string> = {
-    indigo: 'border-indigo-500/35 bg-indigo-950/10',
-    teal: 'border-teal-500/30 bg-teal-950/10',
-    rose: 'border-rose-500/35 bg-rose-950/10',
-    amber: 'border-amber-500/35 bg-amber-950/10',
-    violet: 'border-violet-500/35 bg-violet-950/10',
-    slate: 'border-slate-800/60 bg-slate-900',
+    indigo: 'sui-border-info sui-bg-info',
+    teal: 'sui-border-info sui-bg-info',
+    rose: 'sui-border-negative sui-bg-negative',
+    amber: 'sui-border-warning sui-bg-warning',
+    violet: 'sui-border-info sui-bg-info',
+    slate: 'sui-border-weak sui-bg-section',
 };
 
 const navItems = [
@@ -149,13 +149,13 @@ const formatTooltipName = (name?: string): string => {
 const Panel: React.FC<PanelProps> = ({ title, children, className, bodyClassName }) => (
     <section
         className={cn(
-            'overflow-hidden rounded-lg border border-slate-800/60 bg-slate-900 shadow-[0_20px_80px_rgba(0,0,0,0.18)]',
+            'overflow-hidden rounded-lg border sui-border-weak sui-bg-section sui-shadow-overlay',
             className
         )}
     >
         {title ? (
-            <div className="border-b border-slate-800/60 px-4 py-3">
-                <h2 className="text-sm font-bold text-slate-100">{title}</h2>
+            <div className="border-b sui-border-weak px-4 py-3">
+                <h2 className="text-sm font-bold sui-color-active">{title}</h2>
             </div>
         ) : null}
         <div className={cn('p-4', bodyClassName)}>{children}</div>
@@ -173,21 +173,21 @@ const Metric: React.FC<MetricProps> = ({
     className,
 }) => {
     const positive = trendDirection === goodWhen;
-    const trendClass = positive ? 'text-emerald-400' : 'text-rose-400';
+    const trendClass = positive ? 'sui-color-positive' : 'sui-color-negative';
 
     return (
         <Panel
             className={cn('min-h-[108px]', toneClasses[tone], className)}
             bodyClassName="flex h-full flex-col justify-center"
         >
-            <div className="flex items-center gap-2 text-slate-400">
+            <div className="flex items-center gap-2 sui-color-default">
                 <Icon className="h-4 w-4" />
                 <span className="text-xs font-black uppercase tracking-[0.16em]">
                     {title}
                 </span>
             </div>
             <div className="mt-4 flex items-end gap-3">
-                <span className="text-3xl font-semibold tracking-tight text-white">
+                <span className="text-3xl font-semibold tracking-tight sui-color-active">
                     {value}
                 </span>
                 {trend ? (
@@ -204,31 +204,31 @@ const FilterBar: React.FC<FilterBarProps> = ({ filters }) => (
     <Panel className="rounded-lg" bodyClassName="flex flex-wrap items-center gap-3 p-3">
         <button
             type="button"
-            className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-700 bg-slate-800 px-3 text-sm font-bold text-slate-200 transition hover:border-indigo-400/70 hover:bg-slate-800/75"
+            className="inline-flex h-9 items-center gap-2 rounded-md border sui-border-default sui-bg-popup px-3 text-sm font-bold sui-color-active transition sui-hover-border-info sui-hover-bg-overlay"
         >
-            <Calendar className="h-4 w-4 text-slate-400" />
+            <Calendar className="h-4 w-4 sui-color-default" />
             Last 24 Hours
-            <ChevronDown className="h-4 w-4 text-slate-500" />
+            <ChevronDown className="h-4 w-4 sui-color-muted" />
         </button>
-        <div className="hidden h-8 w-px bg-slate-800 sm:block" />
+        <div className="hidden h-8 w-px sui-bg-popup sm:block" />
         {filters.map((filter) => (
             <button
                 key={filter.label}
                 type="button"
-                className="inline-flex h-9 min-w-[130px] items-center justify-between gap-3 rounded-md border border-dashed border-slate-700 bg-slate-950 px-3 text-sm text-slate-400 transition hover:border-indigo-400/70 hover:text-slate-200"
+                className="inline-flex h-9 min-w-[130px] items-center justify-between gap-3 rounded-md border border-dashed sui-border-default sui-bg-page px-3 text-sm sui-color-default transition sui-hover-border-info sui-hover-color-active"
             >
                 <span>
-                    {filter.label}: <strong className="font-bold text-slate-200">{filter.value}</strong>
+                    {filter.label}: <strong className="font-bold sui-color-active">{filter.value}</strong>
                 </span>
-                <ChevronDown className="h-4 w-4 text-slate-600" />
+                <ChevronDown className="h-4 w-4 sui-color-default" />
             </button>
         ))}
         <label className="relative ml-auto min-w-[250px] flex-1 sm:max-w-xs">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 sui-color-muted" />
             <input
                 aria-label="Search dashboard"
                 placeholder="Search in dashboard..."
-                className="h-9 w-full rounded-md border border-slate-800 bg-slate-950 py-0 pl-9 pr-3 text-sm text-slate-200 outline-none transition placeholder:text-slate-500 focus:border-indigo-400/80 focus:ring-2 focus:ring-indigo-500/20"
+                className="h-9 w-full rounded-md border sui-border-weak sui-bg-page py-0 pl-9 pr-3 text-sm  outline-none transition sui-color-muted sui-focus-border-info focus:ring-2 sui-focus-ring"
             />
         </label>
     </Panel>
@@ -238,9 +238,9 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
     if (!active || !payload?.length) return null;
 
     return (
-        <div className="rounded-lg border border-slate-700 bg-slate-950/95 px-3 py-2 shadow-2xl backdrop-blur">
+        <div className="rounded-lg border sui-border-default sui-bg-page px-3 py-2 shadow-2xl backdrop-blur">
             {label ? (
-                <div className="mb-2 text-xs font-bold uppercase tracking-widest text-slate-400">
+                <div className="mb-2 text-xs font-bold uppercase tracking-widest sui-color-default">
                     {label}
                 </div>
             ) : null}
@@ -250,14 +250,14 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
                         key={`${item.name ?? item.dataKey}-${item.value}`}
                         className="flex min-w-[150px] items-center justify-between gap-5 text-xs"
                     >
-                        <span className="flex items-center gap-2 text-slate-300">
+                        <span className="flex items-center gap-2 sui-color-default">
                             <span
                                 className="h-2 w-2 rounded-full"
                                 style={{ backgroundColor: item.color ?? '#6366f1' }}
                             />
                             {formatTooltipName(item.name ?? item.dataKey)}
                         </span>
-                        <strong className="font-semibold text-white">
+                        <strong className="font-semibold sui-color-active">
                             {typeof item.value === 'number'
                                 ? formatShortNumber(item.value)
                                 : item.value}
@@ -270,31 +270,31 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
 };
 
 const AppHeader: React.FC = () => (
-    <header className="flex min-h-[72px] items-center justify-between border-b border-slate-800/80 bg-slate-900/80 px-6 backdrop-blur">
+    <header className="flex min-h-[72px] items-center justify-between border-b sui-border-weak sui-bg-section px-6 backdrop-blur">
         <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md border border-indigo-500/60 bg-indigo-500/15 text-indigo-300">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md border sui-border-info sui-bg-accent sui-color-info">
                 <Activity className="h-5 w-5" />
             </div>
             <div>
-                <h1 className="text-xl font-black tracking-tight text-slate-100">
+                <h1 className="text-xl font-black tracking-tight sui-color-active">
                     M365 Activity Monitoring
                 </h1>
-                <p className="text-xs font-medium text-slate-500">
+                <p className="text-xs font-medium sui-color-muted">
                     Splunk Add-on for Microsoft Office 365
                 </p>
             </div>
         </div>
-        <div className="flex items-center gap-4 text-slate-400">
+        <div className="flex items-center gap-4 sui-color-default">
             <div className="inline-flex items-center gap-2 text-sm font-semibold">
-                <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,0.9)]" />
+                <span className="h-2 w-2 animate-pulse rounded-full sui-bg-positive sui-shadow-overlay" />
                 Live Data
             </div>
-            <div className="h-6 w-px bg-slate-800" />
+            <div className="h-6 w-px sui-bg-popup" />
             {[Download, Share2, Settings, MoreVertical].map((Icon, index) => (
                 <button
                     key={index}
                     type="button"
-                    className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-800 hover:text-indigo-300"
+                    className="flex h-8 w-8 items-center justify-center rounded-md sui-color-default transition sui-hover-bg-overlay sui-hover-color-info"
                 >
                     <Icon className="h-4 w-4" />
                 </button>
@@ -312,7 +312,7 @@ const NavigationInner: React.FC = () => {
     const activeTab = searchParams.get('tab') || 'overview';
 
     return (
-        <nav className="flex h-12 items-end gap-1 border-b border-slate-800/80 bg-slate-950/30 px-6">
+        <nav className="flex h-12 items-end gap-1 border-b sui-border-weak sui-bg-page px-6">
             {navItems.map((item) => {
                 const isActive = activeTab === item.tab;
 
@@ -323,8 +323,8 @@ const NavigationInner: React.FC = () => {
                         className={cn(
                             'flex h-full items-center border-b-2 px-4 text-sm font-bold transition',
                             isActive
-                                ? 'border-indigo-400 text-indigo-300'
-                                : 'border-transparent text-slate-400 hover:text-slate-200'
+                                ? 'sui-border-info sui-color-info'
+                                : 'sui-border-transparent sui-color-default sui-hover-color-active'
                         )}
                     >
                         {item.label}
@@ -346,7 +346,7 @@ const RoutedContent: React.FC = () => {
 };
 
 const DashboardShell: React.FC = () => (
-    <div className="m365-dashboard scd-c3-atmosphere min-h-screen bg-[#0A0E17] font-sans text-slate-200">
+    <div className="m365-dashboard scd-c3-atmosphere min-h-screen sui-bg-section font-sans sui-color-active">
         <AppHeader />
         <Navigation />
         <main className="max-h-[calc(100vh-120px)] overflow-y-auto px-6 py-6">
@@ -360,7 +360,7 @@ const ChartLegend: React.FC<{ items: Array<{ name: string; color: string }> }> =
 }) => (
     <div className="mt-4 flex flex-wrap items-center justify-center gap-4">
         {items.map((item) => (
-            <div key={item.name} className="flex items-center gap-2 text-sm text-slate-300">
+            <div key={item.name} className="flex items-center gap-2 text-sm sui-color-default">
                 <span
                     className="h-3 w-3 rounded-full"
                     style={{ backgroundColor: item.color }}
@@ -601,22 +601,22 @@ const ClientSummary: React.FC = () => (
 
 const About: React.FC = () => (
     <div className="mx-auto max-w-4xl">
-        <Panel className="border-indigo-500/30 bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950/20">
+        <Panel className="sui-border-info bg-gradient-to-br sui-gradient-from-section sui-gradient-via-section sui-gradient-to-info">
             <div className="space-y-8 p-8">
                 <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-indigo-500/60 bg-indigo-500/15 text-indigo-300">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg border sui-border-info sui-bg-accent sui-color-info">
                         <Shield className="h-7 w-7" />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-black tracking-tight text-white">
+                        <h2 className="text-2xl font-black tracking-tight sui-color-active">
                             M365 Activity Monitoring
                         </h2>
-                        <p className="text-base font-medium text-slate-400">
+                        <p className="text-base font-medium sui-color-default">
                             Splunk Add-on for Microsoft Office 365
                         </p>
                     </div>
                 </div>
-                <p className="max-w-3xl text-lg leading-8 text-slate-300">
+                <p className="max-w-3xl text-lg leading-8 sui-color-default">
                     This dashboard provides a comprehensive, modern view of Microsoft
                     365 activity. It is designed to feel like a highly polished Splunk
                     Dashboard Studio experience while using standard dashboard building
@@ -625,7 +625,7 @@ const About: React.FC = () => (
                 </p>
                 <div className="grid gap-6 md:grid-cols-2">
                     <InfoCard icon={Database} title="Data Sources">
-                        <ul className="space-y-3 text-sm text-slate-400">
+                        <ul className="space-y-3 text-sm sui-color-default">
                             <li>Azure Active Directory audit logs</li>
                             <li>Exchange Online message trace</li>
                             <li>SharePoint and OneDrive activity</li>
@@ -633,29 +633,29 @@ const About: React.FC = () => (
                         </ul>
                     </InfoCard>
                     <InfoCard icon={FileText} title="Documentation">
-                        <div className="space-y-3 text-sm text-slate-300">
-                            <a className="flex items-center gap-2 transition hover:text-indigo-300" href="https://docs.splunk.com/" rel="noreferrer" target="_blank">
+                        <div className="space-y-3 text-sm sui-color-default">
+                            <a className="flex items-center gap-2 transition sui-hover-color-info" href="https://docs.splunk.com/" rel="noreferrer" target="_blank">
                                 <ExternalLink className="h-4 w-4" />
                                 Splunk Add-on Configuration Guide
                             </a>
-                            <a className="flex items-center gap-2 transition hover:text-indigo-300" href="https://docs.splunk.com/Documentation/DashStudio" rel="noreferrer" target="_blank">
+                            <a className="flex items-center gap-2 transition sui-hover-color-info" href="https://docs.splunk.com/Documentation/DashStudio" rel="noreferrer" target="_blank">
                                 <ExternalLink className="h-4 w-4" />
                                 Dashboard Studio Reference
                             </a>
                         </div>
                     </InfoCard>
                 </div>
-                <div className="border-t border-slate-800 pt-7">
-                    <h3 className="mb-5 text-sm font-black uppercase tracking-[0.16em] text-slate-200">
+                <div className="border-t sui-border-weak pt-7">
+                    <h3 className="mb-5 text-sm font-black uppercase tracking-[0.16em] sui-color-active">
                         Version Information
                     </h3>
                     <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                         {versionInfo.map((item) => (
                             <div key={item.label}>
-                                <div className="text-sm font-semibold text-slate-500">
+                                <div className="text-sm font-semibold sui-color-muted">
                                     {item.label}
                                 </div>
-                                <div className="mt-2 font-mono text-sm font-bold text-slate-100">
+                                <div className="mt-2 font-mono text-sm font-bold sui-color-active">
                                     {item.value}
                                 </div>
                             </div>
@@ -672,8 +672,8 @@ const InfoCard: React.FC<{
     icon: IconComponent;
     title: string;
 }> = ({ children, icon: Icon, title }) => (
-    <div className="rounded-lg border border-slate-800 bg-slate-950/35 p-5">
-        <div className="mb-4 flex items-center gap-3 text-indigo-300">
+    <div className="rounded-lg border sui-border-weak sui-bg-page p-5">
+        <div className="mb-4 flex items-center gap-3 sui-color-info">
             <Icon className="h-5 w-5" />
             <h3 className="text-lg font-bold">{title}</h3>
         </div>

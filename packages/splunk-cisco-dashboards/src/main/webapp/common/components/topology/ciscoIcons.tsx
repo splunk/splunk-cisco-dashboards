@@ -96,7 +96,7 @@ import { cn } from '@/common/lib/utils';
 
 interface IconProps {
     /** Tailwind size + optional colour override. Status callers can
-     *  pass e.g. `text-rose-500` to recolour the icon for a critical
+     *  pass e.g. `sui-color-negative` to recolour the icon for a critical
      *  alert; without a `text-*` class the per-class default below
      *  takes over via tailwind-merge. Width/height utilities
      *  (`w-9 h-9`) drive the icon size. */
@@ -112,21 +112,21 @@ interface IconProps {
 // — operators would lose the ability to tell a "healthy router"
 // apart from a "healthy switch" at a glance otherwise.
 const COLOR = {
-    AMBER: 'text-amber-600 dark:text-amber-400',
-    SKY: 'text-sky-600 dark:text-sky-400',
-    INDIGO: 'text-indigo-600 dark:text-indigo-400',
-    BLUE: 'text-blue-600 dark:text-blue-400',
-    ROSE: 'text-rose-600 dark:text-rose-400',
-    VIOLET: 'text-violet-600 dark:text-violet-400',
-    FUCHSIA: 'text-fuchsia-600 dark:text-fuchsia-400',
-    EMERALD: 'text-emerald-600 dark:text-emerald-400',
-    TEAL: 'text-teal-600 dark:text-teal-400',
-    CYAN: 'text-cyan-600 dark:text-cyan-400',
-    PURPLE: 'text-purple-600 dark:text-purple-400',
-    RED: 'text-red-600 dark:text-red-400',
-    LIME: 'text-lime-600 dark:text-lime-400',
-    SLATE: 'text-slate-500 dark:text-slate-400',
-    PINK: 'text-pink-600 dark:text-pink-400',
+    AMBER: 'sui-color-warning',
+    SKY: 'sui-color-info',
+    INDIGO: 'sui-color-info',
+    BLUE: 'sui-color-info',
+    ROSE: 'sui-color-negative',
+    VIOLET: 'sui-color-info',
+    FUCHSIA: 'sui-color-info',
+    EMERALD: 'sui-color-positive',
+    TEAL: 'sui-color-info',
+    CYAN: 'sui-color-info',
+    PURPLE: 'sui-color-info',
+    RED: 'sui-color-negative',
+    LIME: 'sui-color-positive',
+    SLATE: 'sui-color-muted sui-color-default',
+    PINK: 'sui-color-info',
 } as const;
 
 /**

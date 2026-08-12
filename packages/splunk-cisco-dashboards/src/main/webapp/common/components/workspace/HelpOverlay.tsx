@@ -16,11 +16,11 @@ interface HelpOverlayProps {
 const renderKeys = (keys: string): React.ReactNode =>
     keys.split(' ').map((k, i, arr) => (
         <React.Fragment key={`${k}-${i}`}>
-            <kbd className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded text-xs font-mono font-bold text-slate-700 dark:text-slate-200">
+            <kbd className="px-1.5 py-0.5  sui-bg-popup border  sui-border-default rounded text-xs font-mono font-bold  sui-color-active">
                 {k.length === 1 ? k.toUpperCase() : k}
             </kbd>
             {i < arr.length - 1 && (
-                <span className="text-xs text-slate-400 dark:text-slate-500 mx-1">
+                <span className="text-xs  sui-color-muted mx-1">
                     then
                 </span>
             )}
@@ -82,7 +82,7 @@ export const HelpOverlay = React.memo<HelpOverlayProps>(({ open, onClose, shortc
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-[3000] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-6"
+                    className="fixed inset-0 z-[3000] sui-bg-section backdrop-blur-sm flex items-center justify-center p-6"
                     onClick={onClose}
                 >
                     <motion.div
@@ -96,13 +96,13 @@ export const HelpOverlay = React.memo<HelpOverlayProps>(({ open, onClose, shortc
                         // either getting cramped. Falls back to a
                         // single column on smaller viewports via the
                         // `lg:` breakpoint on the inner grid.
-                        className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto"
+                        className="sui-bg-section rounded-xl border  sui-border-default shadow-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex items-center justify-between mb-4">
                             <h2
                                 id="help-overlay-title"
-                                className="text-sm font-black text-sky-900 dark:text-sky-200 uppercase tracking-widest"
+                                className="text-sm font-black  sui-color-info uppercase tracking-widest"
                             >
                                 Help &amp; reference
                             </h2>
@@ -110,7 +110,7 @@ export const HelpOverlay = React.memo<HelpOverlayProps>(({ open, onClose, shortc
                                 type="button"
                                 onClick={onClose}
                                 aria-label="Close help"
-                                className="text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 transition-colors p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+                                className="sui-color-default sui-color-muted  sui-hover-color-active transition-colors p-1 rounded  sui-hover-bg-overlay"
                             >
                                 <X className="w-4 h-4" />
                             </button>
@@ -128,8 +128,8 @@ export const HelpOverlay = React.memo<HelpOverlayProps>(({ open, onClose, shortc
                               * for chord-style shortcuts. */}
                             <section>
                                 <div className="flex items-center gap-1.5 mb-3">
-                                    <Keyboard className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
-                                    <h3 className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider">
+                                    <Keyboard className="w-3.5 h-3.5  sui-color-info" />
+                                    <h3 className="text-xs font-black  sui-color-active uppercase tracking-wider">
                                         Keyboard shortcuts
                                     </h3>
                                 </div>
@@ -137,9 +137,9 @@ export const HelpOverlay = React.memo<HelpOverlayProps>(({ open, onClose, shortc
                                     {shortcuts.map((s) => (
                                         <li
                                             key={s.keys}
-                                            className="flex items-center justify-between gap-3 text-[12px]"
+                                            className="flex items-center justify-between gap-3 sui-color-default"
                                         >
-                                            <span className="text-slate-700 dark:text-slate-200 leading-tight">
+                                            <span className="sui-color-default sui-color-active leading-tight">
                                                 {s.description}
                                             </span>
                                             <span className="flex items-center flex-shrink-0">
@@ -177,12 +177,12 @@ export const HelpOverlay = React.memo<HelpOverlayProps>(({ open, onClose, shortc
                               *      inventing a new one. */}
                             <section>
                                 <div className="flex items-center gap-1.5 mb-3">
-                                    <Settings2 className="w-3.5 h-3.5 text-sky-500 dark:text-sky-400" />
-                                    <h3 className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider">
+                                    <Settings2 className="w-3.5 h-3.5  sui-color-info" />
+                                    <h3 className="text-xs font-black  sui-color-active uppercase tracking-wider">
                                         Customizing tiles
                                     </h3>
                                 </div>
-                                <p className="text-xs text-slate-600 dark:text-slate-300 mb-3 leading-snug">
+                                <p className="text-xs  sui-color-default mb-3 leading-snug">
                                     Right-click any tile to open the picker. Most
                                     customisations stay scoped to the tile you
                                     opened it from — a few fan out further, summarised
@@ -194,17 +194,17 @@ export const HelpOverlay = React.memo<HelpOverlayProps>(({ open, onClose, shortc
                                             key={row.action}
                                             className="text-xs leading-snug"
                                         >
-                                            <div className="text-slate-700 dark:text-slate-200 font-semibold">
+                                            <div className="sui-color-default sui-color-active font-semibold">
                                                 {row.action}
                                             </div>
-                                            <div className="text-slate-500 dark:text-slate-400 text-xs">
+                                            <div className="sui-color-muted sui-color-default text-xs">
                                                 → {row.scope}
                                             </div>
                                         </li>
                                     ))}
                                 </ul>
-                                <p className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 leading-snug flex items-start gap-1.5">
-                                    <ArrowUpRight className="w-3 h-3 mt-0.5 text-sky-500 dark:text-sky-400 flex-shrink-0" />
+                                <p className="mt-3 pt-3 border-t  sui-border-weak text-xs  sui-color-default leading-snug flex items-start gap-1.5">
+                                    <ArrowUpRight className="w-3 h-3 mt-0.5  sui-color-info flex-shrink-0" />
                                     <span>
                                         KPI tiles stay single-value by design. For
                                         tables, breakdowns, or alternative
@@ -215,9 +215,9 @@ export const HelpOverlay = React.memo<HelpOverlayProps>(({ open, onClose, shortc
                             </section>
                         </div>
 
-                        <p className="mt-5 pt-4 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-400 dark:text-slate-500">
+                        <p className="mt-5 pt-4 border-t  sui-border-weak text-xs  sui-color-muted">
                             Shortcuts are disabled while typing in inputs. Press{' '}
-                            <kbd className="px-1 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded font-mono">
+                            <kbd className="px-1 py-0.5  sui-bg-popup border  sui-border-default rounded font-mono">
                                 Esc
                             </kbd>{' '}
                             or click outside to close.

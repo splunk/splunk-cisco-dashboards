@@ -37,8 +37,6 @@ interface PieTileProps {
     noDataReason?: NoDataReason;
     rangeLabel?: string;
     visibleSliceCap?: number;
-    /** Selects the matching Dashboard Studio chart theme. */
-    isDark?: boolean;
     className?: string;
 }
 
@@ -50,7 +48,7 @@ const DEFAULT_SLICE_CAP = 8;
 const StudioBar = React.lazy(() => import('@splunk/visualizations/Bar'));
 
 const ChartLoadingState: React.FC = () => (
-    <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-400 dark:text-slate-500">
+    <div className="flex h-full w-full items-center justify-center text-xs font-semibold  sui-color-muted">
         Loading chart…
     </div>
 );
@@ -88,10 +86,10 @@ const NoDataState: React.FC<{
     }
     return (
         <div className="flex flex-col items-start mb-1">
-            <span className="text-4xl font-black tracking-tighter leading-none text-slate-400 dark:text-slate-500">
+            <span className="text-4xl font-black tracking-tighter leading-none  sui-color-muted">
                 —
             </span>
-            <span className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5 leading-tight">
+            <span className="text-xs font-medium  sui-color-muted mt-0.5 leading-tight">
                 {subtext}
             </span>
         </div>
@@ -117,7 +115,6 @@ export const PieTile: React.FC<PieTileProps> = ({
     noDataReason,
     rangeLabel,
     visibleSliceCap = DEFAULT_SLICE_CAP,
-    isDark = false,
     className,
 }) => {
     const [isFocusOpen, setIsFocusOpen] = useState(false);
@@ -202,9 +199,9 @@ export const PieTile: React.FC<PieTileProps> = ({
             showXMajorGridLines: false,
             showYMajorGridLines: false,
             seriesColors: colors,
-            backgroundColor: isDark ? '#131a23' : '#ffffff',
+            backgroundColor: '#131a23',
         }),
-        [colors, isDark]
+        [colors]
     );
     const focusStudioOptions = useMemo(
         () => ({ ...studioOptions, backgroundColor: '#131a23' }),
@@ -222,10 +219,10 @@ export const PieTile: React.FC<PieTileProps> = ({
                     className={cn(
                         'absolute top-1 right-2 w-1.5 h-1.5 rounded-full',
                         source === 'live'
-                            ? 'bg-emerald-500'
+                            ? 'sui-bg-positive'
                             : source === 'loading'
-                            ? 'bg-amber-400 animate-pulse'
-                            : 'bg-slate-300'
+                            ? 'sui-bg-warning animate-pulse'
+                            : 'sui-bg-floating'
                     )}
                     title={
                         source === 'live'
@@ -238,7 +235,7 @@ export const PieTile: React.FC<PieTileProps> = ({
             )}
 
             <div data-tile-control="true" className="flex flex-col mb-0.5">
-                <span className="text-[12px] font-bold text-slate-800 dark:text-slate-100 tracking-tight leading-tight uppercase flex items-center gap-1">
+                <span className="sui-color-default font-bold sui-color-active tracking-tight leading-tight flex items-center gap-1">
                     <span className="flex items-center gap-1 min-w-0 truncate">{label}</span>
                     <span className="ml-auto flex items-center gap-0.5 flex-shrink-0">
                         {description && (
@@ -263,7 +260,7 @@ export const PieTile: React.FC<PieTileProps> = ({
                     </span>
                 </span>
                 {subLabel && (
-                    <span className="text-[9.5px] text-slate-400 dark:text-slate-500 font-medium tracking-tight leading-tight line-clamp-1 min-h-[12px]">
+                    <span className="sui-color-default  sui-color-muted font-medium tracking-tight leading-tight line-clamp-1 min-h-[12px]">
                         {subLabel}
                     </span>
                 )}
@@ -281,16 +278,16 @@ export const PieTile: React.FC<PieTileProps> = ({
                         <StudioBar
                             width="100%"
                             height="100%"
-                            themeKey={isDark ? 'enterpriseDark' : 'enterpriseLight'}
+                            themeKey="enterpriseDark"
                             options={studioOptions}
                             dataSources={studioDataSources}
                         />
                     </React.Suspense>
-                    <span className="pointer-events-none absolute left-1 top-1 rounded bg-white/90 px-1.5 py-0.5 text-xs font-bold tabular-nums text-slate-600 shadow-sm ring-1 ring-slate-200/80 dark:bg-slate-950/90 dark:text-slate-200 dark:ring-slate-700/80">
+                    <span className="pointer-events-none absolute left-1 top-1 rounded  px-1.5 py-0.5 text-xs font-bold tabular-nums  shadow-sm ring-1 sui-focus-ring sui-bg-page sui-color-active sui-focus-ring">
                         Total {formatCount(total)}
                     </span>
                     {overflowCount > 0 && (
-                        <span className="pointer-events-none absolute bottom-0 left-1 z-10 rounded bg-white/85 px-1 text-xs italic text-slate-400 dark:bg-slate-950/85 dark:text-slate-500">
+                        <span className="pointer-events-none absolute bottom-0 left-1 z-10 rounded  px-1 text-xs italic  sui-bg-page sui-color-muted">
                             +{overflowCount} more
                         </span>
                     )}
@@ -315,7 +312,7 @@ export const PieTile: React.FC<PieTileProps> = ({
                 <div
                     role="img"
                     aria-label={`Expanded ${label} ranked horizontal bar chart. Total ${formatCount(total)}.`}
-                    className="relative h-full min-h-[320px] rounded-[10px] border border-[#1e3449] bg-[#0e1a2b] p-3"
+                    className="relative h-full min-h-[320px] rounded-[10px] border sui-border-default sui-bg-section p-3"
                 >
                     <React.Suspense fallback={<ChartLoadingState />}>
                         <StudioBar
@@ -326,11 +323,11 @@ export const PieTile: React.FC<PieTileProps> = ({
                             dataSources={studioDataSources}
                         />
                     </React.Suspense>
-                    <span className="pointer-events-none absolute left-4 top-4 rounded bg-slate-950/90 px-2 py-1 text-xs font-bold tabular-nums text-slate-200 shadow-sm ring-1 ring-slate-700/80">
+                    <span className="pointer-events-none absolute left-4 top-4 rounded sui-bg-page px-2 py-1 text-xs font-bold tabular-nums sui-color-active shadow-sm ring-1 sui-focus-ring">
                         Total {formatCount(total)}
                     </span>
                     {overflowCount > 0 && (
-                        <span className="pointer-events-none absolute bottom-3 left-4 rounded bg-slate-950/85 px-1.5 py-0.5 text-xs italic text-slate-500">
+                        <span className="pointer-events-none absolute bottom-3 left-4 rounded sui-bg-page px-1.5 py-0.5 text-xs italic sui-color-muted">
                             +{overflowCount} more
                         </span>
                     )}

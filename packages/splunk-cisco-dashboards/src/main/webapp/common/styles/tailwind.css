@@ -18,30 +18,34 @@
 
 #scan-root,
 #scan-root * {
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 #scan-root {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    overflow-x: hidden;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    background: var(--sui-background-page);
-    color: var(--sui-content-default);
-    font-family: var(--sui-font-family);
-    font-size: var(--sui-font-size-default);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--sui-background-page);
+  color: var(--sui-content-default);
+  font-family: var(--sui-font-family);
+  font-size: var(--sui-font-size-default);
 }
 
 #scan-root :where(h1, h2, h3, h4, h5, h6) {
-    color: var(--sui-content-active);
-    font-family: var(--sui-font-family-title);
+  color: var(--sui-content-active);
+  font-family: var(--sui-font-family-title);
 }
 
-#scan-root :where(button, a[href], input, select, textarea, [tabindex]):focus-visible {
-    outline: 2px solid var(--sui-focus-color);
-    outline-offset: 2px;
+/* Native controls still use Tailwind for layout. SUI components supply their
+ * own focus treatment; this tokenized fallback protects custom controls that
+ * intentionally suppress the browser outline. */
+#scan-root
+  :where(button, a[href], input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--sui-focus-color);
+  outline-offset: 2px;
 }
 
 /* SUI compact icon-only buttons use a 28px interaction footprint. */
@@ -49,26 +53,26 @@
 /* H1 is a real compact section mode, not just a smaller number in the
  * height pill. Preserve every tile and interaction while tightening the
  * headline/chart floors; H2-H4 retain the full analytical presentation. */
-#scan-root [data-section-density='compact'] .text-4xl {
-    font-size: 1.75rem;
-    line-height: 1;
+#scan-root [data-section-density="compact"] .text-4xl {
+  font-size: 1.75rem;
+  line-height: 1;
 }
 
-#scan-root [data-section-density='compact'] .min-h-\[72px\] {
-    min-height: 54px;
+#scan-root [data-section-density="compact"] .min-h-\[72px\] {
+  min-height: 54px;
 }
 
-#scan-root [data-section-density='compact'] .min-h-\[116px\],
-#scan-root [data-section-density='compact'] .min-h-\[118px\] {
-    min-height: 92px;
+#scan-root [data-section-density="compact"] .min-h-\[116px\],
+#scan-root [data-section-density="compact"] .min-h-\[118px\] {
+  min-height: 92px;
 }
 #scan-root button:has(> svg:only-child) {
-    min-height: 28px;
-    min-width: 28px;
+  min-height: 28px;
+  min-width: 28px;
 }
 
 #scan-root :where(button, input, select, textarea):disabled {
-    cursor: not-allowed;
+  cursor: not-allowed;
 }
 
 /*
@@ -82,9 +86,9 @@
  */
 html.scd-overview-active,
 body.scd-overview-active {
-    max-width: 100%;
-    min-width: 0;
-    overflow-x: hidden;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 body.scd-overview-active .dashboard,
@@ -98,36 +102,24 @@ body.scd-overview-active .dashboard-panel,
 body.scd-overview-active .panel-body,
 #scan-root .scd-overview-page,
 #scan-root .scd-signal-rail-ticker {
-    min-width: 0;
+  min-width: 0;
 }
 
 #scan-root .scd-overview-page,
 #scan-root .scd-signal-rail-ticker {
-    width: 100%;
-    max-width: 100%;
+  width: 100%;
+  max-width: 100%;
 }
 
 /* Shared C3 presentation tokens for React-mounted operational surfaces. The
  * Dashboard Studio definitions consume the same values from
  * c3VisualizationPalette.ts and the shared c3-atmosphere template. */
 #scan-root {
-    --scd-c3-canvas: #0f1117;
-    --scd-c3-panel: #131a23;
-    --scd-c3-secondary: #1c2738;
-    --scd-c3-text: #ecf0f5;
-    --scd-c3-muted: #a6adb6;
-    --scd-c3-info: #649ef5;
-    --scd-c3-cyan: #049fd9;
-    --scd-c3-cyan-bright: #00bceb;
-    --scd-c3-positive: #4cbf7f;
-    --scd-c3-caution: #f0c243;
-    --scd-c3-orange: #f7782f;
-    --scd-c3-critical: #fa5762;
-    --scd-c3-lavender: #9ca6ff;
-    --scd-c3-purple: #9b5ff5;
-    --scd-c3-panel-border: rgb(65 74 86 / 64%);
-    --scd-c3-toolbar-border: rgb(65 74 86 / 52%);
-    --scd-c3-accent-stroke: rgb(100 158 245 / 28%);
+  --scd-c3-cyan: #049fd9;
+  --scd-c3-cyan-bright: #00bceb;
+  --scd-c3-orange: #f7782f;
+  --scd-c3-lavender: #9ca6ff;
+  --scd-c3-purple: #9b5ff5;
 }
 
 /*
@@ -136,59 +128,55 @@ body.scd-overview-active .panel-body,
  * C3 does not use a flat dark fill. Every dark dashboard shell consumes the
  * same borderless atmospheric asset, then keeps mostly opaque operational
  * panels above it so contrast and dense telemetry remain dependable.
- * Light mode retains the standard SUI page foundation.
  */
-#scan-root .scd-overview-page.scd-c3-surface.dark {
-    position: relative;
-    background-color: #0b1118;
-    isolation: isolate;
+#scan-root .scd-overview-page.scd-c3-surface {
+  position: relative;
+  background-color: #0b1118;
+  isolation: isolate;
 }
 
 #scan-root .scd-c3-atmosphere {
-    background-color: #0b1118 !important;
-    background-image: url('/static/app/splunk-cisco-dashboards/c3-atmosphere.svg') !important;
-    background-position: center top !important;
-    background-repeat: no-repeat !important;
-    background-size: cover !important;
+  background-color: #0b1118 !important;
+  background-image: url("/static/app/splunk-cisco-dashboards/c3-atmosphere.svg") !important;
+  background-position: center top !important;
+  background-repeat: no-repeat !important;
+  background-size: cover !important;
 }
 
 /* The Figma-led Insights Workspace uses the released SUI SpotLight presets
  * for its atmosphere. Keep its canvas neutral so the preset is the visible
  * gradient instead of layering it over the legacy custom SVG atmosphere. */
 #scan-root .scd-one-cisco-spotlight-canvas {
-    background-color: #0b1118 !important;
-    background-image: none !important;
+  background-color: #0b1118 !important;
+  background-image: none !important;
 }
 
-#scan-root .scd-c3-surface.dark .scd-c3-toolbar {
-    background: transparent;
+#scan-root .scd-c3-surface .scd-c3-toolbar {
+  background: transparent;
 }
 
-#scan-root .scd-c3-surface.dark .scd-c3-panel {
-    background:
-        linear-gradient(145deg, rgb(19 26 35 / 98%), rgb(17 24 32 / 96%)) !important;
-    border-color: var(--scd-c3-panel-border) !important;
-    box-shadow:
-        0 3px 8px rgb(0 0 0 / 8%),
-        inset 0 1px 0 rgb(255 255 255 / 3%) !important;
-    backdrop-filter: blur(8px) saturate(106%);
+#scan-root .scd-c3-surface .scd-c3-panel {
+  background: transparent;
 }
 
-#scan-root .scd-c3-surface.dark .scd-signal-rail-ticker {
-    background:
-        linear-gradient(180deg, rgb(19 26 35 / 97%), rgb(15 17 23 / 94%)) !important;
-    border-color: var(--scd-c3-toolbar-border) !important;
-    box-shadow: 0 3px 8px rgb(0 0 0 / 8%);
-    backdrop-filter: blur(8px) saturate(106%);
+#scan-root .scd-c3-surface .scd-signal-rail-ticker {
+  background: linear-gradient(
+    180deg,
+    rgb(19 26 35 / 97%),
+    rgb(15 17 23 / 94%)
+  ) !important;
+  border-color: var(--scd-c3-toolbar-border) !important;
+  box-shadow: 0 3px 8px rgb(0 0 0 / 8%);
+  backdrop-filter: blur(8px) saturate(106%);
 }
 
 #scan-root
-    .scd-c3-surface.dark
-    .scd-signal-rail-ticker[data-variant='one-cisco-glass'] {
-    background: transparent !important;
-    border-color: transparent !important;
-    box-shadow: none;
-    backdrop-filter: none;
+  .scd-c3-surface
+  .scd-signal-rail-ticker[data-variant="one-cisco-glass"] {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 /* C3 uses sentence-case page and card hierarchy. Preserve customer-supplied
@@ -196,23 +184,23 @@ body.scd-overview-active .panel-body,
 #scan-root .scd-c3-surface .scd-c3-toolbar h1,
 #scan-root .scd-c3-surface .scd-c3-toolbar p,
 #scan-root .scd-c3-surface .scd-c3-panel h2 {
-    text-transform: none;
+  text-transform: none;
 }
 
 #scan-root .scd-c3-surface .scd-c3-toolbar h1,
 #scan-root .scd-c3-surface .scd-c3-panel h2 {
-    letter-spacing: -0.01em;
+  letter-spacing: -0.01em;
 }
 
 #scan-root .scd-c3-surface .scd-c3-toolbar p {
-    letter-spacing: 0.06em;
+  letter-spacing: 0.06em;
 }
 
 #scan-root .scd-signal-rail-ticker {
-    /* The KPI viewport owns marquee clipping. Keep the rail visible so its
+  /* The KPI viewport owns marquee clipping. Keep the rail visible so its
      * style picker can extend below the compact ticker row. */
-    overflow: visible;
-    contain: inline-size;
+  overflow: visible;
+  contain: inline-size;
 }
 
 /*
@@ -221,32 +209,32 @@ body.scd-overview-active .panel-body,
  * `100vh`-style dashboard taller than the visible browser space.
  */
 .dashboard-body:has(#scan-root) {
-    padding: 0 !important;
+  padding: 0 !important;
 }
 
 .dashboard:has(#scan-root) > .dashboard-header,
 .dashboard:has(#scan-root) > .dashboard-messages {
-    display: none !important;
-    height: 0 !important;
-    min-height: 0 !important;
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
 }
 
 .dashboard-layout-row-column:has(#scan-root),
 .dashboard-element:has(#scan-root),
 .panel-element-row:has(#scan-root) {
-    margin: 0 !important;
-    padding: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 .dashboard-row:has(#scan-root),
 .dashboard-cell:has(#scan-root),
 .dashboard-panel:has(#scan-root) {
-    margin: 0 !important;
-    padding: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 .dashboard-panel:has(#scan-root) .panel-body {
-    padding: 0 !important;
+  padding: 0 !important;
 }
 
 /*
@@ -255,23 +243,23 @@ body.scd-overview-active .panel-body,
  * MacBook-width browser windows resize more predictably.
  */
 @media (min-width: 1120px) {
-    #scan-root .scd-overview-split[data-map-position='right'] {
-        flex-direction: row;
-    }
+  #scan-root .scd-overview-split[data-map-position="right"] {
+    flex-direction: row;
+  }
 
-    #scan-root .scd-overview-metrics[data-map-position='right'] {
-        flex-shrink: 0;
-        width: var(--scd-left-pct);
-    }
+  #scan-root .scd-overview-metrics[data-map-position="right"] {
+    flex-shrink: 0;
+    width: var(--scd-left-pct);
+  }
 
-    #scan-root .scd-overview-splitter[data-map-position='right'] {
-        display: flex;
-    }
+  #scan-root .scd-overview-splitter[data-map-position="right"] {
+    display: flex;
+  }
 
-    #scan-root .scd-overview-map[data-map-position='right'] {
-        flex: 1 1 0%;
-        width: auto;
-    }
+  #scan-root .scd-overview-map[data-map-position="right"] {
+    flex: 1 1 0%;
+    width: auto;
+  }
 }
 
 #scan-root h1,
@@ -281,55 +269,45 @@ body.scd-overview-active .panel-body,
 #scan-root h5,
 #scan-root h6,
 #scan-root p {
-    margin: 0;
+  margin: 0;
 }
 
 #scan-root
-    :where(
-        button:not([data-test='button']):not([data-test='select']):not(
-                [data-test='multiselect']
-            ):not([data-test='option'])
-    ) {
-    /* Keep this reset deliberately low-specificity. Tailwind utilities on
+  :where(
+    button:not([data-test="button"]):not([data-test="select"]):not(
+        [data-test="multiselect"]
+      ):not([data-test="option"])
+  ) {
+  /* Keep this reset deliberately low-specificity. Tailwind utilities on
      * custom buttons must be able to restore their intended dark/light text,
      * background, border, and spacing treatment. */
-    font-family: inherit;
-    cursor: pointer;
-    background: none;
-    border: 0;
-    padding: 0;
-    color: inherit;
+  font-family: inherit;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
 }
 
 #scan-root input {
-    font-family: inherit;
+  font-family: inherit;
 }
 
 #scan-root select,
 #scan-root textarea {
-    font-family: inherit;
+  font-family: inherit;
 }
 
 #scan-root a {
-    text-decoration: none;
-    color: inherit;
-}
-
-/*
- * Splunk Web's host CSS supplies legacy Leaflet zoom-button PNG backgrounds,
- * while Leaflet 1.9 renders the same +/− symbols as text inside the controls.
- * Clear only the legacy images so the two icon generations do not overlap.
- */
-#scan-root .customer-topology-map .leaflet-control-zoom-in,
-#scan-root .customer-topology-map .leaflet-control-zoom-out {
-    background-image: none;
+  text-decoration: none;
+  color: inherit;
 }
 
 #scan-root ul,
 #scan-root ol {
-    margin: 0;
-    padding: 0;
-    list-style: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 /*
@@ -354,11 +332,11 @@ body.scd-overview-active .panel-body,
  * export — we keep `hidden` as the resting state so the placeholder
  * never reflows during normal use.
  */
-html[data-exporting='true'] [data-export-hide] {
-    display: none !important;
+html[data-exporting="true"] [data-export-hide] {
+  display: none !important;
 }
-html[data-exporting='true'] [data-export-placeholder] {
-    display: flex !important;
+html[data-exporting="true"] [data-export-placeholder] {
+  display: flex !important;
 }
 
 /*
@@ -368,9 +346,9 @@ html[data-exporting='true'] [data-export-placeholder] {
  * here so they don't get rasterised mid-frame. Restricted to
  * `[data-exporting]` so it never affects the live dashboard.
  */
-html[data-exporting='true'] *,
-html[data-exporting='true'] *::before,
-html[data-exporting='true'] *::after {
-    animation-play-state: paused !important;
-    transition: none !important;
+html[data-exporting="true"] *,
+html[data-exporting="true"] *::before,
+html[data-exporting="true"] *::after {
+  animation-play-state: paused !important;
+  transition: none !important;
 }

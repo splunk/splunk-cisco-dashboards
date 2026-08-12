@@ -225,7 +225,7 @@ const DashboardStudioDrilldownModal = ({
                 activeSearch ? splunkSearchbaseEditUrl(activeSearch.name) : undefined
             }
             renderInDocumentBody
-            contentClassName="dashboard-builder-drilldown-shell flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950/[0.28]"
+            contentClassName="dashboard-builder-drilldown-shell flex min-h-0 flex-1 flex-col overflow-hidden sui-bg-page"
         >
             {loadError && (
                 <div className="dashboard-builder-drilldown-status">

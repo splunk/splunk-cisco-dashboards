@@ -56,8 +56,6 @@ import {
     type DiagramMode,
     type NetworkDiagramCanvasHandle,
 } from '@/common/components/diagram/NetworkDiagramCanvas';
-import { useTheme } from '@/common/hooks/useTheme';
-import { ThemeToggle } from '@/common/components/workspace/ThemeToggle';
 import { AnimationsEnabledProvider } from '@/common/contexts/AnimationsEnabledContext';
 import { IpAddressVisibilityProvider } from '@/common/contexts/IpAddressVisibilityContext';
 import { useExportPage } from '@/common/hooks/useExportPage';
@@ -171,13 +169,6 @@ const NetworkDiagramPage: React.FC = () => {
      *  to read-only, and (c) request the browser fullscreen API.
      *  Esc → fullscreenchange listener auto-flips back to edit. */
     const [mode, setMode] = useState<DiagramMode>('edit');
-
-    /** Build 115.10 — light / dark theme manager mirroring the
-     *  Florida overview dashboard. Defaults to `system` so we
-     *  follow the operator's OS preference unless they explicitly
-     *  pick a side via the header toggle (persisted to
-     *  localStorage by `useTheme`). */
-    const { theme, resolvedTheme, cycle: cycleTheme } = useTheme();
 
     /** Build 115.12 — page-level animations kill switch. Drives
      *  every flowing-dot / marching-ants effect inside the canvas
@@ -746,17 +737,7 @@ const NetworkDiagramPage: React.FC = () => {
         <div
             ref={pageWrapperRef}
             className={cn(
-                'scd-network-diagram-page flex flex-col w-full h-[calc(100vh-8rem)] max-h-[calc(100vh-8rem)] overflow-hidden bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100',
-                // Build 115.10 — Tailwind runs in `class` darkMode,
-                // so we need the literal `dark` class on a wrapper
-                // when the resolved theme is dark. The wrapper-level
-                // application here mirrors the overview dashboard so
-                // the diagram page picks up the same styles. The
-                // `dark:` utilities listed above on this wrapper take
-                // care of body / text base colours; the rest of the
-                // tree was already authored with `dark:` variants
-                // for the Cyber-NOC palette.
-                resolvedTheme === 'dark' && 'dark scd-c3-atmosphere'
+                'scd-network-diagram-page scd-c3-atmosphere flex flex-col w-full h-[calc(100vh-8rem)] max-h-[calc(100vh-8rem)] overflow-hidden sui-bg-page sui-color-default'
             )}
         >
             <DiagramHeader
@@ -785,9 +766,6 @@ const NetworkDiagramPage: React.FC = () => {
                 onToggleIpAddresses={toggleIpAddresses}
                 onExport={handleExport}
                 exporting={exporting}
-                themeSlot={
-                    <ThemeToggle theme={theme} onCycle={cycleTheme} iconOnly />
-                }
             />
             <main className="flex-1 min-h-0 flex overflow-hidden">
                 {/* Build 113: hide the device palette entirely in view

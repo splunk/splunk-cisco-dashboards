@@ -105,7 +105,6 @@ for (const [relativePath, marker] of runtimeContracts) {
 
 for (const cssPath of [
     path.join(WEBAPP_ROOT, 'common/styles/tailwind.css'),
-    path.join(WEBAPP_ROOT, 'pages/macro_index_tuning/macro-index-tuning.css'),
     path.join(APP_ROOT, 'src/main/resources/splunk/appserver/static/start.css'),
 ]) {
     assert.match(

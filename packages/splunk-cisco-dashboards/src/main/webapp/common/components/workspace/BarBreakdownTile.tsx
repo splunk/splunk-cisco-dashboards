@@ -153,10 +153,10 @@ const NoDataState: React.FC<{
     }
     return (
         <div className="flex flex-col items-start mb-1">
-            <span className="text-4xl font-black tracking-tighter leading-none text-slate-400 dark:text-slate-500">
+            <span className="text-4xl font-black tracking-tighter leading-none  sui-color-muted">
                 —
             </span>
-            <span className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5 leading-tight">
+            <span className="text-xs font-medium  sui-color-muted mt-0.5 leading-tight">
                 {subtext}
             </span>
         </div>
@@ -245,10 +245,10 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                     className={cn(
                         'absolute top-1 right-2 w-1.5 h-1.5 rounded-full',
                         source === 'live'
-                            ? 'bg-emerald-500'
+                            ? 'sui-bg-positive'
                             : source === 'loading'
-                            ? 'bg-amber-400 animate-pulse'
-                            : 'bg-slate-300'
+                            ? 'sui-bg-warning animate-pulse'
+                            : 'sui-bg-floating'
                     )}
                     title={
                         source === 'live'
@@ -270,7 +270,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                 data-tile-control="true"
                 className="flex flex-col mb-0.5"
             >
-                <span className="text-[12px] font-bold text-slate-800 dark:text-slate-100 tracking-tight leading-tight uppercase flex items-center gap-1">
+                <span className="sui-color-default font-bold sui-color-active tracking-tight leading-tight flex items-center gap-1">
                     <span className="flex items-center gap-1 min-w-0 truncate">
                         {label}
                     </span>
@@ -297,7 +297,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                     </span>
                 </span>
                 {subLabel && (
-                    <span className="text-[9.5px] text-slate-400 dark:text-slate-500 font-medium tracking-tight leading-tight line-clamp-1 min-h-[12px]">
+                    <span className="sui-color-default  sui-color-muted font-medium tracking-tight leading-tight line-clamp-1 min-h-[12px]">
                         {subLabel}
                     </span>
                 )}
@@ -320,7 +320,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                         the visibleRowCap, so when the cap kicks in the
                         headline still reflects the full result set. */}
                     <div className="flex items-baseline gap-2 mb-1">
-                        <span className="text-4xl font-black tracking-tighter leading-none text-slate-700 dark:text-slate-100">
+                        <span className="text-4xl font-black tracking-tighter leading-none  sui-color-active">
                             {formatCount(aggregated.total)}
                         </span>
                     </div>
@@ -351,23 +351,23 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                                     className="flex items-center gap-1.5 text-xs leading-tight"
                                     title={`${entry.key}: ${formatCount(entry.value)}`}
                                 >
-                                    <span className="w-14 truncate text-slate-500 dark:text-slate-400 font-medium capitalize">
+                                    <span className="w-14 truncate  sui-color-default font-medium capitalize">
                                         {entry.key}
                                     </span>
-                                    <div className="flex-1 min-w-0 h-2 bg-slate-100 dark:bg-slate-800 rounded-sm overflow-hidden">
+                                    <div className="flex-1 min-w-0 h-2  sui-bg-popup rounded-sm overflow-hidden">
                                         <div
                                             className={cn('h-full rounded-sm', colorForLabel(entry.key))}
                                             style={{ width: `${widthPct}%` }}
                                         />
                                     </div>
-                                    <span className="w-8 text-right text-slate-700 dark:text-slate-200 font-semibold tabular-nums">
+                                    <span className="w-8 text-right  sui-color-active font-semibold tabular-nums">
                                         {formatCount(entry.value)}
                                     </span>
                                 </div>
                             );
                         })}
                         {overflowCount > 0 && (
-                            <span className="text-xs text-slate-400 dark:text-slate-500 italic">
+                            <span className="text-xs  sui-color-muted italic">
                                 +{overflowCount} more
                             </span>
                         )}
@@ -395,9 +395,9 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                     aria-label={`Expanded ${label} bar chart. Total ${formatCount(
                         aggregated.total
                     )}.`}
-                    className="flex h-full min-h-[320px] flex-col rounded-[10px] border border-[#1e3449] bg-[#0e1a2b] p-5"
+                    className="flex h-full min-h-[320px] flex-col rounded-[10px] border sui-border-default sui-bg-section p-5"
                 >
-                    <span className="text-5xl font-black tracking-tighter leading-none text-slate-100">
+                    <span className="text-5xl font-black tracking-tighter leading-none sui-color-active">
                         {formatCount(aggregated.total)}
                     </span>
                     <div className="mt-7 flex flex-1 flex-col gap-4 overflow-y-auto">
@@ -411,10 +411,10 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                                     key={entry.key}
                                     className="flex items-center gap-3 text-sm leading-tight"
                                 >
-                                    <span className="w-40 truncate font-semibold capitalize text-slate-300">
+                                    <span className="w-40 truncate font-semibold capitalize sui-color-default">
                                         {entry.key}
                                     </span>
-                                    <div className="h-5 min-w-0 flex-1 overflow-hidden rounded bg-slate-800">
+                                    <div className="h-5 min-w-0 flex-1 overflow-hidden rounded sui-bg-popup">
                                         <div
                                             className={cn(
                                                 'h-full rounded',
@@ -423,14 +423,14 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                                             style={{ width: `${widthPct}%` }}
                                         />
                                     </div>
-                                    <span className="w-20 text-right font-bold tabular-nums text-slate-100">
+                                    <span className="w-20 text-right font-bold tabular-nums sui-color-active">
                                         {formatCount(entry.value)}
                                     </span>
                                 </div>
                             );
                         })}
                         {focusOverflowCount > 0 && (
-                            <span className="text-xs italic text-slate-500">
+                            <span className="text-xs italic sui-color-muted">
                                 +{focusOverflowCount} more
                             </span>
                         )}

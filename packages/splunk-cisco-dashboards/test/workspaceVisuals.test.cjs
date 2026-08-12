@@ -111,7 +111,7 @@ assert.match(
 );
 assert.match(
   profile,
-  /<h2 className="text-base font-bold text-sky-900[\s\S]*?\{topologyHeaderName\}[\s\S]*?<\/h2>/,
+  /<h2 className="text-base font-bold\s+sui-color-info[\s\S]*?\{topologyHeaderName\}[\s\S]*?<\/h2>/,
   "The connectivity panel title must use the page's level-two section hierarchy",
 );
 assert.match(
@@ -290,7 +290,7 @@ assert.match(
 );
 assert.match(
   profile,
-  /resolvedTheme === "dark" && "dark scd-one-cisco-spotlight-canvas"/,
+  /"dark scd-one-cisco-spotlight-canvas sui-bg-page sui-color-default"/,
   "The Figma-led workspace must keep a neutral canvas for the SUI SpotLight preset",
 );
 assert.match(
@@ -310,7 +310,7 @@ assert.match(
 );
 assert.match(
   tailwindStyles,
-  /\.scd-c3-surface\.dark \.scd-c3-panel[\s\S]*?rgb\(19 26 35 \/ 98%\)[\s\S]*?backdrop-filter: blur\(8px\)/,
+  /\.scd-c3-surface \.scd-c3-panel[\s\S]*?rgb\(19 26 35 \/ 98%\)[\s\S]*?backdrop-filter: blur\(8px\)/,
   "C3 panels must remain readable, mostly opaque surfaces above the atmospheric canvas",
 );
 for (const color of [
@@ -476,7 +476,7 @@ assert.match(
 );
 assert.match(
   signalRail,
-  /border border-transparent bg-transparent shadow-none/,
+  /border sui-border-transparent sui-bg-transparent shadow-none/,
   "Signal Rail control buttons must use transparent chrome over signal tiles",
 );
 assert.match(

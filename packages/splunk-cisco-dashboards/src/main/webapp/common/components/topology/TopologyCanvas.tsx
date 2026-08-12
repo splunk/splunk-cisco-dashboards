@@ -548,8 +548,8 @@ const TopologyCanvasInner: React.FC<TopologyCanvasProps> = ({
     return (
         <div
             className={cn(
-                'relative w-full h-full rounded-xl border bg-white dark:bg-slate-900 overflow-hidden',
-                'border-slate-200 dark:border-slate-800',
+                'relative w-full h-full rounded-xl border  sui-bg-section overflow-hidden',
+                'sui-border-weak',
                 className
             )}
         >
@@ -591,9 +591,9 @@ const TopologyCanvasInner: React.FC<TopologyCanvasProps> = ({
                     onClick={handleRefresh}
                     className={cn(
                         'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm',
-                        'bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200',
-                        'border border-slate-200 dark:border-slate-700',
-                        'hover:bg-white dark:hover:bg-slate-800 transition-colors'
+                        'sui-bg-section sui-bg-popup  sui-color-active',
+                        'border  sui-border-default',
+                        'sui-hover-bg-section sui-hover-bg-overlay transition-colors'
                     )}
                     title="Re-fetch asset_inventory and site_topology_lookup"
                 >
@@ -608,9 +608,9 @@ const TopologyCanvasInner: React.FC<TopologyCanvasProps> = ({
                     onClick={handleResetLayout}
                     className={cn(
                         'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm',
-                        'bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-200',
-                        'border border-slate-200 dark:border-slate-700',
-                        'hover:bg-white dark:hover:bg-slate-800 transition-colors'
+                        'sui-bg-section sui-bg-popup  sui-color-active',
+                        'border  sui-border-default',
+                        'sui-hover-bg-section sui-hover-bg-overlay transition-colors'
                     )}
                     title="Discard manual position overrides and re-run auto-layout"
                 >
@@ -622,8 +622,8 @@ const TopologyCanvasInner: React.FC<TopologyCanvasProps> = ({
                     onClick={handleSaveAll}
                     className={cn(
                         'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm',
-                        'bg-sky-500/90 hover:bg-sky-500 text-white',
-                        'border border-sky-600/30',
+                        'sui-bg-accent sui-hover-bg-accent sui-color-active',
+                        'border sui-border-info',
                         'transition-colors'
                     )}
                     title="Save the current layout + manual edges (local-only until Build 106)"
@@ -634,7 +634,7 @@ const TopologyCanvasInner: React.FC<TopologyCanvasProps> = ({
             </div>
 
             {/* Hint banner: tells operators how to draw edges */}
-            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-full text-xs font-medium bg-slate-900/80 dark:bg-slate-100/90 text-slate-100 dark:text-slate-900 shadow-sm pointer-events-none">
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-full text-xs font-medium  sui-bg-section  sui-color-active shadow-sm pointer-events-none">
                 Hover a device to reveal its 4 ports · drag from a port to another device to draw a link · click any node or edge to edit
             </div>
 
@@ -649,33 +649,33 @@ const TopologyCanvasInner: React.FC<TopologyCanvasProps> = ({
 
             {/* Loading / empty / error overlays */}
             {(isLoading || isLayingOut) && !error && nodes.length === 0 && (
-                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm">
-                    <Loader2 className="w-6 h-6 animate-spin text-sky-500" aria-hidden />
-                    <p className="text-sm text-slate-600 dark:text-slate-300">
+                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2  sui-bg-section backdrop-blur-sm">
+                    <Loader2 className="w-6 h-6 animate-spin sui-color-info" aria-hidden />
+                    <p className="text-sm  sui-color-default">
                         Reading asset_inventory.csv and site_topology_lookup.csv&hellip;
                     </p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500">
+                    <p className="text-xs  sui-color-muted">
                         First run after a scheduled rebuild can take a few seconds.
                     </p>
                 </div>
             )}
             {error && (
                 <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 px-6 text-center">
-                    <p className="text-sm font-semibold text-rose-600 dark:text-rose-400">
+                    <p className="text-sm font-semibold  sui-color-negative">
                         Topology discovery failed
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md">
+                    <p className="text-xs  sui-color-default max-w-md">
                         {error}
                     </p>
                 </div>
             )}
             {isEmpty && (
                 <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 px-6 text-center">
-                    <NetworkIcon className="w-8 h-8 text-slate-400" aria-hidden />
-                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    <NetworkIcon className="w-8 h-8 sui-color-default" aria-hidden />
+                    <p className="text-sm font-semibold  sui-color-active">
                         No devices in <code className="font-mono text-xs">asset_inventory.csv</code> yet
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md">
+                    <p className="text-xs  sui-color-default max-w-md">
                         The <code className="font-mono">[Asset Inventory - Build Lookup]</code> scheduled search builds this lookup nightly. Run it on demand from the Splunk Searches &amp; Reports UI to see the canvas populate without waiting until 02:05.
                     </p>
                 </div>

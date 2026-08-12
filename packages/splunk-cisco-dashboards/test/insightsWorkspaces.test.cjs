@@ -100,8 +100,7 @@ assert.deepEqual(
     scalable_network_segmentation:
       "dashboard_manager#/sn_segmentation_readiness",
     hybrid_mesh_firewalling: "dashboard_manager#/sn_hmf_enforcement",
-    agentic_ops:
-      "dashboard_manager#/sn_agentic_ops_operational_intelligence",
+    agentic_ops: "dashboard_manager#/sn_agentic_ops_operational_intelligence",
     it_health: "dashboard_manager#/netops_critical_systems_health",
     security: "dashboard_manager#/secops_resilience",
     building: "dashboard_manager#/workplace_building_intelligence",
@@ -128,8 +127,8 @@ assert.deepEqual(
   [
     {
       id: "secure_networking",
-      headerTitle: "Secure Networking Operations",
-      headerSubtitle: "Live posture, policy, infrastructure, and connectivity",
+      headerTitle: "Splunk for Secure Networking",
+      headerSubtitle: "Secure Networking Executive Insights",
     },
     {
       id: "zero_trust_access_demo",
@@ -158,9 +157,8 @@ assert.deepEqual(
   "Every packaged workspace must have deliberate factory header copy",
 );
 assert.equal(
-  PACKAGED_WORKSPACE_FALLBACKS.find(
-    ({ id }) => id === "zero_trust_access_demo",
-  ).sourceWorkspace,
+  PACKAGED_WORKSPACE_FALLBACKS.find(({ id }) => id === "zero_trust_access_demo")
+    .sourceWorkspace,
   "secure_networking",
 );
 
@@ -214,7 +212,9 @@ const confPath = path.join(
   "src/main/resources/splunk/default/insights_workspaces.conf",
 );
 const conf = fs.readFileSync(confPath, "utf8");
-const stanzaNames = [...conf.matchAll(/^\[([^\]]+)\]$/gm)].map((match) => match[1]);
+const stanzaNames = [...conf.matchAll(/^\[([^\]]+)\]$/gm)].map(
+  (match) => match[1],
+);
 const workspaceStanzas = stanzaNames
   .filter((name) => name.startsWith("workspace."))
   .map((name) => name.slice("workspace.".length));
@@ -252,7 +252,8 @@ assert.equal(
 );
 assert.ok(
   secureNetworkingLayoutBlocks.every(
-    (block) => (block.match(/^tiles = (.+)$/m)?.[1].split(",").length ?? 0) === 9,
+    (block) =>
+      (block.match(/^tiles = (.+)$/m)?.[1].split(",").length ?? 0) === 9,
   ),
   "Every Secure Networking section must expose exactly nine factory tiles",
 );
@@ -374,7 +375,14 @@ const searchbaseStanzaIds = new Set(
 const drilldownTargetsForBlock = (block) => {
   const plural = block.match(/^drilldown_stanza_ids = (.+)$/m)?.[1];
   if (plural) {
-    return [...new Set(plural.split(",").map((target) => target.trim()).filter(Boolean))];
+    return [
+      ...new Set(
+        plural
+          .split(",")
+          .map((target) => target.trim())
+          .filter(Boolean),
+      ),
+    ];
   }
   const singular = block.match(/^drilldown_stanza_id = (.+)$/m)?.[1];
   return singular ? [singular.trim()] : [];
@@ -394,7 +402,11 @@ for (const block of searchbaseBlocks) {
       searchbaseStanzaIds.has(targetId),
       `${sourceId} must resolve drilldown stanza ${targetId}`,
     );
-    assert.notEqual(sourceId, targetId, `${sourceId} must not drill into itself`);
+    assert.notEqual(
+      sourceId,
+      targetId,
+      `${sourceId} must not drill into itself`,
+    );
   }
 }
 assert.equal(
@@ -546,7 +558,10 @@ assert.deepEqual(
   "The Secure Networking command map must expose exactly two footer KPIs",
 );
 for (const { stanzaId, mapFooter } of secureMapFooters) {
-  assertNumericThresholds(mapFooter.thresholds, `${mapFooter.id} (${stanzaId})`);
+  assertNumericThresholds(
+    mapFooter.thresholds,
+    `${mapFooter.id} (${stanzaId})`,
+  );
   assert.ok(
     typeof mapFooter.thresholdNote === "string" &&
       mapFooter.thresholdNote.trim().length > 0,
@@ -632,6 +647,9 @@ assert.match(
   /^conf_replication_include\.insights_workspaces = true$/m,
 );
 assert.match(defaultMeta, /^\[insights_workspaces\]$/m);
-assert.doesNotMatch(`${appConf}\n${serverConf}\n${defaultMeta}`, /overview_factory_tiles/);
+assert.doesNotMatch(
+  `${appConf}\n${serverConf}\n${defaultMeta}`,
+  /overview_factory_tiles/,
+);
 
 console.log("✓ Insights workspace tests passed");

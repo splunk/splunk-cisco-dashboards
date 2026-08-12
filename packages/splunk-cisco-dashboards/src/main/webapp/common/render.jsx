@@ -3,11 +3,6 @@ import { createRoot } from 'react-dom/client';
 import layout from '@splunk/react-page/18';
 import CopyrightMark from './components/CopyrightMark';
 import AppThemeProvider from './theme/AppThemeProvider';
-import {
-    APP_THEME_DENSITY,
-    APP_THEME_FAMILY,
-    resolveThemePreference,
-} from './theme/themePreference';
 
 /**
  * Shared mount helper used by every page entrypoint.
@@ -57,31 +52,21 @@ export function renderAsPage(pageElement, options = {}) {
         ...layoutOptions
     } = options;
 
-    resolveThemePreference()
-        .then((colorScheme) => {
-            const theme = colorScheme;
-
-            layout(
-                <AppThemeProvider initialColorScheme={colorScheme}>
-                    <>
-                        {pageElement}
-                        <CopyrightMark />
-                    </>
-                </AppThemeProvider>,
-                {
-                    ...layoutOptions,
-                    hideAppBar,
-                    navLayout,
-                    pageTitle,
-                    theme,
-                    themeDensity: APP_THEME_DENSITY,
-                    themeFamily: APP_THEME_FAMILY,
-                }
-            );
-        })
-        .catch((e) => {
-            const errorEl = document.createElement('span');
-            errorEl.textContent = e instanceof Error ? e.message : String(e);
-            document.body.appendChild(errorEl);
-        });
+    layout(
+        <AppThemeProvider>
+            <>
+                {pageElement}
+                <CopyrightMark />
+            </>
+        </AppThemeProvider>,
+        {
+            ...layoutOptions,
+            hideAppBar,
+            navLayout,
+            pageTitle,
+            theme: 'dark',
+            themeDensity: 'comfortable',
+            themeFamily: 'prisma',
+        }
+    );
 }

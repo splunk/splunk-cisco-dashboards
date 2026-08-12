@@ -107,7 +107,7 @@ const getAutoDetailSize = (wide: boolean): DialogSize | null => {
 };
 
 const ACTION_CLASS =
-    'inline-flex h-8 items-center justify-center gap-1.5 rounded-[6px] border border-[#35506b] bg-[#132238] px-3 text-xs font-bold text-[#d8e5f0] transition-colors hover:border-sky-500 hover:bg-[#18304a] hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-400';
+    'inline-flex h-8 items-center justify-center gap-1.5 rounded-[6px] border sui-border-default sui-bg-section px-3 text-xs font-bold sui-color-default transition-colors sui-hover-border-info sui-hover-bg-section sui-hover-color-active focus:outline-none focus:ring-2 sui-focus-ring';
 
 /**
  * Shared dark-mode shell for Insights Workspace focus and drill-down dialogs.
@@ -409,7 +409,7 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                 type="button"
                 tabIndex={-1}
                 aria-hidden="true"
-                className="absolute inset-0 cursor-default border-0 bg-transparent p-0"
+                className="absolute inset-0 cursor-default border-0 sui-bg-transparent p-0"
                 onClick={() => onCloseRef.current()}
             />
             <div
@@ -430,24 +430,24 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                         : undefined
                 }
                 className={cn(
-                    'relative z-10 flex w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[4px] border border-white/[0.18] bg-[linear-gradient(123deg,rgba(255,255,255,0.01)_0.5%,rgba(255,255,255,0)_49.75%,rgba(0,0,0,0.04)_100%),linear-gradient(123deg,rgba(90,101,111,0.45)_1.82%,rgba(62,73,83,0.25)_100%)] text-slate-100 shadow-[0_50px_200px_rgba(0,0,0,0.5),0_29px_66px_rgba(0,0,0,0.41),0_14px_47px_rgba(0,0,0,0.17),0_5px_10px_rgba(0,0,0,0.15),inset_0_1px_4px_rgba(255,255,255,0.14)] backdrop-blur-[75px] outline-none',
+                    'relative z-10 flex w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[4px] border sui-border-weak sui-bg-section sui-color-active sui-shadow-overlay backdrop-blur-[75px] outline-none',
                     VARIANT_CLASS[variant],
                     variant === 'detail' && wide && 'max-w-[1320px]',
                     'max-[719px]:h-[calc(100vh-1rem)] max-[719px]:max-h-[calc(100vh-1rem)] max-[719px]:w-full max-[719px]:max-w-none max-[719px]:rounded-b-none max-[719px]:rounded-t-2xl'
                 )}
             >
-                <div className="flex min-h-16 flex-shrink-0 items-center justify-between gap-4 border-b border-white/[0.1] bg-slate-950/[0.24] py-2.5 pl-5 pr-4 backdrop-blur-xl">
+                <div className="flex min-h-16 flex-shrink-0 items-center justify-between gap-4 border-b sui-border-weak sui-bg-page py-2.5 pl-5 pr-4 backdrop-blur-xl">
                     <div className="min-w-0">
                         <h2
                             id={titleId}
-                            className="truncate text-[15px] font-bold leading-[19px] text-[#f3f7fb]"
+                            className="truncate  font-bold leading-[19px] sui-color-default"
                         >
                             {title}
                         </h2>
                         {subtitle && (
                             <p
                                 id={generatedSubtitleId}
-                                className="mt-[3px] truncate text-xs font-normal leading-[15px] text-[#8ea3b8]"
+                                className="mt-[3px] truncate text-xs font-normal leading-[15px] sui-color-default"
                             >
                                 {subtitle}
                             </p>
@@ -458,7 +458,7 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                         <label
                             htmlFor={generatedBackdropOpacityId}
                             title="Adjust workspace dimming behind the dialog"
-                            className="hidden h-8 items-center gap-2 rounded-[6px] border border-white/[0.1] bg-slate-950/[0.2] px-2 text-[11px] font-semibold text-[#a8bacb] min-[720px]:flex"
+                            className="hidden h-8 items-center gap-2 rounded-[6px] border sui-border-weak sui-bg-page px-2  font-semibold sui-color-default min-[720px]:flex"
                         >
                             <span>Backdrop</span>
                             <input
@@ -475,7 +475,7 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                             />
                             <output
                                 htmlFor={generatedBackdropOpacityId}
-                                className="w-8 text-right font-mono text-[10px] text-[#d8e5f0]"
+                                className="w-8 text-right font-mono  sui-color-default"
                             >
                                 {backdropOpacity}%
                             </output>
@@ -503,7 +503,7 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                             onClick={() => onCloseRef.current()}
                             title="Close"
                             aria-label={`Close ${title}`}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-[6px] text-[#91a6ba] transition-colors hover:bg-[#18304a] hover:text-white focus:outline-none focus:ring-2 focus:ring-sky-400"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-[6px] sui-color-default transition-colors sui-hover-bg-section sui-hover-color-active focus:outline-none focus:ring-2 sui-focus-ring"
                         >
                             <X className="h-4 w-4" aria-hidden="true" />
                         </button>
@@ -527,9 +527,9 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                             onPointerDown={beginResize('width')}
                             onKeyDown={resizeWithKeyboard('width')}
                             onDoubleClick={resetAutoSize}
-                            className="group absolute bottom-7 right-0 top-16 z-30 hidden w-2 cursor-ew-resize border-0 bg-transparent p-0 focus:outline-none min-[720px]:block"
+                            className="group absolute bottom-7 right-0 top-16 z-30 hidden w-2 cursor-ew-resize border-0 sui-bg-transparent p-0 focus:outline-none min-[720px]:block"
                         >
-                            <span className="absolute bottom-1/3 right-0 h-16 w-1 rounded-l-full bg-sky-300/20 transition-colors group-hover:bg-sky-300/65 group-focus:bg-sky-300/65" />
+                            <span className="absolute bottom-1/3 right-0 h-16 w-1 rounded-l-full  transition-colors sui-group-hover-bg-info sui-bg-info" />
                         </button>
                         <button
                             type="button"
@@ -538,9 +538,9 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                             onPointerDown={beginResize('height')}
                             onKeyDown={resizeWithKeyboard('height')}
                             onDoubleClick={resetAutoSize}
-                            className="group absolute bottom-0 left-7 right-7 z-30 hidden h-2 cursor-ns-resize border-0 bg-transparent p-0 focus:outline-none min-[720px]:block"
+                            className="group absolute bottom-0 left-7 right-7 z-30 hidden h-2 cursor-ns-resize border-0 sui-bg-transparent p-0 focus:outline-none min-[720px]:block"
                         >
-                            <span className="absolute bottom-0 left-1/2 h-1 w-16 -translate-x-1/2 rounded-t-full bg-sky-300/20 transition-colors group-hover:bg-sky-300/65 group-focus:bg-sky-300/65" />
+                            <span className="absolute bottom-0 left-1/2 h-1 w-16 -translate-x-1/2 rounded-t-full  transition-colors sui-group-hover-bg-info sui-bg-info" />
                         </button>
                         <button
                             type="button"
@@ -549,9 +549,9 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                             onPointerDown={beginResize('both')}
                             onKeyDown={resizeWithKeyboard('both')}
                             onDoubleClick={resetAutoSize}
-                            className="group absolute bottom-0 right-0 z-40 hidden h-7 w-7 cursor-nwse-resize border-0 bg-transparent p-0 focus:outline-none min-[720px]:block"
+                            className="group absolute bottom-0 right-0 z-40 hidden h-7 w-7 cursor-nwse-resize border-0 sui-bg-transparent p-0 focus:outline-none min-[720px]:block"
                         >
-                            <span className="absolute bottom-1.5 right-1.5 h-3.5 w-3.5 rounded-br-md border-b-2 border-r-2 border-sky-300/45 transition-colors group-hover:border-sky-200 group-focus:border-sky-200" />
+                            <span className="absolute bottom-1.5 right-1.5 h-3.5 w-3.5 rounded-br-md border-b-2 border-r-2  transition-colors sui-group-hover-border-info sui-border-info" />
                         </button>
                     </>
                 )}

@@ -93,7 +93,7 @@ export const LinkToNewPage = styled.a`
     display: block;
     color: ${pick({
         enterprise: variables.linkColor,
-        prisma: variables.interactiveColorPrimary,
+        prisma: variables.interactiveColorAccent,
     })};
 `;
 

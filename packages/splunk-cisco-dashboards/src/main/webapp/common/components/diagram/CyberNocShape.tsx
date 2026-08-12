@@ -56,30 +56,30 @@ interface CyberNocShapeData {
 /** Status → LED colour and shadow. The shadow values are tuned
  *  so the glow is visible but doesn't bleed into adjacent nodes
  *  even when devices are placed close together. Tailwind's
- *  arbitrary value syntax (`shadow-[0_0_8px_#10b981]`) lets us
+ *  arbitrary value syntax (`sui-shadow-overlay`) lets us
  *  inline the colour without adding bespoke utilities. */
 const STATUS_LED: Record<
     HealthStatus,
     { dot: string; glow: string; label: string }
 > = {
     healthy: {
-        dot: 'bg-emerald-500',
-        glow: 'shadow-[0_0_8px_#10b981]',
+        dot: 'sui-bg-positive',
+        glow: 'sui-shadow-overlay',
         label: 'Healthy',
     },
     warning: {
-        dot: 'bg-amber-500',
-        glow: 'shadow-[0_0_8px_#f59e0b]',
+        dot: 'sui-bg-warning',
+        glow: 'sui-shadow-overlay',
         label: 'Warning',
     },
     critical: {
-        dot: 'bg-rose-500',
-        glow: 'shadow-[0_0_8px_#ef4444]',
+        dot: 'sui-bg-negative',
+        glow: 'sui-shadow-overlay',
         label: 'Critical',
     },
     unknown: {
-        dot: 'bg-slate-500',
-        glow: 'shadow-[0_0_4px_#64748b]',
+        dot: 'sui-bg-floating',
+        glow: 'sui-shadow-overlay',
         label: 'No telemetry',
     },
 };
@@ -206,7 +206,7 @@ const NodeHandles: React.FC = () => {
                         position={s.pos}
                         id={`${s.id}-target`}
                         className={cn(
-                            '!w-2 !h-2 !bg-sky-300 !border-none',
+                            '!w-2 !h-2 sui-important-bg-info !border-none',
                             'opacity-0 group-hover:opacity-100 transition-opacity'
                         )}
                     />
@@ -215,7 +215,7 @@ const NodeHandles: React.FC = () => {
                         position={s.pos}
                         id={`${s.id}-source`}
                         className={cn(
-                            '!w-2 !h-2 !bg-sky-400 !border-none',
+                            '!w-2 !h-2 sui-important-bg-accent !border-none',
                             'opacity-0 group-hover:opacity-100 transition-opacity'
                         )}
                     />
@@ -251,12 +251,12 @@ const CyberNocShape: React.FC<{
     return (
         <div
             className={cn(
-                'group relative bg-[#111827]/90 backdrop-blur-md',
-                'border border-slate-700 rounded-lg shadow-[0_0_15px_rgba(0,0,0,0.5)]',
+                'group relative sui-bg-section backdrop-blur-md',
+                'border sui-border-default rounded-lg sui-shadow-overlay',
                 'p-3 min-w-[170px]',
-                'hover:border-sky-500 hover:shadow-[0_0_10px_rgba(56,189,248,0.5)]',
+                'sui-hover-border-info sui-shadow-overlay',
                 'transition-all',
-                selected && 'border-sky-500 shadow-[0_0_12px_rgba(56,189,248,0.7)]'
+                selected && 'sui-border-info sui-shadow-overlay'
             )}
             title={`${node.label}\nStatus: ${led.label}${
                 node.healthScore !== undefined ? ` (${node.healthScore})` : ''
@@ -265,7 +265,7 @@ const CyberNocShape: React.FC<{
             {/* Status LED — top-left, glowing */}
             <span
                 className={cn(
-                    'absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full border border-slate-900',
+                    'absolute -top-1 -left-1 w-2.5 h-2.5 rounded-full border sui-border-weak',
                     led.dot,
                     led.glow
                 )}
@@ -275,17 +275,17 @@ const CyberNocShape: React.FC<{
             <div className="flex items-center gap-3">
                 <div
                     className={cn(
-                        'p-2 bg-slate-800/50 rounded-md',
-                        'group-hover:bg-sky-500/10 transition-colors'
+                        'p-2 sui-bg-popup rounded-md',
+                        'sui-group-hover-bg-accent transition-colors'
                     )}
                 >
-                    <Icon className="w-[18px] h-[18px] text-sky-400" />
+                    <Icon className="w-[18px] h-[18px] sui-color-info" />
                 </div>
                 <div className="overflow-hidden">
-                    <div className="text-xs font-bold text-slate-100 truncate uppercase tracking-wider">
+                    <div className="text-xs font-bold sui-color-active truncate uppercase tracking-wider">
                         {node.shortLabel ?? node.label}
                     </div>
-                    <div className="text-xs text-slate-500 font-mono truncate">
+                    <div className="text-xs sui-color-muted font-mono truncate">
                         {secondaryLine(node)}
                     </div>
                 </div>

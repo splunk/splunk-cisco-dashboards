@@ -126,9 +126,9 @@ export const SortableMetricCard: React.FC<SortableMetricCardProps> = ({
                         // on top of the tile label (e.g. "OPEN ISSUES"),
                         // the underlying text still reads through the
                         // chip rather than being abruptly overwritten.
-                        'bg-white/85 dark:bg-slate-900/85 backdrop-blur-[2px]',
-                        'shadow-sm ring-1 ring-slate-200/70 dark:ring-slate-700/60',
-                        'text-slate-500 dark:text-slate-400',
+                        'sui-bg-section backdrop-blur-[2px]',
+                        'shadow-sm ring-1 sui-focus-ring',
+                        'sui-color-muted sui-color-default',
                         'cursor-grab active:cursor-grabbing',
                         'pointer-events-none opacity-0 transition-opacity duration-150',
                         // Reveal only from the small action corner, not
@@ -169,8 +169,8 @@ export const SortableMetricCard: React.FC<SortableMetricCardProps> = ({
                         // another container won't break the match.
                         'group-has-[[data-tile-control="true"]:hover]/sortable:!opacity-0',
                         'group-has-[[data-info-open="true"]]/sortable:!opacity-0',
-                        'hover:text-sky-600 dark:hover:text-sky-400',
-                        'focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-400'
+                        'sui-hover-color-info',
+                        'focus:outline-none focus-visible:ring-1 sui-focus-visible-ring'
                     )}
                 >
                     <GripVertical className="w-3 h-3" />
@@ -185,7 +185,7 @@ export const SortableMetricCard: React.FC<SortableMetricCardProps> = ({
                         className={cn(
                             'absolute left-5 top-0.5',
                             'flex h-4 w-4 items-center justify-center rounded',
-                            'bg-white/90 dark:bg-slate-900/90 backdrop-blur-[2px]',
+                            'sui-bg-section backdrop-blur-[2px]',
                             'shadow-sm ring-1',
                             'pointer-events-none opacity-0 transition-opacity duration-150',
                             isDragging
@@ -193,14 +193,14 @@ export const SortableMetricCard: React.FC<SortableMetricCardProps> = ({
                                 : 'group-hover/tile-actions:pointer-events-auto group-hover/tile-actions:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100',
                             tileAction.tone === 'remove'
                                 ? [
-                                      'text-red-500 hover:text-red-600',
-                                      'ring-red-200/80 dark:ring-red-900/70',
+                                      'sui-color-negative sui-hover-color-negative',
+                                      'sui-focus-ring',
                                   ]
                                 : [
-                                      'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200',
-                                      'ring-slate-200/70 dark:ring-slate-700/60',
+                                      'sui-color-default  sui-hover-color-active',
+                                      'sui-focus-ring',
                                   ],
-                            'focus:outline-none focus-visible:ring-1 focus-visible:ring-sky-400'
+                            'focus:outline-none focus-visible:ring-1 sui-focus-visible-ring'
                         )}
                     >
                         <X className="w-3 h-3" />
