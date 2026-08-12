@@ -20,6 +20,7 @@ import { useSplunkTheme, variables } from "@splunk/themes";
 import styled from "styled-components";
 import Select from "@splunk/react-ui/Select";
 import Slider from "@splunk/react-ui/Slider";
+import SpotLight from "@splunk/react-ui/SpotLight";
 import {
   Circle,
   MapContainer,
@@ -6779,6 +6780,13 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             key={`${tilePreset.id}-${tileUrl}`}
             attribution=""
             url={tileUrl}
+          />
+          <SpotLight
+            inset={{ bottom: "-55%" }}
+            intensity="low"
+            scale={{ x: 0.8, y: 0.45 }}
+            style={{ opacity: 0.36, zIndex: 450 }}
+            variant="element"
           />
           <ZoomControl position="bottomright" />
 
