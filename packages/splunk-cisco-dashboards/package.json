@@ -16,6 +16,7 @@
         "test:start-bootstrap": "node test/startBootstrap.test.cjs",
         "test:catalogue-search": "node test/catalogueSearch.test.cjs",
         "test:searchbase-dispatch": "node test/searchbaseDispatch.test.cjs",
+        "test:searchbase-thresholds": "node test/searchbaseThresholds.test.cjs",
         "test:dashboard-builder-layout": "node test/dashboardBuilderLayout.test.cjs",
         "test:dashboard-drilldown": "node test/dashboardDrilldown.test.cjs",
         "test:searchbase-drilldown-identity": "node test/searchbaseDrilldownIdentity.test.cjs",

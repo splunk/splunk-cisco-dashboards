@@ -27,6 +27,13 @@
   Tile configuration now includes an admin-controlled `Use thresholds` switch;
   disabling it removes threshold-derived colours, status icons, and threshold
   guidance while preserving the warning and critical bands for later use.
+- Searchbase KPI thresholds now declare an explicit reviewed default. Portable
+  health, availability, latency, percentage, and score bands remain enabled;
+  raw activity, inventory, and time-range-dependent volume bands are preserved
+  but disabled until an administrator calibrates them. Corrected defaults now
+  align ISE authentication failure rate with 5%/15% guidance, ThousandEyes
+  average latency with 50/100 ms guidance, and average packet loss with 1%/3%
+  guidance, alongside tighter AP, compliance, and active-incident bands.
 - Insights Workspace tiles can now attach an ordered workflow of up to 24
   Searchbase drill-down searches. Detail dialogs match Dashboard Manager with
   accessible Back/Forward navigation, update Search and Searchbase actions for
