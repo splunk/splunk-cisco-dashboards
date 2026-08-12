@@ -54,23 +54,23 @@
 }
 
 #root-nav-menu [title="Zero Trust Access"] {
-  --scd-pillar-icon: url("images/overview/secure-networking/sui-servers.svg");
+  --scd-pillar-icon: url("images/nav-icons/Fingerprint.svg");
 }
 
 #root-nav-menu [title="Secure Infrastructure"] {
-  --scd-pillar-icon: url("images/overview/secure-networking/sui-servers.svg");
+  --scd-pillar-icon: url("images/nav-icons/NetworkDevices.svg");
 }
 
 #root-nav-menu [title="Scalable Network Segmentation"] {
-  --scd-pillar-icon: url("images/overview/secure-networking/sui-node-model.svg");
+  --scd-pillar-icon: url("images/nav-icons/Globe.svg");
 }
 
 #root-nav-menu [title="Hybrid Mesh Firewalling"] {
-  --scd-pillar-icon: url("images/overview/secure-networking/sui-wall-bricks.svg");
+  --scd-pillar-icon: url("images/nav-icons/ArrowsDoubleLeftRight.svg");
 }
 
 #root-nav-menu [title="Agentic Ops"] {
-  --scd-pillar-icon: url("images/overview/secure-networking/sui-robot-face-wrench.svg");
+  --scd-pillar-icon: url("images/nav-icons/RobotAgent.svg");
 }
 
 #root-nav-menu [data-test="monogram"] {
