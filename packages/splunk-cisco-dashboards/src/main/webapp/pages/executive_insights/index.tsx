@@ -5455,7 +5455,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     setIncludeDrilldownSearches(false);
     setIncludeTableSearches(false);
     setActiveTags(new Set());
-    setFiltersOpen(true);
+    setFiltersOpen(false);
     setAddDestination("personal");
     setAddingRecordId(null);
     setShowAllProfileSearches(true);
@@ -5651,30 +5651,6 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     setActiveTags(new Set());
   }, [selectedApps]);
 
-  useEffect(() => {
-    if (
-      !showAllProfileSearches ||
-      !isDefaultAddTileAppSelection(selectedApps) ||
-      includeHiddenSearches ||
-      includeDrilldownSearches ||
-      includeTableSearches ||
-      selectedCategory !== ALL_ADD_TILE_CATEGORIES ||
-      selectedSubCategory !== ALL_ADD_TILE_SUB_CATEGORIES ||
-      activeTags.size > 0
-    ) {
-      setFiltersOpen(true);
-    }
-  }, [
-    activeTags,
-    includeDrilldownSearches,
-    includeHiddenSearches,
-    includeTableSearches,
-    selectedApps,
-    selectedCategory,
-    selectedSubCategory,
-    showAllProfileSearches,
-  ]);
-
   const tagFacetRecords = useMemo(() => {
     return browseVisibleRecords.filter((record) => {
       if (
@@ -5768,13 +5744,18 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     setShowAllProfileSearches(true);
   };
 
+  const handleDrawerClose = () => {
+    setFiltersOpen(false);
+    onClose();
+  };
+
   const countLabel = `${currentVisibleCount}/${maxTileCount} visible`;
 
   return (
     <Drawer
       divider="header"
       material="glass"
-      onRequestClose={onClose}
+      onRequestClose={handleDrawerClose}
       open={open}
       position="page"
       returnFocus={returnFocus}
