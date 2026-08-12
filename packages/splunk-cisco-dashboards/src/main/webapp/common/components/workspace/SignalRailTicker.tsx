@@ -6,6 +6,9 @@ import React, {
   useState,
 } from "react";
 import Badge from "@splunk/react-ui/Badge";
+import Heading from "@splunk/react-ui/Heading";
+import Layout from "@splunk/react-ui/Layout";
+import ScreenReaderContent from "@splunk/react-ui/ScreenReaderContent";
 import { variables } from "@splunk/themes";
 import styled from "styled-components";
 import {
@@ -139,6 +142,9 @@ const signalRailTickerCss = `
     opacity: 1 !important;
     pointer-events: auto;
     transform: translate(0, -50%) !important;
+}
+.scd-signal-rail-controls {
+  display: none !important;
 }
 .scd-signal-rail-cisco {
     background: linear-gradient(135deg, #0d2b5e 0%, #1749a0 52%, #0d4f8a 100%);
@@ -275,6 +281,10 @@ const StatusPill = styled(Badge)<{ $status: SignalRailStatus }>`
   font-weight: ${variables.fontWeightSemiBold};
   line-height: ${variables.lineHeightSingle};
   white-space: nowrap;
+`;
+
+const StatusOverviewHeader = styled(Layout)`
+  margin-bottom: ${variables.spacingXSmall};
 `;
 
 const MetricContent = styled.span`
@@ -966,7 +976,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
       className={cn(
         "scd-signal-rail-ticker group/signal-rail relative z-40 flex w-full min-w-0 max-w-full flex-shrink-0 flex-col overflow-visible border-b",
         variant === "one-cisco-glass" &&
-          "sui-border-transparent sui-bg-transparent px-1 py-3  sui-color-active",
+          "sui-border-transparent sui-bg-transparent py-3  sui-color-active",
         variant === "original" &&
           "sui-border-weak  px-1.5 py-1 sui-border-weak sui-bg-page",
         variant === "bloomberg" &&
@@ -997,6 +1007,25 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
       }}
     >
       <style>{signalRailTickerCss}</style>
+      <StatusOverviewHeader>
+        <Heading
+          level={2}
+          variant="title3"
+          data-sui-heading-variant="title3"
+        >
+          Status overview
+        </Heading>
+        <span role="status" aria-live="polite" aria-atomic="true">
+          {counts.critical > 0 ? (
+            <StatusPill
+              $status="critical"
+              label={`${counts.critical} Critical`}
+            />
+          ) : (
+            <ScreenReaderContent>0 Critical</ScreenReaderContent>
+          )}
+        </span>
+      </StatusOverviewHeader>
       <div
         className={cn(
           "relative z-[70] flex w-full min-w-0 max-w-full items-center overflow-visible",

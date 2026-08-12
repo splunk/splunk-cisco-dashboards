@@ -1,8 +1,25 @@
-import { createGlobalStyle, css } from "styled-components";
-import { variables } from "@splunk/themes";
+import {
+  createGlobalStyle,
+  css,
+  type FlattenSimpleInterpolation,
+} from "styled-components";
+import { mixins, variables } from "@splunk/themes";
 import type { ComponentType } from "react";
 
 // FILE NOTE: This is merely a step towards ripping out tailwind - ultimately this file should not be necessary and styledcomponents use the tokens directly as needed (which should be a lot less common once most things are using native SUI components).
+
+type HeadingTypographyVariant =
+  | "title1"
+  | "title2"
+  | "title3"
+  | "title4"
+  | "title5"
+  | "title6";
+
+// Bridge the styled-components theme types bundled separately by SUI and this app.
+const headingTypography = mixins.typography as unknown as (
+  variant: HeadingTypographyVariant,
+) => FlattenSimpleInterpolation;
 
 const stateStyles = css`
   .sui-color-active,
@@ -143,7 +160,7 @@ const backgroundStyles = css`
     background-color: ${variables.statusColorCriticalWeak};
   }
   .sui-bg-accent {
-        background-color: ${variables.interactiveColorAccent};
+    background-color: ${variables.interactiveColorAccent};
   }
   .sui-hover-bg-page:hover,
   .sui-focus-bg-page:focus {
@@ -308,19 +325,19 @@ const focusAndSvgStyles = css`
   .sui-stroke-negative {
     stroke: ${variables.contentColorNegative};
   }
-    .sui-placeholder-muted::placeholder {
-        color: ${variables.contentColorMuted};
-    }
-    .sui-guidance-content a {
-        color: ${variables.contentColorLink};
-    }
-    .sui-guidance-content code {
-        background-color: ${variables.statusColorNormalWeak};
-        border-color: ${variables.statusColorNormal};
-        color: ${variables.contentColorPositive};
-    }
+  .sui-placeholder-muted::placeholder {
+    color: ${variables.contentColorMuted};
+  }
+  .sui-guidance-content a {
+    color: ${variables.contentColorLink};
+  }
+  .sui-guidance-content code {
+    background-color: ${variables.statusColorNormalWeak};
+    border-color: ${variables.statusColorNormal};
+    color: ${variables.contentColorPositive};
+  }
   .sui-important-bg-accent {
-        background-color: ${variables.interactiveColorAccent} !important;
+    background-color: ${variables.interactiveColorAccent} !important;
   }
   .sui-important-bg-info {
     background-color: ${variables.statusColorInfoWeak} !important;
@@ -429,6 +446,35 @@ const GlobalSemanticThemeStyles = createGlobalStyle`
         --scd-c3-panel-border: ${variables.borderColorWeak};
         --scd-c3-toolbar-border: ${variables.borderColor};
         --scd-c3-accent-stroke: ${variables.interactiveColorBorder};
+    }
+
+    body.scd-overview-active #scan-root {
+        padding-inline: ${variables.spacingLarge};
+    }
+
+    // have to patch these for now as Heading styles are colliding with all the other stuff pre-SUI
+    body.scd-overview-active #scan-root [data-sui-heading-variant="title1"] {
+        ${headingTypography("title1")}
+    }
+
+    body.scd-overview-active #scan-root [data-sui-heading-variant="title2"] {
+        ${headingTypography("title2")}
+    }
+
+    body.scd-overview-active #scan-root [data-sui-heading-variant="title3"] {
+        ${headingTypography("title3")}
+    }
+
+    body.scd-overview-active #scan-root [data-sui-heading-variant="title4"] {
+        ${headingTypography("title4")}
+    }
+
+    body.scd-overview-active #scan-root [data-sui-heading-variant="title5"] {
+        ${headingTypography("title5")}
+    }
+
+    body.scd-overview-active #scan-root [data-sui-heading-variant="title6"] {
+        ${headingTypography("title6")}
     }
 
     ${stateStyles}

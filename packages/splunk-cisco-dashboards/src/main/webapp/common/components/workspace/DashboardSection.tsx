@@ -33,7 +33,7 @@ interface HeightControlConfig {
 }
 
 interface HeaderActionConfig {
-  onClick: () => void;
+  onClick: (returnFocus: HTMLElement | null) => void;
   label: string;
   title?: string;
   disabled?: boolean;
@@ -109,7 +109,7 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
         {addTileAction && (
           <Menu.Item
             disabled={addTileAction.disabled}
-            onClick={addTileAction.onClick}
+            onClick={() => addTileAction.onClick(actionToggleRef.current)}
             startAdornment={
               <ActionIcon>
                 <Plus />
