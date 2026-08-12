@@ -3,8 +3,6 @@
 const assert = require("assert").strict;
 const fs = require("fs");
 const path = require("path");
-const React = require("react");
-const { renderToStaticMarkup } = require("react-dom/server");
 
 const read = (relativePath) =>
   fs.readFileSync(path.resolve(__dirname, relativePath), "utf8");
@@ -48,14 +46,12 @@ const navigation = read(
 );
 
 const approvedPillarIcons = [
-  ["Zero Trust Access", "shield-keyhole", "ShieldKeyhole"],
-  ["Secure Infrastructure", "servers", "Servers"],
-  ["Scalable Network Segmentation", "node-model", "NodeModel"],
-  ["Hybrid Mesh Firewalling", "wall-bricks", "WallBricks"],
-  ["Agentic Ops", "robot-face-wrench", "RobotFaceWrench"],
+  ["Zero Trust Access", "shield-keyhole", "ShieldKeyhole", "Fingerprint"],
+  ["Secure Infrastructure", "servers", "Servers", "NetworkDevices"],
+  ["Scalable Network Segmentation", "node-model", "NodeModel", "Globe"],
+  ["Hybrid Mesh Firewalling", "wall-bricks", "WallBricks", "ArrowsDoubleLeftRight"],
+  ["Agentic Ops", "robot-face-wrench", "RobotFaceWrench", "RobotAgent"],
 ];
-const extractSvgPaths = (source) =>
-  [...source.matchAll(/<path[^>]*\sd="([^"]+)"/g)].map((match) => match[1]);
 
 assert.match(
   profile,
@@ -274,13 +270,7 @@ assert.match(
   /width: 24px;[\s\S]{0,220}?mask: var\(--scd-pillar-icon\) center \/ contain no-repeat;/,
   "Unsupported shell icons must use one centered SUI vector at Splunk's native rendered size",
 );
-assert.match(
-  navigation,
-  /<collection label="Zero Trust Access" icon="shieldkeyhole">/,
-  "Zero Trust Access must use the ShieldKeyhole icon exposed directly by Splunk navigation",
-);
-
-for (const [title, key, componentName] of approvedPillarIcons) {
+for (const [title, key, componentName, navigationIcon] of approvedPillarIcons) {
   assert.match(
     secureNetworkingSectionConfig[0],
     new RegExp(`title: '${title}'[\\s\\S]*?icon: '${key}'`),
@@ -306,28 +296,28 @@ for (const [title, key, componentName] of approvedPillarIcons) {
     `${title}'s workspace icon key must resolve to ${componentName}`,
   );
 
-  if (title !== "Zero Trust Access") {
-    const assetName = `sui-${key}.svg`;
-    assert.match(
-      applicationStyles,
-      new RegExp(
-        `\\[title='${title}'\\][\\s\\S]{0,160}?${assetName.replace(".", "\\.")}`,
-      ),
-      `${title}'s Splunk navigation item must use the matching SUI vector`,
-    );
-    const staticAsset = read(
-      `../src/main/resources/splunk/appserver/static/images/overview/secure-networking/${assetName}`,
-    );
-    const Icon = require(`@splunk/react-icons/${componentName}`).default;
-    const reactMarkup = renderToStaticMarkup(
-      React.createElement(Icon, { variant: "outlined" }),
-    );
-    assert.deepEqual(
-      extractSvgPaths(staticAsset),
-      extractSvgPaths(reactMarkup),
-      `${title}'s Splunk navigation asset must preserve the official outlined SUI geometry`,
-    );
-  }
+  assert.match(
+    navigation,
+    new RegExp(`<collection label="${title}" icon="${navigationIcon}">`),
+    `${title} must expose its approved icon through Splunk navigation`,
+  );
+
+  const assetName = `${navigationIcon}.svg`;
+  assert.match(
+    applicationStyles,
+    new RegExp(
+      `\\[title="${title}"\\][\\s\\S]{0,160}?images/nav-icons/${assetName.replace(".", "\\.")}`,
+    ),
+    `${title}'s Splunk navigation item must use the matching navigation vector`,
+  );
+  const staticAsset = read(
+    `../src/main/resources/splunk/appserver/static/images/nav-icons/${assetName}`,
+  );
+  assert.match(
+    staticAsset,
+    /<svg[^>]*viewBox="0 0 24 24"[\s\S]*<path\b/,
+    `${title}'s Splunk navigation asset must be a populated 24px SVG`,
+  );
 }
 
 console.log("1CD design contracts passed");

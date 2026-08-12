@@ -310,6 +310,16 @@ body.scd-overview-active .panel-body,
     color: inherit;
 }
 
+/*
+ * Splunk Web's host CSS supplies legacy Leaflet zoom-button PNG backgrounds,
+ * while Leaflet 1.9 renders the same +/− symbols as text inside the controls.
+ * Clear only the legacy images so the two icon generations do not overlap.
+ */
+#scan-root .customer-topology-map .leaflet-control-zoom-in,
+#scan-root .customer-topology-map .leaflet-control-zoom-out {
+    background-image: none;
+}
+
 #scan-root ul,
 #scan-root ol {
     margin: 0;

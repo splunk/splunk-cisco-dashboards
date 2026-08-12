@@ -6577,7 +6577,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                 zoomControl={false}
                 scrollWheelZoom={false}
                 attributionControl={false}
-                className="z-10"
+                className="customer-topology-map z-10"
             >
                 <MapFrame
                     topology={resolvedTopology}
