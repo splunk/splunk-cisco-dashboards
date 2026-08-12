@@ -92,33 +92,35 @@ const TopologyMapRoot = styled.div`
   min-height: 400px;
 
   .leaflet-control-zoom {
-    overflow: hidden;
-    border: 1px solid ${variables.borderColor};
+    display: flex;
+    flex-direction: column;
+    gap: ${variables.spacingXSmall};
+    overflow: visible;
+    border: 0;
+    background-color: transparent;
+    box-shadow: none;
+  }
+
+  .leaflet-control-zoom .leaflet-control-zoom-in,
+  .leaflet-control-zoom .leaflet-control-zoom-out {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: ${variables.inputHeight};
+    height: ${variables.inputHeight};
+    border: ${variables.inputBorderWidth} solid ${variables.borderColorStrong};
     border-radius: ${variables.borderRadius};
     background-color: color-mix(
       in srgb,
       ${variables.backgroundColorPopup} 72%,
       transparent
     );
-    box-shadow: none;
-    backdrop-filter: blur(4px);
-  }
-
-  .leaflet-control-zoom-in,
-  .leaflet-control-zoom-out {
-    width: 28px;
-    height: 28px;
-    border: 0;
-    border-bottom: 1px solid ${variables.borderColor};
-    background-color: transparent;
     background-image: none;
-    color: ${variables.contentColorDefault};
+    backdrop-filter: blur(4px);
+    color: ${variables.contentColorActive};
     font-family: ${variables.fontFamily};
-    line-height: 26px;
-  }
-
-  .leaflet-control-zoom-out {
-    border-bottom: 0;
+    line-height: ${variables.lineHeightSingle};
   }
 
   .leaflet-control-zoom-in:hover,
@@ -6957,8 +6959,11 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
               overlayChrome,
             )}
           >
-            <span className="text-xs font-black uppercase tracking-[0.18em]  sui-color-info">
-              Roles
+            <span
+              className="text-xs tracking-[0.18em]"
+              style={{ color: "#94A3B8" }}
+            >
+              Site Roles
             </span>
             <span className="flex -space-x-1">
               {roleLegendPreviewSites.map((site) => (
@@ -6969,9 +6974,6 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                   title={`${site.shortName}: ${topologyRoleLabel(site.role)}`}
                 />
               ))}
-            </span>
-            <span className="rounded-full  px-1.5 py-0.5 text-xs font-black  sui-bg-accent sui-color-info">
-              {resolvedTopology.sites.length}
             </span>
             <ChevronRight className="h-3.5 w-3.5 sui-color-default transition-transform group-hover:translate-x-0.5" />
           </button>

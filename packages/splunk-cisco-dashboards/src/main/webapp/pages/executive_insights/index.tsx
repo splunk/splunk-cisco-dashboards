@@ -4653,7 +4653,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             //              than rearranging the JSX so the
             //              splitter logic stays attached to
             //              its sibling.
-            "scd-overview-split flex gap-2 h-full min-h-0 relative",
+            // Fill the viewport when content is short, but allow the split
+            // row to grow to the map and KPI cards' natural height.
+            "scd-overview-split flex gap-2 min-h-full relative",
             mapVisible
               ? mapPosition === "right"
                 ? "flex-col xl:flex-row"
@@ -4677,7 +4679,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                         the same drag-to-resize feel vertically as the
                         existing right-mode splitter delivers
                         horizontally. */}
-          <div
+          <OverviewMetricsColumn
             // overflow-y-auto: when the viewport is too short
             // to fit visible sections at their min-h-[180px]
             // floor (plus ticker + header +
@@ -4935,7 +4937,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 </DashboardSection>
               );
             })}
-          </div>
+          </OverviewMetricsColumn>
 
           {/* Splitter handle — renders in every layout mode.
                         Right mode: thin vertical bar visible at xl+,
@@ -6640,6 +6642,15 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
 // Tiny KPI card under the map
 // =============================================================================
 
+const OverviewMetricsColumn = styled.div`
+  @media (width >= 1120px) {
+    &[data-map-position="right"] {
+      /* In split view, the map and its KPI cards set the row height. */
+      contain: size;
+    }
+  }
+`;
+
 const MapViewport = styled.div`
   flex: 1 0 400px;
   min-height: 400px;
@@ -6650,6 +6661,22 @@ interface KpiCardProps {
   value: string;
   status: MetricStatus;
 }
+
+const formatMapKpiValue = (value: string): string => {
+  const match = value
+    .trim()
+    .match(/^(-?\d[\d,]*)(?:\.(\d+))?(\s*[^\d\s].*)?$/);
+  if (!match) return value;
+
+  const [, whole, fraction, suffix = ""] = match;
+  if (!fraction) return `${whole}${suffix}`;
+
+  const numericValue = Number(`${whole.replace(/,/g, "")}.${fraction}`);
+  const roundedValue = Math.round((numericValue + Number.EPSILON) * 10) / 10;
+  return `${roundedValue.toLocaleString("en-US", {
+    maximumFractionDigits: 1,
+  })}${suffix}`;
+};
 
 const MAP_KPI_STATUS_TOKENS = {
   healthy: variables.severityColorNormal,
@@ -7984,6 +8011,7 @@ const KpiCard: React.FC<KpiCardProps> = ({
   status,
 }) => {
   const theme = useSplunkTheme();
+  const displayValue = formatMapKpiValue(value);
   const statusColor = {
     healthy: theme.severityColorNormal,
     warning: theme.severityColorWarning,
@@ -7996,8 +8024,8 @@ const KpiCard: React.FC<KpiCardProps> = ({
       <Card.Header title={<Heading level={3}>{label}</Heading>} />
       <Card.Body>
         <MapKpiContent>
-          <MapKpiValue $status={status} title={value}>
-            {value}
+          <MapKpiValue $status={status} title={displayValue}>
+            {displayValue}
           </MapKpiValue>
           <MapKpiStatusBadge
             $status={status}
