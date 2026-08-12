@@ -5759,7 +5759,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
       open={open}
       position="page"
       returnFocus={returnFocus}
-      width={`min(540px, calc(100vw - ${theme.spacingMedium}))`}
+      width="650px"
     >
       <Drawer.Header
         title="Add search"
