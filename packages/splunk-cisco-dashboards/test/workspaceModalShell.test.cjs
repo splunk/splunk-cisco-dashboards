@@ -84,13 +84,13 @@ assert.match(
 );
 assert.match(
   shell,
-  /rounded-\[4px\][\s\S]*border-white\/\[0\.18\][\s\S]*rgba\(255,255,255,0\.01\)[\s\S]*rgba\(90,101,111,0\.45\)[\s\S]*rgba\(62,73,83,0\.25\)[\s\S]*backdrop-blur-\[75px\]/,
-  "Shared modal shell must follow the SUI glass radius, border, tint, and blur treatment",
+  /rounded-\[4px\][\s\S]*sui-border-weak[\s\S]*sui-bg-section[\s\S]*sui-color-active[\s\S]*sui-shadow-overlay[\s\S]*backdrop-blur-\[75px\]/,
+  "Shared modal shell must use semantic SUI surface, border, text, and elevation tokens",
 );
 assert.match(
   shell,
-  /0_50px_200px[\s\S]*0_29px_66px[\s\S]*inset_0_1px_4px/,
-  "Shared modal shell must preserve the SUI layered modal shadow stack",
+  /sui-shadow-overlay/,
+  "Shared modal shell must use the SUI overlay elevation token",
 );
 for (const accessibleResizeLabel of [
   "Resize dialog width",
@@ -251,7 +251,7 @@ assert.match(
 );
 assert.match(
   searchbaseGuidance,
-  /\[&_code\]:font-mono[\s\S]*?\[&_code\]:text-emerald-200/,
+  /sui-guidance-content[\s\S]*?\[&_code\]:font-mono/,
   "Workspace guidance must render inline SPL as high-contrast code instead of red prose",
 );
 assert.match(

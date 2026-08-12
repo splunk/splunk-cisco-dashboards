@@ -317,12 +317,12 @@ const InsightKpiEditor = (props) => {
                 </div>
             </CollapsiblePanel>
             <CollapsiblePanel title="Color and style">
-                <StyledControlGroup
-                    label="Title Color"
-                    labelPosition="top"
-                    controlsLayout="fillJoin"
-                >
-                    <SplunkThemeProvider density="compact">
+                <SplunkThemeProvider density="compact">
+                    <StyledControlGroup
+                        label="Title Color"
+                        labelPosition="top"
+                        controlsLayout="fillJoin"
+                    >
                         <Color
                             value={titleColor}
                             onChange={({ value }) => {
@@ -330,14 +330,12 @@ const InsightKpiEditor = (props) => {
                             }}
                             disabled={selectedKpi == undefined}
                         />
-                    </SplunkThemeProvider>
-                </StyledControlGroup>
-                <StyledControlGroup
-                    label="Background Color"
-                    labelPosition="top"
-                    controlsLayout="fillJoin"
-                >
-                    <SplunkThemeProvider density="compact">
+                    </StyledControlGroup>
+                    <StyledControlGroup
+                        label="Background Color"
+                        labelPosition="top"
+                        controlsLayout="fillJoin"
+                    >
                         <Color
                             value={bgColor}
                             onChange={({ value }) => {
@@ -345,21 +343,23 @@ const InsightKpiEditor = (props) => {
                             }}
                             disabled={selectedKpi == undefined}
                         />
-                    </SplunkThemeProvider>
-                </StyledControlGroup>
-                <StyledControlGroup label="Border" labelPosition="top" controlsLayout="fillJoin">
-                    <div>
-                        <Number
-                            value={borderSize}
-                            onChange={(e, { value }) => {
-                                setBorderSize(value);
-                            }}
-                            inline
-                            title="Border size"
-                            style={{ marginBottom: '10px' }}
-                            disabled={selectedKpi == undefined}
-                        />
-                        <SplunkThemeProvider density="compact">
+                    </StyledControlGroup>
+                    <StyledControlGroup
+                        label="Border"
+                        labelPosition="top"
+                        controlsLayout="fillJoin"
+                    >
+                        <div>
+                            <Number
+                                value={borderSize}
+                                onChange={(e, { value }) => {
+                                    setBorderSize(value);
+                                }}
+                                inline
+                                title="Border size"
+                                style={{ marginBottom: '10px' }}
+                                disabled={selectedKpi == undefined}
+                            />
                             <Color
                                 value={borderColor}
                                 onChange={(e, { value }) => {
@@ -367,9 +367,9 @@ const InsightKpiEditor = (props) => {
                                 }}
                                 disabled={selectedKpi == undefined}
                             />
-                        </SplunkThemeProvider>
-                    </div>
-                </StyledControlGroup>
+                        </div>
+                    </StyledControlGroup>
+                </SplunkThemeProvider>
             </CollapsiblePanel>
             <CollapsiblePanel title="Interactions">
                 <StyledControlGroup

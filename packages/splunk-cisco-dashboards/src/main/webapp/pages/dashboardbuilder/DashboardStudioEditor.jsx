@@ -80,10 +80,6 @@ import DOMPurify from 'dompurify';
 import Link from '@splunk/react-ui/Link';
 import ButtonGroup from '@splunk/react-ui/ButtonGroup';
 import styled from 'styled-components';
-import prismaDarkTheme from '@splunk/themes/prisma/dark';
-import prismaLightTheme from '@splunk/themes/prisma/light';
-import SplunkThemeProvider from '@splunk/themes/SplunkThemeProvider';
-import { unstable_splunk1cdThemeCustomizer } from '@splunk/themes';
 import useSplunkTheme from '@splunk/themes/useSplunkTheme';
 import { isVersionLower, getServerInfo } from '../../common/lib/splunk';
 import Paintbrush from '@splunk/react-icons/Paintbrush';
@@ -96,7 +92,6 @@ import {
     resolveSearchbaseDefinitionForNativeStudio,
 } from './searchbaseDefinitionUtils';
 import { repairSearchbaseTimeQueryParameters } from './dashboardTimeUtils';
-import { syncSplunkShellTheme } from '../../common/theme/splunkShellTheme';
 import DashboardStudioDrilldownModal from './DashboardStudioDrilldownModal';
 import {
     DEFAULT_DASHBOARD_DRILLDOWN_TIME_RANGE,
@@ -860,10 +855,6 @@ const DashboardStudioEditor = ({
     //hasCloneSharingPermission,
 }) => {
     const navigate = useNavigate();
-    const splunkTheme = useSplunkTheme();
-    const dashboardBuilderColorScheme =
-        splunkTheme.colorScheme === 'dark' ? 'dark' : 'light';
-
     const [isCodeEditable, setIsCodeEditable] = useState(false);
 
     const dashboardApiElem = useRef(null);
@@ -898,10 +889,7 @@ const DashboardStudioEditor = ({
     const [currentDashboard, setCurrentDashboard] = useState(() =>
         toDashboardRecord(initialDashboard),
     );
-    const dashboardColorScheme = normalizeDashboardTheme(
-        currentDashboard?.theme,
-        dashboardBuilderColorScheme,
-    );
+    const dashboardColorScheme = 'dark';
     const hasThemedPortalModal =
         openConvertModal || openBackToManagerModal || openDashboardModal || Boolean(dashboardDrilldown);
     const runtimeDashboardDefinition = useMemo(() => {
@@ -921,17 +909,11 @@ const DashboardStudioEditor = ({
         setDashboardDrilldown(null);
     }, [runtimeDashboardDefinition]);
 
-    useEffect(
-        () => syncSplunkShellTheme(dashboardColorScheme),
-        [dashboardColorScheme],
-    );
-
     // Splunk React UI mounts modal backdrops in a portal outside the Dashboard
     // Studio root. Mark the document while one of our dialogs is open so the
     // portal uses the dashboard theme rather than the surrounding Splunk shell.
     useEffect(() => {
         const portalThemeClasses = [
-            'dashboard-builder-modal-portal-light',
             'dashboard-builder-modal-portal-dark',
         ];
         const activePortalThemeClass = `dashboard-builder-modal-portal-${dashboardColorScheme}`;
@@ -953,8 +935,7 @@ const DashboardStudioEditor = ({
         return () => document.body.classList.remove('dashboard-builder-drilldown-open');
     }, [dashboardDrilldown]);
 
-    const editorTheme =
-        dashboardColorScheme === 'dark' ? prismaDarkTheme : prismaLightTheme;
+    const editorTheme = useSplunkTheme();
     const dashboardBuilderThemeStyle = {
         '--dashboard-builder-background-page': editorTheme.backgroundColorPage,
         '--dashboard-builder-background-section': editorTheme.backgroundColorSection,
@@ -967,7 +948,7 @@ const DashboardStudioEditor = ({
         '--dashboard-builder-border': editorTheme.borderColor,
         '--dashboard-builder-border-strong': editorTheme.borderColorStrong,
         '--dashboard-builder-border-weak': editorTheme.borderColorWeak,
-        '--dashboard-builder-accent': editorTheme.interactiveColorPrimary,
+        '--dashboard-builder-accent': editorTheme.interactiveColorAccent,
         '--dashboard-builder-overlay-hover': editorTheme.interactiveColorOverlayHover,
         '--dashboard-builder-overlay-selected': editorTheme.interactiveColorOverlaySelected,
     };
@@ -2080,12 +2061,6 @@ const DashboardStudioEditor = ({
     return (
         <>
             <ToastMessages />
-            <SplunkThemeProvider
-                family="prisma"
-                density="comfortable"
-                colorScheme={dashboardColorScheme}
-                customizeTheme={unstable_splunk1cdThemeCustomizer}
-            >
             <Modal
                 open={openConvertModal}
                 className={`dashboard-builder-themed-modal dashboard-builder-themed-modal-${dashboardColorScheme}`}
@@ -2317,7 +2292,6 @@ const DashboardStudioEditor = ({
                 modalThemeStyle={dashboardBuilderModalThemeStyle}
                 onRequestClose={() => setDashboardDrilldown(null)}
             />
-            </SplunkThemeProvider>
             {currentDashboard == undefined ? (
                 <></>
             ) : (
@@ -2332,13 +2306,7 @@ const DashboardStudioEditor = ({
                     style={{ minHeight: '100%', ...dashboardBuilderThemeStyle }}
                     id="collection_container"
                 >
-                    <SplunkThemeProvider
-                        family="prisma"
-                        density="comfortable"
-                        colorScheme={dashboardColorScheme}
-                        customizeTheme={unstable_splunk1cdThemeCustomizer}
-                    >
-                        <DashboardContextProvider
+                    <DashboardContextProvider
                             key="DashboardStudioEditorContext"
                             iconRegistry={iconRegistry}
                             featureFlags={featureFlags}
@@ -2359,8 +2327,7 @@ const DashboardStudioEditor = ({
                         >
                             {sourceEditorPanel}
                             {uiEditorPanel}
-                        </DashboardContextProvider>
-                    </SplunkThemeProvider>
+                    </DashboardContextProvider>
                 </div>
             )}
         </>

@@ -106,7 +106,7 @@ export default function DropdownWithSearch({
         '--dashboard-builder-border': splunkTheme.borderColor,
         '--dashboard-builder-border-strong': splunkTheme.borderColorStrong,
         '--dashboard-builder-border-weak': splunkTheme.borderColorWeak,
-        '--dashboard-builder-accent': splunkTheme.interactiveColorPrimary,
+        '--dashboard-builder-accent': splunkTheme.interactiveColorAccent,
         '--dashboard-builder-overlay-hover': splunkTheme.interactiveColorOverlayHover,
         '--dashboard-builder-overlay-selected': splunkTheme.interactiveColorOverlaySelected,
         '--dashboard-builder-modal-background': splunkTheme.backgroundColorPopup,

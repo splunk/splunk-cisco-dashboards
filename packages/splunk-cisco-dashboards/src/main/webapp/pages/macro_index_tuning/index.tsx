@@ -730,7 +730,7 @@ const lightButtonBase =
 const compactButtonBase =
   "inline-flex h-8 min-h-8 items-center justify-center gap-2 rounded border px-3 text-sm font-semibold leading-none transition disabled:cursor-not-allowed disabled:opacity-55";
 const tableSearchInputBase =
-  "h-10 min-h-10 w-full rounded-md border border-slate-300 bg-white py-0 pl-9 pr-3 text-sm leading-none text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-100";
+  "h-10 min-h-10 w-full rounded-md border sui-border-default sui-bg-section py-0 pl-9 pr-3 text-sm leading-none  outline-none transition sui-color-default sui-focus-border-info focus:ring-2 sui-focus-ring";
 
 const normalizeText = (value: unknown): string =>
   Array.isArray(value)
@@ -1446,7 +1446,7 @@ function CopyButton({
             ? "Clipboard access was blocked by the browser."
             : undefined
       }
-      className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+      className={`${lightButtonBase} sui-border-default sui-bg-section sui-color-default sui-hover-border-info sui-hover-color-info`}
     >
       {icon}
       {buttonLabel}
@@ -1471,8 +1471,8 @@ function FieldPills({
   const extra = Math.max(0, values.length - visible.length);
   const classes =
     tone === "sky"
-      ? "border-sky-100 bg-sky-50 text-sky-800"
-      : "border-slate-200 bg-slate-50 text-slate-700";
+      ? "sui-border-info sui-bg-info sui-color-info"
+      : "sui-border-weak sui-bg-page sui-color-default";
 
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -1489,14 +1489,14 @@ function FieldPills({
         <button
           type="button"
           onClick={() => setExpanded(true)}
-          className="rounded border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-sky-700 hover:border-sky-400 hover:bg-sky-50"
+          className="rounded border sui-border-default sui-bg-section px-2 py-0.5 text-xs font-semibold sui-color-info sui-hover-border-info sui-hover-bg-info"
           title={`Show ${extra} more ${valueLabel}`}
         >
           +{extra}
         </button>
       )}
       {extra > 0 && !canExpand && (
-        <span className="rounded border border-slate-200 bg-white px-2 py-0.5 text-xs text-slate-500">
+        <span className="rounded border sui-border-weak sui-bg-section px-2 py-0.5 text-xs sui-color-muted">
           +{extra}
         </span>
       )}
@@ -1504,7 +1504,7 @@ function FieldPills({
         <button
           type="button"
           onClick={() => setExpanded(false)}
-          className="rounded border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-600 hover:border-slate-400 hover:bg-slate-50"
+          className="rounded border sui-border-default sui-bg-section px-2 py-0.5 text-xs font-semibold sui-color-default sui-hover-border-default sui-hover-bg-page"
         >
           Show fewer
         </button>
@@ -1531,7 +1531,7 @@ function MacroInfoBox({
         aria-expanded={open}
         aria-controls={boxId}
         title={`About ${macro}`}
-        className="inline-flex h-7 w-7 items-center justify-center rounded border border-slate-300 bg-white text-slate-600 hover:border-sky-400 hover:bg-sky-50 hover:text-sky-700"
+        className="inline-flex h-7 w-7 items-center justify-center rounded border sui-border-default sui-bg-section sui-color-default sui-hover-border-info sui-hover-bg-info sui-hover-color-info"
       >
         <Info size={15} aria-hidden="true" />
         <span className="sr-only">About {macro}</span>
@@ -1540,7 +1540,7 @@ function MacroInfoBox({
         <div
           id={boxId}
           role="note"
-          className="mt-2 max-w-sm border border-sky-200 bg-sky-50 px-3 py-2 text-xs leading-5 text-slate-700"
+          className="mt-2 max-w-sm border sui-border-info sui-bg-info px-3 py-2 text-xs leading-5 sui-color-default"
         >
           {description || "No description is available for this macro."}
         </div>
@@ -2486,23 +2486,23 @@ export default function MacroIndexTuningPage(): JSX.Element {
     return (
       <tr
         key={macroStatusKey(row)}
-        className="border-b border-slate-100 align-top"
+        className="border-b sui-border-weak align-top"
       >
         <td className="px-4 py-3">
           <div
             className={`font-mono text-sm font-bold ${
-              isUnknown ? "text-amber-700" : "text-sky-800"
+              isUnknown ? "sui-color-warning" : "sui-color-info"
             }`}
           >
             {row.macro}
           </div>
           <MacroInfoBox macro={row.macro} description={row.description} />
-          <div className="mt-1 text-xs text-slate-500">
+          <div className="mt-1 text-xs sui-color-muted">
             {row.sourcetypeCount
               ? `${formatNumber(row.sourcetypeCount)} sourcetypes`
               : "No matching sourcetypes"}
           </div>
-          <div className="mt-1 text-xs text-slate-500">
+          <div className="mt-1 text-xs sui-color-muted">
             {row.targetApp}/local/macros.conf
           </div>
         </td>
@@ -2513,13 +2513,13 @@ export default function MacroIndexTuningPage(): JSX.Element {
               updateDraftDefinition(macroStatusKey(row), event.target.value)
             }
             disabled={isUnknown}
-            className="h-9 w-full rounded border border-slate-300 bg-white px-2 font-mono text-xs text-slate-900 disabled:bg-slate-100 disabled:text-slate-500"
+            className="h-9 w-full rounded border sui-border-default sui-bg-section px-2 font-mono text-xs sui-color-active sui-disabled-bg-section sui-disabled-color-muted"
           />
           {status.state === "error" && status.message && (
-            <div className="mt-1 text-xs text-red-700">{status.message}</div>
+            <div className="mt-1 text-xs sui-color-negative">{status.message}</div>
           )}
           {status.state === "saved" && (
-            <div className="mt-1 text-xs font-semibold text-emerald-700">
+            <div className="mt-1 text-xs font-semibold sui-color-positive">
               Saved
             </div>
           )}
@@ -2539,7 +2539,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
             valueLabel="sourcetypes"
           />
         </td>
-        <td className="px-4 py-3 text-right font-mono text-sm text-slate-700">
+        <td className="px-4 py-3 text-right font-mono text-sm sui-color-default">
           {formatNumber(row.events)}
         </td>
         <td className="px-4 py-3 text-right">
@@ -2547,7 +2547,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
             type="button"
             onClick={() => saveOne(row)}
             disabled={isUnknown || isSaving || !row.draftDefinition.trim()}
-            className={`${compactButtonBase} border-slate-300 bg-white text-slate-700 hover:border-emerald-500 hover:text-emerald-700`}
+            className={`${compactButtonBase} sui-border-default sui-bg-section sui-color-default sui-hover-border-positive sui-hover-color-positive`}
           >
             {isSaving ? (
               <Loader2 size={15} className="animate-spin" />
@@ -2566,13 +2566,13 @@ export default function MacroIndexTuningPage(): JSX.Element {
       const isCollapsed = Boolean(collapsedRowGroups[targetApp]);
       return (
         <React.Fragment key={targetApp}>
-          <tr className="border-b border-slate-200 bg-slate-100">
+          <tr className="border-b sui-border-weak sui-bg-section">
             <td colSpan={6} className="p-0">
               <button
                 type="button"
                 onClick={() => toggleRowGroup(targetApp)}
                 aria-expanded={!isCollapsed}
-                className="scd-macro-group-toggle flex h-9 w-full items-center gap-2 px-4 text-left text-xs font-bold uppercase tracking-wide text-slate-600 hover:bg-slate-200"
+                className="scd-macro-group-toggle flex h-9 w-full items-center gap-2 px-4 text-left text-xs font-bold uppercase tracking-wide sui-color-default sui-hover-bg-overlay"
               >
                 {isCollapsed ? (
                   <ChevronRight size={15} className="shrink-0" />
@@ -2580,14 +2580,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   <ChevronDown size={15} className="shrink-0" />
                 )}
                 <span className="flex min-w-0 items-center gap-2 normal-case tracking-normal">
-                  <span className="truncate text-sm font-semibold text-slate-700">
+                  <span className="truncate text-sm font-semibold sui-color-default">
                     {getTargetAppLabel(targetApp)}
                   </span>
-                  <code className="shrink-0 font-mono text-xs font-medium text-slate-500">
+                  <code className="shrink-0 font-mono text-xs font-medium sui-color-muted">
                     {targetApp}/local/macros.conf
                   </code>
                 </span>
-                <span className="ml-auto shrink-0 rounded bg-white px-2 py-0.5 text-xs font-semibold normal-case tracking-normal text-slate-500">
+                <span className="ml-auto shrink-0 rounded sui-bg-section px-2 py-0.5 text-xs font-semibold normal-case tracking-normal sui-color-muted">
                   {formatNumber(appRows.length)} macros
                 </span>
               </button>
@@ -2619,18 +2619,18 @@ export default function MacroIndexTuningPage(): JSX.Element {
       {
         value: setupRowsToSave.length,
         label: "Macros",
-        colorClass: "text-sky-700",
+        colorClass: "sui-color-info",
       },
       {
         value: setupIndexValueCount,
         label: "Indexes",
-        colorClass: "text-emerald-700",
+        colorClass: "sui-color-positive",
       },
       {
         value: unknownSourcetypeGroups,
         label: "Unmapped",
         colorClass:
-          unknownSourcetypeGroups > 0 ? "text-amber-700" : "text-emerald-700",
+          unknownSourcetypeGroups > 0 ? "sui-color-warning" : "sui-color-positive",
       },
     ];
     let scanEyebrow = "Automatic scan complete";
@@ -2644,17 +2644,17 @@ export default function MacroIndexTuningPage(): JSX.Element {
       scanEyebrow = "Automatic scan needs attention";
       scanHeading = "The index scan could not complete";
     }
-    let performanceStatusClass = "bg-slate-100 text-slate-600";
+    let performanceStatusClass = "sui-bg-section sui-color-default";
     let performanceStatusMessage =
       "Balanced mode is ready with no extra action.";
     if (summariesOnlyEnabled && accelerationCheckInProgress) {
-      performanceStatusClass = "bg-sky-50 text-sky-800";
+      performanceStatusClass = "sui-bg-info sui-color-info";
       performanceStatusMessage = "Checking required data-model acceleration…";
     } else if (summariesOnlyBlocked) {
-      performanceStatusClass = "bg-red-50 text-red-800";
+      performanceStatusClass = "sui-bg-negative sui-color-negative";
       performanceStatusMessage = `${acceleratedRequiredModels} of ${requiredDataModels.length} required data models are accelerated.`;
     } else if (summariesOnlyEnabled) {
-      performanceStatusClass = "bg-emerald-50 text-emerald-800";
+      performanceStatusClass = "sui-bg-positive sui-color-positive";
       performanceStatusMessage =
         "All required Cisco data models are accelerated.";
     }
@@ -2672,37 +2672,37 @@ export default function MacroIndexTuningPage(): JSX.Element {
     return (
       <main
         ref={setupSurfaceRef}
-        className="scd-admin-dark scd-c3-atmosphere dark min-h-screen bg-[#f4f8fa] pb-28 text-slate-800"
+        className="scd-admin-dark scd-c3-atmosphere min-h-screen sui-bg-section pb-28 sui-color-active"
       >
-        <section className="bg-[#102a43] text-white">
+        <section className="sui-bg-section sui-color-active">
           <div className="mx-auto grid max-w-[1180px] gap-6 px-7 py-5 md:grid-cols-[minmax(0,1fr)_400px] md:items-center">
             <div className="min-w-0">
-              <div className="text-xs font-bold uppercase tracking-[0.08em] text-cyan-300">
+              <div className="text-xs font-bold uppercase tracking-[0.08em] sui-color-info">
                 Splunk App for Secure Networking · Setup · Step 3 of 3
               </div>
-              <h1 className="mt-1 text-2xl font-bold leading-tight text-white">
+              <h1 className="mt-1 text-2xl font-bold leading-tight sui-color-active">
                 Finish setup with the detected routing macros
               </h1>
-              <p className="mt-1.5 max-w-3xl text-sm text-slate-300">
+              <p className="mt-1.5 max-w-3xl text-sm sui-color-default">
                 Review exceptions, choose a search-performance mode, then save
                 and return to the dashboards.
               </p>
             </div>
-            <ol className="grid grid-cols-3 overflow-hidden rounded-md bg-white/10 text-xs font-bold">
-              <li className="flex min-h-10 items-center gap-2 bg-emerald-900 px-3 text-emerald-50">
-                <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-600 text-xs">
+            <ol className="grid grid-cols-3 overflow-hidden rounded-md sui-bg-section text-xs font-bold">
+              <li className="flex min-h-10 items-center gap-2 sui-bg-positive px-3 sui-color-positive">
+                <span className="grid h-5 w-5 place-items-center rounded-full sui-bg-positive text-xs">
                   <Check size={12} />
                 </span>
                 Check data
               </li>
-              <li className="flex min-h-10 items-center gap-2 bg-emerald-900 px-3 text-emerald-50">
-                <span className="grid h-5 w-5 place-items-center rounded-full bg-emerald-600 text-xs">
+              <li className="flex min-h-10 items-center gap-2 sui-bg-positive px-3 sui-color-positive">
+                <span className="grid h-5 w-5 place-items-center rounded-full sui-bg-positive text-xs">
                   <Check size={12} />
                 </span>
                 Packages
               </li>
-              <li className="flex min-h-10 items-center gap-2 bg-sky-800 px-3 text-white">
-                <span className="grid h-5 w-5 place-items-center rounded-full bg-cyan-500 text-xs">
+              <li className="flex min-h-10 items-center gap-2 sui-bg-info px-3 sui-color-active">
+                <span className="grid h-5 w-5 place-items-center rounded-full sui-bg-accent text-xs">
                   3
                 </span>
                 Tune indexes
@@ -2716,29 +2716,29 @@ export default function MacroIndexTuningPage(): JSX.Element {
             aria-live="polite"
             className={`mb-4 grid gap-4 rounded-lg border px-5 py-3.5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center ${
               error
-                ? "border-red-200 bg-red-50"
-                : "border-emerald-200 bg-emerald-50"
+                ? "sui-border-negative sui-bg-negative"
+                : "sui-border-positive sui-bg-positive"
             }`}
           >
             <div>
               <div
                 className={`text-xs font-bold uppercase tracking-wide ${
-                  error ? "text-red-700" : "text-emerald-700"
+                  error ? "sui-color-negative" : "sui-color-positive"
                 }`}
               >
                 {scanEyebrow}
               </div>
-              <h2 className="mt-0.5 text-lg font-bold text-slate-900">
+              <h2 className="mt-0.5 text-lg font-bold sui-color-active">
                 {scanHeading}
               </h2>
-              <p className="mt-0.5 text-xs text-slate-600">
+              <p className="mt-0.5 text-xs sui-color-default">
                 {error ||
                   cimError ||
                   "Only review definitions when an index looks unexpected."}
               </p>
               <a
                 href="#setup-data-model-readiness"
-                className="mt-1.5 inline-flex items-center gap-1 text-xs font-bold text-sky-800 hover:text-sky-950"
+                className="mt-1.5 inline-flex items-center gap-1 text-xs font-bold sui-color-info sui-hover-color-info"
               >
                 {accelerationCheckInProgress
                   ? "Checking recommended data-model acceleration…"
@@ -2750,12 +2750,12 @@ export default function MacroIndexTuningPage(): JSX.Element {
               {setupMetrics.map(({ value, label, colorClass }) => (
                 <div
                   key={label}
-                  className="min-w-[72px] rounded-md bg-white px-3 py-2 text-center"
+                  className="min-w-[72px] rounded-md sui-bg-section px-3 py-2 text-center"
                 >
                   <div className={`text-lg font-bold ${colorClass}`}>
                     {formatNumber(value)}
                   </div>
-                  <div className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                  <div className="text-xs font-bold uppercase tracking-wide sui-color-muted">
                     {label}
                   </div>
                 </div>
@@ -2766,7 +2766,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           {setupStatus.state === "error" && setupStatus.message && (
             <div
               role="alert"
-              className="mb-4 flex items-start gap-2 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-900"
+              className="mb-4 flex items-start gap-2 rounded-lg border sui-border-negative sui-bg-negative px-4 py-3 text-sm sui-color-negative"
             >
               <AlertTriangle className="mt-0.5 shrink-0" size={17} />
               <div>
@@ -2777,19 +2777,19 @@ export default function MacroIndexTuningPage(): JSX.Element {
           )}
 
           <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_330px]">
-            <section className="rounded-lg border border-slate-200 bg-white p-5">
-              <div className="text-xs font-bold uppercase tracking-wide text-sky-700">
+            <section className="rounded-lg border sui-border-weak sui-bg-section p-5">
+              <div className="text-xs font-bold uppercase tracking-wide sui-color-info">
                 Index macro plan
               </div>
-              <h2 className="mt-1 text-lg font-bold text-slate-900">
+              <h2 className="mt-1 text-lg font-bold sui-color-active">
                 Review only what needs attention
               </h2>
-              <p className="mt-1 text-xs text-slate-600">
+              <p className="mt-1 text-xs sui-color-default">
                 Detected definitions are saved together when setup finishes.
               </p>
 
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                <div className="flex min-h-9 items-center gap-2 rounded-md bg-slate-100 px-3 text-xs text-slate-600">
+                <div className="flex min-h-9 items-center gap-2 rounded-md sui-bg-section px-3 text-xs sui-color-default">
                   <span className="font-semibold">Range</span>
                   <TimeRangeDropdown
                     earliest={timeRange.earliest}
@@ -2815,7 +2815,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                     if (setupCimAvailable) void runCimDiscovery();
                   }}
                   disabled={setupScanInProgress}
-                  className={`${compactButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+                  className={`${compactButtonBase} sui-border-default sui-bg-section sui-color-default sui-hover-border-info sui-hover-color-info`}
                 >
                   {setupScanInProgress ? (
                     <Loader2 size={14} className="animate-spin" />
@@ -2830,29 +2830,29 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 <div
                   className={`mt-4 flex items-start gap-3 rounded-md border px-3 py-3 ${
                     hasUnknown
-                      ? "border-amber-200 bg-amber-50"
-                      : "border-emerald-200 bg-emerald-50"
+                      ? "sui-border-warning sui-bg-warning"
+                      : "sui-border-positive sui-bg-positive"
                   }`}
                 >
                   {hasUnknown ? (
                     <AlertTriangle
-                      className="mt-0.5 shrink-0 text-amber-700"
+                      className="mt-0.5 shrink-0 sui-color-warning"
                       size={18}
                     />
                   ) : (
-                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-600 text-white">
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full sui-bg-positive sui-color-active">
                       <Check size={14} />
                     </span>
                   )}
                   <div>
-                    <div className="text-sm font-bold text-slate-900">
+                    <div className="text-sm font-bold sui-color-active">
                       {hasUnknown
                         ? `${unknownSourcetypeGroups} unmapped sourcetype group${
                             unknownSourcetypeGroups === 1 ? "" : "s"
                           } need review`
                         : "No unmapped sourcetypes found"}
                     </div>
-                    <div className="mt-0.5 text-xs text-slate-600">
+                    <div className="mt-0.5 text-xs sui-color-default">
                       {hasUnknown
                         ? "Open the definitions below and map unexpected data before finishing."
                         : "All detected Cisco data maps to a known routing macro."}
@@ -2861,8 +2861,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 </div>
               )}
 
-              <details className="group mt-4 overflow-hidden rounded-md border border-slate-200 bg-slate-50">
-                <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-4 text-sm font-bold text-slate-800 hover:bg-slate-100 [&::-webkit-details-marker]:hidden">
+              <details className="group mt-4 overflow-hidden rounded-md border sui-border-weak sui-bg-page">
+                <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-4 text-sm font-bold sui-color-active sui-hover-bg-section [&::-webkit-details-marker]:hidden">
                   <span>
                     Review {setupScdRowsToSave.length} dashboard macro
                     {setupScdRowsToSave.length === 1 ? "" : "s"}
@@ -2872,12 +2872,12 @@ export default function MacroIndexTuningPage(): JSX.Element {
                     className="ml-auto transition-transform group-open:rotate-180"
                   />
                 </summary>
-                <div className="border-t border-slate-200 bg-white">
+                <div className="border-t sui-border-weak sui-bg-section">
                   {setupScdRowsToSave.length ? (
                     <div className="overflow-x-auto">
                       <table className="min-w-full border-collapse text-left text-sm">
                         <thead>
-                          <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                          <tr className="border-b sui-border-weak sui-bg-page text-xs uppercase tracking-wide sui-color-muted">
                             <th className="w-[190px] px-4 py-3 font-bold">
                               Macro
                             </th>
@@ -2902,7 +2902,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                       </table>
                     </div>
                   ) : (
-                    <div className="px-4 py-8 text-center text-sm text-slate-500">
+                    <div className="px-4 py-8 text-center text-sm sui-color-muted">
                       No detected index macro definitions are ready yet.
                     </div>
                   )}
@@ -2911,27 +2911,27 @@ export default function MacroIndexTuningPage(): JSX.Element {
 
               <section
                 aria-labelledby="setup-external-app-macros-heading"
-                className="mt-5 overflow-hidden rounded-lg border border-sky-200 bg-sky-50/50"
+                className="mt-5 overflow-hidden rounded-lg border sui-border-info sui-bg-info"
               >
                 <div className="px-4 py-4">
-                  <div className="text-xs font-bold uppercase tracking-wide text-sky-700">
+                  <div className="text-xs font-bold uppercase tracking-wide sui-color-info">
                     Installed Cisco apps
                   </div>
                   <h3
                     id="setup-external-app-macros-heading"
-                    className="mt-1 text-base font-bold text-slate-900"
+                    className="mt-1 text-base font-bold sui-color-active"
                   >
                     Tune app-owned routing macros
                   </h3>
-                  <p className="mt-1 text-xs text-slate-600">
+                  <p className="mt-1 text-xs sui-color-default">
                     Save detected indexes directly to each app&apos;s
                     local/macros.conf so its dashboards are ready when you open
                     them.
                   </p>
                 </div>
 
-                <details className="group border-t border-sky-200 bg-white">
-                  <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-4 text-sm font-bold text-slate-800 hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+                <details className="group border-t sui-border-info sui-bg-section">
+                  <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-4 text-sm font-bold sui-color-active sui-hover-bg-page [&::-webkit-details-marker]:hidden">
                     <span>
                       Review {setupExternalRowsToSave.length} app macro
                       {setupExternalRowsToSave.length === 1 ? "" : "s"}
@@ -2941,12 +2941,12 @@ export default function MacroIndexTuningPage(): JSX.Element {
                       className="ml-auto transition-transform group-open:rotate-180"
                     />
                   </summary>
-                  <div className="border-t border-slate-200">
+                  <div className="border-t sui-border-weak">
                     {setupExternalRowsToSave.length ? (
                       <div className="overflow-x-auto">
                         <table className="min-w-full border-collapse text-left text-sm">
                           <thead>
-                            <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                            <tr className="border-b sui-border-weak sui-bg-page text-xs uppercase tracking-wide sui-color-muted">
                               <th className="w-[190px] px-4 py-3 font-bold">
                                 Macro
                               </th>
@@ -2973,7 +2973,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                         </table>
                       </div>
                     ) : (
-                      <div className="px-4 py-6 text-center text-sm text-slate-500">
+                      <div className="px-4 py-6 text-center text-sm sui-color-muted">
                         No installed Cisco app macros have matching data in this
                         range yet.
                       </div>
@@ -2983,21 +2983,21 @@ export default function MacroIndexTuningPage(): JSX.Element {
               </section>
 
               {setupCimAvailable && (
-                <section className="mt-4 overflow-hidden rounded-lg border border-violet-200 bg-violet-50/50">
+                <section className="mt-4 overflow-hidden rounded-lg border sui-border-info sui-bg-info">
                   <div className="px-4 py-4">
-                    <div className="text-xs font-bold uppercase tracking-wide text-violet-700">
+                    <div className="text-xs font-bold uppercase tracking-wide sui-color-info">
                       Splunk Common Information Model
                     </div>
-                    <h3 className="mt-1 text-base font-bold text-slate-900">
+                    <h3 className="mt-1 text-base font-bold sui-color-active">
                       Tune detected CIM data-model macros
                     </h3>
-                    <p className="mt-1 text-xs text-slate-600">
+                    <p className="mt-1 text-xs sui-color-default">
                       Setup scans the shipped CIM tags and saves only definitions
                       backed by data in this environment.
                     </p>
                   </div>
-                  <details className="group border-t border-violet-200 bg-white">
-                    <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-4 text-sm font-bold text-slate-800 hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+                  <details className="group border-t sui-border-info sui-bg-section">
+                    <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 px-4 text-sm font-bold sui-color-active sui-hover-bg-page [&::-webkit-details-marker]:hidden">
                       <span>
                         {cimScanState === "loading"
                           ? "Discovering CIM macros"
@@ -3008,7 +3008,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                       {cimScanState === "loading" ? (
                         <Loader2
                           size={15}
-                          className="ml-auto animate-spin text-violet-700"
+                          className="ml-auto animate-spin sui-color-info"
                         />
                       ) : (
                         <ChevronDown
@@ -3017,12 +3017,12 @@ export default function MacroIndexTuningPage(): JSX.Element {
                         />
                       )}
                     </summary>
-                    <div className="border-t border-slate-200">
+                    <div className="border-t sui-border-weak">
                       {setupCimRowsToSave.length ? (
                         <div className="overflow-x-auto">
                           <table className="min-w-full border-collapse text-left text-sm">
                             <thead>
-                              <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                              <tr className="border-b sui-border-weak sui-bg-page text-xs uppercase tracking-wide sui-color-muted">
                                 <th className="w-[190px] px-4 py-3 font-bold">
                                   Macro
                                 </th>
@@ -3047,7 +3047,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                           </table>
                         </div>
                       ) : (
-                        <div className="px-4 py-6 text-center text-sm text-slate-500">
+                        <div className="px-4 py-6 text-center text-sm sui-color-muted">
                           {cimScanState === "error"
                             ? "CIM discovery needs attention. Run the scan again before finishing if you want CIM macros included."
                             : "No CIM definitions with matching data were found in this range."}
@@ -3062,22 +3062,22 @@ export default function MacroIndexTuningPage(): JSX.Element {
             <aside className="grid gap-4">
               <section
                 id="setup-data-model-readiness"
-                className="scroll-mt-4 rounded-lg border border-slate-200 bg-white p-5"
+                className="scroll-mt-4 rounded-lg border sui-border-weak sui-bg-section p-5"
               >
-                <div className="text-xs font-bold uppercase tracking-wide text-sky-700">
+                <div className="text-xs font-bold uppercase tracking-wide sui-color-info">
                   Search performance
                 </div>
-                <h2 className="mt-1 text-lg font-bold text-slate-900">
+                <h2 className="mt-1 text-lg font-bold sui-color-active">
                   Choose how searches run
                 </h2>
-                <p className="mt-1 text-xs text-slate-600">
+                <p className="mt-1 text-xs sui-color-default">
                   You can revisit this choice later from Setup.
                 </p>
 
                 <div className="mt-4 grid gap-3">
                   <label
                     htmlFor="setup-performance-balanced"
-                    className="flex cursor-pointer items-start gap-3 rounded-md border border-slate-200 p-3 hover:border-sky-300"
+                    className="flex cursor-pointer items-start gap-3 rounded-md border sui-border-weak p-3 sui-hover-border-info"
                   >
                     <input
                       id="setup-performance-balanced"
@@ -3088,10 +3088,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
                       className="mt-0.5 h-4 w-4 accent-sky-700"
                     />
                     <span>
-                      <span className="block text-sm font-bold text-slate-900">
+                      <span className="block text-sm font-bold sui-color-active">
                         Balanced (recommended)
                       </span>
-                      <span className="mt-0.5 block text-xs leading-5 text-slate-600">
+                      <span className="mt-0.5 block text-xs leading-5 sui-color-default">
                         Use acceleration when available and fall back to raw
                         events.
                       </span>
@@ -3099,7 +3099,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   </label>
                   <label
                     htmlFor="setup-performance-accelerated"
-                    className="flex cursor-pointer items-start gap-3 rounded-md border border-slate-200 p-3 hover:border-sky-300"
+                    className="flex cursor-pointer items-start gap-3 rounded-md border sui-border-weak p-3 sui-hover-border-info"
                   >
                     <input
                       id="setup-performance-accelerated"
@@ -3110,10 +3110,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
                       className="mt-0.5 h-4 w-4 accent-sky-700"
                     />
                     <span>
-                      <span className="block text-sm font-bold text-slate-900">
+                      <span className="block text-sm font-bold sui-color-active">
                         Accelerated summaries only
                       </span>
-                      <span className="mt-0.5 block text-xs leading-5 text-slate-600">
+                      <span className="mt-0.5 block text-xs leading-5 sui-color-default">
                         Fastest, but requires all three required Cisco data
                         models to be accelerated.
                       </span>
@@ -3128,13 +3128,13 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 </div>
               </section>
 
-              <section className="rounded-lg border border-slate-200 bg-white p-5">
+              <section className="rounded-lg border sui-border-weak sui-bg-section p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="text-xs font-bold uppercase tracking-wide text-sky-700">
+                    <div className="text-xs font-bold uppercase tracking-wide sui-color-info">
                       Performance readiness
                     </div>
-                    <h2 className="mt-1 text-lg font-bold text-slate-900">
+                    <h2 className="mt-1 text-lg font-bold sui-color-active">
                       Accelerate recommended data models
                     </h2>
                   </div>
@@ -3143,7 +3143,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                     onClick={checkDataModelAcceleration}
                     disabled={accelerationCheckInProgress}
                     aria-label="Check data model acceleration again"
-                    className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-slate-300 bg-white text-slate-600 hover:border-sky-400 hover:text-sky-700 disabled:cursor-wait disabled:opacity-60"
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-md border sui-border-default sui-bg-section sui-color-default sui-hover-border-info sui-hover-color-info disabled:cursor-wait disabled:opacity-60"
                   >
                     <RefreshCw
                       size={14}
@@ -3153,7 +3153,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                     />
                   </button>
                 </div>
-                <p className="mt-1 text-xs leading-5 text-slate-600">
+                <p className="mt-1 text-xs leading-5 sui-color-default">
                   Acceleration makes the app&apos;s data-model searches return
                   faster. Setup can finish in Balanced mode while you complete
                   these recommendations.
@@ -3164,7 +3164,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="Open acceleration check in Search"
-                    className="inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 text-xs font-bold text-sky-700 hover:border-sky-400 hover:text-sky-900"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-md border sui-border-default sui-bg-section px-2.5 text-xs font-bold sui-color-info sui-hover-border-info sui-hover-color-info"
                   >
                     <ExternalLink size={12} />
                     Open in Search
@@ -3174,7 +3174,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`Open Splunk ${SPLUNK_DOCS_VERSION} data model acceleration documentation`}
-                    className="inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 text-xs font-bold text-sky-700 hover:border-sky-400 hover:text-sky-900"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-md border sui-border-default sui-bg-section px-2.5 text-xs font-bold sui-color-info sui-hover-border-info sui-hover-color-info"
                   >
                     <ExternalLink size={12} />
                     Splunk acceleration guide
@@ -3184,10 +3184,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 <div
                   className={`mt-3 rounded-md px-3 py-2 text-xs font-semibold ${
                     accelerationCheckInProgress
-                      ? "bg-sky-50 text-sky-800"
+                      ? "sui-bg-info sui-color-info"
                       : dataModelsNeedingAttention.length
-                        ? "bg-amber-50 text-amber-900"
-                        : "bg-emerald-50 text-emerald-800"
+                        ? "sui-bg-warning sui-color-warning"
+                        : "sui-bg-positive sui-color-positive"
                   }`}
                   role="status"
                 >
@@ -3202,36 +3202,36 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   className="mt-3 grid gap-2"
                   aria-label="Recommended data model acceleration status"
                 >
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs sui-color-muted">
                     Expand a product only when you need its model-level actions.
                   </p>
                   {dataModelGroups.map((group) => (
                     <details
                       key={`${group.app}:${group.enabledCount}:${group.attentionCount}:${group.checkingCount}`}
-                      className="group overflow-hidden rounded-md border border-slate-200"
+                      className="group overflow-hidden rounded-md border sui-border-weak"
                     >
                       <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-xs [&::-webkit-details-marker]:hidden">
                         {group.checkingCount ? (
                           <Loader2
                             size={14}
-                            className="shrink-0 animate-spin text-sky-700"
+                            className="shrink-0 animate-spin sui-color-info"
                           />
                         ) : group.attentionCount ? (
                           <AlertTriangle
                             size={14}
-                            className="shrink-0 text-amber-700"
+                            className="shrink-0 sui-color-warning"
                           />
                         ) : (
                           <Check
                             size={14}
-                            className="shrink-0 text-emerald-700"
+                            className="shrink-0 sui-color-positive"
                           />
                         )}
                         <span className="min-w-0 flex-1">
-                          <span className="block truncate font-bold text-slate-900">
+                          <span className="block truncate font-bold sui-color-active">
                             {group.label}
                           </span>
-                          <span className="block text-xs text-slate-500">
+                          <span className="block text-xs sui-color-muted">
                             {group.checkingCount
                               ? "Checking acceleration"
                               : `${group.enabledCount} of ${group.items.length} accelerated`}
@@ -3239,10 +3239,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
                         </span>
                         <ChevronDown
                           size={14}
-                          className="shrink-0 text-slate-500 transition-transform group-open:rotate-180"
+                          className="shrink-0 sui-color-muted transition-transform group-open:rotate-180"
                         />
                       </summary>
-                      <div className="divide-y divide-slate-100 border-t border-slate-200 bg-slate-50">
+                      <div className="divide-y sui-divide-weak border-t sui-border-weak sui-bg-page">
                         {group.items.map((item) => {
                           const enabled = item.state === "enabled";
                           const checking = item.state === "checking";
@@ -3256,33 +3256,33 @@ export default function MacroIndexTuningPage(): JSX.Element {
                                   {checking ? (
                                     <Loader2
                                       size={12}
-                                      className="shrink-0 animate-spin text-sky-700"
+                                      className="shrink-0 animate-spin sui-color-info"
                                     />
                                   ) : enabled ? (
                                     <Check
                                       size={12}
-                                      className="shrink-0 text-emerald-700"
+                                      className="shrink-0 sui-color-positive"
                                     />
                                   ) : (
                                     <AlertTriangle
                                       size={12}
-                                      className="shrink-0 text-amber-700"
+                                      className="shrink-0 sui-color-warning"
                                     />
                                   )}
-                                  <span className="truncate font-bold text-slate-800">
+                                  <span className="truncate font-bold sui-color-active">
                                     {item.label}
                                   </span>
                                 </div>
-                                <code className="mt-0.5 block truncate font-mono text-xs text-slate-500">
+                                <code className="mt-0.5 block truncate font-mono text-xs sui-color-muted">
                                   {item.model}
                                 </code>
                                 <div
                                   className={`mt-0.5 text-xs ${
                                     enabled
-                                      ? "text-emerald-700"
+                                      ? "sui-color-positive"
                                       : checking
-                                        ? "text-slate-500"
-                                        : "text-amber-800"
+                                        ? "sui-color-muted"
+                                        : "sui-color-warning"
                                   }`}
                                 >
                                   {item.message}
@@ -3298,7 +3298,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                                 aria-label={`${
                                   enabled ? "Open" : "Accelerate"
                                 } ${item.label} data model`}
-                                className="mt-0.5 inline-flex h-7 items-center gap-1 rounded border border-slate-300 bg-white px-2 font-bold text-sky-700 hover:border-sky-400 hover:text-sky-900"
+                                className="mt-0.5 inline-flex h-7 items-center gap-1 rounded border sui-border-default sui-bg-section px-2 font-bold sui-color-info sui-hover-border-info sui-hover-color-info"
                               >
                                 {enabled ? "Open" : "Accelerate"}
                                 <ExternalLink size={11} />
@@ -3312,10 +3312,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 </div>
               </section>
 
-              <details className="group overflow-hidden rounded-lg border border-slate-200 bg-white">
-                <summary className="flex min-h-14 cursor-pointer list-none items-center px-4 text-sm font-bold text-slate-800 hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+              <details className="group overflow-hidden rounded-lg border sui-border-weak sui-bg-section">
+                <summary className="flex min-h-14 cursor-pointer list-none items-center px-4 text-sm font-bold sui-color-active sui-hover-bg-page [&::-webkit-details-marker]:hidden">
                   <span>
-                    <span className="block text-xs uppercase tracking-wide text-slate-500">
+                    <span className="block text-xs uppercase tracking-wide sui-color-muted">
                       Optional
                     </span>
                     Advanced tuning
@@ -3325,7 +3325,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                     className="ml-auto transition-transform group-open:rotate-180"
                   />
                 </summary>
-                <div className="grid gap-2 border-t border-slate-200 p-4 text-xs text-slate-600">
+                <div className="grid gap-2 border-t sui-border-weak p-4 text-xs sui-color-default">
                   <p>
                     Re-run CIM discovery, inspect raw SPL, or use per-macro
                     diagnostics without leaving Setup.
@@ -3336,7 +3336,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-disabled={!openSearchUrl}
-                      className={`${compactButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700 ${
+                      className={`${compactButtonBase} sui-border-default sui-bg-section sui-color-default sui-hover-border-info sui-hover-color-info ${
                         openSearchUrl ? "" : "pointer-events-none opacity-55"
                       }`}
                     >
@@ -3352,11 +3352,11 @@ export default function MacroIndexTuningPage(): JSX.Element {
 
         <section
           aria-label="Initial setup actions"
-          className="scd-setup-action-bar fixed bottom-0 right-0 z-[80] flex flex-wrap items-center justify-between gap-3 border-t border-slate-700 bg-[#0f1117] px-6 py-3 shadow-[0_-8px_24px_rgba(0,0,0,0.3)] backdrop-blur"
+          className="scd-setup-action-bar fixed bottom-0 right-0 z-[80] flex flex-wrap items-center justify-between gap-3 border-t sui-border-default sui-bg-section px-6 py-3 sui-shadow-overlay backdrop-blur"
           style={{ left: "var(--scd-setup-footer-left, 0px)" }}
         >
           <div>
-            <div className="text-xs font-bold uppercase tracking-wide text-sky-800">
+            <div className="text-xs font-bold uppercase tracking-wide sui-color-info">
               Step 3 of 3 ·{" "}
               {setupScanReady
                 ? "Ready to finish"
@@ -3364,7 +3364,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   ? "Ready to finish with partial tuning"
                   : "Scanning"}
             </div>
-            <div className="mt-0.5 text-xs text-slate-600">
+            <div className="mt-0.5 text-xs sui-color-default">
               {setupActionMessage}
             </div>
           </div>
@@ -3372,7 +3372,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
             <button
               type="button"
               onClick={returnToSetupPackages}
-              className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+              className={`${lightButtonBase} sui-border-default sui-bg-section sui-color-default sui-hover-border-info sui-hover-color-info`}
             >
               <ArrowLeft size={16} />
               Back to recommendations
@@ -3386,7 +3386,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 setupScanInProgress ||
                 summariesOnlyBlocked
               }
-              className={`${lightButtonBase} border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700`}
+              className={`${lightButtonBase} sui-border-positive sui-bg-positive sui-color-active sui-hover-bg-positive`}
             >
               {setupStatus.state === "saving" ? (
                 <Loader2 size={16} className="animate-spin" />
@@ -3405,23 +3405,23 @@ export default function MacroIndexTuningPage(): JSX.Element {
 
   return (
     <main
-      className={`scd-admin-dark scd-c3-atmosphere dark min-h-screen bg-[#f4f6f8] px-6 py-5 text-slate-800 ${
+      className={`scd-admin-dark scd-c3-atmosphere min-h-screen sui-bg-section px-6 py-5 sui-color-active ${
         setupMode ? "pb-28" : ""
       }`}
     >
       {setupMode && (
-        <section className="mb-4 border border-sky-300 bg-sky-50">
+        <section className="mb-4 border sui-border-info sui-bg-info">
           <div className="px-5 py-4">
             <div>
-              <div className="text-xs font-bold uppercase tracking-wide text-sky-800">
+              <div className="text-xs font-bold uppercase tracking-wide sui-color-info">
                 Initial setup · Step 3 of 3
               </div>
-              <h1 className="mt-1 text-lg font-bold text-slate-900">
+              <h1 className="mt-1 text-lg font-bold sui-color-active">
                 Tune the indexes discovered for your Cisco data
               </h1>
-              <p className="mt-1 max-w-3xl text-sm leading-6 text-slate-700">
+              <p className="mt-1 max-w-3xl text-sm leading-6 sui-color-default">
                 The fast scan runs automatically. Review the proposed{" "}
-                <code className="rounded bg-white px-1 py-0.5 font-mono text-xs">
+                <code className="rounded sui-bg-section px-1 py-0.5 font-mono text-xs">
                   index_*
                 </code>{" "}
                 definitions, edit them if needed, then finish setup. Finishing
@@ -3431,7 +3431,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               {setupStatus.state === "error" && setupStatus.message && (
                 <div
                   role="alert"
-                  className="mt-3 flex items-start gap-2 border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+                  className="mt-3 flex items-start gap-2 border sui-border-negative sui-bg-negative px-3 py-2 text-sm sui-color-negative"
                 >
                   <AlertTriangle className="mt-0.5 shrink-0" size={16} />
                   <span>{setupStatus.message}</span>
@@ -3439,15 +3439,15 @@ export default function MacroIndexTuningPage(): JSX.Element {
               )}
             </div>
           </div>
-          <ol className="grid grid-cols-3 border-t border-sky-200 text-xs font-bold text-slate-600">
-            <li className="flex min-h-10 items-center gap-2 border-r border-sky-200 bg-emerald-50 px-4 text-emerald-800">
+          <ol className="grid grid-cols-3 border-t sui-border-info text-xs font-bold sui-color-default">
+            <li className="flex min-h-10 items-center gap-2 border-r sui-border-info sui-bg-positive px-4 sui-color-positive">
               <Check size={14} /> Discover data
             </li>
-            <li className="flex min-h-10 items-center gap-2 border-r border-sky-200 bg-emerald-50 px-4 text-emerald-800">
+            <li className="flex min-h-10 items-center gap-2 border-r sui-border-info sui-bg-positive px-4 sui-color-positive">
               <Check size={14} /> Validate add-ons
             </li>
-            <li className="flex min-h-10 items-center gap-2 bg-sky-100 px-4 text-sky-900">
-              <span className="grid h-5 w-5 place-items-center rounded-full bg-sky-700 text-xs text-white">
+            <li className="flex min-h-10 items-center gap-2 sui-bg-info px-4 sui-color-info">
+              <span className="grid h-5 w-5 place-items-center rounded-full sui-bg-accent text-xs sui-color-active">
                 3
               </span>
               Tune indexes
@@ -3458,13 +3458,13 @@ export default function MacroIndexTuningPage(): JSX.Element {
       {setupMode && (
         <section
           aria-label="Initial setup actions"
-          className="fixed bottom-0 left-0 right-0 z-[80] flex flex-wrap items-center justify-between gap-3 border-t border-slate-300 bg-white px-6 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.16)] md:left-[72px]"
+          className="fixed bottom-0 left-0 right-0 z-[80] flex flex-wrap items-center justify-between gap-3 border-t sui-border-default sui-bg-section px-6 py-3 sui-shadow-overlay md:left-[72px]"
         >
           <div>
-            <div className="text-xs font-bold uppercase tracking-wide text-sky-800">
+            <div className="text-xs font-bold uppercase tracking-wide sui-color-info">
               Step 3 of 3 · Tune indexes
             </div>
-            <div className="mt-0.5 text-sm text-slate-600">
+            <div className="mt-0.5 text-sm sui-color-default">
               {summariesOnlyBlocked
                 ? "Enable acceleration for the required Cisco data models before finishing."
                 : scanState === "loading"
@@ -3480,7 +3480,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
             <button
               type="button"
               onClick={returnToSetupPackages}
-              className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+              className={`${lightButtonBase} sui-border-default sui-bg-section sui-color-default sui-hover-border-info sui-hover-color-info`}
             >
               <ArrowLeft size={16} />
               Back to recommendations
@@ -3493,7 +3493,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 isSavingAll ||
                 summariesOnlyBlocked
               }
-              className={`${lightButtonBase} border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700`}
+              className={`${lightButtonBase} sui-border-positive sui-bg-positive sui-color-active sui-hover-bg-positive`}
             >
               {setupStatus.state === "saving" ? (
                 <Loader2 size={16} className="animate-spin" />
@@ -3507,19 +3507,19 @@ export default function MacroIndexTuningPage(): JSX.Element {
           </div>
         </section>
       )}
-      <section className="mb-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+      <section className="mb-4 rounded-xl border sui-border-weak sui-bg-section px-5 py-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="m-0 text-xl font-bold tracking-normal text-slate-900">
+            <h1 className="m-0 text-xl font-bold tracking-normal sui-color-active">
               Macro Index Tuning
             </h1>
-            <p className="mt-1 max-w-3xl text-sm text-slate-600">
+            <p className="mt-1 max-w-3xl text-sm sui-color-default">
               Scan known Cisco sourcetypes, review routing coverage, and save
               only the macro changes you need.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex h-10 items-center gap-3 text-sm font-semibold text-slate-700">
+            <div className="flex h-10 items-center gap-3 text-sm font-semibold sui-color-default">
               <span>Range</span>
               <TimeRangeDropdown
                 earliest={timeRange.earliest}
@@ -3540,7 +3540,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               type="button"
               onClick={runScan}
               disabled={isLoading}
-              className={`${lightButtonBase} border-sky-600 bg-sky-600 text-white hover:bg-sky-700`}
+              className={`${lightButtonBase} sui-border-info sui-bg-accent sui-color-active sui-hover-bg-accent`}
             >
               {isLoading ? (
                 <Loader2 size={16} className="animate-spin" />
@@ -3554,7 +3554,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               target="_blank"
               rel="noopener noreferrer"
               aria-disabled={!openSearchUrl}
-              className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700 ${
+              className={`${lightButtonBase} sui-border-default sui-bg-section sui-color-default sui-hover-border-info sui-hover-color-info ${
                 openSearchUrl ? "" : "pointer-events-none opacity-55"
               }`}
             >
@@ -3568,7 +3568,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               disabled={
                 !rowsToSave.length || isLoading || isCimLoading || isSavingAll
               }
-              className={`${lightButtonBase} border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700`}
+              className={`${lightButtonBase} sui-border-positive sui-bg-positive sui-color-active sui-hover-bg-positive`}
             >
               {isSavingAll ? (
                 <Loader2 size={16} className="animate-spin" />
@@ -3583,17 +3583,17 @@ export default function MacroIndexTuningPage(): JSX.Element {
 
       <section
         aria-labelledby="scan-overview-heading"
-        className="mb-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm"
+        className="mb-4 rounded-xl border sui-border-weak sui-bg-section px-5 py-4 shadow-sm"
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2
               id="scan-overview-heading"
-              className="m-0 text-base font-bold text-slate-900"
+              className="m-0 text-base font-bold sui-color-active"
             >
               Scan overview
             </h2>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs sui-color-muted">
               One quick read on routing coverage, events, and acceleration.
             </p>
           </div>
@@ -3601,45 +3601,45 @@ export default function MacroIndexTuningPage(): JSX.Element {
             <button
               type="button"
               onClick={() => setAllDashboardSections(true)}
-              className="text-sky-700 hover:text-sky-900"
+              className="sui-color-info sui-hover-color-info"
             >
               Expand all
             </button>
-            <span className="text-slate-300">·</span>
+            <span className="sui-color-default">·</span>
             <button
               type="button"
               onClick={() => setAllDashboardSections(false)}
-              className="text-slate-600 hover:text-slate-900"
+              className="sui-color-default sui-hover-color-active"
             >
               Collapse all
             </button>
           </div>
         </div>
         <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-lg bg-sky-50 px-4 py-3">
-            <div className="text-lg font-bold text-sky-700">
+          <div className="rounded-lg sui-bg-info px-4 py-3">
+            <div className="text-lg font-bold sui-color-info">
               {formatNumber(externalAppMacroSummaries.length)} apps
             </div>
-            <div className="text-xs text-slate-500">Cisco app coverage</div>
+            <div className="text-xs sui-color-muted">Cisco app coverage</div>
           </div>
-          <div className="rounded-lg bg-slate-100 px-4 py-3">
-            <div className="text-lg font-bold text-slate-900">
+          <div className="rounded-lg sui-bg-section px-4 py-3">
+            <div className="text-lg font-bold sui-color-active">
               {formatNumber(totalIndexValues)} indexes
             </div>
-            <div className="text-xs text-slate-500">Known routing targets</div>
+            <div className="text-xs sui-color-muted">Known routing targets</div>
           </div>
-          <div className="rounded-lg bg-emerald-50 px-4 py-3">
-            <div className="text-lg font-bold text-emerald-700">
+          <div className="rounded-lg sui-bg-positive px-4 py-3">
+            <div className="text-lg font-bold sui-color-positive">
               {formatNumber(totalEvents)} events
             </div>
-            <div className="text-xs text-slate-500">Selected range</div>
+            <div className="text-xs sui-color-muted">Selected range</div>
           </div>
-          <div className="rounded-lg bg-emerald-50 px-4 py-3">
-            <div className="text-lg font-bold text-emerald-700">
+          <div className="rounded-lg sui-bg-positive px-4 py-3">
+            <div className="text-lg font-bold sui-color-positive">
               {formatNumber(acceleratedDataModelCount)} /{" "}
               {formatNumber(dataModelReadiness.length)}
             </div>
-            <div className="text-xs text-slate-500">
+            <div className="text-xs sui-color-muted">
               Data models accelerated
             </div>
           </div>
@@ -3648,7 +3648,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
 
       <section
         aria-labelledby="external-app-macro-readiness-heading"
-        className="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+        className="mb-4 overflow-hidden rounded-xl border sui-border-weak sui-bg-section shadow-sm"
       >
         <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-4">
           <button
@@ -3659,18 +3659,18 @@ export default function MacroIndexTuningPage(): JSX.Element {
             className="flex min-w-0 flex-1 items-start gap-2 text-left"
           >
             {expandedDashboardSections.appCoverage ? (
-              <ChevronDown size={18} className="mt-0.5 shrink-0 text-slate-500" />
+              <ChevronDown size={18} className="mt-0.5 shrink-0 sui-color-muted" />
             ) : (
-              <ChevronRight size={18} className="mt-0.5 shrink-0 text-slate-500" />
+              <ChevronRight size={18} className="mt-0.5 shrink-0 sui-color-muted" />
             )}
             <span>
               <span
                 id="external-app-macro-readiness-heading"
-                className="block text-sm font-bold text-slate-900"
+                className="block text-sm font-bold sui-color-active"
               >
                 Cisco app macro coverage
               </span>
-              <span className="mt-1 block text-xs text-slate-500">
+              <span className="mt-1 block text-xs sui-color-muted">
                 {formatNumber(externalAppMacroSummaries.length)} companion apps ·{" "}
                 {formatNumber(externalAppMacroRows.length)} macros ·{" "}
                 {formatNumber(
@@ -3682,7 +3682,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               </span>
             </span>
           </button>
-          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+          <span className="rounded-full sui-bg-positive px-3 py-1 text-xs font-semibold sui-color-positive">
             Ready to review
           </span>
         </div>
@@ -3690,13 +3690,13 @@ export default function MacroIndexTuningPage(): JSX.Element {
         {expandedDashboardSections.appCoverage && (
           <div id="external-app-macro-readiness-content">
             {isLoading && externalAppMacroRows.length === 0 ? (
-              <div className="flex min-h-24 items-center justify-center gap-3 border-t border-slate-200 text-sm text-slate-600">
-                <Loader2 size={18} className="animate-spin text-sky-700" />
+              <div className="flex min-h-24 items-center justify-center gap-3 border-t sui-border-weak text-sm sui-color-default">
+                <Loader2 size={18} className="animate-spin sui-color-info" />
                 Checking Cisco app macro coverage...
               </div>
             ) : (
               <div
-                className="divide-y divide-slate-100 border-t border-slate-200"
+                className="divide-y sui-divide-weak border-t sui-border-weak"
                 role="list"
                 aria-label="Cisco app-owned routing macro coverage"
               >
@@ -3712,18 +3712,18 @@ export default function MacroIndexTuningPage(): JSX.Element {
                       className="flex flex-wrap items-center gap-3 px-4 py-3 text-xs"
                     >
                       {hasMatchingData ? (
-                        <Check size={15} className="shrink-0 text-emerald-700" />
+                        <Check size={15} className="shrink-0 sui-color-positive" />
                       ) : (
-                        <Info size={15} className="shrink-0 text-slate-500" />
+                        <Info size={15} className="shrink-0 sui-color-muted" />
                       )}
                       <div className="min-w-[240px] flex-1">
-                        <div className="font-bold text-slate-900">{summary.label}</div>
-                        <code className="font-mono text-xs text-slate-500">
+                        <div className="font-bold sui-color-active">{summary.label}</div>
+                        <code className="font-mono text-xs sui-color-muted">
                           {summary.targetApp}
                         </code>
                       </div>
-                      <div className="text-slate-600">
-                        <strong className="text-slate-900">
+                      <div className="sui-color-default">
+                        <strong className="sui-color-active">
                           {formatNumber(summary.rows.length)}
                         </strong>{" "}
                         macros · <strong>{formatNumber(summary.indexCount)}</strong>{" "}
@@ -3735,7 +3735,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                           href={managerLink.href}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 font-bold text-sky-700 hover:text-sky-900"
+                          className="inline-flex items-center gap-1 font-bold sui-color-info sui-hover-color-info"
                         >
                           Manage
                           <ExternalLink size={11} />
@@ -3747,7 +3747,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               </div>
             )}
             {appInventoryError && (
-              <div className="border-t border-slate-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <div className="border-t sui-border-weak sui-bg-warning px-4 py-3 text-sm sui-color-warning">
                 {appInventoryError}
               </div>
             )}
@@ -3755,8 +3755,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
         )}
       </section>
 
-      <section className="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+      <section className="mb-4 overflow-hidden rounded-xl border sui-border-weak sui-bg-section shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b sui-border-weak px-4 py-3">
           <button
             type="button"
             onClick={() => toggleDashboardSection("performance")}
@@ -3765,15 +3765,15 @@ export default function MacroIndexTuningPage(): JSX.Element {
             className="flex min-w-0 flex-1 items-start gap-2 text-left"
           >
             {expandedDashboardSections.performance ? (
-              <ChevronDown size={18} className="mt-0.5 shrink-0 text-slate-500" />
+              <ChevronDown size={18} className="mt-0.5 shrink-0 sui-color-muted" />
             ) : (
-              <ChevronRight size={18} className="mt-0.5 shrink-0 text-slate-500" />
+              <ChevronRight size={18} className="mt-0.5 shrink-0 sui-color-muted" />
             )}
             <span>
-              <span className="block text-sm font-bold text-slate-900">
+              <span className="block text-sm font-bold sui-color-active">
                 Search performance
               </span>
-              <span className="mt-1 block text-xs text-slate-500">
+              <span className="mt-1 block text-xs sui-color-muted">
                 Control ad hoc search mode and inspect acceleration only when needed.
               </span>
             </span>
@@ -3782,8 +3782,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
             <span
               className={`rounded-full px-3 py-1 text-xs font-semibold ${
                 dataModelsNeedingAttention.length
-                  ? "bg-amber-50 text-amber-800"
-                  : "bg-emerald-50 text-emerald-700"
+                  ? "sui-bg-warning sui-color-warning"
+                  : "sui-bg-positive sui-color-positive"
               }`}
             >
               {formatNumber(acceleratedDataModelCount)} /{" "}
@@ -3798,7 +3798,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               disabled={
                 adhocStatus.state === "saving" || accelerationCheckInProgress
               }
-              className={`${compactButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+              className={`${compactButtonBase} sui-border-default sui-bg-section sui-color-default sui-hover-border-info sui-hover-color-info`}
             >
               <RefreshCw
                 size={14}
@@ -3816,14 +3816,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
           <div id="search-performance-content">
         <div className="grid gap-3 px-4 py-4 lg:grid-cols-[180px_minmax(0,1fr)_auto] lg:items-start">
           <div>
-            <div className="font-mono text-sm font-bold text-sky-800">
+            <div className="font-mono text-sm font-bold sui-color-info">
               {ADHOC_MACRO_NAME}
             </div>
             <MacroInfoBox
               macro={ADHOC_MACRO_NAME}
               description={adhocDescription}
             />
-            <div className="mt-1 text-xs text-slate-500">
+            <div className="mt-1 text-xs sui-color-muted">
               tstats acceleration options
             </div>
           </div>
@@ -3835,15 +3835,15 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 setAdhocDefinition(event.target.value);
                 setAdhocStatus({ state: "idle" });
               }}
-              className="h-9 w-full rounded border border-slate-300 bg-white px-2 font-mono text-xs text-slate-900"
+              className="h-9 w-full rounded border sui-border-default sui-bg-section px-2 font-mono text-xs sui-color-active"
             />
             {adhocStatus.state === "error" && adhocStatus.message && (
-              <div className="mt-1 text-xs text-red-700">
+              <div className="mt-1 text-xs sui-color-negative">
                 {adhocStatus.message}
               </div>
             )}
             {adhocStatus.state === "saved" && (
-              <div className="mt-1 text-xs font-semibold text-emerald-700">
+              <div className="mt-1 text-xs font-semibold sui-color-positive">
                 Saved
               </div>
             )}
@@ -3856,7 +3856,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               !adhocDefinition.trim() ||
               summariesOnlyBlocked
             }
-            className={`${lightButtonBase} border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700`}
+            className={`${lightButtonBase} sui-border-positive sui-bg-positive sui-color-active sui-hover-bg-positive`}
           >
             {adhocStatus.state === "saving" ? (
               <Loader2 size={16} className="animate-spin" />
@@ -3866,7 +3866,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
             Save
           </button>
         </div>
-        <div className="border-t border-slate-200 bg-slate-50 px-4 py-4">
+        <div className="border-t sui-border-weak sui-bg-page px-4 py-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <button
               type="button"
@@ -3876,15 +3876,15 @@ export default function MacroIndexTuningPage(): JSX.Element {
               className="flex min-w-0 flex-1 items-start gap-2 text-left"
             >
               {expandedDashboardSections.acceleration ? (
-                <ChevronDown size={17} className="mt-0.5 shrink-0 text-slate-500" />
+                <ChevronDown size={17} className="mt-0.5 shrink-0 sui-color-muted" />
               ) : (
-                <ChevronRight size={17} className="mt-0.5 shrink-0 text-slate-500" />
+                <ChevronRight size={17} className="mt-0.5 shrink-0 sui-color-muted" />
               )}
               <span>
-                <span className="block text-sm font-bold text-slate-900">
+                <span className="block text-sm font-bold sui-color-active">
                   Data model acceleration readiness
                 </span>
-                <span className="mt-1 block text-xs text-slate-600">
+                <span className="mt-1 block text-xs sui-color-default">
                   {accelerationCheckInProgress
                     ? "Checking recommended models…"
                     : `${acceleratedDataModelCount} of ${dataModelReadiness.length} accelerated`}
@@ -3897,7 +3897,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Open acceleration check in Search"
-                className={`${compactButtonBase} border-slate-300 bg-white text-sky-700 hover:border-sky-400 hover:text-sky-900`}
+                className={`${compactButtonBase} sui-border-default sui-bg-section sui-color-info sui-hover-border-info sui-hover-color-info`}
               >
                 <ExternalLink size={13} />
                 Open in Search
@@ -3907,7 +3907,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={`Open Splunk ${SPLUNK_DOCS_VERSION} data model acceleration documentation`}
-                className={`${compactButtonBase} border-slate-300 bg-white text-sky-700 hover:border-sky-400 hover:text-sky-900`}
+                className={`${compactButtonBase} sui-border-default sui-bg-section sui-color-info sui-hover-border-info sui-hover-color-info`}
               >
                 <ExternalLink size={13} />
                 Acceleration guide
@@ -3916,7 +3916,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 type="button"
                 onClick={checkDataModelAcceleration}
                 disabled={accelerationCheckInProgress}
-                className={`${compactButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+                className={`${compactButtonBase} sui-border-default sui-bg-section sui-color-default sui-hover-border-info sui-hover-color-info`}
               >
                 <RefreshCw
                   size={14}
@@ -3932,10 +3932,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
           <div
             className={`mt-3 rounded-md px-3 py-2 text-xs font-semibold ${
               accelerationCheckInProgress
-                ? "bg-sky-100 text-sky-800"
+                ? "sui-bg-info sui-color-info"
                 : dataModelsNeedingAttention.length
-                  ? "bg-amber-100 text-amber-900"
-                  : "bg-emerald-100 text-emerald-800"
+                  ? "sui-bg-warning sui-color-warning"
+                  : "sui-bg-positive sui-color-positive"
             }`}
             role="status"
           >
@@ -3954,21 +3954,21 @@ export default function MacroIndexTuningPage(): JSX.Element {
               <details
                 key={group.app}
                 open={group.attentionCount > 0}
-                className="group overflow-hidden rounded-md border border-slate-200 bg-white"
+                className="group overflow-hidden rounded-md border sui-border-weak sui-bg-section"
               >
                 <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-xs [&::-webkit-details-marker]:hidden">
                   {group.checkingCount ? (
-                    <Loader2 size={14} className="shrink-0 animate-spin text-sky-700" />
+                    <Loader2 size={14} className="shrink-0 animate-spin sui-color-info" />
                   ) : group.attentionCount ? (
-                    <AlertTriangle size={14} className="shrink-0 text-amber-700" />
+                    <AlertTriangle size={14} className="shrink-0 sui-color-warning" />
                   ) : (
-                    <Check size={14} className="shrink-0 text-emerald-700" />
+                    <Check size={14} className="shrink-0 sui-color-positive" />
                   )}
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-bold text-slate-900">
+                    <span className="block truncate font-bold sui-color-active">
                       {group.label}
                     </span>
-                    <span className="block text-xs text-slate-500">
+                    <span className="block text-xs sui-color-muted">
                       {group.checkingCount
                         ? "Checking acceleration"
                         : `${group.enabledCount} of ${group.items.length} accelerated`}
@@ -3976,10 +3976,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   </span>
                   <ChevronDown
                     size={14}
-                    className="shrink-0 text-slate-500 transition-transform group-open:rotate-180"
+                    className="shrink-0 sui-color-muted transition-transform group-open:rotate-180"
                   />
                 </summary>
-                <div className="divide-y divide-slate-100 border-t border-slate-200 bg-slate-50">
+                <div className="divide-y sui-divide-weak border-t sui-border-weak sui-bg-page">
                   {group.items.map((item) => {
                     const enabled = item.state === "enabled";
                     const checking = item.state === "checking";
@@ -3991,26 +3991,26 @@ export default function MacroIndexTuningPage(): JSX.Element {
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
                             {checking ? (
-                              <Loader2 size={12} className="shrink-0 animate-spin text-sky-700" />
+                              <Loader2 size={12} className="shrink-0 animate-spin sui-color-info" />
                             ) : enabled ? (
-                              <Check size={12} className="shrink-0 text-emerald-700" />
+                              <Check size={12} className="shrink-0 sui-color-positive" />
                             ) : (
-                              <AlertTriangle size={12} className="shrink-0 text-amber-700" />
+                              <AlertTriangle size={12} className="shrink-0 sui-color-warning" />
                             )}
-                            <span className="truncate font-bold text-slate-800">
+                            <span className="truncate font-bold sui-color-active">
                               {item.label}
                             </span>
                           </div>
-                          <code className="mt-0.5 block truncate font-mono text-xs text-slate-500">
+                          <code className="mt-0.5 block truncate font-mono text-xs sui-color-muted">
                             {item.model}
                           </code>
                           <div
                             className={`mt-0.5 text-xs ${
                               enabled
-                                ? "text-emerald-700"
+                                ? "sui-color-positive"
                                 : checking
-                                  ? "text-slate-500"
-                                  : "text-amber-800"
+                                  ? "sui-color-muted"
+                                  : "sui-color-warning"
                             }`}
                           >
                             {item.message}
@@ -4023,7 +4023,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                           href={splunkDataModelManagerUrl(item)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="mt-0.5 inline-flex h-7 items-center gap-1 rounded border border-slate-300 bg-white px-2 font-bold text-sky-700 hover:border-sky-400 hover:text-sky-900"
+                          className="mt-0.5 inline-flex h-7 items-center gap-1 rounded border sui-border-default sui-bg-section px-2 font-bold sui-color-info sui-hover-border-info sui-hover-color-info"
                         >
                           {enabled ? "Open" : "Accelerate"}
                           <ExternalLink size={11} />
@@ -4039,7 +4039,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           {summariesOnlyEnabled && accelerationCheckInProgress ? (
             <div
               role="status"
-              className="mt-3 flex items-start gap-2 border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800"
+              className="mt-3 flex items-start gap-2 border sui-border-info sui-bg-info px-3 py-2 text-sm sui-color-info"
             >
               <Loader2 className="mt-0.5 shrink-0 animate-spin" size={16} />
               Checking the required data-model acceleration settings.
@@ -4047,7 +4047,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           ) : summariesOnlyBlocked ? (
             <div
               role="alert"
-              className="mt-3 flex items-start gap-2 border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+              className="mt-3 flex items-start gap-2 border sui-border-negative sui-bg-negative px-3 py-2 text-sm sui-color-negative"
             >
               <AlertTriangle className="mt-0.5 shrink-0" size={16} />
               <span>
@@ -4059,14 +4059,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
           ) : summariesOnlyEnabled ? (
             <div
               role="status"
-              className="mt-3 flex items-start gap-2 border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800"
+              className="mt-3 flex items-start gap-2 border sui-border-positive sui-bg-positive px-3 py-2 text-sm sui-color-positive"
             >
               <Check className="mt-0.5 shrink-0" size={16} />
               All required Cisco data models have acceleration enabled.
             </div>
           ) : (
-            <div className="mt-3 flex items-start gap-2 border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
-              <Info className="mt-0.5 shrink-0 text-sky-700" size={16} />
+            <div className="mt-3 flex items-start gap-2 border sui-border-weak sui-bg-section px-3 py-2 text-sm sui-color-default">
+              <Info className="mt-0.5 shrink-0 sui-color-info" size={16} />
               <span>
                 <code className="font-mono">summariesonly=false</code> may fall
                 back to raw events while acceleration is being prepared.
@@ -4081,7 +4081,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
       </section>
 
       {error && (
-        <section className="mb-4 flex items-start gap-2 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+        <section className="mb-4 flex items-start gap-2 border sui-border-negative sui-bg-negative px-4 py-3 text-sm sui-color-negative">
           <AlertTriangle className="mt-0.5 shrink-0" size={17} />
           <div>
             <div className="font-bold">Macro tuning scan failed.</div>
@@ -4091,7 +4091,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
       )}
 
       {hasUnknown && (
-        <section className="mb-4 flex items-start gap-2 border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <section className="mb-4 flex items-start gap-2 border sui-border-warning sui-bg-warning px-4 py-3 text-sm sui-color-warning">
           <AlertTriangle className="mt-0.5 shrink-0" size={17} />
           <div>
             <div className="font-bold">
@@ -4105,11 +4105,11 @@ export default function MacroIndexTuningPage(): JSX.Element {
         </section>
       )}
 
-      <section className="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <section className="mb-4 overflow-hidden rounded-xl border sui-border-weak sui-bg-section shadow-sm">
         <div
           className={`px-4 py-3 ${
             expandedDashboardSections.dashboardMacros
-              ? "border-b border-slate-200"
+              ? "border-b sui-border-weak"
               : ""
           }`}
         >
@@ -4121,15 +4121,15 @@ export default function MacroIndexTuningPage(): JSX.Element {
             className="flex w-full items-start gap-2 text-left"
           >
             {expandedDashboardSections.dashboardMacros ? (
-              <ChevronDown size={18} className="mt-0.5 shrink-0 text-slate-500" />
+              <ChevronDown size={18} className="mt-0.5 shrink-0 sui-color-muted" />
             ) : (
-              <ChevronRight size={18} className="mt-0.5 shrink-0 text-slate-500" />
+              <ChevronRight size={18} className="mt-0.5 shrink-0 sui-color-muted" />
             )}
             <span className="min-w-0 flex-1">
-              <span className="block text-sm font-bold text-slate-900">
+              <span className="block text-sm font-bold sui-color-active">
                 Dashboard index macros
               </span>
-              <span className="mt-0.5 block text-xs text-slate-500">
+              <span className="mt-0.5 block text-xs sui-color-muted">
                 {formatNumber(dashboardMacroRows.length)} macros ·{" "}
                 {formatNumber(totalIndexValues)} indexes · owned by {APP_NAME}
               </span>
@@ -4146,7 +4146,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               </span>
               <Search
                 size={16}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 sui-color-default"
               />
               <input
                 id="macro-index-tuning-search"
@@ -4167,7 +4167,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 href={macrosManagerUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+                className={`${lightButtonBase} sui-border-default sui-bg-section sui-color-default sui-hover-border-info sui-hover-color-info`}
               >
                 <ExternalLink size={16} />
                 Open SCD macros
@@ -4180,23 +4180,23 @@ export default function MacroIndexTuningPage(): JSX.Element {
         {expandedDashboardSections.dashboardMacros && (
           <div id="dashboard-macro-definitions-content">
         {isLoading && dashboardMacroRows.length === 0 ? (
-          <div className="flex min-h-[260px] items-center justify-center gap-3 text-sm text-slate-600">
-            <Loader2 size={18} className="animate-spin text-sky-700" />
+          <div className="flex min-h-[260px] items-center justify-center gap-3 text-sm sui-color-default">
+            <Loader2 size={18} className="animate-spin sui-color-info" />
             Scanning indexes and sourcetypes...
           </div>
         ) : dashboardMacroRows.length === 0 ? (
-          <div className="min-h-[220px] px-4 py-12 text-center text-sm text-slate-500">
+          <div className="min-h-[220px] px-4 py-12 text-center text-sm sui-color-muted">
             No dashboard macro rows returned for the selected range.
           </div>
         ) : filteredDashboardMacroRows.length === 0 ? (
-          <div className="min-h-[220px] px-4 py-12 text-center text-sm text-slate-500">
+          <div className="min-h-[220px] px-4 py-12 text-center text-sm sui-color-muted">
             No dashboard macro rows match the current search.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full border-collapse text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <tr className="border-b sui-border-weak sui-bg-page text-xs uppercase tracking-wide sui-color-muted">
                   <th className="w-[190px] px-4 py-3 font-bold">Macro</th>
                   <th className="min-w-[330px] px-4 py-3 font-bold">
                     Definition
@@ -4224,12 +4224,12 @@ export default function MacroIndexTuningPage(): JSX.Element {
       <section
         id="external-app-macro-definitions"
         aria-labelledby="external-app-macro-definitions-heading"
-        className="mb-4 scroll-mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+        className="mb-4 scroll-mt-4 overflow-hidden rounded-xl border sui-border-weak sui-bg-section shadow-sm"
       >
         <div
           className={`px-4 py-3 ${
             expandedDashboardSections.externalMacros
-              ? "border-b border-slate-200"
+              ? "border-b sui-border-weak"
               : ""
           }`}
         >
@@ -4241,18 +4241,18 @@ export default function MacroIndexTuningPage(): JSX.Element {
             className="flex w-full items-start gap-2 text-left"
           >
             {expandedDashboardSections.externalMacros ? (
-              <ChevronDown size={18} className="mt-0.5 shrink-0 text-slate-500" />
+              <ChevronDown size={18} className="mt-0.5 shrink-0 sui-color-muted" />
             ) : (
-              <ChevronRight size={18} className="mt-0.5 shrink-0 text-slate-500" />
+              <ChevronRight size={18} className="mt-0.5 shrink-0 sui-color-muted" />
             )}
             <span className="min-w-0 flex-1">
               <span
                 id="external-app-macro-definitions-heading"
-                className="block text-sm font-bold text-slate-900"
+                className="block text-sm font-bold sui-color-active"
               >
                 Cisco app macros
               </span>
-              <span className="mt-0.5 block text-xs text-slate-500">
+              <span className="mt-0.5 block text-xs sui-color-muted">
                 {formatNumber(externalAppMacroRows.length)} macros across{" "}
                 {formatNumber(externalAppMacroSummaries.length)} companion apps
               </span>
@@ -4263,23 +4263,23 @@ export default function MacroIndexTuningPage(): JSX.Element {
         {expandedDashboardSections.externalMacros && (
           <div id="external-app-macro-definitions-content">
         {isLoading && externalAppMacroRows.length === 0 ? (
-          <div className="flex min-h-[220px] items-center justify-center gap-3 text-sm text-slate-600">
-            <Loader2 size={18} className="animate-spin text-sky-700" />
+          <div className="flex min-h-[220px] items-center justify-center gap-3 text-sm sui-color-default">
+            <Loader2 size={18} className="animate-spin sui-color-info" />
             Scanning app-owned macros...
           </div>
         ) : externalAppMacroRows.length === 0 ? (
-          <div className="min-h-[180px] px-4 py-12 text-center text-sm text-slate-500">
+          <div className="min-h-[180px] px-4 py-12 text-center text-sm sui-color-muted">
             No supported Cisco app macro definitions are available.
           </div>
         ) : filteredExternalAppMacroRows.length === 0 ? (
-          <div className="min-h-[180px] px-4 py-12 text-center text-sm text-slate-500">
+          <div className="min-h-[180px] px-4 py-12 text-center text-sm sui-color-muted">
             No Cisco app macro rows match the current search.
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full border-collapse text-left text-sm">
               <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <tr className="border-b sui-border-weak sui-bg-page text-xs uppercase tracking-wide sui-color-muted">
                   <th className="w-[190px] px-4 py-3 font-bold">Macro</th>
                   <th className="min-w-[330px] px-4 py-3 font-bold">
                     Definition
@@ -4305,10 +4305,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
       </section>
 
       {isTargetAppInstalled(CIM_APP_NAME) && (
-        <section className="mb-4 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <section className="mb-4 overflow-hidden rounded-xl border sui-border-weak sui-bg-section shadow-sm">
           <div
             className={`grid gap-3 px-4 py-3 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center ${
-              isCimGroupCollapsed ? "" : "border-b border-slate-200"
+              isCimGroupCollapsed ? "" : "border-b sui-border-weak"
             }`}
           >
             <div className="min-w-0">
@@ -4316,7 +4316,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               type="button"
               onClick={() => toggleRowGroup(CIM_APP_NAME)}
               aria-expanded={!isCimGroupCollapsed}
-              className="flex h-9 max-w-full items-center gap-2 text-left text-xs font-bold uppercase tracking-wide text-slate-600 hover:text-sky-700"
+              className="flex h-9 max-w-full items-center gap-2 text-left text-xs font-bold uppercase tracking-wide sui-color-default sui-hover-color-info"
             >
               {isCimGroupCollapsed ? (
                 <ChevronRight size={15} className="shrink-0" />
@@ -4324,19 +4324,19 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 <ChevronDown size={15} className="shrink-0" />
               )}
               <span className="flex min-w-0 items-center gap-2 normal-case tracking-normal">
-                <span className="truncate text-sm font-semibold text-slate-700">
+                <span className="truncate text-sm font-semibold sui-color-default">
                   {getTargetAppLabel(CIM_APP_NAME)}
                 </span>
-                <code className="shrink-0 font-mono text-xs font-medium text-slate-500">
+                <code className="shrink-0 font-mono text-xs font-medium sui-color-muted">
                   {CIM_APP_NAME}/local/macros.conf
                 </code>
               </span>
-              <span className="shrink-0 rounded bg-slate-100 px-2 py-0.5 text-xs font-semibold normal-case tracking-normal text-slate-500">
+              <span className="shrink-0 rounded sui-bg-section px-2 py-0.5 text-xs font-semibold normal-case tracking-normal sui-color-muted">
                 {formatNumber(cimMacroRows.length)} macros
               </span>
             </button>
             {!isCimGroupCollapsed && (
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm sui-color-default">
                 CIM data model discovery. Discover all {CIM_MACRO_NAMES.length}{" "}
                 Splunk_SA_CIM index macros with their shipped tag-based
                 constraints only when needed.
@@ -4345,7 +4345,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           </div>
           {!isCimGroupCollapsed && (
           <div className="flex min-w-0 flex-wrap items-center gap-2 xl:justify-end">
-            <div className="flex h-10 items-center gap-2 text-sm font-semibold text-slate-700">
+            <div className="flex h-10 items-center gap-2 text-sm font-semibold sui-color-default">
               <span>CIM range</span>
               <TimeRangeDropdown
                 earliest={cimTimeRange.earliest}
@@ -4366,7 +4366,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               type="button"
               onClick={runCimDiscovery}
               disabled={isCimLoading}
-              className={`${lightButtonBase} border-sky-600 bg-sky-600 text-white hover:bg-sky-700`}
+              className={`${lightButtonBase} sui-border-info sui-bg-accent sui-color-active sui-hover-bg-accent`}
             >
               {isCimLoading ? (
                 <Loader2 size={16} className="animate-spin" />
@@ -4382,7 +4382,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 !cimRowsToSave.length || isCimLoading || isSavingCim
               }
               title="Save all loaded CIM definitions without description or iseval settings"
-              className={`${lightButtonBase} border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700`}
+              className={`${lightButtonBase} sui-border-positive sui-bg-positive sui-color-active sui-hover-bg-positive`}
             >
               {isSavingCim ? (
                 <Loader2 size={16} className="animate-spin" />
@@ -4395,7 +4395,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               href={openCimSearchUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+              className={`${lightButtonBase} sui-border-default sui-bg-section sui-color-default sui-hover-border-info sui-hover-color-info`}
             >
               <ExternalLink size={16} />
               Open CIM Search
@@ -4404,7 +4404,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               href={cimMacrosManagerUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className={`${lightButtonBase} border-slate-300 bg-white text-slate-700 hover:border-sky-400 hover:text-sky-700`}
+              className={`${lightButtonBase} sui-border-default sui-bg-section sui-color-default sui-hover-border-info sui-hover-color-info`}
             >
               <ExternalLink size={16} />
               Open CIM macros
@@ -4416,7 +4416,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
         {!isCimGroupCollapsed && (
           <>
             {cimError && (
-              <div className="flex items-start gap-2 border-b border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              <div className="flex items-start gap-2 border-b sui-border-negative sui-bg-negative px-4 py-3 text-sm sui-color-negative">
                 <AlertTriangle className="mt-0.5 shrink-0" size={17} />
                 <div>
                   <div className="font-bold">CIM discovery failed.</div>
@@ -4426,23 +4426,23 @@ export default function MacroIndexTuningPage(): JSX.Element {
             )}
 
             {isCimLoading && cimRows.length === 0 ? (
-              <div className="flex min-h-[180px] items-center justify-center gap-3 text-sm text-slate-600">
-                <Loader2 size={18} className="animate-spin text-sky-700" />
+              <div className="flex min-h-[180px] items-center justify-center gap-3 text-sm sui-color-default">
+                <Loader2 size={18} className="animate-spin sui-color-info" />
                 Discovering indexes for all CIM data models...
               </div>
             ) : cimRows.length === 0 ? (
-              <div className="min-h-[160px] px-4 py-12 text-center text-sm text-slate-500">
+              <div className="min-h-[160px] px-4 py-12 text-center text-sm sui-color-muted">
                 No CIM macro rows loaded.
               </div>
             ) : filteredCimRows.length === 0 ? (
-              <div className="min-h-[160px] px-4 py-12 text-center text-sm text-slate-500">
+              <div className="min-h-[160px] px-4 py-12 text-center text-sm sui-color-muted">
                 No CIM macro rows match the current search.
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full border-collapse text-left text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr className="border-b sui-border-weak sui-bg-page text-xs uppercase tracking-wide sui-color-muted">
                       <th className="w-[190px] px-4 py-3 font-bold">Macro</th>
                       <th className="min-w-[330px] px-4 py-3 font-bold">
                         Definition
@@ -4470,7 +4470,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
         </section>
       )}
 
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <section className="overflow-hidden rounded-xl border sui-border-weak sui-bg-section shadow-sm">
         <button
           type="button"
           onClick={() => toggleDashboardSection("diagnostics")}
@@ -4479,15 +4479,15 @@ export default function MacroIndexTuningPage(): JSX.Element {
           className="flex w-full items-start gap-2 px-4 py-3 text-left"
         >
           {expandedDashboardSections.diagnostics ? (
-            <ChevronDown size={18} className="mt-0.5 shrink-0 text-slate-500" />
+            <ChevronDown size={18} className="mt-0.5 shrink-0 sui-color-muted" />
           ) : (
-            <ChevronRight size={18} className="mt-0.5 shrink-0 text-slate-500" />
+            <ChevronRight size={18} className="mt-0.5 shrink-0 sui-color-muted" />
           )}
           <span>
-            <span className="block text-sm font-bold text-slate-900">
+            <span className="block text-sm font-bold sui-color-active">
               Preview & diagnostics
             </span>
-            <span className="mt-0.5 block text-xs text-slate-500">
+            <span className="mt-0.5 block text-xs sui-color-muted">
               macros.conf preview, fast scan SPL, and CIM discovery SPL
             </span>
           </span>
@@ -4495,10 +4495,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
         {expandedDashboardSections.diagnostics && (
         <div
           id="macro-diagnostics-content"
-          className="grid gap-4 border-t border-slate-200 bg-slate-50 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]"
+          className="grid gap-4 border-t sui-border-weak sui-bg-page p-4 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]"
         >
-        <details className="rounded-lg border border-slate-200 bg-white">
-          <summary className="cursor-pointer border-b border-slate-200 px-4 py-3 text-base font-bold text-slate-900">
+        <details className="rounded-lg border sui-border-weak sui-bg-section">
+          <summary className="cursor-pointer border-b sui-border-weak px-4 py-3 text-base font-bold sui-color-active">
             macros.conf preview
           </summary>
           <textarea
@@ -4508,25 +4508,25 @@ export default function MacroIndexTuningPage(): JSX.Element {
               macroStanzas || "# Run the scan to populate macro definitions."
             }
             aria-label="macros.conf preview"
-            className="m-0 h-[320px] w-full resize-y overflow-auto border-0 bg-white p-4 font-mono text-xs leading-relaxed text-slate-800 outline-none"
+            className="m-0 h-[320px] w-full resize-y overflow-auto border-0 sui-bg-section p-4 font-mono text-xs leading-relaxed sui-color-active outline-none"
           />
         </details>
 
         <div className="grid gap-4">
-          <details className="rounded-lg border border-slate-200 bg-white">
-            <summary className="cursor-pointer border-b border-slate-200 px-4 py-3 text-base font-bold text-slate-900">
+          <details className="rounded-lg border sui-border-weak sui-bg-section">
+            <summary className="cursor-pointer border-b sui-border-weak px-4 py-3 text-base font-bold sui-color-active">
               Fast scan SPL
             </summary>
-            <pre className="m-0 max-h-[220px] overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-xs leading-relaxed text-slate-800">
+            <pre className="m-0 max-h-[220px] overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-xs leading-relaxed sui-color-active">
               {searchSpl || "# Loading searchbase SPL..."}
             </pre>
           </details>
 
-          <details className="rounded-lg border border-slate-200 bg-white">
-            <summary className="cursor-pointer border-b border-slate-200 px-4 py-3 text-base font-bold text-slate-900">
+          <details className="rounded-lg border sui-border-weak sui-bg-section">
+            <summary className="cursor-pointer border-b sui-border-weak px-4 py-3 text-base font-bold sui-color-active">
               CIM discovery SPL
             </summary>
-            <pre className="m-0 max-h-[220px] overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-xs leading-relaxed text-slate-800">
+            <pre className="m-0 max-h-[220px] overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-xs leading-relaxed sui-color-active">
               {CIM_DISCOVERY_SEARCH}
             </pre>
           </details>

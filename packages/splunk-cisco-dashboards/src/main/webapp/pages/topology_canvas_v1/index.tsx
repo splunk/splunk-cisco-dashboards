@@ -23,22 +23,15 @@ import React from 'react';
 import { Layers, Sparkles } from '@/common/icons/SuiIcon';
 import { TopologyCanvas } from '@/common/components/topology/TopologyCanvas';
 import { fetchAllEdges } from '@/common/components/topology/edgeFetchers';
-import { useTheme } from '@/common/hooks/useTheme';
-import { cn } from '@/common/lib/utils';
 
 const TopologyCanvasPage: React.FC = () => {
-    const { resolvedTheme } = useTheme();
-
     return (
         <div
-            className={cn(
-                'flex flex-col w-full h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100',
-                resolvedTheme === 'dark' && 'dark scd-c3-atmosphere'
-            )}
+            className="scd-c3-atmosphere flex flex-col w-full h-screen sui-bg-page sui-color-default"
         >
-        <header className="flex items-center justify-between gap-4 px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+        <header className="flex items-center justify-between gap-4 px-6 py-4 border-b  sui-border-weak  sui-bg-section">
             <div className="flex items-center gap-3 min-w-0">
-                <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 flex-shrink-0">
+                <div className="flex items-center justify-center w-9 h-9 rounded-lg sui-bg-accent  sui-color-info flex-shrink-0">
                     <Layers className="w-5 h-5" aria-hidden />
                 </div>
                 <div className="min-w-0">
@@ -46,12 +39,12 @@ const TopologyCanvasPage: React.FC = () => {
                         <h1 className="text-base font-semibold tracking-tight truncate">
                             Network Topology Canvas
                         </h1>
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium   sui-bg-warning sui-color-warning">
                             <Sparkles className="w-2.5 h-2.5" aria-hidden />
                             v1 spike
                         </span>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                    <p className="text-xs  sui-color-default truncate">
                         Auto-discovered from <code className="font-mono">asset_inventory.csv</code> and{' '}
                         <code className="font-mono">site_topology_lookup.csv</code>; ThousandEyes A2A
                         measurements overlay as dashed sky-blue edges. Drag any device to override its

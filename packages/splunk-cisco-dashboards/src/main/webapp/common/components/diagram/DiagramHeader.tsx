@@ -124,13 +124,6 @@ interface DiagramHeaderProps {
      *  Parent is responsible for the fullscreen API call; the
      *  header just emits the mode change. */
     onModeChange: (mode: 'edit' | 'view') => void;
-    /** Build 115.10 — light/dark theme toggle. Optional so callers
-     *  that don't care about theming (tests, future embeds) keep
-     *  working without breakage. When provided, the header
-     *  renders the same `ThemeToggle` pill the overview dashboard
-     *  uses so the operator gets one consistent affordance across
-     *  pages. */
-    themeSlot?: React.ReactNode;
     /** Build 115.12 — page-level animation kill switch. Operators
      *  asked for a quick way to pause every flowing dot /
      *  marching-ants effect on busy diagrams (e.g. while
@@ -181,7 +174,6 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
     onRefreshDirectory,
     onAddOrSelectTitle,
     onModeChange,
-    themeSlot,
     animationsEnabled,
     onToggleAnimations,
     ipAddressesVisible,
@@ -313,9 +305,9 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
 
     return (
         <>
-        <header className="flex items-center justify-between gap-5 px-7 py-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 relative">
+        <header className="flex items-center justify-between gap-5 px-7 py-4 border-b  sui-border-weak  sui-bg-section relative">
             <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-violet-500/12 text-violet-600 dark:text-violet-400 flex-shrink-0">
+                <div className="flex items-center justify-center w-11 h-11 rounded-xl sui-bg-accent  sui-color-info flex-shrink-0">
                     <Network className="w-5 h-5" aria-hidden />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -330,8 +322,8 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                             onClick={handlePickerToggle}
                             className={cn(
                                 'flex items-center gap-1.5 px-2.5 py-1 rounded-md text-sm',
-                                'hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors',
-                                'text-slate-700 dark:text-slate-300'
+                                'sui-hover-bg-section sui-hover-bg-overlay transition-colors',
+                                'sui-color-default'
                             )}
                             title="Switch diagrams"
                         >
@@ -340,7 +332,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                             </span>
                             {dirty && (
                                 <span
-                                    className="text-amber-500 dark:text-amber-400"
+                                    className="sui-color-warning"
                                     title="Unsaved changes"
                                 >
                                     •
@@ -368,7 +360,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                          *  "Saved 'foo' at 3:21:05 PM") fit fine on a
                          *  single line and stay where they were. */}
                         {statusMessage && statusMessage.kind === 'info' && (
-                            <span className="text-xs truncate text-slate-500 dark:text-slate-400">
+                            <span className="text-xs truncate  sui-color-default">
                                 {statusMessage.text}
                             </span>
                         )}
@@ -510,8 +502,8 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                     className={cn(
                                         'inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors',
                                         animationsEnabled !== false
-                                            ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-amber-500 hover:border-slate-300 dark:hover:border-slate-600'
-                                            : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-400 hover:border-slate-400 dark:hover:border-slate-500'
+                                            ? 'sui-bg-section  sui-border-default sui-color-warning  sui-hover-border-default'
+                                            : 'sui-bg-section sui-bg-popup  sui-border-default sui-color-default  sui-hover-border-strong'
                                     )}
                                 >
                                     {animationsEnabled !== false ? (
@@ -540,8 +532,8 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                     className={cn(
                                         'inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors',
                                         ipAddressesVisible !== false
-                                            ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-sky-500 hover:border-slate-300 dark:hover:border-slate-600'
-                                            : 'bg-slate-100 dark:bg-slate-800 border-slate-300 dark:border-slate-600 text-slate-400 hover:border-slate-400 dark:hover:border-slate-500'
+                                            ? 'sui-bg-section  sui-border-default sui-color-info  sui-hover-border-default'
+                                            : 'sui-bg-section sui-bg-popup  sui-border-default sui-color-default  sui-hover-border-strong'
                                     )}
                                 >
                                     {ipAddressesVisible !== false ? (
@@ -569,7 +561,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                         aria-busy={exporting === true}
                                         className={cn(
                                             'inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors',
-                                            'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600',
+                                            'sui-bg-section  sui-border-default  sui-color-default  sui-hover-border-default',
                                             'disabled:opacity-50 disabled:cursor-wait'
                                         )}
                                     >
@@ -602,12 +594,12 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                      *  hover area) to `pt-1` (padding,
                                      *  inside the hover area). */}
                                     <div className="absolute right-0 top-full pt-1 hidden group-hover:block group-focus-within:block z-50 w-32">
-                                        <div className="flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md shadow-lg overflow-hidden">
+                                        <div className="flex flex-col  sui-bg-section border  sui-border-default rounded-md shadow-lg overflow-hidden">
                                             <button
                                                 type="button"
                                                 onClick={() => onExport('png')}
                                                 disabled={exporting === true}
-                                                className="px-3 py-1.5 text-xs text-left font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-slate-800 disabled:opacity-50"
+                                                className="px-3 py-1.5 text-xs text-left font-semibold  sui-color-active  sui-hover-bg-overlay disabled:opacity-50"
                                             >
                                                 Save as PNG
                                             </button>
@@ -615,7 +607,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                                 type="button"
                                                 onClick={() => onExport('pdf')}
                                                 disabled={exporting === true}
-                                                className="px-3 py-1.5 text-xs text-left font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-slate-800 border-t border-slate-100 dark:border-slate-700 disabled:opacity-50"
+                                                className="px-3 py-1.5 text-xs text-left font-semibold  sui-color-active  sui-hover-bg-overlay border-t  sui-border-default disabled:opacity-50"
                                             >
                                                 Save as PDF
                                             </button>
@@ -623,13 +615,12 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                     </div>
                                 </div>
                             )}
-                            {themeSlot && <div className="ml-1">{themeSlot}</div>}
                         </ToolbarGroup>
                     </>
                 )}
                 {busy && (
                     <Loader2
-                        className="w-4 h-4 animate-spin text-slate-400 ml-1"
+                        className="w-4 h-4 animate-spin sui-color-default ml-1"
                         aria-hidden
                     />
                 )}
@@ -651,10 +642,10 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                     role="listbox"
                     className={cn(
                         'absolute top-full left-16 mt-1 z-30 w-96 max-w-[90vw] max-h-[70vh] overflow-auto rounded-lg shadow-lg',
-                        'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700'
+                        'sui-bg-section border  sui-border-default'
                     )}
                 >
-                    <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-800 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center justify-between px-3 py-2 border-b  sui-border-weak text-xs uppercase tracking-wide  sui-color-default">
                         <span>Saved diagrams</span>
                         <button
                             type="button"
@@ -662,7 +653,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                 setPickerOpen(false);
                                 onNew();
                             }}
-                            className="flex items-center gap-1 text-sky-600 dark:text-sky-400 normal-case tracking-normal text-xs hover:underline"
+                            className="flex items-center gap-1  sui-color-info normal-case tracking-normal text-xs hover:underline"
                         >
                             <Plus className="w-3 h-3" aria-hidden />
                             New
@@ -674,10 +665,10 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                      *  scrollable list so a long match list still
                      *  shows the input as the operator scrolls. */}
                     {availableDiagrams && availableDiagrams.length > 0 && (
-                        <div className="sticky top-0 z-10 px-2 py-1.5 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
+                        <div className="sticky top-0 z-10 px-2 py-1.5  sui-bg-section border-b  sui-border-weak">
                             <div className="relative">
                                 <Search
-                                    className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"
+                                    className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sui-color-default"
                                     aria-hidden
                                 />
                                 <input
@@ -692,11 +683,11 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                     aria-label="Filter saved diagrams by name"
                                     className={cn(
                                         'w-full pl-7 pr-7 py-1 text-xs rounded-md',
-                                        'bg-white dark:bg-slate-800',
-                                        'border border-slate-200 dark:border-slate-700',
-                                        'text-slate-900 dark:text-slate-100',
-                                        'placeholder:text-slate-400 dark:placeholder:text-slate-500',
-                                        'focus:outline-none focus:ring-2 focus:ring-sky-500/40 focus:border-sky-400'
+                                        'sui-bg-section sui-bg-popup',
+                                        'border  sui-border-default',
+                                        'sui-color-active',
+                                        'sui-color-default sui-color-muted',
+                                        'focus:outline-none focus:ring-2 sui-focus-ring sui-focus-border-info'
                                     )}
                                 />
                                 {pickerQuery.length > 0 && (
@@ -708,7 +699,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                         }}
                                         title="Clear search (Esc)"
                                         aria-label="Clear search"
-                                        className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                        className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded sui-color-default  sui-hover-color-active"
                                     >
                                         <X className="w-3 h-3" aria-hidden />
                                     </button>
@@ -717,13 +708,13 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                         </div>
                     )}
                     {availableDiagrams === null && (
-                        <div className="flex items-center gap-2 px-3 py-3 text-xs text-slate-500 dark:text-slate-400">
+                        <div className="flex items-center gap-2 px-3 py-3 text-xs  sui-color-default">
                             <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden />
                             Loading…
                         </div>
                     )}
                     {availableDiagrams && availableDiagrams.length === 0 && (
-                        <p className="px-3 py-4 text-center text-xs text-slate-500 dark:text-slate-400">
+                        <p className="px-3 py-4 text-center text-xs  sui-color-default">
                             No saved diagrams yet. Use Save As to create one.
                         </p>
                     )}
@@ -769,8 +760,8 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                     className={cn(
                                         'w-full flex items-center justify-between gap-2 px-3 py-1.5 text-left text-xs',
                                         d.name === diagramName
-                                            ? 'bg-sky-50 dark:bg-sky-950/30 text-sky-700 dark:text-sky-300'
-                                            : 'hover:bg-slate-50 dark:hover:bg-slate-800/60 text-slate-700 dark:text-slate-200'
+                                            ? 'sui-bg-info  sui-color-info'
+                                            : 'sui-hover-bg-page sui-hover-bg-overlay  sui-color-active'
                                     )}
                                     title={d.name}
                                 >
@@ -787,7 +778,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                             {d.name}
                                         </span>
                                     </span>
-                                    <span className="text-xs text-slate-400 flex-shrink-0 whitespace-nowrap">
+                                    <span className="text-xs sui-color-default flex-shrink-0 whitespace-nowrap">
                                         {d.updatedAt
                                             ? new Date(d.updatedAt).toLocaleString()
                                             : ''}
@@ -808,7 +799,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                 {q.length > 0 &&
                                     factory.length === 0 &&
                                     custom.length === 0 && (
-                                        <p className="px-3 py-4 text-center text-xs text-slate-500 dark:text-slate-400">
+                                        <p className="px-3 py-4 text-center text-xs  sui-color-default">
                                             No diagrams match{' '}
                                             <span className="font-mono">
                                                 "{pickerQuery}"
@@ -818,7 +809,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                     )}
                                 {factory.length > 0 && (
                                     <>
-                                        <div className="px-3 pt-2 pb-1 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
+                                        <div className="px-3 pt-2 pb-1 text-xs uppercase tracking-wide  sui-color-muted flex items-center gap-1.5">
                                             <FolderOpen
                                                 className="w-3 h-3 opacity-70"
                                                 aria-hidden
@@ -832,7 +823,7 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                                 )}
                                 {custom.length > 0 && (
                                     <>
-                                        <div className="px-3 pt-2 pb-1 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-800 mt-1 flex items-center gap-1.5">
+                                        <div className="px-3 pt-2 pb-1 text-xs uppercase tracking-wide  sui-color-muted border-t  sui-border-weak mt-1 flex items-center gap-1.5">
                                             <FolderOpen
                                                 className="w-3 h-3 opacity-70"
                                                 aria-hidden
@@ -862,13 +853,13 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                 role="alert"
                 className={cn(
                     'flex items-start gap-3 px-6 py-2.5 border-b',
-                    'bg-rose-50 dark:bg-rose-950/40',
-                    'border-rose-200 dark:border-rose-900/60',
-                    'text-rose-800 dark:text-rose-200'
+                    'sui-bg-negative',
+                    'sui-border-negative',
+                    'sui-color-negative'
                 )}
             >
                 <AlertTriangle
-                    className="w-4 h-4 mt-0.5 flex-shrink-0 text-rose-600 dark:text-rose-400"
+                    className="w-4 h-4 mt-0.5 flex-shrink-0  sui-color-negative"
                     aria-hidden
                 />
                 <div className="flex-1 min-w-0 text-xs leading-relaxed">
@@ -880,8 +871,8 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                         onClick={() => window.location.reload()}
                         className={cn(
                             'flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium',
-                            'bg-rose-600 hover:bg-rose-700 text-white',
-                            'dark:bg-rose-500 dark:hover:bg-rose-600',
+                            'sui-bg-negative sui-hover-bg-negative sui-color-active',
+                            'sui-bg-negative sui-hover-bg-negative',
                             'transition-colors flex-shrink-0'
                         )}
                         title="Reload the page to refresh the CSRF cookie"
@@ -896,8 +887,8 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                         onClick={onDismissStatus}
                         className={cn(
                             'p-1 rounded flex-shrink-0',
-                            'text-rose-700 dark:text-rose-300',
-                            'hover:bg-rose-100 dark:hover:bg-rose-900/40',
+                            'sui-color-negative',
+                            'sui-hover-bg-negative',
                             'transition-colors'
                         )}
                         aria-label="Dismiss error"
@@ -931,8 +922,8 @@ const ToolbarGroup: React.FC<ToolbarGroupProps> = ({ label, children }) => (
     <div
         aria-label={`${label} actions`}
         className={cn(
-            'inline-flex items-center gap-1 rounded-xl border border-slate-200/80 bg-slate-50/80 p-1',
-            'dark:border-slate-700/80 dark:bg-slate-800/55'
+            'inline-flex items-center gap-1 rounded-xl border sui-border-weak sui-bg-page p-1',
+            'sui-border-default sui-bg-popup'
         )}
     >
         <span className="sr-only">{label}</span>
@@ -959,10 +950,10 @@ const HeaderButton: React.FC<HeaderButtonProps> = ({
             'whitespace-nowrap',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             !disabled && accent
-                ? 'bg-sky-500 hover:bg-sky-600 text-white border-sky-600'
+                ? 'sui-bg-accent sui-hover-bg-accent sui-color-active sui-border-info'
                 : !disabled && danger
-                  ? 'bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900 hover:bg-rose-50 dark:hover:bg-rose-950/30'
-                  : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                  ? 'sui-bg-section  sui-color-negative  sui-border-negative  sui-hover-bg-negative'
+                  : 'sui-bg-section  sui-color-active  sui-border-default  sui-hover-border-default'
         )}
     >
         <Icon className="w-4 h-4" aria-hidden />

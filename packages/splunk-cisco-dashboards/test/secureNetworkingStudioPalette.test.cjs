@@ -631,22 +631,22 @@ assert.equal(
 const applicationCss = fs.readFileSync(APPLICATION_CSS_PATH, "utf8");
 assert.match(
   applicationCss,
-  /\[data-test='viz-description'\][\s\S]*?white-space:\s*normal;[\s\S]*?-webkit-line-clamp:\s*3;/,
+  /\[data-test=["']viz-description["']\][\s\S]*?white-space:\s*normal;[\s\S]*?-webkit-line-clamp:\s*3;/,
   "Dashboard Studio descriptions must retain the shared wrapping treatment",
 );
 assert.match(
   applicationCss,
-  /\[data-test='viz-size-wrapper'\][\s\S]*?flex:\s*1 1 0;[\s\S]*?height:\s*auto !important;/,
+  /\[data-test=["']viz-size-wrapper["']\][\s\S]*?flex:\s*1 1 0;[\s\S]*?height:\s*auto !important;/,
   "Dashboard Studio visualizations must resize below wrapped descriptions",
 );
 assert.match(
   applicationCss,
-  /body\.scd-managed-studio-template[\s\S]*?> \[role='main'\][\s\S]*?flex:\s*1 1 0;[\s\S]*?min-width:\s*900px;[\s\S]*?width:\s*0;/,
+  /body\.scd-managed-studio-template[\s\S]*?> \[role=["']main["']\][\s\S]*?flex:\s*1 1 0;[\s\S]*?min-width:\s*900px;[\s\S]*?width:\s*0;/,
   "the managed Studio template must shrink beside app navigation without making type unreadable",
 );
 assert.match(
   applicationCss,
-  /body\.scd-managed-studio-template[\s\S]*?\[data-test='DashboardLayoutContainer'\][\s\S]*?font-family:\s*Inter, system-ui, sans-serif !important;/,
+  /body\.scd-managed-studio-template[\s\S]*?\[data-test=["']DashboardLayoutContainer["']\][\s\S]*?font-family:\s*Inter, system-ui, sans-serif !important;/,
   "the managed Studio template must use the Insights Workspace font stack",
 );
 assert.match(
@@ -656,7 +656,7 @@ assert.match(
 );
 assert.match(
   applicationCss,
-  /button:not\(\[value='advancedTR'\]\)\[style\*='rgb\(204, 204, 204\)'\][\s\S]*?background:\s*#049fd9 !important;[\s\S]*?border-color:\s*#00bceb !important;/,
+  /button:not\(\[value=["']advancedTR["']\]\)\[style\*=["']rgb\(204, 204, 204\)["']\][\s\S]*?background:\s*#049fd9 !important;[\s\S]*?border-color:\s*#00bceb !important;/,
   "the managed Studio template selected time preset must use the C3 cyan state",
 );
 

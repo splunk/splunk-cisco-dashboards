@@ -3691,7 +3691,7 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                  *      universal "shareable" background.
                  *
                  *   2. isViewMode (Present)  → pure white in
-                 *      light theme (was `bg-slate-50` ≈ #f8fafc,
+                 *      light theme (was `sui-bg-page` ≈ #f8fafc,
                  *      a faint gray tint that operators told us
                  *      "looked dirty next to the white slide
                  *      around it"). Dark theme stays at
@@ -3705,10 +3705,10 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                  *      this mode; the slight-warmer dark surface
                  *      is part of the editor identity. */
                 exporting
-                    ? 'bg-white border-slate-200'
+                    ? 'sui-bg-section sui-border-weak'
                     : isViewMode
-                    ? 'bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700'
-                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800',
+                    ? 'sui-bg-section sui-bg-page  sui-border-default'
+                    : 'sui-bg-section  sui-border-weak',
                 // Build 113: in view mode, suppress every port handle
                 // hovered or otherwise — handles are the visible
                 // editing affordance, and view mode is supposed to
@@ -3869,11 +3869,11 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
              *  hint there would be misleading. */}
             {isEmpty && !isViewMode && (
                 <div className="absolute inset-0 z-10 pointer-events-none flex items-center justify-center">
-                    <div className="px-4 py-3 rounded-xl bg-white/85 dark:bg-slate-900/85 backdrop-blur-sm border border-dashed border-slate-300 dark:border-slate-700 text-center max-w-md">
-                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                    <div className="px-4 py-3 rounded-xl  sui-bg-section backdrop-blur-sm border border-dashed  sui-border-default text-center max-w-md">
+                        <p className="text-sm font-semibold  sui-color-active">
                             Start your diagram
                         </p>
-                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        <p className="mt-1 text-xs  sui-color-default">
                             Drag from Shapes, Inventory, or imported stencils. Connect
                             devices from their port handles.
                         </p>
@@ -4050,25 +4050,25 @@ const CanvasViewportControls: React.FC<{
             <div className="relative pointer-events-auto">
                 <div
                     className={cn(
-                        'w-16 rounded-xl border border-slate-200 bg-white/95',
-                        'dark:bg-slate-900/95 dark:border-slate-700',
-                        'shadow-[0_12px_30px_rgba(15,23,42,0.14)] backdrop-blur',
+                        'w-16 rounded-xl border sui-border-weak sui-bg-section',
+                        'sui-bg-section sui-border-default',
+                        'sui-shadow-overlay backdrop-blur',
                         'py-2 flex flex-col items-center'
                     )}
                 >
                     <ViewportButton {...controls[0]} />
-                    <div className="my-1.5 h-px w-9 bg-slate-200 dark:bg-slate-700" />
+                    <div className="my-1.5 h-px w-9  sui-bg-floating" />
                     <div
                         aria-label={`Zoom ${zoomPct}%`}
-                        className="h-8 flex items-center justify-center text-base font-semibold text-slate-700 dark:text-slate-200"
+                        className="h-8 flex items-center justify-center text-base font-semibold  sui-color-active"
                     >
                         {zoomPct}%
                     </div>
-                    <div className="my-1.5 h-px w-9 bg-slate-200 dark:bg-slate-700" />
+                    <div className="my-1.5 h-px w-9  sui-bg-floating" />
                     <ViewportButton {...controls[1]} />
-                    <div className="my-2 h-px w-9 bg-slate-200 dark:bg-slate-700" />
+                    <div className="my-2 h-px w-9  sui-bg-floating" />
                     <ViewportButton {...controls[2]} />
-                    <div className="my-2 h-px w-9 bg-slate-200 dark:bg-slate-700" />
+                    <div className="my-2 h-px w-9  sui-bg-floating" />
                     <ViewportButton {...controls[3]} />
                 </div>
                 <button
@@ -4079,10 +4079,10 @@ const CanvasViewportControls: React.FC<{
                     onClick={onHelpToggle}
                     className={cn(
                         'absolute -right-3 -bottom-3 w-10 h-10 rounded-full',
-                        'flex items-center justify-center border border-slate-200',
-                        'bg-white text-slate-700 shadow-[0_10px_24px_rgba(15,23,42,0.2)]',
-                        'dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100',
-                        'hover:text-sky-600 dark:hover:text-sky-300 transition-colors'
+                        'flex items-center justify-center border sui-border-weak',
+                        'sui-bg-section sui-color-default sui-shadow-overlay',
+                        'sui-bg-section sui-border-default sui-color-active',
+                        'sui-hover-color-info transition-colors'
                     )}
                 >
                     <HelpCircle className="w-6 h-6" aria-hidden />
@@ -4106,7 +4106,7 @@ const ViewportButton: React.FC<{
         aria-label={label}
         title={title}
         onClick={onClick}
-        className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-700 hover:bg-slate-100 hover:text-sky-600 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-sky-300 transition-colors"
+        className="w-9 h-9 rounded-lg flex items-center justify-center    sui-color-active sui-hover-bg-overlay sui-hover-color-info transition-colors"
     >
         <Icon className="w-5 h-5" aria-hidden />
     </button>
@@ -4118,16 +4118,16 @@ const CanvasHelpPopover: React.FC<{ onClose: () => void }> = ({ onClose }) => (
         aria-label="Canvas instructions"
         className={cn(
             'absolute right-[4.5rem] bottom-0 w-80 rounded-lg shadow-xl',
-            'bg-white dark:bg-slate-900',
-            'border border-slate-200 dark:border-slate-700',
-            'text-slate-700 dark:text-slate-200'
+            'sui-bg-section',
+            'border  sui-border-default',
+            'sui-color-default sui-color-active'
         )}
         onKeyDown={(e) => {
             if (e.key === 'Escape') onClose();
         }}
     >
-        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+        <div className="flex items-center justify-between px-3 py-2 border-b  sui-border-default">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider  sui-color-default">
                 <Info className="w-3.5 h-3.5" aria-hidden />
                 Canvas tips
             </div>
@@ -4135,14 +4135,14 @@ const CanvasHelpPopover: React.FC<{ onClose: () => void }> = ({ onClose }) => (
                 type="button"
                 onClick={onClose}
                 aria-label="Close instructions"
-                className="p-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
+                className="p-0.5 rounded  sui-hover-bg-overlay sui-color-muted"
             >
                 <XIcon className="w-3.5 h-3.5" aria-hidden />
             </button>
         </div>
         <div className="px-3 py-2 text-xs leading-relaxed space-y-2">
             <div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
+                <div className="text-xs font-semibold uppercase tracking-wider  sui-color-muted mb-0.5">
                     Add shapes
                 </div>
                 Drag any tile from <span className="font-semibold">Shapes</span> or a
@@ -4151,14 +4151,14 @@ const CanvasHelpPopover: React.FC<{ onClose: () => void }> = ({ onClose }) => (
                 to group devices.
             </div>
             <div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
+                <div className="text-xs font-semibold uppercase tracking-wider  sui-color-muted mb-0.5">
                     Pan &amp; zoom
                 </div>
                 Wheel or two-finger scroll pans. Hold Cmd / Ctrl while scrolling to
                 zoom, or use the control stack.
             </div>
             <div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
+                <div className="text-xs font-semibold uppercase tracking-wider  sui-color-muted mb-0.5">
                     Shortcuts
                 </div>
                 Del deletes selection, Cmd/Ctrl + Z undoes, Cmd/Ctrl + Shift + Z redoes,
@@ -4187,9 +4187,9 @@ const UndoRedoControls: React.FC<{
         <div
             className={cn(
                 'absolute bottom-3 left-1/2 -translate-x-1/2 z-10',
-                'flex items-center gap-0.5 rounded-lg border bg-white/95',
-                'dark:bg-slate-900/95 dark:border-slate-700',
-                'shadow-[0_2px_6px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.04)]',
+                'flex items-center gap-0.5 rounded-lg border sui-bg-section',
+                'sui-bg-section sui-border-default',
+                'sui-shadow-overlay',
                 'backdrop-blur'
             )}
         >
@@ -4202,8 +4202,8 @@ const UndoRedoControls: React.FC<{
                 className={cn(
                     'p-1.5 rounded-l-lg transition-colors',
                     canUndo
-                        ? 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'
-                        : 'text-slate-300 dark:text-slate-600 cursor-not-allowed'
+                        ? 'sui-color-default  sui-color-active sui-hover-bg-overlay'
+                        : 'sui-color-default cursor-not-allowed'
                 )}
             >
                 <Undo2 className="w-4 h-4" />
@@ -4217,8 +4217,8 @@ const UndoRedoControls: React.FC<{
                 className={cn(
                     'p-1.5 rounded-r-lg transition-colors',
                     canRedo
-                        ? 'text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800'
-                        : 'text-slate-300 dark:text-slate-600 cursor-not-allowed'
+                        ? 'sui-color-default  sui-color-active sui-hover-bg-overlay'
+                        : 'sui-color-default cursor-not-allowed'
                 )}
             >
                 <Redo2 className="w-4 h-4" />
@@ -4266,42 +4266,42 @@ const DeleteConfirmDialog: React.FC<{
     }, [onConfirm, onCancel]);
 
     return (
-        <div className="absolute inset-0 z-30 flex items-center justify-center bg-slate-900/30 backdrop-blur-sm">
+        <div className="absolute inset-0 z-30 flex items-center justify-center sui-bg-section backdrop-blur-sm">
             <div
                 role="dialog"
                 aria-modal="true"
                 aria-label="Confirm deletion"
                 className={cn(
-                    'w-[420px] max-w-[90%] rounded-xl border bg-white dark:bg-slate-900 dark:border-slate-700',
-                    'shadow-[0_4px_12px_rgba(0,0,0,0.08),0_24px_48px_rgba(0,0,0,0.06)]',
+                    'w-[420px] max-w-[90%] rounded-xl border  sui-bg-section sui-border-default',
+                    'sui-shadow-overlay',
                     'p-4'
                 )}
             >
                 <div className="flex items-start gap-3">
-                    <div className="shrink-0 mt-0.5 rounded-full bg-rose-50 dark:bg-rose-950/40 p-1.5">
-                        <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                    <div className="shrink-0 mt-0.5 rounded-full  sui-bg-negative p-1.5">
+                        <AlertTriangle className="w-4 h-4  sui-color-negative" />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                        <div className="text-sm font-semibold  sui-color-active">
                             Delete {summary}?
                         </div>
-                        <div className="mt-1 text-xs text-slate-600 dark:text-slate-400">
+                        <div className="mt-1 text-xs  sui-color-default">
                             {nodeCount > 0
                                 ? 'Connected lines will also be removed. Children of deleted regions will be unparented.'
                                 : 'This connection will be removed from the diagram.'}{' '}
                             You can undo this with {(typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform)) ? '⌘Z' : 'Ctrl+Z'}.
                         </div>
                         {targets.length <= 6 ? (
-                            <ul className="mt-2 max-h-32 overflow-auto rounded border border-slate-200 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-800/40 px-2 py-1 text-xs text-slate-700 dark:text-slate-300">
+                            <ul className="mt-2 max-h-32 overflow-auto rounded border  sui-border-default  sui-bg-popup px-2 py-1 text-xs  sui-color-default">
                                 {targets.map((t) => (
                                     <li key={`${t.kind}:${t.id}`} className="truncate py-0.5">
-                                        <span className="text-slate-400 mr-1">{t.kind === 'edge' ? '↔' : '▢'}</span>
+                                        <span className="sui-color-default mr-1">{t.kind === 'edge' ? '↔' : '▢'}</span>
                                         {t.label}
                                     </li>
                                 ))}
                             </ul>
                         ) : (
-                            <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                            <div className="mt-2 text-xs  sui-color-default">
                                 {targets.length} items will be deleted.
                             </div>
                         )}
@@ -4311,7 +4311,7 @@ const DeleteConfirmDialog: React.FC<{
                     <button
                         type="button"
                         onClick={onCancel}
-                        className="px-3 py-1.5 text-xs rounded-md border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800"
+                        className="px-3 py-1.5 text-xs rounded-md border  sui-border-default  sui-color-active  sui-hover-bg-overlay"
                     >
                         Cancel
                     </button>
@@ -4319,7 +4319,7 @@ const DeleteConfirmDialog: React.FC<{
                         type="button"
                         onClick={onConfirm}
                         autoFocus
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-rose-600 hover:bg-rose-500 text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-rose-500/40"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md sui-bg-negative sui-hover-bg-negative sui-color-active shadow-sm focus:outline-none focus:ring-2 sui-focus-ring"
                     >
                         <Trash2 className="w-3.5 h-3.5" />
                         Delete

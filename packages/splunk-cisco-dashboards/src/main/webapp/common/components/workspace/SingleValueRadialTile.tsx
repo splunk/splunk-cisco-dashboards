@@ -275,7 +275,7 @@ const RadialArc: React.FC<RadialArcProps> = ({
                 y={textY}
                 textAnchor="middle"
                 dominantBaseline="central"
-                className="fill-slate-900 dark:fill-slate-50 tabular-nums"
+                className="sui-fill-active tabular-nums"
                 style={{
                     fontFamily: 'inherit',
                     fontWeight: 800,
@@ -286,7 +286,7 @@ const RadialArc: React.FC<RadialArcProps> = ({
                 {deltaText !== null && (
                     <tspan
                         dx="6"
-                        className="fill-slate-500 dark:fill-slate-400"
+                        className="sui-fill-muted sui-fill-default"
                         style={{ fontSize: '13px', fontWeight: 700 }}
                     >
                         {deltaText}
@@ -341,10 +341,10 @@ const NoDataBody: React.FC<{
     return (
         <div className="flex flex-1 items-center justify-center gap-4 min-h-[88px]">
             <div className="flex flex-col items-center">
-                <span className="text-4xl font-black tracking-tighter leading-none text-slate-400 dark:text-slate-500">
+                <span className="text-4xl font-black tracking-tighter leading-none  sui-color-muted">
                     —
                 </span>
-                <span className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">
+                <span className="text-xs font-medium  sui-color-muted mt-0.5">
                     {subtext}
                 </span>
             </div>

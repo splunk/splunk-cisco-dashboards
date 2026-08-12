@@ -29,56 +29,61 @@ import React, {
   useRef,
   useState,
 } from "react";
+import styled from "styled-components";
 import DotsThreeVertical from "@splunk/react-icons/DotsThreeVertical";
 import { createURL } from "@splunk/splunk-utils/url";
+import Badge from "@splunk/react-ui/Badge";
 import Button from "@splunk/react-ui/Button";
+import Card from "@splunk/react-ui/Card";
 import Dropdown from "@splunk/react-ui/Dropdown";
+import Heading from "@splunk/react-ui/Heading";
 import Menu from "@splunk/react-ui/Menu";
 import Select from "@splunk/react-ui/Select";
 import SpotLight from "@splunk/react-ui/SpotLight";
+import { variables } from "@splunk/themes";
 import useSplunkTheme from "@splunk/themes/useSplunkTheme";
 import {
-    Activity,
-    RefreshCw,
-    Download,
-    Keyboard,
-    RotateCcw,
-    Settings2,
-    ExternalLink,
-    Edit3,
-    Upload,
-    X,
-    Check,
-    CheckCircle2,
-    ChevronDown,
-    ChevronLeft,
-    ChevronRight,
-    AlertCircle,
-    ClipboardCheck,
-    ArrowRight,
-    ArrowUp,
-    ArrowDown,
-    ArrowUpDown,
-    Shield,
-    ShieldKeyhole,
-    Plus,
-    Eye,
-    EyeOff,
-    Search,
-    Tag,
-    Trash2,
-    PanelBottom,
-    PanelRight,
-    PanelRightClose,
-    PanelTop,
-    Sparkles,
-    Servers,
-    NodeModel,
-    WallBricks,
-    RobotFaceWrench,
-    Building2,
-    type SuiIcon,
-} from '@/common/icons/SuiIcon';
+  Activity,
+  RefreshCw,
+  Download,
+  Keyboard,
+  RotateCcw,
+  Settings2,
+  ExternalLink,
+  Edit3,
+  Upload,
+  X,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
+  ClipboardCheck,
+  ArrowRight,
+  ArrowUp,
+  ArrowDown,
+  ArrowUpDown,
+  Shield,
+  ShieldKeyhole,
+  Plus,
+  Eye,
+  EyeOff,
+  Search,
+  Tag,
+  Trash2,
+  PanelBottom,
+  PanelRight,
+  PanelRightClose,
+  PanelTop,
+  Sparkles,
+  Servers,
+  NodeModel,
+  WallBricks,
+  RobotFaceWrench,
+  Building2,
+  type SuiIcon,
+} from "@/common/icons/SuiIcon";
 import { DashboardSection } from "@/common/components/workspace/DashboardSection";
 import { OneCdRadioBar } from "@/common/components/workspace/OneCdPrimitives";
 import { MetricItem } from "@/common/components/workspace/MetricItem";
@@ -130,6 +135,7 @@ import {
   useMetric,
   useKpi,
   useTableData,
+  computeStatus,
   isTableViz,
   isBarBreakdownViz,
   deriveThresholdLines,
@@ -142,7 +148,6 @@ import {
 } from "@/common/hooks/useMetric";
 import { useExportPage } from "@/common/hooks/useExportPage";
 import { useKeyboardShortcuts } from "@/common/hooks/useKeyboardShortcuts";
-import { useTheme } from "@/common/hooks/useTheme";
 import {
   usePersistedMetricOverrides,
   type MetricOverride,
@@ -781,8 +786,9 @@ const buildAddedOverviewMetricConfig = (
 
 const MAP_FOOTER_SLOTS = ["primary", "secondary"] as const;
 type MapFooterSlot = (typeof MAP_FOOTER_SLOTS)[number];
+type MapFooterKpiConfig = KpiConfig & { thresholds?: MetricThresholds };
 
-const DISABLED_MAP_FOOTER_KPI_CONFIG: KpiConfig = {
+const DISABLED_MAP_FOOTER_KPI_CONFIG: MapFooterKpiConfig = {
   id: "__map_footer_unavailable",
   label: "",
   valueField: "value",
@@ -795,10 +801,10 @@ const isMapFooterSlot = (value: unknown): value is MapFooterSlot =>
 
 const buildOverviewMapFooterConfig = (
   records: SearchbaseRecord[] | null,
-): KpiConfig[] => {
+): MapFooterKpiConfig[] => {
   if (records === null) return [];
 
-  const discovered = new Map<MapFooterSlot, KpiConfig>();
+  const discovered = new Map<MapFooterSlot, MapFooterKpiConfig>();
 
   for (const record of records) {
     if (!record.searchName || !record.search) continue;
@@ -825,12 +831,21 @@ const buildOverviewMapFooterConfig = (
       unit: readOverviewString(raw, "unit", 32),
       mockValue: readOverviewString(raw, "mockValue", 120) ?? "Loading...",
       thresholdNote: readOverviewString(raw, "thresholdNote", 2000),
+      thresholds: parseOverviewThresholds(raw.thresholds),
     });
   }
 
   return MAP_FOOTER_SLOTS.map((slot) => discovered.get(slot)).filter(
-    (item): item is KpiConfig => Boolean(item),
+    (item): item is MapFooterKpiConfig => Boolean(item),
   );
+};
+
+const mapFooterStatus = (
+  value: string,
+  thresholds?: MetricThresholds,
+): MetricStatus => {
+  const numericValue = Number.parseFloat(value.replace(/,/g, ""));
+  return computeStatus(numericValue, thresholds);
 };
 
 // =============================================================================
@@ -1278,7 +1293,9 @@ const buildMetricDetailTableConfig = (
         dispatchContext: detail.dispatchContext,
         tag,
         rowKeyField:
-          readDetailStringOption(options, "rowKeyField") ?? columns[0]?.field ?? "",
+          readDetailStringOption(options, "rowKeyField") ??
+          columns[0]?.field ??
+          "",
         emptyMessage:
           readDetailStringOption(options, "emptyMessage") ??
           "No detail rows returned for this time range.",
@@ -1328,8 +1345,6 @@ interface MetricCardProps {
   infoAnchor?: "auto" | "left" | "right";
   /** Tightens nonessential chart chrome when the available viewport is short. */
   compactDensity?: boolean;
-  /** Keeps native Dashboard Studio visualizations aligned with the profile theme. */
-  isDark?: boolean;
   /**
    * Optional override applied on top of the static config. When
    * present, the gear icon is rendered with a "modified" dot.
@@ -1444,7 +1459,6 @@ const MetricCard: React.FC<MetricCardProps> = ({
   onStatus,
   infoAnchor = "auto",
   compactDensity = false,
-  isDark = false,
   override,
   onConfigure,
   onOpenDetailTable,
@@ -1606,7 +1620,6 @@ const MetricCard: React.FC<MetricCardProps> = ({
         detailTableTitle={detailTableConfig?.buttonTitle}
         infoAnchor={infoAnchor}
         isCustomized={Boolean(override)}
-        isDark={isDark}
       />
     );
   }
@@ -1878,9 +1891,7 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
       // supports) means we don't add a new prop — we just pin
       // the existing one regardless of what the searchbase
       // entry asked for.
-      dataValuesDisplay={
-        hidePeak ? "off" : dataValuesDisplay
-      }
+      dataValuesDisplay={hidePeak ? "off" : dataValuesDisplay}
       sparklineDensity={compactDensity ? "compact" : "detailed"}
       status={result.status}
       source={result.source}
@@ -2027,7 +2038,6 @@ const BarBreakdownCardLeaf: React.FC<CommonLeafProps> = ({
 
 interface PieCardLeafProps extends CommonLeafProps {
   sbRecord: SearchbaseRecord | null;
-  isDark: boolean;
 }
 
 /**
@@ -2047,7 +2057,6 @@ const PieCardLeaf: React.FC<PieCardLeafProps> = ({
   detailTableTitle,
   infoAnchor,
   isCustomized,
-  isDark,
 }) => {
   const result = useTableData(dispatchedConfig, range, refreshToken);
 
@@ -2086,7 +2095,6 @@ const PieCardLeaf: React.FC<PieCardLeafProps> = ({
       isCustomized={isCustomized}
       noDataReason={result.noDataReason}
       rangeLabel={result.rangeLabel}
-      isDark={isDark}
     />
   );
 };
@@ -2198,9 +2206,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   signalTickerDefault,
 }) => {
   // ------------------------------ Theme ------------------------------
-  const { resolvedTheme, setTheme } = useTheme();
   const { spacingSmall, spacingXSmall } = useSplunkTheme();
-  const workspaceToggleRef = useRef<HTMLAnchorElement | HTMLButtonElement>(null);
+  const workspaceToggleRef = useRef<HTMLAnchorElement | HTMLButtonElement>(
+    null,
+  );
   useLayoutEffect(() => {
     document.documentElement.classList.add("scd-overview-active");
     document.body.classList.add("scd-overview-active");
@@ -2209,9 +2218,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       document.body.classList.remove("scd-overview-active");
     };
   }, []);
-  useEffect(() => {
-    setTheme(insightsWorkspace.themePreference);
-  }, [insightsWorkspace.id, insightsWorkspace.themePreference, setTheme]);
   const availableDashboardHeight = useAvailableDashboardHeight();
   const compactDensity =
     availableDashboardHeight !== null &&
@@ -2618,12 +2624,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     setFocusedSection(null);
   }, [insightsWorkspace.id]);
 
-  const toggleSectionFocus = useCallback(
-    (section: SectionId) => {
-      setFocusedSection((current) => (current === section ? null : section));
-    },
-    [],
-  );
+  const toggleSectionFocus = useCallback((section: SectionId) => {
+    setFocusedSection((current) => (current === section ? null : section));
+  }, []);
 
   const toggleSectionCollapsed = useCallback(
     (section: SectionId) => {
@@ -2749,13 +2752,15 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   // ------------------------------ Help overlay ------------------------------
   const [helpOpen, setHelpOpen] = useState(false);
   const [headerActionsOpen, setHeaderActionsOpen] = useState(false);
-  const headerActionsToggleRef = useRef<
-    HTMLAnchorElement | HTMLButtonElement
-  >(null);
+  const headerActionsToggleRef = useRef<HTMLAnchorElement | HTMLButtonElement>(
+    null,
+  );
   const closeHeaderActions = useCallback((restoreFocus = true) => {
     setHeaderActionsOpen(false);
     if (restoreFocus) {
-      window.requestAnimationFrame(() => headerActionsToggleRef.current?.focus());
+      window.requestAnimationFrame(() =>
+        headerActionsToggleRef.current?.focus(),
+      );
     }
   }, []);
 
@@ -3349,7 +3354,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     ) => {
       if (!record.id) return;
       if (destination === "workspace" && !canManageWorkspaceConfig) {
-        window.alert("You do not have permission to change this shared workspace.");
+        window.alert(
+          "You do not have permission to change this shared workspace.",
+        );
         return;
       }
       const sectionMetrics = metricConfig.filter((m) => m.section === section);
@@ -3409,7 +3416,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       };
       setWorkspaceLayoutStatus("saving");
       try {
-        await saveWorkspaceLayout(insightsWorkspace, { [section]: nextSectionLayout });
+        await saveWorkspaceLayout(insightsWorkspace, {
+          [section]: nextSectionLayout,
+        });
         setWorkspaceLayout(nextLayout);
         applyPersonalViewState();
         setWorkspaceLayoutStatus("saved");
@@ -3612,7 +3621,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             {SECTION_ICON_MASK_OFFSETS.map(([x, y]) => (
               <span
                 key={`${x}:${y}`}
-                className="absolute inset-0 bg-current"
+                className="absolute inset-0 sui-bg-accent"
                 style={{
                   ...iconMaskStyle,
                   transform: `translate(${x}px, ${y}px)`,
@@ -4074,7 +4083,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   // are admin-controlled (searchbase.conf `viz_options.mapFooter`)
   // now, same as the main tile grid — `base` is already the
   // effective value, no per-user override to layer on top.
-  const buildEffectiveMapFooterKpiCfg = (base: KpiConfig): KpiConfig => {
+  const buildEffectiveMapFooterKpiCfg = (
+    base: MapFooterKpiConfig,
+  ): MapFooterKpiConfig => {
     if (searchbaseByName === null || searchbaseById === null) {
       return { ...base, spl: undefined, savedSearch: undefined };
     }
@@ -4097,14 +4108,14 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
 
   const mapPrimaryBaseCfg = mapFooterKpiConfig[0];
   const mapSecondaryBaseCfg = mapFooterKpiConfig[1];
-  const effectiveMapPrimaryCfg = useMemo<KpiConfig>(
+  const effectiveMapPrimaryCfg = useMemo<MapFooterKpiConfig>(
     () =>
       mapPrimaryBaseCfg
         ? buildEffectiveMapFooterKpiCfg(mapPrimaryBaseCfg)
         : DISABLED_MAP_FOOTER_KPI_CONFIG,
     [mapPrimaryBaseCfg, searchbaseById, searchbaseByName],
   );
-  const effectiveMapSecondaryCfg = useMemo<KpiConfig>(
+  const effectiveMapSecondaryCfg = useMemo<MapFooterKpiConfig>(
     () =>
       mapSecondaryBaseCfg
         ? buildEffectiveMapFooterKpiCfg(mapSecondaryBaseCfg)
@@ -4117,72 +4128,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     timeRange,
     refreshToken,
   );
-  const mapPrimaryOverride = mapPrimaryBaseCfg
-    ? overrides[mapPrimaryBaseCfg.id]
-    : undefined;
-  const mapSecondaryOverride = mapSecondaryBaseCfg
-    ? overrides[mapSecondaryBaseCfg.id]
-    : undefined;
-  const mapPrimaryBaseRecord = mapPrimaryBaseCfg
-    ? resolveSearchbaseRecordForConfig(
-        mapPrimaryBaseCfg,
-        searchbaseById,
-        searchbaseByName,
-      )
-    : null;
-  const mapSecondaryBaseRecord = mapSecondaryBaseCfg
-    ? resolveSearchbaseRecordForConfig(
-        mapSecondaryBaseCfg,
-        searchbaseById,
-        searchbaseByName,
-      )
-    : null;
-  const mapPrimaryDrilldownSpl = mapPrimary.spl;
-  const mapSecondaryDrilldownSpl = mapSecondary.spl;
-  const handleMapPrimaryOpenInSearch = useCallback(() => {
-    if (!mapPrimaryDrilldownSpl) return;
-    const url = splunkSearchAppUrl(
-      mapPrimaryDrilldownSpl,
-      timeRange,
-      effectiveMapPrimaryCfg.dispatchContext,
-    );
-    if (typeof window !== "undefined") {
-      window.open(url, "_blank", "noopener,noreferrer");
-    }
-  }, [
-    effectiveMapPrimaryCfg.dispatchContext,
-    mapPrimaryDrilldownSpl,
-    timeRange,
-  ]);
-  const handleMapSecondaryOpenInSearch = useCallback(() => {
-    if (!mapSecondaryDrilldownSpl) return;
-    const url = splunkSearchAppUrl(
-      mapSecondaryDrilldownSpl,
-      timeRange,
-      effectiveMapSecondaryCfg.dispatchContext,
-    );
-    if (typeof window !== "undefined") {
-      window.open(url, "_blank", "noopener,noreferrer");
-    }
-  }, [
-    effectiveMapSecondaryCfg.dispatchContext,
-    mapSecondaryDrilldownSpl,
-    timeRange,
-  ]);
-  const mapPrimaryBindingFootnote = !mapPrimaryBaseCfg
-    ? ""
-    : mapPrimaryBaseRecord
-      ? `Searchbase: ${mapPrimaryBaseRecord.searchName}`
-      : mapPrimaryBaseCfg.searchbaseId
-        ? `Searchbase id: ${mapPrimaryBaseCfg.searchbaseId}`
-        : "(inline SPL)";
-  const mapSecondaryBindingFootnote = !mapSecondaryBaseCfg
-    ? ""
-    : mapSecondaryBaseRecord
-      ? `Searchbase: ${mapSecondaryBaseRecord.searchName}`
-      : mapSecondaryBaseCfg.searchbaseId
-        ? `Searchbase id: ${mapSecondaryBaseCfg.searchbaseId}`
-        : "(inline SPL)";
 
   // ------------------------------ Keyboard shortcuts ------------------------------
   // Drilldowns open in a new tab so the executive can keep the
@@ -4293,9 +4238,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       className={cn(
         "scd-overview-page scd-c3-surface relative isolate flex w-full min-w-0 max-w-full flex-col overflow-hidden font-sans",
         compactDensity && "scd-overview-compact",
-        "bg-slate-50 text-slate-900",
-        "dark:bg-slate-950 dark:text-slate-100",
-        resolvedTheme === "dark" && "dark scd-one-cisco-spotlight-canvas",
+        "sui-bg-page sui-color-active",
+        "sui-bg-page sui-color-active",
+        "dark scd-one-cisco-spotlight-canvas sui-bg-page sui-color-default",
       )}
     >
       <SpotLight
@@ -4305,7 +4250,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         scale={0.5}
       />
       {/* Header */}
-      <header className="scd-c3-toolbar h-14 flex-shrink-0 bg-transparent dark:bg-transparent border-0 px-4 flex items-center justify-between shadow-none backdrop-filter-none">
+      <header className="scd-c3-toolbar h-14 flex-shrink-0  sui-bg-transparent border-0 px-4 flex items-center justify-between shadow-none backdrop-filter-none">
         {/*
          * The branding cluster (logo + title/subtitle + edit
          * pencil) is the hover-trigger group. The pencil sits
@@ -4328,7 +4273,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           )}
         >
           {effectiveLogoSrc ? (
-            <div className="w-9 h-9 bg-sky-600 rounded-lg flex items-center justify-center text-white overflow-hidden p-1 flex-shrink-0">
+            <div className="w-9 h-9 sui-bg-accent rounded-lg flex items-center justify-center sui-color-active overflow-hidden p-1 flex-shrink-0">
               <img
                 src={effectiveLogoSrc}
                 alt="Dashboard logo"
@@ -4355,7 +4300,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               className="flex min-w-0 items-center"
               style={{ columnGap: spacingSmall }}
             >
-              <h1 className="truncate text-lg font-bold leading-none tracking-[-0.01em] text-slate-900 dark:text-slate-100">
+              <h1 className="truncate text-lg font-bold leading-none tracking-[-0.01em]  sui-color-active">
                 {effectiveTitle}
               </h1>
               <Dropdown
@@ -4397,7 +4342,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 </Menu>
               </Dropdown>
             </div>
-            <p className="mt-1 truncate text-xs font-medium leading-none text-slate-500 dark:text-slate-400">
+            <p className="mt-1 truncate text-xs font-medium leading-none  sui-color-default">
               {effectiveSubtitle}
             </p>
           </div>
@@ -4406,7 +4351,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             onClick={() => setBrandingEditorOpen(true)}
             title="Edit branding (title, subtitle, logo)"
             aria-label="Edit branding (title, subtitle, logo)"
-            className="flex-shrink-0 p-1 rounded text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-slate-100 dark:hover:bg-slate-800 opacity-0 group-hover/branding:opacity-100 focus-visible:opacity-100 transition"
+            className="flex-shrink-0 p-1 rounded sui-color-default  sui-hover-color-info  sui-hover-bg-overlay opacity-0 group-hover/branding:opacity-100 focus-visible:opacity-100 transition"
           >
             <Edit3 className="w-3.5 h-3.5" />
           </button>
@@ -4600,11 +4545,11 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       {signalTickerConfig.showPriorityDrilldown ? (
         <div
           data-testid="priority-drilldown-row"
-          className="scd-c3-toolbar group flex-shrink-0 relative block border-b border-sky-200 dark:border-sky-800/60 bg-white hover:bg-sky-50/80 dark:bg-slate-900 dark:hover:bg-sky-950/30 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-inset"
+          className="scd-c3-toolbar group flex-shrink-0 relative block border-b  sui-border-info   sui-bg-section sui-hover-bg-info transition-colors focus:outline-none focus-visible:ring-2 sui-focus-visible-ring focus-visible:ring-inset"
         >
           <div
             aria-hidden="true"
-            className="absolute left-0 top-0 bottom-0 w-1 bg-sky-600 dark:bg-sky-500"
+            className="absolute left-0 top-0 bottom-0 w-1  sui-bg-accent"
           />
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 pl-5 pr-4 py-2">
             <a
@@ -4613,18 +4558,18 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               rel="noopener noreferrer"
               title={`Open ${selectedPriorityDrilldown.title} in a new tab`}
               aria-label={`Open ${selectedPriorityDrilldown.title} in a new tab`}
-              className="min-w-0 h-7 flex items-center gap-3 rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+              className="min-w-0 h-7 flex items-center gap-3 rounded-sm focus:outline-none focus-visible:ring-2 sui-focus-visible-ring"
             >
-              <div className="flex-shrink-0 w-7 h-7 rounded bg-sky-600 text-white flex items-center justify-center shadow-sm">
-                <ClipboardCheck className="w-4 h-4 stroke-[2.5px]" />
+              <div className="flex-shrink-0 w-7 h-7 rounded sui-bg-accent sui-color-active flex items-center justify-center shadow-sm">
+                <ClipboardCheck className="w-4 h-4 sui-stroke-default" />
               </div>
-              <span className="text-xs font-black text-sky-700 dark:text-sky-300 uppercase tracking-[0.25em] whitespace-nowrap flex-shrink-0 hidden sm:inline w-[172px]">
+              <span className="text-xs font-black  sui-color-info uppercase tracking-[0.25em] whitespace-nowrap flex-shrink-0 hidden sm:inline w-[172px]">
                 {PRIORITY_DRILLDOWN_LABEL}
               </span>
-              <span className="text-[13px] font-bold text-slate-900 dark:text-slate-100 truncate min-w-0">
+              <span className="sui-color-default font-bold  sui-color-active truncate min-w-0">
                 {selectedPriorityDrilldown.title}
               </span>
-              <span className="text-xs text-slate-600 dark:text-slate-400 truncate min-w-0 hidden lg:inline">
+              <span className="text-xs  sui-color-default truncate min-w-0 hidden lg:inline">
                 {selectedPriorityDrilldown.description}
               </span>
             </a>
@@ -4632,7 +4577,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               <label className="hidden md:flex flex-shrink-0 items-center gap-1.5 h-7 !mb-0">
                 <span className="sr-only">Priority drill-down dashboard</span>
                 <Settings2
-                  className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500"
+                  className="w-3.5 h-3.5  sui-color-muted"
                   aria-hidden="true"
                 />
                 <select
@@ -4642,7 +4587,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   }
                   title="Choose priority drill-down dashboard"
                   aria-label="Choose priority drill-down dashboard"
-                  className="h-7 !mb-0 w-[220px] max-w-[22vw] rounded-md border border-slate-200 dark:border-slate-700 bg-white/90 dark:bg-slate-900/90 px-2 py-0 text-xs leading-none font-semibold text-slate-700 dark:text-slate-200 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  className="h-7 !mb-0 w-[220px] max-w-[22vw] rounded-md border  sui-border-default  sui-bg-section px-2 py-0 text-xs leading-none font-semibold  sui-color-active shadow-sm focus:outline-none focus:ring-2 sui-focus-ring"
                 >
                   {APP_PRIORITY_DRILLDOWNS.map((item) => (
                     <option key={item.viewName} value={item.viewName}>
@@ -4658,10 +4603,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 title={`Open ${selectedPriorityDrilldown.title} in a new tab`}
                 aria-label={`Open ${selectedPriorityDrilldown.title} in a new tab`}
                 data-testid="featured-report-cta"
-                className="h-7 flex-shrink-0 inline-flex items-center gap-1.5 px-3 rounded bg-sky-600 group-hover:bg-sky-500 active:bg-sky-700 text-white text-xs font-bold tracking-wide uppercase shadow-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+                className="h-7 flex-shrink-0 inline-flex items-center gap-1.5 px-3 rounded sui-bg-accent sui-group-hover-bg-accent sui-active-bg-accent sui-color-active text-xs font-bold tracking-wide uppercase shadow-sm transition-colors focus:outline-none focus-visible:ring-2 sui-focus-visible-ring"
               >
                 {PRIORITY_DRILLDOWN_CTA}
-                <ArrowRight className="w-3.5 h-3.5 stroke-[2.5px]" />
+                <ArrowRight className="w-3.5 h-3.5 sui-stroke-default" />
               </a>
             </div>
           </div>
@@ -4684,10 +4629,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 and xl stops. */}
       <main
         className={cn(
-          "flex-1 min-h-0 w-full",
-          isVerticalSplit
-            ? "overflow-y-auto overflow-x-hidden"
-            : "overflow-hidden",
+          "flex-1 min-h-[400px] w-full overflow-y-auto overflow-x-hidden",
           compactDensity ? "px-1 py-1.5" : "px-1.5 py-2",
         )}
       >
@@ -4750,7 +4692,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             // scrollbar from showing up due to the cards'
             // shadow bleed at narrow widths.
             className={cn(
-              "scd-overview-metrics flex flex-col gap-2 min-h-0 min-w-0 w-full overflow-y-auto overflow-x-hidden",
+              "scd-overview-metrics flex flex-col gap-3 min-h-0 min-w-0 w-full overflow-y-auto overflow-x-hidden",
               mapVisible && mapPosition === "right"
                 ? "xl:w-[var(--scd-left-pct)] xl:flex-shrink-0"
                 : "",
@@ -4792,8 +4734,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 sectionHeights[section] ?? sectionHeightBounds.defaultLevel;
               const isCompactHeight =
                 heightLevel === sectionHeightBounds.minLevel;
-              const renderCompactHeight =
-                isCompactHeight && !isSectionFocused;
+              const renderCompactHeight = isCompactHeight && !isSectionFocused;
               const baseMinHeight = renderCompactHeight
                 ? SECTION_HEIGHT_H1_BASE_PX
                 : compactDensity
@@ -4911,7 +4852,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                       }
                     >
                       {visibleIds.length === 0 && (
-                        <div className="flex flex-1 items-center justify-center rounded-md border border-dashed border-slate-200 bg-slate-50/70 px-4 text-center text-xs font-semibold text-slate-400 dark:border-slate-700 dark:bg-slate-800/40 dark:text-slate-500">
+                        <div className="flex flex-1 items-center justify-center rounded-md border border-dashed   px-4 text-center text-xs font-semibold  sui-border-default sui-bg-popup sui-color-muted">
                           No tiles configured.
                         </div>
                       )}
@@ -4975,7 +4916,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                                 !isSectionFocused &&
                                 (compactDensity || renderCompactHeight)
                               }
-                              isDark={resolvedTheme === "dark"}
                               onOpenDetailTable={setActiveDetailTable}
                               onConfigure={() =>
                                 openPicker(cfg.id, cfg.label, {
@@ -5026,8 +4966,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               onDoubleClick={resetSplit}
               className={cn(
                 "scd-overview-splitter flex flex-shrink-0 items-center justify-center group relative",
-                "rounded-full transition-colors",
-                "focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400",
+                "rounded-full border sui-border-strong transition-colors",
+                "focus:outline-none focus-visible:ring-2 sui-focus-visible-ring",
                 // Right mode hides the splitter on sub-xl
                 // widths because the layout collapses to a
                 // single column there. Vertical modes
@@ -5038,8 +4978,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   ? "h-1.5 my-0.5 w-full cursor-row-resize"
                   : "w-1.5 mx-0.5 cursor-col-resize",
                 dragging
-                  ? "bg-sky-500"
-                  : "bg-slate-200 dark:bg-slate-700 hover:bg-sky-400 dark:hover:bg-sky-500",
+                  ? "sui-bg-accent"
+                  : "sui-bg-overlay sui-hover-bg-accent",
               )}
               data-map-position={mapPosition}
             >
@@ -5057,19 +4997,19 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               >
                 <span
                   className={cn(
-                    "block rounded-full bg-white",
+                    "block rounded-full sui-bg-border-strong",
                     isVerticalSplit ? "h-0.5 w-1" : "w-0.5 h-1",
                   )}
                 />
                 <span
                   className={cn(
-                    "block rounded-full bg-white",
+                    "block rounded-full sui-bg-border-strong",
                     isVerticalSplit ? "h-0.5 w-1" : "w-0.5 h-1",
                   )}
                 />
                 <span
                   className={cn(
-                    "block rounded-full bg-white",
+                    "block rounded-full sui-bg-border-strong",
                     isVerticalSplit ? "h-0.5 w-1" : "w-0.5 h-1",
                   )}
                 />
@@ -5096,13 +5036,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               data-map-position={mapPosition}
               style={verticalMapStyle}
             >
-              <div className="scd-c3-panel flex-1 min-h-0 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-3 shadow-sm flex flex-col overflow-hidden">
+              <div className="scd-c3-panel sui-bg-section rounded-lg border sui-border-weak p-3 shadow-sm flex flex-col">
                 <div className="mb-2 flex flex-shrink-0 flex-wrap items-start justify-between gap-2">
                   <div className="min-w-[12rem] flex-1">
-                    <h2 className="text-base font-bold text-sky-900 dark:text-sky-200 uppercase tracking-wide leading-none">
+                    <h2 className="text-base font-bold  sui-color-info uppercase tracking-wide leading-none">
                       {topologyHeaderName}
                     </h2>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-0.5">
+                    <p className="text-xs  sui-color-muted font-medium mt-0.5">
                       {topologyHeaderSubtitle}
                     </p>
                   </div>
@@ -5114,9 +5054,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   </div>
                 </div>
 
-                <div className="flex-1 min-h-0">
-                  {regionalView === "map" ? (
-                    /* Build 1190 — render the live map
+                {regionalView === "map" ? (
+                  <MapViewport>
+                    {/* Build 1190 — render the live map
                                        during export instead of swapping
                                        to TopologySiteTable. The Build
                                        1186 substitute approach was
@@ -5142,11 +5082,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                                        them are kept in `tailwind.css`
                                        so other components can opt in
                                        to the same swap pattern in the
-                                       future. */
+                                       future. */}
                     <CustomerTopologyMap
                       key={`${insightsWorkspace.id}-${topologyResetKey}`}
                       topology={workspaceTopology}
-                      isDark={resolvedTheme === "dark"}
                       earliestTime={timeRange.earliest}
                       latestTime={timeRange.latest}
                       refreshToken={refreshToken}
@@ -5161,10 +5100,12 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                         }
                       }}
                     />
-                  ) : (
+                  </MapViewport>
+                ) : (
+                  <div className="flex-1 min-h-0">
                     <TopologySiteTable topology={workspaceTopology} />
-                  )}
-                </div>
+                  </div>
+                )}
 
                 {mapPrimaryBaseCfg || mapSecondaryBaseCfg ? (
                   <div className="mt-3 grid grid-cols-2 gap-3 flex-shrink-0">
@@ -5172,56 +5113,20 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                       <KpiCard
                         label={effectiveMapPrimaryCfg.label}
                         value={mapPrimary.value}
-                        source={mapPrimary.source}
-                        accentClassName="bg-emerald-500"
-                        description={mapPrimaryBaseCfg.description}
-                        thresholdNote={mapPrimaryBaseCfg.thresholdNote}
-                        bindingFootnote={mapPrimaryBindingFootnote}
-                        onOpenInSearch={
-                          mapPrimaryDrilldownSpl
-                            ? handleMapPrimaryOpenInSearch
-                            : undefined
-                        }
-                        onConfigure={() =>
-                          openPicker(
-                            mapPrimaryBaseCfg.id,
-                            mapPrimaryBaseCfg.label,
-                            {
-                              savedSearch: mapPrimaryBaseCfg.savedSearch,
-                              valueField: mapPrimaryBaseCfg.valueField,
-                              unit: mapPrimaryBaseCfg.unit,
-                            },
-                          )
-                        }
-                        isCustomized={Boolean(mapPrimaryOverride)}
+                        status={mapFooterStatus(
+                          mapPrimary.value,
+                          effectiveMapPrimaryCfg.thresholds,
+                        )}
                       />
                     ) : null}
                     {mapSecondaryBaseCfg ? (
                       <KpiCard
                         label={effectiveMapSecondaryCfg.label}
                         value={mapSecondary.value}
-                        source={mapSecondary.source}
-                        accentClassName="bg-sky-500"
-                        description={mapSecondaryBaseCfg.description}
-                        thresholdNote={mapSecondaryBaseCfg.thresholdNote}
-                        bindingFootnote={mapSecondaryBindingFootnote}
-                        onOpenInSearch={
-                          mapSecondaryDrilldownSpl
-                            ? handleMapSecondaryOpenInSearch
-                            : undefined
-                        }
-                        onConfigure={() =>
-                          openPicker(
-                            mapSecondaryBaseCfg.id,
-                            mapSecondaryBaseCfg.label,
-                            {
-                              savedSearch: mapSecondaryBaseCfg.savedSearch,
-                              valueField: mapSecondaryBaseCfg.valueField,
-                              unit: mapSecondaryBaseCfg.unit,
-                            },
-                          )
-                        }
-                        isCustomized={Boolean(mapSecondaryOverride)}
+                        status={mapFooterStatus(
+                          mapSecondary.value,
+                          effectiveMapSecondaryCfg.thresholds,
+                        )}
                       />
                     ) : null}
                   </div>
@@ -5416,8 +5321,7 @@ const ALL_ADD_TILE_CATEGORIES = "__all_add_tile_categories";
 const ALL_ADD_TILE_SUB_CATEGORIES = "__all_add_tile_sub_categories";
 const ADD_TILE_TAG_CHIP_LIMIT = 24;
 
-const makeDefaultAddTileAppSelection = (): Set<string> =>
-  new Set();
+const makeDefaultAddTileAppSelection = (): Set<string> => new Set();
 
 const isDefaultAddTileAppSelection = (
   selection: ReadonlySet<string>,
@@ -5579,14 +5483,12 @@ const OverviewAddTileAppMultiSelect: React.FC<
           }
         }}
         className={cn(
-          "flex min-h-[42px] w-full cursor-pointer flex-wrap items-center gap-1 rounded-lg border bg-white px-2 py-1.5 text-sm transition-shadow dark:bg-slate-950",
-          open
-            ? "border-sky-400 ring-2 ring-sky-400/25"
-            : "border-slate-200 dark:border-slate-800",
+          "flex min-h-[42px] w-full cursor-pointer flex-wrap items-center gap-1 rounded-lg border  px-2 py-1.5 text-sm transition-shadow sui-bg-page",
+          open ? "sui-border-info ring-2 sui-focus-ring" : "sui-border-weak",
         )}
       >
         {isAllApps ? (
-          <span className="min-w-0 flex-1 truncate font-semibold text-slate-700 dark:text-slate-100">
+          <span className="min-w-0 flex-1 truncate font-semibold  sui-color-active">
             All apps ({appOptions.length})
           </span>
         ) : (
@@ -5595,7 +5497,7 @@ const OverviewAddTileAppMultiSelect: React.FC<
             return (
               <span
                 key={app}
-                className="inline-flex max-w-full items-center gap-1 rounded-full bg-sky-500 py-0.5 pl-2 pr-1 text-xs font-bold uppercase tracking-wide text-white"
+                className="inline-flex max-w-full items-center gap-1 rounded-full sui-bg-accent py-0.5 pl-2 pr-1 text-xs font-bold uppercase tracking-wide sui-color-active"
               >
                 <span className="max-w-[220px] truncate">{app}</span>
                 {count > 0 && (
@@ -5609,7 +5511,7 @@ const OverviewAddTileAppMultiSelect: React.FC<
                   }}
                   title={`Remove ${app} app filter`}
                   aria-label={`Remove ${app} app filter`}
-                  className="rounded-full p-0.5 hover:bg-sky-700/40"
+                  className="rounded-full p-0.5 sui-hover-bg-accent"
                 >
                   <X className="h-2.5 w-2.5" />
                 </button>
@@ -5618,11 +5520,11 @@ const OverviewAddTileAppMultiSelect: React.FC<
           })
         )}
         {!isAllApps && selectedList.length === 0 && (
-          <span className="min-w-0 flex-1 truncate font-semibold text-slate-500 dark:text-slate-400">
+          <span className="min-w-0 flex-1 truncate font-semibold  sui-color-default">
             No matching apps selected
           </span>
         )}
-        <ChevronDown className="ml-auto h-4 w-4 shrink-0 text-slate-400" />
+        <ChevronDown className="ml-auto h-4 w-4 shrink-0 sui-color-default" />
       </div>
 
       {open && (
@@ -5631,7 +5533,7 @@ const OverviewAddTileAppMultiSelect: React.FC<
           role="listbox"
           aria-label="Filter searches by app"
           aria-multiselectable="true"
-          className="absolute left-0 right-0 top-full z-30 mt-1 max-h-64 overflow-auto rounded-lg border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900"
+          className="absolute left-0 right-0 top-full z-30 mt-1 max-h-64 overflow-auto rounded-lg border   shadow-xl sui-border-weak sui-bg-section"
         >
           <button
             type="button"
@@ -5640,25 +5542,23 @@ const OverviewAddTileAppMultiSelect: React.FC<
             onClick={() => onChange(new Set())}
             className={cn(
               "flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs transition-colors focus:outline-none",
-              isAllApps
-                ? "bg-sky-50 dark:bg-sky-900/30"
-                : "hover:bg-sky-50 dark:hover:bg-sky-900/30",
+              isAllApps ? "sui-bg-info" : "sui-hover-bg-info",
             )}
           >
-            <span className="flex min-w-0 items-center gap-2 truncate font-semibold text-slate-700 dark:text-slate-200">
+            <span className="flex min-w-0 items-center gap-2 truncate font-semibold  sui-color-active">
               <span
                 className={cn(
                   "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border",
                   isAllApps
-                    ? "border-sky-500 bg-sky-500 text-white"
-                    : "border-slate-300 dark:border-slate-700",
+                    ? "sui-border-info sui-bg-accent sui-color-active"
+                    : "sui-border-default",
                 )}
               >
                 {isAllApps && <Check className="h-3 w-3" />}
               </span>
               <span className="truncate">All apps</span>
             </span>
-            <span className="shrink-0 text-xs font-bold text-slate-400 dark:text-slate-500">
+            <span className="shrink-0 text-xs font-bold  sui-color-muted">
               {appOptions.length}
             </span>
           </button>
@@ -5674,25 +5574,23 @@ const OverviewAddTileAppMultiSelect: React.FC<
                 onClick={() => toggleApp(app)}
                 className={cn(
                   "flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs transition-colors focus:outline-none",
-                  selected
-                    ? "bg-sky-50 dark:bg-sky-900/30"
-                    : "hover:bg-sky-50 dark:hover:bg-sky-900/30",
+                  selected ? "sui-bg-info" : "sui-hover-bg-info",
                 )}
               >
-                <span className="flex min-w-0 items-center gap-2 truncate text-slate-700 dark:text-slate-200">
+                <span className="flex min-w-0 items-center gap-2 truncate  sui-color-active">
                   <span
                     className={cn(
                       "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border",
                       selected
-                        ? "border-sky-500 bg-sky-500 text-white"
-                        : "border-slate-300 dark:border-slate-700",
+                        ? "sui-border-info sui-bg-accent sui-color-active"
+                        : "sui-border-default",
                     )}
                   >
                     {selected && <Check className="h-3 w-3" />}
                   </span>
                   <span className="truncate">{app}</span>
                 </span>
-                <span className="shrink-0 text-xs font-bold text-slate-400 dark:text-slate-500">
+                <span className="shrink-0 text-xs font-bold  sui-color-muted">
                   {count}
                 </span>
               </button>
@@ -6174,7 +6072,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   return (
     <>
       <div
-        className="fixed inset-0 z-[1500] bg-slate-950/30 backdrop-blur-sm"
+        className="fixed inset-0 z-[1500] sui-bg-page backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -6182,14 +6080,14 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
         role="dialog"
         aria-modal="true"
         aria-label={`Add search to ${sectionTitle}`}
-        className="fixed top-0 right-0 z-[1600] h-full w-full max-w-[calc(100vw-12px)] border-l border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900 sm:w-[500px] xl:w-[540px] flex flex-col"
+        className="fixed top-0 right-0 z-[1600] h-full w-full max-w-[calc(100vw-12px)] border-l   shadow-2xl sui-border-weak sui-bg-section sm:w-[500px] xl:w-[540px] flex flex-col"
       >
-        <div className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+        <div className="flex flex-shrink-0 items-center justify-between gap-3 border-b  px-4 py-3 sui-border-weak">
           <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+            <p className="text-xs font-bold uppercase tracking-widest  sui-color-muted">
               Add search
             </p>
-            <p className="truncate text-sm font-black text-slate-800 dark:text-slate-100">
+            <p className="truncate text-sm font-black  sui-color-active">
               {sectionTitle}
             </p>
           </div>
@@ -6199,8 +6097,8 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
               className={cn(
                 "rounded-full border px-2 py-1 text-xs font-black uppercase tracking-wider",
                 atVisibleMax
-                  ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/40 dark:text-amber-200"
-                  : "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-200",
+                  ? "sui-border-warning sui-bg-warning sui-color-warning"
+                  : "sui-border-info sui-bg-info sui-color-info",
               )}
             >
               {countLabel}
@@ -6210,7 +6108,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
               onClick={onClose}
               title="Close (Esc)"
               aria-label="Close add search panel"
-              className="rounded p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+              className="rounded p-1.5 sui-color-default transition-colors   focus:outline-none focus-visible:ring-2 sui-focus-visible-ring sui-hover-bg-overlay sui-hover-color-active"
             >
               <X className="h-4 w-4" />
             </button>
@@ -6219,7 +6117,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
 
         <div className="flex-shrink-0 space-y-2 px-4 py-3">
           <label className="relative block">
-            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 sui-color-default" />
             <input
               ref={searchInputRef}
               type="text"
@@ -6227,17 +6125,17 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Filter by name, description, or tag..."
               maxLength={120}
-              className="w-full rounded-md border border-slate-200 bg-white py-1.5 pl-8 pr-2.5 text-[12px] text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              className="w-full rounded-md border   py-1.5 pl-8 pr-2.5   focus:outline-none focus:ring-2 sui-focus-ring sui-border-default sui-bg-popup sui-color-active"
             />
           </label>
 
-          <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-2.5 dark:border-slate-800 dark:bg-slate-950/50">
+          <div className="rounded-lg border   p-2.5 sui-border-weak sui-bg-page">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+              <span className="text-xs font-black uppercase tracking-[0.18em] sui-color-default">
                 Add to
               </span>
               <div
-                className="inline-flex rounded-md border border-slate-200 bg-white p-0.5 dark:border-slate-800 dark:bg-slate-950"
+                className="inline-flex rounded-md border   p-0.5 sui-border-weak sui-bg-page"
                 role="group"
                 aria-label="Where to add this search"
               >
@@ -6247,8 +6145,8 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                   className={cn(
                     "rounded px-2.5 py-1 text-xs font-black uppercase tracking-wider transition-colors",
                     addDestination === "personal"
-                      ? "bg-sky-600 text-white shadow-sm"
-                      : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100",
+                      ? "sui-bg-accent sui-color-active shadow-sm"
+                      : "sui-color-muted  sui-color-default sui-hover-color-active",
                   )}
                 >
                   For me
@@ -6260,8 +6158,8 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                     className={cn(
                       "rounded px-2.5 py-1 text-xs font-black uppercase tracking-wider transition-colors",
                       addDestination === "workspace"
-                        ? "bg-sky-600 text-white shadow-sm"
-                        : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100",
+                        ? "sui-bg-accent sui-color-active shadow-sm"
+                        : "sui-color-muted  sui-color-default sui-hover-color-active",
                     )}
                   >
                     Shared workspace
@@ -6269,7 +6167,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                 )}
               </div>
             </div>
-            <p className="mt-1 text-xs leading-snug text-slate-500 dark:text-slate-400">
+            <p className="mt-1 text-xs leading-snug  sui-color-default">
               {addDestination === "workspace"
                 ? "Every viewer of this workspace will see the tile."
                 : "Only you will see the tile in this browser."}
@@ -6287,7 +6185,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                   ? "Hide filters"
                   : "Show filters (App, Visibility, Category, Sub-cat, Tags)"
               }
-              className="flex items-center gap-1.5 rounded px-1.5 py-1 -ml-1.5 text-xs font-bold uppercase tracking-widest text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-100"
+              className="flex items-center gap-1.5 rounded px-1.5 py-1 -ml-1.5 text-xs font-bold uppercase tracking-widest  transition-colors   sui-color-default sui-hover-bg-overlay sui-hover-color-active"
             >
               {filtersOpen ? (
                 <ChevronDown className="h-3 w-3" />
@@ -6297,7 +6195,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
               <span>Filters</span>
               {activeFilterCount > 0 && (
                 <span
-                  className="ml-1 rounded-full bg-sky-100 px-1.5 py-px text-xs font-semibold normal-case tracking-normal text-sky-700 dark:bg-sky-900/50 dark:text-sky-300"
+                  className="ml-1 rounded-full  px-1.5 py-px text-xs font-semibold normal-case tracking-normal  sui-bg-info sui-color-info"
                   title={`${activeFilterCount} active filter${activeFilterCount === 1 ? "" : "s"}`}
                 >
                   {activeFilterCount} active
@@ -6307,7 +6205,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
             <div className="flex items-center gap-2">
               <span
                 title="Searchbase stanzas matching the current app, visibility, category, sub-category, tag, scope, and text filters"
-                className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-black uppercase tracking-wider text-sky-700 shadow-sm dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-200"
+                className="inline-flex items-center rounded-full border   px-2.5 py-1 text-xs font-black uppercase tracking-wider  shadow-sm sui-border-info sui-bg-info sui-color-info"
               >
                 {availableSearchLabel}
               </span>
@@ -6316,7 +6214,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                   type="button"
                   onClick={handleClearFacets}
                   title="Reset every filter to its default"
-                  className="text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-200"
+                  className="text-xs font-bold uppercase tracking-widest   sui-color-muted sui-hover-color-active"
                 >
                   Clear filters
                 </button>
@@ -6327,15 +6225,15 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
           {filtersOpen && (
             <div
               id="overview-add-search-filters"
-              className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-900/50"
+              className="space-y-3 rounded-lg border   p-3 sui-border-weak sui-bg-section"
             >
               {showScopeToggle && (
                 <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
-                  <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                  <span className="text-xs font-black uppercase tracking-[0.18em] sui-color-default">
                     Scope
                   </span>
                   <div
-                    className="inline-flex w-fit rounded-md border border-slate-200 bg-white p-0.5 dark:border-slate-800 dark:bg-slate-950"
+                    className="inline-flex w-fit rounded-md border   p-0.5 sui-border-weak sui-bg-page"
                     role="group"
                     aria-label="Search scope"
                   >
@@ -6345,8 +6243,8 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                       className={cn(
                         "rounded px-2 py-1 text-xs font-black uppercase tracking-wider transition-colors",
                         !showAllProfileSearches
-                          ? "bg-sky-50 text-sky-700 shadow-sm dark:bg-sky-950/50 dark:text-sky-200"
-                          : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100",
+                          ? "sui-bg-info  shadow-sm sui-bg-info sui-color-info"
+                          : "sui-color-muted  sui-color-default sui-hover-color-active",
                       )}
                     >
                       Suggested
@@ -6357,8 +6255,8 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                       className={cn(
                         "rounded px-2 py-1 text-xs font-black uppercase tracking-wider transition-colors",
                         showAllProfileSearches
-                          ? "bg-sky-50 text-sky-700 shadow-sm dark:bg-sky-950/50 dark:text-sky-200"
-                          : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100",
+                          ? "sui-bg-info  shadow-sm sui-bg-info sui-color-info"
+                          : "sui-color-muted  sui-color-default sui-hover-color-active",
                       )}
                     >
                       All searches
@@ -6369,7 +6267,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
 
               <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
                 <span
-                  className="text-xs font-black uppercase tracking-[0.18em] text-slate-400"
+                  className="text-xs font-black uppercase tracking-[0.18em] sui-color-default"
                   title="Splunk app the search dispatches in"
                 >
                   App
@@ -6383,40 +6281,40 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
               </div>
 
               <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-start">
-                <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                <span className="text-xs font-black uppercase tracking-[0.18em] sui-color-default">
                   Visibility
                 </span>
                 <div className="grid grid-cols-3 gap-2">
-                  <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                  <label className="flex min-h-[58px] items-center gap-2 rounded-lg border   px-2.5 py-2 text-xs font-bold leading-snug  sui-border-weak sui-bg-page sui-color-active">
                     <input
                       type="checkbox"
                       checked={includeHiddenSearches}
                       onChange={(e) =>
                         setIncludeHiddenSearches(e.target.checked)
                       }
-                      className="h-4 w-4 shrink-0 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900"
+                      className="h-4 w-4 shrink-0 rounded  sui-color-info sui-focus-ring sui-border-default sui-bg-section"
                     />
                     <span>Show hidden searches</span>
                   </label>
-                  <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                  <label className="flex min-h-[58px] items-center gap-2 rounded-lg border   px-2.5 py-2 text-xs font-bold leading-snug  sui-border-weak sui-bg-page sui-color-active">
                     <input
                       type="checkbox"
                       checked={includeDrilldownSearches}
                       onChange={(e) =>
                         setIncludeDrilldownSearches(e.target.checked)
                       }
-                      className="h-4 w-4 shrink-0 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900"
+                      className="h-4 w-4 shrink-0 rounded  sui-color-info sui-focus-ring sui-border-default sui-bg-section"
                     />
                     <span>Show drill-down searches</span>
                   </label>
-                  <label className="flex min-h-[58px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-bold leading-snug text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                  <label className="flex min-h-[58px] items-center gap-2 rounded-lg border   px-2.5 py-2 text-xs font-bold leading-snug  sui-border-weak sui-bg-page sui-color-active">
                     <input
                       type="checkbox"
                       checked={includeTableSearches}
                       onChange={(e) =>
                         setIncludeTableSearches(e.target.checked)
                       }
-                      className="h-4 w-4 shrink-0 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-900"
+                      className="h-4 w-4 shrink-0 rounded  sui-color-info sui-focus-ring sui-border-default sui-bg-section"
                     />
                     <span>Show table searches</span>
                   </label>
@@ -6425,14 +6323,14 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
 
               {categories.length > 0 && (
                 <label className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
-                  <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                  <span className="text-xs font-black uppercase tracking-[0.18em] sui-color-default">
                     Category
                   </span>
                   <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
                     aria-label="Filter searches by category"
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-950"
+                    className="w-full rounded-lg border   px-3 py-2 text-sm font-semibold  outline-none sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-weak sui-bg-page sui-color-active sui-focus-ring"
                   >
                     <option value={ALL_ADD_TILE_CATEGORIES}>
                       All categories
@@ -6449,14 +6347,14 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
               {selectedCategory !== ALL_ADD_TILE_CATEGORIES &&
                 subCategories.length > 0 && (
                   <label className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
-                    <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                    <span className="text-xs font-black uppercase tracking-[0.18em] sui-color-default">
                       Sub-cat
                     </span>
                     <select
                       value={selectedSubCategory}
                       onChange={(e) => setSelectedSubCategory(e.target.value)}
                       aria-label="Filter searches by sub-category"
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-950"
+                      className="w-full rounded-lg border   px-3 py-2 text-sm font-semibold  outline-none sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-weak sui-bg-page sui-color-active sui-focus-ring"
                     >
                       <option value={ALL_ADD_TILE_SUB_CATEGORIES}>
                         All sub-categories ({subCategories.length})
@@ -6472,7 +6370,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
 
               {(allTagsWithCounts.length > 0 || activeTags.size > 0) && (
                 <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-start">
-                  <span className="pt-2 text-xs font-black uppercase tracking-[0.18em] text-slate-400">
+                  <span className="pt-2 text-xs font-black uppercase tracking-[0.18em] sui-color-default">
                     Tags
                   </span>
                   <div className="relative" ref={tagSelectRef}>
@@ -6482,19 +6380,19 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                         tagInputRef.current?.focus();
                       }}
                       className={cn(
-                        "flex min-h-[42px] cursor-text flex-wrap items-center gap-1 rounded-lg border bg-white px-2 py-1.5 transition-shadow dark:bg-slate-950",
+                        "flex min-h-[42px] cursor-text flex-wrap items-center gap-1 rounded-lg border  px-2 py-1.5 transition-shadow sui-bg-page",
                         tagDropdownOpen
-                          ? "border-sky-400 ring-2 ring-sky-400/25"
-                          : "border-slate-200 dark:border-slate-800",
+                          ? "sui-border-info ring-2 sui-focus-ring"
+                          : "sui-border-weak",
                       )}
                     >
-                      <Tag className="ml-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      <Tag className="ml-0.5 h-3.5 w-3.5 shrink-0 sui-color-default" />
                       {Array.from(activeTags).map((tag) => {
                         const count = tagCountByName.get(tag) ?? 0;
                         return (
                           <span
                             key={tag}
-                            className="inline-flex items-center gap-1 rounded-full bg-sky-500 py-0.5 pl-2 pr-1 text-xs font-bold uppercase tracking-wide text-white"
+                            className="inline-flex items-center gap-1 rounded-full sui-bg-accent py-0.5 pl-2 pr-1 text-xs font-bold uppercase tracking-wide sui-color-active"
                           >
                             {tag}
                             {count > 0 && (
@@ -6510,7 +6408,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                               }}
                               title={`Remove ${tag} filter`}
                               aria-label={`Remove ${tag} filter`}
-                              className="rounded-full p-0.5 hover:bg-sky-700/40"
+                              className="rounded-full p-0.5 sui-hover-bg-accent"
                             >
                               <X className="h-2.5 w-2.5" />
                             </button>
@@ -6534,7 +6432,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                         }
                         maxLength={64}
                         aria-label="Filter results by tag"
-                        className="min-w-[120px] flex-1 border-0 bg-transparent py-1 text-sm text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100"
+                        className="min-w-[120px] flex-1 border-0 sui-bg-transparent py-1 text-sm  outline-none  sui-color-active"
                       />
                     </div>
 
@@ -6542,10 +6440,10 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                       <div
                         role="listbox"
                         aria-label="Available tags"
-                        className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-auto rounded-lg border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900"
+                        className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-auto rounded-lg border   shadow-xl sui-border-weak sui-bg-section"
                       >
                         {tagDropdownOptions.length === 0 ? (
-                          <p className="px-3 py-2 text-xs italic text-slate-400 dark:text-slate-500">
+                          <p className="px-3 py-2 text-xs italic  sui-color-muted">
                             {tagFilter.trim()
                               ? `No more tags match "${tagFilter.trim()}".`
                               : activeTags.size > 0
@@ -6568,15 +6466,15 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                                   className={cn(
                                     "flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs transition-colors focus:outline-none",
                                     isFirstTyped
-                                      ? "bg-sky-50 dark:bg-sky-900/30"
-                                      : "hover:bg-sky-50 dark:hover:bg-sky-900/30",
+                                      ? "sui-bg-info"
+                                      : "sui-hover-bg-info",
                                   )}
                                 >
-                                  <span className="flex min-w-0 items-center gap-1.5 truncate text-slate-700 dark:text-slate-200">
-                                    <Tag className="h-3 w-3 shrink-0 text-slate-400" />
+                                  <span className="flex min-w-0 items-center gap-1.5 truncate  sui-color-active">
+                                    <Tag className="h-3 w-3 shrink-0 sui-color-default" />
                                     <span className="truncate">{tag}</span>
                                   </span>
-                                  <span className="shrink-0 text-xs font-bold text-slate-400 dark:text-slate-500">
+                                  <span className="shrink-0 text-xs font-bold  sui-color-muted">
                                     {count}
                                   </span>
                                 </button>
@@ -6585,7 +6483,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                             {!tagFilter.trim() &&
                               allTagsWithCounts.length - activeTags.size >
                                 tagDropdownOptions.length && (
-                                <p className="border-t border-slate-100 px-3 py-1.5 text-xs text-slate-400 dark:border-slate-800 dark:text-slate-500">
+                                <p className="border-t  px-3 py-1.5 text-xs  sui-border-weak sui-color-muted">
                                   Top {tagDropdownOptions.length} of{" "}
                                   {allTagsWithCounts.length - activeTags.size} -
                                   type to filter.
@@ -6604,12 +6502,12 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
 
         <div className="min-h-0 flex-1 overflow-auto px-3 pb-3">
           {loading && (
-            <div className="px-3 py-8 text-center text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+            <div className="px-3 py-8 text-center text-xs font-bold uppercase tracking-widest  sui-color-muted">
               Loading searchbase.conf
             </div>
           )}
           {!loading && filteredRecords.length === 0 && (
-            <div className="px-3 py-8 text-center text-xs font-semibold text-slate-400 dark:text-slate-500">
+            <div className="px-3 py-8 text-center text-xs font-semibold  sui-color-muted">
               No searches match the current filters.
             </div>
           )}
@@ -6629,39 +6527,39 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                   className={cn(
                     "mb-2 rounded-lg border p-3 transition-colors",
                     hiddenInSection
-                      ? "border-amber-200 bg-amber-50/70 dark:border-amber-900/70 dark:bg-amber-950/30"
+                      ? "sui-border-warning sui-bg-warning"
                       : alreadyInSection
-                        ? "border-sky-200 bg-sky-50/70 dark:border-sky-900/70 dark:bg-sky-950/30"
-                        : "border-slate-200 bg-white hover:border-sky-200 hover:bg-sky-50/40 dark:border-slate-800 dark:bg-slate-950 dark:hover:border-sky-900/70 dark:hover:bg-sky-950/20",
+                        ? "sui-border-info sui-bg-info"
+                        : "sui-border-weak sui-bg-page sui-hover-border-info sui-hover-bg-info",
                   )}
                 >
                   <div className="flex items-start gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex min-w-0 items-center gap-2">
                         <p
-                          className="truncate text-[12px] font-black text-slate-800 dark:text-slate-100"
+                          className="truncate  font-black  sui-color-active"
                           title={record.searchName}
                         >
                           {record.searchName}
                         </p>
                         {hiddenInSection ? (
-                          <EyeOff className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-300" />
+                          <EyeOff className="h-3.5 w-3.5 shrink-0  sui-color-warning" />
                         ) : alreadyInSection ? (
-                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-sky-600 dark:text-sky-300" />
+                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0  sui-color-info" />
                         ) : null}
                         {record.searchHidden && (
-                          <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-xs font-black uppercase tracking-wider text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+                          <span className="shrink-0 rounded-full  px-1.5 py-0.5 text-xs font-black uppercase tracking-wider  sui-bg-popup sui-color-muted">
                             Hidden
                           </span>
                         )}
                       </div>
-                      <p className="mt-0.5 truncate text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                      <p className="mt-0.5 truncate text-xs font-bold uppercase tracking-wider  sui-color-muted">
                         {[record.category, record.subCategory]
                           .filter(Boolean)
                           .join(" / ") || record.id}
                       </p>
                       {description && (
-                        <p className="mt-1 line-clamp-2 text-xs leading-snug text-slate-500 dark:text-slate-400">
+                        <p className="mt-1 line-clamp-2 text-xs leading-snug  sui-color-default">
                           {description}
                         </p>
                       )}
@@ -6670,7 +6568,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                           {tags.map((tag) => (
                             <span
                               key={tag}
-                              className="rounded-full bg-slate-100 px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-300"
+                              className="rounded-full  px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide  sui-bg-popup sui-color-default"
                             >
                               {tag}
                             </span>
@@ -6684,7 +6582,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                         type="button"
                         onClick={() => onUnhide(record)}
                         title={`Show ${record.searchName} in ${sectionTitle}`}
-                        className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md bg-amber-500 px-2 text-xs font-black uppercase tracking-wider text-white transition-colors hover:bg-amber-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                        className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md sui-bg-warning px-2 text-xs font-black uppercase tracking-wider sui-color-active transition-colors sui-hover-bg-warning focus:outline-none focus-visible:ring-2 sui-focus-visible-ring"
                       >
                         <Eye className="h-3.5 w-3.5" />
                         Show
@@ -6694,7 +6592,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                         type="button"
                         onClick={() => onRemove(record)}
                         title={`Remove ${record.searchName} from ${sectionTitle}`}
-                        className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md border border-red-200 bg-white px-2 text-xs font-black uppercase tracking-wider text-red-600 transition-colors hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-300 dark:border-red-900/70 dark:bg-slate-950 dark:text-red-300 dark:hover:bg-red-950/30"
+                        className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md border   px-2 text-xs font-black uppercase tracking-wider  transition-colors  focus:outline-none focus-visible:ring-2 sui-focus-visible-ring sui-border-negative sui-bg-page sui-color-negative sui-hover-bg-negative"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                         Remove
@@ -6712,10 +6610,10 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                               : `Add ${record.searchName}`
                         }
                         className={cn(
-                          "inline-flex h-8 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-black uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400",
+                          "inline-flex h-8 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-black uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 sui-focus-visible-ring",
                           disabled
-                            ? "cursor-not-allowed bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"
-                            : "bg-sky-600 text-white hover:bg-sky-500 active:bg-sky-700",
+                            ? "cursor-not-allowed   sui-bg-popup sui-color-muted"
+                            : "sui-bg-accent sui-color-active sui-hover-bg-accent sui-active-bg-accent",
                         )}
                       >
                         <Plus className="h-3.5 w-3.5" />
@@ -6742,38 +6640,62 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
 // Tiny KPI card under the map
 // =============================================================================
 
+const MapViewport = styled.div`
+  flex: 1 0 400px;
+  min-height: 400px;
+`;
+
 interface KpiCardProps {
   label: string;
   value: string;
-  source: "live" | "mock" | "loading";
-  accentClassName: string;
-  /** When provided, renders a gear icon that opens the KPI picker. */
-  onConfigure?: () => void;
-  /** Marks the gear with a small dot when the tile is overridden. */
-  isCustomized?: boolean;
-  /** Body text for the (?) info tooltip. Hides the icon when omitted. */
-  description?: string;
-  /**
-   * Qualitative "what counts as good?" sentence rendered in the
-   * THRESHOLDS section. The KPI cards in this column are string-
-   * valued (site labels — top incident volume, operational lead),
-   * so they have no numeric threshold; this note explains how to
-   * read the value instead.
-   */
-  thresholdNote?: string;
-  /**
-   * Italic footnote shown at the bottom of the tooltip — typically the
-   * search binding (saved-search stanza or "(inline SPL)") so the
-   * operator can trace the data lineage at a glance.
-   */
-  bindingFootnote?: string;
-  /**
-   * Click handler for the ExternalLink icon — opens the literal SPL
-   * the tile dispatched in the standard Splunk Search & Reporting UI.
-   * Hidden when omitted, matching `MetricItem`'s behavior.
-   */
-  onOpenInSearch?: () => void;
+  status: MetricStatus;
 }
+
+const MAP_KPI_STATUS_TOKENS = {
+  healthy: variables.severityColorNormal,
+  warning: variables.severityColorWarning,
+  critical: variables.severityColorCritical,
+  unknown: variables.severityColorUnknown,
+};
+
+const MAP_KPI_STATUS_LABELS: Record<MetricStatus, string> = {
+  healthy: "Healthy",
+  warning: "Warning",
+  critical: "Critical",
+  unknown: "Unknown",
+};
+
+const MapKpiStatusBadge = styled(Badge)<{ $status: MetricStatus }>`
+  padding: ${variables.spacingXSmall} ${variables.spacingSmall};
+  border: 1px solid ${({ $status }) => MAP_KPI_STATUS_TOKENS[$status]};
+  font-family: ${variables.fontFamily};
+  font-size: ${variables.fontSizeSmall};
+  font-weight: ${variables.fontWeightSemiBold};
+  line-height: ${variables.lineHeightSingle};
+  white-space: nowrap;
+`;
+
+const MapKpiContent = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  gap: ${variables.spacingSmall};
+  text-align: center;
+`;
+
+const MapKpiValue = styled.p<{ $status: MetricStatus }>`
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: ${({ $status }) => MAP_KPI_STATUS_TOKENS[$status]};
+  font-family: ${variables.fontFamily};
+  font-size: 1.875rem;
+  font-weight: ${variables.fontWeightBold};
+  line-height: ${variables.lineHeightSingle};
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
 
 // =============================================================================
 // Regional view toggle (MAP / TABLE)
@@ -6840,8 +6762,8 @@ const MetricDetailTableStateRow: React.FC<MetricDetailTableStateRowProps> = ({
     kind === "loading" ? RefreshCw : kind === "error" ? AlertCircle : Search;
   const iconClasses =
     kind === "error"
-      ? "border-rose-400/25 bg-rose-500/10 text-rose-300"
-      : "border-sky-400/20 bg-sky-500/10 text-sky-300";
+      ? "sui-border-negative sui-bg-negative sui-color-negative"
+      : "sui-border-info sui-bg-accent sui-color-info";
 
   return (
     <tr>
@@ -6862,10 +6784,10 @@ const MetricDetailTableStateRow: React.FC<MetricDetailTableStateRowProps> = ({
               aria-hidden="true"
             />
           </span>
-          <strong className="text-sm font-semibold text-slate-100">
+          <strong className="text-sm font-semibold sui-color-active">
             {title}
           </strong>
-          <span className="text-xs leading-5 text-slate-400">{message}</span>
+          <span className="text-xs leading-5 sui-color-default">{message}</span>
         </div>
       </td>
     </tr>
@@ -7140,15 +7062,15 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
       openInSearchHref={searchUrl}
       openInSearchbaseHref={searchbaseUrl}
       wide={displayColumns.length > 5}
-      contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-950/[0.28]"
+      contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden sui-bg-page"
       headerMeta={
         statusField ? (
           <>
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-950/70 px-2 py-1 text-xs font-semibold text-emerald-300">
+            <span className="inline-flex items-center gap-1 rounded-full sui-bg-positive px-2 py-1 text-xs font-semibold sui-color-positive">
               <CheckCircle2 className="h-3 w-3" />
               {availableCount} available
             </span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-rose-950/70 px-2 py-1 text-xs font-semibold text-rose-300">
+            <span className="inline-flex items-center gap-1 rounded-full sui-bg-negative px-2 py-1 text-xs font-semibold sui-color-negative">
               <AlertCircle className="h-3 w-3" />
               {unavailableCount} unavailable
             </span>
@@ -7157,15 +7079,15 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
       }
     >
       <div
-        className="flex shrink-0 items-center border-b border-white/[0.1] bg-slate-950/[0.28] px-4 py-2.5"
+        className="flex shrink-0 items-center border-b sui-border-weak sui-bg-page px-4 py-2.5"
         data-detail-search-summary="true"
       >
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-bold text-[#edf5fb]">
+          <div className="truncate text-sm font-bold sui-color-default">
             {activeConfig.metadata.title}
           </div>
           {activeClassification.length > 0 && (
-            <div className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#7890a6]">
+            <div className="mt-0.5  font-bold uppercase tracking-[0.12em] sui-color-default">
               {activeClassification.join(" • ")}
             </div>
           )}
@@ -7179,13 +7101,13 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
               type="button"
               disabled={!canGoBack}
               onClick={showPrevious}
-              className="inline-flex items-center gap-1 rounded border border-white/[0.12] bg-slate-900/70 px-2 py-1 text-xs font-bold text-slate-200 transition-colors hover:border-sky-400/60 hover:text-sky-200 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-35"
+              className="inline-flex items-center gap-1 rounded border sui-border-weak sui-bg-section px-2 py-1 text-xs font-bold sui-color-active transition-colors sui-hover-border-info sui-hover-color-info focus:outline-none focus:ring-2 sui-focus-ring disabled:cursor-not-allowed disabled:opacity-35"
             >
               <ChevronLeft className="h-3 w-3" aria-hidden="true" />
               Back
             </button>
             <span
-              className="min-w-[4.5rem] text-center text-xs font-bold tabular-nums text-slate-400"
+              className="min-w-[4.5rem] text-center text-xs font-bold tabular-nums sui-color-default"
               aria-live="polite"
             >
               {activeIndex + 1} / {config.targets.length}
@@ -7194,7 +7116,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
               type="button"
               disabled={!canGoForward}
               onClick={showNext}
-              className="inline-flex items-center gap-1 rounded border border-white/[0.12] bg-slate-900/70 px-2 py-1 text-xs font-bold text-slate-200 transition-colors hover:border-sky-400/60 hover:text-sky-200 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-35"
+              className="inline-flex items-center gap-1 rounded border sui-border-weak sui-bg-section px-2 py-1 text-xs font-bold sui-color-active transition-colors sui-hover-border-info sui-hover-color-info focus:outline-none focus:ring-2 sui-focus-ring disabled:cursor-not-allowed disabled:opacity-35"
             >
               Forward
               <ChevronRight className="h-3 w-3" aria-hidden="true" />
@@ -7206,150 +7128,148 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
         className="min-h-[154px] max-h-[min(46vh,520px)] shrink overflow-auto overscroll-contain"
         data-detail-results-region="content-aware"
       >
-        <table className="w-full min-w-[860px] bg-transparent text-sm">
-            <thead className="sticky top-0 z-10 border-b border-white/[0.1] bg-slate-950/[0.72] backdrop-blur-xl">
-              <tr className="text-left text-xs font-bold text-[#8ea3b8]">
-                {displayColumns.map((column, index) => {
-                  const isSorted = sortState?.field === column.field;
-                  const SortIcon = isSorted
-                    ? sortState.direction === "asc"
-                      ? ArrowUp
-                      : ArrowDown
-                    : ArrowUpDown;
-                  return (
-                    <th
-                      key={column.field}
-                      scope="col"
-                      aria-sort={
-                        isSorted
-                          ? sortState.direction === "asc"
-                            ? "ascending"
-                            : "descending"
-                          : "none"
-                      }
+        <table className="w-full min-w-[860px] sui-bg-transparent text-sm">
+          <thead className="sticky top-0 z-10 border-b sui-border-weak sui-bg-page backdrop-blur-xl">
+            <tr className="text-left text-xs font-bold sui-color-default">
+              {displayColumns.map((column, index) => {
+                const isSorted = sortState?.field === column.field;
+                const SortIcon = isSorted
+                  ? sortState.direction === "asc"
+                    ? ArrowUp
+                    : ArrowDown
+                  : ArrowUpDown;
+                return (
+                  <th
+                    key={column.field}
+                    scope="col"
+                    aria-sort={
+                      isSorted
+                        ? sortState.direction === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                    }
+                    className={cn(
+                      index === 0 ? "px-5" : "px-4",
+                      "py-3",
+                      column.align === "right" && "text-right",
+                    )}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleSortColumn(column.field)}
+                      title={`Sort by ${column.label}`}
                       className={cn(
-                        index === 0 ? "px-5" : "px-4",
-                        "py-3",
-                        column.align === "right" && "text-right",
+                        "group inline-flex w-full items-center gap-1.5 rounded px-1 py-0.5 -mx-1 text-left transition-colors  sui-hover-color-info focus:outline-none focus:ring-2 sui-focus-ring",
+                        column.align === "right"
+                          ? "justify-end"
+                          : "justify-start",
+                        isSorted && "sui-color-info",
                       )}
                     >
-                      <button
-                        type="button"
-                        onClick={() => handleSortColumn(column.field)}
-                        title={`Sort by ${column.label}`}
+                      <span>{column.label}</span>
+                      <SortIcon
                         className={cn(
-                          "group inline-flex w-full items-center gap-1.5 rounded px-1 py-0.5 -mx-1 text-left transition-colors hover:text-sky-600 dark:hover:text-sky-300 focus:outline-none focus:ring-2 focus:ring-sky-400",
-                          column.align === "right"
-                            ? "justify-end"
-                            : "justify-start",
-                          isSorted && "text-sky-600 dark:text-sky-300",
+                          "h-3 w-3 flex-shrink-0",
+                          isSorted
+                            ? "opacity-100"
+                            : "opacity-35 group-hover:opacity-80",
                         )}
-                      >
-                        <span>{column.label}</span>
-                        <SortIcon
+                        aria-hidden="true"
+                      />
+                    </button>
+                  </th>
+                );
+              })}
+            </tr>
+          </thead>
+          <tbody className="divide-y sui-divide-weak">
+            {loading ? (
+              <MetricDetailTableStateRow
+                columnCount={columnCount}
+                kind="loading"
+                title="Loading details"
+                message={`Running ${activeConfig.metadata.title.toLowerCase()} for the selected time range.`}
+              />
+            ) : errorMessage ? (
+              <MetricDetailTableStateRow
+                columnCount={columnCount}
+                kind="error"
+                title="Details unavailable"
+                message={`${errorMessage} Open the query in Search to inspect the failure.`}
+              />
+            ) : rows.length === 0 ? (
+              <MetricDetailTableStateRow
+                columnCount={columnCount}
+                kind="empty"
+                title="No results in this time range"
+                message={`${activeConfig.emptyMessage} Try a wider range or open the query in Search.`}
+              />
+            ) : (
+              sortedRows.map((row, rowIndex) => {
+                const rowStatus = statusField ? row[statusField] : "";
+                const rowIsAvailable = rowStatus === availableStatus;
+                const rowKey =
+                  (activeConfig.rowKeyField && row[activeConfig.rowKeyField]) ||
+                  displayColumns.map((column) => row[column.field]).join("|") ||
+                  "detail-row";
+                return (
+                  <tr
+                    key={`${rowKey}-${rowIndex}`}
+                    className="sui-bg-section sui-bg-page transition-colors sui-hover-bg-info"
+                  >
+                    {displayColumns.map((column, index) => {
+                      const value = row[column.field];
+                      const isStatusColumn = column.kind === "status";
+                      const statusIsAvailable = value === availableStatus;
+                      const statusIsUnavailable = value === unavailableStatus;
+                      return (
+                        <td
+                          key={column.field}
                           className={cn(
-                            "h-3 w-3 flex-shrink-0",
-                            isSorted
-                              ? "opacity-100"
-                              : "opacity-35 group-hover:opacity-80",
+                            index === 0
+                              ? "px-5 font-medium sui-color-default"
+                              : "px-4 sui-color-default",
+                            "py-3",
+                            column.align === "right" &&
+                              "text-right tabular-nums",
+                            column.truncate && "max-w-xs truncate",
+                            column.kind === "metric" &&
+                              statusField &&
+                              (rowIsAvailable
+                                ? "font-medium  sui-color-positive"
+                                : "font-medium  sui-color-negative"),
                           )}
-                          aria-hidden="true"
-                        />
-                      </button>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#1e293b]">
-              {loading ? (
-                <MetricDetailTableStateRow
-                  columnCount={columnCount}
-                  kind="loading"
-                  title="Loading details"
-                  message={`Running ${activeConfig.metadata.title.toLowerCase()} for the selected time range.`}
-                />
-              ) : errorMessage ? (
-                <MetricDetailTableStateRow
-                  columnCount={columnCount}
-                  kind="error"
-                  title="Details unavailable"
-                  message={`${errorMessage} Open the query in Search to inspect the failure.`}
-                />
-              ) : rows.length === 0 ? (
-                <MetricDetailTableStateRow
-                  columnCount={columnCount}
-                  kind="empty"
-                  title="No results in this time range"
-                  message={`${activeConfig.emptyMessage} Try a wider range or open the query in Search.`}
-                />
-              ) : (
-                sortedRows.map((row, rowIndex) => {
-                  const rowStatus = statusField ? row[statusField] : "";
-                  const rowIsAvailable = rowStatus === availableStatus;
-                  const rowKey =
-                    (activeConfig.rowKeyField && row[activeConfig.rowKeyField]) ||
-                    displayColumns
-                      .map((column) => row[column.field])
-                      .join("|") ||
-                    "detail-row";
-                  return (
-                    <tr
-                      key={`${rowKey}-${rowIndex}`}
-                      className="odd:bg-slate-900/[0.22] even:bg-slate-950/[0.18] transition-colors hover:bg-sky-900/[0.24]"
-                    >
-                      {displayColumns.map((column, index) => {
-                        const value = row[column.field];
-                        const isStatusColumn = column.kind === "status";
-                        const statusIsAvailable = value === availableStatus;
-                        const statusIsUnavailable = value === unavailableStatus;
-                        return (
-                          <td
-                            key={column.field}
-                            className={cn(
-                              index === 0
-                                ? "px-5 font-medium text-[#f3f7fb]"
-                                : "px-4 text-[#d6e1eb]",
-                              "py-3",
-                              column.align === "right" &&
-                                "text-right tabular-nums",
-                              column.truncate && "max-w-xs truncate",
-                              column.kind === "metric" &&
-                                statusField &&
-                                (rowIsAvailable
-                                  ? "font-medium text-emerald-600 dark:text-emerald-300"
-                                  : "font-medium text-rose-600 dark:text-rose-300"),
-                            )}
-                          >
-                            {isStatusColumn ? (
-                              <span
-                                className={cn(
-                                  "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold",
-                                  statusIsAvailable
-                                    ? "bg-emerald-600 text-white"
-                                    : statusIsUnavailable
-                                      ? "bg-rose-600 text-white"
-                                      : "bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200",
-                                )}
-                              >
-                                {statusIsAvailable ? (
-                                  <CheckCircle2 className="w-3 h-3" />
-                                ) : (
-                                  <AlertCircle className="w-3 h-3" />
-                                )}
-                                {value}
-                              </span>
-                            ) : (
-                              value
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
+                        >
+                          {isStatusColumn ? (
+                            <span
+                              className={cn(
+                                "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold",
+                                statusIsAvailable
+                                  ? "sui-bg-positive sui-color-active"
+                                  : statusIsUnavailable
+                                    ? "sui-bg-negative sui-color-active"
+                                    : "sui-bg-popup sui-color-active",
+                              )}
+                            >
+                              {statusIsAvailable ? (
+                                <CheckCircle2 className="w-3 h-3" />
+                              ) : (
+                                <AlertCircle className="w-3 h-3" />
+                              )}
+                              {value}
+                            </span>
+                          ) : (
+                            value
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
         </table>
       </div>
       <SearchbaseDrilldownGuidance
@@ -7488,12 +7408,12 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
   };
 
   const inputClass =
-    "w-full px-2 py-1.5 text-sm bg-white dark:bg-slate-800 border " +
-    "border-slate-300 dark:border-slate-600 rounded text-slate-900 " +
-    "dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 " +
-    "focus:outline-none focus:ring-1 focus:ring-sky-400";
+    "w-full px-2 py-1.5 text-sm  sui-bg-popup border " +
+    "sui-border-default rounded sui-color-active " +
+    "sui-color-active sui-placeholder-muted " +
+    "focus:outline-none focus:ring-1 sui-focus-ring";
   const labelClass =
-    "block text-xs font-bold text-slate-600 dark:text-slate-400 " +
+    "block text-xs font-bold  sui-color-default " +
     "uppercase tracking-wider mb-1";
 
   return (
@@ -7506,12 +7426,12 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
         if (!isSaving && e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
-      <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl w-full max-w-2xl mx-4">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+      <div className="absolute inset-0 sui-bg-section backdrop-blur-sm" />
+      <div className="relative  sui-bg-section border  sui-border-default rounded-lg shadow-xl w-full max-w-2xl mx-4">
+        <div className="flex items-center justify-between px-4 py-3 border-b  sui-border-default">
           <h2
             id="section-titles-editor-title"
-            className="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider"
+            className="text-sm font-bold  sui-color-active uppercase tracking-wider"
           >
             Edit sections
           </h2>
@@ -7522,9 +7442,9 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
             title="Close"
             aria-label="Close"
             className={cn(
-              "p-1 rounded text-slate-400 hover:text-slate-600",
-              "dark:hover:text-slate-300 hover:bg-slate-100",
-              "dark:hover:bg-slate-800 transition-colors",
+              "p-1 rounded sui-color-default sui-hover-color-default",
+              "sui-hover-color-default sui-hover-bg-section",
+              "sui-hover-bg-overlay transition-colors",
               isSaving && "cursor-not-allowed opacity-50",
             )}
           >
@@ -7534,7 +7454,7 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
 
         <div className="px-4 py-4 space-y-4">
           <div className="flex items-center justify-between gap-3">
-            <div className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+            <div className="text-xs font-semibold  sui-color-default">
               {layoutDraft.length} of {maxSections} visible
             </div>
             <button
@@ -7543,9 +7463,9 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
               disabled={!canAddSection || isSaving}
               className={cn(
                 "inline-flex items-center gap-1.5 px-3 py-1.5 rounded",
-                "border border-sky-200 bg-sky-50 text-xs font-bold",
-                "text-sky-700 hover:bg-sky-100 dark:border-sky-900/60",
-                "dark:bg-sky-950/40 dark:text-sky-200",
+                "border sui-border-info sui-bg-info text-xs font-bold",
+                "sui-color-info sui-hover-bg-info sui-border-info",
+                "sui-bg-info sui-color-info",
                 (!canAddSection || isSaving) && "cursor-not-allowed opacity-50",
               )}
             >
@@ -7569,8 +7489,8 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
                   className={cn(
                     "rounded-lg border p-3 transition-colors",
                     isVisible
-                      ? "border-sky-200 bg-sky-50/60 dark:border-sky-900/60 dark:bg-sky-950/20"
-                      : "border-slate-200 bg-slate-50/80 dark:border-slate-700 dark:bg-slate-800/40",
+                      ? "sui-border-info sui-bg-info"
+                      : "sui-border-weak  sui-border-default sui-bg-popup",
                   )}
                 >
                   <div className="mb-2 flex items-center justify-between gap-2">
@@ -7581,7 +7501,7 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
                       {isVisible
                         ? `Section ${visibleIndex + 1}`
                         : "Hidden section"}
-                      <span className="ml-2 text-xs font-black text-slate-400 dark:text-slate-500">
+                      <span className="ml-2 text-xs font-black  sui-color-muted">
                         {sectionKeyLabel}
                       </span>
                     </label>
@@ -7601,8 +7521,8 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
                         "inline-flex h-8 items-center gap-1.5 rounded px-2",
                         "text-xs font-bold transition-colors",
                         isVisible
-                          ? "bg-white text-slate-600 hover:text-slate-900 dark:bg-slate-900 dark:text-slate-300"
-                          : "bg-sky-600 text-white hover:bg-sky-500",
+                          ? "sui-bg-section  sui-hover-color-active sui-bg-section sui-color-default"
+                          : "sui-bg-accent sui-color-active sui-hover-bg-accent",
                         (isSaving || (isVisible ? !canHide : !canShow)) &&
                           "cursor-not-allowed opacity-50",
                       )}
@@ -7630,23 +7550,23 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
           </div>
 
           {errorMessage && (
-            <div className="flex items-start gap-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200">
+            <div className="flex items-start gap-2 rounded border   px-3 py-2 text-xs font-semibold  sui-border-negative sui-bg-negative sui-color-negative">
               <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
               <span className="min-w-0 break-words">{errorMessage}</span>
             </div>
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-slate-200 dark:border-slate-700">
+        <div className="flex items-center justify-between gap-2 px-4 py-3 border-t  sui-border-default">
           <button
             type="button"
             onClick={reset}
             disabled={isSaving}
             className={cn(
               "inline-flex items-center gap-1.5 px-3 py-1.5 rounded border",
-              "border-slate-300 dark:border-slate-600 text-xs font-bold",
-              "text-slate-700 dark:text-slate-200 hover:bg-slate-50",
-              "dark:hover:bg-slate-800 transition-colors",
+              "sui-border-default text-xs font-bold",
+              "sui-color-default sui-color-active sui-hover-bg-page",
+              "sui-hover-bg-overlay transition-colors",
               isSaving && "cursor-not-allowed opacity-50",
             )}
           >
@@ -7659,10 +7579,10 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
               onClick={onClose}
               disabled={isSaving}
               className={cn(
-                "px-3 py-1.5 rounded border border-slate-300",
-                "dark:border-slate-600 text-xs font-bold text-slate-700",
-                "dark:text-slate-200 hover:bg-slate-50",
-                "dark:hover:bg-slate-800 transition-colors",
+                "px-3 py-1.5 rounded border sui-border-default",
+                "sui-border-default text-xs font-bold sui-color-default",
+                "sui-color-active sui-hover-bg-page",
+                "sui-hover-bg-overlay transition-colors",
                 isSaving && "cursor-not-allowed opacity-50",
               )}
             >
@@ -7674,8 +7594,8 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
               disabled={isSaving}
               className={cn(
                 "inline-flex items-center gap-1.5 px-3 py-1.5",
-                "rounded bg-sky-600 text-xs font-bold text-white",
-                "hover:bg-sky-500 transition-colors",
+                "rounded sui-bg-accent text-xs font-bold sui-color-active",
+                "sui-hover-bg-accent transition-colors",
                 isSaving && "cursor-not-allowed opacity-60",
               )}
             >
@@ -7846,14 +7766,14 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
       }}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" />
+      <div className="absolute inset-0 sui-bg-section backdrop-blur-sm" />
 
       {/* Card */}
-      <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700">
+      <div className="relative  sui-bg-section border  sui-border-default rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-4 py-3 border-b  sui-border-default">
           <h2
             id="branding-editor-title"
-            className="text-sm font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider"
+            className="text-sm font-bold  sui-color-active uppercase tracking-wider"
           >
             Edit branding
           </h2>
@@ -7862,7 +7782,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
             onClick={onClose}
             title="Close"
             aria-label="Close"
-            className="p-1 rounded text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-1 rounded sui-color-default  sui-hover-color-default  sui-hover-bg-overlay transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -7873,7 +7793,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
           <div>
             <label
               htmlFor="branding-title-input"
-              className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1"
+              className="block text-xs font-bold  sui-color-default uppercase tracking-wider mb-1"
             >
               Title
             </label>
@@ -7884,11 +7804,11 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
               onChange={(e) => setTitleField(e.target.value)}
               placeholder={titlePlaceholder}
               maxLength={120}
-              className="w-full px-2 py-1.5 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-400"
+              className="w-full px-2 py-1.5 text-sm  sui-bg-popup border  sui-border-default rounded  sui-color-active sui-placeholder-muted focus:outline-none focus:ring-1 sui-focus-ring"
             />
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-500">
+            <p className="mt-1 text-xs  sui-color-muted">
               Leave blank to use the value from the
-              <code className="mx-1 px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">
+              <code className="mx-1 px-1 py-0.5  sui-bg-popup rounded">
                 [customer_name]
               </code>
               macro.
@@ -7899,7 +7819,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
           <div>
             <label
               htmlFor="branding-subtitle-input"
-              className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1"
+              className="block text-xs font-bold  sui-color-default uppercase tracking-wider mb-1"
             >
               Subtitle
             </label>
@@ -7910,20 +7830,20 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
               onChange={(e) => setSubtitleField(e.target.value)}
               placeholder={subtitlePlaceholder}
               maxLength={120}
-              className="w-full px-2 py-1.5 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-sky-400"
+              className="w-full px-2 py-1.5 text-sm  sui-bg-popup border  sui-border-default rounded  sui-color-active sui-placeholder-muted focus:outline-none focus:ring-1 sui-focus-ring"
             />
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-500">
+            <p className="mt-1 text-xs  sui-color-muted">
               Leave blank for the default (&ldquo;{subtitlePlaceholder}&rdquo;).
             </p>
           </div>
 
           {/* Logo */}
           <div>
-            <span className="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-1">
+            <span className="block text-xs font-bold  sui-color-default uppercase tracking-wider mb-1">
               Logo
             </span>
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-sky-600 rounded-lg flex items-center justify-center text-white overflow-hidden p-1 flex-shrink-0">
+              <div className="w-12 h-12 sui-bg-accent rounded-lg flex items-center justify-center sui-color-active overflow-hidden p-1 flex-shrink-0">
                 {previewLogoSrc ? (
                   <img
                     src={previewLogoSrc}
@@ -7940,7 +7860,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-900/30 hover:bg-sky-100 dark:hover:bg-sky-900/50 rounded transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold  sui-color-info  sui-bg-info  sui-hover-bg-info rounded transition-colors"
                 >
                   <Upload className="w-3 h-3" />
                   {logoDataUri ? "Replace logo" : "Upload logo"}
@@ -7949,7 +7869,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
                   <button
                     type="button"
                     onClick={handleClearLogo}
-                    className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 underline"
+                    className="text-xs  sui-color-default  sui-hover-color-active underline"
                   >
                     Clear (use default)
                   </button>
@@ -7963,7 +7883,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
                 />
               </div>
             </div>
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-500">
+            <p className="mt-1 text-xs  sui-color-muted">
               PNG, SVG, JPEG, WebP, or GIF. Max{" "}
               {Math.round(BRANDING_LOGO_DATA_URI_MAX_BYTES / 1024)} KB after
               encoding. Stored in your browser only.
@@ -7973,18 +7893,18 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
           {errorMessage ? (
             <div
               role="alert"
-              className="text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-900/30 border border-rose-200 dark:border-rose-800 rounded px-2 py-1.5"
+              className="text-xs  sui-color-negative  sui-bg-negative border  sui-border-negative rounded px-2 py-1.5"
             >
               {errorMessage}
             </div>
           ) : null}
         </div>
 
-        <div className="flex items-center justify-between gap-2 px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+        <div className="flex items-center justify-between gap-2 px-4 py-3 border-t  sui-border-default  sui-bg-section">
           <button
             type="button"
             onClick={onResetToDefaults}
-            className="text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-rose-600 dark:hover:text-rose-300 underline"
+            className="text-xs font-bold  sui-color-default  sui-hover-color-negative underline"
           >
             Reset to defaults
           </button>
@@ -7992,14 +7912,14 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              className="px-3 py-1.5 text-xs font-bold  sui-color-default  sui-bg-popup border  sui-border-default rounded  sui-hover-bg-floating transition-colors"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleSave}
-              className="px-3 py-1.5 text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 rounded transition-colors"
+              className="px-3 py-1.5 text-xs font-bold sui-color-active sui-bg-accent sui-hover-bg-accent rounded transition-colors"
             >
               Save
             </button>
@@ -8061,87 +7981,35 @@ const MapLayoutRadioBar: React.FC<MapLayoutRadioBarProps> = ({
 const KpiCard: React.FC<KpiCardProps> = ({
   label,
   value,
-  source,
-  accentClassName,
-  onConfigure,
-  isCustomized = false,
-  description,
-  thresholdNote,
-  bindingFootnote,
-  onOpenInSearch,
-}) => (
-  <div className="p-2 border border-slate-100 dark:border-slate-800 rounded-lg bg-slate-50/50 dark:bg-slate-800/40 relative">
-    <span
-      className={
-        "absolute top-1 right-2 w-1.5 h-1.5 rounded-full " +
-        (source === "live"
-          ? "bg-emerald-500"
-          : source === "loading"
-            ? "bg-amber-400 animate-pulse"
-            : "bg-slate-300 dark:bg-slate-600")
-      }
-      title={
-        source === "live"
-          ? "Live"
-          : source === "loading"
-            ? "Loading…"
-            : "No live source assigned"
-      }
-    />
-    <div className="flex items-center gap-2 mb-0.5">
-      <div className={cn("w-1.5 h-1.5 rounded-full", accentClassName)} />
-      <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate flex-1">
-        {label}
-      </span>
-      {description && (
-        <InfoTooltip
-          title={label}
-          description={description}
-          thresholdNote={thresholdNote}
-          footnote={bindingFootnote}
-          anchor="right"
-          iconAriaLabel={`What is ${label}?`}
-          className="flex-shrink-0"
-        />
-      )}
-      {onOpenInSearch && (
-        <button
-          type="button"
-          onClick={onOpenInSearch}
-          title="Open in Search"
-          aria-label={`Open ${label} in Search`}
-          className="p-0.5 -my-0.5 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400 flex-shrink-0"
-        >
-          <ExternalLink className="w-3 h-3 stroke-[2.5px]" />
-        </button>
-      )}
-      {onConfigure && (
-        <button
-          type="button"
-          onClick={onConfigure}
-          title={
-            isCustomized
-              ? `Configure ${label} (customised)`
-              : `Configure ${label}`
-          }
-          aria-label={`Configure ${label} tile`}
-          className="p-0.5 -my-0.5 mr-2 text-slate-300 dark:text-slate-500 hover:text-sky-600 dark:hover:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400 relative flex-shrink-0"
-        >
-          <Settings2 className="w-3 h-3 stroke-[2.5px]" />
-          {isCustomized && (
-            <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-sky-500 border border-white dark:border-slate-900" />
-          )}
-        </button>
-      )}
-    </div>
-    <p
-      className="text-xs font-bold text-slate-700 dark:text-slate-200 leading-tight truncate"
-      title={value}
-    >
-      {value}
-    </p>
-  </div>
-);
+  status,
+}) => {
+  const theme = useSplunkTheme();
+  const statusColor = {
+    healthy: theme.severityColorNormal,
+    warning: theme.severityColorWarning,
+    critical: theme.severityColorCritical,
+    unknown: theme.severityColorUnknown,
+  }[status];
+
+  return (
+    <Card>
+      <Card.Header title={<Heading level={3}>{label}</Heading>} />
+      <Card.Body>
+        <MapKpiContent>
+          <MapKpiValue $status={status} title={value}>
+            {value}
+          </MapKpiValue>
+          <MapKpiStatusBadge
+            $status={status}
+            label={MAP_KPI_STATUS_LABELS[status]}
+            backgroundColor={`color-mix(in srgb, ${statusColor} 50%, transparent)`}
+            foregroundColor={theme.contentColorActive}
+          />
+        </MapKpiContent>
+      </Card.Body>
+    </Card>
+  );
+};
 
 const InsightsWorkspacePage: React.FC = () => {
   const [bundle, setBundle] = useState<InsightsWorkspaceBundle | null>(null);
@@ -8177,7 +8045,7 @@ const InsightsWorkspacePage: React.FC = () => {
 
   if (!bundle) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 text-sm font-semibold text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+      <div className="flex min-h-screen items-center justify-center  text-sm font-semibold  sui-bg-page sui-color-default">
         Loading Insights workspaces…
       </div>
     );

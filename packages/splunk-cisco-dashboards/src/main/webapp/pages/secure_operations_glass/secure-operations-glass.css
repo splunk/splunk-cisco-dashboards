@@ -37,7 +37,7 @@
     min-width: 0;
 }
 
-#scan-root .scd-glass[data-theme="dark"] {
+#scan-root .scd-glass {
     --glass-accent: var(--scd-c3-info);
     --glass-accent-strong: var(--scd-c3-cyan-bright);
     --glass-accent-text: var(--scd-c3-info);
@@ -909,7 +909,7 @@
     width: 100%;
 }
 
-#scan-root .scd-glass[data-theme="dark"] .scd-glass-leaflet-map {
+#scan-root .scd-glass .scd-glass-leaflet-map {
     background: var(--scd-c3-canvas);
 }
 
@@ -918,7 +918,7 @@
     transition: filter 180ms ease;
 }
 
-#scan-root .scd-glass[data-theme="dark"] .scd-glass-leaflet-map .leaflet-tile-pane {
+#scan-root .scd-glass .scd-glass-leaflet-map .leaflet-tile-pane {
     filter: saturate(0.78) contrast(1.08) brightness(0.92);
 }
 

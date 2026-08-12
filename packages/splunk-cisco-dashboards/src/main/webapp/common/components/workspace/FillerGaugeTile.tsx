@@ -64,10 +64,10 @@ const NoDataBody: React.FC<{
     }
     return (
         <div className="flex flex-col mb-1">
-            <span className="text-4xl font-black tracking-tighter leading-none text-slate-400 dark:text-slate-500">
+            <span className="text-4xl font-black tracking-tighter leading-none  sui-color-muted">
                 —
             </span>
-            <span className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">
+            <span className="text-xs font-medium  sui-color-muted mt-0.5">
                 {subtext}
             </span>
         </div>
@@ -129,7 +129,7 @@ export const FillerGaugeTile: React.FC<FillerGaugeTileProps> = ({
             ) : (
                 <>
                     <div className="flex items-baseline gap-2 mb-1">
-                        <span className="text-4xl font-black tracking-tighter leading-none text-slate-700 dark:text-slate-100 tabular-nums">
+                        <span className="text-4xl font-black tracking-tighter leading-none  sui-color-active tabular-nums">
                             {value}
                             {unit}
                         </span>
@@ -138,7 +138,7 @@ export const FillerGaugeTile: React.FC<FillerGaugeTileProps> = ({
                         data-tile-control="true"
                         className="flex-1 min-h-[48px] max-h-20 flex flex-col justify-center gap-1 pt-1"
                     >
-                        <div className="h-3 w-full rounded-sm bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                        <div className="h-3 w-full rounded-sm  sui-bg-popup overflow-hidden">
                             <div
                                 className="h-full rounded-sm transition-[width]"
                                 style={{
@@ -147,7 +147,7 @@ export const FillerGaugeTile: React.FC<FillerGaugeTileProps> = ({
                                 }}
                             />
                         </div>
-                        <div className="flex justify-between text-xs tabular-nums text-slate-400 dark:text-slate-500 font-medium">
+                        <div className="flex justify-between text-xs tabular-nums  sui-color-muted font-medium">
                             <span>{gaugeRange.min}</span>
                             <span>{gaugeRange.max}</span>
                         </div>

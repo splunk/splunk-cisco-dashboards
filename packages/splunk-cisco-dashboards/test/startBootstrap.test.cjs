@@ -513,13 +513,6 @@ const macroTuningViewSource = fs.readFileSync(
   path.join(viewsRoot, "admin_macro_index_tuning.xml"),
   "utf8",
 );
-const macroTuningStyleSource = fs.readFileSync(
-  path.resolve(
-    __dirname,
-    "../src/main/webapp/pages/macro_index_tuning/macro-index-tuning.css",
-  ),
-  "utf8",
-);
 const macroTuningRenderSource = fs.readFileSync(
   path.resolve(
     __dirname,
@@ -546,22 +539,19 @@ assert.match(setupViewSource, /id="scan-root" hidden="hidden"/);
 assert.match(macroTuningViewSource, /<dashboard\b[^>]*\btheme="dark"/);
 assert.match(macroTuningSource, /scd-admin-dark scd-c3-atmosphere dark/);
 assert.doesNotMatch(macroTuningSource, /setTheme\("dark"\)/);
-assert.match(macroTuningRenderSource, /fixedColorScheme: 'dark'/);
+assert.match(macroTuningRenderSource, /mountPageRaw\(MacroIndexTuningPage\)/);
+assert.doesNotMatch(macroTuningRenderSource, /fixedColorScheme/);
 assert.match(macroTuningSource, /Back to recommendations/);
 assert.match(macroTuningSource, /scd:setup-step/);
 assert.doesNotMatch(macroTuningSource, /Open full tuner/);
 assert.match(macroTuningBootstrapSource, /setup.*setup=1#tune-indexes/s);
-assert.match(macroTuningStyleSource, /scd-admin-dark/);
-assert.match(macroTuningStyleSource, /c3-atmosphere\.svg/);
 assert.match(setupStyleSource, /c3-atmosphere\.svg/);
 assert.match(setupStyleSource, /\.scd-setup__package-table\s*\{/);
 assert.match(setupStyleSource, /content: attr\(data-label\)/);
-assert.match(macroTuningStyleSource, /scd-setup-action-bar/);
-assert.match(macroTuningStyleSource, /summary\[class\*='hover:bg-slate-'\]:hover/);
 assert.match(macroTuningSource, /scd-macro-group-toggle/);
 assert.match(
-  macroTuningStyleSource,
-  /\.scd-macro-group-toggle:hover,[\s\S]*\.scd-macro-group-toggle:focus-visible/,
+  macroTuningSource,
+  /scd-macro-group-toggle[^"]*sui-color-default[^"]*sui-hover-bg-overlay/,
 );
 assert.match(setupStyleSource, /@container setup-content \(max-width: 880px\)/);
 assert.match(macroTuningSource, /Review only what needs attention/);

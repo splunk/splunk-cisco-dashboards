@@ -38,14 +38,14 @@ export const DiagramPalette: React.FC<{ className?: string }> = ({ className }) 
     return (
         <div
             className={cn(
-                'flex h-full min-h-0 w-72 flex-col overflow-hidden border-r border-slate-200 bg-white [contain:layout_paint] dark:border-slate-800 dark:bg-slate-900',
+                'flex h-full min-h-0 w-72 flex-col overflow-hidden border-r   [contain:layout_paint] sui-border-weak sui-bg-section',
                 className
             )}
         >
             <div
                 role="tablist"
                 aria-label="Palette tabs"
-                className="flex border-b border-slate-200 dark:border-slate-800"
+                className="flex border-b  sui-border-weak"
             >
                 {TAB_DEFS.map((t) => {
                     const isActive = t.id === active;
@@ -58,8 +58,8 @@ export const DiagramPalette: React.FC<{ className?: string }> = ({ className }) 
                             className={cn(
                                 'flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-xs font-medium border-b-2 transition-colors',
                                 isActive
-                                    ? 'border-sky-500 text-sky-600 dark:text-sky-400 bg-sky-50/50 dark:bg-sky-950/30'
-                                    : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                    ? 'sui-border-info  sui-color-info  sui-bg-info'
+                                    : 'sui-border-transparent  sui-color-default  sui-hover-color-active'
                             )}
                             type="button"
                         >

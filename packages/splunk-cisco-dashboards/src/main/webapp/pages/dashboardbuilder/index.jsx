@@ -10,7 +10,6 @@ import {
 } from 'react-router-dom';
 
 import '../../common/shims/requirejs-emotion-shim';
-import '../../common/styles/splunkShellTheme.css';
 import VizKpi from '../../common/components/templatewizard/viz-kpi/VizKpi';
 import VizOther from '../../common/components/templatewizard/viz-other/VizOther';
 import { renderAsPage } from '../../common/render';

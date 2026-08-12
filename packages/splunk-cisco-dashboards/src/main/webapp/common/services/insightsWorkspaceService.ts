@@ -97,9 +97,6 @@ const readBoolean = (raw: unknown, fallback: boolean): boolean => {
     return fallback;
 };
 
-const readThemePreference = (raw: unknown): 'light' | 'dark' | 'system' =>
-    raw === 'light' || raw === 'dark' || raw === 'system' ? raw : 'system';
-
 const readMapPosition = (raw: unknown): 'right' | 'below' | 'above' =>
     raw === 'below' || raw === 'above' ? raw : 'right';
 
@@ -277,7 +274,6 @@ const parseWorkspaceEntry = (entry: ConfRestEntry): InsightsWorkspace | null => 
         isBuiltIn: readBoolean(content.is_builtin, false),
         enabled: readBoolean(content.enabled, true),
         sortOrder: optionalInt(content.sort_order),
-        themePreference: readThemePreference(content.theme_preference),
         mapVisible: readBoolean(content.map_visible, true),
         mapPosition: readMapPosition(content.map_position),
         regionalView: readRegionalView(content.regional_view),
@@ -452,7 +448,6 @@ const workspaceFields = (workspace: InsightsWorkspace): Record<string, string> =
     is_builtin: workspace.isBuiltIn ? '1' : '0',
     enabled: workspace.enabled ? '1' : '0',
     sort_order: String(workspace.sortOrder),
-    theme_preference: workspace.themePreference,
     map_visible: workspace.mapVisible ? '1' : '0',
     map_position: workspace.mapPosition,
     regional_view: workspace.regionalView,

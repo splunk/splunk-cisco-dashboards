@@ -264,7 +264,7 @@ const SwitchChassis: React.FC<SilhouetteProps> = ({ className }) => (
         viewBox={SVG_VIEWBOX}
         preserveAspectRatio="xMidYMid meet"
         className={cn(
-            'w-full h-full text-emerald-600 dark:text-emerald-400',
+            'w-full h-full  sui-color-positive',
             className
         )}
     >
@@ -342,7 +342,7 @@ const L3SwitchChassis: React.FC<SilhouetteProps> = ({ className }) => (
         viewBox={SVG_VIEWBOX}
         preserveAspectRatio="xMidYMid meet"
         className={cn(
-            'w-full h-full text-emerald-700 dark:text-emerald-300',
+            'w-full h-full  sui-color-positive',
             className
         )}
     >
@@ -438,7 +438,7 @@ const StackChassis: React.FC<SilhouetteProps> = ({ className }) => (
         viewBox={SVG_VIEWBOX}
         preserveAspectRatio="xMidYMid meet"
         className={cn(
-            'w-full h-full text-emerald-600 dark:text-emerald-400',
+            'w-full h-full  sui-color-positive',
             className
         )}
     >
@@ -530,7 +530,7 @@ const RouterChassis: React.FC<SilhouetteProps> = ({ className }) => (
         viewBox={SVG_VIEWBOX}
         preserveAspectRatio="xMidYMid meet"
         className={cn(
-            'w-full h-full text-amber-600 dark:text-amber-400',
+            'w-full h-full  sui-color-warning',
             className
         )}
     >
@@ -670,7 +670,7 @@ const FirewallChassis: React.FC<SilhouetteProps> = ({ className }) => (
         viewBox={SVG_VIEWBOX}
         preserveAspectRatio="xMidYMid meet"
         className={cn(
-            'w-full h-full text-rose-600 dark:text-rose-400',
+            'w-full h-full  sui-color-negative',
             className
         )}
     >
@@ -777,7 +777,7 @@ const WlcChassis: React.FC<SilhouetteProps> = ({ className }) => (
         viewBox={SVG_VIEWBOX}
         preserveAspectRatio="xMidYMid meet"
         className={cn(
-            'w-full h-full text-violet-600 dark:text-violet-400',
+            'w-full h-full  sui-color-info',
             className
         )}
     >
@@ -938,7 +938,7 @@ const RackChassis: React.FC<SilhouetteProps> = ({ shape, Icon, className }) => {
             viewBox={SVG_VIEWBOX}
             preserveAspectRatio="xMidYMid meet"
             className={cn(
-                'w-full h-full text-slate-500 dark:text-slate-400',
+                'w-full h-full  sui-color-default',
                 className
             )}
         >
@@ -988,7 +988,7 @@ const DiscSilhouette: React.FC<SilhouetteProps> = ({ Icon, className }) => (
         viewBox={SVG_VIEWBOX}
         preserveAspectRatio="xMidYMid meet"
         className={cn(
-            'w-full h-full text-sky-500 dark:text-sky-400',
+            'w-full h-full  sui-color-info',
             className
         )}
     >
@@ -1043,7 +1043,7 @@ const CylinderSilhouette: React.FC<SilhouetteProps> = ({ Icon, className }) => (
         viewBox={SVG_VIEWBOX}
         preserveAspectRatio="xMidYMid meet"
         className={cn(
-            'w-full h-full text-amber-600 dark:text-amber-400',
+            'w-full h-full  sui-color-warning',
             className
         )}
     >
@@ -1094,7 +1094,7 @@ const CloudSilhouette: React.FC<SilhouetteProps> = ({ Icon, className }) => (
         viewBox={SVG_VIEWBOX}
         preserveAspectRatio="xMidYMid meet"
         className={cn(
-            'w-full h-full text-sky-600 dark:text-sky-400',
+            'w-full h-full  sui-color-info',
             className
         )}
     >
@@ -1119,7 +1119,7 @@ const BuildingSilhouette: React.FC<SilhouetteProps> = ({ Icon, className }) => (
         viewBox={SVG_VIEWBOX}
         preserveAspectRatio="xMidYMid meet"
         className={cn(
-            'w-full h-full text-violet-600 dark:text-violet-400',
+            'w-full h-full  sui-color-info',
             className
         )}
     >
@@ -1167,7 +1167,7 @@ const BuildingSilhouette: React.FC<SilhouetteProps> = ({ Icon, className }) => (
         />
         <ellipse cx={50} cy={82} rx={32} ry={2.5} fill="currentColor" opacity={0.15} />
         <foreignObject x={42} y={26} width={16} height={10}>
-            <div className="w-full h-full flex items-center justify-center text-white">
+            <div className="w-full h-full flex items-center justify-center sui-color-active">
                 <Icon className="w-3 h-3" />
             </div>
         </foreignObject>
@@ -1179,7 +1179,7 @@ const UsersGroupSilhouette: React.FC<SilhouetteProps> = ({ className }) => (
         viewBox={SVG_VIEWBOX}
         preserveAspectRatio="xMidYMid meet"
         className={cn(
-            'w-full h-full text-emerald-600 dark:text-emerald-400',
+            'w-full h-full  sui-color-positive',
             className
         )}
     >
@@ -1217,7 +1217,7 @@ const EndpointSilhouette: React.FC<SilhouetteProps> = ({ Icon, className }) => (
         viewBox={SVG_VIEWBOX}
         preserveAspectRatio="xMidYMid meet"
         className={cn(
-            'w-full h-full text-slate-600 dark:text-slate-300',
+            'w-full h-full  sui-color-default',
             className
         )}
     >

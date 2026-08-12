@@ -138,22 +138,22 @@ const statusTone: Record<
     { text: string; progress: string; soft: string; border: string }
 > = {
     healthy: {
-        text: 'text-emerald-500',
+        text: 'sui-color-positive',
         progress: 'bg-emerald-500',
         soft: 'bg-emerald-500/15',
-        border: 'border-emerald-400/40',
+        border: 'sui-border-positive',
     },
     warning: {
-        text: 'text-amber-500',
+        text: 'sui-color-warning',
         progress: 'bg-amber-500',
         soft: 'bg-amber-500/15',
-        border: 'border-amber-400/40',
+        border: 'sui-border-warning',
     },
     critical: {
-        text: 'text-red-500',
+        text: 'sui-color-negative',
         progress: 'bg-red-500',
         soft: 'bg-red-500/15',
-        border: 'border-red-400/40',
+        border: 'sui-border-negative',
     },
 };
 
@@ -353,28 +353,28 @@ const HelpTooltip: React.FC<HelpTooltipProps> = ({ kpi }) => {
                           width: 320,
                           visibility: coords ? 'visible' : 'hidden',
                       }}
-                      className="z-[9999] rounded-xl bg-slate-900 p-4 text-left text-slate-200 shadow-2xl ring-1 ring-sky-400/40"
+                      className="z-[9999] rounded-xl sui-bg-section p-4 text-left sui-color-active shadow-2xl ring-1 sui-focus-ring"
                   >
                       <div className="mb-2 flex items-center gap-2">
-                          <span className="h-3 w-1 rounded-full bg-sky-500" />
-                          <span className="text-[12px] font-black uppercase tracking-widest text-slate-100">
+                          <span className="h-3 w-1 rounded-full sui-bg-accent" />
+                          <span className="sui-color-default font-black uppercase tracking-widest sui-color-active">
                               {kpi.title}
                           </span>
                       </div>
-                      <p className="text-[12px] leading-5 text-slate-300">{kpi.description}</p>
+                      <p className="sui-color-default leading-5 sui-color-default">{kpi.description}</p>
                       <div className="mt-3">
-                          <p className="text-xs font-black uppercase tracking-[0.22em] text-sky-400">
+                          <p className="text-xs font-black uppercase tracking-[0.22em] sui-color-info">
                               Thresholds
                           </p>
                           {(['Healthy', 'Warning', 'Critical'] as const).map((label) => (
                               <div key={label} className="mt-2 flex items-center justify-between gap-3">
-                                  <span className="text-[12px] text-slate-300">{label}</span>
+                                  <span className="sui-color-default">{label}</span>
                                   <span
                                       className={cn(
                                           'rounded-full px-2 py-0.5 text-xs font-bold',
-                                          label === 'Healthy' && 'bg-emerald-500/20 text-emerald-300',
-                                          label === 'Warning' && 'bg-amber-500/20 text-amber-300',
-                                          label === 'Critical' && 'bg-red-500/20 text-red-300'
+                                          label === 'Healthy' && 'sui-bg-positive sui-color-positive',
+                                          label === 'Warning' && 'sui-bg-warning sui-color-warning',
+                                          label === 'Critical' && 'sui-bg-negative sui-color-negative'
                                       )}
                                   >
                                       {formatThreshold(label, kpi.thresholds, kpi.unit)}
@@ -382,7 +382,7 @@ const HelpTooltip: React.FC<HelpTooltipProps> = ({ kpi }) => {
                               </div>
                           ))}
                       </div>
-                      <div className="mt-3 border-t border-slate-700 pt-2 text-xs uppercase tracking-widest text-slate-400">
+                      <div className="mt-3 border-t sui-border-default pt-2 text-xs uppercase tracking-widest sui-color-default">
                           Current status: <span className={statusTone[status].text}>{status}</span>
                       </div>
                   </div>,
@@ -402,7 +402,7 @@ const HelpTooltip: React.FC<HelpTooltipProps> = ({ kpi }) => {
                 onFocus={() => setOpen(true)}
                 onBlur={() => setOpen(false)}
                 {...getInteractiveControlProps()}
-                className="inline-flex h-5 w-5 items-center justify-center rounded-full text-blue-500 transition hover:bg-blue-500/10 hover:text-blue-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                className="inline-flex h-5 w-5 items-center justify-center rounded-full sui-color-info transition sui-hover-bg-accent sui-hover-color-info focus:outline-none focus-visible:ring-2 sui-focus-visible-ring"
             >
                 <HelpCircle className="h-4 w-4" />
             </button>
@@ -434,9 +434,9 @@ export const MetricCard: React.FC<MetricCardProps> = ({
             data-kpi-instance={kpi.instanceId}
             className={cn(
                 'group relative flex h-[284px] min-w-0 flex-col rounded-xl border p-5',
-                'bg-white/78 text-slate-900 shadow-[0_16px_50px_-32px_rgba(15,23,42,0.5)] backdrop-blur-xl',
-                'border-slate-200/90 hover:border-sky-300 hover:shadow-[0_20px_60px_-35px_rgba(14,165,233,0.55)]',
-                'dark:bg-slate-900/74 dark:text-slate-100 dark:border-slate-700/80 dark:hover:border-sky-500/60'
+                'sui-bg-section sui-color-active sui-shadow-overlay backdrop-blur-xl',
+                'sui-border-weak sui-hover-border-info sui-shadow-overlay',
+                'sui-bg-section sui-color-active sui-border-default sui-hover-border-info'
             )}
         >
             <button
@@ -444,7 +444,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
                 aria-label={`Configure ${kpi.title}`}
                 title={`Configure ${kpi.title}`}
                 {...getInteractiveControlProps(() => onConfigure(kpi))}
-                className="absolute left-3 top-3 z-10 inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white/90 text-slate-500 opacity-0 shadow-sm transition hover:text-sky-600 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-400"
+                className="absolute left-3 top-3 z-10 inline-flex h-7 w-7 items-center justify-center rounded-lg border    opacity-0 shadow-sm transition sui-hover-color-info group-hover:opacity-100 focus:opacity-100 focus:outline-none focus-visible:ring-2 sui-focus-visible-ring sui-border-default sui-bg-section sui-color-default"
             >
                 <Settings2 className="h-3.5 w-3.5" />
             </button>
@@ -453,9 +453,9 @@ export const MetricCard: React.FC<MetricCardProps> = ({
                 aria-label={`Remove ${kpi.title}`}
                 title={`Remove ${kpi.title}`}
                 {...getInteractiveControlProps(() => onRemove(kpi))}
-                className="absolute -right-2 -top-2 z-20 inline-flex h-7 w-7 items-center justify-center rounded-full bg-rose-600 text-white opacity-0 shadow-lg ring-2 ring-white transition hover:bg-rose-500 group-hover:opacity-100 focus:opacity-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-300 dark:ring-slate-950"
+                className="absolute -right-2 -top-2 z-20 inline-flex h-7 w-7 items-center justify-center rounded-full sui-bg-negative sui-color-active opacity-0 shadow-lg ring-2 sui-focus-ring transition sui-hover-bg-negative group-hover:opacity-100 focus:opacity-100 focus:outline-none focus-visible:ring-2 sui-focus-visible-ring sui-focus-ring"
             >
-                <X className="h-4 w-4 stroke-[3px]" />
+                <X className="h-4 w-4 sui-stroke-default" />
             </button>
 
             <div className="flex items-start justify-between gap-3">
@@ -465,7 +465,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
                 </div>
                 <div className="flex items-center gap-3">
                     {!kpi.display.hideDelta && (
-                        <span className={cn('inline-flex items-center gap-1 text-[12px] font-black', tone.text)}>
+                        <span className={cn('inline-flex items-center gap-1 sui-color-default font-black', tone.text)}>
                             {kpi.trend >= 0 ? (
                                 <ArrowUpRight className="h-3 w-3" />
                             ) : (
@@ -479,43 +479,43 @@ export const MetricCard: React.FC<MetricCardProps> = ({
                         aria-label={`Expand ${kpi.title}`}
                         title={`Expand ${kpi.title}`}
                         {...getInteractiveControlProps(() => onExpand(kpi))}
-                        className="inline-flex h-6 w-6 items-center justify-center rounded text-slate-400 transition hover:bg-slate-100 hover:text-sky-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:hover:bg-slate-800"
+                        className="inline-flex h-6 w-6 items-center justify-center rounded sui-color-default transition  sui-hover-color-info focus:outline-none focus-visible:ring-2 sui-focus-visible-ring sui-hover-bg-overlay"
                     >
                         <Maximize2 className="h-4 w-4" />
                     </button>
                 </div>
             </div>
 
-            <h3 className="mt-4 min-h-[34px] text-[15px] font-black leading-tight text-slate-700 dark:text-slate-200">
+            <h3 className="mt-4 min-h-[34px]  font-black leading-tight  sui-color-active">
                 {kpi.title}
             </h3>
 
             <div className="mt-5 flex items-baseline gap-2">
                 {displayValue ? (
-                    <span className="text-[34px] font-black leading-none tracking-tight text-slate-950 dark:text-white">
+                    <span className="sui-color-default font-black leading-none tracking-tight  sui-color-active">
                         {displayValue}
                     </span>
                 ) : (
-                    <span className="text-[30px] font-black leading-none text-slate-400">—</span>
+                    <span className="sui-color-default font-black leading-none sui-color-default">—</span>
                 )}
                 {showUnit && !kpi.display.hideAbsoluteLabel && (
-                    <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                    <span className="text-sm font-semibold  sui-color-default">
                         {kpi.unit}
                     </span>
                 )}
                 {showSubtitle && (
-                    <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                    <span className="text-sm font-semibold  sui-color-default">
                         {kpi.subtitle}
                     </span>
                 )}
             </div>
 
             <div className="mt-4">
-                <div className="mb-1.5 flex items-center justify-between text-[12px] font-medium text-slate-500 dark:text-slate-400">
+                <div className="mb-1.5 flex items-center justify-between  font-medium  sui-color-default">
                     <span>Progress</span>
                     <span>{kpi.progress}%</span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-slate-200/70 dark:bg-slate-700/70">
+                <div className="h-2 overflow-hidden rounded-full  sui-bg-floating">
                     <div
                         className={cn('h-full rounded-full', tone.progress)}
                         style={{ width: `${Math.max(0, Math.min(kpi.progress, 100))}%` }}

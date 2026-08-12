@@ -1,7 +1,5 @@
 import React, {
-    createContext,
     useCallback,
-    useContext,
     useEffect,
     useMemo,
     useRef,
@@ -14,13 +12,10 @@ import {
     CalendarDays,
     Download,
     Grid2X2,
-    Moon,
     Pause,
     Settings,
-    Sun,
 } from '@/common/icons/SuiIcon';
 import { useExportPage } from '@/common/hooks/useExportPage';
-import { useTheme } from '@/common/hooks/useTheme';
 import { cn } from '@/common/lib/utils';
 import {
     createKPIInstance,
@@ -39,40 +34,11 @@ import { KPIConfigModal } from './components/KPIConfigModal';
 import { KPISection } from './components/KPISection';
 import { SiteMap } from './components/SiteMap';
 
-type ThemeMode = 'light' | 'dark';
 type MapPosition = 'right' | 'top' | 'bottom';
-
-interface ThemeContextValue {
-    theme: ThemeMode;
-    toggleTheme: () => void;
-}
 
 const SECTION_STORAGE_KEY = 'splunk-cisco-dashboards.health-monitoring.sections.v1';
 const MAP_POSITION_STORAGE_KEY =
     'splunk-cisco-dashboards.health-monitoring.map-position';
-
-const ThemeContext = createContext<ThemeContextValue | null>(null);
-
-const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { resolvedTheme, setTheme } = useTheme();
-    const toggleTheme = useCallback(
-        () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark'),
-        [resolvedTheme, setTheme]
-    );
-
-    const value = useMemo(
-        () => ({ theme: resolvedTheme as ThemeMode, toggleTheme }),
-        [resolvedTheme, toggleTheme]
-    );
-
-    return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
-};
-
-const useThemeContext = () => {
-    const context = useContext(ThemeContext);
-    if (!context) throw new Error('ThemeContext is missing.');
-    return context;
-};
 
 interface ErrorBoundaryState {
     hasError: boolean;
@@ -97,14 +63,14 @@ class ErrorBoundary extends React.Component<
     render() {
         if (!this.state.hasError) return this.props.children;
         return (
-            <div className="flex min-h-screen items-center justify-center bg-slate-950 p-8 text-white">
-                <div className="max-w-xl rounded-xl border border-red-500/50 bg-red-950/40 p-6 shadow-2xl">
+            <div className="flex min-h-screen items-center justify-center sui-bg-page p-8 sui-color-active">
+                <div className="max-w-xl rounded-xl border sui-border-negative sui-bg-negative p-6 shadow-2xl">
                     <h1 className="text-xl font-black">Dashboard Error</h1>
-                    <p className="mt-3 text-sm leading-6 text-red-100">
+                    <p className="mt-3 text-sm leading-6 sui-color-negative">
                         The Health Monitoring Dashboard hit an unexpected render error.
                     </p>
                     {this.state.message && (
-                        <pre className="mt-4 overflow-auto rounded-lg bg-slate-950 p-3 text-xs text-red-200">
+                        <pre className="mt-4 overflow-auto rounded-lg sui-bg-page p-3 text-xs sui-color-negative">
                             {this.state.message}
                         </pre>
                     )}
@@ -209,7 +175,6 @@ const timeRangeToSplunkEarliest = (range: string): string => {
 };
 
 const DashboardContent: React.FC = () => {
-    const { theme, toggleTheme } = useThemeContext();
     const [sections, setSections] = useState<SectionState>(readSections);
     const [searchTerm, setSearchTerm] = useState('');
     const [timeRange, setTimeRange] = useState('7d');
@@ -344,9 +309,9 @@ const DashboardContent: React.FC = () => {
                 `[data-kpi-instance="${instanceId}"]`
             );
             element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            element?.classList.add('ring-2', 'ring-sky-400');
+            element?.classList.add('ring-2', 'sui-focus-ring');
             window.setTimeout(() => {
-                element?.classList.remove('ring-2', 'ring-sky-400');
+                element?.classList.remove('ring-2', 'sui-focus-ring');
             }, 1600);
         }, 0);
     }, []);
@@ -354,7 +319,6 @@ const DashboardContent: React.FC = () => {
     const configTemplate = configKpi ? getTemplateById(configKpi.templateId) : undefined;
     const mapPanel = (
         <SiteMap
-            isDark={theme === 'dark'}
             earliestTime={timeRangeToSplunkEarliest(timeRange)}
             latestTime="now"
         />
@@ -381,20 +345,15 @@ const DashboardContent: React.FC = () => {
     return (
         <div
             ref={exportRef}
-            className={cn(
-                'h-screen min-h-[720px] overflow-hidden font-sans',
-                theme === 'dark'
-                    ? 'dark scd-c3-atmosphere bg-slate-950 text-slate-100'
-                    : 'bg-slate-100 text-slate-900'
-            )}
+            className="scd-c3-atmosphere h-screen min-h-[720px] overflow-hidden font-sans sui-bg-page sui-color-active"
         >
             <div className="flex h-full flex-col">
-                <header className="flex h-[76px] flex-shrink-0 items-center justify-between gap-4 border-b border-slate-200 bg-white/86 px-7 shadow-sm backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/82">
+                <header className="flex h-[76px] flex-shrink-0 items-center justify-between gap-4 border-b   px-7 shadow-sm backdrop-blur-xl sui-border-weak sui-bg-page">
                     <div className="min-w-0">
-                        <h1 className="truncate text-2xl font-black tracking-tight text-blue-600 dark:text-blue-400">
+                        <h1 className="truncate text-2xl font-black tracking-tight  sui-color-info">
                             Your Organization Name
                         </h1>
-                        <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">
+                        <p className="mt-1 text-sm font-semibold  sui-color-default">
                             Health Monitoring Dashboard
                         </p>
                     </div>
@@ -405,8 +364,8 @@ const DashboardContent: React.FC = () => {
                             onChange={setSearchTerm}
                             onOpenLibrary={() => setBrowserTarget('it-health')}
                         />
-                        <div className="hidden items-center gap-2 rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm font-black text-slate-800 shadow-sm lg:flex dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-100">
-                            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                        <div className="hidden items-center gap-2 rounded-lg border   px-3 py-2 text-sm font-black  shadow-sm lg:flex sui-border-default sui-bg-section sui-color-active">
+                            <span className="h-2.5 w-2.5 rounded-full sui-bg-positive" />
                             All Systems Operational
                         </div>
                         <div className="relative group">
@@ -415,7 +374,7 @@ const DashboardContent: React.FC = () => {
                                 disabled={exporting}
                                 title="Export dashboard screenshot"
                                 aria-label="Export dashboard screenshot"
-                                className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 hover:text-slate-950 disabled:cursor-wait disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                                className="inline-flex h-10 w-10 items-center justify-center rounded-lg  transition   disabled:cursor-wait disabled:opacity-50 focus:outline-none focus-visible:ring-2 sui-focus-visible-ring sui-color-default sui-hover-bg-overlay sui-hover-color-active"
                             >
                                 {exporting ? (
                                     <Pause className="h-5 w-5 animate-pulse" />
@@ -423,18 +382,18 @@ const DashboardContent: React.FC = () => {
                                     <Download className="h-5 w-5" />
                                 )}
                             </button>
-                            <div className="absolute right-0 top-full z-50 mt-2 hidden w-32 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg group-hover:block group-focus-within:block dark:border-slate-700 dark:bg-slate-900">
+                            <div className="absolute right-0 top-full z-50 mt-2 hidden w-32 overflow-hidden rounded-lg border   shadow-lg group-hover:block group-focus-within:block sui-border-default sui-bg-section">
                                 <button
                                     type="button"
                                     onClick={() => exportAs('png')}
-                                    className="block w-full px-3 py-2 text-left text-xs font-black text-slate-700 transition hover:bg-sky-50 hover:text-sky-700 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-sky-300"
+                                    className="block w-full px-3 py-2 text-left text-xs font-black  transition   sui-color-active sui-hover-bg-overlay sui-hover-color-info"
                                 >
                                     Save as PNG
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => exportAs('pdf')}
-                                    className="block w-full border-t border-slate-100 px-3 py-2 text-left text-xs font-black text-slate-700 transition hover:bg-sky-50 hover:text-sky-700 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 dark:hover:text-sky-300"
+                                    className="block w-full border-t  px-3 py-2 text-left text-xs font-black  transition   sui-border-default sui-color-active sui-hover-bg-overlay sui-hover-color-info"
                                 >
                                     Save as PDF
                                 </button>
@@ -442,27 +401,14 @@ const DashboardContent: React.FC = () => {
                         </div>
                         <button
                             type="button"
-                            onClick={toggleTheme}
-                            aria-label="Toggle light and dark theme"
-                            title="Toggle theme"
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
-                        >
-                            {theme === 'dark' ? (
-                                <Sun className="h-5 w-5" />
-                            ) : (
-                                <Moon className="h-5 w-5" />
-                            )}
-                        </button>
-                        <button
-                            type="button"
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-lg  transition   focus:outline-none focus-visible:ring-2 sui-focus-visible-ring sui-color-default sui-hover-bg-overlay sui-hover-color-active"
                             aria-label="Notifications"
                         >
                             <Bell className="h-5 w-5" />
                         </button>
                         <button
                             type="button"
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 hover:text-slate-950 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-lg  transition   focus:outline-none focus-visible:ring-2 sui-focus-visible-ring sui-color-default sui-hover-bg-overlay sui-hover-color-active"
                             aria-label="Dashboard settings"
                         >
                             <Settings className="h-5 w-5" />
@@ -473,8 +419,8 @@ const DashboardContent: React.FC = () => {
                 <main className="min-h-0 flex-1 overflow-y-auto px-7 py-6">
                     <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
-                            <CalendarDays className="h-5 w-5 text-slate-500" />
-                            <span className="text-sm font-black text-slate-600 dark:text-slate-300">
+                            <CalendarDays className="h-5 w-5 sui-color-muted" />
+                            <span className="text-sm font-black  sui-color-default">
                                 Time Range:
                             </span>
                             {['24h', '7d', '30d', '90d'].map((range) => (
@@ -483,10 +429,10 @@ const DashboardContent: React.FC = () => {
                                     type="button"
                                     onClick={() => setTimeRange(range)}
                                     className={cn(
-                                        'h-9 min-w-14 rounded-lg border px-4 text-sm font-black transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
+                                        'h-9 min-w-14 rounded-lg border px-4 text-sm font-black transition focus:outline-none focus-visible:ring-2 sui-focus-visible-ring',
                                         timeRange === range
-                                            ? 'border-slate-950 bg-slate-950 text-white dark:border-white dark:bg-white dark:text-slate-950'
-                                            : 'border-slate-200 bg-white text-slate-900 hover:border-sky-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
+                                            ? 'sui-border-weak   sui-border-strong sui-bg-section sui-color-active'
+                                            : 'sui-border-weak   sui-hover-border-info sui-border-default sui-bg-section sui-color-active'
                                     )}
                                 >
                                     {range}
@@ -494,8 +440,8 @@ const DashboardContent: React.FC = () => {
                             ))}
                         </div>
                         <label className="flex items-center gap-3">
-                            <Grid2X2 className="h-5 w-5 text-slate-400" />
-                            <span className="text-sm font-black text-slate-600 dark:text-slate-300">
+                            <Grid2X2 className="h-5 w-5 sui-color-default" />
+                            <span className="text-sm font-black  sui-color-default">
                                 Map Position:
                             </span>
                             <select
@@ -503,7 +449,7 @@ const DashboardContent: React.FC = () => {
                                 onChange={(event) =>
                                     setMapPosition(event.target.value as MapPosition)
                                 }
-                                className="h-10 rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold outline-none focus:border-sky-400 dark:border-slate-700 dark:bg-slate-900"
+                                className="h-10 rounded-lg border   px-4 text-sm font-semibold outline-none sui-focus-border-info sui-border-default sui-bg-section"
                             >
                                 <option value="right">Right Side</option>
                                 <option value="top">Top</option>
@@ -557,9 +503,7 @@ const DashboardContent: React.FC = () => {
 
 const HealthMonitoringDashboard: React.FC = () => (
     <ErrorBoundary>
-        <ThemeProvider>
-            <DashboardContent />
-        </ThemeProvider>
+        <DashboardContent />
     </ErrorBoundary>
 );
 

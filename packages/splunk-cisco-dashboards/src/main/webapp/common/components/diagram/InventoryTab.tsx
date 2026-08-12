@@ -255,19 +255,19 @@ const InventoryRow: React.FC<{ asset: TopologyDiscoveredNode }> = ({ asset }) =>
             }${asset.siteLabel ? `\n${asset.siteLabel}` : ''}`}
             className={cn(
                 'flex items-center gap-2 px-2 py-1.5 rounded-md cursor-grab active:cursor-grabbing select-none',
-                'border border-transparent hover:border-sky-400 hover:bg-sky-50/60 dark:hover:bg-sky-950/30',
+                'border sui-border-transparent sui-hover-border-info  sui-hover-bg-info',
                 'transition-colors duration-100'
             )}
         >
-            {/* Build 112: dropped the `text-slate-*` colour override
+            {/* Build 112: dropped the `sui-color-active` colour override
                 so each inventory row picks up its icon's per-class
                 accent (router=amber, firewall=rose, etc.). */}
             <Icon className="w-6 h-6 flex-shrink-0" />
             <div className="min-w-0 flex-1">
-                <div className="text-xs font-medium text-slate-900 dark:text-slate-100 truncate">
+                <div className="text-xs font-medium  sui-color-active truncate">
                     {asset.shortLabel}
                 </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 truncate uppercase tracking-wide">
+                <div className="text-xs  sui-color-default truncate uppercase tracking-wide">
                     {deviceType}
                     {model ? ` · ${model}` : ''}
                 </div>
@@ -304,21 +304,21 @@ const FilterDropdown: React.FC<{
                 onClick={() => setOpen((v) => !v)}
                 className={cn(
                     'w-full flex items-center justify-between gap-2 px-2 py-1 rounded-md text-xs',
-                    'border bg-white dark:bg-slate-900',
-                    'border-slate-200 dark:border-slate-700',
-                    'hover:border-sky-400 dark:hover:border-sky-500',
+                    'border  sui-bg-section',
+                    'sui-border-weak sui-border-default',
+                    'sui-hover-border-info',
                     selected.size > 0 &&
-                        'border-sky-400 bg-sky-50/60 dark:bg-sky-950/40 dark:border-sky-500'
+                        'sui-border-info  sui-bg-info sui-border-info'
                 )}
                 aria-expanded={open}
             >
                 <span className="flex items-center gap-1.5 min-w-0">
-                    <Filter className="w-3 h-3 flex-shrink-0 text-slate-400" />
-                    <span className="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    <Filter className="w-3 h-3 flex-shrink-0 sui-color-default" />
+                    <span className="text-xs uppercase tracking-wider  sui-color-default">
                         {label}
                     </span>
                 </span>
-                <span className="truncate text-slate-700 dark:text-slate-200 flex-1 text-right">
+                <span className="truncate  sui-color-active flex-1 text-right">
                     {summary}
                 </span>
             </button>
@@ -326,8 +326,8 @@ const FilterDropdown: React.FC<{
                 <div
                     className={cn(
                         'absolute z-30 mt-1 left-0 right-0 max-h-64 overflow-y-auto',
-                        'rounded-md border border-slate-200 dark:border-slate-700',
-                        'bg-white dark:bg-slate-900 shadow-xl'
+                        'rounded-md border  sui-border-default',
+                        'sui-bg-section shadow-xl'
                     )}
                     onMouseLeave={() => setOpen(false)}
                 >
@@ -337,14 +337,14 @@ const FilterDropdown: React.FC<{
                             onClick={() => {
                                 onClear();
                             }}
-                            className="w-full flex items-center justify-between gap-2 px-2 py-1 text-xs text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/40 border-b border-slate-200 dark:border-slate-700"
+                            className="w-full flex items-center justify-between gap-2 px-2 py-1 text-xs  sui-color-info  sui-hover-bg-info border-b  sui-border-default"
                         >
                             Clear all
                             <X className="w-2.5 h-2.5" />
                         </button>
                     )}
                     {options.length === 0 ? (
-                        <div className="px-2 py-2 text-xs text-slate-400 italic">
+                        <div className="px-2 py-2 text-xs sui-color-default italic">
                             No values in the current set.
                         </div>
                     ) : (
@@ -358,8 +358,8 @@ const FilterDropdown: React.FC<{
                                     className={cn(
                                         'w-full flex items-center justify-between gap-2 px-2 py-1 text-xs',
                                         active
-                                            ? 'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300'
-                                            : 'text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                            ? 'sui-bg-info  sui-color-info'
+                                            : 'sui-color-default sui-color-active  sui-hover-bg-overlay'
                                     )}
                                 >
                                     <span className="flex items-center gap-1.5 min-w-0">
@@ -367,15 +367,15 @@ const FilterDropdown: React.FC<{
                                             className={cn(
                                                 'w-3 h-3 flex-shrink-0 rounded-sm border',
                                                 active
-                                                    ? 'bg-sky-500 border-sky-600'
-                                                    : 'border-slate-300 dark:border-slate-600'
+                                                    ? 'sui-bg-accent sui-border-info'
+                                                    : 'sui-border-default'
                                             )}
                                         />
                                         <span className="truncate">
                                             {opt.value}
                                         </span>
                                     </span>
-                                    <span className="text-xs font-mono text-slate-400 flex-shrink-0">
+                                    <span className="text-xs font-mono sui-color-default flex-shrink-0">
                                         {opt.count}
                                     </span>
                                 </button>
@@ -413,7 +413,7 @@ const ProvenanceChips: React.FC<{
         <div
             role="tablist"
             aria-label="Inventory source filter"
-            className="flex items-center gap-1 p-0.5 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900"
+            className="flex items-center gap-1 p-0.5 rounded-md border  sui-border-default  sui-bg-section"
         >
             {items.map((it) => {
                 const active = value === it.id;
@@ -430,10 +430,10 @@ const ProvenanceChips: React.FC<{
                             'flex-1 px-2 py-1 rounded-[5px] text-xs font-medium uppercase tracking-wider transition-colors',
                             'flex items-center justify-center gap-1.5',
                             active
-                                ? 'bg-white dark:bg-slate-800 text-sky-700 dark:text-sky-300 shadow-sm border border-sky-200 dark:border-sky-700'
+                                ? 'sui-bg-section sui-bg-popup  sui-color-info shadow-sm border  sui-border-info'
                                 : empty
-                                  ? 'text-slate-400 dark:text-slate-600 cursor-not-allowed'
-                                  : 'text-slate-600 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-slate-800/60'
+                                  ? 'sui-color-default cursor-not-allowed'
+                                  : 'sui-color-default sui-bg-section sui-hover-bg-overlay'
                         )}
                     >
                         <span>{it.label}</span>
@@ -441,8 +441,8 @@ const ProvenanceChips: React.FC<{
                             className={cn(
                                 'text-xs font-mono',
                                 active
-                                    ? 'text-sky-500 dark:text-sky-400'
-                                    : 'text-slate-400 dark:text-slate-500'
+                                    ? 'sui-color-info'
+                                    : 'sui-color-default sui-color-muted'
                             )}
                         >
                             {it.count}
@@ -623,7 +623,7 @@ export const InventoryTab: React.FC = () => {
             {/* Search bar */}
             <div className="relative">
                 <Search
-                    className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sui-color-default"
                     aria-hidden
                 />
                 <input
@@ -632,20 +632,20 @@ export const InventoryTab: React.FC = () => {
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="Search devices, models, serials…"
                     className={cn(
-                        'w-full pl-7 pr-7 py-1.5 text-xs rounded-md border bg-white dark:bg-slate-900',
-                        'border-slate-200 dark:border-slate-700',
-                        'focus:outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20',
-                        'placeholder:text-slate-400'
+                        'w-full pl-7 pr-7 py-1.5 text-xs rounded-md border  sui-bg-section',
+                        'sui-border-weak sui-border-default',
+                        'focus:outline-none sui-focus-border-info focus:ring-2 sui-focus-ring',
+                        'sui-color-default'
                     )}
                 />
                 {query.length > 0 && (
                     <button
                         type="button"
                         onClick={() => setQuery('')}
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded  sui-hover-bg-overlay"
                         aria-label="Clear search"
                     >
-                        <X className="w-3 h-3 text-slate-400" aria-hidden />
+                        <X className="w-3 h-3 sui-color-default" aria-hidden />
                     </button>
                 )}
             </div>
@@ -683,7 +683,7 @@ export const InventoryTab: React.FC = () => {
             </div>
 
             {/* Counter + clear */}
-            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <div className="flex items-center justify-between text-xs  sui-color-default">
                 <span>
                     {filtered.length} of {assets.length} device
                     {assets.length === 1 ? '' : 's'}
@@ -692,7 +692,7 @@ export const InventoryTab: React.FC = () => {
                     <button
                         type="button"
                         onClick={clearAllFilters}
-                        className="text-sky-600 dark:text-sky-400 hover:underline"
+                        className="sui-color-info hover:underline"
                     >
                         Clear filters
                     </button>
@@ -702,31 +702,31 @@ export const InventoryTab: React.FC = () => {
             {/* List */}
             <div className="flex-1 min-h-0 overflow-y-auto -mx-1 px-1">
                 {isLoading && (
-                    <div className="flex items-center gap-2 py-3 text-xs text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center gap-2 py-3 text-xs  sui-color-default">
                         <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden />
                         Reading asset_inventory + splunk_inventory…
                     </div>
                 )}
                 {error && (
-                    <div className="flex flex-col gap-1.5 py-3 text-xs text-rose-600 dark:text-rose-400">
+                    <div className="flex flex-col gap-1.5 py-3 text-xs  sui-color-negative">
                         <div className="flex items-center gap-1.5">
                             <AlertCircle className="w-3.5 h-3.5" aria-hidden />
                             <span className="font-medium">Couldn't load inventory</span>
                         </div>
-                        <p className="text-slate-500 dark:text-slate-400 leading-snug">
+                        <p className="sui-color-muted sui-color-default leading-snug">
                             {error}
                         </p>
                         <button
                             type="button"
                             onClick={reload}
-                            className="self-start mt-1 px-2 py-0.5 rounded border text-xs border-rose-300 text-rose-600 hover:bg-rose-50 dark:border-rose-700 dark:hover:bg-rose-950/30"
+                            className="self-start mt-1 px-2 py-0.5 rounded border text-xs  sui-color-negative  sui-border-negative sui-hover-bg-negative"
                         >
                             Retry
                         </button>
                     </div>
                 )}
                 {!isLoading && !error && filtered.length === 0 && (
-                    <p className="py-6 text-center text-xs text-slate-400">
+                    <p className="py-6 text-center text-xs sui-color-default">
                         No devices match the current filters.
                     </p>
                 )}
@@ -736,7 +736,7 @@ export const InventoryTab: React.FC = () => {
                     ))}
                 </div>
                 {overflow > 0 && (
-                    <p className="mt-2 px-2 py-1 rounded bg-amber-50 dark:bg-amber-950/30 text-xs text-amber-700 dark:text-amber-300 leading-snug">
+                    <p className="mt-2 px-2 py-1 rounded  sui-bg-warning text-xs  sui-color-warning leading-snug">
                         {overflow} more match — filter to narrow.
                     </p>
                 )}

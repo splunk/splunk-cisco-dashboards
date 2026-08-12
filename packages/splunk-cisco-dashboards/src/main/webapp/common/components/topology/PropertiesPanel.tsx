@@ -319,14 +319,14 @@ const EDGE_KIND_OPTIONS: Array<{ id: EdgeUpdate['kind']; label: string; hint: st
 ];
 
 const SectionHeader: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 px-3 pt-3 pb-1">
+    <div className="text-xs font-semibold uppercase tracking-wider  sui-color-default px-3 pt-3 pb-1">
         {children}
     </div>
 );
 
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
     <div className="px-3 py-1.5">
-        <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+        <label className="block text-xs font-medium  sui-color-default mb-1">
             {label}
         </label>
         {children}
@@ -334,11 +334,11 @@ const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, 
 );
 
 const inputClass = cn(
-    'w-full text-[12px] px-2 py-1.5 rounded border',
-    'border-slate-200 dark:border-slate-700',
-    'bg-white dark:bg-slate-900',
-    'text-slate-900 dark:text-slate-100',
-    'focus:outline-none focus:ring-2 focus:ring-sky-500/40'
+    'w-full sui-color-default px-2 py-1.5 rounded border',
+    'sui-border-weak sui-border-default',
+    'sui-bg-section',
+    'sui-color-active',
+    'focus:outline-none focus:ring-2 sui-focus-ring'
 );
 
 /**
@@ -425,19 +425,19 @@ const BindToHostField: React.FC<{
 
     return (
         <div className="px-3 py-1.5" ref={containerRef}>
-            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+            <label className="block text-xs font-medium  sui-color-default mb-1">
                 Bind to host
-                <span className="ml-1 text-xs font-normal text-slate-400">
+                <span className="ml-1 text-xs font-normal sui-color-default">
                     {assetIndex.size.toLocaleString()} known hosts
                 </span>
             </label>
             {boundAsset ? (
-                <div className="flex items-start gap-2 p-2 rounded border border-emerald-200 dark:border-emerald-700/60 bg-emerald-50/60 dark:bg-emerald-950/30">
+                <div className="flex items-start gap-2 p-2 rounded border  sui-border-positive  sui-bg-positive">
                     <div className="flex-1 min-w-0">
-                        <div className="text-[12px] font-medium text-emerald-800 dark:text-emerald-200 truncate">
+                        <div className="sui-color-default font-medium  sui-color-positive truncate">
                             {boundAsset.label ?? boundAsset.id}
                         </div>
-                        <div className="text-xs text-emerald-700 dark:text-emerald-300 truncate">
+                        <div className="text-xs  sui-color-positive truncate">
                             {boundAsset.shortLabel ?? boundAsset.id}
                             {boundAsset.vendor ? ` · ${boundAsset.vendor}` : ''}
                             {boundAsset.model ? ` ${boundAsset.model}` : ''}
@@ -445,7 +445,7 @@ const BindToHostField: React.FC<{
                     </div>
                     <button
                         type="button"
-                        className="text-xs px-2 py-1 rounded border border-emerald-300 dark:border-emerald-600 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                        className="text-xs px-2 py-1 rounded border  sui-border-positive  sui-color-positive  sui-hover-bg-positive"
                         onClick={() => {
                             onUnbind();
                             setQuery('');
@@ -476,22 +476,22 @@ const BindToHostField: React.FC<{
                         }}
                     />
                     {open && matches.length > 0 ? (
-                        <ul className="absolute z-30 mt-1 left-0 right-0 max-h-64 overflow-auto rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg">
+                        <ul className="absolute z-30 mt-1 left-0 right-0 max-h-64 overflow-auto rounded border  sui-border-default  sui-bg-section shadow-lg">
                             {matches.map((a) => (
                                 <li key={a.id}>
                                     <button
                                         type="button"
-                                        className="block w-full text-left px-2 py-1.5 hover:bg-sky-50 dark:hover:bg-sky-900/30"
+                                        className="block w-full text-left px-2 py-1.5  sui-hover-bg-info"
                                         onClick={() => {
                                             onBind(a.id);
                                             setQuery('');
                                             setOpen(false);
                                         }}
                                     >
-                                        <div className="text-[12px] text-slate-900 dark:text-slate-100 truncate">
+                                        <div className="sui-color-default  sui-color-active truncate">
                                             {a.label ?? a.id}
                                         </div>
-                                        <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                                        <div className="text-xs  sui-color-default truncate">
                                             {a.shortLabel ?? a.id}
                                             {a.vendor ? ` · ${a.vendor}` : ''}
                                             {a.model ? ` ${a.model}` : ''}
@@ -501,13 +501,13 @@ const BindToHostField: React.FC<{
                             ))}
                         </ul>
                     ) : open && query.length > 0 ? (
-                        <div className="absolute z-30 mt-1 left-0 right-0 px-3 py-2 rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-500 shadow-sm">
+                        <div className="absolute z-30 mt-1 left-0 right-0 px-3 py-2 rounded border  sui-border-default  sui-bg-section text-xs sui-color-muted shadow-sm">
                             No hosts match “{query}”.
                         </div>
                     ) : null}
                 </div>
             )}
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 leading-tight">
+            <p className="mt-1 text-xs  sui-color-default leading-tight">
                 Binding pulls vendor, model, and live host status from{' '}
                 <code className="text-xs">asset_inventory</code>. The shape is auto-
                 reshaped to match the host&apos;s device family.
@@ -810,7 +810,7 @@ const NodePropertiesForm: React.FC<{
                 />
             </Field>
             {data.node?.serialNumber ? (
-                <div className="px-3 pb-2 text-xs text-slate-500 dark:text-slate-400">
+                <div className="px-3 pb-2 text-xs  sui-color-default">
                     Serial:{' '}
                     <code className="font-mono">{data.node.serialNumber}</code>
                 </div>
@@ -827,7 +827,7 @@ const NodePropertiesForm: React.FC<{
             </Field>
 
             <SectionHeader>Provenance</SectionHeader>
-            <div className="px-3 pb-2 space-y-1 text-xs text-slate-500 dark:text-slate-400">
+            <div className="px-3 pb-2 space-y-1 text-xs  sui-color-default">
                 <div>
                     <span className="font-medium">ID:</span>{' '}
                     <code className="font-mono">{node.id}</code>
@@ -843,18 +843,18 @@ const NodePropertiesForm: React.FC<{
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 px-3 py-3 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center gap-2 px-3 py-3 border-t  sui-border-weak">
                 <button
                     type="button"
                     onClick={handleApply}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-sky-500 hover:bg-sky-600 text-white shadow-sm"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium sui-bg-accent sui-hover-bg-accent sui-color-active shadow-sm"
                 >
                     <Save className="w-3.5 h-3.5" aria-hidden /> Apply
                 </button>
                 <button
                     type="button"
                     onClick={() => onDelete(node.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border border-rose-300 dark:border-rose-700 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border  sui-border-negative  sui-color-negative  sui-hover-bg-negative"
                 >
                     <Trash2 className="w-3.5 h-3.5" aria-hidden /> Remove
                 </button>
@@ -940,12 +940,12 @@ const RegionPropertiesForm: React.FC<{
                                 className={cn(
                                     'flex flex-col items-center justify-center gap-1 rounded border py-1.5 text-xs transition-colors',
                                     isActive
-                                        ? 'border-sky-500 bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300'
-                                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-500 dark:text-slate-400'
+                                        ? 'sui-border-info  sui-bg-info  sui-color-info'
+                                        : 'sui-border-weak sui-border-default  sui-hover-border-default  sui-color-default'
                                 )}
                             >
                                 <span
-                                    className="w-4 h-4 rounded-full border border-slate-300/60"
+                                    className="w-4 h-4 rounded-full border sui-border-default"
                                     style={{ background: opt.swatch }}
                                 />
                                 {opt.label}
@@ -956,9 +956,9 @@ const RegionPropertiesForm: React.FC<{
             </Field>
 
             <SectionHeader>Stats</SectionHeader>
-            <div className="px-3 pb-2 text-xs text-slate-500 dark:text-slate-400">
+            <div className="px-3 pb-2 text-xs  sui-color-default">
                 Devices in this region:{' '}
-                <span className="font-semibold text-slate-700 dark:text-slate-200">
+                <span className="font-semibold  sui-color-active">
                     {typeof data.deviceCount === 'number' ? data.deviceCount : 0}
                 </span>
                 <div className="text-xs italic pt-1">
@@ -967,18 +967,18 @@ const RegionPropertiesForm: React.FC<{
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 px-3 py-3 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center gap-2 px-3 py-3 border-t  sui-border-weak">
                 <button
                     type="button"
                     onClick={handleApply}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-sky-500 hover:bg-sky-600 text-white shadow-sm"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium sui-bg-accent sui-hover-bg-accent sui-color-active shadow-sm"
                 >
                     <Save className="w-3.5 h-3.5" aria-hidden /> Apply
                 </button>
                 <button
                     type="button"
                     onClick={() => onDelete(node.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border border-rose-300 dark:border-rose-700 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border  sui-border-negative  sui-color-negative  sui-hover-bg-negative"
                 >
                     <Trash2 className="w-3.5 h-3.5" aria-hidden /> Remove
                 </button>
@@ -1069,8 +1069,8 @@ const TitlePropertiesForm: React.FC<{
                         className={cn(
                             'flex items-center justify-center w-8 h-7 rounded border text-xs font-medium transition-colors',
                             bold
-                                ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300'
-                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300'
+                                ? 'sui-bg-info  sui-border-info  sui-color-info'
+                                : 'sui-bg-section  sui-border-default  sui-color-default sui-hover-border-default'
                         )}
                     >
                         <Bold className="w-3.5 h-3.5" aria-hidden />
@@ -1083,8 +1083,8 @@ const TitlePropertiesForm: React.FC<{
                         className={cn(
                             'flex items-center justify-center w-8 h-7 rounded border text-xs font-medium transition-colors',
                             italic
-                                ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300'
-                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300'
+                                ? 'sui-bg-info  sui-border-info  sui-color-info'
+                                : 'sui-bg-section  sui-border-default  sui-color-default sui-hover-border-default'
                         )}
                     >
                         <Italic className="w-3.5 h-3.5" aria-hidden />
@@ -1109,8 +1109,8 @@ const TitlePropertiesForm: React.FC<{
                                 className={cn(
                                     'w-6 h-6 rounded-full border-2 transition-transform',
                                     active
-                                        ? 'border-sky-400 scale-110 shadow-sm'
-                                        : 'border-white dark:border-slate-800 hover:scale-105'
+                                        ? 'sui-border-info scale-110 shadow-sm'
+                                        : 'sui-border-strong sui-border-weak hover:scale-105'
                                 )}
                                 style={{ backgroundColor: p.value }}
                             />
@@ -1135,7 +1135,7 @@ const TitlePropertiesForm: React.FC<{
             </Field>
 
             <SectionHeader>Provenance</SectionHeader>
-            <div className="px-3 pb-2 space-y-1 text-xs text-slate-500 dark:text-slate-400">
+            <div className="px-3 pb-2 space-y-1 text-xs  sui-color-default">
                 <div>
                     <span className="font-medium">ID:</span>{' '}
                     <code className="font-mono">{node.id}</code>
@@ -1146,18 +1146,18 @@ const TitlePropertiesForm: React.FC<{
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 px-3 py-3 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center gap-2 px-3 py-3 border-t  sui-border-weak">
                 <button
                     type="button"
                     onClick={handleApply}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-sky-500 hover:bg-sky-600 text-white shadow-sm"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium sui-bg-accent sui-hover-bg-accent sui-color-active shadow-sm"
                 >
                     <Save className="w-3.5 h-3.5" aria-hidden /> Apply
                 </button>
                 <button
                     type="button"
                     onClick={() => onDelete(node.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border border-rose-300 dark:border-rose-700 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border  sui-border-negative  sui-color-negative  sui-hover-bg-negative"
                 >
                     <Trash2 className="w-3.5 h-3.5" aria-hidden /> Remove title
                 </button>
@@ -1317,8 +1317,8 @@ const TextBoxPropertiesForm: React.FC<{
                         className={cn(
                             'flex items-center justify-center w-8 h-7 rounded border text-xs font-medium transition-colors',
                             bold
-                                ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300'
-                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300'
+                                ? 'sui-bg-info  sui-border-info  sui-color-info'
+                                : 'sui-bg-section  sui-border-default  sui-color-default sui-hover-border-default'
                         )}
                     >
                         <Bold className="w-3.5 h-3.5" aria-hidden />
@@ -1331,8 +1331,8 @@ const TextBoxPropertiesForm: React.FC<{
                         className={cn(
                             'flex items-center justify-center w-8 h-7 rounded border text-xs font-medium transition-colors',
                             italic
-                                ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300'
-                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300'
+                                ? 'sui-bg-info  sui-border-info  sui-color-info'
+                                : 'sui-bg-section  sui-border-default  sui-color-default sui-hover-border-default'
                         )}
                     >
                         <Italic className="w-3.5 h-3.5" aria-hidden />
@@ -1350,8 +1350,8 @@ const TextBoxPropertiesForm: React.FC<{
                             className={cn(
                                 'flex-1 px-2 py-1 rounded border text-xs font-medium transition-colors',
                                 align === opt.id
-                                    ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300'
-                                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-slate-300'
+                                    ? 'sui-bg-info  sui-border-info  sui-color-info'
+                                    : 'sui-bg-section  sui-border-default  sui-color-default sui-hover-border-default'
                             )}
                         >
                             {opt.label}
@@ -1376,8 +1376,8 @@ const TextBoxPropertiesForm: React.FC<{
                                 className={cn(
                                     'w-6 h-6 rounded-full border-2 transition-transform',
                                     active
-                                        ? 'border-sky-400 scale-110 shadow-sm'
-                                        : 'border-white dark:border-slate-800 hover:scale-105'
+                                        ? 'sui-border-info scale-110 shadow-sm'
+                                        : 'sui-border-strong sui-border-weak hover:scale-105'
                                 )}
                                 style={{ backgroundColor: p.value }}
                             />
@@ -1414,10 +1414,10 @@ const TextBoxPropertiesForm: React.FC<{
                                 className={cn(
                                     'w-6 h-6 rounded-full border transition-transform',
                                     active
-                                        ? 'border-sky-400 scale-110 shadow-sm'
-                                        : 'border-slate-300 dark:border-slate-600 hover:scale-105',
+                                        ? 'sui-border-info scale-110 shadow-sm'
+                                        : 'sui-border-default hover:scale-105',
                                     p.value === 'transparent' &&
-                                        'bg-[conic-gradient(at_top_left,_#fff_25%,_#e2e8f0_25%_50%,_#fff_50%_75%,_#e2e8f0_75%)] bg-[length:8px_8px]'
+                                        'sui-bg-section bg-[length:8px_8px]'
                                 )}
                                 style={
                                     p.value === 'transparent'
@@ -1443,18 +1443,18 @@ const TextBoxPropertiesForm: React.FC<{
                 </select>
             </Field>
 
-            <div className="flex items-center gap-2 px-3 py-3 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center gap-2 px-3 py-3 border-t  sui-border-weak">
                 <button
                     type="button"
                     onClick={handleApply}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium bg-sky-500 hover:bg-sky-600 text-white shadow-sm"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium sui-bg-accent sui-hover-bg-accent sui-color-active shadow-sm"
                 >
                     <Save className="w-3.5 h-3.5" aria-hidden /> Apply
                 </button>
                 <button
                     type="button"
                     onClick={() => onDelete(node.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border border-rose-300 dark:border-rose-700 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border  sui-border-negative  sui-color-negative  sui-hover-bg-negative"
                 >
                     <Trash2 className="w-3.5 h-3.5" aria-hidden /> Remove
                 </button>
@@ -1624,13 +1624,13 @@ const EdgePropertiesForm: React.FC<{
     return (
         <>
             <SectionHeader>Endpoints</SectionHeader>
-            <div className="px-3 pb-1 space-y-1 text-xs text-slate-700 dark:text-slate-300">
+            <div className="px-3 pb-1 space-y-1 text-xs  sui-color-default">
                 <div>
-                    <span className="font-medium text-slate-500 dark:text-slate-400">Source:</span>{' '}
+                    <span className="font-medium  sui-color-default">Source:</span>{' '}
                     <code className="font-mono">{edge.source}</code>
                 </div>
                 <div>
-                    <span className="font-medium text-slate-500 dark:text-slate-400">Target:</span>{' '}
+                    <span className="font-medium  sui-color-default">Target:</span>{' '}
                     <code className="font-mono">{edge.target}</code>
                 </div>
             </div>
@@ -1652,7 +1652,7 @@ const EdgePropertiesForm: React.FC<{
                         </option>
                     ))}
                 </select>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-xs  sui-color-default">
                     {EDGE_KIND_OPTIONS.find((o) => o.id === kind)?.hint}
                 </p>
             </Field>
@@ -1660,7 +1660,7 @@ const EdgePropertiesForm: React.FC<{
             <SectionHeader>Direction</SectionHeader>
             <Field label="Arrowheads">
                 <div
-                    className="flex items-stretch gap-0.5 p-0.5 rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40"
+                    className="flex items-stretch gap-0.5 p-0.5 rounded-md border  sui-border-default  sui-bg-popup"
                     role="radiogroup"
                     aria-label="Edge direction"
                 >
@@ -1681,8 +1681,8 @@ const EdgePropertiesForm: React.FC<{
                                 className={cn(
                                     'flex-1 flex items-center justify-center px-2 py-1 rounded text-xs font-medium transition-colors',
                                     active
-                                        ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm border border-sky-200 dark:border-sky-700'
-                                        : 'text-slate-600 dark:text-slate-300 hover:bg-white/70 dark:hover:bg-slate-900/40 border border-transparent'
+                                        ? 'sui-bg-section  sui-color-info shadow-sm border  sui-border-info'
+                                        : 'sui-color-default sui-bg-section sui-hover-bg-section border sui-border-transparent'
                                 )}
                             >
                                 <Icon className="w-3.5 h-3.5" aria-hidden />
@@ -1690,7 +1690,7 @@ const EdgePropertiesForm: React.FC<{
                         );
                     })}
                 </div>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-xs  sui-color-default">
                     {EDGE_DIRECTION_OPTIONS.find((o) => o.id === direction)?.hint}
                 </p>
             </Field>
@@ -1720,7 +1720,7 @@ const EdgePropertiesForm: React.FC<{
                         </option>
                     ))}
                 </select>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-xs  sui-color-default">
                     {ARROW_STYLE_OPTIONS.find((o) => o.id === arrowStyle)
                         ?.hint ?? ''}
                 </p>
@@ -1746,8 +1746,8 @@ const EdgePropertiesForm: React.FC<{
                     className={cn(
                         'inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-xs transition-colors w-full justify-start',
                         liveStatus
-                            ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300'
-                            : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                            ? 'sui-bg-positive  sui-border-positive  sui-color-positive'
+                            : 'sui-bg-page sui-bg-popup  sui-border-default  sui-color-default'
                     )}
                     title={
                         liveStatus
@@ -1759,8 +1759,8 @@ const EdgePropertiesForm: React.FC<{
                         className={cn(
                             'w-3.5 h-3.5',
                             liveStatus
-                                ? 'text-emerald-500'
-                                : 'text-slate-400'
+                                ? 'sui-color-positive'
+                                : 'sui-color-default'
                         )}
                         aria-hidden
                     />
@@ -1768,7 +1768,7 @@ const EdgePropertiesForm: React.FC<{
                         {liveStatus ? 'Reporting from hosts' : 'Static colour'}
                     </span>
                 </button>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-xs  sui-color-default">
                     Recolour the line based on live <code>| metadata</code> activity for bound endpoints — green when reporting, red when stale.
                 </p>
             </Field>
@@ -1799,8 +1799,8 @@ const EdgePropertiesForm: React.FC<{
                                 className={cn(
                                     'w-6 h-6 rounded-full border-2 transition-transform',
                                     active
-                                        ? 'border-sky-400 scale-110 shadow-sm'
-                                        : 'border-white dark:border-slate-800 hover:scale-105'
+                                        ? 'sui-border-info scale-110 shadow-sm'
+                                        : 'sui-border-strong sui-border-weak hover:scale-105'
                                 )}
                                 style={{ backgroundColor: p.value }}
                             />
@@ -1816,14 +1816,14 @@ const EdgePropertiesForm: React.FC<{
                         className={cn(
                             'h-6 px-2 rounded-full text-xs font-medium border transition-colors',
                             lineColor === ''
-                                ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300'
-                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300'
+                                ? 'sui-bg-info  sui-border-info  sui-color-info'
+                                : 'sui-bg-section  sui-border-default  sui-color-default sui-hover-border-default'
                         )}
                     >
                         Auto
                     </button>
                 </div>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-xs  sui-color-default">
                     {lineColor
                         ? `Custom colour ${lineColor}`
                         : 'Auto — colour matches the edge kind.'}
@@ -1856,8 +1856,8 @@ const EdgePropertiesForm: React.FC<{
                                 className={cn(
                                     'w-6 h-6 rounded-full border-2 transition-transform',
                                     active
-                                        ? 'border-sky-400 scale-110 shadow-sm'
-                                        : 'border-white dark:border-slate-800 hover:scale-105'
+                                        ? 'sui-border-info scale-110 shadow-sm'
+                                        : 'sui-border-strong sui-border-weak hover:scale-105'
                                 )}
                                 style={{ backgroundColor: p.value }}
                             />
@@ -1873,14 +1873,14 @@ const EdgePropertiesForm: React.FC<{
                         className={cn(
                             'h-6 px-2 rounded-full text-xs font-medium border transition-colors',
                             animationColor === ''
-                                ? 'bg-sky-50 dark:bg-sky-900/30 border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300'
-                                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300'
+                                ? 'sui-bg-info  sui-border-info  sui-color-info'
+                                : 'sui-bg-section  sui-border-default  sui-color-default sui-hover-border-default'
                         )}
                     >
                         Auto
                     </button>
                 </div>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-xs  sui-color-default">
                     {animationActive
                         ? animationColor
                             ? `Custom colour ${animationColor}`
@@ -1912,7 +1912,7 @@ const EdgePropertiesForm: React.FC<{
             </Field>
 
             <SectionHeader>Provenance</SectionHeader>
-            <div className="px-3 pb-2 space-y-1 text-xs text-slate-500 dark:text-slate-400">
+            <div className="px-3 pb-2 space-y-1 text-xs  sui-color-default">
                 <div>
                     <span className="font-medium">ID:</span>{' '}
                     <code className="font-mono">{edge.id}</code>
@@ -1927,11 +1927,11 @@ const EdgePropertiesForm: React.FC<{
                 </div>
             </div>
 
-            <div className="flex items-center gap-2 px-3 py-3 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center gap-2 px-3 py-3 border-t  sui-border-weak">
                 <button
                     type="button"
                     onClick={() => onDelete(edge.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border border-rose-300 dark:border-rose-700 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/30"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border  sui-border-negative  sui-color-negative  sui-hover-bg-negative"
                 >
                     <Trash2 className="w-3.5 h-3.5" aria-hidden /> Remove
                 </button>
@@ -1978,21 +1978,21 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
         <aside
             className={cn(
                 'absolute top-3 right-3 bottom-3 z-20 flex flex-col w-[300px]',
-                'rounded-xl border border-slate-200 dark:border-slate-800',
-                'bg-white dark:bg-slate-900 shadow-xl overflow-hidden'
+                'rounded-xl border  sui-border-weak',
+                'sui-bg-section shadow-xl overflow-hidden'
             )}
             role="dialog"
             aria-label={headerText}
         >
-            <header className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-slate-800">
-                <h2 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+            <header className="flex items-center justify-between px-3 py-2 border-b  sui-border-weak">
+                <h2 className="text-xs font-semibold  sui-color-active">
                     {headerText}
                 </h2>
                 <button
                     type="button"
                     onClick={onClose}
                     aria-label="Close properties panel"
-                    className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400"
+                    className="p-1 rounded  sui-hover-bg-overlay  sui-color-default"
                 >
                     <X className="w-3.5 h-3.5" aria-hidden />
                 </button>

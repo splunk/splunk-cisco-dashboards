@@ -112,7 +112,7 @@ export const KPIBrowser: React.FC<KPIBrowserProps> = ({
 
     return createPortal(
         <div
-            className="fixed inset-0 z-[9996] flex items-start justify-center overflow-y-auto bg-slate-950/55 px-4 py-8 backdrop-blur-sm"
+            className="fixed inset-0 z-[9996] flex items-start justify-center overflow-y-auto sui-bg-page px-4 py-8 backdrop-blur-sm"
             onMouseDown={(event) => {
                 if (event.target === event.currentTarget) onClose();
             }}
@@ -120,11 +120,11 @@ export const KPIBrowser: React.FC<KPIBrowserProps> = ({
             aria-modal="true"
             aria-label="Browse KPI library"
         >
-            <div className="flex max-h-[88vh] w-[min(560px,96vw)] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-950 shadow-2xl dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
+            <div className="flex max-h-[88vh] w-[min(560px,96vw)] flex-col overflow-hidden rounded-xl border    shadow-2xl sui-border-default sui-bg-page sui-color-active">
                 <header className="flex items-start justify-between gap-4 px-6 py-5">
                     <div>
                         <h2 className="text-xl font-black tracking-tight">Browse KPI Library</h2>
-                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        <p className="mt-1 text-sm  sui-color-default">
                             Select a KPI for {KPI_SECTION_TITLES[targetSectionId]}.
                         </p>
                     </div>
@@ -132,7 +132,7 @@ export const KPIBrowser: React.FC<KPIBrowserProps> = ({
                         type="button"
                         onClick={onClose}
                         aria-label="Close KPI library"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-white"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg sui-color-muted transition   focus:outline-none focus-visible:ring-2 sui-focus-visible-ring sui-hover-bg-overlay sui-hover-color-active"
                     >
                         <X className="h-4 w-4" />
                     </button>
@@ -140,18 +140,18 @@ export const KPIBrowser: React.FC<KPIBrowserProps> = ({
 
                 <div className="px-6 pb-4">
                     <div className="relative">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 sui-color-default" />
                         <input
                             autoFocus
                             value={query}
                             onChange={(event) => setQuery(event.target.value)}
                             placeholder="Filter by name, description, or tag..."
-                            className="h-10 w-full rounded-lg border border-slate-200 bg-slate-100 pl-10 pr-3 text-sm font-semibold outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20 dark:border-slate-700 dark:bg-slate-900"
+                            className="h-10 w-full rounded-lg border   pl-10 pr-3 text-sm font-semibold outline-none sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-section"
                         />
                     </div>
 
-                    <div className="mt-4 flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                        <Filter className="h-4 w-4 text-slate-500" />
+                    <div className="mt-4 flex items-center gap-2 text-xs font-black uppercase tracking-wider  sui-color-default">
+                        <Filter className="h-4 w-4 sui-color-muted" />
                         Filters
                     </div>
                     <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -176,13 +176,13 @@ export const KPIBrowser: React.FC<KPIBrowserProps> = ({
                             },
                         ].map((filter) => (
                             <label key={filter.label} className="block">
-                                <span className="text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                <span className="text-xs font-black uppercase tracking-wide  sui-color-default">
                                     {filter.label}
                                 </span>
                                 <select
                                     value={filter.value}
                                     onChange={(event) => filter.onChange(event.target.value)}
-                                    className="mt-2 h-10 w-full rounded-lg border border-slate-200 bg-slate-100 px-3 text-sm font-semibold outline-none focus:border-sky-400 dark:border-slate-700 dark:bg-slate-900"
+                                    className="mt-2 h-10 w-full rounded-lg border   px-3 text-sm font-semibold outline-none sui-focus-border-info sui-border-default sui-bg-section"
                                 >
                                     {filter.options.map((option) => (
                                         <option key={option} value={option}>
@@ -195,7 +195,7 @@ export const KPIBrowser: React.FC<KPIBrowserProps> = ({
                     </div>
                 </div>
 
-                <div className="min-h-0 flex-1 overflow-y-auto border-t border-slate-200 px-6 py-4 dark:border-slate-800">
+                <div className="min-h-0 flex-1 overflow-y-auto border-t  px-6 py-4 sui-border-weak">
                     <div className="space-y-3">
                         {filteredTemplates.map((template) => {
                             const binding = bindings[template.id];
@@ -206,13 +206,13 @@ export const KPIBrowser: React.FC<KPIBrowserProps> = ({
                                     className={cn(
                                         'rounded-xl border p-4 transition',
                                         binding
-                                            ? 'border-sky-300 bg-sky-50/70 dark:border-sky-800 dark:bg-sky-950/30'
-                                            : 'border-slate-200 hover:border-sky-300 dark:border-slate-800 dark:hover:border-sky-600'
+                                            ? 'sui-border-info sui-bg-info'
+                                            : 'sui-border-weak sui-hover-border-info'
                                     )}
                                 >
                                     {binding && (
                                         <div className="mb-3 flex items-center justify-between gap-3">
-                                            <span className="rounded-full border border-emerald-300 bg-emerald-100 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                                            <span className="rounded-full border   px-3 py-1 text-xs font-black uppercase tracking-wide  sui-border-positive sui-bg-positive sui-color-positive">
                                                 Bound: {KPI_SECTION_TITLES[binding.sectionId]}
                                             </span>
                                             <button
@@ -221,7 +221,7 @@ export const KPIBrowser: React.FC<KPIBrowserProps> = ({
                                                     onJumpTo(binding.instanceId);
                                                     onClose();
                                                 }}
-                                                className="text-xs font-black uppercase tracking-wide text-slate-700 transition hover:text-sky-600 dark:text-slate-200 dark:hover:text-sky-300"
+                                                className="text-xs font-black uppercase tracking-wide  transition  sui-color-active sui-hover-color-info"
                                             >
                                                 Jump To
                                             </button>
@@ -229,11 +229,11 @@ export const KPIBrowser: React.FC<KPIBrowserProps> = ({
                                     )}
                                     <div className="flex gap-3">
                                         {Icon && (
-                                            <Icon className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-500" />
+                                            <Icon className="mt-0.5 h-5 w-5 flex-shrink-0 sui-color-positive" />
                                         )}
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-start justify-between gap-3">
-                                                <h3 className="text-base font-black leading-tight text-slate-900 dark:text-white">
+                                                <h3 className="text-base font-black leading-tight  sui-color-active">
                                                     {template.title}
                                                 </h3>
                                                 <button
@@ -247,10 +247,10 @@ export const KPIBrowser: React.FC<KPIBrowserProps> = ({
                                                         onSelect(template, targetSectionId);
                                                     }}
                                                     className={cn(
-                                                        'inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
+                                                        'inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg transition focus:outline-none focus-visible:ring-2 sui-focus-visible-ring',
                                                         binding
-                                                            ? 'text-sky-600 hover:bg-sky-100 dark:text-sky-300 dark:hover:bg-sky-950'
-                                                            : 'text-slate-400 hover:bg-slate-100 hover:text-sky-600 dark:hover:bg-slate-800'
+                                                            ? 'sui-color-info sui-hover-bg-info'
+                                                            : 'sui-color-default  sui-hover-color-info sui-hover-bg-overlay'
                                                     )}
                                                     aria-label={
                                                         binding
@@ -261,20 +261,20 @@ export const KPIBrowser: React.FC<KPIBrowserProps> = ({
                                                     <ArrowRight className="h-5 w-5" />
                                                 </button>
                                             </div>
-                                            <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                                            <p className="mt-2 text-sm leading-6  sui-color-default">
                                                 {template.description}
                                             </p>
                                             <div className="mt-3 flex flex-wrap gap-1.5">
                                                 {template.tags.slice(0, 4).map((tag) => (
                                                     <span
                                                         key={tag}
-                                                        className="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-xs font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+                                                        className="rounded-full border   px-2 py-0.5 text-xs font-semibold  sui-border-default sui-bg-section sui-color-default"
                                                     >
                                                         {tag}
                                                     </span>
                                                 ))}
                                             </div>
-                                            <p className="mt-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                            <p className="mt-3 text-xs font-semibold  sui-color-default">
                                                 {template.app} <span className="px-2">.</span>{' '}
                                                 {template.category}{' '}
                                                 <span className="px-2">.</span>{' '}
@@ -286,21 +286,21 @@ export const KPIBrowser: React.FC<KPIBrowserProps> = ({
                             );
                         })}
                         {filteredTemplates.length === 0 && (
-                            <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                            <div className="rounded-xl border border-dashed  p-8 text-center text-sm font-semibold  sui-border-default sui-color-default">
                                 No KPIs match the selected filters.
                             </div>
                         )}
                     </div>
                 </div>
 
-                <footer className="flex items-center justify-between border-t border-slate-200 px-6 py-4 text-sm dark:border-slate-800">
-                    <span className="font-semibold text-slate-500 dark:text-slate-400">
+                <footer className="flex items-center justify-between border-t  px-6 py-4 text-sm sui-border-weak">
+                    <span className="font-semibold  sui-color-default">
                         Showing {filteredTemplates.length} of {templates.length} KPIs
                     </span>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="h-10 rounded-lg border border-slate-200 px-4 font-black transition hover:border-sky-300 hover:text-sky-700 dark:border-slate-700 dark:hover:text-sky-300"
+                        className="h-10 rounded-lg border  px-4 font-black transition sui-hover-border-info  sui-border-default sui-hover-color-info"
                     >
                         Cancel
                     </button>

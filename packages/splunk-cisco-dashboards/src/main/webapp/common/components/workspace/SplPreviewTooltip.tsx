@@ -482,7 +482,7 @@ export const SplPreviewTooltip: React.FC<SplPreviewTooltipProps> = ({
                           backgroundColor: SPLUNK_EDITOR_COLORS.shell,
                           color: SPLUNK_EDITOR_COLORS.text,
                       }}
-                      className="z-[9999] rounded-lg shadow-2xl ring-1 ring-black/40"
+                      className="z-[9999] rounded-lg shadow-2xl ring-1 sui-focus-ring"
                   >
                       <div
                           onPointerDown={startDrag}
@@ -516,7 +516,7 @@ export const SplPreviewTooltip: React.FC<SplPreviewTooltipProps> = ({
                                   aria-label={`Close SPL preview for ${title}`}
                                   onPointerDown={(event) => event.stopPropagation()}
                                   onClick={closeTooltip}
-                                  className="rounded p-1 transition-colors hover:bg-white/10 focus:outline-none focus:ring-1 focus:ring-sky-300"
+                                  className="rounded p-1 transition-colors sui-bg-section focus:outline-none focus:ring-1 sui-focus-ring"
                                   style={{ color: SPLUNK_EDITOR_COLORS.muted }}
                               >
                                   <X className="h-3.5 w-3.5" />
@@ -525,7 +525,7 @@ export const SplPreviewTooltip: React.FC<SplPreviewTooltipProps> = ({
                       </div>
                       <div
                           aria-label="SPL preview source"
-                          className="max-h-[34rem] overflow-auto rounded-b-lg border px-3 py-3 font-mono text-[12.5px] leading-6"
+                          className="max-h-[34rem] overflow-auto rounded-b-lg border px-3 py-3 font-mono sui-color-default leading-6"
                           style={{
                               backgroundColor: SPLUNK_EDITOR_COLORS.editor,
                               borderColor: SPLUNK_EDITOR_COLORS.border,
@@ -536,7 +536,7 @@ export const SplPreviewTooltip: React.FC<SplPreviewTooltipProps> = ({
                           }}
                       >
                           <code
-                              className="block whitespace-pre-wrap break-words bg-transparent p-0"
+                              className="block whitespace-pre-wrap break-words sui-bg-transparent p-0"
                               style={{ backgroundColor: 'transparent', color: 'inherit' }}
                           >
                               {spl.trim() ? (
@@ -580,11 +580,11 @@ export const SplPreviewTooltip: React.FC<SplPreviewTooltipProps> = ({
                 aria-haspopup="dialog"
                 onClick={toggleTooltip}
                 className={cn(
-                    'rounded p-0.5 -my-0.5 text-slate-400 transition-colors hover:text-sky-600 focus:text-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-400',
+                    'rounded p-0.5 -my-0.5 sui-color-default transition-colors sui-hover-color-info sui-focus-color-info focus:outline-none focus:ring-1 sui-focus-ring',
                     iconClassName
                 )}
             >
-                <Code2 className="h-3.5 w-3.5 stroke-[2.25px]" />
+                <Code2 className="h-3.5 w-3.5 sui-stroke-default" />
             </button>
             {popover}
         </span>

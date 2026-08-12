@@ -235,7 +235,7 @@ export default function DBHomePage() {
     "--dashboard-manager-border": splunkTheme.borderColor,
     "--dashboard-manager-border-strong": splunkTheme.borderColorStrong,
     "--dashboard-manager-border-weak": splunkTheme.borderColorWeak,
-    "--dashboard-manager-accent": splunkTheme.interactiveColorPrimary,
+    "--dashboard-manager-accent": splunkTheme.interactiveColorAccent,
     "--dashboard-manager-overlay-hover":
       splunkTheme.interactiveColorOverlayHover,
     "--dashboard-manager-overlay-selected":

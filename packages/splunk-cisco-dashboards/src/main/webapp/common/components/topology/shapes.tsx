@@ -96,35 +96,35 @@ const STATUS_PRESETS: Record<
     }
 > = {
     healthy: {
-        ring: 'ring-emerald-500/60 border-emerald-500/30',
-        dot: 'bg-emerald-500',
-        dotGlow: 'shadow-[0_0_8px_2px_rgba(16,185,129,0.5)]',
-        dotPing: 'bg-emerald-400/80',
-        accent: 'text-emerald-600 dark:text-emerald-400',
+        ring: 'sui-focus-ring sui-border-positive',
+        dot: 'sui-bg-positive',
+        dotGlow: 'sui-shadow-overlay',
+        dotPing: 'sui-bg-positive',
+        accent: 'sui-color-positive',
         label: 'Healthy',
     },
     warning: {
-        ring: 'ring-amber-500/70 border-amber-500/40',
-        dot: 'bg-amber-500',
-        dotGlow: 'shadow-[0_0_8px_2px_rgba(245,158,11,0.5)]',
-        dotPing: 'bg-amber-400/70',
-        accent: 'text-amber-600 dark:text-amber-400',
+        ring: 'sui-focus-ring sui-border-warning',
+        dot: 'sui-bg-warning',
+        dotGlow: 'sui-shadow-overlay',
+        dotPing: 'sui-bg-warning',
+        accent: 'sui-color-warning',
         label: 'Warning',
     },
     critical: {
-        ring: 'ring-rose-500/80 border-rose-500/50',
-        dot: 'bg-rose-500',
-        dotGlow: 'shadow-[0_0_8px_2px_rgba(244,63,94,0.6)]',
-        dotPing: 'bg-rose-500/80',
-        accent: 'text-rose-600 dark:text-rose-400',
+        ring: 'sui-focus-ring sui-border-negative',
+        dot: 'sui-bg-negative',
+        dotGlow: 'sui-shadow-overlay',
+        dotPing: 'sui-bg-negative',
+        accent: 'sui-color-negative',
         label: 'Critical',
     },
     unknown: {
-        ring: 'ring-slate-400/40 border-slate-300/60 dark:border-slate-700/60',
-        dot: 'bg-slate-400',
+        ring: 'sui-focus-ring  sui-border-default',
+        dot: 'sui-bg-floating',
         dotGlow: '',
         dotPing: '',
-        accent: 'text-slate-500 dark:text-slate-400',
+        accent: 'sui-color-muted sui-color-default',
         label: 'No telemetry',
     },
 };
@@ -201,7 +201,7 @@ const CustomStencilPortHandles: React.FC<{ selected?: boolean }> = ({
             const className = cn(
                 guideAnchor ? '!h-1.5 !w-1.5' : '!h-1 !w-1',
                 '!min-h-0 !min-w-0 !rounded-full',
-                '!border !border-white !bg-sky-500',
+                '!border sui-important-border-strong sui-important-bg-accent',
                 'transition-opacity',
                 selected && guideAnchor ? 'opacity-70' : 'opacity-0',
                 guideAnchor ? 'group-hover:opacity-80' : 'group-hover:opacity-40'
@@ -273,14 +273,14 @@ const NodeHandles: React.FC<{
                             type="target"
                             position={s.pos}
                             id={`${s.id}-target`}
-                            className="!w-2.5 !h-2.5 !bg-sky-400 !border-2 !border-white dark:!border-slate-900 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="!w-2.5 !h-2.5 sui-important-bg-accent !border-2 sui-important-border-strong sui-important-border-weak opacity-0 group-hover:opacity-100 transition-opacity"
                             style={s.style}
                         />
                         <Handle
                             type="source"
                             position={s.pos}
                             id={`${s.id}-source`}
-                            className="!w-2.5 !h-2.5 !bg-sky-500 !border-2 !border-white dark:!border-slate-900 opacity-0 group-hover:opacity-100 transition-opacity"
+                            className="!w-2.5 !h-2.5 sui-important-bg-accent !border-2 sui-important-border-strong sui-important-border-weak opacity-0 group-hover:opacity-100 transition-opacity"
                             style={s.style}
                         />
                     </React.Fragment>
@@ -365,7 +365,7 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
     if (customStencil) {
         return (
             <div
-                className="group relative flex h-full w-full items-center justify-center overflow-visible bg-transparent"
+                className="group relative flex h-full w-full items-center justify-center overflow-visible sui-bg-transparent"
                 style={{ width: '100%', height: '100%' }}
                 title={title}
             >
@@ -373,8 +373,8 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
                     isVisible={selected === true}
                     minWidth={180}
                     minHeight={20}
-                    lineClassName="!border-sky-500/55"
-                    handleClassName="!bg-sky-500 !border-white !w-2 !h-2"
+                    lineClassName="sui-important-border-info"
+                    handleClassName="sui-important-bg-accent sui-important-border-strong !w-2 !h-2"
                 />
                 <NodeHandles
                     freeform={data.freeformAnchors === true}
@@ -387,7 +387,7 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
                     className="pointer-events-none block h-full w-full object-contain"
                     draggable={false}
                 />
-                <div className="pointer-events-none absolute left-0 top-full mt-1 min-w-28 max-w-72 rounded-md border border-slate-200 bg-white/95 px-1.5 py-1 leading-tight shadow-sm backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/95">
+                <div className="pointer-events-none absolute left-0 top-full mt-1 min-w-28 max-w-72 rounded-md border   px-1.5 py-1 leading-tight shadow-sm backdrop-blur-sm sui-border-default sui-bg-section">
                     <div className="flex items-center gap-1">
                         <span
                             className={cn(
@@ -397,7 +397,7 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
                             )}
                             aria-hidden
                         />
-                        <span className="truncate text-xs font-semibold text-slate-900 dark:text-slate-100">
+                        <span className="truncate text-xs font-semibold  sui-color-active">
                             {node.shortLabel}
                         </span>
                     </div>
@@ -405,8 +405,8 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
                         className={cn(
                             'truncate text-xs font-mono tracking-tight',
                             vendorModelLine
-                                ? 'text-slate-600 dark:text-slate-300'
-                                : 'text-transparent'
+                                ? 'sui-color-default'
+                                : 'sui-color-transparent'
                         )}
                         title={vendorModelLine ?? undefined}
                     >
@@ -416,8 +416,8 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
                         className={cn(
                             'truncate text-xs font-mono tracking-tight',
                             showIp
-                                ? 'text-sky-600 dark:text-sky-400'
-                                : 'text-transparent'
+                                ? 'sui-color-info'
+                                : 'sui-color-transparent'
                         )}
                         title={showIp ? ipAddress : undefined}
                     >
@@ -431,7 +431,7 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
     return (
         <div
             className={cn(
-                'group relative flex flex-col items-stretch rounded-lg border bg-white dark:bg-slate-900',
+                'group relative flex flex-col items-stretch rounded-lg border  sui-bg-section',
                 // Build 111: layered shadow recipe ported from the v0
                 // reference. A tight contact shadow + a softer
                 // ambient shadow stack to deliver the "premium
@@ -440,18 +440,18 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
                 // simultaneously for a subtle lift on cursor.
                 // Dark-mode variants increase alpha because shadows
                 // need to read against a near-black canvas.
-                'shadow-[0_1px_3px_rgba(0,0,0,0.08),0_4px_12px_rgba(0,0,0,0.04)]',
-                'dark:shadow-[0_1px_3px_rgba(0,0,0,0.4),0_4px_12px_rgba(0,0,0,0.3)]',
+                'sui-shadow-overlay',
+                'sui-shadow-overlay',
                 'transition-shadow duration-200',
-                'hover:shadow-[0_2px_8px_rgba(0,0,0,0.1),0_8px_24px_rgba(0,0,0,0.06)]',
-                'dark:hover:shadow-[0_2px_8px_rgba(0,0,0,0.5),0_8px_24px_rgba(0,0,0,0.35)]',
+                'sui-shadow-overlay',
+                'sui-shadow-overlay',
                 // Status ring softened from `ring-2` (Build 105) to
                 // `ring-1` (Build 111). The chunky ring + offset
                 // combo competed visually with the new layered
                 // shadows; a 1px coloured ring still carries the
                 // status signal at a glance but lets the shadow do
                 // the depth work uncontested.
-                'ring-1 ring-offset-1 dark:ring-offset-slate-950',
+                'ring-1 ring-offset-1 sui-ring-offset-page',
                 status.ring,
                 selected &&
                     'outline outline-2 outline-sky-500/70 outline-offset-2'
@@ -485,8 +485,8 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
                 isVisible={selected === true}
                 minWidth={90}
                 minHeight={100}
-                lineClassName="!border-sky-500/50"
-                handleClassName="!bg-sky-500 !border-white !w-2 !h-2"
+                lineClassName="sui-important-border-info"
+                handleClassName="sui-important-bg-accent sui-important-border-strong !w-2 !h-2"
             />
             <NodeHandles freeform={data.freeformAnchors === true} />
             {/* Silhouette area — top 2/3.
@@ -570,7 +570,7 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
                     />
                     {ledHover && candidateHost && (
                         <span
-                            className="absolute top-full right-0 mt-1 z-20 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-900/90 dark:bg-slate-800/95 text-white text-xs font-semibold whitespace-nowrap shadow-md pointer-events-none"
+                            className="absolute top-full right-0 mt-1 z-20 inline-flex items-center gap-1 px-1.5 py-0.5 rounded  sui-bg-popup sui-color-active text-xs font-semibold whitespace-nowrap shadow-md pointer-events-none"
                             role="status"
                         >
                             <ExternalLink className="w-2.5 h-2.5" aria-hidden />
@@ -584,24 +584,24 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
                 vendor·model. Build 115.13 adds an optional fourth
                 line for the operator-supplied IP address (gated
                 by the page-level "Show IPs" toggle). We collapse
-                missing rows to invisible (text-transparent) rather
+                missing rows to invisible (sui-color-transparent) rather
                 than removing them so the card height stays
                 consistent across rows in the same diagram, which
                 keeps grid-aligned OOB diagrams from re-flowing
                 when one card has an IP and a neighbour doesn't. */}
-            <div className="border-t border-slate-200 dark:border-slate-800 px-2 py-1 leading-tight">
-                <div className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
+            <div className="border-t  sui-border-weak px-2 py-1 leading-tight">
+                <div className="text-xs font-semibold  sui-color-active truncate">
                     {node.shortLabel}
                 </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 truncate uppercase tracking-wide">
+                <div className="text-xs  sui-color-default truncate uppercase tracking-wide">
                     {detail}
                 </div>
                 <div
                     className={cn(
                         'text-xs truncate font-mono tracking-tight',
                         vendorModelLine
-                            ? 'text-slate-600 dark:text-slate-300'
-                            : 'text-transparent'
+                            ? 'sui-color-default'
+                            : 'sui-color-transparent'
                     )}
                     title={vendorModelLine ?? undefined}
                 >
@@ -611,8 +611,8 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
                     className={cn(
                         'text-xs truncate font-mono tracking-tight',
                         showIp
-                            ? 'text-sky-600 dark:text-sky-400'
-                            : 'text-transparent'
+                            ? 'sui-color-info'
+                            : 'sui-color-transparent'
                     )}
                     title={showIp ? ipAddress : undefined}
                 >
@@ -720,16 +720,16 @@ export const TopologyZoneNode: React.FC<{
 }> = ({ data }) => (
     <div
         className={cn(
-            'rounded-xl border-2 border-dashed bg-slate-50/60 dark:bg-slate-900/40',
+            'rounded-xl border-2 border-dashed  sui-bg-section',
             data.isUnsited
-                ? 'border-amber-400/60 dark:border-amber-500/40'
-                : 'border-slate-300/70 dark:border-slate-700/70'
+                ? 'sui-border-warning'
+                : 'sui-border-default'
         )}
         style={{ width: '100%', height: '100%' }}
     >
-        <div className="flex items-center justify-between px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+        <div className="flex items-center justify-between px-3 py-1.5 text-xs font-semibold uppercase tracking-wider  sui-color-default">
             <span className="truncate">{data.label}</span>
-            <span className="ml-2 px-1.5 py-0.5 rounded bg-slate-200/70 dark:bg-slate-800/70 text-slate-500 dark:text-slate-400 text-xs">
+            <span className="ml-2 px-1.5 py-0.5 rounded  sui-bg-popup  sui-color-default text-xs">
                 {data.deviceCount}
             </span>
         </div>

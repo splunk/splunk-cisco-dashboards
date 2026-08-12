@@ -16,9 +16,7 @@ const dashboardSection = read(
 const topologyMap = read(
   "../src/main/webapp/common/components/workspace/CustomerTopologyMap.tsx",
 );
-const profile = read(
-  "../src/main/webapp/pages/executive_insights/index.tsx",
-);
+const profile = read("../src/main/webapp/pages/executive_insights/index.tsx");
 const signalRail = read(
   "../src/main/webapp/common/components/workspace/SignalRailTicker.tsx",
 );
@@ -28,9 +26,7 @@ const signalTickerRail = read(
 const signalTickerConfig = read(
   "../src/main/webapp/common/config/signalTicker.ts",
 );
-const tailwindStyles = read(
-  "../src/main/webapp/common/styles/tailwind.css",
-);
+const tailwindStyles = read("../src/main/webapp/common/styles/tailwind.css");
 const workspacesConf = read(
   "../src/main/resources/splunk/default/insights_workspaces.conf",
 );
@@ -60,7 +56,12 @@ const approvedPillarIcons = [
   ["Zero Trust Access", "shield-keyhole", "ShieldKeyhole", "Fingerprint"],
   ["Secure Infrastructure", "servers", "Servers", "NetworkDevices"],
   ["Scalable Network Segmentation", "node-model", "NodeModel", "Globe"],
-  ["Hybrid Mesh Firewalling", "wall-bricks", "WallBricks", "ArrowsDoubleLeftRight"],
+  [
+    "Hybrid Mesh Firewalling",
+    "wall-bricks",
+    "WallBricks",
+    "ArrowsDoubleLeftRight",
+  ],
   ["Agentic Ops", "robot-face-wrench", "RobotFaceWrench", "RobotAgent"],
 ];
 
@@ -147,13 +148,13 @@ assert.doesNotMatch(
 );
 assert.match(
   signalRail,
-  /DEFAULT_VARIANT: SignalRailVariant = 'one-cisco-glass'/,
+  /DEFAULT_VARIANT: SignalRailVariant = ["']one-cisco-glass["']/,
   "The 1CD glass treatment must be the factory Signal Rail presentation",
 );
 assert.match(
   signalRail,
-  /<OneCdGlassCard[\s\S]*?tag="article"[\s\S]*?<Badge/,
-  "The live KPI row must use SUI glass cards and badges",
+  /const StatusPill = styled\(Badge\)[\s\S]*?<OneCdGlassCard[\s\S]*?tag="article"[\s\S]*?<StatusPill/,
+  "The live KPI row must use SUI glass cards and styled SUI badges",
 );
 assert.doesNotMatch(
   signalRail,
@@ -162,13 +163,13 @@ assert.doesNotMatch(
 );
 assert.match(
   signalRail,
-  /if \(variant === 'one-cisco-glass'\) \{[\s\S]{0,240}?'min-w-0 px-4 py-3'[\s\S]{0,120}?'min-w-0 px-5 py-4'/,
+  /if \(variant === ["']one-cisco-glass["']\) \{[\s\S]{0,240}?["']min-w-0 px-4 py-3["'][\s\S]{0,120}?["']min-w-0 px-5 py-4["']/,
   "Glass status cards must hug their content instead of imposing a minimum height",
 );
 assert.match(
   signalRail,
-  /'scd-signal-rail-item flex flex-col gap-0 overflow-hidden'[\s\S]{0,1400}?className="mt-1\.5 flex items-end justify-between gap-3"/,
-  "Glass status cards must keep the subtitle-to-value spacing compact",
+  /const MetricContent = styled\.span[\s\S]*?flex-wrap: wrap;[\s\S]*?align-items: center;[\s\S]*?justify-content: center;[\s\S]*?min-width: 0;[\s\S]*?width: 100%;/,
+  "Glass status card metric content must be centered as a group",
 );
 assert.match(
   profile,
@@ -179,22 +180,32 @@ assert.doesNotMatch(signalRail, /OneCdSurface|SpotLight|spotlight=/);
 assert.doesNotMatch(topologyMap, /OneCdSurface|SpotLight|spotlight=/);
 assert.match(
   signalRail,
-  /color-mix\(in srgb, \$\{STATUS_BADGE_COLOR\.critical\} 50%, transparent\)/,
-  "Status badge fills must match the designer's 50% severity treatment",
+  /healthy: variables\.severityColorNormal,[\s\S]*?warning: variables\.severityColorWarning,[\s\S]*?critical: variables\.severityColorCritical,[\s\S]*?unknown: variables\.severityColorUnknown/,
+  "Status pills must use Splunk semantic severity tokens",
 );
 assert.match(
   signalRail,
-  /foregroundColor=\{variables\.contentColorActive\}/,
-  "Status badge text must use a readable SUI content token",
+  /const MetricValue = styled\.span[\s\S]*?color: \$\{\(\{ \$status \}\) => STATUS_PILL_TOKENS\[\$status\]\};[\s\S]*?font-size: 48px;/,
+  "Glass status card values must use the matching severity token at 48px",
+);
+assert.match(
+  signalRail,
+  /border: 1px solid \$\{\(\{ \$status \}\) => STATUS_PILL_TOKENS\[\$status\]\}[\s\S]*?color-mix\([\s\S]*?\$\{\(\{ \$status \}\) => STATUS_PILL_TOKENS\[\$status\]\} 50%,[\s\S]*?transparent/,
+  "Status pills must use the exact severity color for their border and a 50% transparent body",
+);
+assert.match(
+  signalRail,
+  /const StatusPill = styled\(Badge\)[\s\S]*?color: \$\{variables\.contentColorActive\}/,
+  "Status pill text must use a readable SUI content token",
 );
 assert.match(
   tailwindStyles,
-  /\.scd-one-cisco-spotlight-canvas[\s\S]*?background-image: none[\s\S]*?\.scd-signal-rail-ticker\[data-variant='one-cisco-glass'\][\s\S]*?background: transparent/,
+  /\.scd-one-cisco-spotlight-canvas[\s\S]*?background-image: none[\s\S]*?\.scd-signal-rail-ticker\[data-variant=["']one-cisco-glass["']\][\s\S]*?background: transparent/,
   "The SUI SpotLight preset must not be obscured by custom workspace or rail gradients",
 );
 assert.match(
   signalRail,
-  /variant === 'one-cisco-glass' \|\| durationSeconds <= 0/,
+  /variant === ["']one-cisco-glass["'] \|\| durationSeconds <= 0/,
   "The 1CD status overview must remain static because motion belongs to map connectors",
 );
 assert.match(
@@ -254,7 +265,7 @@ assert.match(
 );
 assert.match(
   workspacesConf,
-  /header_title = Secure Networking Operations[\s\S]*?header_subtitle = Live posture, policy, infrastructure, and connectivity/,
+  /header_title = Splunk for Secure Networking[\s\S]*?header_subtitle = Secure Networking Executive Insights/,
   "The primary workspace title must summarize the operational area",
 );
 
@@ -340,7 +351,10 @@ for (const [dashboardId, story] of Object.entries(secureNetworkingStories)) {
   const matchingPrefix = Object.keys(approvedStudioIcons).find((prefix) =>
     dashboardId.startsWith(prefix),
   );
-  assert.ok(matchingPrefix, `${dashboardId} must belong to one approved pillar`);
+  assert.ok(
+    matchingPrefix,
+    `${dashboardId} must belong to one approved pillar`,
+  );
   const assetName = `${approvedStudioIcons[matchingPrefix]}.svg`;
   const expectedPath = `/static/app/splunk-cisco-dashboards/images/nav-icons/${assetName}`;
   assert.equal(

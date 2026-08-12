@@ -100,10 +100,10 @@ const NoDataBody: React.FC<{
     }
     return (
         <div className="flex flex-col mb-1">
-            <span className="text-4xl font-black tracking-tighter leading-none text-slate-400 dark:text-slate-500">
+            <span className="text-4xl font-black tracking-tighter leading-none  sui-color-muted">
                 —
             </span>
-            <span className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">
+            <span className="text-xs font-medium  sui-color-muted mt-0.5">
                 {subtext}
             </span>
         </div>
@@ -172,7 +172,7 @@ export const MarkerGaugeTile: React.FC<MarkerGaugeTileProps> = ({
             ) : (
                 <>
                     <div className="flex items-baseline gap-2 mb-1">
-                        <span className="text-4xl font-black tracking-tighter leading-none text-slate-700 dark:text-slate-100 tabular-nums">
+                        <span className="text-4xl font-black tracking-tighter leading-none  sui-color-active tabular-nums">
                             {value}
                             {unit}
                         </span>
@@ -196,7 +196,7 @@ export const MarkerGaugeTile: React.FC<MarkerGaugeTileProps> = ({
                                 ))}
                             </div>
                             <div
-                                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-0 h-0 border-l-[5px] border-r-[5px] border-b-[8px] border-l-transparent border-r-transparent"
+                                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-0 h-0     sui-border-transparent"
                                 style={{
                                     left: `${Math.max(2, Math.min(98, markerLeftPct))}%`,
                                     borderBottomColor: markerColor,
@@ -204,7 +204,7 @@ export const MarkerGaugeTile: React.FC<MarkerGaugeTileProps> = ({
                                 aria-hidden="true"
                             />
                         </div>
-                        <div className="flex justify-between text-xs tabular-nums text-slate-400 dark:text-slate-500 font-medium mt-2">
+                        <div className="flex justify-between text-xs tabular-nums  sui-color-muted font-medium mt-2">
                             <span>{gaugeRange.min ?? DEFAULT_GAUGE_RANGE.min}</span>
                             <span>{gaugeRange.max ?? DEFAULT_GAUGE_RANGE.max}</span>
                         </div>

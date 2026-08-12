@@ -141,10 +141,10 @@ interface MetricItemProps {
 }
 
 const STATUS_TEXT_COLOR: Record<MetricStatus, string> = {
-    healthy: 'text-[#2e7d5b] dark:text-[#4cbf7f]',
-    warning: 'text-[#9a6a00] dark:text-[#f0c243]',
-    critical: 'text-[#c73543] dark:text-[#fa5762]',
-    unknown: 'text-[#3273b8] dark:text-[#649ef5]',
+    healthy: 'sui-color-default',
+    warning: 'sui-color-default',
+    critical: 'sui-color-default',
+    unknown: 'sui-color-default',
 };
 
 // Change-arrow + delta-percent pill color. Historically this was a
@@ -156,10 +156,10 @@ const STATUS_TEXT_COLOR: Record<MetricStatus, string> = {
 // status-aware color so the headline number, the trend arrow, and
 // the trend-percent pill all read the same story at a glance.
 const STATUS_TREND_COLOR: Record<MetricStatus, string> = {
-    healthy: 'text-[#2e7d5b] dark:text-[#4cbf7f]',
-    warning: 'text-[#9a6a00] dark:text-[#f0c243]',
-    critical: 'text-[#c73543] dark:text-[#fa5762]',
-    unknown: 'text-slate-400 dark:text-slate-500',
+    healthy: 'sui-color-default',
+    warning: 'sui-color-default',
+    critical: 'sui-color-default',
+    unknown: 'sui-color-default sui-color-muted',
 };
 
 // Sparkline stroke/fill palette per status. ALL three statuses
@@ -194,7 +194,7 @@ const STATUS_VIZ_COLOR: Partial<Record<MetricStatus, string>> = {
 };
 
 const MOCK_VIZ_COLOR = C3_VISUALIZATION_COLORS.neutral;
-const MOCK_HEADLINE_COLOR = 'text-slate-500 dark:text-slate-400';
+const MOCK_HEADLINE_COLOR = 'sui-color-muted sui-color-default';
 const MOCK_DATA_HELP =
     'Sample data shown until live results are available. Bind this tile to a Splunk search to see real values.';
 
@@ -208,13 +208,13 @@ const DemoDataChip: React.FC = () => (
             type="button"
             aria-label={MOCK_DATA_HELP}
             data-tile-control="true"
-            className="px-1.5 py-0.5 rounded-full border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-xs font-extrabold tracking-normal text-slate-600 dark:text-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-400"
+            className="px-1.5 py-0.5 rounded-full border  sui-border-default  sui-bg-popup text-xs font-extrabold tracking-normal  sui-color-default focus:outline-none focus:ring-1 sui-focus-ring"
         >
             Demo data
         </button>
         <span
             role="tooltip"
-            className="pointer-events-none absolute right-0 top-full z-50 mt-1 w-56 rounded-md bg-slate-900 px-2 py-1.5 text-xs leading-snug text-slate-100 shadow-lg ring-1 ring-slate-700 opacity-0 transition-opacity group-hover/demo:opacity-100 group-focus-within/demo:opacity-100"
+            className="pointer-events-none absolute right-0 top-full z-50 mt-1 w-56 rounded-md sui-bg-section px-2 py-1.5 text-xs leading-snug sui-color-active shadow-lg ring-1 sui-focus-ring opacity-0 transition-opacity group-hover/demo:opacity-100 group-focus-within/demo:opacity-100"
         >
             {MOCK_DATA_HELP}
         </span>
@@ -252,11 +252,11 @@ const formatCompactNumber = (value: number): string => {
 
 const StatusIcon: React.FC<{ status: MetricStatus }> = ({ status }) => {
     if (status === 'critical')
-        return <AlertCircle className="w-3 h-3 text-red-500" aria-label="Critical" />;
+        return <AlertCircle className="w-3 h-3 sui-color-negative" aria-label="Critical" />;
     if (status === 'warning')
-        return <AlertTriangle className="w-3 h-3 text-amber-500" aria-label="Warning" />;
+        return <AlertTriangle className="w-3 h-3 sui-color-warning" aria-label="Warning" />;
     if (status === 'healthy')
-        return <CheckCircle2 className="w-3 h-3 text-emerald-500" aria-label="Healthy" />;
+        return <CheckCircle2 className="w-3 h-3 sui-color-positive" aria-label="Healthy" />;
     return null;
 };
 
@@ -345,13 +345,13 @@ export const MetricItem: React.FC<MetricItemProps> = ({
             className={cn(
                 'flex flex-col flex-1 basis-0 min-w-[108px] px-1.5 py-1 relative',
                 isMock &&
-                    'rounded-md border border-dashed border-slate-300 dark:border-slate-600',
+                    'rounded-md border border-dashed  sui-border-default',
                 className
             )}
         >
             {source === 'loading' && (
                 <span
-                    className="absolute top-1 right-2 w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"
+                    className="absolute top-1 right-2 w-1.5 h-1.5 rounded-full sui-bg-warning animate-pulse"
                     title="Loading saved search…"
                 />
             )}
@@ -363,8 +363,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                 // inline controls). Without this, the GripVertical
                 // chip at `top-0.5 left-0.5` pops in on any tile
                 // hover and visibly clips the first character of
-                // the uppercase label (e.g. the "N" in "NETWORK
-                // HEALTH"). The grip still appears when the
+                // the label. The grip still appears when the
                 // cursor is over the empty top-left corner of the
                 // sortable wrapper — i.e. the actual drag zone —
                 // so the affordance isn't lost, just no longer
@@ -372,7 +371,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                 data-tile-control="true"
                 className="flex flex-col mb-0.5"
             >
-                <span className="text-[12px] font-bold text-slate-800 dark:text-slate-100 tracking-tight leading-tight uppercase flex items-center gap-1">
+                <span className="sui-color-default font-bold sui-color-active tracking-tight leading-tight flex items-center gap-1">
                     <span className="flex items-center gap-1 min-w-0 truncate">
                         {label}
                         {status !== 'unknown' && <StatusIcon status={status} />}
@@ -402,7 +401,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                     </span>
                 </span>
                 {subLabel && (
-                    <span className="text-[9.5px] text-slate-400 dark:text-slate-400 font-medium tracking-tight leading-tight line-clamp-1 min-h-[12px]">
+                    <span className="sui-color-default font-medium tracking-tight leading-tight line-clamp-1 min-h-[12px]">
                         {subLabel}
                     </span>
                 )}
@@ -449,11 +448,11 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                     return (
                         <div className="flex flex-col mb-1">
                             <div className="flex items-baseline gap-2">
-                                <span className="text-4xl font-black tracking-tighter leading-none text-slate-400 dark:text-slate-500">
+                                <span className="text-4xl font-black tracking-tighter leading-none  sui-color-muted">
                                     —
                                 </span>
                             </div>
-                            <span className="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5 leading-tight">
+                            <span className="text-xs font-medium  sui-color-muted mt-0.5 leading-tight">
                                 {subtext}
                             </span>
                         </div>
@@ -492,9 +491,9 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                                 )}
                             >
                                 {(change as number) >= 0 ? (
-                                    <ArrowUp className="w-3 h-3 stroke-[3px]" />
+                                    <ArrowUp className="w-3 h-3 sui-stroke-default" />
                                 ) : (
-                                    <ArrowDown className="w-3 h-3 stroke-[3px]" />
+                                    <ArrowDown className="w-3 h-3 sui-stroke-default" />
                                 )}
                                 <span>
                                     {(change as number) > 0
@@ -616,9 +615,9 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                         {isMock && <DemoDataChip />}
                     </>
                 }
-                contentClassName="grid gap-4 overflow-y-auto bg-[#0b1220] p-5 lg:grid-cols-[200px_minmax(0,1fr)]"
+                contentClassName="grid gap-4 overflow-y-auto sui-bg-section p-5 lg:grid-cols-[200px_minmax(0,1fr)]"
             >
-                <div className="rounded-[10px] border border-[#1e3449] bg-[#101c2e] p-4">
+                <div className="rounded-[10px] border sui-border-default sui-bg-section p-4">
                     <div
                         className={cn(
                             'text-5xl font-black leading-none tracking-tighter',
@@ -632,29 +631,29 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                         !isMock && (
                             <div
                                 className={cn(
-                                    'mt-3 inline-flex items-center rounded-full bg-slate-950/70 px-2 py-1 text-xs font-black',
+                                    'mt-3 inline-flex items-center rounded-full sui-bg-page px-2 py-1 text-xs font-black',
                                     STATUS_TREND_COLOR[status]
                                 )}
                             >
                                 {change >= 0 ? (
-                                    <ArrowUp className="h-3.5 w-3.5 stroke-[3px]" />
+                                    <ArrowUp className="h-3.5 w-3.5 sui-stroke-default" />
                                 ) : (
-                                    <ArrowDown className="h-3.5 w-3.5 stroke-[3px]" />
+                                    <ArrowDown className="h-3.5 w-3.5 sui-stroke-default" />
                                 )}
                                 <span>
                                     {change > 0 ? `+${displayChange}` : displayChange}%
                                 </span>
                             </div>
                         )}
-                    <div className="mt-4 space-y-2 text-xs font-semibold text-[#8ea3b8]">
+                    <div className="mt-4 space-y-2 text-xs font-semibold sui-color-default">
                         <div className="flex items-center justify-between gap-3">
                             <span>Status</span>
-                            <span className="capitalize text-[#d3dfea]">{status}</span>
+                            <span className="capitalize sui-color-default">{status}</span>
                         </div>
                         {rangeLabel && (
                             <div className="flex items-center justify-between gap-3">
                                 <span>Range</span>
-                                <span className="text-right text-[#d3dfea]">
+                                <span className="text-right sui-color-default">
                                     {rangeLabel}
                                 </span>
                             </div>
@@ -662,13 +661,13 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                         {previousLabel && previousData?.length ? (
                             <div className="flex items-center justify-between gap-3">
                                 <span>Overlay</span>
-                                <span className="text-[#d3dfea]">{previousLabel}</span>
+                                <span className="sui-color-default">{previousLabel}</span>
                             </div>
                         ) : null}
                     </div>
                 </div>
 
-                <div className="h-full min-h-[280px] rounded-[10px] border border-[#1e3449] bg-[#0e1a2b] p-3">
+                <div className="h-full min-h-[280px] rounded-[10px] border sui-border-default sui-bg-section p-3">
                     <Sparkline
                         data={sparkData}
                         color={focusChartColor}

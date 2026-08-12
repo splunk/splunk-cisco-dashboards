@@ -395,9 +395,9 @@ const SparklineTooltip: React.FC<SparklineTooltipProps> = ({
     return (
         <div
             role="tooltip"
-            className="pointer-events-none rounded-md border border-slate-200 dark:border-slate-700 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm shadow-lg px-2 py-1 text-xs leading-tight"
+            className="pointer-events-none rounded-md border  sui-border-default  sui-bg-section backdrop-blur-sm shadow-lg px-2 py-1 text-xs leading-tight"
         >
-            <div className="font-semibold text-slate-500 dark:text-slate-400 tabular-nums">
+            <div className="font-semibold  sui-color-default tabular-nums">
                 {timeLabel}
             </div>
             <div className="flex items-center gap-1.5 mt-0.5">
@@ -406,17 +406,17 @@ const SparklineTooltip: React.FC<SparklineTooltipProps> = ({
                     style={{ background: color }}
                     aria-hidden="true"
                 />
-                <span className="font-bold text-slate-900 dark:text-slate-100 tabular-nums">
+                <span className="font-bold  sui-color-active tabular-nums">
                     {formatValue(point.value)}
                 </span>
             </div>
             {point.previous !== null && Number.isFinite(point.previous) && (
                 <div className="flex items-center gap-1.5 mt-0.5">
                     <span
-                        className="inline-block w-2 h-px bg-slate-600 dark:bg-slate-300 flex-shrink-0"
+                        className="inline-block w-2 h-px  sui-bg-floating flex-shrink-0"
                         aria-hidden="true"
                     />
-                    <span className="text-slate-500 dark:text-slate-400 tabular-nums">
+                    <span className="sui-color-muted sui-color-default tabular-nums">
                         {previousLabel}: {formatValue(point.previous as number)}
                     </span>
                 </div>
@@ -539,7 +539,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
               },
               title,
               className:
-                  'h-full w-full cursor-pointer rounded transition-opacity hover:opacity-100 focus:outline-none focus:ring-1 focus:ring-sky-400',
+                  'h-full w-full cursor-pointer rounded transition-opacity hover:opacity-100 focus:outline-none focus:ring-1 sui-focus-ring',
           }
         : { className: 'h-full w-full' };
 
@@ -961,31 +961,14 @@ export const Sparkline: React.FC<SparklineProps> = ({
             role={onClick ? undefined : 'img'}
             {...interactiveProps}
         >
-            {/* Build 98 (2026-05-13): Theme-aware baseline / previous-period
-              * overlay stroke. Declared as a CSS custom property here and
-              * referenced via `stroke="var(--baseline-stroke)"` on the
-              * three `<Line dataKey="previous">` elements below. The
-              * Tailwind arbitrary-property syntax flips the value when
-              * any ancestor carries the `.dark` class (set on the page
-              * root by `pages/executive_insights` from `useTheme()`), so the same
-              * Sparkline instance reads its own theme without prop
-              * plumbing or hook reordering — important because Sparkline
-              * has an `if (vizType === 'singlevalue') return null` early
-              * return at the top of the component which would otherwise
-              * make any added theme hook subject to React error #310.
-              *
-              * Colour choices:
-              *   • Light: slate-600 (#475569) — readable on white bg,
-              *     doesn't compete with axis text or status icons.
-              *   • Dark:  slate-300 (#cbd5e1) — readable on slate-950
-              *     bg, sits visually behind the primary tile colour.
-              *
-              * Stroke width bumped 1.75 → 2.25 and dash pattern
+            {/* The semantic class supplies the theme's muted-content token to
+              * the previous-period line without adding a hook below this
+              * component's early-return path. Stroke width bumped 1.75 → 2.25 and dash pattern
               * lengthened 6/3 → 8/4 so the line doesn't read as a
               * "row of pixels" at small chart heights — the previous
               * style melted into the gridline noise on the dashboard
               * landing page (Alan flagged on 2026-05-13). */}
-            <div className="flex flex-col h-full w-full [--baseline-stroke:#475569] dark:[--baseline-stroke:#cbd5e1]">
+            <div className="flex flex-col h-full w-full [--baseline-stroke:#cbd5e1]">
                 <div className="flex-1 min-h-0">
                     <ResponsiveContainer width="100%" height="100%">
                         {chartElement}
@@ -993,7 +976,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
                 </div>
                 {showFooter && (
                     <div
-                        className={`flex items-center pt-0.5 px-3 text-xs tabular-nums leading-none text-slate-400 dark:text-slate-400 font-medium select-none ${footerJustify}`}
+                        className={`flex items-center pt-0.5 px-3 text-xs tabular-nums leading-none  sui-color-default font-medium select-none ${footerJustify}`}
                         aria-hidden="true"
                     >
                         {sameTime ? (

@@ -17,8 +17,6 @@ import {
     Gauge,
     Maximize2,
     Minimize2,
-    MonitorSmartphone,
-    Moon,
     MoreVertical,
     PanelRightOpen,
     Play,
@@ -30,7 +28,6 @@ import {
     Settings2,
     SlidersHorizontal,
     Square,
-    Sun,
     Table2,
     Trash2,
     X,
@@ -77,7 +74,6 @@ import {
     normalizeDataValuesDisplay,
     sparklineVizTypeFromSplunkViz,
 } from '@/common/components/workspace/Sparkline';
-import { useTheme } from '@/common/hooks/useTheme';
 import { C3_ATMOSPHERE_BACKGROUND_STYLE } from '@/common/theme/c3Atmosphere';
 import {
     isBarBreakdownViz,
@@ -571,7 +567,7 @@ const TileVizSelect: React.FC<{
                             : event.target.value
                     )
                 }
-                className="h-6 max-w-[132px] rounded border border-transparent bg-transparent px-1 text-xs font-black uppercase text-slate-500 outline-none transition hover:border-slate-300 hover:bg-white focus:border-sky-300 focus:bg-white focus:ring-1 focus:ring-sky-300 dark:text-slate-300 dark:hover:border-slate-700 dark:hover:bg-slate-900 dark:focus:border-sky-700 dark:focus:bg-slate-900 dark:focus:ring-sky-800"
+                className="h-6 max-w-[132px] rounded border sui-border-transparent sui-bg-transparent px-1 text-xs font-black uppercase  outline-none transition     focus:ring-1 sui-focus-ring sui-color-default sui-hover-border-default sui-hover-bg-section sui-focus-border-info sui-focus-bg-section sui-focus-ring"
             >
                 <option value={DEFAULT_TILE_VIZ}>Default ({defaultLabel})</option>
                 {TILE_VIZ_OPTIONS.map((option) => (
@@ -638,7 +634,7 @@ const TileOverlaySelect: React.FC<{
                     }
                     onChangeOverlay(tile.id, next);
                 }}
-                className="h-6 max-w-[152px] rounded border border-transparent bg-transparent px-1 text-xs font-black uppercase text-slate-500 outline-none transition hover:border-slate-300 hover:bg-white focus:border-sky-300 focus:bg-white focus:ring-1 focus:ring-sky-300 dark:text-slate-300 dark:hover:border-slate-700 dark:hover:bg-slate-900 dark:focus:border-sky-700 dark:focus:bg-slate-900 dark:focus:ring-sky-800"
+                className="h-6 max-w-[152px] rounded border sui-border-transparent sui-bg-transparent px-1 text-xs font-black uppercase  outline-none transition     focus:ring-1 sui-focus-ring sui-color-default sui-hover-border-default sui-hover-bg-section sui-focus-border-info sui-focus-bg-section sui-focus-ring"
             >
                 {defaultOverlayField && (
                     <option value={DEFAULT_OVERLAY_FIELD}>
@@ -981,7 +977,7 @@ const MissingSearchbaseTile: React.FC<{
     onRemove: (tileId: string) => void;
     presentationMode?: boolean;
 }> = ({ tile, onRemove, presentationMode = false }) => (
-    <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900/70 dark:bg-rose-950/30 dark:text-rose-200">
+    <div className="rounded-md border   p-3 text-sm  sui-border-negative sui-bg-negative sui-color-negative">
         <div className="flex items-center gap-2 font-bold">
             <AlertCircle className="h-4 w-4" />
             Missing searchbase entry
@@ -991,7 +987,7 @@ const MissingSearchbaseTile: React.FC<{
             <button
                 type="button"
                 onClick={() => onRemove(tile.id)}
-                className="mt-3 inline-flex items-center gap-1 rounded border border-rose-200 bg-white px-2 py-1 text-xs font-semibold text-rose-700 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-100"
+                className="mt-3 inline-flex items-center gap-1 rounded border   px-2 py-1 text-xs font-semibold  sui-hover-bg-negative sui-border-negative sui-bg-negative sui-color-negative"
             >
                 <Trash2 className="h-3.5 w-3.5" />
                 Remove
@@ -1156,8 +1152,8 @@ const SearchbaseNoDataPanel: React.FC<{
             className={cn(
                 'flex h-full min-h-[220px] flex-col rounded-md border border-dashed p-4',
                 isError
-                    ? 'border-rose-200 bg-rose-50 text-rose-900 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-100'
-                    : 'border-sky-200 bg-sky-50 text-slate-900 dark:border-sky-800 dark:bg-slate-800 dark:text-slate-50'
+                    ? 'sui-border-negative sui-bg-negative sui-color-negative'
+                    : 'sui-border-info sui-bg-popup sui-color-active'
             )}
         >
             <div className="flex items-start gap-3">
@@ -1165,8 +1161,8 @@ const SearchbaseNoDataPanel: React.FC<{
                     className={cn(
                         'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md',
                         isError
-                            ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/70 dark:text-rose-100'
-                            : 'bg-white text-sky-700 shadow-sm dark:bg-slate-950 dark:text-sky-200'
+                            ? 'sui-bg-negative sui-color-negative'
+                            : 'sui-bg-section  shadow-sm sui-bg-page sui-color-info'
                     )}
                 >
                     <AlertCircle className="h-5 w-5" />
@@ -1179,8 +1175,8 @@ const SearchbaseNoDataPanel: React.FC<{
                         className={cn(
                             'mt-1 text-xs leading-snug',
                             isError
-                                ? 'text-rose-700 dark:text-rose-200'
-                                : 'text-slate-600 dark:text-slate-200'
+                                ? 'sui-color-negative'
+                                : 'sui-color-default sui-color-active'
                         )}
                     >
                         {copy.detail}
@@ -1189,10 +1185,10 @@ const SearchbaseNoDataPanel: React.FC<{
             </div>
 
             <div className="mt-4 min-w-0">
-                <div className="truncate text-xs font-black uppercase tracking-wide text-slate-500 dark:text-slate-300">
+                <div className="truncate text-xs font-black uppercase tracking-wide  sui-color-default">
                     {record.searchName}
                 </div>
-                <p className="mt-1 line-clamp-3 text-xs leading-snug text-slate-600 dark:text-slate-200">
+                <p className="mt-1 line-clamp-3 text-xs leading-snug  sui-color-active">
                     {description || record.id}
                 </p>
             </div>
@@ -1201,7 +1197,7 @@ const SearchbaseNoDataPanel: React.FC<{
                 <button
                     type="button"
                     onClick={onOpenSearch}
-                    className="inline-flex items-center gap-1 rounded-md bg-slate-900 px-2.5 py-1.5 text-xs font-black text-white transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-sky-200"
+                    className="inline-flex items-center gap-1 rounded-md  px-2.5 py-1.5 text-xs font-black  transition  focus:outline-none focus:ring-2 sui-focus-ring sui-bg-section sui-color-active sui-hover-bg-info"
                 >
                     <Search className="h-3.5 w-3.5" />
                     Open in Search
@@ -1210,7 +1206,7 @@ const SearchbaseNoDataPanel: React.FC<{
                     <button
                         type="button"
                         onClick={onOpenDrilldown}
-                        className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-white px-2.5 py-1.5 text-xs font-black text-sky-700 transition hover:border-sky-300 hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-300 dark:border-sky-900 dark:bg-slate-950 dark:text-sky-200 dark:hover:bg-sky-950"
+                        className="inline-flex items-center gap-1 rounded-md border   px-2.5 py-1.5 text-xs font-black  transition sui-hover-border-info  focus:outline-none focus:ring-2 sui-focus-ring sui-border-info sui-bg-page sui-color-info sui-hover-bg-info"
                     >
                         <Table2 className="h-3.5 w-3.5" />
                         {drilldownTitle ?? 'View detail'}
@@ -1220,7 +1216,7 @@ const SearchbaseNoDataPanel: React.FC<{
                     <button
                         type="button"
                         onClick={onConfigure}
-                        className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-black text-slate-700 transition hover:border-sky-300 hover:text-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-300 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:hover:border-sky-700 dark:hover:text-sky-200"
+                        className="inline-flex items-center gap-1 rounded-md border   px-2.5 py-1.5 text-xs font-black  transition   focus:outline-none focus:ring-2 sui-focus-ring sui-border-default sui-bg-page sui-color-active sui-hover-border-info sui-hover-color-info"
                     >
                         <Settings2 className="h-3.5 w-3.5" />
                         Replace
@@ -1732,7 +1728,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
     ]);
 
     return (
-        <div className="group/tile flex min-h-[248px] flex-col rounded-md border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-800/95 dark:shadow-none dark:ring-1 dark:ring-slate-900/30">
+        <div className="group/tile flex min-h-[248px] flex-col rounded-md border   transition-shadow hover:shadow-md sui-border-default sui-bg-popup ring-1 sui-focus-ring">
             <div className="flex h-full min-h-0 flex-1 flex-col p-2">
                 {isTableViz(viz) ? (
                     <SearchbaseTableTileBody
@@ -1841,7 +1837,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                 )}
             </div>
             {!presentationMode && (
-                <div className="flex items-center gap-2 border-t border-slate-100 px-2 py-1.5 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-300">
+                <div className="flex items-center gap-2 border-t  px-2 py-1.5 text-xs font-semibold  sui-border-default sui-color-default">
                     <TileVizSelect
                         tile={tile}
                         record={record}
@@ -1861,7 +1857,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                             onClick={() => onRefresh(tile.id)}
                             title="Refresh this tile"
                             aria-label="Refresh this tile"
-                            className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-sky-300"
+                            className="rounded p-1 sui-color-default transition-colors   focus:outline-none focus:ring-1 sui-focus-ring sui-hover-bg-overlay sui-hover-color-info"
                         >
                             <RefreshCw className="h-3.5 w-3.5" />
                         </button>
@@ -1871,7 +1867,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                                 onClick={openDrilldown}
                                 title={detailTableConfig.buttonTitle}
                                 aria-label={detailTableConfig.buttonTitle}
-                                className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-sky-300"
+                                className="rounded p-1 sui-color-default transition-colors   focus:outline-none focus:ring-1 sui-focus-ring sui-hover-bg-overlay sui-hover-color-info"
                             >
                                 <Table2 className="h-3.5 w-3.5" />
                             </button>
@@ -1881,7 +1877,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                             onClick={() => onStop(tile.id)}
                             title="Stop this tile"
                             aria-label="Stop this tile"
-                            className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-amber-600 focus:outline-none focus:ring-1 focus:ring-amber-400 dark:hover:bg-slate-800 dark:hover:text-amber-300"
+                            className="rounded p-1 sui-color-default transition-colors   focus:outline-none focus:ring-1 sui-focus-ring sui-hover-bg-overlay sui-hover-color-warning"
                         >
                             <X className="h-3.5 w-3.5" />
                         </button>
@@ -1890,7 +1886,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                             onClick={() => onCycleSize(tile.id)}
                             title={`Tile size: ${TILE_SPAN_LABEL[tile.span]}`}
                             aria-label={`Tile size: ${TILE_SPAN_LABEL[tile.span]}`}
-                            className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-sky-300"
+                            className="rounded p-1 sui-color-default transition-colors   focus:outline-none focus:ring-1 sui-focus-ring sui-hover-bg-overlay sui-hover-color-info"
                         >
                             <Maximize2 className="h-3.5 w-3.5" />
                         </button>
@@ -1899,7 +1895,7 @@ const ResolvedSearchbaseCanvasTile: React.FC<ResolvedSearchbaseCanvasTileProps> 
                             onClick={() => onRemove(tile.id)}
                             title="Remove tile"
                             aria-label="Remove tile"
-                            className="rounded p-1 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 focus:outline-none focus:ring-1 focus:ring-rose-400 dark:hover:bg-rose-950/40 dark:hover:text-rose-300"
+                            className="rounded p-1 sui-color-default transition-colors   focus:outline-none focus:ring-1 sui-focus-ring sui-hover-bg-negative sui-hover-color-negative"
                         >
                             <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -1940,25 +1936,25 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
     return (
         <div
             className={cn(
-                'group/tile flex min-h-[248px] flex-col rounded-md bg-white shadow-sm dark:bg-slate-800/95 dark:shadow-none dark:ring-1 dark:ring-slate-900/30',
+                'group/tile flex min-h-[248px] flex-col rounded-md  sui-bg-popup ring-1 sui-focus-ring',
                 presentationMode
-                    ? 'border border-slate-200 dark:border-slate-700'
-                    : 'border border-dashed border-slate-300 dark:border-slate-700'
+                    ? 'border  sui-border-default'
+                    : 'border border-dashed  sui-border-default'
             )}
         >
             <div className="flex min-h-0 flex-1 flex-col p-4">
                 <div className="flex items-start gap-3">
                     <div
-                        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-200"
+                        className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md   sui-bg-popup sui-color-active"
                         style={{ borderTop: `3px solid ${color}` }}
                     >
                         <Gauge className="h-5 w-5" />
                     </div>
                     <div className="min-w-0 flex-1">
-                        <h3 className="line-clamp-2 text-sm font-black uppercase leading-tight tracking-tight text-slate-900 dark:text-slate-50">
+                        <h3 className="line-clamp-2 text-sm font-black uppercase leading-tight tracking-tight  sui-color-active">
                             {record.searchName}
                         </h3>
-                        <div className="mt-1 truncate text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        <div className="mt-1 truncate text-xs font-semibold uppercase tracking-wide sui-color-default">
                             {[record.category, record.subCategory]
                                 .filter(Boolean)
                                 .join(' / ')}
@@ -1966,28 +1962,28 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
                     </div>
                 </div>
 
-                <p className="mt-3 line-clamp-4 text-xs leading-snug text-slate-600 dark:text-slate-300">
+                <p className="mt-3 line-clamp-4 text-xs leading-snug  sui-color-default">
                     {description || record.id}
                 </p>
 
                 <div className="mt-3 flex flex-wrap gap-1">
-                    <span className="rounded bg-slate-100 px-2 py-1 text-xs font-black uppercase text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                    <span className="rounded  px-2 py-1 text-xs font-black uppercase  sui-bg-popup sui-color-default">
                         {formatVizLabel(viz)}
                     </span>
                     {tile.vizOverride && (
-                        <span className="rounded bg-sky-50 px-2 py-1 text-xs font-black uppercase text-sky-700 dark:bg-sky-950 dark:text-sky-200">
+                        <span className="rounded  px-2 py-1 text-xs font-black uppercase  sui-bg-info sui-color-info">
                             Override
                         </span>
                     )}
                     {record.drilldownSearchName && (
-                        <span className="rounded bg-sky-50 px-2 py-1 text-xs font-black uppercase text-sky-700 dark:bg-sky-950 dark:text-sky-200">
+                        <span className="rounded  px-2 py-1 text-xs font-black uppercase  sui-bg-info sui-color-info">
                             Drilldown
                         </span>
                     )}
                     {record.tags.slice(0, 3).map((tag) => (
                         <span
                             key={tag}
-                            className="rounded bg-slate-50 px-2 py-1 text-xs font-bold text-slate-500 dark:bg-slate-900 dark:text-slate-400"
+                            className="rounded  px-2 py-1 text-xs font-bold  sui-bg-section sui-color-default"
                         >
                             {tag}
                         </span>
@@ -1998,7 +1994,7 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
                     <button
                         type="button"
                         onClick={() => onRun(tile.id)}
-                        className="mt-auto inline-flex items-center justify-center gap-2 rounded-md bg-slate-900 px-3 py-2 text-xs font-black text-white transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-sky-200"
+                        className="mt-auto inline-flex items-center justify-center gap-2 rounded-md  px-3 py-2 text-xs font-black  transition  focus:outline-none focus:ring-2 sui-focus-ring sui-bg-section sui-color-active sui-hover-bg-info"
                     >
                         <Play className="h-3.5 w-3.5" />
                         Run search
@@ -2006,7 +2002,7 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
                 )}
             </div>
 
-            <div className="flex items-center gap-2 border-t border-slate-100 px-2 py-1.5 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-300">
+            <div className="flex items-center gap-2 border-t  px-2 py-1.5 text-xs font-semibold  sui-border-default sui-color-default">
                 {!presentationMode && (
                     <TileVizSelect
                         tile={tile}
@@ -2020,7 +2016,7 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
                         onClick={openSearch}
                         title="Open in Search"
                         aria-label={`Open ${record.searchName} in Search`}
-                        className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-sky-300"
+                        className="rounded p-1 sui-color-default transition-colors   focus:outline-none focus:ring-1 sui-focus-ring sui-hover-bg-overlay sui-hover-color-info"
                     >
                         <Search className="h-3.5 w-3.5" />
                     </button>
@@ -2030,7 +2026,7 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
                             onClick={() => onConfigure(tile.id)}
                             title="Replace tile"
                             aria-label="Replace tile"
-                            className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-sky-300"
+                            className="rounded p-1 sui-color-default transition-colors   focus:outline-none focus:ring-1 sui-focus-ring sui-hover-bg-overlay sui-hover-color-info"
                         >
                             <Settings2 className="h-3.5 w-3.5" />
                         </button>
@@ -2041,7 +2037,7 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
                             onClick={openDrilldown}
                             title={detailTableConfig.buttonTitle}
                             aria-label={detailTableConfig.buttonTitle}
-                            className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-sky-300"
+                            className="rounded p-1 sui-color-default transition-colors   focus:outline-none focus:ring-1 sui-focus-ring sui-hover-bg-overlay sui-hover-color-info"
                         >
                             <Table2 className="h-3.5 w-3.5" />
                         </button>
@@ -2053,7 +2049,7 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
                                 onClick={() => onCycleSize(tile.id)}
                                 title={`Tile size: ${TILE_SPAN_LABEL[tile.span]}`}
                                 aria-label={`Tile size: ${TILE_SPAN_LABEL[tile.span]}`}
-                                className="rounded p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-sky-600 focus:outline-none focus:ring-1 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-sky-300"
+                                className="rounded p-1 sui-color-default transition-colors   focus:outline-none focus:ring-1 sui-focus-ring sui-hover-bg-overlay sui-hover-color-info"
                             >
                                 <Maximize2 className="h-3.5 w-3.5" />
                             </button>
@@ -2062,7 +2058,7 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
                                 onClick={() => onRemove(tile.id)}
                                 title="Remove tile"
                                 aria-label="Remove tile"
-                                className="rounded p-1 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 focus:outline-none focus:ring-1 focus:ring-rose-400 dark:hover:bg-rose-950/40 dark:hover:text-rose-300"
+                                className="rounded p-1 sui-color-default transition-colors   focus:outline-none focus:ring-1 sui-focus-ring sui-hover-bg-negative sui-hover-color-negative"
                             >
                                 <Trash2 className="h-3.5 w-3.5" />
                             </button>
@@ -2199,20 +2195,20 @@ const SearchbaseDetailTableModal: React.FC<{
                 if (event.target === event.currentTarget) onClose();
             }}
         >
-            <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" />
-            <div className="relative w-full max-w-6xl max-h-[88vh] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-950">
-                <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+            <div className="absolute inset-0 sui-bg-page backdrop-blur-sm" />
+            <div className="relative w-full max-w-6xl max-h-[88vh] overflow-hidden rounded-lg border   shadow-2xl sui-border-default sui-bg-page">
+                <div className="flex items-start justify-between gap-4 border-b  px-5 py-4 sui-border-weak">
                     <div>
                         <div className="flex items-center gap-2">
-                            <Table2 className="h-4 w-4 text-sky-600 dark:text-sky-300" />
+                            <Table2 className="h-4 w-4  sui-color-info" />
                             <h2
                                 id={titleId}
-                                className="text-base font-bold text-slate-900 dark:text-slate-100"
+                                className="text-base font-bold  sui-color-active"
                             >
                                 {config.title}
                             </h2>
                         </div>
-                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        <p className="mt-1 text-sm  sui-color-default">
                             {config.subtitle(range)}
                         </p>
                     </div>
@@ -2221,7 +2217,7 @@ const SearchbaseDetailTableModal: React.FC<{
                             href={searchUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 rounded border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:border-slate-700 dark:text-slate-300 dark:hover:border-sky-600 dark:hover:bg-sky-950/40 dark:hover:text-sky-200"
+                            className="inline-flex items-center gap-1.5 rounded border  px-2.5 py-1.5 text-xs font-semibold  transition-colors    focus:outline-none focus:ring-2 sui-focus-ring sui-border-default sui-color-default sui-hover-border-info sui-hover-bg-info sui-hover-color-info"
                         >
                             <ExternalLink className="h-3.5 w-3.5" />
                             Open in Search
@@ -2231,7 +2227,7 @@ const SearchbaseDetailTableModal: React.FC<{
                             onClick={onClose}
                             title="Close"
                             aria-label={`Close ${config.title}`}
-                            className="rounded p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                            className="rounded p-1.5 sui-color-default transition-colors   focus:outline-none focus:ring-2 sui-focus-ring sui-hover-bg-overlay sui-hover-color-active"
                         >
                             <X className="h-4 w-4" />
                         </button>
@@ -2240,8 +2236,8 @@ const SearchbaseDetailTableModal: React.FC<{
 
                 <div className="max-h-[calc(88vh-90px)] overflow-auto">
                     <table className="w-full min-w-[760px] text-sm">
-                        <thead className="sticky top-0 z-10 border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-                            <tr className="text-left text-xs font-bold text-slate-500 dark:text-slate-400">
+                        <thead className="sticky top-0 z-10 border-b   sui-border-weak sui-bg-page">
+                            <tr className="text-left text-xs font-bold  sui-color-default">
                                 {displayColumns.map((column, index) => (
                                     <th
                                         key={column.field}
@@ -2257,12 +2253,12 @@ const SearchbaseDetailTableModal: React.FC<{
                                 ))}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        <tbody className="divide-y sui-divide-weak">
                             {loading ? (
                                 <tr>
                                     <td
                                         colSpan={columnCount}
-                                        className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
+                                        className="px-5 py-10 text-center text-sm  sui-color-default"
                                     >
                                         Loading {config.title.toLowerCase()}...
                                     </td>
@@ -2271,7 +2267,7 @@ const SearchbaseDetailTableModal: React.FC<{
                                 <tr>
                                     <td
                                         colSpan={columnCount}
-                                        className="px-5 py-10 text-center text-sm text-rose-600 dark:text-rose-300"
+                                        className="px-5 py-10 text-center text-sm  sui-color-negative"
                                     >
                                         {errorMessage}
                                     </td>
@@ -2280,7 +2276,7 @@ const SearchbaseDetailTableModal: React.FC<{
                                 <tr>
                                     <td
                                         colSpan={columnCount}
-                                        className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
+                                        className="px-5 py-10 text-center text-sm  sui-color-default"
                                     >
                                         {config.emptyMessage}
                                     </td>
@@ -2297,15 +2293,15 @@ const SearchbaseDetailTableModal: React.FC<{
                                     return (
                                         <tr
                                             key={`${rowKey}-${rowIndex}`}
-                                            className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/70"
+                                            className="transition-colors  sui-hover-bg-section"
                                         >
                                             {displayColumns.map((column, index) => (
                                                 <td
                                                     key={column.field}
                                                     className={cn(
                                                         index === 0
-                                                            ? 'px-5 font-medium text-slate-900 dark:text-slate-100'
-                                                            : 'px-4 text-slate-600 dark:text-slate-300',
+                                                            ? 'px-5 font-medium  sui-color-active'
+                                                            : 'px-4  sui-color-default',
                                                         'py-3',
                                                         column.align === 'right' &&
                                                             'text-right tabular-nums',
@@ -2540,8 +2536,8 @@ const NoDataReportModal: React.FC<{
                     type="button"
                     onClick={() => toggleSort(column.key)}
                     className={cn(
-                        'inline-flex items-center gap-1.5 rounded px-1 py-0.5 text-left transition-colors hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-slate-100',
-                        active && 'text-slate-900 dark:text-slate-100'
+                        'inline-flex items-center gap-1.5 rounded px-1 py-0.5 text-left transition-colors   focus:outline-none focus:ring-2 sui-focus-ring sui-hover-bg-overlay sui-hover-color-active',
+                        active && 'sui-color-active'
                     )}
                 >
                     <span>{column.label}</span>
@@ -2568,25 +2564,25 @@ const NoDataReportModal: React.FC<{
                 if (event.target === event.currentTarget) onClose();
             }}
         >
-            <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" />
+            <div className="absolute inset-0 sui-bg-page backdrop-blur-sm" />
             <div
                 ref={dialogRef}
-                className="relative flex overflow-hidden rounded-lg border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-950"
+                className="relative flex overflow-hidden rounded-lg border   shadow-2xl sui-border-default sui-bg-page"
                 style={dialogStyle}
             >
                 <div className="flex min-h-0 w-full flex-col">
-                <div className="flex flex-shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+                <div className="flex flex-shrink-0 items-start justify-between gap-4 border-b  px-5 py-4 sui-border-weak">
                     <div>
                         <div className="flex items-center gap-2">
-                            <Table2 className="h-4 w-4 text-sky-600 dark:text-sky-300" />
+                            <Table2 className="h-4 w-4  sui-color-info" />
                             <h2
                                 id="searchbase-no-data-report-title"
-                                className="text-base font-bold text-slate-900 dark:text-slate-100"
+                                className="text-base font-bold  sui-color-active"
                             >
                                 Needs attention report
                             </h2>
                         </div>
-                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        <p className="mt-1 text-sm  sui-color-default">
                             {rows.length.toLocaleString()} observed{' '}
                             {rows.length === 1 ? 'search' : 'searches'} failed or returned no data.
                         </p>
@@ -2596,7 +2592,7 @@ const NoDataReportModal: React.FC<{
                             href={reportUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 rounded border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition-colors hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:border-slate-700 dark:text-slate-300 dark:hover:border-sky-600 dark:hover:bg-sky-950/40 dark:hover:text-sky-200"
+                            className="inline-flex items-center gap-1.5 rounded border  px-2.5 py-1.5 text-xs font-semibold  transition-colors    focus:outline-none focus:ring-2 sui-focus-ring sui-border-default sui-color-default sui-hover-border-info sui-hover-bg-info sui-hover-color-info"
                         >
                             <ExternalLink className="h-3.5 w-3.5" />
                             Open in Search
@@ -2606,7 +2602,7 @@ const NoDataReportModal: React.FC<{
                             onClick={onClose}
                             title="Close"
                             aria-label="Close needs attention report"
-                            className="rounded p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-slate-200"
+                            className="rounded p-1.5 sui-color-default transition-colors   focus:outline-none focus:ring-2 sui-focus-ring sui-hover-bg-overlay sui-hover-color-active"
                         >
                             <X className="h-4 w-4" />
                         </button>
@@ -2615,20 +2611,20 @@ const NoDataReportModal: React.FC<{
 
                 <div className="min-h-0 flex-1 overflow-auto">
                     <table className="w-full min-w-[1180px] text-sm">
-                        <thead className="sticky top-0 z-10 border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-                            <tr className="text-left text-xs font-bold text-slate-500 dark:text-slate-400">
+                        <thead className="sticky top-0 z-10 border-b   sui-border-weak sui-bg-page">
+                            <tr className="text-left text-xs font-bold  sui-color-default">
                                 {NO_DATA_REPORT_SORT_COLUMNS.map(renderSortHeader)}
                                 <th className="px-4 py-3">reason</th>
                                 <th className="px-4 py-3">time_range</th>
                                 <th className="px-4 py-3 text-right">action</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        <tbody className="divide-y sui-divide-weak">
                             {rows.length === 0 ? (
                                 <tr>
                                     <td
                                         colSpan={8}
-                                        className="px-5 py-10 text-center text-sm text-slate-500 dark:text-slate-400"
+                                        className="px-5 py-10 text-center text-sm  sui-color-default"
                                     >
                                         Run tiles first; searches that fail or return no data
                                         will appear here.
@@ -2645,12 +2641,12 @@ const NoDataReportModal: React.FC<{
                                     return (
                                         <tr
                                             key={`${row.tileId}-${row.observedAt}`}
-                                            className="transition-colors hover:bg-slate-50 dark:hover:bg-slate-900/70"
+                                            className="transition-colors  sui-hover-bg-section"
                                         >
-                                            <td className="px-5 py-3 font-mono text-xs font-semibold text-slate-900 dark:text-slate-100">
+                                            <td className="px-5 py-3 font-mono text-xs font-semibold  sui-color-active">
                                                 {row.stanzaName}
                                             </td>
-                                            <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
+                                            <td className="px-4 py-3 font-medium  sui-color-active">
                                                 <div className="flex items-start gap-2">
                                                     <span>{row.searchName}</span>
                                                     <InfoTooltip
@@ -2660,7 +2656,7 @@ const NoDataReportModal: React.FC<{
                                                         anchor="right"
                                                         iconAriaLabel={`Show description for ${row.searchName}`}
                                                         className="mt-0.5 flex-none"
-                                                        iconClassName="text-sky-600 hover:text-sky-700 focus:text-sky-700 dark:text-sky-300 dark:hover:text-sky-200 dark:focus:text-sky-200"
+                                                        iconClassName="sui-color-info sui-hover-color-info sui-focus-color-info"
                                                     />
                                                     <SplPreviewTooltip
                                                         title={row.searchName}
@@ -2669,20 +2665,20 @@ const NoDataReportModal: React.FC<{
                                                         anchor="left"
                                                         iconAriaLabel={`Preview SPL for ${row.searchName}`}
                                                         className="mt-0.5 flex-none"
-                                                        iconClassName="text-indigo-600 hover:text-indigo-700 focus:text-indigo-700 dark:text-indigo-300 dark:hover:text-indigo-200 dark:focus:text-indigo-200"
+                                                        iconClassName="sui-color-info sui-hover-color-info sui-focus-color-info"
                                                         fontScale={SPL_PREVIEW_FONT_SCALE}
                                                         maxWidth={splPreviewMaxWidth}
                                                     />
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                                            <td className="px-4 py-3  sui-color-default">
                                                 {row.category || '-'}
                                             </td>
-                                            <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                                            <td className="px-4 py-3  sui-color-default">
                                                 {row.subCategory || '-'}
                                             </td>
                                             <td
-                                                className="px-4 py-3 text-slate-600 dark:text-slate-300"
+                                                className="px-4 py-3  sui-color-default"
                                                 title={tags.join(', ') || 'No tags'}
                                             >
                                                 {tags.length > 0 ? (
@@ -2690,13 +2686,13 @@ const NoDataReportModal: React.FC<{
                                                         {tags.slice(0, 4).map((tag) => (
                                                             <span
                                                                 key={tag}
-                                                                className="rounded border border-slate-200 px-1.5 py-0.5 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-300"
+                                                                className="rounded border  px-1.5 py-0.5 text-xs font-semibold  sui-border-default sui-color-default"
                                                             >
                                                                 {tag}
                                                             </span>
                                                         ))}
                                                         {tags.length > 4 && (
-                                                            <span className="rounded border border-slate-200 px-1.5 py-0.5 text-xs font-semibold text-slate-400 dark:border-slate-700 dark:text-slate-500">
+                                                            <span className="rounded border  px-1.5 py-0.5 text-xs font-semibold  sui-border-default sui-color-muted">
                                                                 +{tags.length - 4}
                                                             </span>
                                                         )}
@@ -2705,10 +2701,10 @@ const NoDataReportModal: React.FC<{
                                                     '-'
                                                 )}
                                             </td>
-                                            <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                                            <td className="px-4 py-3  sui-color-default">
                                                 {noDataReasonLabel(row.reason)}
                                             </td>
-                                            <td className="px-4 py-3 text-slate-600 dark:text-slate-300">
+                                            <td className="px-4 py-3  sui-color-default">
                                                 {row.rangeLabel || '-'}
                                             </td>
                                             <td className="px-4 py-3 text-right">
@@ -2722,7 +2718,7 @@ const NoDataReportModal: React.FC<{
                                                                 record.dispatchContext
                                                             )
                                                         }
-                                                        className="inline-flex items-center gap-1 rounded border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 transition-colors hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:border-slate-700 dark:text-slate-300 dark:hover:border-sky-600 dark:hover:bg-sky-950/40 dark:hover:text-sky-200"
+                                                        className="inline-flex items-center gap-1 rounded border  px-2 py-1 text-xs font-semibold  transition-colors    focus:outline-none focus:ring-2 sui-focus-ring sui-border-default sui-color-default sui-hover-border-info sui-hover-bg-info sui-hover-color-info"
                                                     >
                                                         <Search className="h-3.5 w-3.5" />
                                                         Open
@@ -2742,38 +2738,38 @@ const NoDataReportModal: React.FC<{
                     tabIndex={-1}
                     aria-label="Resize needs attention report from the left edge"
                     onPointerDown={(event) => startDialogResize(event, 'width', -1, 0)}
-                    className="absolute bottom-10 left-0 top-14 z-20 w-2 cursor-ew-resize rounded-l-lg transition-colors hover:bg-sky-400/20"
+                    className="absolute bottom-10 left-0 top-14 z-20 w-2 cursor-ew-resize rounded-l-lg transition-colors sui-hover-bg-accent"
                 />
                 <button
                     type="button"
                     tabIndex={-1}
                     aria-label="Resize needs attention report from the right edge"
                     onPointerDown={(event) => startDialogResize(event, 'width', 1, 0)}
-                    className="absolute bottom-10 right-0 top-14 z-20 w-2 cursor-ew-resize rounded-r-lg transition-colors hover:bg-sky-400/20"
+                    className="absolute bottom-10 right-0 top-14 z-20 w-2 cursor-ew-resize rounded-r-lg transition-colors sui-hover-bg-accent"
                 />
                 <button
                     type="button"
                     tabIndex={-1}
                     aria-label="Resize needs attention report from the top edge"
                     onPointerDown={(event) => startDialogResize(event, 'height', 0, -1)}
-                    className="absolute left-10 right-10 top-0 z-20 h-2 cursor-ns-resize rounded-t-lg transition-colors hover:bg-sky-400/20"
+                    className="absolute left-10 right-10 top-0 z-20 h-2 cursor-ns-resize rounded-t-lg transition-colors sui-hover-bg-accent"
                 />
                 <button
                     type="button"
                     tabIndex={-1}
                     aria-label="Resize needs attention report from the bottom edge"
                     onPointerDown={(event) => startDialogResize(event, 'height', 0, 1)}
-                    className="absolute bottom-0 left-10 right-10 z-20 h-2 cursor-ns-resize transition-colors hover:bg-sky-400/20"
+                    className="absolute bottom-0 left-10 right-10 z-20 h-2 cursor-ns-resize transition-colors sui-hover-bg-accent"
                 />
                 <button
                     type="button"
                     tabIndex={-1}
                     aria-label="Resize needs attention report from the corner"
                     onPointerDown={(event) => startDialogResize(event, 'both', 1, 1)}
-                    className="absolute bottom-0 right-0 z-30 h-8 w-8 cursor-nwse-resize rounded-br-lg transition-colors hover:bg-sky-400/20"
+                    className="absolute bottom-0 right-0 z-30 h-8 w-8 cursor-nwse-resize rounded-br-lg transition-colors sui-hover-bg-accent"
                 >
-                    <span className="pointer-events-none absolute bottom-1 right-1 h-3 w-3 border-b border-r border-slate-400 dark:border-slate-500" />
-                    <span className="pointer-events-none absolute bottom-2 right-2 h-2 w-2 border-b border-r border-slate-300 dark:border-slate-600" />
+                    <span className="pointer-events-none absolute bottom-1 right-1 h-3 w-3 border-b border-r  sui-border-strong" />
+                    <span className="pointer-events-none absolute bottom-2 right-2 h-2 w-2 border-b border-r  sui-border-default" />
                 </button>
             </div>
         </div>
@@ -2968,21 +2964,21 @@ const SearchableFilterSelect: React.FC<SearchableFilterSelectProps> = ({
                         setOpen(false);
                     }
                 }}
-                className="flex h-10 w-full items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-left text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
+                className="flex h-10 w-full items-center gap-2 rounded-md border   px-3 text-left text-sm  outline-none transition sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-section sui-color-active sui-focus-ring"
             >
                 <span className="min-w-0 flex-1 truncate">{selectedLabel}</span>
                 <ChevronDown
                     className={cn(
-                        'h-4 w-4 flex-shrink-0 text-slate-500 transition-transform',
+                        'h-4 w-4 flex-shrink-0 sui-color-muted transition-transform',
                         open && 'rotate-180'
                     )}
                 />
             </button>
 
             {open && (
-                <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-950">
-                    <label className="relative block border-b border-slate-100 dark:border-slate-800">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md border   shadow-xl sui-border-default sui-bg-page">
+                    <label className="relative block border-b  sui-border-weak">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 sui-color-default" />
                         <input
                             ref={inputRef}
                             value={search}
@@ -3001,12 +2997,12 @@ const SearchableFilterSelect: React.FC<SearchableFilterSelectProps> = ({
                                 }
                             }}
                             placeholder={searchPlaceholder}
-                            className="h-10 w-full bg-white pl-9 pr-3 text-sm text-slate-700 outline-none dark:bg-slate-950 dark:text-slate-100"
+                            className="h-10 w-full  pl-9 pr-3 text-sm  outline-none sui-bg-page sui-color-active"
                         />
                     </label>
                     <div role="listbox" aria-label={ariaLabel} className="max-h-56 overflow-y-auto p-1">
                         {filteredOptions.length === 0 ? (
-                            <div className="px-3 py-3 text-sm text-slate-500 dark:text-slate-400">
+                            <div className="px-3 py-3 text-sm  sui-color-default">
                                 No matches
                             </div>
                         ) : (
@@ -3022,8 +3018,8 @@ const SearchableFilterSelect: React.FC<SearchableFilterSelectProps> = ({
                                         className={cn(
                                             'flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm transition-colors',
                                             selected
-                                                ? 'bg-sky-50 font-bold text-sky-700 dark:bg-sky-950 dark:text-sky-200'
-                                                : 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-900'
+                                                ? 'sui-bg-info font-bold  sui-bg-info sui-color-info'
+                                                : 'sui-color-default  sui-color-active sui-hover-bg-section'
                                         )}
                                     >
                                         <span className="min-w-0 flex-1 truncate">
@@ -3167,21 +3163,21 @@ const SearchableAppMultiSelect: React.FC<SearchableAppMultiSelectProps> = ({
                         setOpen(false);
                     }
                 }}
-                className="flex h-10 w-full items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-left text-sm font-semibold text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-900"
+                className="flex h-10 w-full items-center gap-2 rounded-md border   px-3 text-left text-sm font-semibold  outline-none transition sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-page sui-color-active sui-focus-ring"
             >
                 <span className="min-w-0 flex-1 truncate">{selectedLabel}</span>
                 <ChevronDown
                     className={cn(
-                        'h-4 w-4 flex-shrink-0 text-slate-500 transition-transform',
+                        'h-4 w-4 flex-shrink-0 sui-color-muted transition-transform',
                         open && 'rotate-180'
                     )}
                 />
             </button>
 
             {open && (
-                <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-950">
-                    <label className="relative block border-b border-slate-100 dark:border-slate-800">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md border   shadow-xl sui-border-default sui-bg-page">
+                    <label className="relative block border-b  sui-border-weak">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 sui-color-default" />
                         <input
                             ref={inputRef}
                             value={search}
@@ -3201,7 +3197,7 @@ const SearchableAppMultiSelect: React.FC<SearchableAppMultiSelectProps> = ({
                                 }
                             }}
                             placeholder="Search apps..."
-                            className="h-10 w-full bg-white pl-9 pr-3 text-sm text-slate-700 outline-none dark:bg-slate-950 dark:text-slate-100"
+                            className="h-10 w-full  pl-9 pr-3 text-sm  outline-none sui-bg-page sui-color-active"
                         />
                     </label>
                     <div
@@ -3219,12 +3215,12 @@ const SearchableAppMultiSelect: React.FC<SearchableAppMultiSelectProps> = ({
                                 className={cn(
                                     'flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm transition-colors',
                                     selectedApps.size === 0
-                                        ? 'bg-sky-50 font-bold text-sky-700 dark:bg-sky-950 dark:text-sky-200'
-                                        : 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-900'
+                                        ? 'sui-bg-info font-bold  sui-bg-info sui-color-info'
+                                        : 'sui-color-default  sui-color-active sui-hover-bg-section'
                                 )}
                             >
                                 <span className="min-w-0 flex-1 truncate">All apps</span>
-                                <span className="text-xs font-bold text-slate-400">
+                                <span className="text-xs font-bold sui-color-default">
                                     {totalCount}
                                 </span>
                                 {selectedApps.size === 0 && (
@@ -3233,7 +3229,7 @@ const SearchableAppMultiSelect: React.FC<SearchableAppMultiSelectProps> = ({
                             </button>
                         )}
                         {filteredApps.length === 0 && !allAppsMatches ? (
-                            <div className="px-3 py-3 text-sm text-slate-500 dark:text-slate-400">
+                            <div className="px-3 py-3 text-sm  sui-color-default">
                                 No matches
                             </div>
                         ) : (
@@ -3251,14 +3247,14 @@ const SearchableAppMultiSelect: React.FC<SearchableAppMultiSelectProps> = ({
                                         className={cn(
                                             'flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm transition-colors',
                                             selected
-                                                ? 'bg-sky-50 font-bold text-sky-700 dark:bg-sky-950 dark:text-sky-200'
-                                                : 'text-slate-700 hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-900'
+                                                ? 'sui-bg-info font-bold  sui-bg-info sui-color-info'
+                                                : 'sui-color-default  sui-color-active sui-hover-bg-section'
                                         )}
                                     >
                                         <span className="min-w-0 flex-1 truncate">
                                             {appLabel(option)}
                                         </span>
-                                        <span className="text-xs font-bold text-slate-400">
+                                        <span className="text-xs font-bold sui-color-default">
                                             {countsByApp.get(option) ?? 0}
                                         </span>
                                         {selected && (
@@ -3697,16 +3693,16 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     const replaceMode = replaceTileId !== null;
 
     return (
-        <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[560px] flex-col border-l border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-950">
-            <div className="flex items-center gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
-                <div className="flex h-10 w-10 items-center justify-center rounded-md bg-sky-50 text-sky-600 dark:bg-sky-950 dark:text-sky-300">
+        <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[560px] flex-col border-l   shadow-2xl sui-border-weak sui-bg-page">
+            <div className="flex items-center gap-3 border-b  px-5 py-4 sui-border-weak">
+                <div className="flex h-10 w-10 items-center justify-center rounded-md   sui-bg-info sui-color-info">
                     <SlidersHorizontal className="h-5 w-5" />
                 </div>
                 <div className="min-w-0">
-                    <div className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
+                    <div className="text-xs font-black uppercase tracking-[0.22em] sui-color-default">
                         {replaceMode ? 'Replace tile' : 'Add tiles'}
                     </div>
-                    <h2 className="truncate text-lg font-black text-slate-900 dark:text-slate-50">
+                    <h2 className="truncate text-lg font-black  sui-color-active">
                         Searchbase catalogue
                     </h2>
                 </div>
@@ -3715,20 +3711,20 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                     onClick={onClose}
                     title="Close"
                     aria-label="Close"
-                    className="ml-auto rounded p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                    className="ml-auto rounded p-2 sui-color-default transition-colors   focus:outline-none focus:ring-2 sui-focus-ring sui-hover-bg-overlay sui-hover-color-active"
                 >
                     <X className="h-5 w-5" />
                 </button>
             </div>
 
-            <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+            <div className="border-b  px-4 py-3 sui-border-weak">
                 <label className="relative block">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 sui-color-default" />
                     <input
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
                         placeholder="Filter by stanza, name, SPL, or description..."
-                        className="h-11 w-full rounded-md border border-slate-300 bg-white pl-10 pr-3 text-sm font-medium text-slate-900 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:focus:ring-sky-900"
+                        className="h-11 w-full rounded-md border   pl-10 pr-3 text-sm font-medium  outline-none transition sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-section sui-color-active sui-focus-ring"
                     />
                 </label>
 
@@ -3737,17 +3733,17 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                         type="button"
                         onClick={() => setFiltersCollapsed((current) => !current)}
                         aria-expanded={!filtersCollapsed}
-                        className="inline-flex min-w-0 items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-xs font-black uppercase tracking-[0.16em] text-slate-800 transition hover:bg-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-300 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 dark:focus:ring-sky-800"
+                        className="inline-flex min-w-0 items-center gap-2 rounded-md  px-3 py-2 text-xs font-black uppercase tracking-[0.16em]  transition  focus:outline-none focus:ring-2 sui-focus-ring sui-bg-popup sui-color-active sui-hover-bg-floating sui-focus-ring"
                     >
                         <span>Filters</span>
                         {hasActiveFilters && (
-                            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs tracking-normal text-sky-700 dark:bg-sky-900 dark:text-sky-200">
+                            <span className="rounded-full  px-2 py-0.5 text-xs tracking-normal  sui-bg-info sui-color-info">
                                 active
                             </span>
                         )}
                         <ChevronDown
                             className={cn(
-                                'h-4 w-4 flex-shrink-0 text-slate-500 transition-transform dark:text-slate-300',
+                                'h-4 w-4 flex-shrink-0  transition-transform sui-color-default',
                                 filtersCollapsed && '-rotate-90'
                             )}
                         />
@@ -3755,14 +3751,14 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                     <div className="ml-auto flex items-center gap-3">
                         <span
                             title="Searchbase stanzas matching the current app, visibility, category, sub-category, viz, tag, and text filters"
-                            className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-black uppercase tracking-wider text-sky-700 shadow-sm dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-200"
+                            className="inline-flex items-center rounded-full border   px-2.5 py-1 text-xs font-black uppercase tracking-wider  shadow-sm sui-border-info sui-bg-info sui-color-info"
                         >
                             {availableSearchLabel}
                         </span>
                         <button
                             type="button"
                             onClick={resetFilters}
-                            className="text-xs font-black uppercase tracking-[0.18em] text-slate-400 transition-colors hover:text-sky-600 dark:hover:text-sky-300"
+                            className="text-xs font-black uppercase tracking-[0.18em] sui-color-default transition-colors  sui-hover-color-info"
                         >
                             Clear filters
                         </button>
@@ -3775,22 +3771,22 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                             {activeFilterChips.slice(0, 10).map((chip) => (
                                 <span
                                     key={chip.id}
-                                    className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                                    className="inline-flex rounded-full  px-2 py-1 text-xs font-bold  sui-bg-popup sui-color-default"
                                 >
                                     {chip.label}
                                 </span>
                             ))}
                             {activeFilterChips.length > 10 && (
-                                <span className="inline-flex rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                                <span className="inline-flex rounded-full  px-2 py-1 text-xs font-bold  sui-bg-popup sui-color-default">
                                     +{activeFilterChips.length - 10}
                                 </span>
                             )}
                         </div>
                     )
                 ) : (
-                    <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/80 p-3 dark:border-slate-800 dark:bg-slate-900/60">
+                    <div className="mt-3 rounded-xl border   p-3 sui-border-weak sui-bg-section">
                         <div className="grid grid-cols-[76px_minmax(0,1fr)] gap-x-3 gap-y-3">
-                            <span className="self-center text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                            <span className="self-center text-xs font-black uppercase tracking-[0.16em] sui-color-default">
                                 App
                             </span>
                             <SearchableAppMultiSelect
@@ -3809,11 +3805,11 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                 }}
                             />
 
-                            <span className="self-start pt-4 text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                            <span className="self-start pt-4 text-xs font-black uppercase tracking-[0.16em] sui-color-default">
                                 Visibility
                             </span>
                             <div className="grid gap-2 sm:grid-cols-3">
-                                <label className="flex min-h-16 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-bold leading-tight text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                <label className="flex min-h-16 items-center gap-2 rounded-lg border   px-3 py-3 text-sm font-bold leading-tight  shadow-sm sui-border-weak sui-bg-page sui-color-active">
                                     <input
                                         type="checkbox"
                                         checked={includeHiddenSearches}
@@ -3822,11 +3818,11 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                                 event.target.checked
                                             )
                                         }
-                                        className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-950"
+                                        className="h-4 w-4 rounded  sui-color-info sui-focus-ring sui-border-default sui-bg-page"
                                     />
                                     <span>Show hidden searches</span>
                                 </label>
-                                <label className="flex min-h-16 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-bold leading-tight text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                <label className="flex min-h-16 items-center gap-2 rounded-lg border   px-3 py-3 text-sm font-bold leading-tight  shadow-sm sui-border-weak sui-bg-page sui-color-active">
                                     <input
                                         type="checkbox"
                                         checked={includeDrilldownSearches}
@@ -3835,24 +3831,24 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                                 event.target.checked
                                             )
                                         }
-                                        className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-950"
+                                        className="h-4 w-4 rounded  sui-color-info sui-focus-ring sui-border-default sui-bg-page"
                                     />
                                     <span>Show drill-down searches</span>
                                 </label>
-                                <label className="flex min-h-16 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm font-bold leading-tight text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100">
+                                <label className="flex min-h-16 items-center gap-2 rounded-lg border   px-3 py-3 text-sm font-bold leading-tight  shadow-sm sui-border-weak sui-bg-page sui-color-active">
                                     <input
                                         type="checkbox"
                                         checked={includeTableSearches}
                                         onChange={(event) =>
                                             setIncludeTableSearches(event.target.checked)
                                         }
-                                        className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-400 dark:border-slate-700 dark:bg-slate-950"
+                                        className="h-4 w-4 rounded  sui-color-info sui-focus-ring sui-border-default sui-bg-page"
                                     />
                                     <span>Show table searches</span>
                                 </label>
                             </div>
 
-                            <label className="self-center text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                            <label className="self-center text-xs font-black uppercase tracking-[0.16em] sui-color-default">
                                 Category
                             </label>
                             <SearchableFilterSelect
@@ -3872,7 +3868,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
 
                             {category !== ALL && subCategoryOptions.length > 0 && (
                                 <>
-                                    <label className="self-center text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                                    <label className="self-center text-xs font-black uppercase tracking-[0.16em] sui-color-default">
                                         Sub-cat
                                     </label>
                                     <SearchableFilterSelect
@@ -3891,7 +3887,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                 </>
                             )}
 
-                            <label className="self-center text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                            <label className="self-center text-xs font-black uppercase tracking-[0.16em] sui-color-default">
                                 Viz
                             </label>
                             <select
@@ -3901,7 +3897,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                     setSelectedTags([]);
                                     setTagInput('');
                                 }}
-                                className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-900"
+                                className="h-10 rounded-md border   px-3 text-sm font-semibold  outline-none sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-page sui-color-active sui-focus-ring"
                             >
                                 <option value={ALL}>All viz types</option>
                                 {vizTypeOptions.map((option) => (
@@ -3911,7 +3907,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                 ))}
                             </select>
 
-                            <label className="self-center text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                            <label className="self-center text-xs font-black uppercase tracking-[0.16em] sui-color-default">
                                 Tags
                             </label>
                             <div>
@@ -3919,7 +3915,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                     value={tagInput}
                                     onChange={(event) => setTagInput(event.target.value)}
                                     placeholder={`Filter by tag (${availableTagCount} tags available, AND combined)...`}
-                                    className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-200 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-900"
+                                    className="h-10 w-full rounded-md border   px-3 text-sm  outline-none transition sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-page sui-color-active sui-focus-ring"
                                 />
                                 {(selectedTags.length > 0 || tagOptions.length > 0) && (
                                     <div className="mt-2 flex max-h-20 flex-wrap gap-1 overflow-y-auto">
@@ -3934,7 +3930,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                                         )
                                                     )
                                                 }
-                                                className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-1 text-xs font-bold text-sky-700 hover:bg-sky-200 dark:bg-sky-900 dark:text-sky-100 dark:hover:bg-sky-800"
+                                                className="inline-flex items-center gap-1 rounded-full  px-2 py-1 text-xs font-bold   sui-bg-info sui-color-info sui-hover-bg-info"
                                             >
                                                 {tag}
                                                 <X className="h-3 w-3" />
@@ -3945,10 +3941,10 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                                 key={tag}
                                                 type="button"
                                                 onClick={() => selectTag(tag)}
-                                                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-500 hover:border-sky-300 hover:text-sky-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400 dark:hover:border-sky-700 dark:hover:text-sky-300"
+                                                className="inline-flex items-center gap-1 rounded-full border   px-2 py-1 text-xs font-semibold    sui-border-default sui-bg-page sui-color-default sui-hover-border-info sui-hover-color-info"
                                             >
                                                 {tag}
-                                                <span className="text-slate-400">{count}</span>
+                                                <span className="sui-color-default">{count}</span>
                                             </button>
                                         ))}
                                     </div>
@@ -3959,9 +3955,9 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                 )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 px-4 py-3 text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+            <div className="flex flex-wrap items-center gap-2 border-b  px-4 py-3 text-xs  sui-border-weak sui-color-default">
                 <span
-                    className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 font-black uppercase tracking-wider text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/50 dark:text-sky-200"
+                    className="inline-flex items-center rounded-full border   px-2.5 py-1 font-black uppercase tracking-wider  sui-border-info sui-bg-info sui-color-info"
                     title={`${browserRecords.length.toLocaleString()} searches are in the current app and visibility scope before category, tag, viz, and text filters`}
                 >
                     {availableSearchLabel}
@@ -3981,7 +3977,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                 onAddRecords(addableFilteredRecords);
                                 setSelectedNames(new Set());
                             }}
-                            className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-white px-3 py-1.5 text-xs font-black text-sky-700 transition hover:border-sky-300 hover:bg-sky-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400 dark:border-sky-900 dark:bg-slate-950 dark:text-sky-300 dark:hover:bg-sky-950 dark:disabled:border-slate-800 dark:disabled:bg-slate-900 dark:disabled:text-slate-600"
+                            className="inline-flex items-center gap-1 rounded-md border   px-3 py-1.5 text-xs font-black  transition sui-hover-border-info  disabled:cursor-not-allowed    sui-border-info sui-bg-page sui-color-info sui-hover-bg-info sui-disabled-border-weak sui-disabled-bg-section sui-disabled-color-default"
                         >
                             <Plus className="h-3.5 w-3.5" />
                             Add all filtered
@@ -3993,7 +3989,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                 onAddRecords(selectedRecords);
                                 setSelectedNames(new Set());
                             }}
-                            className="inline-flex items-center gap-1 rounded-md bg-sky-600 px-3 py-1.5 text-xs font-black text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700"
+                            className="inline-flex items-center gap-1 rounded-md sui-bg-accent px-3 py-1.5 text-xs font-black sui-color-active transition sui-hover-bg-accent disabled:cursor-not-allowed  sui-disabled-bg-floating"
                         >
                             <Plus className="h-3.5 w-3.5" />
                             Add selected
@@ -4004,11 +4000,11 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
 
             <div className="min-h-0 flex-1 overflow-y-auto p-3">
                 {browserRecords.length === 0 ? (
-                    <div className="rounded-md border border-dashed border-slate-300 p-5 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                    <div className="rounded-md border border-dashed  p-5 text-sm  sui-border-default sui-color-default">
                         Searchbase catalogue is empty in this runtime.
                     </div>
                 ) : filteredRecords.length === 0 ? (
-                    <div className="rounded-md border border-dashed border-slate-300 p-5 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                    <div className="rounded-md border border-dashed  p-5 text-sm  sui-border-default sui-color-default">
                         No matches.
                     </div>
                 ) : (
@@ -4023,10 +4019,10 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                 <div
                                     key={record.id || record.searchName}
                                     className={cn(
-                                        'rounded-md border bg-white p-3 transition-colors dark:bg-slate-950',
+                                        'rounded-md border  p-3 transition-colors sui-bg-page',
                                         checked
-                                            ? 'border-sky-300 ring-1 ring-sky-200 dark:border-sky-700 dark:ring-sky-900'
-                                            : 'border-slate-200 hover:border-sky-200 dark:border-slate-800 dark:hover:border-sky-800'
+                                            ? 'sui-border-info ring-1 sui-focus-ring sui-border-info sui-focus-ring'
+                                            : 'sui-border-weak sui-hover-border-info'
                                     )}
                                 >
                                     <div className="flex items-start gap-2">
@@ -4041,12 +4037,12 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                                 aria-checked={checked}
                                                 role="checkbox"
                                                 className={cn(
-                                                    'mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md border-2 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-sky-300 dark:focus:ring-sky-800',
+                                                    'mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md border-2 shadow-sm transition-colors focus:outline-none focus:ring-2 sui-focus-ring',
                                                     checked
-                                                        ? 'border-sky-500 bg-sky-500 text-white'
+                                                        ? 'sui-border-info sui-bg-accent sui-color-active'
                                                         : duplicateBlocked
-                                                        ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-transparent opacity-60 dark:border-slate-800 dark:bg-slate-900'
-                                                        : 'border-slate-400 bg-white text-transparent hover:border-sky-500 hover:bg-sky-50 dark:border-slate-600 dark:bg-slate-950 dark:hover:border-sky-500 dark:hover:bg-sky-950'
+                                                        ? 'cursor-not-allowed   sui-color-transparent opacity-60 sui-border-weak sui-bg-section'
+                                                        : 'sui-border-default  sui-color-transparent   sui-border-default sui-bg-page sui-hover-border-info sui-hover-bg-info'
                                                 )}
                                             >
                                                 <Check className="h-3.5 w-3.5" />
@@ -4054,14 +4050,14 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                         )}
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center gap-2">
-                                                <h3 className="truncate text-sm font-black text-slate-900 dark:text-slate-50">
+                                                <h3 className="truncate text-sm font-black  sui-color-active">
                                                     {record.searchName}
                                                 </h3>
-                                                <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-black uppercase text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                                                <span className="rounded  px-1.5 py-0.5 text-xs font-black uppercase  sui-bg-popup sui-color-default">
                                                     {formatVizLabel(record.defaultViz)}
                                                 </span>
                                             </div>
-                                            <div className="mt-0.5 truncate text-xs font-semibold uppercase tracking-wide text-slate-400">
+                                            <div className="mt-0.5 truncate text-xs font-semibold uppercase tracking-wide sui-color-default">
                                                 {[
                                                     record.category,
                                                     record.subCategory,
@@ -4070,7 +4066,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                                     .filter(Boolean)
                                                     .join(' / ')}
                                             </div>
-                                            <p className="mt-1 line-clamp-2 text-xs leading-snug text-slate-600 dark:text-slate-300">
+                                            <p className="mt-1 line-clamp-2 text-xs leading-snug  sui-color-default">
                                                 {recordPlainText(record) || record.id}
                                             </p>
                                             {record.tags.length > 0 && (
@@ -4080,7 +4076,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                                             key={tag}
                                                             type="button"
                                                             onClick={() => selectTag(tag)}
-                                                            className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-500 hover:bg-sky-100 hover:text-sky-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-sky-900 dark:hover:text-sky-100"
+                                                            className="rounded-full  px-2 py-0.5 text-xs font-bold    sui-bg-popup sui-color-default sui-hover-bg-info sui-hover-color-info"
                                                         >
                                                             {tag}
                                                         </button>
@@ -4099,7 +4095,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                                     ? 'Replace tile'
                                                     : 'Add tile'
                                             }
-                                            className="inline-flex flex-shrink-0 items-center gap-1 rounded-md bg-slate-900 px-2.5 py-1.5 text-xs font-black text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-sky-200 dark:disabled:bg-slate-800 dark:disabled:text-slate-500"
+                                            className="inline-flex flex-shrink-0 items-center gap-1 rounded-md  px-2.5 py-1.5 text-xs font-black  transition  disabled:cursor-not-allowed   sui-bg-section sui-color-active sui-hover-bg-info sui-disabled-bg-popup sui-disabled-color-muted"
                                         >
                                             <Plus className="h-3.5 w-3.5" />
                                             {duplicateBlocked
@@ -4110,7 +4106,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                                         </button>
                                     </div>
                                     {canvasCount > 0 && (
-                                        <div className="mt-2 text-xs font-semibold text-sky-600 dark:text-sky-300">
+                                        <div className="mt-2 text-xs font-semibold  sui-color-info">
                                             In canvas: {canvasCount}
                                         </div>
                                     )}
@@ -4192,7 +4188,6 @@ const SearchbaseCanvasPage: React.FC = () => {
     const [moreMenuOpen, setMoreMenuOpen] = useState(false);
     const [editingCanvasName, setEditingCanvasName] = useState(false);
     const canvasNameInputRef = useRef<HTMLInputElement | null>(null);
-    const { theme, resolvedTheme, cycle } = useTheme();
 
     const range =
         TIME_RANGE_OPTIONS.find((option) => option.label === rangeLabel) ??
@@ -5312,14 +5307,6 @@ const SearchbaseCanvasPage: React.FC = () => {
         setSaveStatus('New empty canvas.');
     }, [canvasDirty, hasUnsavedCurrentCanvas]);
 
-    const HeaderThemeIcon =
-        theme === 'system' ? MonitorSmartphone : resolvedTheme === 'dark' ? Moon : Sun;
-    const themeTitle =
-        theme === 'system'
-            ? 'Following system theme'
-            : resolvedTheme === 'dark'
-            ? 'Dark theme'
-            : 'Light theme';
     const hasTileResultFilter = tileResultFilter !== 'all';
     const hasTileAppFilter = tileAppFilter !== ALL;
     const hasTileFilters = hasTileSearch || hasTileResultFilter || hasTileAppFilter;
@@ -5402,14 +5389,11 @@ const SearchbaseCanvasPage: React.FC = () => {
 
     return (
         <div
-            className={cn(
-                resolvedTheme === 'dark' && 'dark',
-                'relative min-h-screen overflow-x-hidden bg-[#f5f7fb] font-sans text-slate-900 dark:bg-slate-900 dark:text-slate-50'
-            )}
-            style={resolvedTheme === 'dark' ? C3_ATMOSPHERE_BACKGROUND_STYLE : undefined}
+            className="relative min-h-screen overflow-x-hidden font-sans sui-bg-page sui-color-default"
+            style={C3_ATMOSPHERE_BACKGROUND_STYLE}
         >
             <div className="flex min-h-screen min-w-0 flex-col overflow-x-hidden">
-                <header className="border-b border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                <header className="border-b   shadow-sm sui-border-weak sui-bg-page">
                     <div className="flex min-w-0 flex-wrap items-center gap-3 px-4 py-3">
                         <div className="min-w-[240px] flex-1">
                             {editingCanvasName ? (
@@ -5424,14 +5408,14 @@ const SearchbaseCanvasPage: React.FC = () => {
                                         }
                                     }}
                                     placeholder="Untitled canvas"
-                                    className="block h-9 w-full max-w-[460px] rounded-none border-0 border-b border-slate-300 bg-transparent p-0 text-2xl font-black leading-9 text-slate-950 outline-none transition-colors placeholder:text-slate-400 focus:ring-0 dark:border-slate-600 dark:text-slate-50 dark:placeholder:text-slate-600"
+                                    className="block h-9 w-full max-w-[460px] rounded-none border-0 border-b  sui-bg-transparent p-0 text-2xl font-black leading-9  outline-none transition-colors  focus:ring-0 sui-border-default  sui-color-default"
                                     aria-label="Canvas name"
                                 />
                             ) : (
                                 <button
                                     type="button"
                                     onDoubleClick={() => setEditingCanvasName(true)}
-                                    className="block max-w-[520px] truncate border-0 bg-transparent p-0 text-left text-2xl font-black leading-tight text-slate-950 transition-colors focus:outline-none dark:text-slate-50"
+                                    className="block max-w-[520px] truncate border-0 sui-bg-transparent p-0 text-left text-2xl font-black leading-tight  transition-colors focus:outline-none sui-color-active"
                                     title="Double-click to rename"
                                     aria-label="Edit canvas name"
                                 >
@@ -5440,7 +5424,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                             )}
                             <div className="mt-2 flex flex-wrap items-center gap-1.5">
                                 <span
-                                    className="inline-flex h-6 items-center rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+                                    className="inline-flex h-6 items-center rounded-md border   px-2 text-xs font-bold  sui-border-weak sui-bg-section sui-color-active"
                                     title="Total tiles on this canvas"
                                 >
                                     {tiles.length.toLocaleString()} canvas tiles
@@ -5449,8 +5433,8 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     className={cn(
                                         'inline-flex h-6 items-center rounded-md border px-2 text-xs font-bold',
                                         runningTileIds.size > 0
-                                            ? 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900 dark:bg-sky-950 dark:text-sky-200'
-                                            : 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300'
+                                            ? 'sui-border-info sui-bg-info sui-color-info'
+                                            : 'sui-border-weak sui-bg-section sui-color-default'
                                     )}
                                     title="Tiles with an active result view"
                                 >
@@ -5460,10 +5444,10 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     type="button"
                                     onClick={() => setNoDataReportOpen(true)}
                                     className={cn(
-                                        'inline-flex h-6 items-center rounded-md border px-2 text-xs font-bold transition focus:outline-none focus:ring-2 focus:ring-amber-300',
+                                        'inline-flex h-6 items-center rounded-md border px-2 text-xs font-bold transition focus:outline-none focus:ring-2 sui-focus-ring',
                                         observedNoDataRows.length > 0
-                                            ? 'border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300 hover:bg-amber-100 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200 dark:hover:bg-amber-900'
-                                            : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
+                                            ? 'sui-border-warning   sui-hover-border-warning  sui-border-warning sui-bg-warning sui-color-warning sui-hover-bg-warning'
+                                            : 'sui-border-weak   sui-hover-border-default  sui-border-weak sui-bg-section sui-color-default sui-hover-bg-overlay'
                                     )}
                                     title="Open needs attention report"
                                     aria-label={`Open needs attention report. ${observedNoDataRows.length.toLocaleString()} observed searches need attention.`}
@@ -5471,7 +5455,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     {observedNoDataRows.length.toLocaleString()} attention
                                 </button>
                                 <span
-                                    className="inline-flex h-6 items-center rounded-md border border-slate-200 bg-slate-50 px-2 text-xs font-bold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                                    className="inline-flex h-6 items-center rounded-md border   px-2 text-xs font-bold  sui-border-weak sui-bg-section sui-color-default"
                                     title="Loaded searches available in the catalogue"
                                 >
                                     {records.length.toLocaleString()} in catalogue
@@ -5494,7 +5478,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 onClick={saveCurrentCanvas}
                                 disabled={savingCanvas || tiles.length === 0}
                                 title="Save canvas"
-                                className="inline-flex h-10 items-center gap-1.5 rounded-md bg-emerald-600 px-3 text-sm font-black text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                                className="inline-flex h-10 items-center gap-1.5 rounded-md sui-bg-positive px-3 text-sm font-black sui-color-active transition sui-hover-bg-positive disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 sui-focus-ring"
                             >
                                 <Save className="h-3.5 w-3.5" />
                                 Save
@@ -5506,7 +5490,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     setBrowserOpen(true);
                                 }}
                                 disabled={autoAdvanceActive}
-                                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-md bg-sky-600 px-4 text-sm font-black text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-sky-300"
+                                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-md sui-bg-accent px-4 text-sm font-black sui-color-active transition sui-hover-bg-accent disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 sui-focus-ring"
                             >
                                 <Plus className="h-4 w-4" />
                                 Add
@@ -5524,7 +5508,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     runVisibleTiles();
                                 }}
                                 title={runVisibleTitle}
-                                className="inline-flex h-10 items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-3 text-sm font-black text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-emerald-300 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200 dark:hover:bg-emerald-900"
+                                className="inline-flex h-10 items-center gap-1.5 rounded-md border   px-3 text-sm font-black  transition sui-hover-border-positive  disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 sui-focus-ring sui-border-positive sui-bg-positive sui-color-positive sui-hover-bg-positive"
                             >
                                 <Play className="h-3.5 w-3.5" />
                                 Run
@@ -5547,10 +5531,10 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 }}
                                 title={autoAdvanceTitle}
                                 className={cn(
-                                    'inline-flex h-10 items-center gap-2 rounded-md border px-3 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-sky-300',
+                                    'inline-flex h-10 items-center gap-2 rounded-md border px-3 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 sui-focus-ring',
                                     autoAdvanceActive
-                                        ? 'border-sky-300 bg-sky-600 text-white hover:bg-sky-700 dark:border-sky-700 dark:bg-sky-700 dark:hover:bg-sky-600'
-                                        : 'border-slate-300 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-sky-700 dark:hover:bg-sky-950 dark:hover:text-sky-200'
+                                        ? 'sui-border-info  sui-color-active  sui-border-info sui-bg-accent sui-hover-bg-accent'
+                                        : 'sui-border-default sui-bg-section sui-color-active sui-hover-border-info sui-hover-bg-info sui-hover-color-info'
                                 )}
                             >
                                 <ChevronRight className="h-4 w-4" />
@@ -5559,8 +5543,8 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     className={cn(
                                         'rounded-full px-1.5 py-0.5 text-xs leading-none',
                                         autoAdvanceActive
-                                            ? 'bg-white/20 text-white'
-                                            : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300'
+                                            ? 'sui-bg-section sui-color-active'
+                                            : 'sui-bg-section  sui-bg-popup sui-color-default'
                                     )}
                                 >
                                     {autoAdvanceProgressLabel}
@@ -5574,7 +5558,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 }
                                 onClick={stopAllTiles}
                                 title="Stop all running tiles"
-                                className="inline-flex h-10 items-center gap-1.5 rounded-md border border-rose-200 bg-rose-50 px-3 text-sm font-black text-rose-700 transition hover:border-rose-300 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-rose-300 dark:border-rose-900 dark:bg-rose-950 dark:text-rose-200 dark:hover:bg-rose-900"
+                                className="inline-flex h-10 items-center gap-1.5 rounded-md border   px-3 text-sm font-black  transition sui-hover-border-negative  disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 sui-focus-ring sui-border-negative sui-bg-negative sui-color-negative sui-hover-bg-negative"
                             >
                                 <Square className="h-3.5 w-3.5" />
                                 Stop
@@ -5584,7 +5568,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 onClick={enterPresentationMode}
                                 disabled={tiles.length === 0 || autoAdvanceActive}
                                 title="Present this canvas"
-                                className="inline-flex h-10 items-center gap-1.5 rounded-md bg-slate-950 px-3 text-sm font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white"
+                                className="inline-flex h-10 items-center gap-1.5 rounded-md  px-3 text-sm font-black  transition  disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 sui-focus-ring sui-bg-section sui-color-active sui-hover-bg-section"
                             >
                                 <Presentation className="h-3.5 w-3.5" />
                                 Present
@@ -5598,18 +5582,9 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 }
                                 title="Refresh visible tiles"
                                 aria-label="Refresh visible tiles"
-                                className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:ring-slate-700"
+                                className="inline-flex h-10 w-10 items-center justify-center rounded-md border    transition  disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 sui-focus-ring sui-border-weak sui-bg-section sui-color-active sui-hover-bg-overlay sui-focus-ring"
                             >
                                 <RefreshCw className="h-4 w-4" />
-                            </button>
-                            <button
-                                type="button"
-                                onClick={cycle}
-                                title={themeTitle}
-                                aria-label={themeTitle}
-                                className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:ring-slate-700"
-                            >
-                                <HeaderThemeIcon className="h-4 w-4" />
                             </button>
                             <div className="relative">
                                 <button
@@ -5619,19 +5594,19 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     aria-expanded={moreMenuOpen}
                                     title="More canvas actions"
                                     aria-label="More canvas actions"
-                                    className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800 dark:focus:ring-slate-700"
+                                    className="inline-flex h-10 w-10 items-center justify-center rounded-md border    transition  disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 sui-focus-ring sui-border-weak sui-bg-section sui-color-active sui-hover-bg-overlay sui-focus-ring"
                                 >
                                     <MoreVertical className="h-4 w-4" />
                                 </button>
                                 {moreMenuOpen && (
-                                    <div className="absolute right-0 z-30 mt-2 w-56 rounded-md border border-slate-200 bg-white p-1.5 shadow-lg dark:border-slate-800 dark:bg-slate-900">
+                                    <div className="absolute right-0 z-30 mt-2 w-56 rounded-md border   p-1.5 shadow-lg sui-border-weak sui-bg-section">
                                         <button
                                             type="button"
                                             onClick={() => {
                                                 setMoreMenuOpen(false);
                                                 createNewCanvas();
                                             }}
-                                            className="flex h-9 w-full items-center gap-2 rounded px-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+                                            className="flex h-9 w-full items-center gap-2 rounded px-2 text-left text-sm font-semibold   sui-color-active sui-hover-bg-overlay"
                                         >
                                             <Plus className="h-3.5 w-3.5" />
                                             New empty canvas
@@ -5643,7 +5618,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                                 saveCanvasAs();
                                             }}
                                             disabled={savingCanvas || tiles.length === 0}
-                                            className="flex h-9 w-full items-center gap-2 rounded px-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-slate-200 dark:hover:bg-slate-800"
+                                            className="flex h-9 w-full items-center gap-2 rounded px-2 text-left text-sm font-semibold   disabled:cursor-not-allowed disabled:opacity-40 sui-color-active sui-hover-bg-overlay"
                                         >
                                             <Copy className="h-3.5 w-3.5" />
                                             Save as
@@ -5651,7 +5626,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                         <button
                                             type="button"
                                             onClick={() => setNoDataReportOpen(true)}
-                                            className="flex h-9 w-full items-center gap-2 rounded px-2 text-left text-sm font-semibold text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800"
+                                            className="flex h-9 w-full items-center gap-2 rounded px-2 text-left text-sm font-semibold   sui-color-active sui-hover-bg-overlay"
                                         >
                                             <Table2 className="h-3.5 w-3.5" />
                                             Needs attention report
@@ -5663,7 +5638,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                                 void deleteActiveCanvas();
                                             }}
                                             disabled={savingCanvas || !activeSavedCanvasName}
-                                            className="flex h-9 w-full items-center gap-2 rounded px-2 text-left text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-rose-300 dark:hover:bg-rose-950"
+                                            className="flex h-9 w-full items-center gap-2 rounded px-2 text-left text-sm font-semibold   disabled:cursor-not-allowed disabled:opacity-40 sui-color-negative sui-hover-bg-negative"
                                         >
                                             <Trash2 className="h-3.5 w-3.5" />
                                             Delete saved canvas
@@ -5674,7 +5649,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="flex min-w-0 flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/80 px-4 py-2 dark:border-slate-800 dark:bg-slate-900/60">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2 border-t   px-4 py-2 sui-border-weak sui-bg-section">
                         <div className="flex flex-wrap items-center gap-2">
                             <select
                                 value={activeSavedCanvasName ?? ''}
@@ -5683,7 +5658,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     if (name) void loadCanvasByName(name);
                                 }}
                                 disabled={savingCanvas || autoAdvanceActive}
-                                className="h-9 w-[250px] shrink-0 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-800 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-950"
+                                className="h-9 w-[250px] shrink-0 rounded-md border   px-3 text-sm font-semibold  outline-none transition sui-focus-border-info focus:ring-2 sui-focus-ring disabled:cursor-not-allowed disabled:opacity-50 sui-border-default sui-bg-page sui-color-active sui-focus-ring"
                             >
                                 <option value="">Load saved canvas...</option>
                                 {savedCanvases.map((canvas) => (
@@ -5697,7 +5672,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 onChange={(event) => setRangeLabel(event.target.value)}
                                 disabled={autoAdvanceActive}
                                 aria-label="Time range"
-                                className="h-9 w-[150px] rounded-md border border-slate-300 bg-white px-2 text-sm font-semibold text-slate-900 outline-none transition disabled:cursor-not-allowed disabled:opacity-50 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-950"
+                                className="h-9 w-[150px] rounded-md border   px-2 text-sm font-semibold  outline-none transition disabled:cursor-not-allowed disabled:opacity-50 sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-page sui-color-active sui-focus-ring"
                             >
                                 {TIME_RANGE_OPTIONS.map((option) => (
                                     <option key={option.label} value={option.label}>
@@ -5712,7 +5687,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 }
                                 disabled={autoAdvanceActive}
                                 aria-label="Tiles per page"
-                                className="h-9 w-[130px] rounded-md border border-slate-300 bg-white px-2 text-sm font-semibold text-slate-900 outline-none transition disabled:cursor-not-allowed disabled:opacity-50 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:ring-sky-950"
+                                className="h-9 w-[130px] rounded-md border   px-2 text-sm font-semibold  outline-none transition disabled:cursor-not-allowed disabled:opacity-50 sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-page sui-color-active sui-focus-ring"
                             >
                                 {PAGE_SIZE_OPTIONS.map((option) => (
                                     <option key={option} value={option}>
@@ -5721,7 +5696,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 ))}
                             </select>
                         </div>
-                        <div className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        <div className="min-w-0 flex-1 truncate text-xs font-semibold  sui-color-default">
                             {catalogueError
                                 ? catalogueError
                                 : loadingCatalogue
@@ -5733,17 +5708,17 @@ const SearchbaseCanvasPage: React.FC = () => {
                     </div>
                 </header>
 
-                <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden bg-[#f5f7fb] p-4 dark:bg-transparent">
-                    <div className="mb-3 flex min-w-0 flex-wrap items-center gap-3 rounded-md border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden  p-4 sui-bg-transparent">
+                    <div className="mb-3 flex min-w-0 flex-wrap items-center gap-3 rounded-md border   p-3 shadow-sm sui-border-weak sui-bg-page">
                         <div className="relative w-full max-w-[520px]">
-                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500 dark:text-slate-400" />
+                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2  sui-color-default" />
                             <input
                                 type="search"
                                 value={tileSearchQuery}
                                 onChange={(event) => setTileSearchQuery(event.target.value)}
                                 placeholder="Search tiles by name or query..."
                                 disabled={tiles.length === 0 || autoAdvanceActive}
-                                className="h-11 w-full rounded-md border border-slate-300 bg-white pl-10 pr-10 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-500 focus:border-sky-400 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-sky-500 dark:focus:ring-sky-950 dark:disabled:bg-slate-900"
+                                className="h-11 w-full rounded-md border   pl-10 pr-10 text-sm font-medium  outline-none transition   focus:ring-2 sui-focus-ring disabled:cursor-not-allowed  sui-disabled-color-default sui-border-default sui-bg-page  sui-color-muted sui-focus-border-info sui-focus-ring sui-disabled-bg-section"
                                 aria-label="Search tiles by name or query"
                             />
                             {tileSearchQuery.trim().length > 0 && (
@@ -5752,7 +5727,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     onClick={() => setTileSearchQuery('')}
                                     title="Clear tile search"
                                     aria-label="Clear tile search"
-                                    className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-sm text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 dark:focus:ring-slate-700"
+                                    className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-sm  transition   focus:outline-none focus:ring-2 sui-focus-ring sui-color-default sui-hover-bg-overlay sui-hover-color-active sui-focus-ring"
                                 >
                                     <X className="h-4 w-4" />
                                 </button>
@@ -5761,7 +5736,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                         <div
                             role="group"
                             aria-label="Filter tiles by last observed search result"
-                            className="inline-flex h-11 max-w-full overflow-hidden rounded-md border border-slate-300 bg-white p-1 dark:border-slate-700 dark:bg-slate-950"
+                            className="inline-flex h-11 max-w-full overflow-hidden rounded-md border   p-1 sui-border-default sui-bg-page"
                         >
                             {TILE_RESULT_FILTER_OPTIONS.filter((option) =>
                                 tileResultFilterIsVisible(
@@ -5791,14 +5766,14 @@ const SearchbaseCanvasPage: React.FC = () => {
                                         title={option.title}
                                         aria-pressed={selected}
                                         className={cn(
-                                            'inline-flex min-w-0 items-center gap-1.5 rounded px-2.5 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-55 focus:outline-none focus:ring-2 focus:ring-sky-300 sm:px-3',
+                                            'inline-flex min-w-0 items-center gap-1.5 rounded px-2.5 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-55 focus:outline-none focus:ring-2 sui-focus-ring sm:px-3',
                                             selected
                                                 ? option.value === 'failed'
-                                                    ? 'bg-rose-700 text-white shadow-sm dark:bg-rose-600 dark:text-white'
-                                                    : 'bg-slate-900 text-white shadow-sm dark:bg-slate-100 dark:text-slate-950'
+                                                    ? 'sui-bg-negative  shadow-sm sui-bg-negative sui-color-active'
+                                                    : 'sui-bg-section  shadow-sm sui-bg-section sui-color-active'
                                                 : option.value === 'failed'
-                                                ? 'text-rose-700 hover:bg-rose-50 hover:text-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/50 dark:hover:text-rose-200'
-                                                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50'
+                                                ? 'sui-color-negative sui-hover-bg-negative sui-hover-color-negative'
+                                                : 'sui-color-muted   sui-color-default sui-hover-bg-overlay sui-hover-color-active'
                                         )}
                                     >
                                         <Icon className="h-3.5 w-3.5 flex-shrink-0" />
@@ -5807,8 +5782,8 @@ const SearchbaseCanvasPage: React.FC = () => {
                                             className={cn(
                                                 'rounded-full px-1.5 py-0.5 text-xs leading-none',
                                                 selected
-                                                    ? 'bg-white/20 text-current dark:bg-slate-950/10'
-                                                    : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300'
+                                                    ? 'sui-bg-section sui-color-current sui-bg-page'
+                                                    : 'sui-bg-section  sui-bg-popup sui-color-default'
                                             )}
                                         >
                                             {count.toLocaleString()}
@@ -5825,7 +5800,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 disabled={tiles.length === 0 || autoAdvanceActive}
                                 title="Filter canvas tiles by their Searchbase source app"
                                 aria-label="Filter tiles by app"
-                                className="h-11 w-full appearance-none rounded-md border border-slate-300 bg-white px-3 pr-8 text-sm font-bold text-slate-700 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-sky-500 dark:focus:ring-sky-950 dark:disabled:bg-slate-900"
+                                className="h-11 w-full appearance-none rounded-md border   px-3 pr-8 text-sm font-bold  outline-none transition  focus:ring-2 sui-focus-ring disabled:cursor-not-allowed  sui-disabled-color-default sui-border-default sui-bg-page sui-color-active sui-focus-border-info sui-focus-ring sui-disabled-bg-section"
                             >
                                 <option
                                     key={`all-${tileAppFilterBaseTiles.length}`}
@@ -5839,7 +5814,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     </option>
                                 ))}
                             </select>
-                            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 sui-color-muted" />
                         </label>
                         <div className="flex min-w-0 flex-wrap items-center gap-2">
                         <button
@@ -5852,11 +5827,11 @@ const SearchbaseCanvasPage: React.FC = () => {
                             }
                             title="Previous page"
                             aria-label="Previous page"
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-slate-300 bg-white text-slate-600 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-900"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-sm border    transition sui-hover-border-default  disabled:cursor-not-allowed disabled:opacity-40 sui-border-default sui-bg-page sui-color-default sui-hover-bg-section"
                         >
                             <ChevronLeft className="h-4 w-4" />
                         </button>
-                        <div className="inline-flex h-8 items-center rounded-sm border border-slate-300 bg-white px-3 text-sm font-bold text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                        <div className="inline-flex h-8 items-center rounded-sm border   px-3 text-sm font-bold  sui-border-default sui-bg-page sui-color-active">
                             Page {clampedPageIndex + 1} of {totalPages}
                         </div>
                         <button
@@ -5872,11 +5847,11 @@ const SearchbaseCanvasPage: React.FC = () => {
                             }
                             title="Next page"
                             aria-label="Next page"
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-slate-300 bg-white text-slate-600 transition hover:border-slate-400 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-900"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-sm border    transition sui-hover-border-default  disabled:cursor-not-allowed disabled:opacity-40 sui-border-default sui-bg-page sui-color-default sui-hover-bg-section"
                         >
                             <ChevronRight className="h-4 w-4" />
                         </button>
-                        <div className="whitespace-nowrap text-sm font-semibold text-slate-500 dark:text-slate-400">
+                        <div className="whitespace-nowrap text-sm font-semibold  sui-color-default">
                             {visibleTileSummary}
                         </div>
                         </div>
@@ -5885,7 +5860,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 type="button"
                                 onClick={clearCanvas}
                                 disabled={autoAdvanceActive}
-                                className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 text-xs font-black text-slate-500 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-45 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:border-rose-800 dark:hover:bg-rose-950 dark:hover:text-rose-300"
+                                className="ml-auto inline-flex h-8 items-center gap-1.5 rounded-md border   px-3 text-xs font-black  transition    disabled:cursor-not-allowed disabled:opacity-45 sui-border-default sui-bg-page sui-color-default sui-hover-border-negative sui-hover-bg-negative sui-hover-color-negative"
                             >
                                 <Trash2 className="h-3.5 w-3.5" />
                                 Clear
@@ -5894,15 +5869,15 @@ const SearchbaseCanvasPage: React.FC = () => {
                     </div>
 
                     {tiles.length === 0 ? (
-                        <div className="flex min-h-[calc(100vh-280px)] items-center justify-center rounded-md border border-dashed border-slate-300 bg-white shadow-sm dark:border-slate-800 dark:bg-transparent">
+                        <div className="flex min-h-[calc(100vh-280px)] items-center justify-center rounded-md border border-dashed   shadow-sm sui-border-weak sui-bg-transparent">
                             <div className="mx-auto max-w-sm px-6 text-center">
-                                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-md bg-sky-50 text-sky-600 ring-1 ring-sky-100 dark:bg-sky-950 dark:text-sky-300 dark:ring-sky-900">
+                                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-md   ring-1 sui-focus-ring sui-bg-info sui-color-info sui-focus-ring">
                                     <Plus className="h-7 w-7" />
                                 </div>
-                                <h2 className="mt-4 text-2xl font-black text-slate-950 dark:text-slate-50">
+                                <h2 className="mt-4 text-2xl font-black  sui-color-active">
                                     No tiles yet
                                 </h2>
-                                <p className="mt-2 text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">
+                                <p className="mt-2 text-sm font-medium leading-6  sui-color-default">
                                     Start with the catalogue, add the searches you want, then run or present the canvas.
                                 </p>
                                 <button
@@ -5911,7 +5886,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                         setReplaceTileId(null);
                                         setBrowserOpen(true);
                                     }}
-                                    className="mt-5 inline-flex items-center gap-2 rounded-md bg-sky-600 px-4 py-2 text-sm font-black text-white transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                                    className="mt-5 inline-flex items-center gap-2 rounded-md sui-bg-accent px-4 py-2 text-sm font-black sui-color-active transition sui-hover-bg-accent focus:outline-none focus:ring-2 sui-focus-ring"
                                 >
                                     <PanelRightOpen className="h-4 w-4" />
                                     Open catalogue
@@ -5919,17 +5894,17 @@ const SearchbaseCanvasPage: React.FC = () => {
                             </div>
                         </div>
                     ) : filteredTiles.length === 0 ? (
-                        <div className="flex min-h-[360px] items-center justify-center rounded-md border border-dashed border-slate-300 bg-white shadow-sm dark:border-slate-800 dark:bg-transparent">
+                        <div className="flex min-h-[360px] items-center justify-center rounded-md border border-dashed   shadow-sm sui-border-weak sui-bg-transparent">
                             <div className="mx-auto max-w-sm px-6 text-center">
-                                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md   sui-bg-popup sui-color-default">
                                     <Search className="h-7 w-7" />
                                 </div>
-                                <h2 className="mt-4 text-xl font-black text-slate-950 dark:text-slate-50">
+                                <h2 className="mt-4 text-xl font-black  sui-color-active">
                                     {hasTileResultFilter
                                         ? 'No tiles in this result state'
                                         : 'No matching tiles'}
                                 </h2>
-                                <p className="mt-2 text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">
+                                <p className="mt-2 text-sm font-medium leading-6  sui-color-default">
                                     {hasTileResultFilter
                                         ? 'Run searches from the All view, or switch result filters after results come back.'
                                         : 'Try a different app, tile name, tag, category, or SPL fragment.'}
@@ -5941,7 +5916,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                         setTileResultFilter('all');
                                         setTileAppFilter(ALL);
                                     }}
-                                    className="mt-5 inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-black text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:bg-slate-100 dark:text-slate-950 dark:hover:bg-white"
+                                    className="mt-5 inline-flex items-center gap-2 rounded-md  px-4 py-2 text-sm font-black  transition  focus:outline-none focus:ring-2 sui-focus-ring sui-bg-section sui-color-active sui-hover-bg-section"
                                 >
                                     <X className="h-4 w-4" />
                                     {hasTileResultFilter ? 'Clear filters' : 'Clear search'}
@@ -5969,24 +5944,22 @@ const SearchbaseCanvasPage: React.FC = () => {
 
             {presentationMode && (
                 <div
-                    className="absolute inset-0 z-[70] min-h-screen overflow-y-auto bg-[#f5f7fb] p-4 text-slate-950 dark:bg-transparent dark:text-slate-50"
-                    style={
-                        resolvedTheme === 'dark' ? C3_ATMOSPHERE_BACKGROUND_STYLE : undefined
-                    }
+                    className="absolute inset-0 z-[70] min-h-screen overflow-y-auto  p-4  sui-bg-transparent sui-color-active"
+                    style={C3_ATMOSPHERE_BACKGROUND_STYLE}
                 >
-                    <div className="mb-4 flex min-w-0 items-center gap-3 rounded-md border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                    <div className="mb-4 flex min-w-0 items-center gap-3 rounded-md border   px-4 py-3 shadow-sm sui-border-weak sui-bg-section">
                         <div className="min-w-0 flex-1">
-                            <div className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">
+                            <div className="text-xs font-black uppercase tracking-[0.2em] sui-color-default">
                                 Presenting
                             </div>
-                            <h1 className="truncate text-2xl font-black leading-tight text-slate-950 dark:text-slate-50">
+                            <h1 className="truncate text-2xl font-black leading-tight  sui-color-active">
                                 {canvasNameDisplay}
                             </h1>
                         </div>
                         <button
                             type="button"
                             onClick={() => setPresentationMode(false)}
-                            className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-black text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-sky-300 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-800"
+                            className="inline-flex h-10 items-center gap-2 rounded-md border   px-3 text-sm font-black  transition  focus:outline-none focus:ring-2 sui-focus-ring sui-border-default sui-bg-page sui-color-active sui-hover-bg-overlay"
                         >
                             <Minimize2 className="h-4 w-4" />
                             Exit
@@ -5994,15 +5967,15 @@ const SearchbaseCanvasPage: React.FC = () => {
                     </div>
 
                     {visibleTiles.length === 0 ? (
-                        <div className="flex min-h-[calc(100vh-180px)] items-center justify-center rounded-md border border-dashed border-slate-300 bg-white text-center shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                        <div className="flex min-h-[calc(100vh-180px)] items-center justify-center rounded-md border border-dashed   text-center shadow-sm sui-border-weak sui-bg-section">
                             <div className="max-w-sm px-6">
-                                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-md   sui-bg-popup sui-color-default">
                                     <Presentation className="h-7 w-7" />
                                 </div>
-                                <h2 className="mt-4 text-xl font-black text-slate-950 dark:text-slate-50">
+                                <h2 className="mt-4 text-xl font-black  sui-color-active">
                                     Nothing to present
                                 </h2>
-                                <p className="mt-2 text-sm font-medium leading-6 text-slate-500 dark:text-slate-400">
+                                <p className="mt-2 text-sm font-medium leading-6  sui-color-default">
                                     Add tiles or clear the current tile search, then present the canvas.
                                 </p>
                             </div>
@@ -6019,7 +5992,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                 <button
                     type="button"
                     aria-label="Close catalogue"
-                    className="fixed inset-0 z-40 bg-slate-950/20 backdrop-blur-[1px] dark:bg-slate-950/50"
+                    className="fixed inset-0 z-40  backdrop-blur-[1px] sui-bg-page"
                     onClick={() => {
                         setBrowserOpen(false);
                         setReplaceTileId(null);

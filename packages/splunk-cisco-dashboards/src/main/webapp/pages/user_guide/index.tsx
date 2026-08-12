@@ -23,8 +23,6 @@ import {
     Wifi,
 } from '@/common/icons/SuiIcon';
 import { APP_VERSION_LABEL } from "@/common/lib/buildInfo";
-import { ThemeToggle } from '@/common/components/workspace/ThemeToggle';
-import { useTheme } from '@/common/hooks/useTheme';
 
 import "./user-guide.css";
 
@@ -48,7 +46,7 @@ const searchUrl = (q: string): string =>
   `/${getSplunkLocale()}/app/${APP_NAME}/search?q=${encodeURIComponent(q)}`;
 
 const sectionLinkBase =
-  "inline-flex h-9 items-center gap-2 rounded border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-sky-400 hover:text-sky-700";
+  "inline-flex h-9 items-center gap-2 rounded border sui-border-default sui-bg-section px-3 text-sm font-semibold sui-color-default transition sui-hover-border-info sui-hover-color-info";
 
 const GUIDE_GROUPS = [
   {
@@ -137,19 +135,19 @@ function Section({
     <section
       id={id}
       data-guide-section={id}
-      className="scd-guide-section scroll-mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
+      className="scd-guide-section scroll-mt-6 overflow-hidden rounded-xl border sui-border-weak sui-bg-section shadow-sm"
     >
-      <div className="border-b border-slate-200 px-5 py-4">
+      <div className="border-b sui-border-weak px-5 py-4">
         <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-sky-100 bg-sky-50 text-sky-700">
+          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border sui-border-info sui-bg-info sui-color-info">
             {icon}
           </div>
           <div className="min-w-0">
-            <div className="mb-1 text-xs font-bold uppercase tracking-[0.12em] text-sky-700">
+            <div className="mb-1 text-xs font-bold uppercase tracking-[0.12em] sui-color-info">
               Section {sectionNumber(id)}
             </div>
-            <h2 className="m-0 text-xl font-bold text-slate-950">{title}</h2>
-            {kicker && <p className="mt-1 text-sm text-slate-600">{kicker}</p>}
+            <h2 className="m-0 text-xl font-bold sui-color-active">{title}</h2>
+            {kicker && <p className="mt-1 text-sm sui-color-default">{kicker}</p>}
           </div>
         </div>
       </div>
@@ -166,11 +164,11 @@ function InfoCard({
   children: React.ReactNode;
 }): JSX.Element {
   return (
-    <div className="border border-slate-200 bg-slate-50 p-4">
-      <h3 className="m-0 text-sm font-bold uppercase tracking-wide text-slate-600">
+    <div className="border sui-border-weak sui-bg-page p-4">
+      <h3 className="m-0 text-sm font-bold uppercase tracking-wide sui-color-default">
         {title}
       </h3>
-      <div className="mt-3 text-sm leading-6 text-slate-700">{children}</div>
+      <div className="mt-3 text-sm leading-6 sui-color-default">{children}</div>
     </div>
   );
 }
@@ -197,21 +195,21 @@ function CodeBlock({ children }: { children: React.ReactNode }): JSX.Element {
   }, [code]);
 
   return (
-    <div className="overflow-hidden rounded-lg border border-slate-700 bg-slate-950">
-      <div className="scd-guide-no-print flex items-center justify-between border-b border-slate-700 bg-slate-900 px-3 py-2">
-        <span className="text-xs font-bold uppercase tracking-wide text-slate-400">
+    <div className="overflow-hidden rounded-lg border sui-border-default sui-bg-page">
+      <div className="scd-guide-no-print flex items-center justify-between border-b sui-border-default sui-bg-section px-3 py-2">
+        <span className="text-xs font-bold uppercase tracking-wide sui-color-default">
           Configuration example
         </span>
         <button
           type="button"
           onClick={copyCode}
-          className="inline-flex items-center gap-1.5 rounded border border-slate-600 bg-slate-800 px-2 py-1 text-xs font-semibold text-slate-200 hover:border-sky-500 hover:text-white"
+          className="inline-flex items-center gap-1.5 rounded border sui-border-default sui-bg-popup px-2 py-1 text-xs font-semibold sui-color-active sui-hover-border-info sui-hover-color-active"
         >
           {copied ? <Check size={13} /> : <Copy size={13} />}
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
-      <pre className="scd-guide-code-pre m-0 overflow-auto p-4 font-mono text-xs leading-6 text-slate-100">
+      <pre className="scd-guide-code-pre m-0 overflow-auto p-4 font-mono text-xs leading-6 sui-color-active">
         {code}
       </pre>
     </div>
@@ -625,7 +623,6 @@ const troubleshootingRows = [
 ];
 
 export default function UserGuidePage(): JSX.Element {
-  const { theme, resolvedTheme, cycle: cycleTheme } = useTheme();
   const setupUrl = `${appUrl("setup")}?setup=1`;
   const setupTuningUrl = `${setupUrl}#tune-indexes`;
   const workspaceUrl = appUrl("workspace_insights");
@@ -895,10 +892,7 @@ export default function UserGuidePage(): JSX.Element {
 
   return (
     <main
-      className={`scd-user-guide scd-overview-page scd-c3-surface min-h-screen ${resolvedTheme} ${
-        resolvedTheme === "dark" ? "scd-c3-atmosphere" : ""
-      }`}
-      data-theme={resolvedTheme}
+      className="scd-user-guide scd-overview-page scd-c3-surface scd-c3-atmosphere min-h-screen"
     >
       <div className="scd-guide-layout">
         <GuideContents
@@ -914,28 +908,23 @@ export default function UserGuidePage(): JSX.Element {
         />
 
         <article className="scd-guide-document grid gap-5">
-          <header className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <header className="rounded-xl border sui-border-weak sui-bg-section p-6 shadow-sm sm:p-8">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <div className="mb-3 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-sky-700">
+                <div className="mb-3 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] sui-color-info">
                   <LifeBuoy size={15} />
                   User Guide
                 </div>
-                <h1 className="m-0 text-3xl font-bold tracking-normal text-slate-950">
+                <h1 className="m-0 text-3xl font-bold tracking-normal sui-color-active">
                   Splunk App for Secure Networking
                 </h1>
               </div>
               <div className="scd-guide-no-print flex items-center gap-2">
-                <ThemeToggle
-                  theme={theme}
-                  onCycle={cycleTheme}
-                  className="scd-guide-theme-toggle"
-                />
                 <button
                   type="button"
                   onClick={exportPdf}
                   title="Open the browser print dialog to save this guide as PDF"
-                  className="inline-flex h-11 items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 text-sm font-bold text-sky-700 shadow-sm hover:border-sky-400 hover:bg-sky-50"
+                  className="inline-flex h-11 items-center gap-2 rounded-lg border sui-border-default sui-bg-section px-4 text-sm font-bold sui-color-info shadow-sm sui-hover-border-info sui-hover-bg-info"
                 >
                   <Download size={17} />
                   Export PDF
@@ -943,18 +932,18 @@ export default function UserGuidePage(): JSX.Element {
               </div>
             </div>
 
-            <p className="mt-5 max-w-4xl text-lg leading-8 text-slate-700">
+            <p className="mt-5 max-w-4xl text-lg leading-8 sui-color-default">
               Setup and operating guide for deploying the app, tuning macros,
               validating data sources, and keeping the executive dashboards
               useful after the first install.
             </p>
-            <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-slate-200 pt-4 text-sm text-slate-600">
+            <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t sui-border-weak pt-4 text-sm sui-color-default">
               <span>
-                <strong className="text-slate-800">Version:</strong>{" "}
+                <strong className="sui-color-active">Version:</strong>{" "}
                 {APP_VERSION_LABEL}
               </span>
               <span>
-                <strong className="text-slate-800">License:</strong> Apache-2.0
+                <strong className="sui-color-active">License:</strong> Apache-2.0
               </span>
             </div>
             <div className="scd-guide-no-print mt-5 flex flex-wrap gap-2">
@@ -1008,7 +997,7 @@ export default function UserGuidePage(): JSX.Element {
               <div className="overflow-x-auto">
                 <table className="min-w-[1180px] border-collapse text-left text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr className="border-b sui-border-weak sui-bg-page text-xs uppercase tracking-wide sui-color-muted">
                       <th className="w-[22%] px-3 py-2 font-bold">
                         Dependency
                       </th>
@@ -1030,12 +1019,12 @@ export default function UserGuidePage(): JSX.Element {
                     {dependencyApps.map((app) => (
                       <tr
                         key={app.name}
-                        className="border-b border-slate-100 align-top"
+                        className="border-b sui-border-weak align-top"
                       >
-                        <td className="px-3 py-3 font-bold text-slate-800">
+                        <td className="px-3 py-3 font-bold sui-color-active">
                           {app.name}
                         </td>
-                        <td className="px-3 py-3 font-mono text-xs text-slate-700">
+                        <td className="px-3 py-3 font-mono text-xs sui-color-default">
                           {app.folder}
                         </td>
                         <td className="px-3 py-3">
@@ -1043,16 +1032,16 @@ export default function UserGuidePage(): JSX.Element {
                             href={app.splunkbase}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 font-mono text-xs font-bold text-sky-800 hover:text-sky-600"
+                            className="inline-flex items-center gap-1 font-mono text-xs font-bold sui-color-info sui-hover-color-info"
                           >
                             {app.splunkbase}
                             <ExternalLink size={13} />
                           </a>
                         </td>
-                        <td className="px-3 py-3 font-mono text-xs text-slate-700">
+                        <td className="px-3 py-3 font-mono text-xs sui-color-default">
                           {app.models}
                         </td>
-                        <td className="px-3 py-3 text-slate-600">
+                        <td className="px-3 py-3 sui-color-default">
                           {app.usage}
                         </td>
                       </tr>
@@ -1060,7 +1049,7 @@ export default function UserGuidePage(): JSX.Element {
                   </tbody>
                 </table>
               </div>
-              <p className="mt-4 text-sm leading-6 text-slate-600">
+              <p className="mt-4 text-sm leading-6 sui-color-default">
                 Splunk App for Secure Networking currently uses the Cisco
                 Security Cloud and Cisco ThousandEyes data models, and will use
                 the Cisco_Catalyst_App data model from Cisco Enterprise
@@ -1076,7 +1065,7 @@ export default function UserGuidePage(): JSX.Element {
               kicker="Use the guided setup to validate packages, tune index macros, and choose a search-performance mode."
               icon={<PlayCircle size={19} />}
             >
-              <ol className="m-0 grid gap-3 pl-5 text-sm leading-6 text-slate-700">
+              <ol className="m-0 grid gap-3 pl-5 text-sm leading-6 sui-color-default">
                 <li>
                   Install the app, Splunk Common Information Model, Splunk AI
                   Toolkit, and the Cisco apps that provide required data models.
@@ -1133,23 +1122,23 @@ export default function UserGuidePage(): JSX.Element {
               icon={<SlidersHorizontal size={19} />}
             >
               <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-                <div className="space-y-4 text-sm leading-6 text-slate-700">
+                <div className="space-y-4 text-sm leading-6 sui-color-default">
                   <p className="m-0">
                     <strong>Tune indexes</strong> is the third and final step of
                     the Setup workflow. Its React interface is loaded directly
                     inside Setup; the standalone{" "}
-                    <code className="rounded bg-slate-100 px-1 py-0.5">
+                    <code className="rounded sui-bg-section px-1 py-0.5">
                       admin_macro_index_tuning.xml
                     </code>
                     {" "}route redirects here so administrators have one setup
                     destination. The fast scan uses the{" "}
-                    <code className="rounded bg-slate-100 px-1 py-0.5">
+                    <code className="rounded sui-bg-section px-1 py-0.5">
                       admin_macro_index_tuning
                     </code>
                     searchbase entry, which performs a tstats pass over known
                     Cisco sourcetypes and generates macro definitions. The UI
                     discovers every SCD macro whose name starts with{" "}
-                    <code className="rounded bg-slate-100 px-1 py-0.5">
+                    <code className="rounded sui-bg-section px-1 py-0.5">
                       index_
                     </code>
                     from this app at runtime, so newly added index macros appear
@@ -1218,7 +1207,7 @@ iseval = 0`}</CodeBlock>
               <div className="mt-5 overflow-x-auto">
                 <table className="min-w-full border-collapse text-left text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr className="border-b sui-border-weak sui-bg-page text-xs uppercase tracking-wide sui-color-muted">
                       <th className="px-3 py-2 font-bold">Owner App</th>
                       <th className="px-3 py-2 font-bold">Definition Format</th>
                       <th className="px-3 py-2 font-bold">Examples</th>
@@ -1229,18 +1218,18 @@ iseval = 0`}</CodeBlock>
                     {macroFamilies.map((row) => (
                       <tr
                         key={row.app}
-                        className="border-b border-slate-100 align-top"
+                        className="border-b sui-border-weak align-top"
                       >
-                        <td className="px-3 py-3 font-mono text-xs text-sky-800">
+                        <td className="px-3 py-3 font-mono text-xs sui-color-info">
                           {row.app}
                         </td>
-                        <td className="px-3 py-3 font-mono text-xs text-slate-700">
+                        <td className="px-3 py-3 font-mono text-xs sui-color-default">
                           {row.format}
                         </td>
-                        <td className="px-3 py-3 text-slate-700">
+                        <td className="px-3 py-3 sui-color-default">
                           {row.examples}
                         </td>
-                        <td className="px-3 py-3 text-slate-600">{row.note}</td>
+                        <td className="px-3 py-3 sui-color-default">{row.note}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1257,7 +1246,7 @@ iseval = 0`}</CodeBlock>
               <div className="overflow-x-auto">
                 <table className="min-w-[980px] border-collapse text-left text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr className="border-b sui-border-weak sui-bg-page text-xs uppercase tracking-wide sui-color-muted">
                       <th className="w-[24%] px-3 py-2 font-bold">Area</th>
                       <th className="w-[48%] px-3 py-2 font-bold">
                         Sourcetypes or Inputs
@@ -1269,15 +1258,15 @@ iseval = 0`}</CodeBlock>
                     {dataSources.map(([area, sourcetypes, macro]) => (
                       <tr
                         key={area}
-                        className="border-b border-slate-100 align-top"
+                        className="border-b sui-border-weak align-top"
                       >
-                        <td className="px-3 py-3 font-bold text-slate-800">
+                        <td className="px-3 py-3 font-bold sui-color-active">
                           {area}
                         </td>
-                        <td className="px-3 py-3 text-slate-700">
+                        <td className="px-3 py-3 sui-color-default">
                           {sourcetypes}
                         </td>
-                        <td className="px-3 py-3 font-mono text-xs text-sky-800">
+                        <td className="px-3 py-3 font-mono text-xs sui-color-info">
                           {macro}
                         </td>
                       </tr>
@@ -1285,8 +1274,8 @@ iseval = 0`}</CodeBlock>
                   </tbody>
                 </table>
               </div>
-              <div className="mt-5 border border-slate-200 bg-slate-50 p-4">
-                <h3 className="m-0 text-sm font-bold uppercase tracking-wide text-slate-600">
+              <div className="mt-5 border sui-border-weak sui-bg-page p-4">
+                <h3 className="m-0 text-sm font-bold uppercase tracking-wide sui-color-default">
                   Supporting Macros
                 </h3>
                 <div className="mt-3 overflow-x-auto">
@@ -1295,12 +1284,12 @@ iseval = 0`}</CodeBlock>
                       {supportMacros.map(([macro, purpose]) => (
                         <tr
                           key={macro}
-                          className="border-b border-slate-200 align-top last:border-b-0"
+                          className="border-b sui-border-weak align-top last:border-b-0"
                         >
-                          <td className="w-[30%] px-3 py-3 font-mono text-xs text-sky-800">
+                          <td className="w-[30%] px-3 py-3 font-mono text-xs sui-color-info">
                             {macro}
                           </td>
-                          <td className="px-3 py-3 text-slate-700">
+                          <td className="px-3 py-3 sui-color-default">
                             {purpose}
                           </td>
                         </tr>
@@ -1322,21 +1311,21 @@ iseval = 0`}</CodeBlock>
                   <a
                     key={dashboard.view}
                     href={appUrl(dashboard.view)}
-                    className="group border border-slate-200 bg-slate-50 p-4 text-slate-800 transition hover:border-sky-300 hover:bg-sky-50"
+                    className="group border sui-border-weak sui-bg-page p-4 sui-color-active transition sui-hover-border-info sui-hover-bg-info"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <h3 className="m-0 text-base font-bold text-slate-950 group-hover:text-sky-800">
+                      <h3 className="m-0 text-base font-bold sui-color-active sui-group-hover-color-info">
                         {dashboard.title}
                       </h3>
                       <ExternalLink
                         size={15}
-                        className="shrink-0 text-slate-400 group-hover:text-sky-700"
+                        className="shrink-0 sui-color-default sui-group-hover-color-info"
                       />
                     </div>
-                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                    <p className="mt-2 text-sm leading-6 sui-color-default">
                       {dashboard.summary}
                     </p>
-                    <div className="mt-3 font-mono text-xs text-sky-800">
+                    <div className="mt-3 font-mono text-xs sui-color-info">
                       {dashboard.view}
                     </div>
                   </a>
@@ -1354,7 +1343,7 @@ iseval = 0`}</CodeBlock>
                 <InfoCard title="Workspace-owned configuration">
                   A workspace stores its own section layout, selected tiles,
                   signal rail, map visibility and placement, map presentation,
-                  and light, dark, or system theme. Shared Signal Rail defaults
+                  and dark presentation settings. Shared Signal Rail defaults
                   are centrally governed, while each signed-in user&apos;s rail
                   differences are private to that user and workspace and follow
                   the account across browsers. When adding a search, choose
@@ -1421,7 +1410,7 @@ iseval = 0`}</CodeBlock>
                   investigation.
                 </InfoCard>
               </div>
-              <div className="mt-4 border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+              <div className="mt-4 border sui-border-warning sui-bg-warning p-4 text-sm leading-6 sui-color-warning">
                 <strong>When no test is available:</strong> create an
                 agent-to-agent test between the two enterprise agents in
                 ThousandEyes, allow metric events to arrive in Splunk, then
@@ -1508,18 +1497,18 @@ iseval = 0`}</CodeBlock>
               <div className="overflow-x-auto">
                 <table className="min-w-full border-collapse text-left text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr className="border-b sui-border-weak sui-bg-page text-xs uppercase tracking-wide sui-color-muted">
                       <th className="px-3 py-2 font-bold">Symptom</th>
                       <th className="px-3 py-2 font-bold">First Check</th>
                     </tr>
                   </thead>
                   <tbody>
                     {troubleshootingRows.map(([symptom, check]) => (
-                      <tr key={symptom} className="border-b border-slate-100">
-                        <td className="px-3 py-3 font-bold text-slate-800">
+                      <tr key={symptom} className="border-b sui-border-weak">
+                        <td className="px-3 py-3 font-bold sui-color-active">
                           {symptom}
                         </td>
-                        <td className="px-3 py-3 text-slate-700">{check}</td>
+                        <td className="px-3 py-3 sui-color-default">{check}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -1558,23 +1547,23 @@ iseval = 0`}</CodeBlock>
               <div className="overflow-x-auto">
                 <table className="min-w-full border-collapse text-left text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr className="border-b sui-border-weak sui-bg-page text-xs uppercase tracking-wide sui-color-muted">
                       <th className="px-3 py-2 font-bold">Version</th>
                       <th className="px-3 py-2 font-bold">Release focus</th>
                       <th className="px-3 py-2 font-bold">Administrator action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr className="border-b border-slate-100 align-top">
-                      <td className="px-3 py-3 font-mono text-xs font-bold text-sky-800">
+                    <tr className="border-b sui-border-weak align-top">
+                      <td className="px-3 py-3 font-mono text-xs font-bold sui-color-info">
                         {APP_VERSION_LABEL}
                       </td>
-                      <td className="px-3 py-3 text-slate-700">
+                      <td className="px-3 py-3 sui-color-default">
                         Six-card Secure Networking KPI stories, guided setup,
                         workspace customization, Searchbase drilldowns, and
                         site-connectivity improvements.
                       </td>
-                      <td className="px-3 py-3 text-slate-700">
+                      <td className="px-3 py-3 sui-color-default">
                         Review setup readiness after installing companion apps;
                         existing workspaces keep their saved configuration.
                       </td>
@@ -1609,7 +1598,7 @@ iseval = 0`}</CodeBlock>
                 <InfoCard title="Insights Workspaces">
                   Workspaces now own their layout and presentation choices,
                   including sections, tiles, signal rail, map configuration,
-                  and theme. Secure Networking visualizations use the same
+                  within the shared dark theme. Secure Networking visualizations use the same
                   restrained operational palette and layered dark atmosphere
                   observed in Cisco Cloud Control, while Splunk&apos;s 1CD theme
                   customizer remains the component foundation. Signal Rail
@@ -1636,8 +1625,7 @@ iseval = 0`}</CodeBlock>
                 </InfoCard>
                 <InfoCard title="Dashboard Studio editing">
                   Dashboard Manager confirmation dialogs now use the edited
-                  dashboard&apos;s saved light or dark theme, even when it differs
-                  from the signed-in user&apos;s Splunk appearance preference.
+                  app&apos;s fixed dark SUI theme, including portal-rendered dialogs.
                   Internal Dashboard Studio drilldown links now open supporting
                   Searchbase searches inside Dashboard Manager with the active
                   dashboard time range. Their triggers use the same
@@ -1671,7 +1659,7 @@ iseval = 0`}</CodeBlock>
                   corresponding ThousandEyes test for deeper investigation.
                 </InfoCard>
               </div>
-              <p className="mt-5 text-sm leading-6 text-slate-600">
+              <p className="mt-5 text-sm leading-6 sui-color-default">
                 This in-app section is the release-notes source for the current
                 version. For upgrades, use the setup workflow after installation
                 to confirm companion-package and data-model readiness before
@@ -1681,21 +1669,21 @@ iseval = 0`}</CodeBlock>
 
             <div className="grid gap-4 md:grid-cols-4">
               <InfoCard title="Network">
-                <Wifi size={18} className="mb-2 text-sky-700" />
+                <Wifi size={18} className="mb-2 sui-color-info" />
                 Catalyst, SD-WAN, Zeek, Meraki, NVM, F5, and data center views.
               </InfoCard>
               <InfoCard title="Security">
-                <Shield size={18} className="mb-2 text-red-600" />
+                <Shield size={18} className="mb-2 sui-color-negative" />
                 Firewall, identity, endpoint, DNS, web, email, and incident
                 views.
               </InfoCard>
               <InfoCard title="Experience">
-                <Gauge size={18} className="mb-2 text-emerald-700" />
+                <Gauge size={18} className="mb-2 sui-color-positive" />
                 Client health, ThousandEyes, site readiness, and activation
                 reporting.
               </InfoCard>
               <InfoCard title="Setup">
-                <Settings size={18} className="mb-2 text-slate-700" />
+                <Settings size={18} className="mb-2 sui-color-default" />
                 Macro tuning, lookup health, and searchbase reference tooling.
               </InfoCard>
             </div>

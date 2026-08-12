@@ -20,7 +20,7 @@ const PALETTE_PATH = path.join(
 );
 const SHARED_STYLES_PATH = path.join(
   APP_ROOT,
-  "src/main/webapp/common/styles/tailwind.css",
+  "src/main/webapp/common/theme/SemanticThemeStyles.tsx",
 );
 
 const CANVAS = "#0f1117";
@@ -380,19 +380,20 @@ const userGuideSource = fs.readFileSync(
   path.join(APP_ROOT, "src/main/webapp/pages/user_guide/index.tsx"),
   "utf8",
 );
-assert.match(userGuideSource, /useTheme\(\)/);
 assert.match(userGuideSource, /scd-c3-surface/);
-assert.match(userGuideSource, /ThemeToggle/);
+assert.match(userGuideSource, /scd-c3-atmosphere/);
+assert.doesNotMatch(userGuideSource, /data-theme=/);
+assert.doesNotMatch(userGuideSource, /useTheme|ThemeToggle/);
 
 const sharedStyles = fs.readFileSync(SHARED_STYLES_PATH, "utf8");
-for (const [token, value] of [
-  ["--scd-c3-canvas", CANVAS],
-  ["--scd-c3-panel", PANEL],
-  ["--scd-c3-secondary", SECONDARY],
-  ["--scd-c3-text", TEXT],
-  ["--scd-c3-muted", MUTED],
+for (const [token, semanticToken] of [
+  ["--scd-c3-canvas", "backgroundColorPage"],
+  ["--scd-c3-panel", "backgroundColorSection"],
+  ["--scd-c3-secondary", "backgroundColorPopup"],
+  ["--scd-c3-text", "contentColorActive"],
+  ["--scd-c3-muted", "contentColorMuted"],
 ]) {
-  assert.match(sharedStyles, new RegExp(`${token}:\\s*${value.replace("#", "\\#")}`));
+  assert.match(sharedStyles, new RegExp(`${token}:\\s*\\$\\{variables\\.${semanticToken}\\}`));
 }
 
 const allViewFiles = fs.readdirSync(VIEWS_DIR).filter((filename) => filename.endsWith(".xml"));

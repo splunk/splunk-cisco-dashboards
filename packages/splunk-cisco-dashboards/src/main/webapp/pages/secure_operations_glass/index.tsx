@@ -66,8 +66,6 @@ import {
 } from 'recharts';
 
 import type { SearchbaseRecord } from '@/common/services/searchbaseCatalogue';
-import { ThemeToggle } from '@/common/components/workspace/ThemeToggle';
-import { useTheme } from '@/common/hooks/useTheme';
 import { splunkSearchAppUrl } from '@/common/lib/splunkSearchUrl';
 import { C3_SERIES_PALETTE } from '@/common/theme/c3VisualizationPalette';
 import {
@@ -86,7 +84,6 @@ import {
 
 const VIEW_NAME = 'secops_overview';
 
-type Theme = 'light' | 'dark';
 type TabId =
     | 'overview'
     | 'identity'
@@ -112,7 +109,6 @@ interface PageContext {
     earliest: string;
     refreshToken: number;
     filters: Filters;
-    theme: Theme;
     showSearchInfo: (record: SearchbaseRecord) => void;
 }
 
@@ -1457,12 +1453,10 @@ const createOperationsSiteIcon = ({
     name,
     status,
     selected,
-    theme,
 }: {
     name: string;
     status: string;
     selected: boolean;
-    theme: Theme;
 }): L.DivIcon => {
     const safeName = escapeMapText(name);
     const safeStatus = escapeMapText(status);
@@ -1473,7 +1467,7 @@ const createOperationsSiteIcon = ({
             <div
                 class="scd-glass-map-marker is-${siteHealthTone(status)}${
                     selected ? ' is-selected' : ''
-                } is-${theme}"
+                } is-dark"
                 role="button"
                 aria-label="${safeName}, ${safeStatus}"
             >
@@ -1568,10 +1562,7 @@ const SiteHealthPanel = ({
     const selectedMapStyle =
         SITE_MAP_STYLE_PRESETS.find((preset) => preset.id === mapStyle) ??
         SITE_MAP_STYLE_PRESETS[0];
-    const tileUrl =
-        context.theme === 'dark'
-            ? selectedMapStyle.darkUrl
-            : selectedMapStyle.lightUrl;
+    const tileUrl = selectedMapStyle.darkUrl;
 
     const chooseSite = (name: string): void => {
         setSelectedSite(name);
@@ -1629,7 +1620,7 @@ const SiteHealthPanel = ({
                                     className="scd-glass-leaflet-map"
                                 >
                                     <TileLayer
-                                        key={`${context.theme}-${selectedMapStyle.id}`}
+                                        key={`dark-${selectedMapStyle.id}`}
                                         attribution={selectedMapStyle.attribution}
                                         url={tileUrl}
                                     />
@@ -1651,7 +1642,6 @@ const SiteHealthPanel = ({
                                                     name,
                                                     status,
                                                     selected: selectedSite === name,
-                                                    theme: context.theme,
                                                 })}
                                                 title={`${name} — ${status}`}
                                                 eventHandlers={{
@@ -2353,7 +2343,6 @@ const FilterSidebar = ({
 );
 
 const SecureOperationsGlassPage = (): JSX.Element => {
-    const { theme, resolvedTheme, cycle: cycleTheme } = useTheme();
     const [activeTab, setActiveTab] = useState<TabId>('overview');
     const [earliest, setEarliest] = useState('-7d@d');
     const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -2392,10 +2381,9 @@ const SecureOperationsGlassPage = (): JSX.Element => {
             earliest,
             refreshToken,
             filters,
-            theme: resolvedTheme,
             showSearchInfo,
         }),
-        [catalogue, earliest, refreshToken, filters, resolvedTheme, showSearchInfo]
+        [catalogue, earliest, refreshToken, filters, showSearchInfo]
     );
 
     const renderTab = (): React.ReactNode => {
@@ -2421,10 +2409,7 @@ const SecureOperationsGlassPage = (): JSX.Element => {
 
     return (
         <div
-            className={`scd-glass scd-overview-page scd-c3-surface ${resolvedTheme} ${
-                resolvedTheme === 'dark' ? 'scd-c3-atmosphere' : ''
-            }`}
-            data-theme={resolvedTheme}
+            className="scd-glass scd-overview-page scd-c3-surface scd-c3-atmosphere"
         >
             <header className="scd-glass-header">
                 <div className="scd-glass-title-block">
@@ -2462,11 +2447,6 @@ const SecureOperationsGlassPage = (): JSX.Element => {
                     </div>
                 </div>
                 <div className="scd-glass-header-actions">
-                    <ThemeToggle
-                        theme={theme}
-                        onCycle={cycleTheme}
-                        className="scd-glass-theme-toggle"
-                    />
                     <Button
                         appearance="subtle"
                         className="scd-glass-icon-button"

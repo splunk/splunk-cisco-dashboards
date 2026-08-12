@@ -15,7 +15,7 @@
  * every utility class under `#scan-root` (`important: '#scan-root'`)
  * to keep Tailwind's reset / utilities from leaking into Splunk Web's
  * own chrome around the panel. So on `<body>` directly, none of
- * `bg-slate-900`, `p-4`, `rounded-lg`, `shadow-xl`, etc. were applied
+ * `sui-bg-section`, `p-4`, `rounded-lg`, `shadow-xl`, etc. were applied
  * - the popover rendered as raw unstyled text floating over the tile
  * content (caught immediately by Alan in the customer 2026-05-11 review).
  *
@@ -91,17 +91,17 @@ interface InfoTooltipProps {
 // palette is tuned for the white tile background — same colour roles
 // (sky/amber/red), shifted up a step for legibility on dark.
 const THRESHOLD_TONE_TEXT: Record<ThresholdLine['tone'], string> = {
-    healthy: 'text-emerald-400',
-    warning: 'text-amber-400',
-    critical: 'text-red-400',
-    unknown: 'text-slate-300',
+    healthy: 'sui-color-positive',
+    warning: 'sui-color-warning',
+    critical: 'sui-color-negative',
+    unknown: 'sui-color-default',
 };
 
 const THRESHOLD_TONE_DOT: Record<ThresholdLine['tone'], string> = {
-    healthy: 'bg-emerald-400',
-    warning: 'bg-amber-400',
-    critical: 'bg-red-400',
-    unknown: 'bg-slate-400',
+    healthy: 'sui-bg-positive',
+    warning: 'sui-bg-warning',
+    critical: 'sui-bg-negative',
+    unknown: 'sui-bg-floating',
 };
 
 // Width of the popover in pixels. Kept in sync with the Tailwind
@@ -248,31 +248,31 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                       }}
                       className={cn(
                           'z-[9999] p-4 rounded-lg pointer-events-none',
-                          'bg-slate-900 text-slate-100 shadow-xl ring-1 ring-slate-700/60',
+                          'sui-bg-section sui-color-active shadow-xl ring-1 sui-focus-ring',
                           // 13.5px sub-pixel-rounds noticeably crisper
                           // than 13 on retina displays; leading-[1.6]
                           // is a hair tighter than `leading-relaxed`
                           // (1.625) but reads more densely in the
                           // popover frame.
-                          'text-[13.5px] leading-[1.6] normal-case tracking-normal text-left'
+                          'sui-color-default leading-[1.6] normal-case tracking-normal text-left'
                       )}
                   >
                       {title && (
-                          <span className="block font-bold text-white text-[15px] mb-2 normal-case">
+                          <span className="block font-bold  sui-color-default mb-2 normal-case">
                               {title}
                           </span>
                       )}
-                      <span className="block text-slate-200 font-normal normal-case">
+                      <span className="block sui-color-active font-normal normal-case">
                           {description}
                       </span>
                       {showThresholds && (
-                          <span className="block mt-3 pt-2.5 border-t border-slate-700">
+                          <span className="block mt-3 pt-2.5 border-t sui-border-default">
                               {/* Section header. Mirrors the all-caps
                                   treatment of "DESCRIPTION/VALUE" in
                                   the reference design: a tight, sky-
                                   blue label that primes the eye for a
                                   short data block below. */}
-                              <span className="block text-sky-400 text-xs font-bold tracking-wider mb-1.5 uppercase">
+                              <span className="block sui-color-info text-xs font-bold tracking-wider mb-1.5 uppercase">
                                   Thresholds
                               </span>
                               {Array.isArray(thresholdLines) && thresholdLines.length > 0 && (
@@ -297,7 +297,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                                               >
                                                   {line.label}
                                               </span>
-                                              <span className="text-slate-200 font-mono text-[12.5px]">
+                                              <span className="sui-color-active font-mono sui-color-default">
                                                   {line.value}
                                               </span>
                                           </span>
@@ -307,7 +307,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                               {thresholdNote && (
                                   <span
                                       className={cn(
-                                          'block text-slate-300 text-[12.5px] leading-snug',
+                                          'block  sui-color-default leading-snug',
                                           Array.isArray(thresholdLines) && thresholdLines.length > 0
                                               ? 'mt-1.5'
                                               : ''
@@ -319,7 +319,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                           </span>
                       )}
                       {footnote && (
-                          <span className="block mt-2.5 pt-2 border-t border-slate-700 text-slate-400 italic text-[11.5px] font-mono break-all leading-snug">
+                          <span className="block mt-2.5 pt-2 border-t sui-border-default  italic sui-color-default font-mono break-all leading-snug">
                               {footnote}
                           </span>
                       )}
@@ -371,7 +371,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                 type="button"
                 aria-label={iconAriaLabel}
                 className={cn(
-                    'p-0.5 -my-0.5 text-slate-400 dark:text-slate-400 hover:text-sky-600 dark:hover:text-sky-300 focus:text-sky-600 dark:focus:text-sky-300 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400',
+                    'p-0.5 -my-0.5  sui-color-default  sui-hover-color-info  sui-focus-color-info transition-colors rounded focus:outline-none focus:ring-1 sui-focus-ring',
                     iconClassName
                 )}
             >

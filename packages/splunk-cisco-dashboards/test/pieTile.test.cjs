@@ -92,10 +92,11 @@ assert.doesNotMatch(
   "Bar breakdown charts must not enlarge automatically on hover",
 );
 assert.match(
-  profile,
-  /isDark=\{resolvedTheme === "dark"\}/,
-  "The profile must pass its theme into native Studio charts",
+  pieTile,
+  /themeKey="enterpriseDark"/,
+  "Native Studio charts must use the fixed dark theme",
 );
+assert.doesNotMatch(pieTile, /enterpriseLight|isDark/);
 
 console.log(
   "✓ Native ranked bars, labels, theme, and explicit expansion regression tests passed",

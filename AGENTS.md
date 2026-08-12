@@ -1,5 +1,9 @@
 # Repository Workflow Guardrails
 
+## Prefer Splunk UI over custom
+
+Whereever and whenever possible use native Splunk UI Design system components and themeing. We are migrating off of tailwind so add no more tech debt by avoiding using anything of it and moving to Splunk UI (SUI) native solutions where possible. Consult the splunk-ui-mcp if you have it available for definitive information to that end.
+
 ## Branch safety
 
 - Codex must never create, edit, delete, stage, or commit repository files while the current branch is `main` or `master`.

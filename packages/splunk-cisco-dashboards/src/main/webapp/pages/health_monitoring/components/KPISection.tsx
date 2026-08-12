@@ -50,7 +50,7 @@ export const KPISection: React.FC<KPISectionProps> = ({
     return (
         <section className="min-w-0">
             <div className="mb-4 flex items-center justify-between gap-3">
-                <h2 className="text-[20px] font-black tracking-tight text-slate-900 dark:text-white">
+                <h2 className="sui-color-default font-black tracking-tight  sui-color-active">
                     {title}
                 </h2>
                 <button
@@ -58,9 +58,9 @@ export const KPISection: React.FC<KPISectionProps> = ({
                     onClick={() => onAdd(sectionId)}
                     className={cn(
                         'inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-sm font-black transition',
-                        'border-slate-200 bg-white/85 text-slate-900 shadow-sm hover:border-sky-300 hover:text-sky-700',
-                        'focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
-                        'dark:border-slate-700 dark:bg-slate-900/80 dark:text-white dark:hover:border-sky-500'
+                        'sui-border-weak sui-bg-section sui-color-active shadow-sm sui-hover-border-info sui-hover-color-info',
+                        'focus:outline-none focus-visible:ring-2 sui-focus-visible-ring',
+                        'sui-border-default sui-bg-section sui-color-active sui-hover-border-info'
                     )}
                 >
                     <Plus className="h-4 w-4" />
@@ -88,7 +88,7 @@ export const KPISection: React.FC<KPISectionProps> = ({
                     })}
                 </div>
             ) : (
-                <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 p-8 text-center text-sm font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-900/45 dark:text-slate-400">
+                <div className="rounded-xl border border-dashed   p-8 text-center text-sm font-semibold  sui-border-default sui-bg-section sui-color-default">
                     {searchTerm.trim()
                         ? 'No KPIs in this section match the search.'
                         : 'No KPIs in this section yet.'}

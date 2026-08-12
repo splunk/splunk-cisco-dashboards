@@ -105,7 +105,7 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
 
     return createPortal(
         <div
-            className="fixed inset-0 z-[9997] flex items-center justify-center overflow-hidden bg-slate-950/55 p-3 backdrop-blur-sm sm:p-5"
+            className="fixed inset-0 z-[9997] flex items-center justify-center overflow-hidden sui-bg-page p-3 backdrop-blur-sm sm:p-5"
             onMouseDown={(event) => {
                 if (event.target === event.currentTarget) onClose();
             }}
@@ -113,11 +113,11 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
             aria-modal="true"
             aria-label={`Configure ${kpi.title}`}
         >
-            <div className="flex max-h-[92vh] w-[min(500px,96vw)] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white text-slate-950 shadow-2xl dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
-                <header className="flex flex-shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+            <div className="flex max-h-[92vh] w-[min(500px,96vw)] flex-col overflow-hidden rounded-xl border    shadow-2xl sui-border-default sui-bg-page sui-color-active">
+                <header className="flex flex-shrink-0 items-start justify-between gap-4 border-b  px-5 py-4 sui-border-weak">
                     <div>
                         <h2 className="text-lg font-black tracking-tight">Edit KPI</h2>
-                        <p className="mt-1 max-w-[390px] text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        <p className="mt-1 max-w-[390px] text-xs leading-5  sui-color-default">
                             Configure the KPI tile settings, chart style, display options, and thresholds.
                         </p>
                     </div>
@@ -125,7 +125,7 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                         type="button"
                         aria-label="Close KPI editor"
                         {...getInteractiveControlProps(() => onClose())}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 dark:hover:bg-slate-800 dark:hover:text-white"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg sui-color-muted transition   focus:outline-none focus-visible:ring-2 sui-focus-visible-ring sui-hover-bg-overlay sui-hover-color-active"
                     >
                         <X className="h-4 w-4" />
                     </button>
@@ -134,7 +134,7 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                 <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
                     <section>
                         <div className="mb-3 flex items-center gap-2">
-                            <Settings2 className="h-4 w-4 text-blue-600" />
+                            <Settings2 className="h-4 w-4 sui-color-info" />
                             <h3 className="text-xs font-black uppercase tracking-wide">
                                 Basic Information
                             </h3>
@@ -145,19 +145,19 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                                 <input
                                     value={draft.title}
                                     onChange={(event) => updateDraft({ title: event.target.value })}
-                                    className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-slate-100 px-3 text-sm font-semibold outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20 dark:border-slate-700 dark:bg-slate-900"
+                                    className="mt-1.5 h-9 w-full rounded-lg border   px-3 text-sm font-semibold outline-none sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-section"
                                 />
                             </label>
                             <label className="block">
                                 <span className="text-xs font-semibold">Icon</span>
-                                <div className="mt-1.5 flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-slate-100 px-3 dark:border-slate-700 dark:bg-slate-900">
-                                    <IconPreview className="h-4 w-4 text-slate-500" />
+                                <div className="mt-1.5 flex h-9 items-center gap-2 rounded-lg border   px-3 sui-border-default sui-bg-section">
+                                    <IconPreview className="h-4 w-4 sui-color-muted" />
                                     <select
                                         value={draft.icon}
                                         onChange={(event) =>
                                             updateDraft({ icon: event.target.value as KPIIconName })
                                         }
-                                        className="min-w-0 flex-1 bg-transparent text-sm font-semibold outline-none"
+                                        className="min-w-0 flex-1 sui-bg-transparent text-sm font-semibold outline-none"
                                     >
                                         {iconOptions.map((option) => (
                                             <option key={option.value} value={option.value}>
@@ -175,7 +175,7 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                                     onChange={(event) =>
                                         updateDraft({ value: Number(event.target.value) })
                                     }
-                                    className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-slate-100 px-3 text-sm font-semibold outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20 dark:border-slate-700 dark:bg-slate-900"
+                                    className="mt-1.5 h-9 w-full rounded-lg border   px-3 text-sm font-semibold outline-none sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-section"
                                 />
                             </label>
                             <label className="block">
@@ -183,7 +183,7 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                                 <input
                                     value={draft.subtitle ?? ''}
                                     onChange={(event) => updateDraft({ subtitle: event.target.value })}
-                                    className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-slate-100 px-3 text-sm font-semibold outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20 dark:border-slate-700 dark:bg-slate-900"
+                                    className="mt-1.5 h-9 w-full rounded-lg border   px-3 text-sm font-semibold outline-none sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-section"
                                 />
                             </label>
                             <label className="block sm:col-span-2">
@@ -193,7 +193,7 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                                     onChange={(event) =>
                                         updateDraft({ description: event.target.value })
                                     }
-                                    className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-slate-100 px-3 text-sm font-semibold outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20 dark:border-slate-700 dark:bg-slate-900"
+                                    className="mt-1.5 h-9 w-full rounded-lg border   px-3 text-sm font-semibold outline-none sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-section"
                                 />
                             </label>
                             <label className="block">
@@ -204,7 +204,7 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                                     onChange={(event) =>
                                         updateDraft({ progress: Number(event.target.value) })
                                     }
-                                    className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-slate-100 px-3 text-sm font-semibold outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20 dark:border-slate-700 dark:bg-slate-900"
+                                    className="mt-1.5 h-9 w-full rounded-lg border   px-3 text-sm font-semibold outline-none sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-section"
                                 />
                             </label>
                             <label className="block">
@@ -215,15 +215,15 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                                     onChange={(event) =>
                                         updateDraft({ trend: Number(event.target.value) })
                                     }
-                                    className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-slate-100 px-3 text-sm font-semibold outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20 dark:border-slate-700 dark:bg-slate-900"
+                                    className="mt-1.5 h-9 w-full rounded-lg border   px-3 text-sm font-semibold outline-none sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-section"
                                 />
                             </label>
                         </div>
                     </section>
 
-                    <section className="mt-5 border-t border-slate-200 pt-4 dark:border-slate-800">
+                    <section className="mt-5 border-t  pt-4 sui-border-weak">
                         <div className="mb-3 flex items-center gap-2">
-                            <ChartLine className="h-4 w-4 text-blue-600" />
+                            <ChartLine className="h-4 w-4 sui-color-info" />
                             <h3 className="text-xs font-black uppercase tracking-wide">
                                 Chart Style
                             </h3>
@@ -237,10 +237,10 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                                         type="button"
                                         onClick={() => updateDraft({ chartType: value })}
                                         className={cn(
-                                            'flex h-12 flex-col items-center justify-center gap-0.5 rounded-lg border text-xs font-black uppercase transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
+                                            'flex h-12 flex-col items-center justify-center gap-0.5 rounded-lg border text-xs font-black uppercase transition focus:outline-none focus-visible:ring-2 sui-focus-visible-ring',
                                             active
-                                                ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300'
-                                                : 'border-slate-200 text-slate-600 hover:border-sky-300 dark:border-slate-700 dark:text-slate-300'
+                                                ? 'sui-border-info   sui-bg-info sui-color-info'
+                                                : 'sui-border-weak  sui-hover-border-info sui-border-default sui-color-default'
                                         )}
                                     >
                                         <Icon className="h-4 w-4" />
@@ -251,9 +251,9 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                         </div>
                     </section>
 
-                    <section className="mt-5 border-t border-slate-200 pt-4 dark:border-slate-800">
+                    <section className="mt-5 border-t  pt-4 sui-border-weak">
                         <div className="mb-3 flex items-center gap-2">
-                            <Eye className="h-4 w-4 text-blue-600" />
+                            <Eye className="h-4 w-4 sui-color-info" />
                             <h3 className="text-xs font-black uppercase tracking-wide">Display</h3>
                         </div>
                         {[
@@ -298,7 +298,7 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                                 />
                                 <span>
                                     <span className="block text-xs font-semibold">{option.label}</span>
-                                    <span className="mt-0.5 block text-xs leading-4 text-slate-500 dark:text-slate-400">
+                                    <span className="mt-0.5 block text-xs leading-4  sui-color-default">
                                         {option.body}
                                     </span>
                                 </span>
@@ -306,14 +306,14 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                         ))}
                     </section>
 
-                    <section className="mt-5 border-t border-slate-200 pt-4 dark:border-slate-800">
+                    <section className="mt-5 border-t  pt-4 sui-border-weak">
                         <div className="mb-3 flex items-center gap-2">
-                            <Gauge className="h-4 w-4 text-blue-600" />
+                            <Gauge className="h-4 w-4 sui-color-info" />
                             <h3 className="text-xs font-black uppercase tracking-wide">
                                 Thresholds
                             </h3>
                         </div>
-                        <p className="mb-3 text-xs leading-4 text-slate-500 dark:text-slate-400">
+                        <p className="mb-3 text-xs leading-4  sui-color-default">
                             Set the healthy, warning, and critical bands used to colour the headline value and status icon.
                         </p>
                         <div className="grid grid-cols-2 gap-2">
@@ -335,10 +335,10 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                                         )
                                     }
                                     className={cn(
-                                        'h-9 rounded-lg border text-xs font-black uppercase transition focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400',
+                                        'h-9 rounded-lg border text-xs font-black uppercase transition focus:outline-none focus-visible:ring-2 sui-focus-visible-ring',
                                         draft.thresholds.direction === option.value
-                                            ? 'border-slate-950 bg-slate-950 text-white dark:border-white dark:bg-white dark:text-slate-950'
-                                            : 'border-slate-200 bg-white text-slate-900 hover:border-sky-300 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100'
+                                            ? 'sui-border-weak   sui-border-strong sui-bg-section sui-color-active'
+                                            : 'sui-border-weak   sui-hover-border-info sui-border-default sui-bg-page sui-color-active'
                                     )}
                                 >
                                     {option.label}
@@ -357,7 +357,7 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                                         onChange={(event) =>
                                             updateThreshold(key, event.target.value)
                                         }
-                                        className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-slate-100 px-3 text-sm font-semibold outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-400/20 dark:border-slate-700 dark:bg-slate-900"
+                                        className="mt-1.5 h-9 w-full rounded-lg border   px-3 text-sm font-semibold outline-none sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-section"
                                     />
                                 </label>
                             ))}
@@ -365,7 +365,7 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                     </section>
                 </div>
 
-                <footer className="flex flex-shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-white px-5 py-3 dark:border-slate-800 dark:bg-slate-950">
+                <footer className="flex flex-shrink-0 flex-wrap items-center justify-end gap-2 border-t   px-5 py-3 sui-border-weak sui-bg-page">
                     <button
                         type="button"
                         onClick={() => {
@@ -383,7 +383,7 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                                 });
                             }
                         }}
-                        className="mr-auto inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-xs font-black uppercase text-slate-800 transition hover:border-sky-300 hover:text-sky-700 dark:border-slate-700 dark:text-slate-100"
+                        className="mr-auto inline-flex h-9 items-center gap-2 rounded-lg border  px-3 text-xs font-black uppercase  transition sui-hover-border-info sui-hover-color-info sui-border-default sui-color-active"
                     >
                         <RotateCcw className="h-4 w-4" />
                         Reset Tile
@@ -391,21 +391,21 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                     <button
                         type="button"
                         onClick={() => onFactoryReset(kpi)}
-                        className="h-9 rounded-lg bg-rose-600 px-3 text-xs font-black uppercase text-white transition hover:bg-rose-500"
+                        className="h-9 rounded-lg sui-bg-negative px-3 text-xs font-black uppercase sui-color-active transition sui-hover-bg-negative"
                     >
                         Factory Reset
                     </button>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="h-9 rounded-lg border border-slate-200 px-3 text-xs font-black uppercase transition hover:border-sky-300 dark:border-slate-700"
+                        className="h-9 rounded-lg border  px-3 text-xs font-black uppercase transition sui-hover-border-info sui-border-default"
                     >
                         Cancel
                     </button>
                     <button
                         type="button"
                         onClick={() => onApply(draft)}
-                        className="h-9 rounded-lg bg-slate-950 px-3 text-xs font-black uppercase text-white transition hover:bg-sky-700 dark:bg-white dark:text-slate-950 dark:hover:bg-sky-200"
+                        className="h-9 rounded-lg  px-3 text-xs font-black uppercase  transition  sui-bg-section sui-color-active sui-hover-bg-info"
                     >
                         Apply
                     </button>
