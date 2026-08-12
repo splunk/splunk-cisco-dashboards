@@ -1,26 +1,3 @@
-/**
- * Splunk App for Secure Networking — Insights Workspace
- *
- * Executive landing page adapted for Splunk and pumped full of
- * dashboards-tooling niceties:
- *   * Time-range picker (default Last 24 hours)
- *   * Auto-refresh interval picker + manual refresh button
- *   * Per-metric searchbase wiring, with saved-search dispatch used only
- *     for searches that are intentionally scheduled
- *   * Threshold-driven status colouring on every metric
- *   * Aggregate health badge derived from those statuses
- *   * Comparison overlay (previous-period dashed line) on every spark
- *   * Click-sparkline → opens the SPL in Splunk Search
- *   * KPI cards under the topology map driven by searchbase or inline SPL
- *   * PNG / PDF export of the entire page
- *   * Keyboard shortcuts (g i, g s, g b, g r, t, r, ?, /)
- *   * Click-to-pin map popups (ESC or X to close)
- *
- * Each "feature" surfaced through this page is independent — see the
- * inline section comments to remove or pare down individual capabilities
- * without rippling the rest of the page.
- */
-
 import React, {
   useCallback,
   useEffect,
@@ -35,11 +12,24 @@ import { createURL } from "@splunk/splunk-utils/url";
 import Badge from "@splunk/react-ui/Badge";
 import Button from "@splunk/react-ui/Button";
 import Card from "@splunk/react-ui/Card";
+import CardLayout from "@splunk/react-ui/CardLayout";
+import Checkbox from "@splunk/react-ui/Checkbox";
+import Chip from "@splunk/react-ui/Chip";
+import CollapsiblePanel from "@splunk/react-ui/CollapsiblePanel";
+import ControlGroup from "@splunk/react-ui/ControlGroup";
+import Drawer from "@splunk/react-ui/Drawer";
 import Dropdown from "@splunk/react-ui/Dropdown";
 import Heading from "@splunk/react-ui/Heading";
+import Layout from "@splunk/react-ui/Layout";
 import Menu from "@splunk/react-ui/Menu";
+import Message from "@splunk/react-ui/Message";
+import Multiselect from "@splunk/react-ui/Multiselect";
+import RadioBar from "@splunk/react-ui/RadioBar";
+import SearchInput from "@splunk/react-ui/Search";
+import ScreenReaderContent from "@splunk/react-ui/ScreenReaderContent";
 import Select from "@splunk/react-ui/Select";
 import SpotLight from "@splunk/react-ui/SpotLight";
+import WaitSpinner from "@splunk/react-ui/WaitSpinner";
 import { variables } from "@splunk/themes";
 import useSplunkTheme from "@splunk/themes/useSplunkTheme";
 import {
@@ -64,13 +54,12 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
+  Search,
   Shield,
   ShieldKeyhole,
   Plus,
   Eye,
   EyeOff,
-  Search,
-  Tag,
   Trash2,
   PanelBottom,
   PanelRight,
@@ -3341,6 +3330,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     null,
   );
   const [addTileSection, setAddTileSection] = useState<SectionId | null>(null);
+  const [lastAddTileSection, setLastAddTileSection] =
+    useState<SectionId | null>(null);
+  const addTileReturnFocusRef = useRef<HTMLElement | null>(null);
   const [activeDetailTable, setActiveDetailTable] =
     useState<MetricDetailTableConfig | null>(null);
 
@@ -3646,12 +3638,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   }, [insightsWorkspace, sectionTitles]);
 
   const addTilePickerState = useMemo(() => {
-    if (!addTileSection) return null;
+    const pickerSection = addTileSection ?? lastAddTileSection;
+    if (!pickerSection) return null;
     const sectionMetrics = metricConfig.filter(
-      (m) => m.section === addTileSection,
+      (m) => m.section === pickerSection,
     );
     const visibleSectionMetrics = renderMetricConfig.filter(
-      (m) => m.section === addTileSection,
+      (m) => m.section === pickerSection,
     );
     const currentSearchbaseIds = new Set(
       sectionMetrics
@@ -3660,24 +3653,22 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     );
     const hiddenSearchbaseIds = new Set(
       sectionMetrics
-        .filter((metric) => isSectionTileHidden(addTileSection, metric.id))
+        .filter((metric) => isSectionTileHidden(pickerSection, metric.id))
         .map((metric) => metric.searchbaseId)
         .filter((id): id is string => Boolean(id)),
     );
     const currentVisibleCount = Math.min(
-      sectionTileCounts[addTileSection],
+      sectionTileCounts[pickerSection],
       Math.min(sectionTileBounds.maxCount, visibleSectionMetrics.length),
     );
     return {
-      section: addTileSection,
-      sectionTitle:
-        effectiveSectionMeta[addTileSection]?.title ?? addTileSection,
+      section: pickerSection,
+      sectionTitle: effectiveSectionMeta[pickerSection]?.title ?? pickerSection,
       currentSearchbaseIds,
       hiddenSearchbaseIds,
       locallyAddedSearchbaseIds: new Set(
-        getSectionTileAdditions(addTileSection),
+        getSectionTileAdditions(pickerSection),
       ),
-      currentTileCount: sectionMetrics.length,
       currentVisibleCount,
     };
   }, [
@@ -3685,6 +3676,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     effectiveSectionMeta,
     getSectionTileAdditions,
     isSectionTileHidden,
+    lastAddTileSection,
     metricConfig,
     renderMetricConfig,
     sectionTileBounds.maxCount,
@@ -4250,7 +4242,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         scale={0.5}
       />
       {/* Header */}
-      <header className="scd-c3-toolbar h-14 flex-shrink-0  sui-bg-transparent border-0 px-4 flex items-center justify-between shadow-none backdrop-filter-none">
+      <header className="scd-c3-toolbar h-14 flex-shrink-0  sui-bg-transparent border-0 flex items-center justify-between shadow-none backdrop-filter-none">
         {/*
          * The branding cluster (logo + title/subtitle + edit
          * pencil) is the hover-trigger group. The pencil sits
@@ -4300,9 +4292,14 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               className="flex min-w-0 items-center"
               style={{ columnGap: spacingSmall }}
             >
-              <h1 className="truncate text-lg font-bold leading-none tracking-[-0.01em]  sui-color-active">
+              <Heading
+                level={1}
+                variant="title1"
+                data-sui-heading-variant="title1"
+                className="truncate"
+              >
                 {effectiveTitle}
-              </h1>
+              </Heading>
               <Dropdown
                 focusToggleReasons={["escapeKey", "tabKey", "toggleClick"]}
                 toggle={
@@ -4563,7 +4560,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               <div className="flex-shrink-0 w-7 h-7 rounded sui-bg-accent sui-color-active flex items-center justify-center shadow-sm">
                 <ClipboardCheck className="w-4 h-4 sui-stroke-default" />
               </div>
-              <span className="text-xs font-black  sui-color-info uppercase tracking-[0.25em] whitespace-nowrap flex-shrink-0 hidden sm:inline w-[172px]">
+              <span className="text-xs font-black  sui-color-info  tracking-[0.25em] whitespace-nowrap flex-shrink-0 hidden sm:inline w-[172px]">
                 {PRIORITY_DRILLDOWN_LABEL}
               </span>
               <span className="sui-color-default font-bold  sui-color-active truncate min-w-0">
@@ -4603,7 +4600,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 title={`Open ${selectedPriorityDrilldown.title} in a new tab`}
                 aria-label={`Open ${selectedPriorityDrilldown.title} in a new tab`}
                 data-testid="featured-report-cta"
-                className="h-7 flex-shrink-0 inline-flex items-center gap-1.5 px-3 rounded sui-bg-accent sui-group-hover-bg-accent sui-active-bg-accent sui-color-active text-xs font-bold tracking-wide uppercase shadow-sm transition-colors focus:outline-none focus-visible:ring-2 sui-focus-visible-ring"
+                className="h-7 flex-shrink-0 inline-flex items-center gap-1.5 px-3 rounded sui-bg-accent sui-group-hover-bg-accent sui-active-bg-accent sui-color-active text-xs font-bold tracking-wide  shadow-sm transition-colors focus:outline-none focus-visible:ring-2 sui-focus-visible-ring"
               >
                 {PRIORITY_DRILLDOWN_CTA}
                 <ArrowRight className="w-3.5 h-3.5 sui-stroke-default" />
@@ -4630,7 +4627,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       <main
         className={cn(
           "flex-1 min-h-[400px] w-full overflow-y-auto overflow-x-hidden",
-          compactDensity ? "px-1 py-1.5" : "px-1.5 py-2",
+          compactDensity ? "py-1.5" : "py-2",
         )}
       >
         <div
@@ -4836,7 +4833,11 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   addTileAction={{
                     label: `Add search to ${meta.title}`,
                     title: `Add search to ${meta.title}`,
-                    onClick: () => setAddTileSection(section),
+                    onClick: (returnFocus) => {
+                      addTileReturnFocusRef.current = returnFocus;
+                      setLastAddTileSection(section);
+                      setAddTileSection(section);
+                    },
                   }}
                   onEditTitle={() => setSectionTitlesEditorOpen(true)}
                 >
@@ -4939,24 +4940,11 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             })}
           </OverviewMetricsColumn>
 
-          {/* Splitter handle — renders in every layout mode.
-                        Right mode: thin vertical bar visible at xl+,
-                        hidden on smaller widths where the layout
-                        collapses to a single stacked column anyway.
-                        Below/above modes: thin horizontal bar always
-                        visible, spanning the full width. 6-8px hit-
-                        area so it's easy to grab without being
-                        visually heavy. Drag along the splitter's
-                        short axis to rebalance tiles ↔ map; arrow
-                        keys nudge ±1% (Shift = ±5%); Home/End jump to
-                        the limits; double-click restores the default
-                        split. Same `leftPct` persists across modes so
-                        switching back to a previous orientation
-                        preserves the user's intent. */}
+          {/* The SUI-tokenized rule remains the interactive split control. */}
           {mapVisible && (
-            <button
-              type="button"
+            <SplitSeparator
               role="separator"
+              tabIndex={0}
               aria-orientation={isVerticalSplit ? "horizontal" : "vertical"}
               aria-label="Resize tiles vs map"
               aria-valuenow={Math.round(leftPct)}
@@ -4967,56 +4955,17 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               onKeyDown={onSplitterKeyDown}
               onDoubleClick={resetSplit}
               className={cn(
-                "scd-overview-splitter flex flex-shrink-0 items-center justify-center group relative",
-                "rounded-full border sui-border-strong transition-colors",
-                "focus:outline-none focus-visible:ring-2 sui-focus-visible-ring",
+                "scd-overview-splitter focus:outline-none",
                 // Right mode hides the splitter on sub-xl
                 // widths because the layout collapses to a
                 // single column there. Vertical modes
                 // never collapse, so the splitter is
                 // always visible in those.
-                mapPosition === "right" && "hidden xl:flex",
-                isVerticalSplit
-                  ? "h-1.5 my-0.5 w-full cursor-row-resize"
-                  : "w-1.5 mx-0.5 cursor-col-resize",
-                dragging
-                  ? "sui-bg-accent"
-                  : "sui-bg-overlay sui-hover-bg-accent",
+                mapPosition === "right" && "hidden xl:block",
               )}
+              $horizontal={isVerticalSplit}
               data-map-position={mapPosition}
-            >
-              {/* Visible grip dots — three subtle dashes,
-                                oriented perpendicular to the drag axis so
-                                they read as a grip handle. Helps signal
-                                the handle is interactive at a glance. */}
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "flex gap-0.5 opacity-50 transition-opacity",
-                  isVerticalSplit ? "flex-row" : "flex-col",
-                  dragging ? "opacity-100" : "group-hover:opacity-90",
-                )}
-              >
-                <span
-                  className={cn(
-                    "block rounded-full sui-bg-border-strong",
-                    isVerticalSplit ? "h-0.5 w-1" : "w-0.5 h-1",
-                  )}
-                />
-                <span
-                  className={cn(
-                    "block rounded-full sui-bg-border-strong",
-                    isVerticalSplit ? "h-0.5 w-1" : "w-0.5 h-1",
-                  )}
-                />
-                <span
-                  className={cn(
-                    "block rounded-full sui-bg-border-strong",
-                    isVerticalSplit ? "h-0.5 w-1" : "w-0.5 h-1",
-                  )}
-                />
-              </span>
-            </button>
+            />
           )}
 
           {/* Map column.
@@ -5041,9 +4990,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               <div className="scd-c3-panel sui-bg-section rounded-lg border sui-border-weak p-3 shadow-sm flex flex-col">
                 <div className="mb-2 flex flex-shrink-0 flex-wrap items-start justify-between gap-2">
                   <div className="min-w-[12rem] flex-1">
-                    <h2 className="text-base font-bold  sui-color-info uppercase tracking-wide leading-none">
+                    <Heading
+                      level={2}
+                      variant="title3"
+                      data-sui-heading-variant="title3"
+                    >
                       {topologyHeaderName}
-                    </h2>
+                    </Heading>
                     <p className="text-xs  sui-color-muted font-medium mt-0.5">
                       {topologyHeaderSubtitle}
                     </p>
@@ -5181,10 +5134,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           locallyAddedSearchbaseIds={
             addTilePickerState.locallyAddedSearchbaseIds
           }
-          currentTileCount={addTilePickerState.currentTileCount}
           currentVisibleCount={addTilePickerState.currentVisibleCount}
           maxTileCount={sectionTileBounds.maxCount}
           canManageWorkspace={canManageWorkspaceConfig}
+          returnFocus={addTileReturnFocusRef}
           onAdd={(record, destination) =>
             handleAddSearchToSection(
               addTilePickerState.section,
@@ -5321,7 +5274,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
 
 const ALL_ADD_TILE_CATEGORIES = "__all_add_tile_categories";
 const ALL_ADD_TILE_SUB_CATEGORIES = "__all_add_tile_sub_categories";
-const ADD_TILE_TAG_CHIP_LIMIT = 24;
 
 const makeDefaultAddTileAppSelection = (): Set<string> => new Set();
 
@@ -5420,190 +5372,6 @@ const recordMatchesAddTileQuery = (
   );
 };
 
-interface OverviewAddTileAppMultiSelectProps {
-  apps: string[];
-  appCountByName: ReadonlyMap<string, number>;
-  selectedApps: ReadonlySet<string>;
-  onChange: (next: Set<string>) => void;
-}
-
-const OverviewAddTileAppMultiSelect: React.FC<
-  OverviewAddTileAppMultiSelectProps
-> = ({ apps, appCountByName, selectedApps, onChange }) => {
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const isAllApps = selectedApps.size === 0;
-  const appOptions = useMemo(() => {
-    return [...apps].sort((a, b) =>
-      a.localeCompare(b, undefined, { sensitivity: "base" }),
-    );
-  }, [apps]);
-  const selectedList = appOptions.filter((app) => selectedApps.has(app));
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const handler = (e: MouseEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  const toggleApp = (app: string) => {
-    const next = new Set<string>(isAllApps ? [] : selectedApps);
-    if (next.has(app)) {
-      next.delete(app);
-    } else {
-      next.add(app);
-    }
-    onChange(next);
-  };
-
-  const removeApp = (app: string) => {
-    const next = new Set<string>(selectedApps);
-    next.delete(app);
-    onChange(next);
-  };
-
-  return (
-    <div className="relative min-w-0" ref={containerRef}>
-      <div
-        role="combobox"
-        aria-label="Filter searches by app"
-        aria-controls="overview-add-search-app-filter-options"
-        aria-expanded={open}
-        tabIndex={0}
-        onClick={() => setOpen(true)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            setOpen((v) => !v);
-          } else if (e.key === "Escape") {
-            setOpen(false);
-          }
-        }}
-        className={cn(
-          "flex min-h-[42px] w-full cursor-pointer flex-wrap items-center gap-1 rounded-lg border  px-2 py-1.5 text-sm transition-shadow sui-bg-page",
-          open ? "sui-border-info ring-2 sui-focus-ring" : "sui-border-weak",
-        )}
-      >
-        {isAllApps ? (
-          <span className="min-w-0 flex-1 truncate font-semibold  sui-color-active">
-            All apps ({appOptions.length})
-          </span>
-        ) : (
-          selectedList.map((app) => {
-            const count = appCountByName.get(app) ?? 0;
-            return (
-              <span
-                key={app}
-                className="inline-flex max-w-full items-center gap-1 rounded-full sui-bg-accent py-0.5 pl-2 pr-1 text-xs font-bold uppercase tracking-wide sui-color-active"
-              >
-                <span className="max-w-[220px] truncate">{app}</span>
-                {count > 0 && (
-                  <span className="font-normal opacity-75">{count}</span>
-                )}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeApp(app);
-                  }}
-                  title={`Remove ${app} app filter`}
-                  aria-label={`Remove ${app} app filter`}
-                  className="rounded-full p-0.5 sui-hover-bg-accent"
-                >
-                  <X className="h-2.5 w-2.5" />
-                </button>
-              </span>
-            );
-          })
-        )}
-        {!isAllApps && selectedList.length === 0 && (
-          <span className="min-w-0 flex-1 truncate font-semibold  sui-color-default">
-            No matching apps selected
-          </span>
-        )}
-        <ChevronDown className="ml-auto h-4 w-4 shrink-0 sui-color-default" />
-      </div>
-
-      {open && (
-        <div
-          id="overview-add-search-app-filter-options"
-          role="listbox"
-          aria-label="Filter searches by app"
-          aria-multiselectable="true"
-          className="absolute left-0 right-0 top-full z-30 mt-1 max-h-64 overflow-auto rounded-lg border   shadow-xl sui-border-weak sui-bg-section"
-        >
-          <button
-            type="button"
-            role="option"
-            aria-selected={isAllApps}
-            onClick={() => onChange(new Set())}
-            className={cn(
-              "flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs transition-colors focus:outline-none",
-              isAllApps ? "sui-bg-info" : "sui-hover-bg-info",
-            )}
-          >
-            <span className="flex min-w-0 items-center gap-2 truncate font-semibold  sui-color-active">
-              <span
-                className={cn(
-                  "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border",
-                  isAllApps
-                    ? "sui-border-info sui-bg-accent sui-color-active"
-                    : "sui-border-default",
-                )}
-              >
-                {isAllApps && <Check className="h-3 w-3" />}
-              </span>
-              <span className="truncate">All apps</span>
-            </span>
-            <span className="shrink-0 text-xs font-bold  sui-color-muted">
-              {appOptions.length}
-            </span>
-          </button>
-          {appOptions.map((app) => {
-            const selected = selectedApps.has(app);
-            const count = appCountByName.get(app) ?? 0;
-            return (
-              <button
-                key={app}
-                type="button"
-                role="option"
-                aria-selected={selected}
-                onClick={() => toggleApp(app)}
-                className={cn(
-                  "flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs transition-colors focus:outline-none",
-                  selected ? "sui-bg-info" : "sui-hover-bg-info",
-                )}
-              >
-                <span className="flex min-w-0 items-center gap-2 truncate  sui-color-active">
-                  <span
-                    className={cn(
-                      "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border",
-                      selected
-                        ? "sui-border-info sui-bg-accent sui-color-active"
-                        : "sui-border-default",
-                    )}
-                  >
-                    {selected && <Check className="h-3 w-3" />}
-                  </span>
-                  <span className="truncate">{app}</span>
-                </span>
-                <span className="shrink-0 text-xs font-bold  sui-color-muted">
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
-
 interface OverviewAddTilePanelProps {
   open: boolean;
   profile: InsightsWorkspace;
@@ -5614,10 +5382,10 @@ interface OverviewAddTilePanelProps {
   currentSearchbaseIds: ReadonlySet<string>;
   hiddenSearchbaseIds: ReadonlySet<string>;
   locallyAddedSearchbaseIds: ReadonlySet<string>;
-  currentTileCount: number;
   currentVisibleCount: number;
   maxTileCount: number;
   canManageWorkspace: boolean;
+  returnFocus: React.MutableRefObject<HTMLElement | null>;
   onAdd: (
     record: SearchbaseRecord,
     destination: "personal" | "workspace",
@@ -5626,6 +5394,13 @@ interface OverviewAddTilePanelProps {
   onUnhide: (record: SearchbaseRecord) => void;
   onClose: () => void;
 }
+
+// Splunk Web's legacy input rule outranks SUI, so restore the themed search background here.
+const StyledSearch = styled(SearchInput)`
+  && input[role="searchbox"] {
+    background-color: ${variables.transparent};
+  }
+`;
 
 const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   open,
@@ -5637,15 +5412,16 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   currentSearchbaseIds,
   hiddenSearchbaseIds,
   locallyAddedSearchbaseIds,
-  currentTileCount,
   currentVisibleCount,
   maxTileCount,
   canManageWorkspace,
+  returnFocus,
   onAdd,
   onRemove,
   onUnhide,
   onClose,
 }) => {
+  const theme = useSplunkTheme();
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(
     ALL_ADD_TILE_CATEGORIES,
@@ -5661,17 +5437,13 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     useState(false);
   const [includeTableSearches, setIncludeTableSearches] = useState(false);
   const [activeTags, setActiveTags] = useState<Set<string>>(() => new Set());
-  const [tagFilter, setTagFilter] = useState("");
-  const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(true);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [addDestination, setAddDestination] = useState<
     "personal" | "workspace"
   >("personal");
   const [addingRecordId, setAddingRecordId] = useState<string | null>(null);
   const [showAllProfileSearches, setShowAllProfileSearches] = useState(true);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
-  const tagSelectRef = useRef<HTMLDivElement | null>(null);
-  const tagInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -5683,8 +5455,6 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     setIncludeDrilldownSearches(false);
     setIncludeTableSearches(false);
     setActiveTags(new Set());
-    setTagFilter("");
-    setTagDropdownOpen(false);
     setFiltersOpen(true);
     setAddDestination("personal");
     setAddingRecordId(null);
@@ -5702,26 +5472,6 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
       setAddingRecordId(null);
     }
   };
-
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
-
-  useEffect(() => {
-    if (!open || !tagDropdownOpen) return undefined;
-    const handler = (e: MouseEvent) => {
-      if (!tagSelectRef.current?.contains(e.target as Node)) {
-        setTagDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open, tagDropdownOpen]);
 
   const addableRecords = useMemo(
     () =>
@@ -5964,19 +5714,6 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     );
   }, [tagFacetRecords]);
 
-  const tagDropdownOptions = useMemo(() => {
-    const filter = tagFilter.trim().toLowerCase();
-    const available = allTagsWithCounts.filter(([tag]) => !activeTags.has(tag));
-    if (!filter) return available.slice(0, ADD_TILE_TAG_CHIP_LIMIT);
-    return available.filter(([tag]) => tag.toLowerCase().includes(filter));
-  }, [activeTags, allTagsWithCounts, tagFilter]);
-
-  const tagCountByName = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const [tag, count] of allTagsWithCounts) map.set(tag, count);
-    return map;
-  }, [allTagsWithCounts]);
-
   const filteredRecords = useMemo(() => {
     return browseVisibleRecords.filter((record) => {
       if (
@@ -6006,40 +5743,6 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     selectedSubCategory,
   ]);
 
-  const addTag = (tag: string) => {
-    setActiveTags((prev) => {
-      if (prev.has(tag)) return prev;
-      const next = new Set(prev);
-      next.add(tag);
-      return next;
-    });
-    setTagFilter("");
-    tagInputRef.current?.focus();
-  };
-
-  const removeTag = (tag: string) => {
-    setActiveTags((prev) => {
-      if (!prev.has(tag)) return prev;
-      const next = new Set(prev);
-      next.delete(tag);
-      return next;
-    });
-  };
-
-  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Backspace" && tagFilter === "" && activeTags.size > 0) {
-      const arr = Array.from(activeTags);
-      removeTag(arr[arr.length - 1]);
-    } else if (e.key === "Escape") {
-      setTagDropdownOpen(false);
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      if (tagDropdownOptions.length > 0) addTag(tagDropdownOptions[0][0]);
-    } else if (e.key === "ArrowDown" && !tagDropdownOpen) {
-      setTagDropdownOpen(true);
-    }
-  };
-
   const activeFilterCount =
     (!showAllProfileSearches ? 1 : 0) +
     (!isDefaultAddTileAppSelection(selectedApps) ? 1 : 0) +
@@ -6049,7 +5752,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     (selectedCategory !== ALL_ADD_TILE_CATEGORIES ? 1 : 0) +
     (selectedSubCategory !== ALL_ADD_TILE_SUB_CATEGORIES ? 1 : 0) +
     activeTags.size;
-  const facetsActive = activeFilterCount > 0 || tagFilter.trim().length > 0;
+  const facetsActive = activeFilterCount > 0;
   const availableSearchLabel = `${filteredRecords.length.toLocaleString()} ${
     filteredRecords.length === 1 ? "search" : "searches"
   } available`;
@@ -6062,579 +5765,342 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     setSelectedCategory(ALL_ADD_TILE_CATEGORIES);
     setSelectedSubCategory(ALL_ADD_TILE_SUB_CATEGORIES);
     setActiveTags(new Set());
-    setTagFilter("");
     setShowAllProfileSearches(true);
   };
 
-  if (!open) return null;
-
-  const atVisibleMax = currentVisibleCount >= maxTileCount;
   const countLabel = `${currentVisibleCount}/${maxTileCount} visible`;
 
   return (
-    <>
-      <div
-        className="fixed inset-0 z-[1500] sui-bg-page backdrop-blur-sm"
-        onClick={onClose}
-        aria-hidden="true"
+    <Drawer
+      divider="header"
+      material="glass"
+      onRequestClose={onClose}
+      open={open}
+      position="page"
+      returnFocus={returnFocus}
+      width={`min(540px, calc(100vw - ${theme.spacingMedium}))`}
+    >
+      <Drawer.Header
+        title="Add search"
+        subtitle={`${sectionTitle} · ${countLabel}`}
       />
-      <aside
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Add search to ${sectionTitle}`}
-        className="fixed top-0 right-0 z-[1600] h-full w-full max-w-[calc(100vw-12px)] border-l   shadow-2xl sui-border-weak sui-bg-section sm:w-[500px] xl:w-[540px] flex flex-col"
-      >
-        <div className="flex flex-shrink-0 items-center justify-between gap-3 border-b  px-4 py-3 sui-border-weak">
-          <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-widest  sui-color-muted">
-              Add search
-            </p>
-            <p className="truncate text-sm font-black  sui-color-active">
-              {sectionTitle}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span
-              title={`${currentVisibleCount} visible, ${currentTileCount} configured, maximum ${maxTileCount}`}
-              className={cn(
-                "rounded-full border px-2 py-1 text-xs font-black uppercase tracking-wider",
-                atVisibleMax
-                  ? "sui-border-warning sui-bg-warning sui-color-warning"
-                  : "sui-border-info sui-bg-info sui-color-info",
-              )}
-            >
-              {countLabel}
-            </span>
-            <button
-              type="button"
-              onClick={onClose}
-              title="Close (Esc)"
-              aria-label="Close add search panel"
-              className="rounded p-1.5 sui-color-default transition-colors   focus:outline-none focus-visible:ring-2 sui-focus-visible-ring sui-hover-bg-overlay sui-hover-color-active"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
 
-        <div className="flex-shrink-0 space-y-2 px-4 py-3">
-          <label className="relative block">
-            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 sui-color-default" />
-            <input
-              ref={searchInputRef}
-              type="text"
+      <Drawer.Body>
+        <div>
+          <ControlGroup hideLabel label="Search">
+            <StyledSearch
+              aria-controls="overview-add-search-results"
+              inputRef={searchInputRef}
+              onChange={(_event, { value }) => setQuery(value)}
+              placeholder="Search by name, description, or tag"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filter by name, description, or tag..."
-              maxLength={120}
-              className="w-full rounded-md border   py-1.5 pl-8 pr-2.5   focus:outline-none focus:ring-2 sui-focus-ring sui-border-default sui-bg-popup sui-color-active"
             />
-          </label>
+          </ControlGroup>
 
-          <div className="rounded-lg border   p-2.5 sui-border-weak sui-bg-page">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs font-black uppercase tracking-[0.18em] sui-color-default">
-                Add to
-              </span>
-              <div
-                className="inline-flex rounded-md border   p-0.5 sui-border-weak sui-bg-page"
-                role="group"
-                aria-label="Where to add this search"
-              >
-                <button
-                  type="button"
-                  onClick={() => setAddDestination("personal")}
-                  className={cn(
-                    "rounded px-2.5 py-1 text-xs font-black uppercase tracking-wider transition-colors",
-                    addDestination === "personal"
-                      ? "sui-bg-accent sui-color-active shadow-sm"
-                      : "sui-color-muted  sui-color-default sui-hover-color-active",
-                  )}
-                >
-                  For me
-                </button>
-                {canManageWorkspace && (
-                  <button
-                    type="button"
-                    onClick={() => setAddDestination("workspace")}
-                    className={cn(
-                      "rounded px-2.5 py-1 text-xs font-black uppercase tracking-wider transition-colors",
-                      addDestination === "workspace"
-                        ? "sui-bg-accent sui-color-active shadow-sm"
-                        : "sui-color-muted  sui-color-default sui-hover-color-active",
-                    )}
-                  >
-                    Shared workspace
-                  </button>
-                )}
-              </div>
-            </div>
-            <p className="mt-1 text-xs leading-snug  sui-color-default">
-              {addDestination === "workspace"
+          <ControlGroup
+            controlsLayout="none"
+            help={
+              addDestination === "workspace"
                 ? "Every viewer of this workspace will see the tile."
-                : "Only you will see the tile in this browser."}
-            </p>
-          </div>
-
-          <div className="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={() => setFiltersOpen((o) => !o)}
-              aria-expanded={filtersOpen}
-              aria-controls="overview-add-search-filters"
-              title={
-                filtersOpen
-                  ? "Hide filters"
-                  : "Show filters (App, Visibility, Category, Sub-cat, Tags)"
+                : "Only you will see the tile in this browser."
+            }
+            label="Add to"
+          >
+            <RadioBar
+              onChange={(_event, { value }) =>
+                setAddDestination(value as "personal" | "workspace")
               }
-              className="flex items-center gap-1.5 rounded px-1.5 py-1 -ml-1.5 text-xs font-bold uppercase tracking-widest  transition-colors   sui-color-default sui-hover-bg-overlay sui-hover-color-active"
+              value={addDestination}
             >
-              {filtersOpen ? (
-                <ChevronDown className="h-3 w-3" />
-              ) : (
-                <ChevronRight className="h-3 w-3" />
+              <RadioBar.Option label="For me" value="personal" />
+              {canManageWorkspace && (
+                <RadioBar.Option label="Shared workspace" value="workspace" />
               )}
-              <span>Filters</span>
-              {activeFilterCount > 0 && (
-                <span
-                  className="ml-1 rounded-full  px-1.5 py-px text-xs font-semibold normal-case tracking-normal  sui-bg-info sui-color-info"
-                  title={`${activeFilterCount} active filter${activeFilterCount === 1 ? "" : "s"}`}
-                >
-                  {activeFilterCount} active
-                </span>
-              )}
-            </button>
-            <div className="flex items-center gap-2">
-              <span
-                title="Searchbase stanzas matching the current app, visibility, category, sub-category, tag, scope, and text filters"
-                className="inline-flex items-center rounded-full border   px-2.5 py-1 text-xs font-black uppercase tracking-wider  shadow-sm sui-border-info sui-bg-info sui-color-info"
-              >
-                {availableSearchLabel}
-              </span>
-              {facetsActive && (
-                <button
-                  type="button"
+            </RadioBar>
+          </ControlGroup>
+
+          <CollapsiblePanel
+            actions={
+              facetsActive ? (
+                <Button
+                  appearance="subtle"
+                  label="Clear filters"
                   onClick={handleClearFacets}
-                  title="Reset every filter to its default"
-                  className="text-xs font-bold uppercase tracking-widest   sui-color-muted sui-hover-color-active"
-                >
-                  Clear filters
-                </button>
-              )}
-            </div>
-          </div>
-
-          {filtersOpen && (
-            <div
-              id="overview-add-search-filters"
-              className="space-y-3 rounded-lg border   p-3 sui-border-weak sui-bg-section"
-            >
-              {showScopeToggle && (
-                <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
-                  <span className="text-xs font-black uppercase tracking-[0.18em] sui-color-default">
-                    Scope
-                  </span>
-                  <div
-                    className="inline-flex w-fit rounded-md border   p-0.5 sui-border-weak sui-bg-page"
-                    role="group"
-                    aria-label="Search scope"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setShowAllProfileSearches(false)}
-                      className={cn(
-                        "rounded px-2 py-1 text-xs font-black uppercase tracking-wider transition-colors",
-                        !showAllProfileSearches
-                          ? "sui-bg-info  shadow-sm sui-bg-info sui-color-info"
-                          : "sui-color-muted  sui-color-default sui-hover-color-active",
-                      )}
-                    >
-                      Suggested
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowAllProfileSearches(true)}
-                      className={cn(
-                        "rounded px-2 py-1 text-xs font-black uppercase tracking-wider transition-colors",
-                        showAllProfileSearches
-                          ? "sui-bg-info  shadow-sm sui-bg-info sui-color-info"
-                          : "sui-color-muted  sui-color-default sui-hover-color-active",
-                      )}
-                    >
-                      All searches
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
-                <span
-                  className="text-xs font-black uppercase tracking-[0.18em] sui-color-default"
-                  title="Splunk app the search dispatches in"
-                >
-                  App
-                </span>
-                <OverviewAddTileAppMultiSelect
-                  apps={apps}
-                  appCountByName={appCountByName}
-                  selectedApps={selectedApps}
-                  onChange={setSelectedApps}
                 />
-              </div>
+              ) : null
+            }
+            appearance="subtle"
+            description={availableSearchLabel}
+            inset
+            onChange={(_event, { action }) => setFiltersOpen(action === "open")}
+            open={filtersOpen}
+            title={
+              activeFilterCount > 0
+                ? `Filters (${activeFilterCount} active)`
+                : "Filters"
+            }
+          >
+            {showScopeToggle && (
+              <ControlGroup controlsLayout="none" label="Scope">
+                <RadioBar
+                  onChange={(_event, { value }) =>
+                    setShowAllProfileSearches(value === "all")
+                  }
+                  value={showAllProfileSearches ? "all" : "suggested"}
+                >
+                  <RadioBar.Option label="Suggested" value="suggested" />
+                  <RadioBar.Option label="All searches" value="all" />
+                </RadioBar>
+              </ControlGroup>
+            )}
 
-              <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-start">
-                <span className="text-xs font-black uppercase tracking-[0.18em] sui-color-default">
-                  Visibility
-                </span>
-                <div className="grid grid-cols-3 gap-2">
-                  <label className="flex min-h-[58px] items-center gap-2 rounded-lg border   px-2.5 py-2 text-xs font-bold leading-snug  sui-border-weak sui-bg-page sui-color-active">
-                    <input
-                      type="checkbox"
-                      checked={includeHiddenSearches}
-                      onChange={(e) =>
-                        setIncludeHiddenSearches(e.target.checked)
-                      }
-                      className="h-4 w-4 shrink-0 rounded  sui-color-info sui-focus-ring sui-border-default sui-bg-section"
-                    />
-                    <span>Show hidden searches</span>
-                  </label>
-                  <label className="flex min-h-[58px] items-center gap-2 rounded-lg border   px-2.5 py-2 text-xs font-bold leading-snug  sui-border-weak sui-bg-page sui-color-active">
-                    <input
-                      type="checkbox"
-                      checked={includeDrilldownSearches}
-                      onChange={(e) =>
-                        setIncludeDrilldownSearches(e.target.checked)
-                      }
-                      className="h-4 w-4 shrink-0 rounded  sui-color-info sui-focus-ring sui-border-default sui-bg-section"
-                    />
-                    <span>Show drill-down searches</span>
-                  </label>
-                  <label className="flex min-h-[58px] items-center gap-2 rounded-lg border   px-2.5 py-2 text-xs font-bold leading-snug  sui-border-weak sui-bg-page sui-color-active">
-                    <input
-                      type="checkbox"
-                      checked={includeTableSearches}
-                      onChange={(e) =>
-                        setIncludeTableSearches(e.target.checked)
-                      }
-                      className="h-4 w-4 shrink-0 rounded  sui-color-info sui-focus-ring sui-border-default sui-bg-section"
-                    />
-                    <span>Show table searches</span>
-                  </label>
-                </div>
-              </div>
+            <ControlGroup label="App">
+              <Multiselect
+                compact
+                filter
+                onChange={(_event, { values }) =>
+                  setSelectedApps(new Set(values.map(String)))
+                }
+                placeholder={`All apps (${apps.length})`}
+                showSelectedValuesFirst="nextOpen"
+                values={Array.from(selectedApps)}
+              >
+                {apps.map((app) => (
+                  <Multiselect.Option
+                    description={`${appCountByName.get(app) ?? 0} searches`}
+                    descriptionPosition="right"
+                    key={app}
+                    label={app}
+                    value={app}
+                  />
+                ))}
+              </Multiselect>
+            </ControlGroup>
 
-              {categories.length > 0 && (
-                <label className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
-                  <span className="text-xs font-black uppercase tracking-[0.18em] sui-color-default">
-                    Category
-                  </span>
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    aria-label="Filter searches by category"
-                    className="w-full rounded-lg border   px-3 py-2 text-sm font-semibold  outline-none sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-weak sui-bg-page sui-color-active sui-focus-ring"
+            <ControlGroup controlsLayout="stack" label="Visibility">
+              <Checkbox
+                checked={includeHiddenSearches}
+                onChange={(_event, { checked }) =>
+                  setIncludeHiddenSearches(checked)
+                }
+              >
+                Show hidden searches
+              </Checkbox>
+              <Checkbox
+                checked={includeDrilldownSearches}
+                onChange={(_event, { checked }) =>
+                  setIncludeDrilldownSearches(checked)
+                }
+              >
+                Show drill-down searches
+              </Checkbox>
+              <Checkbox
+                checked={includeTableSearches}
+                onChange={(_event, { checked }) =>
+                  setIncludeTableSearches(checked)
+                }
+              >
+                Show table searches
+              </Checkbox>
+            </ControlGroup>
+
+            {categories.length > 0 && (
+              <ControlGroup label="Category">
+                <Select
+                  onChange={(_event, { value }) =>
+                    setSelectedCategory(String(value))
+                  }
+                  value={selectedCategory}
+                >
+                  <Select.Option
+                    label="All categories"
+                    value={ALL_ADD_TILE_CATEGORIES}
+                  />
+                  {categories.map((category) => (
+                    <Select.Option
+                      key={category}
+                      label={category}
+                      value={category}
+                    />
+                  ))}
+                </Select>
+              </ControlGroup>
+            )}
+
+            {selectedCategory !== ALL_ADD_TILE_CATEGORIES &&
+              subCategories.length > 0 && (
+                <ControlGroup label="Subcategory">
+                  <Select
+                    onChange={(_event, { value }) =>
+                      setSelectedSubCategory(String(value))
+                    }
+                    value={selectedSubCategory}
                   >
-                    <option value={ALL_ADD_TILE_CATEGORIES}>
-                      All categories
-                    </option>
-                    {categories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-
-              {selectedCategory !== ALL_ADD_TILE_CATEGORIES &&
-                subCategories.length > 0 && (
-                  <label className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-center">
-                    <span className="text-xs font-black uppercase tracking-[0.18em] sui-color-default">
-                      Sub-cat
-                    </span>
-                    <select
-                      value={selectedSubCategory}
-                      onChange={(e) => setSelectedSubCategory(e.target.value)}
-                      aria-label="Filter searches by sub-category"
-                      className="w-full rounded-lg border   px-3 py-2 text-sm font-semibold  outline-none sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-weak sui-bg-page sui-color-active sui-focus-ring"
-                    >
-                      <option value={ALL_ADD_TILE_SUB_CATEGORIES}>
-                        All sub-categories ({subCategories.length})
-                      </option>
-                      {subCategories.map((subCategory) => (
-                        <option key={subCategory} value={subCategory}>
-                          {subCategory}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                )}
-
-              {(allTagsWithCounts.length > 0 || activeTags.size > 0) && (
-                <div className="grid gap-1 sm:grid-cols-[82px_minmax(0,1fr)] sm:items-start">
-                  <span className="pt-2 text-xs font-black uppercase tracking-[0.18em] sui-color-default">
-                    Tags
-                  </span>
-                  <div className="relative" ref={tagSelectRef}>
-                    <div
-                      onClick={() => {
-                        setTagDropdownOpen(true);
-                        tagInputRef.current?.focus();
-                      }}
-                      className={cn(
-                        "flex min-h-[42px] cursor-text flex-wrap items-center gap-1 rounded-lg border  px-2 py-1.5 transition-shadow sui-bg-page",
-                        tagDropdownOpen
-                          ? "sui-border-info ring-2 sui-focus-ring"
-                          : "sui-border-weak",
-                      )}
-                    >
-                      <Tag className="ml-0.5 h-3.5 w-3.5 shrink-0 sui-color-default" />
-                      {Array.from(activeTags).map((tag) => {
-                        const count = tagCountByName.get(tag) ?? 0;
-                        return (
-                          <span
-                            key={tag}
-                            className="inline-flex items-center gap-1 rounded-full sui-bg-accent py-0.5 pl-2 pr-1 text-xs font-bold uppercase tracking-wide sui-color-active"
-                          >
-                            {tag}
-                            {count > 0 && (
-                              <span className="font-normal opacity-75">
-                                {count}
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeTag(tag);
-                              }}
-                              title={`Remove ${tag} filter`}
-                              aria-label={`Remove ${tag} filter`}
-                              className="rounded-full p-0.5 sui-hover-bg-accent"
-                            >
-                              <X className="h-2.5 w-2.5" />
-                            </button>
-                          </span>
-                        );
-                      })}
-                      <input
-                        ref={tagInputRef}
-                        type="text"
-                        value={tagFilter}
-                        onChange={(e) => {
-                          setTagFilter(e.target.value);
-                          setTagDropdownOpen(true);
-                        }}
-                        onFocus={() => setTagDropdownOpen(true)}
-                        onKeyDown={handleTagInputKeyDown}
-                        placeholder={
-                          activeTags.size === 0
-                            ? `Filter by tag (${allTagsWithCounts.length} tags available, AND combined)...`
-                            : "Add tag..."
-                        }
-                        maxLength={64}
-                        aria-label="Filter results by tag"
-                        className="min-w-[120px] flex-1 border-0 sui-bg-transparent py-1 text-sm  outline-none  sui-color-active"
+                    <Select.Option
+                      label={`All subcategories (${subCategories.length})`}
+                      value={ALL_ADD_TILE_SUB_CATEGORIES}
+                    />
+                    {subCategories.map((subCategory) => (
+                      <Select.Option
+                        key={subCategory}
+                        label={subCategory}
+                        value={subCategory}
                       />
-                    </div>
-
-                    {tagDropdownOpen && (
-                      <div
-                        role="listbox"
-                        aria-label="Available tags"
-                        className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-auto rounded-lg border   shadow-xl sui-border-weak sui-bg-section"
-                      >
-                        {tagDropdownOptions.length === 0 ? (
-                          <p className="px-3 py-2 text-xs italic  sui-color-muted">
-                            {tagFilter.trim()
-                              ? `No more tags match "${tagFilter.trim()}".`
-                              : activeTags.size > 0
-                                ? "All available tags already selected."
-                                : "No tags available in this slice."}
-                          </p>
-                        ) : (
-                          <>
-                            {tagDropdownOptions.map(([tag, count], idx) => {
-                              const isFirstTyped =
-                                idx === 0 && Boolean(tagFilter.trim());
-                              return (
-                                <button
-                                  key={tag}
-                                  type="button"
-                                  role="option"
-                                  aria-selected={isFirstTyped}
-                                  onClick={() => addTag(tag)}
-                                  title={`${count} search${count === 1 ? "" : "es"} tagged ${tag}`}
-                                  className={cn(
-                                    "flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-xs transition-colors focus:outline-none",
-                                    isFirstTyped
-                                      ? "sui-bg-info"
-                                      : "sui-hover-bg-info",
-                                  )}
-                                >
-                                  <span className="flex min-w-0 items-center gap-1.5 truncate  sui-color-active">
-                                    <Tag className="h-3 w-3 shrink-0 sui-color-default" />
-                                    <span className="truncate">{tag}</span>
-                                  </span>
-                                  <span className="shrink-0 text-xs font-bold  sui-color-muted">
-                                    {count}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                            {!tagFilter.trim() &&
-                              allTagsWithCounts.length - activeTags.size >
-                                tagDropdownOptions.length && (
-                                <p className="border-t  px-3 py-1.5 text-xs  sui-border-weak sui-color-muted">
-                                  Top {tagDropdownOptions.length} of{" "}
-                                  {allTagsWithCounts.length - activeTags.size} -
-                                  type to filter.
-                                </p>
-                              )}
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
+                    ))}
+                  </Select>
+                </ControlGroup>
               )}
-            </div>
-          )}
+
+            {(allTagsWithCounts.length > 0 || activeTags.size > 0) && (
+              <ControlGroup
+                help="Selected tags are combined with AND."
+                label="Tags"
+              >
+                <Multiselect
+                  compact
+                  filter
+                  onChange={(_event, { values }) =>
+                    setActiveTags(new Set(values.map(String)))
+                  }
+                  placeholder={`All tags (${allTagsWithCounts.length})`}
+                  showSelectedValuesFirst="nextOpen"
+                  values={Array.from(activeTags)}
+                >
+                  {allTagsWithCounts.map(([tag, count]) => (
+                    <Multiselect.Option
+                      description={`${count} searches`}
+                      descriptionPosition="right"
+                      key={tag}
+                      label={tag}
+                      value={tag}
+                    />
+                  ))}
+                </Multiselect>
+              </ControlGroup>
+            )}
+          </CollapsiblePanel>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto px-3 pb-3">
+        <div id="overview-add-search-results">
+          <ScreenReaderContent role="status">
+            {availableSearchLabel}
+          </ScreenReaderContent>
           {loading && (
-            <div className="px-3 py-8 text-center text-xs font-bold uppercase tracking-widest  sui-color-muted">
-              Loading searchbase.conf
-            </div>
+            <Layout>
+              <WaitSpinner size="medium" screenReaderText={null} />
+              <span>Loading searches</span>
+            </Layout>
           )}
           {!loading && filteredRecords.length === 0 && (
-            <div className="px-3 py-8 text-center text-xs font-semibold  sui-color-muted">
+            <Message type="info">
               No searches match the current filters.
-            </div>
+            </Message>
           )}
-          {!loading &&
-            filteredRecords.map((record) => {
-              const alreadyInSection = currentSearchbaseIds.has(record.id);
-              const hiddenInSection = hiddenSearchbaseIds.has(record.id);
-              const locallyAdded = locallyAddedSearchbaseIds.has(record.id);
-              const disabled = alreadyInSection && !hiddenInSection;
-              const description =
-                plainTextFromHtml(record.explanation) ??
-                plainTextFromHtml(record.description);
-              const tags = record.tags.slice(0, 3);
-              return (
-                <div
-                  key={record.id}
-                  className={cn(
-                    "mb-2 rounded-lg border p-3 transition-colors",
-                    hiddenInSection
-                      ? "sui-border-warning sui-bg-warning"
-                      : alreadyInSection
-                        ? "sui-border-info sui-bg-info"
-                        : "sui-border-weak sui-bg-page sui-hover-border-info sui-hover-bg-info",
-                  )}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <p
-                          className="truncate  font-black  sui-color-active"
-                          title={record.searchName}
-                        >
-                          {record.searchName}
-                        </p>
-                        {hiddenInSection ? (
-                          <EyeOff className="h-3.5 w-3.5 shrink-0  sui-color-warning" />
-                        ) : alreadyInSection ? (
-                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0  sui-color-info" />
-                        ) : null}
-                        {record.searchHidden && (
-                          <span className="shrink-0 rounded-full  px-1.5 py-0.5 text-xs font-black uppercase tracking-wider  sui-bg-popup sui-color-muted">
-                            Hidden
-                          </span>
-                        )}
-                      </div>
-                      <p className="mt-0.5 truncate text-xs font-bold uppercase tracking-wider  sui-color-muted">
-                        {[record.category, record.subCategory]
+          {!loading && filteredRecords.length > 0 && (
+            <CardLayout
+              cardWidth="100%"
+              gutterSize={Number.parseFloat(theme.spacingMedium)}
+            >
+              {filteredRecords.map((record) => {
+                const alreadyInSection = currentSearchbaseIds.has(record.id);
+                const hiddenInSection = hiddenSearchbaseIds.has(record.id);
+                const locallyAdded = locallyAddedSearchbaseIds.has(record.id);
+                const disabled = alreadyInSection && !hiddenInSection;
+                const description =
+                  plainTextFromHtml(record.explanation) ??
+                  plainTextFromHtml(record.description);
+                const tags = record.tags.slice(0, 3);
+                const isAdding = addingRecordId === record.id;
+                const addActionLabel = alreadyInSection
+                  ? "Added"
+                  : isAdding
+                    ? "Adding"
+                    : addDestination === "workspace"
+                      ? "Add shared"
+                      : "Add for me";
+                const action = hiddenInSection ? (
+                  <Button
+                    aria-label={`Show ${record.searchName} in ${sectionTitle}`}
+                    appearance="secondary"
+                    icon={<Eye aria-hidden="true" />}
+                    label="Show"
+                    onClick={() => onUnhide(record)}
+                  />
+                ) : locallyAdded ? (
+                  <Button
+                    aria-label={`Remove ${record.searchName} from ${sectionTitle}`}
+                    appearance="destructiveSecondary"
+                    icon={<Trash2 aria-hidden="true" />}
+                    label="Remove"
+                    onClick={() => onRemove(record)}
+                  />
+                ) : (
+                  <Button
+                    aria-label={
+                      alreadyInSection
+                        ? `Added: ${record.searchName} in ${sectionTitle}`
+                        : isAdding
+                          ? `Adding ${record.searchName} to ${sectionTitle}`
+                          : `${addActionLabel}: ${record.searchName} to ${sectionTitle}`
+                    }
+                    aria-busy={isAdding}
+                    appearance="standalone"
+                    disabled={disabled || isAdding}
+                    icon={
+                      isAdding ? (
+                        <WaitSpinner screenReaderText={null} />
+                      ) : (
+                        <Plus aria-hidden="true" />
+                      )
+                    }
+                    label={addActionLabel}
+                    onClick={() => void handleAdd(record)}
+                  />
+                );
+                return (
+                  <Card key={record.id} tag="article">
+                    <Card.Header
+                      actions={() => action}
+                      subtitle={
+                        [record.category, record.subCategory]
                           .filter(Boolean)
-                          .join(" / ") || record.id}
-                      </p>
-                      {description && (
-                        <p className="mt-1 line-clamp-2 text-xs leading-snug  sui-color-default">
-                          {description}
-                        </p>
-                      )}
-                      {tags.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {tags.map((tag) => (
-                            <span
-                              key={tag}
-                              className="rounded-full  px-1.5 py-0.5 text-xs font-bold uppercase tracking-wide  sui-bg-popup sui-color-default"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {hiddenInSection ? (
-                      <button
-                        type="button"
-                        onClick={() => onUnhide(record)}
-                        title={`Show ${record.searchName} in ${sectionTitle}`}
-                        className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md sui-bg-warning px-2 text-xs font-black uppercase tracking-wider sui-color-active transition-colors sui-hover-bg-warning focus:outline-none focus-visible:ring-2 sui-focus-visible-ring"
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                        Show
-                      </button>
-                    ) : locallyAdded ? (
-                      <button
-                        type="button"
-                        onClick={() => onRemove(record)}
-                        title={`Remove ${record.searchName} from ${sectionTitle}`}
-                        className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md border   px-2 text-xs font-black uppercase tracking-wider  transition-colors  focus:outline-none focus-visible:ring-2 sui-focus-visible-ring sui-border-negative sui-bg-page sui-color-negative sui-hover-bg-negative"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                        Remove
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => void handleAdd(record)}
-                        disabled={disabled || addingRecordId === record.id}
-                        title={
-                          alreadyInSection
-                            ? "Already in this section"
-                            : atVisibleMax
-                              ? `Add ${record.searchName} as the last visible tile`
-                              : `Add ${record.searchName}`
-                        }
-                        className={cn(
-                          "inline-flex h-8 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-black uppercase tracking-wider transition-colors focus:outline-none focus-visible:ring-2 sui-focus-visible-ring",
-                          disabled
-                            ? "cursor-not-allowed   sui-bg-popup sui-color-muted"
-                            : "sui-bg-accent sui-color-active sui-hover-bg-accent sui-active-bg-accent",
+                          .join(" / ") || record.id
+                      }
+                      title={
+                        <Layout>
+                          <span>{record.searchName}</span>
+                          {hiddenInSection && (
+                            <Badge label="Hidden in section" />
+                          )}
+                          {!hiddenInSection && alreadyInSection && (
+                            <Badge label="Added" />
+                          )}
+                          {record.searchHidden && (
+                            <Badge label="Hidden search" />
+                          )}
+                        </Layout>
+                      }
+                    />
+                    {(description || tags.length > 0) && (
+                      <Card.Body>
+                        {description && <p>{description}</p>}
+                        {tags.length > 0 && (
+                          <Layout>
+                            {tags.map((tag) => (
+                              <Chip key={tag}>{tag}</Chip>
+                            ))}
+                          </Layout>
                         )}
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                        {alreadyInSection
-                          ? "Added"
-                          : addingRecordId === record.id
-                            ? "Adding"
-                            : addDestination === "workspace"
-                              ? "Add shared"
-                              : "Add for me"}
-                      </button>
+                      </Card.Body>
                     )}
-                  </div>
-                </div>
-              );
-            })}
+                  </Card>
+                );
+              })}
+            </CardLayout>
+          )}
         </div>
-      </aside>
-    </>
+      </Drawer.Body>
+    </Drawer>
   );
 };
 
@@ -6651,6 +6117,37 @@ const OverviewMetricsColumn = styled.div`
   }
 `;
 
+const SplitSeparator = styled.hr<{ $horizontal: boolean }>`
+  position: relative;
+  flex-shrink: 0;
+  align-self: stretch;
+  width: ${({ $horizontal }) => ($horizontal ? "100%" : "1px")};
+  height: ${({ $horizontal }) => ($horizontal ? "1px" : "auto")};
+  margin: 0;
+  border: 0;
+  background-color: ${variables.borderColor};
+  cursor: ${({ $horizontal }) => ($horizontal ? "row-resize" : "col-resize")};
+  margin-left: ${({ $horizontal }) =>
+    $horizontal ? "0" : variables.spacingMedium};
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: ${({ $horizontal }) => ($horizontal ? "50%" : "0")};
+    left: ${({ $horizontal }) => ($horizontal ? "0" : "50%")};
+    width: ${({ $horizontal }) =>
+      $horizontal ? "100%" : variables.spacingXLarge};
+    height: ${({ $horizontal }) =>
+      $horizontal ? variables.spacingXLarge : "100%"};
+    transform: ${({ $horizontal }) =>
+      $horizontal ? "translateY(-50%)" : "translateX(-50%)"};
+  }
+
+  &:focus-visible {
+    box-shadow: ${variables.focusShadow};
+  }
+`;
+
 const MapViewport = styled.div`
   flex: 1 0 400px;
   min-height: 400px;
@@ -6663,9 +6160,7 @@ interface KpiCardProps {
 }
 
 const formatMapKpiValue = (value: string): string => {
-  const match = value
-    .trim()
-    .match(/^(-?\d[\d,]*)(?:\.(\d+))?(\s*[^\d\s].*)?$/);
+  const match = value.trim().match(/^(-?\d[\d,]*)(?:\.(\d+))?(\s*[^\d\s].*)?$/);
   if (!match) return value;
 
   const [, whole, fraction, suffix = ""] = match;
@@ -7114,7 +6609,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
             {activeConfig.metadata.title}
           </div>
           {activeClassification.length > 0 && (
-            <div className="mt-0.5  font-bold uppercase tracking-[0.12em] sui-color-default">
+            <div className="mt-0.5  font-bold  tracking-[0.12em] sui-color-default">
               {activeClassification.join(" • ")}
             </div>
           )}
@@ -7440,8 +6935,7 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
     "sui-color-active sui-placeholder-muted " +
     "focus:outline-none focus:ring-1 sui-focus-ring";
   const labelClass =
-    "block text-xs font-bold  sui-color-default " +
-    "uppercase tracking-wider mb-1";
+    "block text-xs font-bold  sui-color-default " + " tracking-wider mb-1";
 
   return (
     <div
@@ -7458,7 +6952,7 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
         <div className="flex items-center justify-between px-4 py-3 border-b  sui-border-default">
           <h2
             id="section-titles-editor-title"
-            className="text-sm font-bold  sui-color-active uppercase tracking-wider"
+            className="text-sm font-bold  sui-color-active  tracking-wider"
           >
             Edit sections
           </h2>
@@ -7800,7 +7294,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
         <div className="flex items-center justify-between px-4 py-3 border-b  sui-border-default">
           <h2
             id="branding-editor-title"
-            className="text-sm font-bold  sui-color-active uppercase tracking-wider"
+            className="text-sm font-bold  sui-color-active  tracking-wider"
           >
             Edit branding
           </h2>
@@ -7820,7 +7314,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
           <div>
             <label
               htmlFor="branding-title-input"
-              className="block text-xs font-bold  sui-color-default uppercase tracking-wider mb-1"
+              className="block text-xs font-bold  sui-color-default  tracking-wider mb-1"
             >
               Title
             </label>
@@ -7846,7 +7340,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
           <div>
             <label
               htmlFor="branding-subtitle-input"
-              className="block text-xs font-bold  sui-color-default uppercase tracking-wider mb-1"
+              className="block text-xs font-bold  sui-color-default  tracking-wider mb-1"
             >
               Subtitle
             </label>
@@ -7866,7 +7360,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
 
           {/* Logo */}
           <div>
-            <span className="block text-xs font-bold  sui-color-default uppercase tracking-wider mb-1">
+            <span className="block text-xs font-bold  sui-color-default  tracking-wider mb-1">
               Logo
             </span>
             <div className="flex items-center gap-3">
@@ -8005,11 +7499,7 @@ const MapLayoutRadioBar: React.FC<MapLayoutRadioBarProps> = ({
   />
 );
 
-const KpiCard: React.FC<KpiCardProps> = ({
-  label,
-  value,
-  status,
-}) => {
+const KpiCard: React.FC<KpiCardProps> = ({ label, value, status }) => {
   const theme = useSplunkTheme();
   const displayValue = formatMapKpiValue(value);
   const statusColor = {
@@ -8021,7 +7511,13 @@ const KpiCard: React.FC<KpiCardProps> = ({
 
   return (
     <Card>
-      <Card.Header title={<Heading level={3}>{label}</Heading>} />
+      <Card.Header
+        title={
+          <Heading level={3} data-sui-heading-variant="title3">
+            {label}
+          </Heading>
+        }
+      />
       <Card.Body>
         <MapKpiContent>
           <MapKpiValue $status={status} title={displayValue}>
