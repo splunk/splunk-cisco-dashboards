@@ -29,6 +29,20 @@ const expectBounded = (id, limit) => {
   );
 };
 
+const expectAggregateSafe = (id) => {
+  const block = stanza(id);
+  assert.match(
+    block,
+    /\|\s*(?:stats|tstats)\b/,
+    id + " must retain an explicit aggregate grain",
+  );
+  assert.doesNotMatch(
+    block,
+    /\|\s*sort\b/,
+    id + " must not globally sort an aggregated result",
+  );
+};
+
 assert.doesNotMatch(
   searchbaseConf,
   /(?:_?latencyS)\*1000/,
@@ -38,7 +52,7 @@ assert.match(
   stanza("overview_inter_site_latency"),
   /^drilldown_stanza_id = it_critical_systems_ds_site_health$/m,
 );
-expectBounded("overview_link_state_drilldown", 25);
+expectAggregateSafe("overview_link_state_drilldown");
 
 for (const id of [
   "secure_networking_sgt_by_site",
@@ -61,9 +75,9 @@ assert.match(
   stanza("secure_networking_sgt_site_activity_trend"),
   /by location_context limit=8 useother=true/,
 );
-expectBounded("secure_networking_sgt_by_site", 250);
-expectBounded("secure_networking_sgt_distribution_by_site_device", 500);
-expectBounded("secure_networking_zta_radius_node_health_by_site", 250);
+expectAggregateSafe("secure_networking_sgt_by_site");
+expectAggregateSafe("secure_networking_sgt_distribution_by_site_device");
+expectAggregateSafe("secure_networking_zta_radius_node_health_by_site");
 
 const identityBySource = stanza(
   "secure_networking_zta_user_activity_cross_source",
@@ -75,7 +89,7 @@ assert.match(
 assert.match(identityBySource, /"SGT: "\.SourceSecurityGroup/);
 assert.match(identityBySource, /"Identity \/ Security Context"/);
 assert.doesNotMatch(identityBySource, /\blayers_seen\b|\bfail_layers\b/);
-expectBounded("secure_networking_zta_user_activity_cross_source", 500);
+expectAggregateSafe("secure_networking_zta_user_activity_cross_source");
 assert.match(
   stanza("secure_networking_zta_user_activity_source_trend"),
   /^drilldown_stanza_id = secure_networking_zta_user_activity_cross_source$/m,
@@ -93,7 +107,7 @@ assert.doesNotMatch(
   ztnaDetail,
   /"Policy Ruleset"|"Enforced By"|"Posture"|\bas Posture\b/,
 );
-expectBounded("secure_networking_zta_ztna_blocked_access_reasons", 250);
+expectAggregateSafe("secure_networking_zta_ztna_blocked_access_reasons");
 
 const bgpDetail = stanza(
   "secure_networking_thousandeyes_bgp_path_change_detail",
@@ -102,13 +116,13 @@ assert.match(bgpDetail, /^search = \| tstats /m);
 assert.match(bgpDetail, /"Test ID"/);
 assert.match(bgpDetail, /"ThousandEyes Link"/);
 assert.doesNotMatch(bgpDetail, /\bAgent\b|\bTarget\b/);
-expectBounded("secure_networking_thousandeyes_bgp_path_change_detail", 100);
+expectAggregateSafe("secure_networking_thousandeyes_bgp_path_change_detail");
 
 const httpDetail = stanza("secure_networking_thousandeyes_http_trace_log");
 assert.match(httpDetail, /"Metric Coverage"/);
 assert.match(httpDetail, /"Not reported"/);
 assert.match(httpDetail, /Status=case\(/);
-expectBounded("secure_networking_thousandeyes_http_trace_log", 250);
+expectAggregateSafe("secure_networking_thousandeyes_http_trace_log");
 
 assert.match(
   stanza("secure_networking_site_inventory_rollup"),
@@ -123,14 +137,14 @@ const iseNodes = stanza("security_resilience_ise_node_inventory");
 assert.match(iseNodes, /\\\.samples\$/);
 assert.match(iseNodes, /Status=case\(/);
 assert.match(iseNodes, /"Telemetry Coverage"/);
-expectBounded("security_resilience_ise_node_inventory", 100);
+expectAggregateSafe("security_resilience_ise_node_inventory");
 
 assert.match(
   stanza("executive_dashboard_firewall_blocked_with_baseline"),
   /by _time span=1h,/,
 );
+expectAggregateSafe("executive_dashboard_firewall_blocked_with_baseline_drilldown");
 for (const id of [
-  "executive_dashboard_firewall_blocked_with_baseline_drilldown",
   "secure_networking_fmc_blocked_connection_detail",
   "secure_networking_sse_security_event_detail",
 ]) {

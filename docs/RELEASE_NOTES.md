@@ -2,6 +2,18 @@
 
 ## 1.0.36
 
+- Secure Networking catalogue searches now keep explicit aggregate grains
+  without global post-aggregation sorts, preserving complete grouped results
+  while satisfying the repository's SPL scalability policy.
+- Insights Workspace detailed sparklines now retain enough plot height for
+  honest trend variation, extrema labels, and timestamps instead of collapsing
+  into a horizontal line. Add Search drawers also open with their catalogue
+  filters visible, and custom dark-mode controls retain readable component
+  colors by using a low-specificity browser-style reset.
+- All 16 generated Secure Networking Dashboard Studio stories now reuse the
+  exact approved navigation assets for their pillar headers: Fingerprint,
+  NetworkDevices, Globe, ArrowsDoubleLeftRight, and RobotAgent. This removes
+  the visual mismatch between the app menu and the native Studio dashboards.
 - Insights Workspace now begins its Figma-led Cisco shared-design-language
   refresh with SUI glass status cards, restrained SpotLight depth, native
   RadioBar and Select view controls, and token-driven map overlays. The 1CD

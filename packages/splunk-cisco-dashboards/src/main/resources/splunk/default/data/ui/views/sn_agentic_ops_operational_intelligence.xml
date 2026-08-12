@@ -60,7 +60,7 @@
             "title": "Operational Intelligence",
             "options": {
                 "preserveAspectRatio": true,
-                "src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/agentic-ops.svg"
+                "src": "/static/app/splunk-cisco-dashboards/images/nav-icons/RobotAgent.svg"
             }
         },
         "viz_header": {

@@ -1,6 +1,10 @@
 # @splunk/splunk-cisco-dashboards
 
-React-based Splunk app that ships four dashboards for Cisco data:
+Splunk app for Cisco data that combines React workspaces with native
+Dashboard Studio views. The main React entry points cover Insights,
+health monitoring, topology, searchbase authoring, operations, guidance,
+and dashboard management; the packaged Studio views cover the secure
+networking pillars and workplace scenarios.
 
 ## Runtime prerequisites
 
@@ -8,20 +12,10 @@ React-based Splunk app that ships four dashboards for Cisco data:
   for the current and retained sourcetype coverage used by the packaged
   searches and accelerated data-model constraints.
 
-| View      | Purpose                                                                 | Stack                          |
-| --------- | ----------------------------------------------------------------------- | ------------------------------ |
-| Overview  | Executive Control Center — branded title/logo, three-section layout, regional map | TypeScript, Tailwind, Leaflet, Recharts, Motion |
-| Devices   | Inventory + per-device status badges (filterable)                       | `@splunk/react-ui`             |
-| Network   | Aggregate bandwidth time-series + per-device CPU bars                   | `@splunk/react-ui`             |
-| Security  | Severity KPIs, time-window selector, alert timeline                     | `@splunk/react-ui`             |
-
-> The Overview dashboard is a faithful port of the design in
-> `reference_design/splunk-executive-florida-dashboard/` (Vite + React 19 +
-> Tailwind v4 + react-leaflet v5 + recharts v3). It has been adapted to
-> the Splunk app build pipeline: React 19, Tailwind v3, react-leaflet v4,
-> recharts v2 (the latter two stay on their react-18-peer majors to avoid
-> breaking-API rewrites; they work fine on React 19 with peer warnings).
-> Visual output is identical.
+The Insights Workspace uses the shared components in
+`common/components/workspace/`, including KPI tiles, workspace dialogs,
+signal rails, and the customer topology map. Search metadata remains
+centralized in `default/searchbase.conf`.
 
 ## Branding (customer name + logo)
 
@@ -42,10 +36,9 @@ To brand a deployment, use the header editor to upload a logo; the override
 is stored in the browser as a data URI. Title can still be set globally via
 `customer_name`.
 
-Each view is a Simple XML dashboard whose only panel is an `<html>` block
-containing `<div id="scan-root">`. A small RequireJS bootstrap (in
-`appserver/static/<view>_bootstrap.js`) loads the matching React bundle
-from `appserver/static/pages/<view>.js`, which mounts into `#scan-root`.
+Each React view is mounted from a Simple XML shell through a RequireJS
+bootstrap in `appserver/static/`. Native Dashboard Studio definitions are
+packaged alongside those shells under `default/data/ui/views/`.
 
 One mount helper is in active use:
 
@@ -79,9 +72,9 @@ packages/splunk-cisco-dashboards/
         ├── webapp/
         │   ├── common/
         │   │   ├── components/
-        │   │   │   ├── florida/  # DashboardSection, MetricItem, Sparkline, CustomerTopologyMap
-        │   │   │   └── *.jsx     # @splunk/react-ui based shared cards
-        │   │   ├── hooks/        # useSplunkSearch
+        │   │   │   ├── workspace/ # Workspace tiles, dialogs, signal rail, and topology map
+        │   │   │   └── */         # Other shared SUI and topology components
+        │   │   ├── hooks/        # Shared search, export, and workspace hooks
         │   │   ├── lib/          # cn() and other utilities
         │   │   ├── services/     # splunkSearchService (SPL allow-list + mock)
         │   │   ├── styles/       # tailwind.css (scoped)
@@ -89,10 +82,16 @@ packages/splunk-cisco-dashboards/
         │   │   ├── render.jsx    # @splunk/themes mount helper
         │   │   └── render-raw.tsx# bare mount helper (Tailwind dashboards)
         │   └── pages/
-        │       ├── overview/{index,render}.tsx   # Florida Executive design
-        │       ├── devices/{index,render}.jsx
-        │       ├── network/{index,render}.jsx
-        │       └── security/{index,render}.jsx
+        │       ├── executive_insights/
+        │       ├── health_monitoring/
+        │       ├── topology_canvas_v1/
+        │       ├── network_diagram/
+        │       ├── searchbase_canvas/
+        │       ├── m365_activity_monitoring/
+        │       ├── macro_index_tuning/
+        │       ├── secure_operations_glass/
+        │       ├── user_guide/
+        │       └── dashboardbuilder/
         └── resources/
             └── splunk/
                 ├── default/

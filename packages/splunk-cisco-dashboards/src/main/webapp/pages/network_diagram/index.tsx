@@ -57,7 +57,7 @@ import {
     type NetworkDiagramCanvasHandle,
 } from '@/common/components/diagram/NetworkDiagramCanvas';
 import { useTheme } from '@/common/hooks/useTheme';
-import { ThemeToggle } from '@/common/components/florida/ThemeToggle';
+import { ThemeToggle } from '@/common/components/workspace/ThemeToggle';
 import { AnimationsEnabledProvider } from '@/common/contexts/AnimationsEnabledContext';
 import { IpAddressVisibilityProvider } from '@/common/contexts/IpAddressVisibilityContext';
 import { useExportPage } from '@/common/hooks/useExportPage';

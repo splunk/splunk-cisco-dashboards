@@ -50,33 +50,33 @@ import {
     rectSortingStrategy,
     sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
-import { BarBreakdownTile } from '@/common/components/florida/BarBreakdownTile';
+import { BarBreakdownTile } from '@/common/components/workspace/BarBreakdownTile';
 import {
     resolveBaselineField,
     resolveDeltaField,
     resolveOverlayLabel,
     resolveSparkDataField,
     resolveValueField,
-} from '@/common/components/florida/canvasVizOptions';
+} from '@/common/components/workspace/canvasVizOptions';
 import {
     isFillerGaugeViz,
     isMarkerGaugeViz,
     isPieViz,
     isSingleValueRadialViz,
-} from '@/common/components/florida/canvasVizPredicates';
-import { FillerGaugeTile } from '@/common/components/florida/FillerGaugeTile';
-import { MarkerGaugeTile } from '@/common/components/florida/MarkerGaugeTile';
-import { MetricItem } from '@/common/components/florida/MetricItem';
-import { PieTile } from '@/common/components/florida/PieTile';
-import { SingleValueRadialTile } from '@/common/components/florida/SingleValueRadialTile';
-import { SortableMetricCard } from '@/common/components/florida/SortableMetricCard';
-import { TableTile } from '@/common/components/florida/TableTile';
-import { InfoTooltip } from '@/common/components/florida/InfoTooltip';
-import { SplPreviewTooltip } from '@/common/components/florida/SplPreviewTooltip';
+} from '@/common/components/workspace/canvasVizPredicates';
+import { FillerGaugeTile } from '@/common/components/workspace/FillerGaugeTile';
+import { MarkerGaugeTile } from '@/common/components/workspace/MarkerGaugeTile';
+import { MetricItem } from '@/common/components/workspace/MetricItem';
+import { PieTile } from '@/common/components/workspace/PieTile';
+import { SingleValueRadialTile } from '@/common/components/workspace/SingleValueRadialTile';
+import { SortableMetricCard } from '@/common/components/workspace/SortableMetricCard';
+import { TableTile } from '@/common/components/workspace/TableTile';
+import { InfoTooltip } from '@/common/components/workspace/InfoTooltip';
+import { SplPreviewTooltip } from '@/common/components/workspace/SplPreviewTooltip';
 import {
     normalizeDataValuesDisplay,
     sparklineVizTypeFromSplunkViz,
-} from '@/common/components/florida/Sparkline';
+} from '@/common/components/workspace/Sparkline';
 import { useTheme } from '@/common/hooks/useTheme';
 import { C3_ATMOSPHERE_BACKGROUND_STYLE } from '@/common/theme/c3Atmosphere';
 import {

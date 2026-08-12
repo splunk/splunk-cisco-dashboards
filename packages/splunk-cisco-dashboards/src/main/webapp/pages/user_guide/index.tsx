@@ -23,7 +23,7 @@ import {
     Wifi,
 } from '@/common/icons/SuiIcon';
 import { APP_VERSION_LABEL } from "@/common/lib/buildInfo";
-import { ThemeToggle } from '@/common/components/florida/ThemeToggle';
+import { ThemeToggle } from '@/common/components/workspace/ThemeToggle';
 import { useTheme } from '@/common/hooks/useTheme';
 
 import "./user-guide.css";

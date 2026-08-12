@@ -47,7 +47,7 @@ const drilldownModalPath = path.resolve(
 const drilldownModal = fs.readFileSync(drilldownModalPath, "utf8");
 const drilldownGuidancePath = path.resolve(
   __dirname,
-  "../src/main/webapp/common/components/florida/SearchbaseDrilldownGuidance.tsx",
+  "../src/main/webapp/common/components/workspace/SearchbaseDrilldownGuidance.tsx",
 );
 const drilldownGuidance = fs.readFileSync(drilldownGuidancePath, "utf8");
 const insightKpiButtonPath = path.resolve(

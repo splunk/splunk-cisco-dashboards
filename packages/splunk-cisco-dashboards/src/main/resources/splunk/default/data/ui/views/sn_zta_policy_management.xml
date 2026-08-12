@@ -60,7 +60,7 @@
             "title": "Policy Management",
             "options": {
                 "preserveAspectRatio": true,
-                "src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/zero-trust-access.svg"
+                "src": "/static/app/splunk-cisco-dashboards/images/nav-icons/Fingerprint.svg"
             }
         },
         "viz_header": {

@@ -509,17 +509,14 @@ export const MetricItem: React.FC<MetricItemProps> = ({
             })()}
 
             {vizType !== 'singlevalue' ? (
-                // Tile sparkline canvas. We let the chart container *fill
-                // remaining vertical space* (`flex-1`) up to a `max-h-28`
-                // (112px, the design-target where the peak-label bubble
-                // and trend line both read cleanly) and down to a
-                // `min-h-[72px]` floor that still keeps the bubble label
-                // and the bar/line legible. The earlier fixed
-                // `h-28 flex-shrink-0` could not compress when the
-                // browser was shrunk vertically, so the chart's static
-                // 112px would push down past the tile's slot in the
-                // section's flex-column and bleed onto the "Open IT
-                // Health" footer link.
+                // Tile sparkline canvas. Detailed charts reserve vertical
+                // space for their min/max bubbles and timestamp footer, so
+                // they must retain the 112px design-target height. Letting
+                // that mode collapse to the compact 72px floor leaves less
+                // room than its 28px top + bottom Recharts margins and
+                // projects every value onto the same horizontal line.
+                // Compact charts keep the flexible 72–112px contract so a
+                // short viewport can still compress safely.
                 //
                 // `overflow-hidden` on the chart container is the
                 // local containment for that bleed: any chart content
@@ -544,7 +541,12 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                     // bubble (Alan flagged in the 2026-05-14
                     // review).
                     data-tile-control="true"
-                    className="flex-1 min-h-[72px] max-h-28 mt-2 pt-1 opacity-[0.92] hover:opacity-100 transition-opacity overflow-hidden"
+                    className={cn(
+                        'mt-2 overflow-hidden pt-1 opacity-[0.92] transition-opacity hover:opacity-100',
+                        sparklineDensity === 'detailed'
+                            ? 'h-28 min-h-28 flex-none'
+                            : 'flex-1 min-h-[72px] max-h-28'
+                    )}
                 >
                     {/* Sparkline is intentionally NOT wired to the
                         drilldown click. The ExternalLink icon next to

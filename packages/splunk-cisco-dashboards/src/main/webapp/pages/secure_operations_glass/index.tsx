@@ -66,7 +66,7 @@ import {
 } from 'recharts';
 
 import type { SearchbaseRecord } from '@/common/services/searchbaseCatalogue';
-import { ThemeToggle } from '@/common/components/florida/ThemeToggle';
+import { ThemeToggle } from '@/common/components/workspace/ThemeToggle';
 import { useTheme } from '@/common/hooks/useTheme';
 import { splunkSearchAppUrl } from '@/common/lib/splunkSearchUrl';
 import { C3_SERIES_PALETTE } from '@/common/theme/c3VisualizationPalette';
