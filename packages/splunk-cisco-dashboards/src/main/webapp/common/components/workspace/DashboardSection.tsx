@@ -15,6 +15,7 @@ import {
   Plus,
 } from "@/common/icons/SuiIcon";
 import { cn } from "@/common/lib/utils";
+import { TileActionEnvironmentContext } from "./TileActionMenu";
 
 interface TileCountControlConfig {
   value: number;
@@ -83,6 +84,7 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
   onToggleFocus,
 }) => {
   const actionToggleRef = React.useRef<HTMLAnchorElement | HTMLButtonElement>(null);
+  const [tileActionAnnouncement, setTileActionAnnouncement] = React.useState("");
   const runMenuAction = (action: () => void) => () => {
     action();
     window.requestAnimationFrame(() => actionToggleRef.current?.focus());
@@ -259,7 +261,19 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
           wrapTiles ? "gap-2" : "md:flex-nowrap",
         )}
       >
-        {children}
+        <TileActionEnvironmentContext.Provider
+          value={{
+            announce: setTileActionAnnouncement,
+            returnFocus: () => actionToggleRef.current?.focus(),
+          }}
+        >
+          {children}
+        </TileActionEnvironmentContext.Provider>
+        <ScreenReaderContent>
+          <span aria-live="polite" role="status">
+            {tileActionAnnouncement}
+          </span>
+        </ScreenReaderContent>
       </div>
     </CollapsiblePanel>
   );

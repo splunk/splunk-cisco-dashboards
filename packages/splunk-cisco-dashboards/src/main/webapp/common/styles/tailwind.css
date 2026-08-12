@@ -3,21 +3,19 @@
  *
  * Tailwind's Preflight is disabled in tailwind.config.js to avoid
  * stomping on Splunk Web's base styles; the limited resets we need
- * are reintroduced below, scoped to `#scan-root` so they only apply
- * inside our mount point.
+ * are reintroduced below, scoped to our mount point and the Configure Tile
+ * Drawer's portal root.
  *
- * Utility classes are also scoped via the `important: '#scan-root'`
- * selector in tailwind.config.js, which prefixes every generated
- * utility with `#scan-root` (e.g. `#scan-root .bg-white`). This keeps
- * Splunk Web's surrounding chrome unaffected.
+ * Utility classes use the same two narrowly scoped roots in
+ * tailwind.config.js. This keeps Splunk Web's surrounding chrome unaffected.
  */
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-#scan-root,
-#scan-root * {
+:is(#scan-root, #configure-tile-drawer),
+:is(#scan-root, #configure-tile-drawer) * {
   box-sizing: border-box;
 }
 
@@ -34,7 +32,15 @@
   font-size: var(--sui-font-size-default);
 }
 
-#scan-root :where(h1, h2, h3, h4, h5, h6) {
+#configure-tile-drawer {
+  color: var(--sui-content-default);
+  font-family: var(--sui-font-family);
+  font-size: var(--sui-font-size-default);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:is(#scan-root, #configure-tile-drawer) :where(h1, h2, h3, h4, h5, h6) {
   color: var(--sui-content-active);
   font-family: var(--sui-font-family-title);
 }
@@ -42,7 +48,7 @@
 /* Native controls still use Tailwind for layout. SUI components supply their
  * own focus treatment; this tokenized fallback protects custom controls that
  * intentionally suppress the browser outline. */
-#scan-root
+:is(#scan-root, #configure-tile-drawer)
   :where(button, a[href], input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--sui-focus-color);
   outline-offset: 2px;
@@ -66,12 +72,12 @@
 #scan-root [data-section-density="compact"] .min-h-\[118px\] {
   min-height: 92px;
 }
-#scan-root button:has(> svg:only-child) {
+:is(#scan-root, #configure-tile-drawer) button:has(> svg:only-child) {
   min-height: 28px;
   min-width: 28px;
 }
 
-#scan-root :where(button, input, select, textarea):disabled {
+:is(#scan-root, #configure-tile-drawer) :where(button, input, select, textarea):disabled {
   cursor: not-allowed;
 }
 
@@ -262,17 +268,17 @@ body.scd-overview-active .panel-body,
   }
 }
 
-#scan-root h1,
-#scan-root h2,
-#scan-root h3,
-#scan-root h4,
-#scan-root h5,
-#scan-root h6,
-#scan-root p {
+:is(#scan-root, #configure-tile-drawer) h1,
+:is(#scan-root, #configure-tile-drawer) h2,
+:is(#scan-root, #configure-tile-drawer) h3,
+:is(#scan-root, #configure-tile-drawer) h4,
+:is(#scan-root, #configure-tile-drawer) h5,
+:is(#scan-root, #configure-tile-drawer) h6,
+:is(#scan-root, #configure-tile-drawer) p {
   margin: 0;
 }
 
-#scan-root
+:is(#scan-root, #configure-tile-drawer)
   :where(
     button:not([data-test="button"]):not([data-test="select"]):not(
         [data-test="multiselect"]
@@ -289,22 +295,22 @@ body.scd-overview-active .panel-body,
   color: inherit;
 }
 
-#scan-root input {
+:is(#scan-root, #configure-tile-drawer) input {
   font-family: inherit;
 }
 
-#scan-root select,
-#scan-root textarea {
+:is(#scan-root, #configure-tile-drawer) select,
+:is(#scan-root, #configure-tile-drawer) textarea {
   font-family: inherit;
 }
 
-#scan-root a {
+:is(#scan-root, #configure-tile-drawer) a {
   text-decoration: none;
   color: inherit;
 }
 
-#scan-root ul,
-#scan-root ol {
+:is(#scan-root, #configure-tile-drawer) ul,
+:is(#scan-root, #configure-tile-drawer) ol {
   margin: 0;
   padding: 0;
   list-style: none;

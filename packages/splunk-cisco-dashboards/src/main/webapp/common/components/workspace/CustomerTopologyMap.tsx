@@ -4818,7 +4818,7 @@ const MapFrame: React.FC<MapFrameProps> = ({ topology, autoFitSites }) => {
     topology.map.minZoom,
   );
   const [[minLat, minLng], [maxLat, maxLng]] = effectiveBounds;
-  const autoFitAppliedRef = useRef(false);
+  const lastAutoFitSitesKeyRef = useRef<string | null>(null);
 
   // Track the last view we *programmatically* set so subsequent renders
   // that re-derive the same center/zoom don't fight the user's manual
@@ -4905,16 +4905,22 @@ const MapFrame: React.FC<MapFrameProps> = ({ topology, autoFitSites }) => {
   }, [map, minLat, minLng, maxLat, maxLng]);
 
   useEffect(() => {
-    if (autoFitAppliedRef.current) return;
     if (!autoFitSites || autoFitSites.length === 0) return;
     const usable = validTopologySites(autoFitSites);
     if (usable.length === 0) return;
+    // Fit once per coordinate set so asynchronously arriving sites are included
+    // without refitting on ordinary renders or fighting subsequent user navigation.
+    const sitesKey = usable
+      .map((site) => `${site.id}:${site.lat}:${site.lng}`)
+      .sort()
+      .join("|");
+    if (lastAutoFitSitesKeyRef.current === sitesKey) return;
     const bounds = L.latLngBounds(
       usable.map((site) => [site.lat, site.lng] as [number, number]),
     );
     if (!bounds.isValid()) return;
     map.fitBounds(bounds, { padding: [48, 48], animate: false, maxZoom: 9 });
-    autoFitAppliedRef.current = true;
+    lastAutoFitSitesKeyRef.current = sitesKey;
   }, [autoFitSites, map]);
 
   return null;

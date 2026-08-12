@@ -35,10 +35,11 @@
  */
 
 import React from 'react';
-import { GripVertical, X } from '@/common/icons/SuiIcon';
+import { GripVertical } from '@/common/icons/SuiIcon';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/common/lib/utils';
+import { TileRemovalActionContext } from './TileActionMenu';
 
 interface SortableMetricCardProps {
     /**
@@ -55,10 +56,9 @@ interface SortableMetricCardProps {
     /** Optional layout override from the containing section. */
     className?: string;
     tileAction?: {
+        kind: 'hide' | 'remove';
         label: string;
-        title: string;
         onClick: () => void;
-        tone?: 'hide' | 'remove';
     };
 }
 
@@ -175,39 +175,20 @@ export const SortableMetricCard: React.FC<SortableMetricCardProps> = ({
                 >
                     <GripVertical className="w-3 h-3" />
                 </button>
-                {tileAction && (
-                    <button
-                        type="button"
-                        onClick={tileAction.onClick}
-                        aria-label={tileAction.label}
-                        title={tileAction.title}
-                        data-tile-control="true"
-                        className={cn(
-                            'absolute left-5 top-0.5',
-                            'flex h-4 w-4 items-center justify-center rounded',
-                            'sui-bg-section backdrop-blur-[2px]',
-                            'shadow-sm ring-1',
-                            'pointer-events-none opacity-0 transition-opacity duration-150',
-                            isDragging
-                                ? 'opacity-0 pointer-events-none'
-                                : 'group-hover/tile-actions:pointer-events-auto group-hover/tile-actions:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100',
-                            tileAction.tone === 'remove'
-                                ? [
-                                      'sui-color-negative sui-hover-color-negative',
-                                      'sui-focus-ring',
-                                  ]
-                                : [
-                                      'sui-color-default  sui-hover-color-active',
-                                      'sui-focus-ring',
-                                  ],
-                            'focus:outline-none focus-visible:ring-1 sui-focus-visible-ring'
-                        )}
-                    >
-                        <X className="w-3 h-3" />
-                    </button>
-                )}
             </div>
-            {children}
+            <TileRemovalActionContext.Provider
+                value={
+                    tileAction
+                        ? {
+                              kind: tileAction.kind,
+                              label: tileAction.label,
+                              onClick: tileAction.onClick,
+                          }
+                        : null
+                }
+            >
+                {children}
+            </TileRemovalActionContext.Provider>
         </div>
     );
 };
