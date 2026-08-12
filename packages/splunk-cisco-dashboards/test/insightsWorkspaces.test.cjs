@@ -303,20 +303,24 @@ assert.ok(hybridMeshTileIds, "Hybrid Mesh Firewalling must declare tile order");
 const hybridMeshVisibleCount = Number(
   hybridMeshLayoutConf.match(/^visible_count = (\d+)$/m)?.[1],
 );
-const paloTrendTileIds = [
+const requiredHybridMeshTileIds = [
   "secure_networking_sgt_palo_alto_policy_effectiveness_trend",
-  "secure_networking_sgt_palo_alto_traffic_trend",
+  "hmf_threat_blocks",
 ];
 const paloDetailTileIds = [
   "secure_networking_sgt_palo_alto_policy_effectiveness",
   "secure_networking_sgt_palo_alto_traffic_detail",
 ];
-for (const tileId of paloTrendTileIds) {
+for (const tileId of requiredHybridMeshTileIds) {
   assert.ok(
     hybridMeshTileIds.includes(tileId),
     `${tileId} must be a shared Hybrid Mesh Firewalling tile`,
   );
 }
+assert.ok(
+  !hybridMeshTileIds.includes("secure_networking_sgt_palo_alto_traffic_trend"),
+  "Palo Alto Traffic by SGT must remain available in Searchbase without shipping in the shared workspace layout",
+);
 for (const tileId of paloDetailTileIds) {
   assert.ok(
     !hybridMeshTileIds.includes(tileId),
@@ -331,8 +335,8 @@ assert.match(
 assert.ok(
   hybridMeshTileIds
     .slice(0, hybridMeshVisibleCount)
-    .includes("secure_networking_sgt_palo_alto_traffic_trend"),
-  "Palo Alto Traffic by SGT must be one of the three visible factory tiles",
+    .includes("hmf_threat_blocks"),
+  "Threat blocks by category must be one of the three visible factory tiles",
 );
 
 const searchbaseConf = fs.readFileSync(

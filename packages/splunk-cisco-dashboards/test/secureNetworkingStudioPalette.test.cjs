@@ -22,6 +22,13 @@ const EXPECTED_STUDIO_FILES = [
   "sn_zta_ravpn_sessions_and_posture.xml",
   "sn_zta_user_activity_monitoring.xml",
 ].sort();
+const PILLAR_STUDIO_FILES = new Set([
+  "sn_agentic_ops_operational_intelligence.xml",
+  "sn_hmf_enforcement.xml",
+  "sn_secure_infrastructure_posture.xml",
+  "sn_segmentation_readiness.xml",
+  "sn_zta_posture.xml",
+]);
 
 const TEMPLATED_MENU_FILES = [
   "sn_agentic_ops_operational_intelligence.xml",
@@ -99,6 +106,14 @@ const NAV_PATH = path.resolve(
 const TEMPLATES_CONF_PATH = path.resolve(
   __dirname,
   "../src/main/resources/splunk/default/templates.conf",
+);
+const C3_BACKGROUND_PATH = path.resolve(
+  __dirname,
+  "../src/main/resources/splunk/appserver/static/c3-atmosphere.svg",
+);
+const PILLAR_BACKGROUND_PATH = path.resolve(
+  __dirname,
+  "../src/main/resources/splunk/appserver/static/page-spotlight-bottom-glow-low-intensity.svg",
 );
 const BACKGROUND_BUTTON_PATH = path.resolve(
   __dirname,
@@ -197,13 +212,19 @@ const normalizeDisplayLabel = (value) =>
     .replace(/\\([^A-Za-z0-9\s])/g, "$1");
 
 const templatesSource = fs.readFileSync(TEMPLATES_CONF_PATH, "utf8");
-const c3BackgroundMatch = templatesSource.match(
-  /\[background:\/\/c3-atmosphere\]\ndata = ([^\n]+)\nname = Cisco Cloud Control Atmosphere/,
+const c3BackgroundSvg = fs.readFileSync(C3_BACKGROUND_PATH, "utf8").trim();
+const c3BackgroundData = `data:image/svg+xml;base64,${Buffer.from(c3BackgroundSvg).toString("base64")}`;
+const pillarBackgroundSvg = fs.readFileSync(PILLAR_BACKGROUND_PATH, "utf8").trim();
+const pillarBackgroundData = `data:image/svg+xml;base64,${Buffer.from(pillarBackgroundSvg).toString("base64")}`;
+assert.match(
+  templatesSource,
+  new RegExp(
+    `\\[background:\\/\\/page-spotlight-bottom-glow-low-intensity\\]\\ndata = ${pillarBackgroundData.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\nname = Page Spotlight Bottom Glow - Low Intensity`,
+  ),
+  "templates.conf must provide the factory page spotlight background",
 );
-assert.ok(c3BackgroundMatch, "templates.conf must provide the factory C3 atmosphere background");
-const c3BackgroundData = c3BackgroundMatch[1];
 assert.match(c3BackgroundData, /^data:image\/svg\+xml;base64,/);
-const c3BackgroundSvg = Buffer.from(c3BackgroundData.split(",")[1], "base64").toString("utf8");
+assert.match(pillarBackgroundData, /^data:image\/svg\+xml;base64,/);
 const c3SurfaceCss = fs.readFileSync(C3_SURFACE_CSS_PATH, "utf8");
 
 assert.match(c3BackgroundSvg, /<filter id="c3-blur"/);
@@ -222,14 +243,18 @@ assert.doesNotMatch(
 for (const canonicalColor of ["#0b1118", "#30aacc", "#0c1a56", "#2c93e1", "#80148c"]) {
   assert.match(c3BackgroundSvg.toLowerCase(), new RegExp(canonicalColor));
 }
+assert.match(pillarBackgroundSvg, /viewBox="0 0 2000 1288"/);
+assert.match(pillarBackgroundSvg, /<feGaussianBlur[^>]*stdDeviation="140"/);
+assert.match(pillarBackgroundSvg.toLowerCase(), /#ff9000/);
+assert.match(pillarBackgroundSvg.toLowerCase(), /#ff007f/);
 assert.match(c3SurfaceCss, /background-color:\s*#0b1118/);
 assert.match(c3SurfaceCss, /c3-atmosphere\.svg/);
 
 const backgroundButtonSource = fs.readFileSync(BACKGROUND_BUTTON_PATH, "utf8");
 assert.match(
   backgroundButtonSource,
-  /useState\(C3_DEFAULT_BACKGROUND_NAME\)/,
-  "Dashboard Manager must select the C3 atmosphere background by default",
+  /useState\(FACTORY_DEFAULT_BACKGROUND_NAME\)/,
+  "Dashboard Manager must select the page spotlight background by default",
 );
 assert.match(
   backgroundButtonSource,
@@ -240,8 +265,8 @@ assert.match(
 const dashboardEditorSource = fs.readFileSync(DASHBOARD_EDITOR_PATH, "utf8");
 assert.match(
   dashboardEditorSource,
-  /src: C3_DEFAULT_BACKGROUND_DATA/,
-  "new Dashboard Manager dashboards must use the C3 atmosphere background",
+  /src: FACTORY_DEFAULT_BACKGROUND_DATA/,
+  "new Dashboard Manager dashboards must use the page spotlight background",
 );
 
 const actualStudioFiles = fs
@@ -295,10 +320,20 @@ for (const { fileName, xml, definition } of dashboardViews) {
     HOME_DARK_PALETTE.canvas,
     `${fileName} must use the Insights Workspace canvas color`,
   );
+  assert.equal(
+    layout.options.height,
+    1128,
+    `${fileName} canvas height must match its complete card rows`,
+  );
   assert.deepEqual(
     layout.options.backgroundImage,
-    { sizeType: "contain", src: c3BackgroundData, x: 0, y: 0 },
-    `${fileName} must use the factory C3 atmosphere background`,
+    {
+      sizeType: "contain",
+      src: PILLAR_STUDIO_FILES.has(fileName) ? pillarBackgroundData : c3BackgroundData,
+      x: 0,
+      y: 0,
+    },
+    `${fileName} must use its approved pillar or C3 background`,
   );
   assert.equal(
     header?.fillColor,
@@ -614,6 +649,72 @@ for (const { fileName, xml, definition } of dashboardViews) {
   assert.ok(
     colors.includes(HOME_DARK_PALETTE.accent) || colors.includes("#049fd9"),
     `${fileName} must use the C3 information blue or chart cyan`,
+  );
+}
+
+const segmentationReadiness = dashboardViews.find(
+  ({ fileName }) => fileName === "sn_segmentation_readiness.xml",
+).definition;
+const segmentationOperations = dashboardViews.find(
+  ({ fileName }) => fileName === "sn_segmentation_operations.xml",
+).definition;
+const orderedPrimaryRefs = (definition) =>
+  Object.values(definition.dataSources).map(({ options }) => options.ref);
+const orderedCardTitles = (definition) =>
+  Object.keys(definition.dataSources).map((_, index) =>
+    normalizeDisplayLabel(
+      definition.visualizations[
+        `viz_card_${String(index + 1).padStart(2, "0")}_title`
+      ].options.markdown.replace(/^\*\*|\*\*$/g, ""),
+    ),
+  );
+
+assert.deepEqual(orderedPrimaryRefs(segmentationReadiness), [
+  "secure_networking_trustsec_hardware_inventory_trend",
+  "secure_networking_sgt_total_assignments_count",
+  "secure_networking_sgt_unique_count",
+  "secure_networking_segmentation_adoption_rate_trend",
+  "secure_networking_segmentation_zero_coverage_sites_trend",
+  "secure_networking_wired_port_segmentation_exceptions_trend",
+]);
+assert.deepEqual(orderedCardTitles(segmentationReadiness), [
+  "Hardware Readiness",
+  "Active SGT Assignments",
+  "Security Groups in Use",
+  "Segmentation Adoption Rate",
+  "Sites With Zero SGT Coverage",
+  "Wired-Port Segmentation Exceptions",
+]);
+assert.deepEqual(orderedPrimaryRefs(segmentationOperations), [
+  "secure_networking_sgt_site_activity_trend",
+  "secure_networking_sgt_device_activity_trend",
+  "secure_networking_sgt_binding_activity_trend",
+  "secure_networking_sgacl_enforcement_activity_trend",
+  "secure_networking_router_segmentation_feature_trend",
+  "secure_networking_sgt_fmc_blocks_by_sgt",
+]);
+assert.deepEqual(orderedCardTitles(segmentationOperations), [
+  "SGT Activity by Site",
+  "SGT Activity by Device",
+  "IP-SGT Binding Activity",
+  "SGACL Enforcement",
+  "Segmentation Feature Evidence",
+  "SGT-Enforced Blocks",
+]);
+
+for (const primaryRef of [
+  "secure_networking_segmentation_adoption_rate_trend",
+  "secure_networking_segmentation_zero_coverage_sites_trend",
+  "secure_networking_wired_port_segmentation_exceptions_trend",
+]) {
+  assert.equal(
+    dashboardViews.reduce(
+      (count, { definition }) =>
+        count + orderedPrimaryRefs(definition).filter((ref) => ref === primaryRef).length,
+      0,
+    ),
+    1,
+    `${primaryRef} must remain exclusive to Segmentation Readiness`,
   );
 }
 

@@ -193,7 +193,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Access%20Point%20Estate&target=Secure%20Networking%20-%20Site%20Inventory%20Rollup"
+                        "url": "/drilldown?origin=Access%20Point%20Estate&target=Secure%20Networking%20-%20Meraki%20Access%20Point%20Inventory%20Detail"
                     }
                 }
             ],

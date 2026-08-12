@@ -96,8 +96,8 @@ for (const block of searchbase.split(/(?=^\[)/m)) {
     }
 }
 
-assert.equal(thresholdEntries.length, 89, 'Every known threshold object must remain in the audit');
-assert.equal(new Set(thresholdEntries.map(({ id }) => id)).size, 89, 'Threshold audit IDs must be unique');
+assert.equal(thresholdEntries.length, 92, 'Every known threshold object must remain in the audit');
+assert.equal(new Set(thresholdEntries.map(({ id }) => id)).size, 92, 'Threshold audit IDs must be unique');
 
 for (const { id, thresholds } of thresholdEntries) {
     assert.equal(typeof thresholds.enabled, 'boolean', `${id} must declare an explicit enabled state`);

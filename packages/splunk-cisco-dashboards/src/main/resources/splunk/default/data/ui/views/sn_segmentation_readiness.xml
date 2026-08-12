@@ -92,7 +92,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**TrustSec Readiness**"
+                "markdown": "**Hardware Readiness**"
             }
         },
         "viz_card_01_metadata": {
@@ -196,7 +196,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=TrustSec%20Readiness&target=Secure%20Networking%20-%20TrustSec%20Hardware%20Readiness,Secure%20Networking%20-%20Segmentation%20Status%20Rollup"
+                        "url": "/drilldown?origin=Hardware%20Readiness&target=Secure%20Networking%20-%20TrustSec%20Hardware%20Readiness"
                     }
                 }
             ],
@@ -491,7 +491,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**IP\\-SGT Binding Activity**"
+                "markdown": "**Segmentation Adoption Rate**"
             }
         },
         "viz_card_04_metadata": {
@@ -517,7 +517,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks distinct IP prefixes bound to each SGT over time and retains the full binding inventory as drill\\-down detail\\."
+                "markdown": "Trends the percentage of Cisco ISE authentication activity carrying a non\\-default Security Group Tag across the selected time range\\."
             }
         },
         "viz_card_04_singlevalue": {
@@ -538,7 +538,7 @@
                 "trendDisplay": "percent",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
+                "sparklineValues": "> primary | seriesByName(\"AdoptionRate\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "trendValue": "> sparklineValues | delta(-2)"
@@ -586,7 +586,7 @@
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")"
+                "y": "> primary | seriesByName(\"AdoptionRate\")"
             }
         },
         "viz_card_04_drilldown_trigger": {
@@ -595,7 +595,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=IP-SGT%20Binding%20Activity&target=Secure%20Networking%20-%20SGT%20Binding%20Inventory,Secure%20Networking%20-%20IP-SGT%20Bindings%20by%20Security%20Group"
+                        "url": "/drilldown?origin=Segmentation%20Adoption%20Rate&target=Secure%20Networking%20-%20Segmentation%20Status%20Rollup,Secure%20Networking%20-%20SGT%20Distribution%20by%20Site%20and%20Device"
                     }
                 }
             ],
@@ -626,7 +626,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**SGACL Enforcement**"
+                "markdown": "**Sites With Zero SGT Coverage**"
             }
         },
         "viz_card_05_metadata": {
@@ -652,7 +652,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Hourly trend of TrustSec SGACL enforcement events from the Catalyst data model, split by permit/deny \\(and other\\) actions — the primary “is role\\-based policy doing work over time?” signal for scalable segmentation\\."
+                "markdown": "Counts ISE locations with authentication activity but no non\\-default SGT assignments in each time bucket\\."
             }
         },
         "viz_card_05_singlevalue": {
@@ -673,7 +673,7 @@
                 "trendDisplay": "percent",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
+                "sparklineValues": "> primary | seriesByName(\"ZeroCoverageSites\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "trendValue": "> sparklineValues | delta(-2)"
@@ -681,7 +681,7 @@
             "context": {
                 "trendColorEditorConfig": [
                     {
-                        "value": "#f7782f",
+                        "value": "#4cbf7f",
                         "to": -0.000001
                     },
                     {
@@ -690,7 +690,7 @@
                         "to": 0.000001
                     },
                     {
-                        "value": "#4cbf7f",
+                        "value": "#f7782f",
                         "from": 0.000001
                     }
                 ]
@@ -708,10 +708,10 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#4cbf7f",
-                    "#649ef5",
+                    "#fa5762",
                     "#f0c243",
-                    "#fa5762"
+                    "#649ef5",
+                    "#4cbf7f"
                 ],
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 3,
@@ -721,7 +721,7 @@
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")"
+                "y": "> primary | seriesByName(\"ZeroCoverageSites\")"
             }
         },
         "viz_card_05_drilldown_trigger": {
@@ -730,7 +730,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=SGACL%20Enforcement&target=Secure%20Networking%20-%20SGACL%20Deny%20Pairs%20by%20SGT,Secure%20Networking%20-%20SGT%20Policy%20Activity%20and%20SGACL%20Matrix%20Hits"
+                        "url": "/drilldown?origin=Sites%20With%20Zero%20SGT%20Coverage&target=Secure%20Networking%20-%20Segmentation%20Status%20Rollup,Secure%20Networking%20-%20SGT%20by%20Site"
                     }
                 }
             ],
@@ -761,7 +761,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**SGT\\-Enforced Blocks**"
+                "markdown": "**Wired\\-Port Segmentation Exceptions**"
             }
         },
         "viz_card_06_metadata": {
@@ -774,7 +774,7 @@
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
                 "customFontSize": 14,
-                "markdown": "Security  •  Scalable Network Segmentation"
+                "markdown": "Identity  •  Scalable Network Segmentation"
             }
         },
         "viz_card_06_description": {
@@ -787,7 +787,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Trend of FMC block decisions correlated with Security Group Tags, showing enforcement volume across the selected time window\\."
+                "markdown": "Trends wired access ports observing more than two distinct MAC addresses, a practical exception signal before broad segmentation enforcement\\."
             }
         },
         "viz_card_06_singlevalue": {
@@ -808,7 +808,7 @@
                 "trendDisplay": "percent",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"blocks_trend\")",
+                "sparklineValues": "> primary | seriesByName(\"ExceptionPorts\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "trendValue": "> sparklineValues | delta(-2)"
@@ -832,7 +832,7 @@
             }
         },
         "viz_card_06_trend": {
-            "type": "splunk.column",
+            "type": "splunk.area",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_06"
@@ -841,16 +841,22 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "right",
+                "legendDisplay": "off",
                 "seriesColors": [
+                    "#f0c243",
+                    "#fa5762",
+                    "#649ef5",
                     "#4cbf7f"
                 ],
+                "dataValuesDisplay": "minmax",
+                "lineWidth": 3,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "connect",
                 "showYMajorGridLines": true,
-                "stackMode": "unstacked",
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"blocks_trend\")"
+                "y": "> primary | seriesByName(\"ExceptionPorts\")"
             }
         },
         "viz_card_06_drilldown_trigger": {
@@ -859,7 +865,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=SGT-Enforced%20Blocks&target=Secure%20Networking%20-%20FMC%20Events%20Correlated%20by%20SGT"
+                        "url": "/drilldown?origin=Wired-Port%20Segmentation%20Exceptions&target=Secure%20Networking%20-%20Excessive%20Unique%20MAC%20per%20Wired%20Port"
                     }
                 }
             ],
@@ -908,9 +914,9 @@
             "type": "ds.searchbase"
         },
         "ds_story_04": {
-            "name": "Secure Networking - SGT Binding Activity Trend",
+            "name": "Secure Networking - Segmentation Adoption Rate Trend",
             "options": {
-                "ref": "secure_networking_sgt_binding_activity_trend",
+                "ref": "secure_networking_segmentation_adoption_rate_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$"
@@ -919,9 +925,9 @@
             "type": "ds.searchbase"
         },
         "ds_story_05": {
-            "name": "Secure Networking - SGACL Enforcement Activity Trend",
+            "name": "Secure Networking - Sites With Zero SGT Coverage Trend",
             "options": {
-                "ref": "secure_networking_sgacl_enforcement_activity_trend",
+                "ref": "secure_networking_segmentation_zero_coverage_sites_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$"
@@ -930,9 +936,9 @@
             "type": "ds.searchbase"
         },
         "ds_story_06": {
-            "name": "Secure Networking - SGT-Classified FMC Blocks by Tag",
+            "name": "Secure Networking - Wired-Port Segmentation Exceptions Trend",
             "options": {
-                "ref": "secure_networking_sgt_fmc_blocks_by_sgt",
+                "ref": "secure_networking_wired_port_segmentation_exceptions_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$"
@@ -949,7 +955,7 @@
                     "backgroundColor": "#0f1117",
                     "backgroundImage": {
                         "sizeType": "contain",
-                        "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxOTIwIiBoZWlnaHQ9IjEwODAiIHZpZXdCb3g9IjAgMCAxOTIwIDEwODAiPjxkZWZzPjxmaWx0ZXIgaWQ9ImMzLWJsdXIiIHg9Ii01MDAiIHk9Ii01MDAiIHdpZHRoPSIyOTIwIiBoZWlnaHQ9IjI1ODAiIGZpbHRlclVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgY29sb3ItaW50ZXJwb2xhdGlvbi1maWx0ZXJzPSJzUkdCIj48ZmVHYXVzc2lhbkJsdXIgc3RkRGV2aWF0aW9uPSIxNzUiLz48L2ZpbHRlcj48cmFkaWFsR3JhZGllbnQgaWQ9ImMzLWN5YW4tbmF2eSIgY3g9IjEzLjUiIGN5PSIxNDQxLjM2IiByPSI4NTEuNDkiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIiBncmFkaWVudFRyYW5zZm9ybT0idHJhbnNsYXRlKDAgMTQ0MS4zNikgc2NhbGUoMSAuNjE2NTUpIHRyYW5zbGF0ZSgwIC0xNDQxLjM2KSI+PHN0b3Agc3RvcC1jb2xvcj0iIzMwYWFjYyIvPjxzdG9wIG9mZnNldD0iMSIgc3RvcC1jb2xvcj0iIzBjMWE1NiIvPjwvcmFkaWFsR3JhZGllbnQ+PHJhZGlhbEdyYWRpZW50IGlkPSJjMy1ibHVlLXZpb2xldCIgY3g9IjI3My41IiBjeT0iMTQ0MS4zNiIgcj0iODUxLjQ5IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgZ3JhZGllbnRUcmFuc2Zvcm09InRyYW5zbGF0ZSgwIDE0NDEuMzYpIHNjYWxlKDEgLjYxNjU1KSB0cmFuc2xhdGUoMCAtMTQ0MS4zNikiPjxzdG9wIHN0b3AtY29sb3I9IiMyYzkzZTEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiM4MDE0OGMiLz48L3JhZGlhbEdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMTkyMCIgaGVpZ2h0PSIxMDgwIiBmaWxsPSIjMGIxMTE4Ii8+PGcgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNjYyLjQgMCkiIG9wYWNpdHk9Ii43MiI+PHJlY3QgeD0iMTMuNSIgeT0iNDgzIiB3aWR0aD0iNTkzIiBoZWlnaHQ9IjE2OTciIGZpbGw9InVybCgjYzMtY3lhbi1uYXZ5KSIgZmlsdGVyPSJ1cmwoI2MzLWJsdXIpIiB0cmFuc2Zvcm09InJvdGF0ZSgtOTAgMzEwIDEzMzEuNSkiLz48cmVjdCB4PSIyNzMuNSIgeT0iNDgzIiB3aWR0aD0iNTkzIiBoZWlnaHQ9IjE2OTciIGZpbGw9InVybCgjYzMtYmx1ZS12aW9sZXQpIiBmaWx0ZXI9InVybCgjYzMtYmx1cikiIHRyYW5zZm9ybT0icm90YXRlKC05MCA1NzAgMTMzMS41KSIvPjwvZz48L3N2Zz4=",
+                        "src": "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjEyODgiIHZpZXdCb3g9IjAgMCAyMDAwIDEyODgiIHdpZHRoPSIyMDAwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIj48ZmlsdGVyIGlkPSJhIiBjb2xvci1pbnRlcnBvbGF0aW9uLWZpbHRlcnM9InNSR0IiIGZpbHRlclVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgaGVpZ2h0PSIxNTg0IiB3aWR0aD0iMjAwMCIgeD0iMCIgeT0iLTI4MCI+PGZlRmxvb2QgZmxvb2Qtb3BhY2l0eT0iMCIgcmVzdWx0PSJCYWNrZ3JvdW5kSW1hZ2VGaXgiLz48ZmVCbGVuZCBpbj0iU291cmNlR3JhcGhpYyIgaW4yPSJCYWNrZ3JvdW5kSW1hZ2VGaXgiIG1vZGU9Im5vcm1hbCIgcmVzdWx0PSJzaGFwZSIvPjxmZUdhdXNzaWFuQmx1ciByZXN1bHQ9ImVmZmVjdDFfZm9yZWdyb3VuZEJsdXJfNjU1MTZfNjgiIHN0ZERldmlhdGlvbj0iMTQwIi8+PC9maWx0ZXI+PGNsaXBQYXRoIGlkPSJiIj48cGF0aCBkPSJtMjgwIDBoMTQ0MHYxMDI0aC0xNDQweiIvPjwvY2xpcFBhdGg+PGcgZmlsdGVyPSJ1cmwoI2EpIiBvcGFjaXR5PSIuNSI+PGcgY2xpcC1wYXRoPSJ1cmwoI2IpIiBmaWxsLW9wYWNpdHk9Ii41Ij48ZWxsaXBzZSBjeD0iNTY2LjAwMSIgY3k9IjEwNDguMTYiIGZpbGw9IiNmZjkwMDAiIHJ4PSI0MjIiIHJ5PSIxNTQiIHRyYW5zZm9ybT0ibWF0cml4KC0xIC0wIDAgLTEgMTEzMi4wMDIgMjA5Ni4zMikiLz48ZWxsaXBzZSBjeD0iMTE4MSIgY3k9IjEwNzAuMTYiIGZpbGw9IiNmZjAwN2YiIHJ4PSI1OTIiIHJ5PSIyMjMiIHRyYW5zZm9ybT0ibWF0cml4KC0xIC0wIDAgLTEgMjM2MiAyMTQwLjMyKSIvPjxnIGZpbGw9IiNmZjkwMDAiPjxlbGxpcHNlIGN4PSIyNDIuMDEyIiBjeT0iMTU1LjYyMiIgcng9IjI0Mi4wMTIiIHJ5PSIxNTUuNjIyIiB0cmFuc2Zvcm09Im1hdHJpeCgtLjg2MTk2NyAtLjUwNjk2NCAuODIzNDEgLS41Njc0NDcgMTY2OC44NiAxMTgyKSIvPjxlbGxpcHNlIGN4PSI2NzcuMDAxIiBjeT0iMTA0Ny42NiIgcng9IjIyNyIgcnk9Ijk2LjUiIHRyYW5zZm9ybT0ibWF0cml4KC0xIC0wIDAgLTEgMTM1NC4wMDIgMjA5NS4zMikiLz48L2c+PC9nPjwvZz48L3N2Zz4=",
                         "x": 0,
                         "y": 0
                     },

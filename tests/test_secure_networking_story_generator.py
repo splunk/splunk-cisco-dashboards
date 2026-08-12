@@ -77,7 +77,7 @@ def story_fixture(label: str = "Story & <Posture>") -> dict:
 class SecureNetworkingStoryGeneratorTest(unittest.TestCase):
     def setUp(self):
         self.searchbase = parse_searchbase(searchbase_fixture())
-        self.dashboard_id = "secure_networking_fixture_story"
+        self.dashboard_id = "sn_fixture_story"
         self.story = story_fixture()
 
     def test_searchbase_parser_joins_spl_and_strips_html(self):
@@ -349,7 +349,7 @@ class SecureNetworkingStoryGeneratorTest(unittest.TestCase):
         )
 
     def test_config_loaders_selected_generation_and_cli_check_do_not_mutate_views(self):
-        second_id = "secure_networking_fixture_second"
+        second_id = "sn_fixture_second"
         stories = {self.dashboard_id: self.story, second_id: story_fixture("Second")}
         with tempfile.TemporaryDirectory() as temp_directory:
             root = Path(temp_directory)
