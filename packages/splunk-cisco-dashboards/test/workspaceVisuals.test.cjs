@@ -50,6 +50,12 @@ const tileConfigService = read(
 const metricItem = read(
   "../src/main/webapp/common/components/florida/MetricItem.tsx",
 );
+const tileActionMenu = read(
+  "../src/main/webapp/common/components/florida/TileActionMenu.tsx",
+);
+const workspaceManager = read(
+  "../src/main/webapp/common/components/florida/WorkspaceManager.tsx",
+);
 const infoTooltip = read(
   "../src/main/webapp/common/components/florida/InfoTooltip.tsx",
 );
@@ -65,14 +71,27 @@ const dashboardSection = read(
 const sectionPresentation = read(
   "../src/main/webapp/common/hooks/usePersistedSectionPresentation.ts",
 );
+const sectionHeights = read(
+  "../src/main/webapp/common/hooks/usePersistedSectionHeights.ts",
+);
 const c3VisualizationPalette = read(
   "../src/main/webapp/common/theme/c3VisualizationPalette.ts",
 );
 
 assert.match(
   dashboardSection,
-  /<h2 className="leading-none">\{title\}<\/h2>/,
-  "Dashboard section titles must follow the page h1 with level-two headings",
+  /<CollapsiblePanel[\s\S]*?headingLevel=\{2\}[\s\S]*?title=\{[\s\S]*?\{title\}[\s\S]*?<\/span>/,
+  "Dashboard section titles must use CollapsiblePanel's level-two heading semantics",
+);
+assert.doesNotMatch(
+  dashboardSection,
+  /ArrowUpRight/,
+  "The section link must rely on Button's built-in new-window indicator without a duplicate icon",
+);
+assert.match(
+  sectionHeights,
+  /defaultLevel: 2/,
+  "Workspace sections must default to H2 so tile content has sufficient vertical room",
 );
 assert.match(
   profile,
@@ -225,13 +244,8 @@ assert.match(
 );
 assert.match(
   profile,
-  /<Select[\s\S]*?className="scd-toolbar-select"[\s\S]*?labelText="Dashboard time range"[\s\S]*?style=\{\{ width: 124 \}\}/,
-  "The time-range selector must use SUI Select at a compact width",
-);
-assert.match(
-  tailwindStyles,
-  /\.scd-toolbar-select\[data-test='select'\][\s\S]*?color: rgb\(241 245 249\) !important/,
-  "Dark command-bar SUI selectors must keep their labels and carets visible in either Splunk theme",
+  /<MapLayoutRadioBar[\s\S]*?<Select[\s\S]*?labelText="Dashboard time range"[\s\S]*?TIME_RANGE_OPTIONS\.map[\s\S]*?<Select[\s\S]*?prefixLabel="Refresh rate"[\s\S]*?AUTO_REFRESH_OPTIONS\.map[\s\S]*?<Button[\s\S]*?appearance="subtle"[\s\S]*?<RefreshCw[\s\S]*?<Dropdown/,
+  "The header must follow the mockup order: map layout, time range, refresh rate, refresh, actions",
 );
 assert.match(
   profile,
@@ -255,8 +269,8 @@ assert.match(
 );
 assert.match(
   dashboardSection,
-  /scd-c3-panel bg-white dark:bg-slate-900/,
-  "Dashboard sections must use the shared C3 panel treatment",
+  /import CollapsiblePanel from "@splunk\/react-ui\/CollapsiblePanel";[\s\S]*?<CollapsiblePanel/,
+  "Dashboard sections must use the released SUI CollapsiblePanel treatment",
 );
 assert.match(
   profile,
@@ -335,39 +349,64 @@ assert.match(
   "Area sparklines must use the restrained C3 graduated fill",
 );
 assert.match(
-  tailwindStyles,
-  /\.scd-toolbar-select\[data-test='select'\] \{[\s\S]*?border-color: transparent !important;[\s\S]*?background: transparent !important;[\s\S]*?box-shadow: none !important;/,
-  "Command-bar selectors must remain borderless on the dark dashboard header",
+  profile,
+  /<Menu\.Heading title>[\s\S]*?Dashboard controls · \{headerHealthSummary\}[\s\S]*?<\/Menu\.Heading>/,
+  "The aggregate dashboard status must move into the SUI actions menu",
 );
 assert.match(
   profile,
-  /max-\[1399px\]:\[&>span\]:hidden/,
-  "The health badge must collapse to its status icon before truncating the title",
+  /<OneCdRadioBar[\s\S]*?ariaLabel="Map layout"[\s\S]*?options=\{MAP_LAYOUT_OPTIONS\}/,
+  "The map layout control must use the shared SUI RadioBar and include map visibility",
+);
+assert.doesNotMatch(
+  profile,
+  /<MapPositionToggle|toggleMapVisibility|<SlidingPanels/,
+  "Map layout, time range, and refresh rate must not be duplicated in the map card or actions menu",
 );
 assert.match(
   profile,
-  /<Select[\s\S]*?className="scd-toolbar-select"[\s\S]*?labelText="Auto-refresh interval"[\s\S]*?style=\{\{ width: 72 \}\}/,
-  "The auto-refresh selector must use SUI Select at a compact width",
+  /<Button[\s\S]*?appearance="subtle"[\s\S]*?<RefreshCw[\s\S]*?label=\{`Refresh dashboard data now\./,
+  "Manual refresh must remain the only direct dashboard action beside the kebab menu",
+);
+assert.doesNotMatch(
+  profile,
+  /OneCdGlassHeaderButton/,
+  "Header actions must use react-ui Button directly instead of a custom wrapper",
 );
 assert.match(
   profile,
-  /aria-label="Refresh dashboard data now"/,
-  "Manual refresh must remain discoverable while auto-refresh is off",
+  /<Dropdown[\s\S]*?toggle=\{[\s\S]*?<Button[\s\S]*?appearance="subtle"[\s\S]*?hideLabel[\s\S]*?icon=\{<ChevronDown[\s\S]*?label=\{`Switch workspace\. Current: \$\{insightsWorkspace\.label\}`\}[\s\S]*?<Menu style=\{\{ width: WORKSPACE_MENU_WIDTH_PX \}\}>[\s\S]*?workspaces\.map[\s\S]*?<Menu\.Item[\s\S]*?to=\{`\$\{splunkViewAppUrl\("workspace_insights"\)\}[\s\S]*?selectable[\s\S]*?selected=\{workspace\.id === insightsWorkspace\.id\}/,
+  "Workspace switching must use an accessible SUI Dropdown menu beside the page title",
 );
 assert.match(
   profile,
-  /<Globe2 className="w-4 h-4"/,
-  "Map visibility must use the SUI globe metaphor",
+  /<Menu\.Divider \/>[\s\S]*?<Menu\.Item[\s\S]*?setWorkspaceManagerOpen\(true\)[\s\S]*?Edit workspaces/,
+  "Workspace management must be available from the workspace menu",
+);
+assert.doesNotMatch(
+  profile,
+  /<select[\s\S]*?aria-label="Workspace"/,
+  "Workspace switching must not rely on a visually hidden native select",
 );
 assert.match(
-  profile,
-  /<Layers3 className="h-4 w-4 flex-shrink-0"/,
-  "Workspace switching must use the SUI layers metaphor",
+  workspaceManager,
+  /<Modal[\s\S]*?initialFocus="first"[\s\S]*?onRequestClose=\{onClose\}[\s\S]*?open=\{open\}[\s\S]*?returnFocus=\{returnFocus\}[\s\S]*?<Modal\.Header[\s\S]*?title="Insights workspaces"/,
+  "Workspace management must use a named SUI Modal with managed focus",
 );
-assert.match(
+assert.doesNotMatch(
+  workspaceManager,
+  /if \(!open\) return null/,
+  "WorkspaceManager must remain mounted so SUI Modal can restore focus on close",
+);
+assert.doesNotMatch(
+  workspaceManager,
+  /aria-label="Close workspace manager"|<X className=/,
+  "WorkspaceManager must use Modal.Header's built-in close control",
+);
+assert.doesNotMatch(
   profile,
-  /<ThemeToggle[\s\S]*?theme=\{theme\}[\s\S]*?onCycle=\{cycleTheme\}[\s\S]*?className=\{iconBtnClass\}[\s\S]*?iconOnly/,
-  "The crowded overview header must use the compact theme control with explicit toolbar contrast",
+  /ThemeToggle|cycleTheme/,
+  "The dashboard header must not expose theme-toggle button wiring",
 );
 assert.doesNotMatch(
   profile,
@@ -375,14 +414,14 @@ assert.doesNotMatch(
   "The app header must not duplicate Splunk's global signed-in user control",
 );
 assert.match(
-  metricItem,
-  /PanelRightOpen className="w-3\.5 h-3\.5/,
-  "Tile drilldowns must use a larger open-details-panel icon",
+  tileActionMenu,
+  /<PanelRightOpen \/>/,
+  "Tile drilldowns must use the open-details-panel icon in the tile action menu",
 );
 assert.match(
-  metricItem,
-  /Drill down from \$\{label\} to details/,
-  "Tile drilldowns must have an explicit accessible label",
+  tileActionMenu,
+  /<Menu\.Heading title>Tile actions<\/Menu\.Heading>[\s\S]*?Open in Search[\s\S]*?Open details[\s\S]*?Expand visualization[\s\S]*?Configure tile/,
+  "Tile controls must be consolidated into a labeled action menu",
 );
 assert.match(
   metricItem,
@@ -496,7 +535,7 @@ assert.doesNotMatch(
 );
 assert.match(
   dashboardSection,
-  /data-section-density=\{compactHeight \? 'compact' : 'standard'\}/,
+  /data-section-density=\{compactHeight \? ["']compact["'] : ["']standard["']\}/,
   "H1 must expose a real compact section density",
 );
 assert.match(
@@ -521,18 +560,18 @@ assert.match(
 );
 assert.match(
   dashboardSection,
-  /aria-expanded=\{!collapsed\}[\s\S]*?aria-controls=\{sectionBodyId\}/,
-  "Section collapse controls must expose their state and controlled region",
+  /<CollapsiblePanel[\s\S]*?onChange=\{onToggleCollapsed\}[\s\S]*?open=\{!collapsed\}/,
+  "The controlled CollapsiblePanel must expose and update the persisted section state",
+);
+assert.doesNotMatch(
+  dashboardSection,
+  /renderChildrenWhenCollapsed/,
+  "Collapsed panels must use CollapsiblePanel's normal mount and measurement behavior",
 );
 assert.match(
   dashboardSection,
-  /collapsed && 'hidden'/,
-  "Collapsed sections must hide mounted content instead of unmounting live searches",
-);
-assert.match(
-  dashboardSection,
-  /aria-pressed=\{focused\}/,
-  "Section focus controls must expose their pressed state",
+  /focused \? "Exit focus view" : "Focus this section"/,
+  "The section action menu must communicate the current focus action",
 );
 assert.match(
   profile,
