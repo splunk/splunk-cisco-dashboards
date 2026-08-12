@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Copy, Layers3, Plus, Save, Trash2, X } from '@/common/icons/SuiIcon';
+import Modal from '@splunk/react-ui/Modal';
+import { Copy, Plus, Save, Trash2 } from '@/common/icons/SuiIcon';
 
 import {
     WORKSPACE_SOURCES,
@@ -21,6 +22,7 @@ import { cn } from '@/common/lib/utils';
 
 interface WorkspaceManagerProps {
     open: boolean;
+    returnFocus: React.MutableRefObject<HTMLAnchorElement | HTMLButtonElement | null>;
     currentWorkspace: InsightsWorkspace;
     workspaces: readonly InsightsWorkspace[];
     layouts: Record<WorkspaceId, WorkspaceLayoutConfig>;
@@ -119,6 +121,7 @@ const sourceDescription = (sourceWorkspace: WorkspaceSourceId): string =>
 
 export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
     open,
+    returnFocus,
     currentWorkspace,
     workspaces,
     layouts,
@@ -143,15 +146,6 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
         setErrorMessage('');
     }, [currentWorkspace, layouts, open]);
 
-    useEffect(() => {
-        if (!open || typeof document === 'undefined') return undefined;
-        const onKey = (event: KeyboardEvent) => {
-            if (event.key === 'Escape' && status === 'idle') onClose();
-        };
-        document.addEventListener('keydown', onKey);
-        return () => document.removeEventListener('keydown', onKey);
-    }, [onClose, open, status]);
-
     const source = WORKSPACE_SOURCES[draft.sourceWorkspace];
     const duplicateId = useMemo(
         () =>
@@ -168,8 +162,6 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
         validId &&
         !duplicateId &&
         draft.sectionIds.length > 0;
-
-    if (!open) return null;
 
     const selectWorkspace = (workspace: InsightsWorkspace) => {
         setDraft(draftFromWorkspace(workspace, layouts[workspace.id]));
@@ -289,30 +281,19 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
-            <div
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="workspace-manager-title"
-                className="flex h-[min(720px,92vh)] w-[min(1040px,96vw)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900"
-            >
+        <Modal
+            initialFocus="first"
+            onRequestClose={onClose}
+            open={open}
+            returnFocus={returnFocus}
+            style={{ width: 'min(1040px, 96vw)' }}
+        >
+            <Modal.Header
+                subtitle="Reusable customer demo views"
+                title="Insights workspaces"
+            />
+            <div className="flex h-[min(720px,92vh)] overflow-hidden">
                 <aside className="flex w-72 flex-shrink-0 flex-col border-r border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-950/50">
-                    <div className="border-b border-slate-200 p-4 dark:border-slate-700">
-                        <div className="flex items-center gap-2">
-                            <Layers3 className="h-5 w-5 text-sky-600 dark:text-sky-300" />
-                            <div>
-                                <h2
-                                    id="workspace-manager-title"
-                                    className="text-sm font-bold text-slate-900 dark:text-white"
-                                >
-                                    Insights workspaces
-                                </h2>
-                                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                                    Reusable customer demo views
-                                </p>
-                            </div>
-                        </div>
-                    </div>
                     <div className="flex-1 space-y-1 overflow-y-auto p-2">
                         {workspaces.map((workspace) => (
                             <button
@@ -366,14 +347,6 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                 Metadata and section choices are stored in insights_workspaces.conf.
                             </p>
                         </div>
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            aria-label="Close workspace manager"
-                            className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
-                        >
-                            <X className="h-4 w-4" />
-                        </button>
                     </header>
 
                     <div className="flex-1 overflow-y-auto p-5">
@@ -632,6 +605,6 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                     </footer>
                 </section>
             </div>
-        </div>
+        </Modal>
     );
 };

@@ -18,7 +18,8 @@ import {
 } from '@/common/config/insightsWorkspaces';
 
 const STORAGE_KEY = 'splunk-cisco-dashboards.sectionHeights.v1';
-const STORAGE_VERSION = 1;
+// Version 2 resets the former H1 default so existing workspaces start at H2.
+const STORAGE_VERSION = 2;
 
 const isSectionId = (
     raw: unknown,
@@ -106,7 +107,7 @@ export const usePersistedSectionHeights = (
     bounds: SectionHeightBounds = {
         minLevel: 1,
         maxLevel: 4,
-        defaultLevel: 1,
+        defaultLevel: 2,
     }
 ): UsePersistedSectionHeightsResult => {
     const [heights, setHeights] = useState<SectionHeightMap>(() => readFromStorage(bounds));

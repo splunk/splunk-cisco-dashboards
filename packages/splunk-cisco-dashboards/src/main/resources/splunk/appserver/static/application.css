@@ -6,64 +6,75 @@
  * 24px rendered size. Splunk still owns inactive, hover, and selected color.
  */
 #root-nav-menu
-    [data-test='nav-item'][aria-haspopup='true']:is(
-        [title='Secure Infrastructure'],
-        [title='Scalable Network Segmentation'],
-        [title='Hybrid Mesh Firewalling'],
-        [title='Agentic Ops']
-    )
-    > span
-    > span:first-child {
-    align-items: center;
-    justify-content: center;
+  [data-test="nav-item"][aria-haspopup="true"]:is(
+    [title="Zero Trust Access"],
+    [title="Secure Infrastructure"],
+    [title="Scalable Network Segmentation"],
+    [title="Hybrid Mesh Firewalling"],
+    [title="Agentic Ops"]
+  )
+  > span
+  > span:first-child {
+  align-items: center;
+  justify-content: center;
 }
 
 #root-nav-menu
-    [data-test='nav-item'][aria-haspopup='true']:is(
-        [title='Secure Infrastructure'],
-        [title='Scalable Network Segmentation'],
-        [title='Hybrid Mesh Firewalling'],
-        [title='Agentic Ops']
-    )
-    > span
-    > span:first-child
-    > svg {
-    display: none;
+  [data-test="nav-item"][aria-haspopup="true"]:is(
+    [title="Zero Trust Access"],
+    [title="Secure Infrastructure"],
+    [title="Scalable Network Segmentation"],
+    [title="Hybrid Mesh Firewalling"],
+    [title="Agentic Ops"]
+  )
+  > span
+  > span:first-child
+  > svg {
+  display: none;
 }
 
 #root-nav-menu
-    [data-test='nav-item'][aria-haspopup='true']:is(
-        [title='Secure Infrastructure'],
-        [title='Scalable Network Segmentation'],
-        [title='Hybrid Mesh Firewalling'],
-        [title='Agentic Ops']
-    )
-    > span
-    > span:first-child::before {
-    width: 24px;
-    height: 24px;
-    display: block;
-    flex: 0 0 24px;
-    content: '';
-    background-color: currentColor;
-    -webkit-mask: var(--scd-pillar-icon) center / contain no-repeat;
-    mask: var(--scd-pillar-icon) center / contain no-repeat;
+  [data-test="nav-item"][aria-haspopup="true"]:is(
+    [title="Zero Trust Access"],
+    [title="Secure Infrastructure"],
+    [title="Scalable Network Segmentation"],
+    [title="Hybrid Mesh Firewalling"],
+    [title="Agentic Ops"]
+  )
+  > span
+  > span:first-child::before {
+  width: 24px;
+  height: 24px;
+  display: block;
+  flex: 0 0 24px;
+  content: "";
+  background-color: currentColor;
+  -webkit-mask: var(--scd-pillar-icon) center / contain no-repeat;
+  mask: var(--scd-pillar-icon) center / contain no-repeat;
 }
 
-#root-nav-menu [title='Secure Infrastructure'] {
-    --scd-pillar-icon: url('images/overview/secure-networking/sui-servers.svg');
+#root-nav-menu [title="Zero Trust Access"] {
+  --scd-pillar-icon: url("images/overview/secure-networking/sui-servers.svg");
 }
 
-#root-nav-menu [title='Scalable Network Segmentation'] {
-    --scd-pillar-icon: url('images/overview/secure-networking/sui-node-model.svg');
+#root-nav-menu [title="Secure Infrastructure"] {
+  --scd-pillar-icon: url("images/overview/secure-networking/sui-servers.svg");
 }
 
-#root-nav-menu [title='Hybrid Mesh Firewalling'] {
-    --scd-pillar-icon: url('images/overview/secure-networking/sui-wall-bricks.svg');
+#root-nav-menu [title="Scalable Network Segmentation"] {
+  --scd-pillar-icon: url("images/overview/secure-networking/sui-node-model.svg");
 }
 
-#root-nav-menu [title='Agentic Ops'] {
-    --scd-pillar-icon: url('images/overview/secure-networking/sui-robot-face-wrench.svg');
+#root-nav-menu [title="Hybrid Mesh Firewalling"] {
+  --scd-pillar-icon: url("images/overview/secure-networking/sui-wall-bricks.svg");
+}
+
+#root-nav-menu [title="Agentic Ops"] {
+  --scd-pillar-icon: url("images/overview/secure-networking/sui-robot-face-wrench.svg");
+}
+
+#root-nav-menu [data-test="monogram"] {
+  display: none;
 }
 
 /*
@@ -73,32 +84,35 @@
  * panel height. This applies to the five pillar dashboards and their detail
  * dashboards without introducing separate markup visualizations.
  */
-[data-test='DashboardLayoutContainer'] [data-test='corner-radius-container'] > .styled-fullscreen {
-    display: flex;
-    flex-direction: column;
+[data-test="DashboardLayoutContainer"]
+  [data-test="corner-radius-container"]
+  > .styled-fullscreen {
+  display: flex;
+  flex-direction: column;
 }
 
-[data-test='DashboardLayoutContainer'] [data-test='viz-title-description-container'] {
-    flex: 0 0 auto;
-    height: auto;
-    min-height: 40px;
-    max-height: 80px;
-    overflow: hidden;
+[data-test="DashboardLayoutContainer"]
+  [data-test="viz-title-description-container"] {
+  flex: 0 0 auto;
+  height: auto;
+  min-height: 40px;
+  max-height: 80px;
+  overflow: hidden;
 }
 
-[data-test='DashboardLayoutContainer'] [data-test='viz-description'] {
-    display: -webkit-box;
-    overflow: hidden;
-    white-space: normal;
-    text-overflow: clip;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
+[data-test="DashboardLayoutContainer"] [data-test="viz-description"] {
+  display: -webkit-box;
+  overflow: hidden;
+  white-space: normal;
+  text-overflow: clip;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
-[data-test='DashboardLayoutContainer'] [data-test='viz-size-wrapper'] {
-    flex: 1 1 0;
-    min-height: 0;
-    height: auto !important;
+[data-test="DashboardLayoutContainer"] [data-test="viz-size-wrapper"] {
+  flex: 1 1 0;
+  min-height: 0;
+  height: auto !important;
 }
 
 /*
@@ -109,23 +123,21 @@
  * allowlist maintained by dashboard.js.
  */
 body.scd-managed-studio-template
-    > [role='main']
-    > div:has(#collection_container.dashboardbuilderview) {
-    flex: 1 1 0;
-    min-width: 900px;
-    width: 0;
+  > [role="main"]
+  > div:has(#collection_container.dashboardbuilderview) {
+  flex: 1 1 0;
+  min-width: 900px;
+  width: 0;
 }
 
 body.scd-managed-studio-template #collection_container.dashboardbuilderview {
-    width: 100%;
-    min-width: 0;
+  width: 100%;
+  min-width: 0;
 }
 
-body.scd-managed-studio-template
-    [data-test='DashboardLayoutContainer'],
-body.scd-managed-studio-template
-    [data-test='DashboardLayoutContainer'] * {
-    font-family: Inter, system-ui, sans-serif !important;
+body.scd-managed-studio-template [data-test="DashboardLayoutContainer"],
+body.scd-managed-studio-template [data-test="DashboardLayoutContainer"] * {
+  font-family: Inter, system-ui, sans-serif !important;
 }
 
 /*
@@ -134,54 +146,60 @@ body.scd-managed-studio-template
  * route-scoped and use the selected button's inline color only as a state hook.
  */
 body.scd-managed-studio-template #input_time_range {
-    border-radius: 6px;
-    overflow: hidden;
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 body.scd-managed-studio-template #input_time_range > button {
-    background-color: #131a23 !important;
-    border-color: rgba(100, 158, 245, 0.28) !important;
-    color: #ecf0f5 !important;
+  background-color: #131a23 !important;
+  border-color: rgba(100, 158, 245, 0.28) !important;
+  color: #ecf0f5 !important;
 }
 
 body.scd-managed-studio-template #input_time_range > button:hover,
-body.scd-managed-studio-template #input_time_range > button[value='advancedTR'] {
-    background: #1c2738 !important;
-    color: #a6adb6 !important;
+body.scd-managed-studio-template
+  #input_time_range
+  > button[value="advancedTR"] {
+  background: #1c2738 !important;
+  color: #a6adb6 !important;
 }
 
 body.scd-managed-studio-template
-    #input_time_range
-    > button:not([value='advancedTR'])[style*='rgb(204, 204, 204)'] {
-    background: #049fd9 !important;
-    border-color: #00bceb !important;
-    color: #ecf0f5 !important;
+  #input_time_range
+  > button:not([value="advancedTR"])[style*="rgb(204, 204, 204)"] {
+  background: #049fd9 !important;
+  border-color: #00bceb !important;
+  color: #ecf0f5 !important;
 }
 
 body.scd-managed-studio-template
-    #input_time_range
-    > button:not([value='advancedTR'])[style*='rgb(204, 204, 204)']:hover,
+  #input_time_range
+  > button:not([value="advancedTR"])[style*="rgb(204, 204, 204)"]:hover,
 body.scd-managed-studio-template
-    #input_time_range
-    > button:not([value='advancedTR'])[style*='rgb(204, 204, 204)']:focus,
+  #input_time_range
+  > button:not([value="advancedTR"])[style*="rgb(204, 204, 204)"]:focus,
 body.scd-managed-studio-template
-    #input_time_range
-    > button:not([value='advancedTR'])[style*='rgb(204, 204, 204)']:active {
-    background: #049fd9 !important;
-    background-color: #049fd9 !important;
-    border-color: #00bceb !important;
-    color: #ecf0f5 !important;
+  #input_time_range
+  > button:not([value="advancedTR"])[style*="rgb(204, 204, 204)"]:active {
+  background: #049fd9 !important;
+  background-color: #049fd9 !important;
+  border-color: #00bceb !important;
+  color: #ecf0f5 !important;
 }
 
 body.scd-managed-studio-template #input_time_range > button:first-child {
-    border-radius: 6px 0 0 6px;
+  border-radius: 6px 0 0 6px;
 }
 
 body.scd-managed-studio-template #input_time_range > button:last-child {
-    border-radius: 0 6px 6px 0;
+  border-radius: 0 6px 6px 0;
 }
 
 body.scd-managed-studio-template #input_time_range svg {
-    color: currentColor;
-    fill: currentColor;
+  color: currentColor;
+  fill: currentColor;
+}
+
+body {
+  color-scheme: dark;
 }

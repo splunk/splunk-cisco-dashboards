@@ -61,10 +61,7 @@ import {
     ZoomOut,
 } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
-import {
-    OneCdGlassCard,
-    OneCdSurface,
-} from './OneCdSurface';
+import { OneCdGlassCard } from './OneCdPrimitives';
 import {
     getSearchbaseCatalogue,
     plainTextFromHtml,
@@ -6516,18 +6513,14 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     };
 
     return (
-        <OneCdSurface
+        <div
             className={cn(
-                'relative w-full h-full min-h-[320px] overflow-hidden border rounded-xl shadow-inner group',
+                'relative flex w-full h-full min-h-[320px] flex-col overflow-hidden border rounded-xl shadow-inner group',
                 `customer-topology-anim--${visualAnimationLevel}`,
                 isDark
                     ? 'bg-slate-900 border-slate-800'
                     : 'bg-slate-100 border-slate-200'
             )}
-            spotlight="element"
-            spotlightIntensity="low"
-            spotlightInset={{ left: '18%', bottom: '-44%' }}
-            spotlightScale={{ x: 0.65, y: 0.42 }}
         >
             <style>{topologyAnimationCss}</style>
 
@@ -6939,7 +6932,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     )}
                 </div>
             </div>
-        </OneCdSurface>
+        </div>
     );
 };
 

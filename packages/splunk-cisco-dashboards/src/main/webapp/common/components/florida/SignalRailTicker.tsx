@@ -10,7 +10,7 @@ import type {
     SignalTickerFontSize,
     SignalTickerRows,
 } from '@/common/hooks/usePersistedSignalTicker';
-import { OneCdGlassCard, OneCdSurface } from './OneCdSurface';
+import { OneCdGlassCard } from './OneCdPrimitives';
 
 export type SignalRailStatus = MetricStatus;
 export type SignalRailDeltaDirection = 'up' | 'down' | 'flat';
@@ -816,12 +816,9 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
     if (kpis.length === 0) return null;
 
     return (
-        <OneCdSurface
-            as="section"
-            spotlight={variant === 'one-cisco-glass' ? 'page-top' : false}
-            spotlightIntensity="low"
+        <section
             className={cn(
-                'scd-signal-rail-ticker group/signal-rail relative z-40 w-full min-w-0 max-w-full flex-shrink-0 overflow-visible border-b',
+                'scd-signal-rail-ticker group/signal-rail relative z-40 flex w-full min-w-0 max-w-full flex-shrink-0 flex-col overflow-visible border-b',
                 variant === 'one-cisco-glass' &&
                     'border-transparent bg-transparent px-3 py-3 text-slate-950 dark:text-white',
                 variant === 'original' &&
@@ -1056,7 +1053,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                     </span>
                 </div>
             )}
-        </OneCdSurface>
+        </section>
     );
 };
 
