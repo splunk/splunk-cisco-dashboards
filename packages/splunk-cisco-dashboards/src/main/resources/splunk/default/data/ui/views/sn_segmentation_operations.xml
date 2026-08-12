@@ -60,7 +60,7 @@
             "title": "Segmentation Operations",
             "options": {
                 "preserveAspectRatio": true,
-                "src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/segmentation.svg"
+                "src": "/static/app/splunk-cisco-dashboards/images/nav-icons/Globe.svg"
             }
         },
         "viz_header": {

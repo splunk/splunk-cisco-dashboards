@@ -60,7 +60,7 @@
             "title": "Hybrid Mesh Enforcement",
             "options": {
                 "preserveAspectRatio": true,
-                "src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/hybrid-mesh-firewalling.svg"
+                "src": "/static/app/splunk-cisco-dashboards/images/nav-icons/ArrowsDoubleLeftRight.svg"
             }
         },
         "viz_header": {

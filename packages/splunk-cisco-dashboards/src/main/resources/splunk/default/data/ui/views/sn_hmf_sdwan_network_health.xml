@@ -60,7 +60,7 @@
             "title": "SD-WAN and Network Health Monitoring",
             "options": {
                 "preserveAspectRatio": true,
-                "src": "/static/app/splunk-cisco-dashboards/images/overview/secure-networking/hybrid-mesh-firewalling.svg"
+                "src": "/static/app/splunk-cisco-dashboards/images/nav-icons/ArrowsDoubleLeftRight.svg"
             }
         },
         "viz_header": {

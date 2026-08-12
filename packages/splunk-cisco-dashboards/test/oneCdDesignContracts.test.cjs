@@ -44,6 +44,17 @@ const applicationStyles = read(
 const navigation = read(
   "../src/main/resources/splunk/default/data/ui/nav/default.xml",
 );
+const secureNetworkingStories = JSON.parse(
+  read("../../../scripts/secure_networking_story_dashboards.json"),
+);
+
+const approvedStudioIcons = {
+  sn_zta_: "Fingerprint",
+  sn_secure_infrastructure_: "NetworkDevices",
+  sn_segmentation_: "Globe",
+  sn_hmf_: "ArrowsDoubleLeftRight",
+  sn_agentic_ops_: "RobotAgent",
+};
 
 const approvedPillarIcons = [
   ["Zero Trust Access", "shield-keyhole", "ShieldKeyhole", "Fingerprint"],
@@ -317,6 +328,34 @@ for (const [title, key, componentName, navigationIcon] of approvedPillarIcons) {
     staticAsset,
     /<svg[^>]*viewBox="0 0 24 24"[\s\S]*<path\b/,
     `${title}'s Splunk navigation asset must be a populated 24px SVG`,
+  );
+  assert.match(
+    staticAsset,
+    /fill="#649ef5"/,
+    `${title}'s shared Studio and navigation asset must remain readable on a dark canvas`,
+  );
+}
+
+for (const [dashboardId, story] of Object.entries(secureNetworkingStories)) {
+  const matchingPrefix = Object.keys(approvedStudioIcons).find((prefix) =>
+    dashboardId.startsWith(prefix),
+  );
+  assert.ok(matchingPrefix, `${dashboardId} must belong to one approved pillar`);
+  const assetName = `${approvedStudioIcons[matchingPrefix]}.svg`;
+  const expectedPath = `/static/app/splunk-cisco-dashboards/images/nav-icons/${assetName}`;
+  assert.equal(
+    story.header_icon,
+    expectedPath,
+    `${dashboardId} must reuse the exact approved menu icon in Dashboard Studio`,
+  );
+
+  const studioView = read(
+    `../src/main/resources/splunk/default/data/ui/views/${dashboardId}.xml`,
+  );
+  assert.match(
+    studioView,
+    new RegExp(`"src": "${expectedPath.replaceAll("/", "\\/")}"`),
+    `${dashboardId} must contain the generated approved Studio icon path`,
   );
 }
 
