@@ -17,7 +17,9 @@ import React, {
   useSyncExternalStore,
 } from "react";
 import { useSplunkTheme, variables } from "@splunk/themes";
-import styled from "styled-components";
+import styled, { css } from "styled-components";
+import Button from "@splunk/react-ui/Button";
+import Popover from "@splunk/react-ui/Popover";
 import Select from "@splunk/react-ui/Select";
 import Slider from "@splunk/react-ui/Slider";
 import SpotLight from "@splunk/react-ui/SpotLight";
@@ -112,16 +114,15 @@ const TopologyMapRoot = styled.div`
     height: ${variables.inputHeight};
     border: ${variables.inputBorderWidth} solid ${variables.borderColorStrong};
     border-radius: ${variables.borderRadius};
-    background-color: color-mix(
-      in srgb,
-      ${variables.backgroundColorPopup} 72%,
-      transparent
-    );
+    background-color: transparent;
     background-image: none;
-    backdrop-filter: blur(4px);
+    box-shadow: 0 0 0 1px ${variables.backgroundColorPage};
     color: ${variables.contentColorActive};
     font-family: ${variables.fontFamily};
     line-height: ${variables.lineHeightSingle};
+    text-shadow:
+      0 0 2px ${variables.backgroundColorPage},
+      0 0 2px ${variables.backgroundColorPage};
   }
 
   .leaflet-control-zoom-in:hover,
@@ -143,6 +144,107 @@ const TopologyMapRoot = styled.div`
   .leaflet-control-zoom-out.leaflet-disabled {
     color: ${variables.contentColorDisabled};
   }
+`;
+
+const MapTopRightActions = styled.div`
+  position: absolute;
+  top: ${variables.spacingMedium};
+  right: ${variables.spacingMedium};
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: ${variables.spacingXSmall};
+  pointer-events: auto;
+`;
+
+const MapBottomRightActions = styled.div`
+  position: absolute;
+  right: ${variables.spacingMedium};
+  bottom: ${variables.spacingMedium};
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: ${variables.spacingSmall};
+  max-height: calc(100% - 9rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  pointer-events: auto;
+`;
+
+const mapControlChrome = css`
+  border: ${variables.inputBorderWidth} solid ${variables.borderColorStrong};
+  border-radius: ${variables.borderRadius};
+  background-color: transparent;
+  box-shadow: 0 0 0 1px ${variables.backgroundColorPage};
+  color: ${variables.contentColorActive};
+  text-shadow:
+    0 0 2px ${variables.backgroundColorPage},
+    0 0 2px ${variables.backgroundColorPage};
+
+  svg {
+    filter: drop-shadow(0 0 2px ${variables.backgroundColorPage})
+      drop-shadow(0 0 2px ${variables.backgroundColorPage});
+  }
+`;
+
+const MapIconButton = styled(Button)<{ $dimmed?: boolean }>`
+  && {
+    ${mapControlChrome}
+    margin: 0;
+    opacity: ${({ $dimmed }) => ($dimmed ? 0.6 : 1)};
+  }
+
+  &&:focus,
+  &&:focus-visible {
+    box-shadow: ${variables.focusShadow};
+  }
+`;
+
+const MapViewSelect = styled(Select)`
+  && {
+    ${mapControlChrome}
+    width: 136px;
+  }
+
+  &&:focus,
+  &&:focus-visible {
+    box-shadow: ${variables.focusShadow};
+  }
+`;
+
+const MapLegendToggleButton = styled(Button)`
+  && {
+    ${mapControlChrome}
+    max-width: 190px;
+    margin: 0;
+    padding: ${variables.spacingSmall} ${variables.spacingMedium};
+  }
+
+  &&:focus,
+  &&:focus-visible {
+    box-shadow: ${variables.focusShadow};
+  }
+`;
+
+const MapLegendLabel = styled.span`
+  color: inherit;
+  font-size: ${variables.fontSizeSmall};
+  letter-spacing: 0.18em;
+`;
+
+const MapLegendPreview = styled.span`
+  display: flex;
+
+  & > * + * {
+    margin-left: -${variables.spacingXSmall};
+  }
+`;
+
+const MotionSettingsCard = styled(OneCdGlassCard)`
+  width: 16rem;
+  padding: ${variables.spacingLarge};
 `;
 
 delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })
@@ -5613,6 +5715,8 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     readStoredRoleLegendMode,
   );
   const [motionSettingsOpen, setMotionSettingsOpen] = useState(false);
+  const [motionSettingsAnchor, setMotionSettingsAnchor] =
+    useState<HTMLAnchorElement | HTMLButtonElement | null>(null);
   const [tilePresetId, setTilePresetId] = useState<TileLayerPreset["id"]>(() =>
     defaultTileLayerPresetId(true),
   );
@@ -5644,6 +5748,8 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     Record<string, SiteEnrichment>
   >({});
   const pauseUntilRef = useRef<number>(0);
+  const roleLegendToggleRef = useRef<HTMLButtonElement>(null);
+  const restoreRoleLegendFocusRef = useRef(false);
 
   // Connector trails are static until the operator chooses a speed. The
   // derived level keeps the existing reduced/full topology affordances in
@@ -5665,6 +5771,23 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     setRoleLegendMode(next);
     writeStoredRoleLegendMode(next);
   }, []);
+
+  const toggleRoleLegendExpanded = useCallback(
+    (expanded: boolean) => {
+      restoreRoleLegendFocusRef.current = true;
+      setRoleLegendExpanded(expanded);
+    },
+    [setRoleLegendExpanded],
+  );
+
+  useEffect(() => {
+    if (!restoreRoleLegendFocusRef.current) return undefined;
+    restoreRoleLegendFocusRef.current = false;
+    const frame = window.requestAnimationFrame(() =>
+      roleLegendToggleRef.current?.focus(),
+    );
+    return () => window.cancelAnimationFrame(frame);
+  }, [roleLegendMode]);
 
   const updateCurrentMapView = useCallback((view: TopologyMapView) => {
     setCurrentMapView((current) =>
@@ -6568,13 +6691,6 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   const bounds = L.latLngBounds(effectiveMapBounds[0], effectiveMapBounds[1]);
   const roleLegendExpanded = roleLegendMode === "expanded";
   const roleLegendPreviewSites = resolvedTopology.sites.slice(0, 6);
-  const overlayChrome = isDark
-    ? "sui-bg-section sui-border-default sui-color-active backdrop-blur-md"
-    : "sui-bg-section sui-border-info sui-color-default backdrop-blur-md";
-  const buttonChrome = isDark
-    ? "sui-bg-section sui-border-default sui-hover-bg-overlay sui-color-active"
-    : "sui-bg-section sui-border-weak sui-hover-bg-page sui-color-default";
-
   const openSelectedInSearch = () => {
     if (selectedSpl && onOpenInSearch) {
       onOpenInSearch(selectedSpl, selectedDispatchContext);
@@ -6588,6 +6704,11 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     const next = TILE_LAYER_PRESETS[(index + 1) % TILE_LAYER_PRESETS.length];
     setTilePresetId(next.id);
   };
+
+  const closeMotionSettings = useCallback(() => {
+    setMotionSettingsOpen(false);
+    window.requestAnimationFrame(() => motionSettingsAnchor?.focus());
+  }, [motionSettingsAnchor]);
 
   // Build 99 fix: the spotlight-pause logic was previously
   // bumping `pauseUntilRef` on EVERY click, including ones that
@@ -6693,6 +6814,121 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     }));
   };
 
+  const topRightActions = (
+    <MapTopRightActions>
+      {surfaceMode === "geo" && (
+        <MapIconButton
+          appearance="subtle"
+          hideLabel
+          icon={<Layers className="w-4 h-4" />}
+          label={`Switch base map. Current: ${tilePreset.label}`}
+          onClick={cycleTilePreset}
+        />
+      )}
+
+      <MapIconButton
+        appearance="subtle"
+        hideLabel
+        icon={<Pencil className="w-4 h-4" />}
+        label="Edit topology"
+        onClick={openEditor}
+      />
+
+      <div className="relative">
+        <MapIconButton
+          $dimmed={connectorSpeed <= 0}
+          appearance="subtle"
+          elementRef={setMotionSettingsAnchor}
+          hideLabel
+          icon={
+            <Sparkles
+              className={cn(
+                "h-4 w-4",
+                connectorSpeed > 0 ? "sui-color-info" : "sui-color-muted",
+              )}
+            />
+          }
+          label={`Configure connector motion. Current speed: ${topologyConnectorSpeedLabel(connectorSpeed)}`}
+          onClick={() => setMotionSettingsOpen((open) => !open)}
+          aria-controls={
+            motionSettingsOpen ? "topology-connector-speed-popover" : undefined
+          }
+          aria-haspopup="dialog"
+          aria-expanded={motionSettingsOpen}
+        />
+
+        <Popover
+          appearance="none"
+          anchor={motionSettingsAnchor}
+          defaultPlacement="left"
+          hideArrow
+          onRequestClose={closeMotionSettings}
+          open={motionSettingsOpen}
+          repositionMode="any"
+          retainFocus
+          takeFocus
+        >
+          <MotionSettingsCard
+            id="topology-connector-speed-popover"
+            tag="section"
+            className={cn(
+              "shadow-2xl",
+              isDark ? "sui-color-active" : "sui-color-active",
+            )}
+            role="dialog"
+            aria-labelledby="topology-connector-speed-label"
+          >
+            <div className="mb-3 flex items-start justify-between gap-3">
+              <div>
+                <h5
+                  id="topology-connector-speed-label"
+                  className="text-sm font-bold"
+                >
+                  Connector motion
+                </h5>
+                <p className="mt-1 text-xs leading-snug sui-color-default">
+                  Controls the light trails on map connector lines.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeMotionSettings}
+                aria-label="Close connector motion settings"
+                className="rounded-md p-1 sui-color-default transition-colors sui-hover-bg-floating sui-hover-color-current focus:outline-none focus:ring-1 sui-focus-ring"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <Slider
+              inputId="topology-connector-speed"
+              labelledBy="topology-connector-speed-label"
+              min={MIN_TOPOLOGY_CONNECTOR_SPEED}
+              max={MAX_TOPOLOGY_CONNECTOR_SPEED}
+              step={TOPOLOGY_CONNECTOR_SPEED_STEP}
+              stepMarks="always"
+              value={storedConnectorSpeed}
+              displayValue={topologyConnectorSpeedLabel(storedConnectorSpeed)}
+              minLabel="Static"
+              maxLabel="2×"
+              disabled={reducedMotion}
+              onChange={(_event, { value }) => setConnectorSpeed(value)}
+            />
+            <p
+              className="mt-3 text-xs leading-snug sui-color-default"
+              aria-live="polite"
+            >
+              {reducedMotion
+                ? "Motion is disabled while your operating system requests reduced motion."
+                : storedConnectorSpeed <= 0
+                  ? "Static by default."
+                  : `Connector trails are running at ${topologyConnectorSpeedLabel(storedConnectorSpeed)} speed.`}
+            </p>
+          </MotionSettingsCard>
+        </Popover>
+      </div>
+    </MapTopRightActions>
+  );
+
   return (
     <TopologyMapRoot
       className={cn(
@@ -6704,6 +6940,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
       )}
     >
       <style>{topologyAnimationCss}</style>
+      {topRightActions}
 
       {visualAnimationLevel === "on" &&
         !isEditorOpen &&
@@ -6788,7 +7025,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             style={{ opacity: 0.36, zIndex: 450 }}
             variant="element"
           />
-          <ZoomControl position="bottomright" />
+          <ZoomControl position="bottomleft" />
 
           {linkSegments.map(({ link, source, target }) => (
             <TopologyLinkPath
@@ -6856,26 +7093,6 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         </MapContainer>
       )}
 
-      <OneCdGlassCard
-        tag="div"
-        className="absolute right-3 top-3 z-[1100] inline-flex p-1.5"
-      >
-        <Select
-          inline
-          appearance="subtle"
-          labelText="Connectivity presentation"
-          value={surfaceMode}
-          onChange={(_event, { value }) =>
-            setSurfaceMode(value as TopologySurfaceMode)
-          }
-          style={{ width: 136 }}
-        >
-          {TOPOLOGY_SURFACE_OPTIONS.map(([value, label]) => (
-            <Select.Option key={value} label={`View: ${label}`} value={value} />
-          ))}
-        </Select>
-      </OneCdGlassCard>
-
       <SelectionCard
         selected={resolvedSelected}
         topology={resolvedTopology}
@@ -6915,7 +7132,11 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         onOpenInSearch={onOpenInSearch}
       />
 
-      <div className="absolute bottom-6 left-4 z-[1000] space-y-3 pointer-events-auto">
+      <MapBottomRightActions
+        aria-label="Map legend and view controls"
+        role="region"
+        tabIndex={roleLegendExpanded ? 0 : undefined}
+      >
         {roleLegendExpanded ? (
           <OneCdGlassCard
             tag="aside"
@@ -6925,12 +7146,13 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             )}
           >
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h5 className="text-xs font-black uppercase tracking-[0.2em] sui-color-default">
+              <h5 className="text-xs font-black tracking-[0.2em] sui-color-default">
                 Site Roles
               </h5>
               <button
+                ref={roleLegendToggleRef}
                 type="button"
-                onClick={() => setRoleLegendExpanded(false)}
+                onClick={() => toggleRoleLegendExpanded(false)}
                 title="Collapse site roles"
                 aria-label="Collapse site roles"
                 className={cn(
@@ -6956,155 +7178,46 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             </div>
           </OneCdGlassCard>
         ) : (
-          <button
-            type="button"
-            onClick={() => setRoleLegendExpanded(true)}
+          <MapLegendToggleButton
+            appearance="subtle"
+            elementRef={roleLegendToggleRef}
+            onClick={() => toggleRoleLegendExpanded(true)}
             title="Show site roles"
             aria-label="Show site roles"
             aria-expanded={false}
-            className={cn(
-              "group flex max-w-[190px] items-center gap-2 rounded-full border px-2.5 py-2 shadow-lg transition-all focus:outline-none focus:ring-1 sui-focus-ring",
-              overlayChrome,
-            )}
           >
-            <span
-              className="text-xs tracking-[0.18em]"
-              style={{ color: "#94A3B8" }}
-            >
-              Site Roles
-            </span>
-            <span className="flex -space-x-1">
+            <MapLegendLabel>Site Roles</MapLegendLabel>
+            <MapLegendPreview aria-hidden="true">
               {roleLegendPreviewSites.map((site) => (
                 <RoleLegendDot
                   key={site.id}
                   role={site.role}
                   className="h-2.5 w-2.5 rounded-full border shadow-sm sui-border-weak"
-                  title={`${site.shortName}: ${topologyRoleLabel(site.role)}`}
                 />
               ))}
-            </span>
-            <ChevronRight className="h-3.5 w-3.5 sui-color-default transition-transform group-hover:translate-x-0.5" />
-          </button>
+            </MapLegendPreview>
+            <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </MapLegendToggleButton>
         )}
 
-        {surfaceMode === "geo" && (
-          <button
-            type="button"
-            onClick={cycleTilePreset}
-            title={`Tiles: ${tilePreset.label}. Click to cycle.`}
-            aria-label={`Switch base map. Current: ${tilePreset.label}`}
-            className={cn(
-              "border p-2 rounded-lg shadow-md transition-colors focus:outline-none focus:ring-1 sui-focus-ring relative",
-              buttonChrome,
-            )}
-          >
-            <Layers className="w-4 h-4" />
-          </button>
-        )}
-
-        <button
-          type="button"
-          onClick={openEditor}
-          title="Edit topology"
-          aria-label="Edit topology"
-          className={cn(
-            "border p-2 rounded-lg shadow-md transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
-            buttonChrome,
-          )}
+        <MapViewSelect
+          inline
+          appearance="subtle"
+          labelText="Connectivity presentation"
+          value={surfaceMode}
+          onChange={(_event, { value }) =>
+            setSurfaceMode(value as TopologySurfaceMode)
+          }
         >
-          <Pencil className="w-4 h-4" />
-        </button>
-
-        <div
-          className="relative"
-          onKeyDown={(event) => {
-            if (event.key === "Escape") setMotionSettingsOpen(false);
-          }}
-        >
-          <button
-            type="button"
-            onClick={() => setMotionSettingsOpen((open) => !open)}
-            title={
-              reducedMotion
-                ? "Connector motion is forced off by your OS reduce-motion setting."
-                : `Connector motion: ${topologyConnectorSpeedLabel(storedConnectorSpeed)}`
-            }
-            aria-label={`Configure connector motion. Current speed: ${topologyConnectorSpeedLabel(connectorSpeed)}`}
-            aria-haspopup="dialog"
-            aria-expanded={motionSettingsOpen}
-            className={cn(
-              "relative rounded-lg border p-2 shadow-md transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
-              buttonChrome,
-              connectorSpeed <= 0 && "opacity-60",
-            )}
-          >
-            <Sparkles
-              className={cn(
-                "h-4 w-4",
-                connectorSpeed > 0 ? "sui-color-info" : "sui-color-muted",
-              )}
+          {TOPOLOGY_SURFACE_OPTIONS.map(([value, label]) => (
+            <Select.Option
+              key={value}
+              label={`View: ${label}`}
+              value={value}
             />
-          </button>
-
-          {motionSettingsOpen && (
-            <OneCdGlassCard
-              tag="section"
-              className={cn(
-                "absolute bottom-0 left-[calc(100%+0.75rem)] z-[1250] w-64 p-4 shadow-2xl",
-                isDark ? "sui-color-active" : "sui-color-active",
-              )}
-              role="dialog"
-              aria-labelledby="topology-connector-speed-label"
-            >
-              <div className="mb-3 flex items-start justify-between gap-3">
-                <div>
-                  <h5
-                    id="topology-connector-speed-label"
-                    className="text-sm font-bold"
-                  >
-                    Connector motion
-                  </h5>
-                  <p className="mt-1 text-xs leading-snug sui-color-default">
-                    Controls the light trails on map connector lines.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setMotionSettingsOpen(false)}
-                  aria-label="Close connector motion settings"
-                  className="rounded-md p-1 sui-color-default transition-colors sui-hover-bg-floating sui-hover-color-current focus:outline-none focus:ring-1 sui-focus-ring"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-              <Slider
-                inputId="topology-connector-speed"
-                labelledBy="topology-connector-speed-label"
-                min={MIN_TOPOLOGY_CONNECTOR_SPEED}
-                max={MAX_TOPOLOGY_CONNECTOR_SPEED}
-                step={TOPOLOGY_CONNECTOR_SPEED_STEP}
-                stepMarks="always"
-                value={storedConnectorSpeed}
-                displayValue={topologyConnectorSpeedLabel(storedConnectorSpeed)}
-                minLabel="Static"
-                maxLabel="2×"
-                disabled={reducedMotion}
-                onChange={(_event, { value }) => setConnectorSpeed(value)}
-              />
-              <p
-                className="mt-3 text-xs leading-snug sui-color-default"
-                aria-live="polite"
-              >
-                {reducedMotion
-                  ? "Motion is disabled while your operating system requests reduced motion."
-                  : storedConnectorSpeed <= 0
-                    ? "Static by default."
-                    : `Connector trails are running at ${topologyConnectorSpeedLabel(storedConnectorSpeed)} speed.`}
-              </p>
-            </OneCdGlassCard>
-          )}
-        </div>
-      </div>
+          ))}
+        </MapViewSelect>
+      </MapBottomRightActions>
     </TopologyMapRoot>
   );
 };
