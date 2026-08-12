@@ -29,18 +29,22 @@ import React, {
   useRef,
   useState,
 } from "react";
+import DotsThreeVertical from "@splunk/react-icons/DotsThreeVertical";
 import { createURL } from "@splunk/splunk-utils/url";
+import Button from "@splunk/react-ui/Button";
+import Dropdown from "@splunk/react-ui/Dropdown";
+import Menu from "@splunk/react-ui/Menu";
 import Select from "@splunk/react-ui/Select";
+import SpotLight from "@splunk/react-ui/SpotLight";
+import useSplunkTheme from "@splunk/themes/useSplunkTheme";
 import {
     Activity,
     RefreshCw,
-    Pause,
     Download,
     Keyboard,
     RotateCcw,
     Settings2,
     ExternalLink,
-    Globe2,
     Edit3,
     Upload,
     X,
@@ -55,7 +59,6 @@ import {
     ArrowUp,
     ArrowDown,
     ArrowUpDown,
-    Layers3,
     Shield,
     ShieldKeyhole,
     Plus,
@@ -66,6 +69,7 @@ import {
     Trash2,
     PanelBottom,
     PanelRight,
+    PanelRightClose,
     PanelTop,
     Sparkles,
     Servers,
@@ -76,7 +80,7 @@ import {
     type SuiIcon,
 } from '@/common/icons/SuiIcon';
 import { DashboardSection } from "@/common/components/florida/DashboardSection";
-import { OneCdRadioBar } from "@/common/components/florida/OneCdSurface";
+import { OneCdRadioBar } from "@/common/components/florida/OneCdPrimitives";
 import { MetricItem } from "@/common/components/florida/MetricItem";
 import { WorkspaceModalShell } from "@/common/components/florida/WorkspaceModalShell";
 import SearchbaseDrilldownGuidance, {
@@ -110,7 +114,6 @@ import {
   DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES,
   type CustomerTopologySectionTitles,
 } from "@/common/services/customerTopologyPersistenceService";
-import { HealthBadge } from "@/common/components/florida/HealthBadge";
 import {
   SignalTickerEditor,
   SignalTickerRail,
@@ -203,7 +206,6 @@ import {
   horizontalListSortingStrategy,
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
-import { ThemeToggle } from "@/common/components/florida/ThemeToggle";
 import { runSearch } from "@/common/services/splunkSearchService";
 import {
   getSearchbaseCatalogue,
@@ -226,6 +228,9 @@ import { cn } from "@/common/lib/utils";
 
 const APP_NAME = "splunk-cisco-dashboards";
 const APP_CATALOG_SEARCH_NAME = "Splunk for Secure Networking";
+const WORKSPACE_MENU_WIDTH_PX = 200;
+const HEADER_TIME_RANGE_WIDTH_PX = 130;
+const HEADER_REFRESH_RATE_WIDTH_PX = 140;
 
 // Default subtitle shown beneath the customer name when no per-user
 // override is set in localStorage. Operators can change the visible
@@ -2193,7 +2198,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   signalTickerDefault,
 }) => {
   // ------------------------------ Theme ------------------------------
-  const { theme, resolvedTheme, setTheme, cycle: cycleTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
+  const { spacingSmall, spacingXSmall } = useSplunkTheme();
+  const workspaceToggleRef = useRef<HTMLAnchorElement | HTMLButtonElement>(null);
   useLayoutEffect(() => {
     document.documentElement.classList.add("scd-overview-active");
     document.body.classList.add("scd-overview-active");
@@ -2558,7 +2565,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   // the per-section preference is keyed off localStorage.
   //
   // Declared up here (before the aggregate status block) because
-  // the HealthBadge filter below needs to know which tiles are
+  // the header health summary below needs to know which tiles are
   // currently visible.
   const {
     counts: sectionTileCounts,
@@ -2589,7 +2596,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   } = usePersistedSectionHeights({
     minLevel: 1,
     maxLevel: 5,
-    defaultLevel: 1,
+    defaultLevel: 2,
     workspaceId: insightsWorkspace.id,
     availableSections,
   });
@@ -2678,7 +2685,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     setStatuses((prev) => (prev[id] === s ? prev : { ...prev, [id]: s }));
   }, []);
 
-  // The HealthBadge should only reflect tiles the user is
+  // The header health summary should only reflect tiles the user is
   // currently *seeing*. When a tile is hidden (because the user
   // dialled the section count down), its last reported status
   // would otherwise stick around in `statuses` and skew the
@@ -2690,7 +2697,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     for (const section of visibleSections) {
       // Same pipeline the render below uses: canonical ids ->
       // apply user reorder -> slice to visible count. Keeping
-      // the badge filter and the render in lockstep means a
+      // the summary filter and the render in lockstep means a
       // tile dragged into the visible window also gets its
       // status counted in the aggregate, and a tile dragged
       // out is dropped immediately.
@@ -2719,8 +2726,38 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     [statuses, visibleMetricIds],
   );
 
+  const headerHealthSummary = useMemo(() => {
+    const counts = statusList.reduce(
+      (summary, status) => {
+        summary[status] += 1;
+        return summary;
+      },
+      { critical: 0, warning: 0, healthy: 0, unknown: 0 },
+    );
+    if (counts.critical || counts.warning) {
+      return [
+        counts.critical ? `${counts.critical} critical` : "",
+        counts.warning ? `${counts.warning} warning` : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+    }
+    if (counts.healthy) return "All systems operational";
+    return "Awaiting metrics";
+  }, [statusList]);
+
   // ------------------------------ Help overlay ------------------------------
   const [helpOpen, setHelpOpen] = useState(false);
+  const [headerActionsOpen, setHeaderActionsOpen] = useState(false);
+  const headerActionsToggleRef = useRef<
+    HTMLAnchorElement | HTMLButtonElement
+  >(null);
+  const closeHeaderActions = useCallback((restoreFocus = true) => {
+    setHeaderActionsOpen(false);
+    if (restoreFocus) {
+      window.requestAnimationFrame(() => headerActionsToggleRef.current?.focus());
+    }
+  }, []);
 
   const [visibleSearchbaseCatalogue, setVisibleSearchbaseCatalogue] = useState<
     SearchbaseRecord[] | null
@@ -2902,9 +2939,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       // for the current session.
     }
   }, [MAP_VISIBILITY_KEY, mapVisible]);
-  const toggleMapVisibility = useCallback(() => {
-    setMapVisible((visible) => !visible);
-  }, []);
   useEffect(() => {
     setRegionalView(insightsWorkspace.regionalView);
     setMapPosition(insightsWorkspace.mapPosition);
@@ -4167,10 +4201,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     });
   }, []);
   const focusGlobalSearch = useCallback(() => {
-    // Right now the only focusable input is the time-range select.
-    // Once a global search bar is wired this is where it goes.
-    const el = document.querySelector<HTMLSelectElement>(
-      "select[data-shortcut-search]",
+    // Until a global search bar is wired, focus the dashboard-actions menu,
+    // which now owns the time-range controls.
+    const el = document.querySelector<HTMLButtonElement>(
+      "button[data-shortcut-search]",
     );
     el?.focus();
   }, []);
@@ -4252,24 +4286,26 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   }, [closeHelp, helpOpen]);
 
   // ------------------------------ Render ------------------------------
-  const iconBtnClass =
-    "p-1.5 rounded transition-colors text-slate-500 dark:text-slate-400 " +
-    "hover:text-sky-600 dark:hover:text-sky-300 hover:bg-slate-50 dark:hover:bg-slate-800";
-
   return (
     <div
       ref={exportRef}
       style={dashboardShellStyle}
       className={cn(
-        "scd-overview-page scd-c3-surface flex w-full min-w-0 max-w-full flex-col overflow-hidden font-sans",
+        "scd-overview-page scd-c3-surface relative isolate flex w-full min-w-0 max-w-full flex-col overflow-hidden font-sans",
         compactDensity && "scd-overview-compact",
         "bg-slate-50 text-slate-900",
         "dark:bg-slate-950 dark:text-slate-100",
         resolvedTheme === "dark" && "dark scd-one-cisco-spotlight-canvas",
       )}
     >
+      <SpotLight
+        aria-hidden="true"
+        variant="page-top"
+        intensity="low"
+        scale={0.5}
+      />
       {/* Header */}
-      <header className="scd-c3-toolbar h-14 flex-shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 flex items-center justify-between shadow-sm">
+      <header className="scd-c3-toolbar h-14 flex-shrink-0 bg-transparent dark:bg-transparent border-0 px-4 flex items-center justify-between shadow-none backdrop-filter-none">
         {/*
          * The branding cluster (logo + title/subtitle + edit
          * pencil) is the hover-trigger group. The pencil sits
@@ -4315,9 +4351,52 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             </div>
           ) : null}
           <div className="min-w-0">
-            <h1 className="truncate text-lg font-bold leading-none tracking-[-0.01em] text-slate-900 dark:text-slate-100">
-              {effectiveTitle}
-            </h1>
+            <div
+              className="flex min-w-0 items-center"
+              style={{ columnGap: spacingSmall }}
+            >
+              <h1 className="truncate text-lg font-bold leading-none tracking-[-0.01em] text-slate-900 dark:text-slate-100">
+                {effectiveTitle}
+              </h1>
+              <Dropdown
+                focusToggleReasons={["escapeKey", "tabKey", "toggleClick"]}
+                toggle={
+                  <Button
+                    appearance="subtle"
+                    elementRef={workspaceToggleRef}
+                    hideLabel
+                    icon={<ChevronDown aria-hidden="true" />}
+                    label={`Switch workspace. Current: ${insightsWorkspace.label}`}
+                  />
+                }
+              >
+                <Menu style={{ width: WORKSPACE_MENU_WIDTH_PX }}>
+                  {workspaces.map((workspace) => (
+                    <Menu.Item
+                      key={workspace.id}
+                      to={`${splunkViewAppUrl("workspace_insights")}?workspace=${encodeURIComponent(
+                        workspace.id,
+                      )}`}
+                      selectable
+                      selected={workspace.id === insightsWorkspace.id}
+                    >
+                      {workspace.label}
+                    </Menu.Item>
+                  ))}
+                  {canManageWorkspaceConfig && (
+                    <>
+                      <Menu.Divider />
+                      <Menu.Item
+                        onClick={() => setWorkspaceManagerOpen(true)}
+                        startAdornment={<Edit3 aria-hidden="true" />}
+                      >
+                        Edit workspaces
+                      </Menu.Item>
+                    </>
+                  )}
+                </Menu>
+              </Dropdown>
+            </div>
             <p className="mt-1 truncate text-xs font-medium leading-none text-slate-500 dark:text-slate-400">
               {effectiveSubtitle}
             </p>
@@ -4333,261 +4412,169 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           </button>
         </div>
 
-        <div className="flex flex-shrink-0 items-center gap-1">
-          <HealthBadge
-            statuses={statusList}
-            className="max-[1399px]:w-8 max-[1399px]:justify-center max-[1399px]:px-0 max-[1399px]:[&>span]:hidden"
-          />
-          <span
-            data-scd-app-update-host
-            className="inline-flex flex-shrink-0 items-center"
-            aria-live="polite"
-          />
-          <div className="m-0 flex h-8 items-center gap-1.5">
-            <span className="hidden text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 2xl:inline">
-              Range
-            </span>
-            <Select
-              className="scd-toolbar-select"
-              data-shortcut-search
-              value={timeRange.label}
-              onChange={(_event, { value }) => {
-                const next = TIME_RANGE_OPTIONS.find(
-                  (o) => o.label === String(value),
-                );
-                if (next) setTimeRange(next);
-              }}
-              inline
-              labelText="Dashboard time range"
-              style={{ width: 124 }}
-              title="Dashboard time range"
-            >
-              {TIME_RANGE_OPTIONS.map((o) => (
-                <Select.Option key={o.label} label={o.label} value={o.label} />
-              ))}
-            </Select>
-          </div>
-          <div className="m-0 flex h-8 items-center gap-1.5">
-            <span className="hidden text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 2xl:inline">
-              Auto
-            </span>
-            <Select
-              className="scd-toolbar-select"
-              value={autoRefreshSeconds}
-              onChange={(_event, { value }) =>
-                setAutoRefreshSeconds(Number(value))
+        <div
+          className="flex flex-shrink-0 items-center"
+          style={{ columnGap: spacingXSmall }}
+        >
+          <MapLayoutRadioBar
+            value={activeMapPosition}
+            onChange={(next) => {
+              if (next === "hidden") {
+                setMapVisible(false);
+                return;
               }
-              inline
-              labelText="Auto-refresh interval"
-              style={{ width: 72 }}
-              title="Auto-refresh interval"
-            >
-              {AUTO_REFRESH_OPTIONS.map((o) => (
-                <Select.Option
-                  key={o.seconds}
-                  label={o.label}
-                  value={o.seconds}
-                />
-              ))}
-            </Select>
-          </div>
-          <button
-            type="button"
+              setMapPosition(next);
+              setMapVisible(true);
+            }}
+          />
+          <Select
+            appearance="subtle"
+            data-shortcut-search
+            inline
+            labelText="Dashboard time range"
+            onChange={(_event, { value }) => {
+              const next = TIME_RANGE_OPTIONS.find(
+                (option) => option.label === String(value),
+              );
+              if (next) setTimeRange(next);
+            }}
+            style={{ width: HEADER_TIME_RANGE_WIDTH_PX }}
+            value={timeRange.label}
+          >
+            {TIME_RANGE_OPTIONS.map((option) => (
+              <Select.Option
+                key={option.label}
+                label={option.label}
+                value={option.label}
+              />
+            ))}
+          </Select>
+          <Select
+            appearance="subtle"
+            inline
+            onChange={(_event, { value }) =>
+              setAutoRefreshSeconds(Number(value))
+            }
+            prefixLabel="Refresh rate"
+            style={{ width: HEADER_REFRESH_RATE_WIDTH_PX }}
+            value={autoRefreshSeconds}
+          >
+            {AUTO_REFRESH_OPTIONS.map((option) => (
+              <Select.Option
+                key={option.seconds}
+                label={option.label}
+                value={option.seconds}
+              />
+            ))}
+          </Select>
+          <Button
+            appearance="subtle"
+            hideLabel
+            icon={
+              <RefreshCw
+                className={autoRefreshSeconds > 0 ? "animate-pulse" : undefined}
+              />
+            }
+            label={`Refresh dashboard data now. Last refreshed ${lastRefreshed.toLocaleTimeString(
+              [],
+              { hour: "2-digit", minute: "2-digit" },
+            )}`}
             onClick={refreshNow}
-            title={`Refresh now (last: ${lastRefreshed.toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })})`}
-            aria-label="Refresh dashboard data now"
-            className={cn(
-              iconBtnClass,
-              "text-slate-400 dark:text-slate-500",
-            )}
-          >
-            <RefreshCw
-              className={
-                "w-4 h-4 " + (autoRefreshSeconds > 0 ? "animate-pulse" : "")
-              }
-            />
-          </button>
-          <div className="relative group">
-            <button
-              type="button"
-              disabled={exporting}
-              className={cn(
-                iconBtnClass,
-                "disabled:opacity-50 disabled:cursor-wait",
-              )}
-              title="Export"
-            >
-              {exporting ? (
-                <Pause className="w-4 h-4 animate-pulse" />
-              ) : (
-                <Download className="w-4 h-4" />
-              )}
-            </button>
-            <div className="absolute right-0 top-full mt-1 hidden group-hover:flex group-focus-within:flex flex-col bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md shadow-lg overflow-hidden z-50 w-28">
-              <button
-                type="button"
-                onClick={() => exportAs("png")}
-                className="px-3 py-1.5 text-xs text-left font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-slate-800"
-              >
-                Save as PNG
-              </button>
-              <button
-                type="button"
-                onClick={() => exportAs("pdf")}
-                className="px-3 py-1.5 text-xs text-left font-semibold text-slate-700 dark:text-slate-200 hover:bg-sky-50 dark:hover:bg-slate-800 border-t border-slate-100 dark:border-slate-700"
-              >
-                Save as PDF
-              </button>
-            </div>
-          </div>
-          {overrideCount > 0 && (
-            <button
-              type="button"
-              onClick={() => {
-                if (
-                  typeof window !== "undefined" &&
-                  !window.confirm(
-                    `Reset ${overrideCount} customised tile${
-                      overrideCount === 1 ? "" : "s"
-                    } to their default search bindings?`,
-                  )
-                ) {
-                  return;
-                }
-                resetAllOverrides();
-              }}
-              title={`Reset ${overrideCount} customised tile${
-                overrideCount === 1 ? "" : "s"
-              }`}
-              className={cn(
-                iconBtnClass,
-                "relative text-sky-600 dark:text-sky-300",
-              )}
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] rounded-full bg-sky-500 text-white text-xs font-black leading-[14px] text-center px-0.5 border border-white dark:border-slate-900">
-                {overrideCount}
-              </span>
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={() => setSignalTickerEditorOpen(true)}
-            title={`Configure signal rail (${signalTickerItemCount} KPI${
-              signalTickerItemCount === 1 ? "" : "s"
-            })`}
-            className={cn(
-              iconBtnClass,
-              signalTickerConfig.enabled
-                ? "text-sky-600 dark:text-sky-300"
-                : "text-slate-400 dark:text-slate-500",
-            )}
-          >
-            <Sparkles className="w-4 h-4" />
-          </button>
-          <ThemeToggle
-            theme={theme}
-            onCycle={cycleTheme}
-            className={iconBtnClass}
-            iconOnly
           />
-          <button
-            type="button"
-            onClick={toggleMapVisibility}
-            title={
-              mapVisible
-                ? "Hide customer site connectivity map"
-                : "Show customer site connectivity map"
+          <Dropdown
+            defaultPlacement="below"
+            focusToggleReasons={["escapeKey", "tabKey", "toggleClick"]}
+            open={headerActionsOpen}
+            onRequestClose={() => setHeaderActionsOpen(false)}
+            onRequestOpen={() => setHeaderActionsOpen(true)}
+            toggle={
+              <Button
+                appearance="subtle"
+                data-shortcut-search
+                elementRef={headerActionsToggleRef}
+                hideLabel
+                icon={<DotsThreeVertical aria-hidden="true" />}
+                label="Dashboard actions"
+              />
             }
-            aria-label={
-              mapVisible
-                ? "Hide customer site connectivity map"
-                : "Show customer site connectivity map"
-            }
-            aria-pressed={!mapVisible}
-            className={cn(
-              iconBtnClass,
-              !mapVisible &&
-                "text-sky-600 dark:text-sky-300 bg-sky-50 dark:bg-slate-800",
-            )}
           >
-            <Globe2 className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={() => setHelpOpen(true)}
-            // Build 1205: title widened from "Keyboard
-            // shortcuts" to reflect the overlay's broader
-            // remit — it now also documents the picker's
-            // scope contract (tile vs. section vs.
-            // drill-down). The `?` shortcut still works
-            // and is the affordance power users learned;
-            // the title text is the discovery hook for
-            // everyone else.
-            title="Help & reference (?)"
-            className={iconBtnClass}
-          >
-            <Keyboard className="w-4 h-4" />
-          </button>
-          <div className="ml-0.5 flex items-center gap-1 border-l border-slate-200 pl-2 dark:border-slate-700">
-            <div className="flex flex-col items-end">
-              <label
-                className="relative m-0 inline-flex h-7 max-w-[180px] cursor-pointer items-center gap-1 rounded-md px-1.5 text-slate-600 transition-colors hover:bg-slate-50 hover:text-sky-700 focus-within:ring-2 focus-within:ring-sky-500 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-sky-200"
-                title={`Switch workspace. Current: ${insightsWorkspace.label}`}
+            <Menu>
+              <Menu.Heading title>
+                Dashboard controls · {headerHealthSummary}
+              </Menu.Heading>
+              <Menu.Item
+                disabled={exporting}
+                onClick={() => {
+                  closeHeaderActions();
+                  exportAs("png");
+                }}
+                startAdornment={<Download aria-hidden="true" />}
               >
-                <Layers3 className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
-                <span className="hidden truncate text-xs font-bold leading-none xl:block">
-                  {insightsWorkspace.label}
-                </span>
-                <ChevronDown
-                  className="hidden h-3 w-3 flex-shrink-0 xl:block"
-                  aria-hidden="true"
-                />
-                <select
-                  value={insightsWorkspace.id}
-                  onChange={(event) => {
-                    handleInsightsWorkspaceChange(event.target.value);
+                Export as PNG
+              </Menu.Item>
+              <Menu.Item
+                disabled={exporting}
+                onClick={() => {
+                  closeHeaderActions();
+                  exportAs("pdf");
+                }}
+                startAdornment={<Download aria-hidden="true" />}
+              >
+                Export as PDF
+              </Menu.Item>
+              {overrideCount > 0 && (
+                <Menu.Item
+                  description={`${overrideCount} customised`}
+                  onClick={() => {
+                    closeHeaderActions();
+                    if (
+                      typeof window === "undefined" ||
+                      window.confirm(
+                        `Reset ${overrideCount} customised tile${
+                          overrideCount === 1 ? "" : "s"
+                        } to their default search bindings?`,
+                      )
+                    ) {
+                      resetAllOverrides();
+                    }
                   }}
-                  aria-label="Workspace"
-                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  startAdornment={<RotateCcw aria-hidden="true" />}
                 >
-                  {workspaces.map((workspace) => {
-                    return (
-                      <option key={workspace.id} value={workspace.id}>
-                        {workspace.label}
-                      </option>
-                    );
-                  })}
-                </select>
-              </label>
-              <div className="hidden items-center justify-end gap-1 leading-tight xl:flex">
-                <a
-                  href={appCatalogUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-slate-400 no-underline transition-colors hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
-                  title={`Installed: ${appVersionLabel} — click to review Splunk for Secure Networking and upgrades`}
-                  aria-label={`Splunk for Secure Networking and upgrades; installed app ${appVersionLabel}`}
-                >
-                  {appVersionLabel}
-                </a>
-              </div>
-            </div>
-            {canManageWorkspaceConfig && (
-              <button
-                type="button"
-                onClick={() => setWorkspaceManagerOpen(true)}
-                title="Create, duplicate, or manage workspaces"
-                aria-label="Manage workspaces"
-                className={iconBtnClass}
+                  Reset customised tiles
+                </Menu.Item>
+              )}
+              <Menu.Item
+                description={`${signalTickerItemCount} KPI${
+                  signalTickerItemCount === 1 ? "" : "s"
+                }`}
+                onClick={() => {
+                  closeHeaderActions();
+                  setSignalTickerEditorOpen(true);
+                }}
+                startAdornment={<Sparkles aria-hidden="true" />}
               >
-                <Settings2 className="h-4 w-4" />
-              </button>
-            )}
-          </div>
+                Configure signal rail
+              </Menu.Item>
+              <Menu.Item
+                onClick={() => {
+                  closeHeaderActions();
+                  setHelpOpen(true);
+                }}
+                startAdornment={<Keyboard aria-hidden="true" />}
+              >
+                Help and reference
+              </Menu.Item>
+              <Menu.Divider />
+              <Menu.Item
+                description={appVersionLabel}
+                onClick={() => closeHeaderActions()}
+                openInNewContext
+                to={appCatalogUrl}
+              >
+                App details and upgrades
+              </Menu.Item>
+            </Menu>
+          </Dropdown>
         </div>
       </header>
 
@@ -4836,32 +4823,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               const orderedIds = getSectionTileOrder(section, canonicalIds);
               const visibleIds = orderedIds.slice(0, visibleCount);
               const byId = new Map(allSectionMetrics.map((m) => [m.id, m]));
-              const sectionStatuses = visibleIds
-                .map((id) => statuses[id])
-                .filter((status): status is MetricStatus => Boolean(status));
-              const criticalCount = sectionStatuses.filter(
-                (status) => status === "critical",
-              ).length;
-              const warningCount = sectionStatuses.filter(
-                (status) => status === "warning",
-              ).length;
-              const healthyCount = sectionStatuses.filter(
-                (status) => status === "healthy",
-              ).length;
-              const explicitUnknownCount = sectionStatuses.filter(
-                (status) => status === "unknown",
-              ).length;
-              const unresolvedCount = Math.max(
-                0,
-                visibleCount - sectionStatuses.length,
-              );
-              const collapsedSummary = {
-                kpiCount: visibleCount,
-                healthyCount,
-                warningCount,
-                criticalCount,
-                unknownCount: explicitUnknownCount + unresolvedCount,
-              };
               let sectionFlexGrow = heightLevel;
               if (isSectionCollapsed) sectionFlexGrow = 0;
               if (isSectionFocused) {
@@ -4891,7 +4852,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   title={meta.title}
                   linkText={meta.linkText}
                   href={meta.href}
-                  icon={meta.icon}
                   // Height level influences both
                   // proportional growth on roomy
                   // screens and the hard min-height
@@ -4913,7 +4873,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   compactHeight={renderCompactHeight}
                   collapsed={isSectionCollapsed}
                   focused={isSectionFocused}
-                  collapsedSummary={collapsedSummary}
                   onToggleCollapsed={() => toggleSectionCollapsed(section)}
                   onToggleFocus={() => toggleSectionFocus(section)}
                   tileCount={
@@ -5148,10 +5107,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                     </p>
                   </div>
                   <div className="flex flex-shrink-0 items-center gap-2">
-                    <MapPositionToggle
-                      value={mapPosition}
-                      onChange={setMapPosition}
-                    />
                     <RegionalViewToggle
                       value={regionalView}
                       onChange={setRegionalView}
@@ -5285,6 +5240,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
 
       <WorkspaceManager
         open={workspaceManagerOpen}
+        returnFocus={workspaceToggleRef}
         currentWorkspace={insightsWorkspace}
         workspaces={workspaces}
         layouts={layouts}
@@ -8060,74 +8016,47 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
 // for the wiring and the rationale on defaulting to `right` (Build 83).
 type MapPosition = "right" | "below" | "above";
 
-interface MapPositionToggleProps {
-  value: MapPosition;
-  onChange: (next: MapPosition) => void;
+type MapLayout = MapPosition | "hidden";
+
+interface MapLayoutRadioBarProps {
+  value: MapLayout;
+  onChange: (next: MapLayout) => void;
 }
 
-// Three-segment selector for the topology map's placement, rendered
-// in the map card header next to the MAP/TABLE toggle. Each segment
-// is an icon-only button (PanelBottom / PanelRight / PanelTop) with a
-// title tooltip so the meaning stays clear at icon-only widths. The
-// styling mirrors `RegionalViewToggle` for visual parity in the
-// header.
-const MapPositionToggle: React.FC<MapPositionToggleProps> = ({
+const MAP_LAYOUT_OPTIONS = [
+  {
+    value: "below",
+    ariaLabel: "Map below tiles",
+    startAdornment: <PanelBottom aria-hidden="true" />,
+  },
+  {
+    value: "right",
+    ariaLabel: "Map on the right",
+    startAdornment: <PanelRight aria-hidden="true" />,
+  },
+  {
+    value: "above",
+    ariaLabel: "Map above tiles",
+    startAdornment: <PanelTop aria-hidden="true" />,
+  },
+  {
+    value: "hidden",
+    ariaLabel: "Hide map",
+    startAdornment: <PanelRightClose aria-hidden="true" />,
+  },
+] as const;
+
+const MapLayoutRadioBar: React.FC<MapLayoutRadioBarProps> = ({
   value,
   onChange,
-}) => {
-  const baseClass =
-    "p-1 transition-colors rounded focus:outline-none focus:ring-1 focus:ring-sky-400";
-  const activeClass =
-    "bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-sky-600 dark:text-sky-300";
-  const inactiveClass =
-    "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300";
-  const options: Array<{
-    id: MapPosition;
-    icon: React.ReactNode;
-    label: string;
-  }> = [
-    {
-      id: "below",
-      icon: <PanelBottom className="w-3.5 h-3.5" />,
-      label: "Map below tiles",
-    },
-    {
-      id: "right",
-      icon: <PanelRight className="w-3.5 h-3.5" />,
-      label: "Map on the right",
-    },
-    {
-      id: "above",
-      icon: <PanelTop className="w-3.5 h-3.5" />,
-      label: "Map above tiles",
-    },
-  ];
-  return (
-    <div
-      role="tablist"
-      aria-label="Map position"
-      className="flex bg-slate-100 dark:bg-slate-800/60 p-1 rounded-md"
-    >
-      {options.map((opt) => (
-        <button
-          key={opt.id}
-          type="button"
-          role="tab"
-          aria-selected={value === opt.id}
-          aria-label={opt.label}
-          title={opt.label}
-          onClick={() => onChange(opt.id)}
-          className={cn(
-            baseClass,
-            value === opt.id ? activeClass : inactiveClass,
-          )}
-        >
-          {opt.icon}
-        </button>
-      ))}
-    </div>
-  );
-};
+}) => (
+  <OneCdRadioBar
+    ariaLabel="Map layout"
+    options={MAP_LAYOUT_OPTIONS}
+    value={value}
+    onChange={onChange}
+  />
+);
 
 const KpiCard: React.FC<KpiCardProps> = ({
   label,

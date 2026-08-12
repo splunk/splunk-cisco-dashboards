@@ -63,13 +63,13 @@ assert.match(
 );
 assert.match(
   pieTile,
-  /title=\{`Expand \$\{label\}`\}/,
-  "Composition charts must use an explicit expand action",
+  /onExpand=\{hasData \? \(\) => setIsFocusOpen\(true\) : undefined\}/,
+  "Composition charts must expose expand through the tile action menu",
 );
 assert.match(
   barBreakdown,
-  /title=\{`Expand \$\{label\}`\}/,
-  "Bar breakdown charts must use an explicit expand action",
+  /onExpand=\{hasData \? \(\) => setIsFocusOpen\(true\) : undefined\}/,
+  "Bar breakdown charts must expose expand through the tile action menu",
 );
 assert.match(
   modalShell,

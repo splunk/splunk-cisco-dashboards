@@ -9,8 +9,8 @@ const { renderToStaticMarkup } = require("react-dom/server");
 const read = (relativePath) =>
   fs.readFileSync(path.resolve(__dirname, relativePath), "utf8");
 
-const oneCdSurface = read(
-  "../src/main/webapp/common/components/florida/OneCdSurface.tsx",
+const oneCdPrimitives = read(
+  "../src/main/webapp/common/components/florida/OneCdPrimitives.tsx",
 );
 const dashboardSection = read(
   "../src/main/webapp/common/components/florida/DashboardSection.tsx",
@@ -58,49 +58,65 @@ const extractSvgPaths = (source) =>
   [...source.matchAll(/<path[^>]*\sd="([^"]+)"/g)].map((match) => match[1]);
 
 assert.match(
-  oneCdSurface,
-  /from '@splunk\/react-ui\/SpotLight'/,
-  "1CD atmosphere must use the released SUI SpotLight component",
+  profile,
+  /from "@splunk\/react-ui\/SpotLight"/,
+  "The Insights Workspace page must import the released SUI SpotLight component directly",
 );
 assert.match(
-  oneCdSurface,
+  oneCdPrimitives,
   /from '@splunk\/react-ui\/RadioBar'/,
   "Small related view choices must use the released SUI RadioBar component",
 );
 assert.match(
-  oneCdSurface,
+  oneCdPrimitives,
   /styled\(Card\)\.attrs\(\{ material: 'glass' as const \}\)/,
-  "Glass overlays must use the SUI Card glass material instead of a CSS lookalike",
+  "Glass overlays use the glass material supplied by the repository's pinned SUI 5.13 package",
+);
+assert.doesNotMatch(
+  oneCdPrimitives,
+  /styled\(Card\)[\s\S]*?border-radius/,
+  "SUI Card must retain its built-in radius instead of duplicating it in custom CSS",
+);
+assert.doesNotMatch(
+  oneCdPrimitives,
+  /interactiveColorPrimary|contentColorInverted|accentColor|background-color|box-shadow|!important/,
+  "The view RadioBar must not recreate a selected-state treatment with custom color, glow, or forced overrides",
 );
 assert.match(
-  oneCdSurface,
-  /\{ variables \} from '@splunk\/themes'/,
-  "1CD surface styling must resolve through Splunk design tokens",
+  oneCdPrimitives,
+  /styled\(RadioBar\)[\s\S]*?\[role='menuitemradio'\][\s\S]*?opacity: 0\.82[\s\S]*?\[aria-checked='true'\][\s\S]*?:focus-visible[\s\S]*?opacity: 1/,
+  "The SUI RadioBar may add only a subtle opacity lift for the selected or keyboard-focused option",
 );
 assert.match(
-  oneCdSurface,
-  /\[role='radio'\]\[aria-checked='true'\][\s\S]*?background-color: \$\{variables\.interactiveColorPrimary\}/,
-  "The demo RadioBar must retain SUI semantics while making its selected state unmistakable",
+  oneCdPrimitives,
+  /<StyledRadioBar[\s\S]*?role="menubar"[\s\S]*?value=\{value\}/,
+  "The view selector must retain the released SUI RadioBar's view-switching menu semantics",
+);
+assert.doesNotMatch(dashboardSection, /OneCdSurface|SpotLight|spotlight=/);
+assert.match(
+  dashboardSection,
+  /import CollapsiblePanel from "@splunk\/react-ui\/CollapsiblePanel";/,
+  "Workspace metric sections must use the released SUI CollapsiblePanel",
 );
 assert.match(
   dashboardSection,
-  /spotlight=\{collapsed \? 'element' : false\}/,
-  "Collapsed metric panels must retain the designer's discovery spotlight",
+  /<CollapsiblePanel[\s\S]*?actions=\{actions\}[\s\S]*?open=\{!collapsed\}/,
+  "The SUI CollapsiblePanel must own the persisted expand-collapse interaction",
+);
+assert.doesNotMatch(
+  dashboardSection,
+  /renderChildrenWhenCollapsed|panelBodyMinHeight|innerBodyStyles/,
+  "Workspace sections must use CollapsiblePanel's normal content layout without synthetic body sizing",
 );
 assert.match(
   dashboardSection,
-  /\{!collapsed && \([\s\S]{0,240}?absolute top-0 left-0 w-1\.5 h-full/,
-  "The section edge accent must disappear when the compact header is collapsed",
+  /<Dropdown[\s\S]*?<Menu[\s\S]*?addTileAction\.label[\s\S]*?Edit section titles[\s\S]*?Focus this section[\s\S]*?Decrease height[\s\S]*?Show fewer tiles/,
+  "Non-navigation section actions must live in the SUI kebab menu",
 );
-assert.match(
+assert.doesNotMatch(
   dashboardSection,
-  /data-collapsed-status-summary="true"[\s\S]{0,1200}?<Badge/,
-  "Collapsed sections must summarize KPI health with native SUI badges",
-);
-assert.match(
-  dashboardSection,
-  /SUMMARY_BADGE_COLOR\.healthy\} 50%, transparent\)[\s\S]*?SUMMARY_BADGE_COLOR\.warning\} 50%, transparent\)[\s\S]*?SUMMARY_BADGE_COLOR\.critical\} 50%, transparent\)/,
-  "Collapsed severity badges must use the designer's 50% semantic fills",
+  /aria-label=\{collapsed \? `Expand|Collapse section|TileCountPill|HeightPill/,
+  "Metric sections must not recreate controls already owned by CollapsiblePanel or the action menu",
 );
 assert.match(
   topologyMap,
@@ -148,10 +164,12 @@ assert.match(
   "Glass status cards must keep the subtitle-to-value spacing compact",
 );
 assert.match(
-  signalRail,
-  /spotlight=\{variant === 'one-cisco-glass' \? 'page-top' : false\}/,
-  "The 1CD status overview must use the released SUI page-top SpotLight preset",
+  profile,
+  /<SpotLight[\s\S]*?variant="page-top"[\s\S]*?intensity="low"[\s\S]*?scale=\{0\.5\}/,
+  "The Insights Workspace root must own the released SUI page-top SpotLight preset",
 );
+assert.doesNotMatch(signalRail, /OneCdSurface|SpotLight|spotlight=/);
+assert.doesNotMatch(topologyMap, /OneCdSurface|SpotLight|spotlight=/);
 assert.match(
   signalRail,
   /color-mix\(in srgb, \$\{STATUS_BADGE_COLOR\.critical\} 50%, transparent\)/,
