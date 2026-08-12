@@ -1339,7 +1339,7 @@ interface MetricCardProps {
    * present, the gear icon is rendered with a "modified" dot.
    */
   override?: MetricOverride;
-  onConfigure: () => void;
+  onConfigure: (returnFocus?: HTMLElement | null) => void;
   onOpenDetailTable?: (config: MetricDetailTableConfig) => void;
   searchbaseDrilldowns: SearchbaseDrilldownMap;
   /**
@@ -3329,6 +3329,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   const [pickerContext, setPickerContext] = useState<KpiPickerContext | null>(
     null,
   );
+  const pickerReturnFocusRef = useRef<HTMLElement | null>(null);
   const [addTileSection, setAddTileSection] = useState<SectionId | null>(null);
   const [lastAddTileSection, setLastAddTileSection] =
     useState<SectionId | null>(null);
@@ -3736,6 +3737,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
          */
         section?: SectionId;
       },
+      returnFocus?: HTMLElement | null,
     ) => {
       // Search binding, value field, label, and thresholds are
       // admin-controlled (searchbase.conf) now — `current` IS
@@ -3743,6 +3745,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       // top. Only chart style / display flags still come from
       // the viewer's own localStorage override.
       const ov: MetricOverride | undefined = overrides[tileId];
+      pickerReturnFocusRef.current = returnFocus ?? null;
       setPickerContext({
         tileId,
         defaultLabel,
@@ -4873,13 +4876,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                             id={cfg.id}
                             ariaLabel={cfg.label}
                             tileAction={{
+                              kind: isLocalAddition ? "remove" : "hide",
                               label: isLocalAddition
                                 ? `Remove ${cfg.label}`
                                 : `Hide ${cfg.label}`,
-                              title: isLocalAddition
-                                ? `Remove added tile ${cfg.label}`
-                                : `Hide ${cfg.label} from this overview`,
-                              tone: isLocalAddition ? "remove" : "hide",
                               onClick: () =>
                                 isLocalAddition && cfg.searchbaseId
                                   ? removeAddedSearchbaseIdFromSection(
@@ -4920,14 +4920,14 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                                 (compactDensity || renderCompactHeight)
                               }
                               onOpenDetailTable={setActiveDetailTable}
-                              onConfigure={() =>
+                              onConfigure={(returnFocus) =>
                                 openPicker(cfg.id, cfg.label, {
                                   savedSearch: cfg.savedSearch,
                                   valueField: cfg.valueField,
                                   defaultThresholds: cfg.thresholds,
                                   unit: cfg.unit,
                                   section: cfg.section,
-                                })
+                                }, returnFocus)
                               }
                             />
                           </SortableMetricCard>
@@ -5161,6 +5161,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       <KpiPickerPanel
         open={pickerContext !== null}
         context={pickerContext}
+        returnFocus={pickerReturnFocusRef}
         onClose={closePicker}
         onApply={handlePickerApply}
         onApplyDisplayToSection={handleApplyDisplayToSection}

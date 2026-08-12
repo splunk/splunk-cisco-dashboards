@@ -164,7 +164,7 @@ assert.match(
 );
 assert.match(
   kpiPicker,
-  /DRILLDOWN_TARGET_LIMIT = 24[\s\S]*useState<string\[\]>\(\[\]\)[\s\S]*Navigation order/,
+  /DRILLDOWN_TARGET_LIMIT = 24[\s\S]*useState<\s*string\[\]\s*>\(\[\]\)[\s\S]*Navigation order/,
   "Configure Tile must author an ordered and bounded multi-search drilldown workflow",
 );
 assert.match(
