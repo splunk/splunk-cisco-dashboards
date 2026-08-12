@@ -285,9 +285,14 @@ body.scd-overview-active .panel-body,
 }
 
 #scan-root
-    button:not([data-test='button']):not([data-test='select']):not(
-        [data-test='multiselect']
-    ):not([data-test='option']) {
+    :where(
+        button:not([data-test='button']):not([data-test='select']):not(
+                [data-test='multiselect']
+            ):not([data-test='option'])
+    ) {
+    /* Keep this reset deliberately low-specificity. Tailwind utilities on
+     * custom buttons must be able to restore their intended dark/light text,
+     * background, border, and spacing treatment. */
     font-family: inherit;
     cursor: pointer;
     background: none;

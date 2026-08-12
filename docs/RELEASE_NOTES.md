@@ -2,6 +2,11 @@
 
 ## 1.0.36
 
+- Insights Workspace detailed sparklines now retain enough plot height for
+  honest trend variation, extrema labels, and timestamps instead of collapsing
+  into a horizontal line. Add Search drawers also open with their catalogue
+  filters visible, and custom dark-mode controls retain readable component
+  colors by using a low-specificity browser-style reset.
 - Insights Workspace now begins its Figma-led Cisco shared-design-language
   refresh with SUI glass status cards, restrained SpotLight depth, native
   RadioBar and Select view controls, and token-driven map overlays. The 1CD

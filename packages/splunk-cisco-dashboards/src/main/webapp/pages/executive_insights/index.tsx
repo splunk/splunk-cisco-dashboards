@@ -5763,7 +5763,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   const [activeTags, setActiveTags] = useState<Set<string>>(() => new Set());
   const [tagFilter, setTagFilter] = useState("");
   const [tagDropdownOpen, setTagDropdownOpen] = useState(false);
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(true);
   const [addDestination, setAddDestination] = useState<
     "personal" | "workspace"
   >("personal");
@@ -5785,7 +5785,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     setActiveTags(new Set());
     setTagFilter("");
     setTagDropdownOpen(false);
-    setFiltersOpen(false);
+    setFiltersOpen(true);
     setAddDestination("personal");
     setAddingRecordId(null);
     setShowAllProfileSearches(true);

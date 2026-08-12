@@ -79,6 +79,22 @@ const c3VisualizationPalette = read(
 );
 
 assert.match(
+  tailwindStyles,
+  /#scan-root\s+:where\([\s\S]*?button:not\(\[data-test='button'\]\)[\s\S]*?color: inherit;/,
+  "The custom-button reset must stay low-specificity so component text, surface, border, and spacing utilities remain visible",
+);
+assert.doesNotMatch(
+  tailwindStyles,
+  /#scan-root\s+button:not\(\[data-test='button'\]\)/,
+  "The custom-button reset must not outrank Tailwind dark-mode utilities",
+);
+assert.match(
+  profile,
+  /const \[filtersOpen, setFiltersOpen\] = useState\(true\);[\s\S]*?setFiltersOpen\(true\);/,
+  "The Add Search drawer must restore its full catalogue filters whenever it opens",
+);
+
+assert.match(
   dashboardSection,
   /<CollapsiblePanel[\s\S]*?headingLevel=\{2\}[\s\S]*?title=\{[\s\S]*?\{title\}[\s\S]*?<\/span>/,
   "Dashboard section titles must use CollapsiblePanel's level-two heading semantics",
@@ -552,6 +568,11 @@ assert.match(
   sparkline,
   /compact[\s\S]*?top: 6[\s\S]*?bottom: 6[\s\S]*?!compact && Number\.isFinite\(firstTime\)/,
   "Compact H1 sparklines must reclaim plot height from labels and timestamp chrome",
+);
+assert.match(
+  metricItem,
+  /sparklineDensity === 'detailed'[\s\S]*?h-28 min-h-28 flex-none[\s\S]*?flex-1 min-h-\[72px\] max-h-28/,
+  "Detailed sparklines must retain enough canvas height for labels, while compact charts remain flexible",
 );
 assert.match(
   sparkline,
