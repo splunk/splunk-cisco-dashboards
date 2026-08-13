@@ -162,6 +162,110 @@ class SecureNetworkingPillarDashboardTest(unittest.TestCase):
                     f"{dashboard_id} must not use feed freshness searches",
                 )
 
+    def test_managed_wireless_details_match_the_meraki_ap_population(self):
+        detail_id = "secure_networking_meraki_ap_inventory_detail"
+        primary = self.searchbase["secure_networking_meraki_ap_count"]
+        detail = self.searchbase[detail_id]
+
+        self.assertEqual(primary["drilldown_stanza_id"], detail_id)
+        self.assertEqual(detail["default_viz"], "splunk.table")
+        self.assertIn('sourcetype="meraki:accesspoints"', detail["search"])
+
+        for dashboard_id, title in (
+            ("sn_secure_infrastructure_posture", "Managed Wireless Estate"),
+            ("sn_secure_infrastructure_status", "Access Point Estate"),
+        ):
+            with self.subTest(dashboard_id=dashboard_id):
+                card_index, card = next(
+                    (index, card)
+                    for index, card in enumerate(
+                        self.stories[dashboard_id]["cards"], start=1
+                    )
+                    if card["title"] == title
+                )
+                self.assertEqual(card["targets"], [detail_id])
+                definition = json.loads(
+                    ET.parse(VIEWS / f"{dashboard_id}.xml")
+                    .getroot()
+                    .findtext("definition")
+                )
+                trigger = definition["visualizations"][
+                    f"viz_card_{card_index:02d}_drilldown_trigger"
+                ]
+                self.assertEqual(
+                    trigger["eventHandlers"][0]["options"]["url"],
+                    _expected_drilldown_url(title, [detail["search_name"]]),
+                )
+
+    def test_dcloud_posture_cards_use_feeds_present_in_the_demo(self):
+        dashboard_id = "sn_secure_infrastructure_posture"
+        story = self.stories[dashboard_id]
+        cards_by_title = {card["title"]: card for card in story["cards"]}
+        expected = {
+            "Wireless Client Demand": (
+                "secure_networking_meraki_wireless_client_count",
+                'sourcetype="meraki:accesspoints"',
+                "wireless_client_count",
+                "wireless_client_count",
+            ),
+            "SD-WAN Site Coverage": (
+                "secure_networking_sdwan_reporting_sites_trend",
+                'sourcetype="cisco:sdwan:sitehealth"',
+                "total_sites",
+                "reporting_sites",
+            ),
+        }
+
+        self.assertNotIn(
+            "secure_networking_zta_duo_auth_outcomes_trend",
+            {card["primary"] for card in story["cards"]},
+        )
+        self.assertNotIn(
+            "secure_networking_infra_secure_endpoint_incident_trend",
+            {card["primary"] for card in story["cards"]},
+        )
+
+        definition = json.loads(
+            ET.parse(VIEWS / f"{dashboard_id}.xml")
+            .getroot()
+            .findtext("definition")
+        )
+        for title, (
+            primary_id,
+            source_contract,
+            value_field,
+            graph_field,
+        ) in expected.items():
+            with self.subTest(title=title):
+                card_index, card = next(
+                    (index, card)
+                    for index, card in enumerate(story["cards"], start=1)
+                    if card["title"] == title
+                )
+                self.assertEqual(card["primary"], primary_id)
+                self.assertIn(source_contract, self.searchbase[primary_id]["search"])
+                data_source = definition["dataSources"][f"ds_story_{card_index:02d}"]
+                self.assertEqual(data_source["options"]["ref"], primary_id)
+                prefix = f"viz_card_{card_index:02d}"
+                self.assertEqual(
+                    definition["visualizations"][f"{prefix}_singlevalue"]["options"][
+                        "sparklineValues"
+                    ],
+                    f'> primary | seriesByName("{value_field}")',
+                )
+                self.assertEqual(
+                    definition["visualizations"][f"{prefix}_trend"]["options"]["y"],
+                    f'> primary | seriesByName("{graph_field}")',
+                )
+                target_names = [
+                    self.searchbase[target]["search_name"] for target in card["targets"]
+                ]
+                trigger = definition["visualizations"][f"{prefix}_drilldown_trigger"]
+                self.assertEqual(
+                    trigger["eventHandlers"][0]["options"]["url"],
+                    _expected_drilldown_url(title, target_names),
+                )
+
     def test_each_dashboard_has_exact_six_card_story_contract(self):
         for dashboard_id, story in self.stories.items():
             with self.subTest(dashboard_id=dashboard_id):

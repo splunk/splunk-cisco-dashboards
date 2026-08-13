@@ -247,8 +247,8 @@
     "cards": [
       {
         "primary": "secure_networking_trustsec_hardware_inventory_trend",
-        "targets": ["secure_networking_trustsec_hardware_readiness", "secure_networking_segmentation_status_rollup"],
-        "title": "TrustSec Readiness"
+        "targets": ["secure_networking_trustsec_hardware_readiness"],
+        "title": "Hardware Readiness"
       },
       {
         "primary": "secure_networking_sgt_total_assignments_count",
@@ -261,19 +261,19 @@
         "title": "Security Groups in Use"
       },
       {
-        "primary": "secure_networking_sgt_binding_activity_trend",
-        "targets": ["secure_networking_sgt_binding_inventory", "secure_networking_ip_sgt_bindings_by_group"],
-        "title": "IP-SGT Binding Activity"
+        "primary": "secure_networking_segmentation_adoption_rate_trend",
+        "targets": ["secure_networking_segmentation_status_rollup", "secure_networking_sgt_distribution_by_site_device"],
+        "title": "Segmentation Adoption Rate"
       },
       {
-        "primary": "secure_networking_sgacl_enforcement_activity_trend",
-        "targets": ["secure_networking_sgacl_deny_pairs", "secure_networking_sgacl_policy_matrix"],
-        "title": "SGACL Enforcement"
+        "primary": "secure_networking_segmentation_zero_coverage_sites_trend",
+        "targets": ["secure_networking_segmentation_status_rollup", "secure_networking_sgt_by_site"],
+        "title": "Sites With Zero SGT Coverage"
       },
       {
-        "primary": "secure_networking_sgt_fmc_blocks_by_sgt",
-        "targets": ["secure_networking_fmc_sgt_correlated_events"],
-        "title": "SGT-Enforced Blocks"
+        "primary": "secure_networking_wired_port_segmentation_exceptions_trend",
+        "targets": ["secure_networking_excessive_mac_per_port"],
+        "title": "Wired-Port Segmentation Exceptions"
       }
     ]
   },
@@ -294,7 +294,7 @@
       },
       {
         "primary": "secure_networking_meraki_ap_count",
-        "targets": ["secure_networking_site_inventory_rollup", "secure_networking_catalyst_center_software_version_inventory"],
+        "targets": ["secure_networking_meraki_ap_inventory_detail"],
         "title": "Managed Wireless Estate"
       },
       {
@@ -303,14 +303,16 @@
         "title": "Wireless Containment"
       },
       {
-        "primary": "secure_networking_zta_duo_auth_outcomes_trend",
-        "targets": ["secure_networking_infra_duo_blocked_posture_identity", "secure_networking_infra_duo_application_access"],
-        "title": "Identity and Posture"
+        "primary": "secure_networking_meraki_wireless_client_count",
+        "targets": ["secure_networking_meraki_top_clients_by_bandwidth"],
+        "title": "Wireless Client Demand"
       },
       {
-        "primary": "secure_networking_infra_secure_endpoint_incident_trend",
-        "targets": ["secure_networking_infra_secure_endpoint_incidents"],
-        "title": "Endpoint Risk"
+        "primary": "secure_networking_sdwan_reporting_sites_trend",
+        "targets": ["secure_networking_sdwan_site_view", "secure_networking_sdwan_tunnel_health_log"],
+        "title": "SD-WAN Site Coverage",
+        "valueField": "total_sites",
+        "graphFields": ["reporting_sites"]
       }
     ]
   },
@@ -321,7 +323,7 @@
     "cards": [
       {
         "primary": "secure_networking_meraki_ap_count",
-        "targets": ["secure_networking_site_inventory_rollup"],
+        "targets": ["secure_networking_meraki_ap_inventory_detail"],
         "title": "Access Point Estate"
       },
       {
@@ -369,12 +371,12 @@
       {
         "primary": "secure_networking_sgt_binding_activity_trend",
         "targets": ["secure_networking_sgt_binding_inventory", "secure_networking_ip_sgt_bindings_by_group"],
-        "title": "Binding Activity"
+        "title": "IP-SGT Binding Activity"
       },
       {
         "primary": "secure_networking_sgacl_enforcement_activity_trend",
         "targets": ["secure_networking_sgacl_deny_pairs", "secure_networking_sgacl_policy_matrix"],
-        "title": "Policy Enforcement"
+        "title": "SGACL Enforcement"
       },
       {
         "primary": "secure_networking_router_segmentation_feature_trend",
@@ -382,9 +384,9 @@
         "title": "Segmentation Feature Evidence"
       },
       {
-        "primary": "secure_networking_trustsec_hardware_inventory_trend",
-        "targets": ["secure_networking_trustsec_hardware_readiness"],
-        "title": "Hardware Readiness"
+        "primary": "secure_networking_sgt_fmc_blocks_by_sgt",
+        "targets": ["secure_networking_fmc_sgt_correlated_events"],
+        "title": "SGT-Enforced Blocks"
       }
     ]
   },

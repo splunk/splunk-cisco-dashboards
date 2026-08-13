@@ -1,5 +1,45 @@
 # Release notes
 
+## 1.0.38
+
+- Searchbase now includes 12 Catalyst Center interface-telemetry searches for
+  Rx/Tx traffic, device throughput, capacity and headroom, traffic anomalies,
+  errors and discards, quiet interfaces, collection readiness, and critical
+  WAN or firewall handoff assurance. Missing Rx/Tx telemetry remains visible
+  as an assurance finding, and candidate circuits require validation before
+  assigning an internet-provider identity.
+- Dashboard Manager now creates, clones, and generates dashboards in the
+  authenticated Splunk user's private namespace instead of attempting an
+  app-shared `nobody` write. Personal dashboards remain visible and editable
+  to their owner, shared factory dashboard permissions stay protected, and
+  REST failures surface useful error details even for non-JSON responses.
+
+## 1.0.37
+
+- Managed Wireless Estate and Access Point Estate details now stay scoped to
+  the Meraki access points behind the headline KPI. Their drilldowns replace
+  unrelated cross-controller inventory with per-AP SSIDs, event types, client
+  counts, and reporting recency.
+- Secure Infrastructure posture now replaces dCloud-empty Duo and Secure
+  Endpoint cards with Wireless Client Demand and SD-WAN Site Coverage. Both
+  headlines use Meraki access-point or SD-WAN site-health feeds already present
+  in the demo environment.
+- Dashboard Manager now defaults to the low-intensity bottom-glow Page
+  Spotlight background, and the five Secure Networking pillar landing
+  dashboards ship with the same artwork. The previous C3 selector entry and
+  the 18 explicitly retired legacy background choices are no longer offered.
+- Segmentation Readiness and Segmentation Operations retain their six-card
+  layouts while surfacing Hardware Readiness on the readiness view and
+  IP-SGT Binding Activity, SGACL Enforcement, and SGT-Enforced Blocks on the
+  operations view. Segmentation Readiness replaces those operational signals
+  with Segmentation Adoption Rate, Sites With Zero SGT Coverage, and
+  Wired-Port Segmentation Exceptions so readiness now emphasizes deployment
+  coverage and pre-enforcement gaps.
+- Secure Networking Hybrid Mesh Firewalling now shows Meraki Threat Blocks by
+  Category instead of Palo Alto Traffic by SGT among its three factory-visible
+  Insights Workspace tiles. The Palo Alto search remains available in
+  Searchbase for later reuse.
+
 ## 1.0.36
 
 - Secure Networking catalogue searches now keep explicit aggregate grains

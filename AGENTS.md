@@ -4,6 +4,13 @@
 
 Whereever and whenever possible use native Splunk UI Design system components and themeing. We are migrating off of tailwind so add no more tech debt by avoiding using anything of it and moving to Splunk UI (SUI) native solutions where possible. Consult the splunk-ui-mcp if you have it available for definitive information to that end.
 
+## Ghost and Splunk UI references
+
+- Splunk skills marketplace: https://ai-productivity.splunkdev.page/skills-marketplace/
+- Ghost marketplace advanced setup: https://ai-productivity.splunkdev.page/skills-marketplace/getting-started/installation/
+- Ghost skills marketplace handbook: https://ai-productivity.splunkdev.page/handbook/users/reference/skills-marketplace/
+- Splunk UI team plugin and MCP setup: https://ai-productivity.splunkdev.page/skills-marketplace/plugins/splunk-ui/#cursor-support
+
 ## Branch safety
 
 - Codex must never create, edit, delete, stage, or commit repository files while the current branch is `main` or `master`.

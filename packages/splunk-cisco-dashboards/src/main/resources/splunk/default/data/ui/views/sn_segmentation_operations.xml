@@ -362,7 +362,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Binding Activity**"
+                "markdown": "**IP\\-SGT Binding Activity**"
             }
         },
         "viz_card_03_metadata": {
@@ -466,7 +466,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Binding%20Activity&target=Secure%20Networking%20-%20SGT%20Binding%20Inventory,Secure%20Networking%20-%20IP-SGT%20Bindings%20by%20Security%20Group"
+                        "url": "/drilldown?origin=IP-SGT%20Binding%20Activity&target=Secure%20Networking%20-%20SGT%20Binding%20Inventory,Secure%20Networking%20-%20IP-SGT%20Bindings%20by%20Security%20Group"
                     }
                 }
             ],
@@ -497,7 +497,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Policy Enforcement**"
+                "markdown": "**SGACL Enforcement**"
             }
         },
         "viz_card_04_metadata": {
@@ -601,7 +601,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Policy%20Enforcement&target=Secure%20Networking%20-%20SGACL%20Deny%20Pairs%20by%20SGT,Secure%20Networking%20-%20SGT%20Policy%20Activity%20and%20SGACL%20Matrix%20Hits"
+                        "url": "/drilldown?origin=SGACL%20Enforcement&target=Secure%20Networking%20-%20SGACL%20Deny%20Pairs%20by%20SGT,Secure%20Networking%20-%20SGT%20Policy%20Activity%20and%20SGACL%20Matrix%20Hits"
                     }
                 }
             ],
@@ -763,7 +763,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Hardware Readiness**"
+                "markdown": "**SGT\\-Enforced Blocks**"
             }
         },
         "viz_card_06_metadata": {
@@ -776,7 +776,7 @@
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
                 "customFontSize": 14,
-                "markdown": "Asset  •  Scalable Network Segmentation"
+                "markdown": "Security  •  Scalable Network Segmentation"
             }
         },
         "viz_card_06_description": {
@@ -789,7 +789,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Trends the Catalyst Center device inventory by family over time, with the model\\-level TrustSec readiness baseline retained as drill\\-down detail\\."
+                "markdown": "Trend of FMC block decisions correlated with Security Group Tags, showing enforcement volume across the selected time window\\."
             }
         },
         "viz_card_06_singlevalue": {
@@ -810,7 +810,7 @@
                 "trendDisplay": "percent",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
+                "sparklineValues": "> primary | seriesByName(\"blocks_trend\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "trendValue": "> sparklineValues | delta(-2)"
@@ -818,7 +818,7 @@
             "context": {
                 "trendColorEditorConfig": [
                     {
-                        "value": "#f7782f",
+                        "value": "#4cbf7f",
                         "to": -0.000001
                     },
                     {
@@ -827,14 +827,14 @@
                         "to": 0.000001
                     },
                     {
-                        "value": "#4cbf7f",
+                        "value": "#f7782f",
                         "from": 0.000001
                     }
                 ]
             }
         },
         "viz_card_06_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_06"
@@ -843,22 +843,16 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "right",
                 "seriesColors": [
-                    "#4cbf7f",
-                    "#649ef5",
-                    "#f0c243",
-                    "#fa5762"
+                    "#4cbf7f"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 3,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
                 "showYMajorGridLines": true,
+                "stackMode": "unstacked",
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")"
+                "y": "> primary | seriesByName(\"blocks_trend\")"
             }
         },
         "viz_card_06_drilldown_trigger": {
@@ -867,7 +861,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Hardware%20Readiness&target=Secure%20Networking%20-%20TrustSec%20Hardware%20Readiness"
+                        "url": "/drilldown?origin=SGT-Enforced%20Blocks&target=Secure%20Networking%20-%20FMC%20Events%20Correlated%20by%20SGT"
                     }
                 }
             ],
@@ -938,9 +932,9 @@
             "type": "ds.searchbase"
         },
         "ds_story_06": {
-            "name": "Secure Networking - TrustSec Hardware Inventory Trend",
+            "name": "Secure Networking - SGT-Classified FMC Blocks by Tag",
             "options": {
-                "ref": "secure_networking_trustsec_hardware_inventory_trend",
+                "ref": "secure_networking_sgt_fmc_blocks_by_sgt",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$"

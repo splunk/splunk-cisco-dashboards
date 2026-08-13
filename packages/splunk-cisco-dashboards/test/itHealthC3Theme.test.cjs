@@ -10,9 +10,9 @@ const VIEWS_DIR = path.resolve(
   "../src/main/resources/splunk/default/data/ui/views",
 );
 const DASHBOARD_PATH = path.join(VIEWS_DIR, "netops_critical_systems_health.xml");
-const TEMPLATES_PATH = path.resolve(
+const C3_BACKGROUND_PATH = path.resolve(
   __dirname,
-  "../src/main/resources/splunk/default/templates.conf",
+  "../src/main/resources/splunk/appserver/static/c3-atmosphere.svg",
 );
 const PALETTE_PATH = path.resolve(
   __dirname,
@@ -93,12 +93,8 @@ const definitionMatch = xml.match(
 assert.ok(definitionMatch, "netops_critical_systems_health must contain a Dashboard Studio definition");
 const definition = JSON.parse(definitionMatch[1]);
 
-const templates = fs.readFileSync(TEMPLATES_PATH, "utf8");
-const backgroundMatch = templates.match(
-  /\[background:\/\/c3-atmosphere\]\ndata = ([^\n]+)\nname = Cisco Cloud Control Atmosphere/,
-);
-assert.ok(backgroundMatch, "templates.conf must provide the shared C3 atmosphere");
-const sharedBackground = backgroundMatch[1];
+const c3BackgroundSvg = fs.readFileSync(C3_BACKGROUND_PATH, "utf8").trim();
+const sharedBackground = `data:image/svg+xml;base64,${Buffer.from(c3BackgroundSvg).toString("base64")}`;
 
 const paletteSource = fs.readFileSync(PALETTE_PATH, "utf8");
 const sharedPalette = new Set(

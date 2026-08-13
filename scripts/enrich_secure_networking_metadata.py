@@ -158,7 +158,7 @@ DRILLDOWNS = {
     "secure_networking_meraki_unencrypted_ssid_count": "Secure Networking - Meraki SSID Encryption Breakdown",
     "secure_networking_meraki_switch_count": "Secure Networking - Site Inventory Rollup",
     "secure_networking_meraki_wired_client_count": "Secure Networking - Meraki Top Clients by Bandwidth Usage",
-    "secure_networking_meraki_ap_count": "Secure Networking - Site Inventory Rollup",
+    "secure_networking_meraki_ap_count": "Secure Networking - Meraki Access Point Inventory Detail",
     "secure_networking_meraki_wireless_client_count": "Secure Networking - Meraki Top Clients by Bandwidth Usage",
     "secure_networking_infra_fmc_firewall_count": "Secure Networking - HMF Enforcement Coverage by Site",
     "secure_networking_infra_sdwan_edge_count": "Secure Networking - SD-WAN Site View",

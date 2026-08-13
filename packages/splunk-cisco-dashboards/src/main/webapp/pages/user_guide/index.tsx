@@ -1626,6 +1626,11 @@ iseval = 0`}</CodeBlock>
                 <InfoCard title="Dashboard Studio editing">
                   Dashboard Manager confirmation dialogs now use the edited
                   app&apos;s fixed dark SUI theme, including portal-rendered dialogs.
+                  Dashboard creation, cloning, and generation now save into the
+                  authenticated Splunk user&apos;s private namespace instead of
+                  attempting an app-shared write as <code>nobody</code>. Shared
+                  factory dashboards keep their existing permissions, while
+                  personal dashboards remain editable by their owner.
                   Internal Dashboard Studio drilldown links now open supporting
                   Searchbase searches inside Dashboard Manager with the active
                   dashboard time range. Their triggers use the same

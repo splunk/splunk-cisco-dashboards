@@ -13,13 +13,86 @@ const requestJson = async (url, init = {}) => {
             ...(init.headers || {}),
         },
     });
-    const data = await response.json();
-    data.status = response.status;
-    return data;
+    const responseText = await response.text();
+    let data;
+
+    try {
+        data = responseText ? JSON.parse(responseText) : {};
+    } catch {
+        data = {
+            messages: [
+                {
+                    type: 'ERROR',
+                    text: responseText || `Request failed with status ${response.status}.`,
+                },
+            ],
+        };
+    }
+
+    return {
+        ...(data && typeof data === 'object' && !Array.isArray(data) ? data : { data }),
+        status: response.status,
+    };
 };
 
-const dashboardUrl = (dashboardId = '') =>
-    `/en-US/splunkd/__raw/servicesNS/nobody/${encodeURIComponent(
+const getBootstrapSplunkUsername = () => {
+    if (typeof window === 'undefined') {
+        return '';
+    }
+
+    const bootstrap = window.$C || {};
+    const rawUsername =
+        bootstrap.USERNAME ||
+        bootstrap.username ||
+        bootstrap.USER?.username ||
+        bootstrap.USER?.name ||
+        bootstrap.user?.username ||
+        bootstrap.user?.name ||
+        '';
+
+    return typeof rawUsername === 'string' ? rawUsername.trim() : '';
+};
+
+let currentSplunkUsernamePromise;
+
+export const getCurrentSplunkUsername = async () => {
+    const bootstrapUsername = getBootstrapSplunkUsername();
+    if (bootstrapUsername) {
+        return bootstrapUsername;
+    }
+    if (typeof window === 'undefined') {
+        return '';
+    }
+
+    if (!currentSplunkUsernamePromise) {
+        currentSplunkUsernamePromise = requestJson(
+            '/en-US/splunkd/__raw/services/authentication/current-context?output_mode=json',
+            { method: 'GET' },
+        ).then((response) => {
+            if (response.status < 200 || response.status > 299) {
+                return '';
+            }
+
+            const content = response.entry?.[0]?.content || {};
+            const rawUsername = content.username || content.user || content.name || '';
+            return typeof rawUsername === 'string' ? rawUsername.trim() : '';
+        });
+    }
+
+    return currentSplunkUsernamePromise;
+};
+
+const resolveDashboardOwner = async (owner, fallback = '') => {
+    const explicitOwner = typeof owner === 'string' ? owner.trim() : '';
+    if (explicitOwner) {
+        return explicitOwner;
+    }
+
+    return (await getCurrentSplunkUsername()) || fallback;
+};
+
+const dashboardUrl = (owner, dashboardId = '') =>
+    `/en-US/splunkd/__raw/servicesNS/${encodeURIComponent(owner)}/${encodeURIComponent(
         INSIGHTS_APP_ID,
     )}/data/ui/views${dashboardId ? `/${encodeURIComponent(dashboardId)}` : ''}`;
 
@@ -31,14 +104,16 @@ export const normalizeDashboardTheme = (theme, fallback) => {
     return fallback === 'dark' || fallback === 'light' ? fallback : undefined;
 };
 
-export async function getDashboards() {
-    return requestJson(`${dashboardUrl()}?${jsonCountParams.toString()}`, {
+export async function getDashboards(owner) {
+    const namespaceOwner = await resolveDashboardOwner(owner, 'nobody');
+    return requestJson(`${dashboardUrl(namespaceOwner)}?${jsonCountParams.toString()}`, {
         method: 'GET',
     });
 }
 
-export async function getDashboard(dashboardID) {
-    return requestJson(`${dashboardUrl(dashboardID)}?${jsonParams.toString()}`, {
+export async function getDashboard(dashboardID, owner) {
+    const namespaceOwner = await resolveDashboardOwner(owner, 'nobody');
+    return requestJson(`${dashboardUrl(namespaceOwner, dashboardID)}?${jsonParams.toString()}`, {
         method: 'GET',
     });
 }
@@ -58,7 +133,21 @@ export async function addDash(
     dashDescription = '',
     dashTag = '',
     dashTheme = 'light',
+    owner = undefined,
 ) {
+    const namespaceOwner = await resolveDashboardOwner(owner);
+    if (!namespaceOwner) {
+        return {
+            status: 401,
+            messages: [
+                {
+                    type: 'ERROR',
+                    text: 'Dashboard Manager could not identify the signed-in Splunk user.',
+                },
+            ],
+        };
+    }
+
     const dashboardTheme = normalizeDashboardTheme(dashTheme, 'light');
     const definition = `<dashboard version="2" theme="${dashboardTheme}">
    <label>${escapeXml(dashLabel || dashName)}</label>
@@ -79,7 +168,7 @@ export async function addDash(
         'eai:data': definition,
     });
 
-    const response = await requestJson(`${dashboardUrl()}?${jsonParams.toString()}`, {
+    const response = await requestJson(`${dashboardUrl(namespaceOwner)}?${jsonParams.toString()}`, {
         method: 'POST',
         body: createBody.toString(),
     });
@@ -88,7 +177,7 @@ export async function addDash(
         return response;
     }
 
-    return requestJson(`${dashboardUrl(dashName)}?${jsonParams.toString()}`, {
+    return requestJson(`${dashboardUrl(namespaceOwner, dashName)}?${jsonParams.toString()}`, {
         method: 'POST',
         body: new URLSearchParams({ 'eai:data': definition }).toString(),
     });
@@ -109,6 +198,7 @@ export async function updateDashMetadata(
     dashDescription = '',
     dashTag = '',
     dashTheme = 'light',
+    owner = undefined,
 ) {
     const updatedDefinition = {
         ...dashboardDefinition,
@@ -124,6 +214,7 @@ export async function updateDashMetadata(
         dashDescription,
         dashTag,
         dashTheme,
+        owner,
     );
 }
 

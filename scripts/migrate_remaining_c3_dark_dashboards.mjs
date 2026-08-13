@@ -10,9 +10,9 @@ const VIEWS_DIRECTORY = path.join(
     APP_ROOT,
     'src/main/resources/splunk/default/data/ui/views'
 );
-const TEMPLATES_PATH = path.join(
+const C3_BACKGROUND_PATH = path.join(
     APP_ROOT,
-    'src/main/resources/splunk/default/templates.conf'
+    'src/main/resources/splunk/appserver/static/c3-atmosphere.svg'
 );
 const PALETTE_PATH = path.join(
     APP_ROOT,
@@ -55,15 +55,9 @@ for (const required of [
     }
 }
 
-const templates = fs.readFileSync(TEMPLATES_PATH, 'utf8');
-const backgroundMatch = templates.match(
-    /\[background:\/\/c3-atmosphere\]\ndata = ([^\n]+)\nname = Cisco Cloud Control Atmosphere/
-);
-if (!backgroundMatch) {
-    throw new Error('Shared C3 atmospheric background is missing from templates.conf');
-}
-
-const sharedBackground = backgroundMatch[1];
+const c3BackgroundSvg = fs.readFileSync(C3_BACKGROUND_PATH, 'utf8').trim();
+const sharedBackground =
+    `data:image/svg+xml;base64,${Buffer.from(c3BackgroundSvg).toString('base64')}`;
 const C3 = {
     canvas: '#0f1117',
     panel: '#131a23',

@@ -83,7 +83,7 @@ import styled from 'styled-components';
 import useSplunkTheme from '@splunk/themes/useSplunkTheme';
 import { isVersionLower, getServerInfo } from '../../common/lib/splunk';
 import Paintbrush from '@splunk/react-icons/Paintbrush';
-import BackgroundButton, { C3_DEFAULT_BACKGROUND_DATA } from './BackgroundButton';
+import BackgroundButton, { FACTORY_DEFAULT_BACKGROUND_DATA } from './BackgroundButton';
 import SpaceManagerButton from './SpaceManager/SpaceManagerButton';
 import useDashboardStore from '../../common/state/dashboardStore';
 import createSEIIconRegistry from '../../common/udf/IconProviders/createSEIIconRegistry';
@@ -155,6 +155,8 @@ const toDashboardRecord = (dashboard) => {
             data: dashboard.data,
             author: dashboard.author,
             app: dashboard.app,
+            owner: dashboard.owner || dashboard.author,
+            sharing: dashboard.sharing,
             title: dashboard.title,
             label: dashboard.label,
             description: dashboard.description,
@@ -173,6 +175,8 @@ const toDashboardRecord = (dashboard) => {
         data: typeof definition === 'string' ? definition : JSON.stringify(definition),
         author: dashboard.author,
         app: dashboard.app,
+        owner: dashboard.owner || dashboard.author,
+        sharing: dashboard.sharing,
         title: dashboard.title,
         label: dashboard.label,
         description: dashboard.description,
@@ -263,7 +267,7 @@ export const initialDefinition = {
             backgroundColor: '#080d15',
             backgroundImage: {
                 sizeType: 'cover',
-                src: C3_DEFAULT_BACKGROUND_DATA,
+                src: FACTORY_DEFAULT_BACKGROUND_DATA,
                 x: 0,
                 y: 0,
             },
@@ -306,7 +310,11 @@ async function updateDash(
     const fetchInit = defaultFetchInit; // from splunk-utils API
     fetchInit.method = 'POST';
     const response = await fetch(
-        `/en-US/splunkd/__raw/servicesNS/${owner}/${app}/data/ui/views/${dashName}?output_mode=json`,
+        `/en-US/splunkd/__raw/servicesNS/${encodeURIComponent(
+            owner,
+        )}/${encodeURIComponent(app)}/data/ui/views/${encodeURIComponent(
+            dashName,
+        )}?output_mode=json`,
         {
             ...fetchInit,
             body: body,
@@ -1042,6 +1050,8 @@ const DashboardStudioEditor = ({
                                     definition: data,
                                     author: r.content['eai:userName'],
                                     app: r.content['eai:appName'],
+                                    owner: r.acl?.owner || r.content['eai:userName'],
+                                    sharing: r.acl?.sharing || 'app',
                                     title: r.name,
                                     label: r.content['label'],
                                     tag: jObj.dashboard.tag || r.content['tag'] || '',
@@ -1118,6 +1128,10 @@ const DashboardStudioEditor = ({
                             app:
                                 response.entry[0].acl?.app ||
                                 response.entry[0].content['eai:appName'],
+                            owner:
+                                response.entry[0].acl?.owner ||
+                                response.entry[0].content['eai:userName'],
+                            sharing: response.entry[0].acl?.sharing || 'app',
                             title: response.entry[0].name,
                             label: response.entry[0].content['label'],
                             description: response.entry[0].content['description'],
@@ -1175,7 +1189,7 @@ const DashboardStudioEditor = ({
                 dashID,
                 JSON.stringify(definitionToSave, null, 4),
                 currentDashboard.app,
-                currentDashboard.author,
+                currentDashboard.owner || currentDashboard.author,
                 dashboardDescription,
                 dashboardLabel,
                 currentDashboard.tag,

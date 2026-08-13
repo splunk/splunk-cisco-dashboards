@@ -10,9 +10,13 @@ const VIEWS_DIR = path.join(
   APP_ROOT,
   "src/main/resources/splunk/default/data/ui/views",
 );
-const TEMPLATES_PATH = path.join(
+const C3_BACKGROUND_PATH = path.join(
   APP_ROOT,
-  "src/main/resources/splunk/default/templates.conf",
+  "src/main/resources/splunk/appserver/static/c3-atmosphere.svg",
+);
+const SPOTLIGHT_BACKGROUND_PATH = path.join(
+  APP_ROOT,
+  "src/main/resources/splunk/appserver/static/page-spotlight-bottom-glow-low-intensity.svg",
 );
 const PALETTE_PATH = path.join(
   APP_ROOT,
@@ -31,6 +35,13 @@ const MUTED = "#a6adb6";
 const ACCENT_STROKE = "rgba(100,158,245,0.28)";
 const SECTION_FILL = "rgba(15,17,23,0.78)";
 const SECTION_STROKE = "rgba(65,74,86,0.52)";
+const PILLAR_STUDIO_FILES = new Set([
+  "sn_agentic_ops_operational_intelligence.xml",
+  "sn_hmf_enforcement.xml",
+  "sn_secure_infrastructure_posture.xml",
+  "sn_segmentation_readiness.xml",
+  "sn_zta_posture.xml",
+]);
 
 const DASHBOARDS = {
   "admin_asset_inventory.xml": {
@@ -126,12 +137,12 @@ const STYLE_OPTION_KEYS = new Set([
   "nodeHighlightColor",
 ]);
 
-const templates = fs.readFileSync(TEMPLATES_PATH, "utf8");
-const backgroundMatch = templates.match(
-  /\[background:\/\/c3-atmosphere\]\ndata = ([^\n]+)\nname = Cisco Cloud Control Atmosphere/,
-);
-assert.ok(backgroundMatch, "templates.conf must provide the shared C3 atmosphere");
-const sharedBackground = backgroundMatch[1];
+const sharedBackground = `data:image/svg+xml;base64,${Buffer.from(
+  fs.readFileSync(C3_BACKGROUND_PATH, "utf8").trim(),
+).toString("base64")}`;
+const spotlightBackground = `data:image/svg+xml;base64,${Buffer.from(
+  fs.readFileSync(SPOTLIGHT_BACKGROUND_PATH, "utf8").trim(),
+).toString("base64")}`;
 
 const paletteSource = fs.readFileSync(PALETTE_PATH, "utf8");
 const sharedPalette = new Set(
@@ -172,10 +183,13 @@ for (const filename of studioViewFiles) {
 
   for (const [layoutId, layout] of Object.entries(layoutDefinitions)) {
     assert.equal(layout.options?.backgroundColor, CANVAS, `${filename}:${layoutId} canvas`);
+    const expectedBackground = PILLAR_STUDIO_FILES.has(filename)
+      ? spotlightBackground
+      : sharedBackground;
     assert.deepEqual(
       layout.options?.backgroundImage,
-      { sizeType: "contain", src: sharedBackground, x: 0, y: 0 },
-      `${filename}:${layoutId} atmosphere`,
+      { sizeType: "contain", src: expectedBackground, x: 0, y: 0 },
+      `${filename}:${layoutId} approved background`,
     );
     if (Number(layout.options?.width) > 1440) {
       assert.equal(
@@ -403,5 +417,5 @@ for (const filename of allViewFiles) {
 }
 
 console.log(
-  `${studioViewFiles.length} native Studio dashboards use the shared C3 atmosphere on every layout.`,
+  `${studioViewFiles.length} native Studio dashboards use their approved C3 or pillar spotlight background.`,
 );

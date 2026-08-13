@@ -415,6 +415,7 @@ export default function DBHomePage() {
       dashboardDescription,
       "",
       "dark",
+      currentSplunkUser,
     ).then((response) => {
       if (response.status >= 200 && response.status <= 299) {
         console.log(response);
@@ -639,6 +640,7 @@ export default function DBHomePage() {
       dashboardMetadataDescription.trim(),
       "",
       dashboardMetadataTarget.theme,
+      dashboardMetadataTarget.owner,
     ).then((response) => {
       if (response.status >= 200 && response.status <= 299) {
         makeCreateToast(Toaster)({
