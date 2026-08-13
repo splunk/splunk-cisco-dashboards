@@ -2,8 +2,8 @@
 
 Keep app resources in source control and use the root `build.sh` to select the
 resources for an installable package. This workflow lets you test unfinished
-dashboards and Searchbase searches locally without including them in the
-Splunkbase package.
+dashboards, Searchbase searches, and saved searches locally without including
+them in the Splunkbase package.
 
 ## Daily commands
 
@@ -32,13 +32,15 @@ suffix distinguishes it from the Splunkbase artifact.
 
 Developing resources are listed in
 `packages/splunk-cisco-dashboards/config/build-profile-manifest.json`.
-The manifest has two lists:
+The manifest has three lists:
 
 - `developing.views` contains dashboard view IDs.
 - `developing.searchbaseStanzas` contains Searchbase stanza IDs.
+- `developing.savedSearches` contains saved-search stanza names from
+  `savedsearches.conf`.
 
 Any resource not listed is released. Builds fail if a developing ID does not
-match a source view or Searchbase stanza, or if an ID is listed more than once.
+match its source file or if an ID is listed more than once.
 
 For example:
 
@@ -46,7 +48,8 @@ For example:
 {
     "developing": {
         "views": ["netops_catalyst_health"],
-        "searchbaseStanzas": ["my_new_search"]
+        "searchbaseStanzas": ["my_new_search"],
+        "savedSearches": ["My Scheduled Search"]
     }
 }
 ```
@@ -61,8 +64,8 @@ files and the local development stage remain complete.
 
 ## Demote a released resource
 
-To return a dashboard or Searchbase stanza to development, add its ID to the
-matching list in `build-profile-manifest.json`:
+To return a dashboard, Searchbase stanza, or saved search to development, add
+its ID to the matching list in `build-profile-manifest.json`:
 
 ```json
 "views": ["netops_catalyst_health", "netops_health_monitoring"]
@@ -75,8 +78,9 @@ The build profile handles package and navigation filtering.
 
 1. Open
    `packages/splunk-cisco-dashboards/config/build-profile-manifest.json`.
-2. Remove the resource ID from `developing.views` or
-   `developing.searchbaseStanzas`. Its absence means released.
+2. Remove the resource ID from `developing.views`,
+   `developing.searchbaseStanzas`, or `developing.savedSearches`. Its absence
+   means released.
 3. From `packages/splunk-cisco-dashboards`, run the app build profile test:
 
    ```bash
@@ -111,12 +115,31 @@ change when you demote or promote that dashboard.
 When the search is ready for Splunkbase, remove its ID from the manifest and
 rerun the profile test. Its absence means released.
 
+## Add a developing saved search
+
+1. Add or enable the stanza in
+   `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/savedsearches.conf`.
+2. Add the exact stanza name to `developing.savedSearches` in
+   `build-profile-manifest.json`.
+3. Run `yarn test:build-profile`.
+4. Use `./build.sh --developer` while you develop and test the saved search.
+
+Remove the stanza name from the manifest when the saved search is ready for
+Splunkbase. Do not keep developing searches in a separate `.bak` file. Keep
+them in their normal source file and let the build profile control packaging.
+
+The `Executive Dashboard - Score Pipeline` and
+`Executive Dashboard - Data Status Pipeline` saved searches are currently
+developing. Both stanzas have `enableSched = 0`, so the developer package does
+not schedule them.
+
 ## Scope
 
 Profiles currently control dashboard view XML, matching navigation entries,
-and complete Searchbase stanzas. Macros, images, and other app resources remain
-packaged. Before demoting a Searchbase stanza, confirm that a released view or
-released Searchbase stanza does not require it.
+complete Searchbase stanzas, and complete saved-search stanzas. Macros, images,
+and other app resources remain packaged. Before demoting a Searchbase stanza,
+confirm that a released dashboard, Searchbase stanza, or saved search does not
+require it.
 
 Use the root `build.sh` or `yarn package:app` for release artifacts. The
 lower-level `node bin/build.js pack` helper archives the raw development stage

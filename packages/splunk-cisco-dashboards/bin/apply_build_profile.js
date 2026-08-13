@@ -33,6 +33,15 @@ const SOURCE_SEARCHBASE_PATH = path.join(
   "default",
   "searchbase.conf",
 );
+const SOURCE_SAVEDSEARCHES_PATH = path.join(
+  PACKAGE_ROOT,
+  "src",
+  "main",
+  "resources",
+  "splunk",
+  "default",
+  "savedsearches.conf",
+);
 const ALLOWED_PROFILES = new Set(["developer", "splunkbase"]);
 const XML_OPTIONS = {
   ignoreAttributes: false,
@@ -53,7 +62,8 @@ function readManifest(manifestPath = MANIFEST_PATH) {
   if (
     manifest.schemaVersion !== 1 ||
     !Array.isArray(manifest.developing?.views) ||
-    !Array.isArray(manifest.developing?.searchbaseStanzas)
+    !Array.isArray(manifest.developing?.searchbaseStanzas) ||
+    !Array.isArray(manifest.developing?.savedSearches)
   ) {
     throw new Error(
       "build-profile-manifest.json must declare schemaVersion 1 and developing resource arrays",
@@ -94,18 +104,26 @@ function listSourceSearchbaseStanzaIds(
     .sort();
 }
 
+function listSourceSavedSearchIds(
+  sourceSavedSearchesPath = SOURCE_SAVEDSEARCHES_PATH,
+) {
+  return parseConfStanzas(fs.readFileSync(sourceSavedSearchesPath, "utf8"))
+    .stanzas.map(({ id }) => id)
+    .sort();
+}
+
 function validateDevelopingResourceIds(developingIds, sourceIds, label) {
-  const configuredSet = new Set(developingIds);
   const sourceSet = new Set(sourceIds);
   const duplicates = developingIds.filter(
     (id, index) => developingIds.indexOf(id) !== index,
   );
   const stale = developingIds.filter((id) => !sourceSet.has(id));
+  const invalid = developingIds.filter(
+    (id) => typeof id !== "string" || id.trim().length === 0,
+  );
 
-  for (const id of developingIds) {
-    if (!/^[a-z0-9_]+$/.test(id)) {
-      throw new Error(`Invalid developing ${label} ID in manifest: ${id}`);
-    }
+  if (invalid.length > 0) {
+    throw new Error(`Invalid developing ${label} ID in manifest`);
   }
 
   if (duplicates.length > 0 || stale.length > 0) {
@@ -120,14 +138,13 @@ function validateDevelopingResourceIds(developingIds, sourceIds, label) {
       `Developing ${label} manifest is out of sync (${details.join("; ")})`,
     );
   }
-
-  return configuredSet;
 }
 
 function validateManifest(
   manifest = readManifest(),
   sourceViewsDir = SOURCE_VIEWS_DIR,
   sourceSearchbasePath = SOURCE_SEARCHBASE_PATH,
+  sourceSavedSearchesPath = SOURCE_SAVEDSEARCHES_PATH,
 ) {
   validateDevelopingResourceIds(
     manifest.developing.views,
@@ -138,6 +155,11 @@ function validateManifest(
     manifest.developing.searchbaseStanzas,
     listSourceSearchbaseStanzaIds(sourceSearchbasePath),
     "Searchbase stanza",
+  );
+  validateDevelopingResourceIds(
+    manifest.developing.savedSearches,
+    listSourceSavedSearchIds(sourceSavedSearchesPath),
+    "saved search",
   );
 
   return manifest;
@@ -215,6 +237,7 @@ function applyBuildProfile(appRoot, profile, options = {}) {
     options.manifest || readManifest(options.manifestPath),
     options.sourceViewsDir || SOURCE_VIEWS_DIR,
     options.sourceSearchbasePath || SOURCE_SEARCHBASE_PATH,
+    options.sourceSavedSearchesPath || SOURCE_SAVEDSEARCHES_PATH,
   );
   const appViewsDir = path.join(appRoot, "default", "data", "ui", "views");
   const appNavPath = path.join(
@@ -226,15 +249,24 @@ function applyBuildProfile(appRoot, profile, options = {}) {
     "default.xml",
   );
   const appSearchbasePath = path.join(appRoot, "default", "searchbase.conf");
+  const appSavedSearchesPath = path.join(
+    appRoot,
+    "default",
+    "savedsearches.conf",
+  );
   const developingViewIds = [...manifest.developing.views].sort();
   const developingSearchbaseStanzaIds = [
     ...manifest.developing.searchbaseStanzas,
+  ].sort();
+  const developingSavedSearchIds = [
+    ...manifest.developing.savedSearches,
   ].sort();
 
   if (
     !fs.existsSync(appViewsDir) ||
     !fs.existsSync(appNavPath) ||
-    !fs.existsSync(appSearchbasePath)
+    !fs.existsSync(appSearchbasePath) ||
+    !fs.existsSync(appSavedSearchesPath)
   ) {
     throw new Error(`Target is not a staged Splunk app: ${appRoot}`);
   }
@@ -251,8 +283,10 @@ function applyBuildProfile(appRoot, profile, options = {}) {
       profile,
       developingViewIds,
       developingSearchbaseStanzaIds,
+      developingSavedSearchIds,
       removedViewIds: [],
       removedSearchbaseStanzaIds: [],
+      removedSavedSearchIds: [],
       removedNavReferences: 0,
     };
   }
@@ -289,12 +323,20 @@ function applyBuildProfile(appRoot, profile, options = {}) {
     ),
   );
 
+  const savedSearchesSource = fs.readFileSync(appSavedSearchesPath, "utf8");
+  fs.writeFileSync(
+    appSavedSearchesPath,
+    filterConfStanzas(savedSearchesSource, new Set(developingSavedSearchIds)),
+  );
+
   return {
     profile,
     developingViewIds,
     developingSearchbaseStanzaIds,
+    developingSavedSearchIds,
     removedViewIds: developingViewIds,
     removedSearchbaseStanzaIds: developingSearchbaseStanzaIds,
+    removedSavedSearchIds: developingSavedSearchIds,
     removedNavReferences,
   };
 }
@@ -314,15 +356,17 @@ function main() {
     if (profile === "developer") {
       console.log(
         `[build-profile] developer: included ${result.developingViewIds.length} ` +
-          `developing view(s) and ${result.developingSearchbaseStanzaIds.length} ` +
-          "developing Searchbase stanza(s)",
+          `developing view(s), ${result.developingSearchbaseStanzaIds.length} ` +
+          `developing Searchbase stanza(s), and ` +
+          `${result.developingSavedSearchIds.length} developing saved search(es)`,
       );
     } else {
       console.log(
         `[build-profile] splunkbase: excluded ${result.removedViewIds.length} ` +
           `developing view(s), ${result.removedNavReferences} navigation ` +
-          `reference(s), and ${result.removedSearchbaseStanzaIds.length} ` +
-          "developing Searchbase stanza(s)",
+          `reference(s), ${result.removedSearchbaseStanzaIds.length} ` +
+          `developing Searchbase stanza(s), and ` +
+          `${result.removedSavedSearchIds.length} developing saved search(es)`,
       );
     }
   } catch (error) {
@@ -340,6 +384,7 @@ module.exports = {
   filterNavigationNodes,
   hrefTargetsView,
   listSourceSearchbaseStanzaIds,
+  listSourceSavedSearchIds,
   listSourceViewIds,
   parseConfStanzas,
   readManifest,

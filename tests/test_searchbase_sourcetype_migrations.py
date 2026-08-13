@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 import re
 import unittest
 
@@ -16,6 +17,13 @@ SEARCHBASE = (
     / "splunk"
     / "default"
     / "searchbase.conf"
+)
+BUILD_PROFILE_MANIFEST = (
+    ROOT
+    / "packages"
+    / "splunk-cisco-dashboards"
+    / "config"
+    / "build-profile-manifest.json"
 )
 
 DIRECT_PAIRS = (
@@ -64,7 +72,15 @@ def _predicate_has(search: str, sourcetype: str) -> bool:
 class SearchbaseSourcetypeMigrationsTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.searches = dict(parse_stanzas(SEARCHBASE.read_text(encoding="utf-8")))
+        manifest = json.loads(BUILD_PROFILE_MANIFEST.read_text(encoding="utf-8"))
+        developing_ids = set(manifest["developing"]["searchbaseStanzas"])
+        cls.searches = {
+            stanza_id: fields
+            for stanza_id, fields in parse_stanzas(
+                SEARCHBASE.read_text(encoding="utf-8")
+            )
+            if stanza_id not in developing_ids
+        }
 
     def test_direct_migrations_never_use_only_one_sourcetype(self):
         for stanza_id, fields in self.searches.items():

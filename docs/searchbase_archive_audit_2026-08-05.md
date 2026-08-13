@@ -1,5 +1,16 @@
 # Searchbase archive audit — 2026-08-05
 
+## Current status — 2026-08-13
+
+- Moved all 156 archived stanzas into `searchbase.conf` and listed them under
+  `developing.searchbaseStanzas` in `build-profile-manifest.json`.
+- Removed `searchbase.bak`. The build manifest now tracks whether a Searchbase
+  stanza is developing or released.
+- Replaced the archive regression test with build-profile integrity checks.
+
+The remaining sections document the original archive decision and are retained
+for historical context.
+
 ## Outcome
 
 - Audited all 64 stanzas that were already present in `searchbase.bak`.
@@ -9,7 +20,7 @@
 - Archived 92 candidates with no runtime connection.
 - Preserved 8 live drilldown targets for repair rather than archiving them.
 - Confirmed that `ssef_command_logs` was absent from both app-owned registry
-  files. The installed Splunk instance has a separate custom copy in
+  files. The installed Splunk Enterprise instance has a separate custom copy in
   `/opt/10/etc/apps/searchbase/local/searchbase.conf`; it is outside this app
   and was intentionally left untouched.
 - The final registry contains 1,079 live stanzas and 156 archived stanzas, with
@@ -37,10 +48,11 @@ preserve-on-link rule and can be reviewed with the other repairs.
 
 ## Regression protection
 
-`tests/test_searchbase_archive_integrity.py` checks that:
+`tests/test_build_profile_searchbase_integrity.py` checks that:
 
-- live and archived stanza IDs never overlap;
-- archived IDs and display names do not appear anywhere in runtime app source;
-- live Searchbase drilldowns do not resolve to archived display names; and
-- an archived stanza cannot continue supplying a tile configured by
+- `searchbase.bak` does not return;
+- developing stanza IDs are unique and exist in `searchbase.conf`;
+- released runtime resources and drilldowns do not depend on developing
+  Searchbase searches; and
+- a developing stanza cannot continue supplying a tile configured by
   `insights_workspaces.conf` through `viz_options.overview` metadata.
