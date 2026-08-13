@@ -66,7 +66,9 @@
   authenticated Splunk user's private namespace instead of attempting an
   app-shared `nobody` write. Personal dashboards remain visible and editable
   to their owner, shared factory dashboard permissions stay protected, and
-  REST failures surface useful error details even for non-JSON responses.
+  REST failures surface useful error details even for non-JSON responses. The
+  Add Searchbase editor control now keeps its catalogue guidance visible beside
+  the button instead of showing a hover tooltip that obscures the search field.
 
 ## 1.0.37
 

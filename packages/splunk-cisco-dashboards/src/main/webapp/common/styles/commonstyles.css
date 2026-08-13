@@ -4411,16 +4411,6 @@ code {
     color: #ffffff !important;
 }
 
-.dashboardbuilder-searchbase-toolbar-tooltip {
-    display: grid;
-    gap: 3px;
-    max-width: 310px;
-}
-
-.dashboardbuilder-searchbase-toolbar-tooltip span {
-    line-height: 1.35;
-}
-
 .dashboardbuilder-edit-context-message {
     background: var(--dashboard-builder-background-section, #ffffff) !important;
     border: 1px solid var(--dashboard-builder-border-strong, #a8b3bd) !important;
