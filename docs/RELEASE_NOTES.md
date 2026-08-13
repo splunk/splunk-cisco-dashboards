@@ -2,6 +2,12 @@
 
 ## 1.0.38
 
+- Searchbase now includes 12 Catalyst Center interface-telemetry searches for
+  Rx/Tx traffic, device throughput, capacity and headroom, traffic anomalies,
+  errors and discards, quiet interfaces, collection readiness, and critical
+  WAN or firewall handoff assurance. Missing Rx/Tx telemetry remains visible
+  as an assurance finding, and candidate circuits require validation before
+  assigning an internet-provider identity.
 - Dashboard Manager now creates, clones, and generates dashboards in the
   authenticated Splunk user's private namespace instead of attempting an
   app-shared `nobody` write. Personal dashboards remain visible and editable
