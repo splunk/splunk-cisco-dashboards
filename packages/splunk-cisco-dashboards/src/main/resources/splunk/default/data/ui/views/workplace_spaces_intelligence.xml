@@ -2980,7 +2980,9 @@
 				"type": "absolute"
 			}
 		},
-		"options": {},
+		"options": {
+			"showTitleAndDescription": false
+		}
 		"tabs": {
 			"items": [
 				{
