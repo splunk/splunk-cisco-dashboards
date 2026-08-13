@@ -42,12 +42,26 @@ The manifest has three lists:
 Any resource not listed is released. Builds fail if a developing ID does not
 match its source file or if an ID is listed more than once.
 
+The 156 searches migrated from the retired `searchbase.bak` file include the
+`Migrated_From_Searchbase_Bak` tag. To find that migration cohort in the source
+file, run:
+
+```bash
+rg -n 'Migrated_From_Searchbase_Bak' \
+  packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf
+```
+
+The tag records where those searches came from; it does not indicate release
+status. Use the manifest to determine whether a search is developing or
+released. The tag can remain when you promote a migrated search, so the
+manifest stays the only file you edit for promotion or demotion.
+
 For example:
 
 ```json
 {
     "developing": {
-        "views": ["netops_catalyst_health"],
+        "views": ["netops_catalyst_health", "secops_overview"],
         "searchbaseStanzas": ["my_new_search"],
         "savedSearches": ["My Scheduled Search"]
     }

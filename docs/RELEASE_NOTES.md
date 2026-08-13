@@ -6,10 +6,13 @@
   not listed are implicitly released. Splunkbase packages exclude listed
   dashboard views, their navigation entries, Searchbase stanzas, and saved
   searches; developer packages include them and write a `-developer` artifact.
-  Stanzas previously stored in `searchbase.bak` now use the manifest, and the
-  two disabled Executive Dashboard pipeline saved searches are developer-only.
-  Catalyst Health remains available in the local development stage without
+  Stanzas previously stored in `searchbase.bak` now use the manifest and carry
+  a searchable migration-origin tag. The two disabled Executive Dashboard
+  pipeline saved searches are developer-only. Catalyst Health and Security
+  Operations Overview remain available in the local development stage without
   appearing in the Splunkbase package or navigation.
+- Removed the unused FDSE Universal Configuration Console repository-template
+  scaffold. App packaging and development do not reference that template.
 - Searchbase now includes 12 Catalyst Center interface-telemetry searches for
   Rx/Tx traffic, device throughput, capacity and headroom, traffic anomalies,
   errors and discards, quiet interfaces, collection readiness, and critical

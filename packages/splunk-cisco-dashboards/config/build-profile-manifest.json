@@ -1,7 +1,11 @@
 {
   "schemaVersion": 1,
   "developing": {
-    "views": ["netops_catalyst_health", "netops_health_monitoring"],
+    "views": [
+      "netops_catalyst_health",
+      "netops_health_monitoring",
+      "secops_overview"
+    ],
     "searchbaseStanzas": [
       "dc_networking_vmware_esx_server_farm",
       "dc_networking_vmware_cpu_demand_vs_usage",
@@ -158,11 +162,23 @@
       "network_intelligence_firewall_nat_translation_hits",
       "catalyst_center_poe_power_consumption",
       "secure_networking_meraki_top_switch_ports_by_incidents",
-            "secure_networking_meraki_top_blocked_destinations"
+      "secure_networking_meraki_top_blocked_destinations"
     ],
     "savedSearches": [
       "Executive Dashboard - Score Pipeline",
-      "Executive Dashboard - Data Status Pipeline"
+      "Executive Dashboard - Data Status Pipeline",
+      "Executive Dashboard - ds_it_score",
+      "Executive Dashboard - ds_sec_score",
+      "Executive Dashboard - ds_ux_score",
+      "Executive Dashboard - ds_bldg_score",
+      "Security Resilience - ds_security_events",
+      "NetOps Alert - AP Down or Unreachable",
+      "NetOps Alert - AP Saturation Critical",
+      "NetOps Alert - Client Onboarding Degraded",
+      "NetOps Alert - DNAC P1 Issue Raised",
+      "NetOps Alert - NRS Below Threshold",
+      "NetOps Alert - Occupancy Surge 3x",
+      "NetOps Alert - Client Health Collapse"
     ]
   }
 }

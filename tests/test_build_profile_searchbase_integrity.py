@@ -14,6 +14,8 @@ RETIRED_SEARCHBASE_BACKUP = DEFAULT / "searchbase.bak"
 INSIGHTS_WORKSPACES = DEFAULT / "insights_workspaces.conf"
 VIEWS = DEFAULT / "data" / "ui" / "views"
 MANIFEST_PATH = PACKAGE_ROOT / "config" / "build-profile-manifest.json"
+MIGRATED_SEARCHBASE_TAG = "Migrated_From_Searchbase_Bak"
+MIGRATED_SEARCHBASE_STANZA_COUNT = 156
 
 
 def parse_stanzas(path):
@@ -71,6 +73,22 @@ class DevelopingSearchbaseIntegrityTest(unittest.TestCase):
             self.developing_id_set - set(self.live),
             set(),
             "Every developing Searchbase ID must resolve to searchbase.conf",
+        )
+
+    def test_migrated_searchbase_stanzas_have_a_searchable_origin_tag(self):
+        tagged_stanzas = {
+            stanza_id
+            for stanza_id, stanza in self.live.items()
+            if MIGRATED_SEARCHBASE_TAG
+            in {
+                tag.strip()
+                for tag in stanza["fields"].get("tags", "").split(",")
+            }
+        }
+        self.assertEqual(
+            len(tagged_stanzas),
+            MIGRATED_SEARCHBASE_STANZA_COUNT,
+            "The Searchbase backup migration cohort must keep its searchable tag",
         )
 
     def test_released_runtime_sources_do_not_reference_developing_searches(self):
