@@ -215,7 +215,8 @@ Device Health (9), Client Health (5), Device Inventory (5), Network Health (3), 
 (2), Network Alerts (2), Network Authentication (1); NetOps Readiness: Network Readiness Score (5),
 Capacity Planning (5), Occupancy Analytics (5), Readiness Score Components (4), Client Experience (4),
 Issue Tracking (3). Full machine-readable breakdown regenerated at
-`docs/searchbase_review_report.json` after every edit round.
+`artifacts/searchbase/reports/searchbase_review_report.json` after every edit
+round.
 
 ## 7. Controlled tag vocabulary
 

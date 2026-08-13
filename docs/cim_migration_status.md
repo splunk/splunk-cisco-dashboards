@@ -13,8 +13,9 @@ Generated from `packages/splunk-cisco-dashboards/src/main/resources/splunk/defau
 
 ## Phase 2 posture
 
-Per `searchbase_cim_disposition.txt`, **all 136** previously flagged raw CIM
-candidates are intentionally **skipped** (product-specific fields, composites,
+Per `artifacts/searchbase/cim/searchbase_cim_disposition.txt`, **all 136**
+previously flagged raw CIM candidates are intentionally **skipped**
+(product-specific fields, composites,
 rex on `_raw`, multi-index unions, readiness probes). Production firewall and
 identity KPIs already use `tstats` + `scd_summariesonly` on CIM.
 
@@ -98,4 +99,3 @@ identity KPIs already use `tstats` + `scd_summariesonly` on CIM.
 1. Leave hidden Dashboard Studio reconciliation stanzas raw (byte parity).
 2. Add `_dm` readiness twins rather than rewriting ESCU / FTD detail panels.
 3. Re-run this audit after any new firewall or identity panels land.
-

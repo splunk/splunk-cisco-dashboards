@@ -136,7 +136,8 @@ const CURRENT_SCHEMA_VERSION = 2;
  *  Maintaining this small list against the generator is far
  *  cheaper than threading a layer-detection round-trip. Add new
  *  entries here whenever `generate_oob_diagrams.mjs` ships a new
- *  stanza; the build verifies via SESSION_LOG conventions and
+ *  stanza; the build verifies through `docs/history/SESSION_LOG.md`
+ *  conventions and
  *  the conf is regenerated regularly so a missed update is
  *  surfaced quickly.
  *

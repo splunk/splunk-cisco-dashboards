@@ -13,6 +13,10 @@
   appearing in the Splunkbase package or navigation.
 - Removed the unused FDSE Universal Configuration Console repository-template
   scaffold. App packaging and development do not reference that template.
+- Repository-only Searchbase exports, machine-readable reports, CIM audit
+  outputs, and the historical session log now use dedicated `artifacts` and
+  `docs/history` directories. Generator and validator paths follow the new
+  structure without changing packaged app content.
 - Searchbase now includes 12 Catalyst Center interface-telemetry searches for
   Rx/Tx traffic, device throughput, capacity and headroom, traffic anomalies,
   errors and discards, quiet interfaces, collection readiness, and critical

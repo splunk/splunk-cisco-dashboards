@@ -2,7 +2,7 @@
 
 Generated during the SKILL.md-driven re-audit of `searchbase.conf` (2026-08-03). Scope: all 314 `dc_networking_*` stanzas, reviewed by 5 independent agents against the "Independent Catalog Value Gate" and "Representative Example Consolidation" rules in `.github/skills/audit-searchbase-catalog/SKILL.md`.
 
-**Reference-check method**: every candidate below was grepped repo-wide (all dashboard XML, `savedsearches.conf`, every `drilldown_search_name` value in `searchbase.conf`, in both directions). Result: **zero live consumer references found for any of the 89 stanzas listed below** — every hit outside `searchbase.conf` itself traced to generated/provenance artifacts (`docs/searchbase_review_report.json`, `docs/searchbase-dashboard-unmatched.csv`, `packages/splunk-cisco-dashboards/exports/searchbase_export*.conf`, `scripts/curate_dc_networking_searchbase.py`), none of which are live consumers.
+**Reference-check method**: every candidate below was grepped repo-wide (all dashboard XML, `savedsearches.conf`, every `drilldown_search_name` value in `searchbase.conf`, in both directions). Result: **zero live consumer references found for any of the 89 stanzas listed below** — every hit outside `searchbase.conf` itself traced to generated/provenance artifacts (`artifacts/searchbase/reports/searchbase_review_report.json`, `docs/searchbase-dashboard-unmatched.csv`, `artifacts/searchbase/exports/searchbase_export*.conf`, `scripts/curate_dc_networking_searchbase.py`), none of which are live consumers.
 
 Net effect if applied: 314 → 225 `dc_networking_*` stanzas (28% reduction), 1255 → 1166 total catalog stanzas.
 

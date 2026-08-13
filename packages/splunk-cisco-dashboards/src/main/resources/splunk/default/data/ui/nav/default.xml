@@ -86,12 +86,12 @@
         <collection label="Help &amp; Resources">
             <a href="user_guide">User Guide</a>
             <a href="search">Search</a>
+            <a href="search" target="_blank" rel="noopener"></a>
         </collection>
 
         <collection label="Administration">
             <a href="admin_asset_inventory">Asset Inventory</a>
             <a href="setup?setup=1">Setup</a>
         </collection>
-        <a href="search" target="_blank" rel="noopener"></a>
     </collection>
 </nav>

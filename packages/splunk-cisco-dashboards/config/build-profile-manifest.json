@@ -4,7 +4,11 @@
     "views": [
       "netops_catalyst_health",
       "netops_health_monitoring",
-      "secops_overview"
+      "secops_overview",
+      "netops_catalyst_operations",
+      "network_diagram",
+      "sn_topology_canvas",
+      "searchbase_canvas"
     ],
     "searchbaseStanzas": [
       "dc_networking_vmware_esx_server_farm",

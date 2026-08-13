@@ -22,7 +22,7 @@ from audit_searchbase_quality import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
-REPORT = ROOT / "docs/searchbase_review_report.json"
+REPORT = ROOT / "artifacts/searchbase/reports/searchbase_review_report.json"
 SUMMARY = ROOT / "docs/searchbase_review_summary.md"
 REVIEW_DATE = "2026-07-23"
 SECURE_NETWORKING_TAG = "Secure Networking"
@@ -244,6 +244,7 @@ def main() -> int:
         },
         "searches": entries,
     }
+    REPORT.parent.mkdir(parents=True, exist_ok=True)
     REPORT.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
 
     summary = payload["summary"]
@@ -269,7 +270,8 @@ def main() -> int:
                 f"| Remaining static review notes | {summary['remaining_static_findings']} |",
                 "",
                 "The complete per-search original/optimized SPL, metadata, rationale, classification review, "
-                "tag proposals, and residual findings are in `docs/searchbase_review_report.json`.",
+                "tag proposals, and residual findings are in "
+                "`artifacts/searchbase/reports/searchbase_review_report.json`.",
                 "",
                 "## Applied SPL Changes",
                 "",

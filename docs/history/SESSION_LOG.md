@@ -1,5 +1,8 @@
 # Splunk App for Secure Networking — Session Log
 
+> Archived at this path during repository organization on 2026-08-13.
+> Historical entries retain the filenames and paths recorded at the time.
+>
 > Running narrative of what we've built, the decisions behind it, and the
 > verification that proved it works. Newer sessions go at the **top**.
 > Each session ends with a "What's next" pointer so the following session
