@@ -789,7 +789,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Hourly trend of TrustSec SGACL enforcement events from the Catalyst data model, split by permit/deny \\(and other\\) actions — the primary “is role\\-based policy doing work over time?” signal for scalable segmentation\\."
+                "markdown": "Hourly trend of TrustSec SGACL enforcement events from the Catalyst data model, split by permit/deny \\(and other\\) actions - the primary “is role\\-based policy doing work over time?” signal for scalable segmentation\\."
             }
         },
         "viz_card_06_singlevalue": {

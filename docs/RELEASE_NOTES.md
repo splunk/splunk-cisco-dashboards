@@ -2,6 +2,11 @@
 
 ## 1.0.38
 
+- The legacy Macro Index Tuning redirect no longer appears as a separate
+  dashboard; existing links still open the integrated Setup tuning step.
+  NetOps Studio tiles now keep their content inside panel bounds, the readiness
+  sparkline no longer overlaps the KPI row, and the per-site chart shows only
+  minimum and maximum value labels instead of labeling every bar.
 - Native Dashboard Studio single-value tiles now use explicit C3 trend and
   sparkline colors instead of defaults that could render black on dark panels.
   Studio page-title blocks have additional height to prevent text clipping.

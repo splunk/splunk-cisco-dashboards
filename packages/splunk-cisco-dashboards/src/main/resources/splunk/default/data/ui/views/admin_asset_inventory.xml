@@ -308,7 +308,7 @@
 			"dataSources": {
 				"primary": "ds_firewall_gap"
 			},
-			"description": "All known firewalls — which are sending FTD/ASA/eStreamer data to Splunk",
+			"description": "All known firewalls - which are sending FTD/ASA/eStreamer data to Splunk",
 			"options": {
 				"backgroundColor": "#131a23",
 				"count": 20,
@@ -642,7 +642,7 @@
 			"options": {
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "### Metric Reference — Asset Inventory\n\n---\n\n**Total Devices** — Unique devices across all management sources\n\n**Known IP Addresses** — Devices with a known management IP\n\n**Known Serials** — Devices with a hardware serial number\n\n**Last Lookup Refresh** — Scheduled nightly at 02:05 AM\n\n---\n\n**Devices by Type** — Pie chart of device categories (switch, router, AP, firewall, etc.)\n\n**Devices by Management Source** — Which platform discovered each device\n\n**Devices by Family** — Hardware families (Catalyst 9300, Meraki MR, ASA 5500, etc.)\n\n**Devices by Location** — Device distribution across physical sites\n\n---\n\n**Full Inventory** — Searchable table with device name, type, IP, serial, site, source, and last-seen time",
+				"markdown": "### Metric Reference - Asset Inventory\n\n---\n\n**Total Devices** - Unique devices across all management sources\n\n**Known IP Addresses** - Devices with a known management IP\n\n**Known Serials** - Devices with a hardware serial number\n\n**Last Lookup Refresh** - Scheduled nightly at 02:05 AM\n\n---\n\n**Devices by Type** - Pie chart of device categories (switch, router, AP, firewall, etc.)\n\n**Devices by Management Source** - Which platform discovered each device\n\n**Devices by Family** - Hardware families (Catalyst 9300, Meraki MR, ASA 5500, etc.)\n\n**Devices by Location** - Device distribution across physical sites\n\n---\n\n**Full Inventory** - Searchable table with device name, type, IP, serial, site, source, and last-seen time",
 				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
@@ -651,7 +651,7 @@
 			"options": {
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "### Metric Reference — Data Coverage Gaps\n\n---\n\n**Total Devices** — Catalyst Center managed devices in the asset inventory\n\n**Sending Data** — Devices with live telemetry arriving in Splunk within the selected time range\n\n**No Data** — Devices that have never sent any data to Splunk\n\n**Coverage** — Percentage of managed devices with active data\n\n---\n\n**Coverage by Device Family** — Data coverage broken down by hardware family\n\n**Devices NOT Sending Data** — Detail table with first seen, last seen, and data status (Sending Data / Data Stopped / NO DATA)\n\n---\n\n**FW Sending Data** — Firewalls actively sending FTD/ASA/eStreamer data\n\n**FW Expected** — Expected firewall count from the asset inventory\n\n**FW Missing** — Gap between expected and sending firewalls\n\n**HA Pairs Detected** — High availability pair discovery\n\n**Firewall Data Status** — Per-firewall detail with sourcetypes, event count, first seen, and last seen",
+				"markdown": "### Metric Reference - Data Coverage Gaps\n\n---\n\n**Total Devices** - Catalyst Center managed devices in the asset inventory\n\n**Sending Data** - Devices with live telemetry arriving in Splunk within the selected time range\n\n**No Data** - Devices that have never sent any data to Splunk\n\n**Coverage** - Percentage of managed devices with active data\n\n---\n\n**Coverage by Device Family** - Data coverage broken down by hardware family\n\n**Devices NOT Sending Data** - Detail table with first seen, last seen, and data status (Sending Data / Data Stopped / NO DATA)\n\n---\n\n**FW Sending Data** - Firewalls actively sending FTD/ASA/eStreamer data\n\n**FW Expected** - Expected firewall count from the asset inventory\n\n**FW Missing** - Gap between expected and sending firewalls\n\n**HA Pairs Detected** - High availability pair discovery\n\n**Firewall Data Status** - Per-firewall detail with sourcetypes, event count, first seen, and last seen",
 				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
@@ -800,7 +800,7 @@
 		"viz_narr_gaps": {
 			"type": "splunk.markdown",
 			"options": {
-				"markdown": "Identifies **devices in inventory that are not sending data** to Splunk — helping you close visibility gaps before they become blind spots. The firewall section highlights missing ASA, FTD, and Firepower data sources.",
+				"markdown": "Identifies **devices in inventory that are not sending data** to Splunk - helping you close visibility gaps before they become blind spots. The firewall section highlights missing ASA, FTD, and Firepower data sources.",
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5"
 			}
@@ -808,7 +808,7 @@
 		"viz_about_purpose": {
 			"type": "splunk.markdown",
 			"options": {
-				"markdown": "## Asset Inventory & Coverage Dashboard\n\nThis dashboard provides a **consolidated view of all Cisco network assets** discovered across management platforms (Catalyst Center, Meraki Dashboard, and other sources), along with a **data coverage gap analysis** that identifies devices not actively sending telemetry or log data to Splunk.\n\n**Audience:** Network operations, security operations, IT asset management\n\n**Data Sources:** asset_inventory lookup (generated from Catalyst Center, Meraki, and other management APIs), Cisco syslog/NetFlow data in Splunk indexes\n\n**Refresh:** Data updates when the inventory lookup is refreshed (nightly at 02:05 AM); coverage gaps are evaluated against the selected time range\n\n---\n\n### Tab Guide\n\n**Asset Inventory** — Browse and filter the full device inventory by type, management source, and device family. View breakdowns by location and platform.\n\n**Data Coverage Gaps** — Identify devices that exist in inventory but are not sending any data to Splunk. Includes a dedicated firewall coverage section for ASA/FTD/Firepower devices.\n\n**About** — This page. Metric reference, data sources, and troubleshooting.",
+				"markdown": "## Asset Inventory & Coverage Dashboard\n\nThis dashboard provides a **consolidated view of all Cisco network assets** discovered across management platforms (Catalyst Center, Meraki Dashboard, and other sources), along with a **data coverage gap analysis** that identifies devices not actively sending telemetry or log data to Splunk.\n\n**Audience:** Network operations, security operations, IT asset management\n\n**Data Sources:** asset_inventory lookup (generated from Catalyst Center, Meraki, and other management APIs), Cisco syslog/NetFlow data in Splunk indexes\n\n**Refresh:** Data updates when the inventory lookup is refreshed (nightly at 02:05 AM); coverage gaps are evaluated against the selected time range\n\n---\n\n### Tab Guide\n\n**Asset Inventory** - Browse and filter the full device inventory by type, management source, and device family. View breakdowns by location and platform.\n\n**Data Coverage Gaps** - Identify devices that exist in inventory but are not sending any data to Splunk. Includes a dedicated firewall coverage section for ASA/FTD/Firepower devices.\n\n**About** - This page. Metric reference, data sources, and troubleshooting.",
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5"
 			}
@@ -816,7 +816,7 @@
 		"viz_about_sources": {
 			"type": "splunk.markdown",
 			"options": {
-				"markdown": "### Data Sources & Troubleshooting\n\n**Primary Lookup:** asset_inventory — consolidated from Catalyst Center device health, Meraki device inventory, and other management platform APIs. Refreshed nightly at 02:05 AM.\n\n**Coverage Evaluation:** Searches Splunk indexes for matching device events to determine whether each inventory device is actively sending data.\n\n**Firewall Detection:** Pattern-matches device family against ASA, FTD, and Firepower strings to build the dedicated firewall coverage analysis.\n\n---\n\n**No devices appearing?**\nVerify the asset_inventory lookup exists and is populated. Run: | inputlookup asset_inventory | stats count\n\n**Coverage % seems wrong?**\nCoverage is evaluated over the selected time range. A narrow window may miss devices that report infrequently. Try expanding to 24h or 7d.\n\n**Firewall section empty?**\nThe firewall section filters on device_family matching ASA, FTD, or Firepower. If your inventory uses different naming, the regex may need adjustment.",
+				"markdown": "### Data Sources & Troubleshooting\n\n**Primary Lookup:** asset_inventory - consolidated from Catalyst Center device health, Meraki device inventory, and other management platform APIs. Refreshed nightly at 02:05 AM.\n\n**Coverage Evaluation:** Searches Splunk indexes for matching device events to determine whether each inventory device is actively sending data.\n\n**Firewall Detection:** Pattern-matches device family against ASA, FTD, and Firepower strings to build the dedicated firewall coverage analysis.\n\n---\n\n**No devices appearing?**\nVerify the asset_inventory lookup exists and is populated. Run: | inputlookup asset_inventory | stats count\n\n**Coverage % seems wrong?**\nCoverage is evaluated over the selected time range. A narrow window may miss devices that report infrequently. Try expanding to 24h or 7d.\n\n**Firewall section empty?**\nThe firewall section filters on device_family matching ASA, FTD, or Firepower. If your inventory uses different naming, the regex may need adjustment.",
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5"
 			}

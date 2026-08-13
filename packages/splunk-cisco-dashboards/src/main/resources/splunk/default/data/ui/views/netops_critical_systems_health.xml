@@ -87,7 +87,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "# IT — Critical Systems Health\n\nReal-time, centralized view of **critical infrastructure health** across network and core systems. Use this dashboard to assess system status, identify anomalies, and prioritize response to potential service-impacting issues.\n\n**Audience:** Network Operations, Infrastructure Leads, IT Management\n**Primary Sources:** Cisco Catalyst Center (DNAC), Cisco IOS Syslog, Cisco ISE, DHCP Servers\n**Refresh:** All panels follow the global time picker; key saved searches run every 15 minutes\n\n---\n\n## How to Navigate This Dashboard\n\n**Overview** — Health scores, issue counts, syslog severity, device inventory, compliance trends.\n*Start here — confirm the backbone is operating within normal bounds.*\n\n**Details & KPI Reference** — Site-level breakdowns, WAN circuit reference, topology map, full device inventory.\n*Drill in when Overview shows degraded health or rising issue counts.*\n\n**Catalyst Center Intelligence** — Deep DNAC analytics: unreachable devices, CPU/memory alerts, DHCP events, power resilience.\n*Investigation mode — root cause analysis on specific device or site issues.*\n\n> **Reading pattern:** Green numbers on Overview = healthy, move on. Yellow/red = switch to Details for site-level context, then CC Intelligence for device-level root cause."
+				"markdown": "# IT - Critical Systems Health\n\nReal-time, centralized view of **critical infrastructure health** across network and core systems. Use this dashboard to assess system status, identify anomalies, and prioritize response to potential service-impacting issues.\n\n**Audience:** Network Operations, Infrastructure Leads, IT Management\n**Primary Sources:** Cisco Catalyst Center (DNAC), Cisco IOS Syslog, Cisco ISE, DHCP Servers\n**Refresh:** All panels follow the global time picker; key saved searches run every 15 minutes\n\n---\n\n## How to Navigate This Dashboard\n\n**Overview** - Health scores, issue counts, syslog severity, device inventory, compliance trends.\n*Start here - confirm the backbone is operating within normal bounds.*\n\n**Details & KPI Reference** - Site-level breakdowns, WAN circuit reference, topology map, full device inventory.\n*Drill in when Overview shows degraded health or rising issue counts.*\n\n**Catalyst Center Intelligence** - Deep DNAC analytics: unreachable devices, CPU/memory alerts, DHCP events, power resilience.\n*Investigation mode - root cause analysis on specific device or site issues.*\n\n> **Reading pattern:** Green numbers on Overview = healthy, move on. Yellow/red = switch to Details for site-level context, then CC Intelligence for device-level root cause."
 			},
 			"type": "splunk.markdown"
 		},
@@ -96,7 +96,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "## Data Sources & Troubleshooting\n\n---\n\n**Cisco Catalyst Center** — Cisco DNA Center App for Splunk\nSourcetypes: `cisco:dnac:networkhealth`, `cisco:dnac:devicehealth`, `cisco:dnac:issues`, `cisco:dnac:compliance`\nFreshness: ~15 min\n\n**Network Syslog** — Splunk Add-on for Cisco ESA / IOS\nSourcetypes: `cisco:ios`, `cisco:asa`\nFreshness: Real-time\n\n**DHCP (Windows)** — Splunk Add-on for Windows\nSourcetypes: `WinEventLog:Microsoft-Windows-Dhcp*`\nFreshness: Real-time\n\n**ITSI KPI Summary** — Splunk ITSI\nSourcetypes: `itsi_summary`\nFreshness: Per-service interval\n\n---\n\n**Panel showing \"No results\"?**\n\n1. **Widen the time range** — some metrics need 4+ hours of data to populate\n2. **Verify the TAs are installed** — check *Manage Apps* for the add-ons listed above\n3. **Confirm data flow** — run `index=* sourcetype=cisco:dnac:* | head 5` to test\n4. **Check saved search status** — some panels depend on scheduled searches; verify they are enabled under *Settings → Searches, Reports, and Alerts*."
+				"markdown": "## Data Sources & Troubleshooting\n\n---\n\n**Cisco Catalyst Center** - Cisco DNA Center App for Splunk\nSourcetypes: `cisco:dnac:networkhealth`, `cisco:dnac:devicehealth`, `cisco:dnac:issues`, `cisco:dnac:compliance`\nFreshness: ~15 min\n\n**Network Syslog** - Splunk Add-on for Cisco ESA / IOS\nSourcetypes: `cisco:ios`, `cisco:asa`\nFreshness: Real-time\n\n**DHCP (Windows)** - Splunk Add-on for Windows\nSourcetypes: `WinEventLog:Microsoft-Windows-Dhcp*`\nFreshness: Real-time\n\n**ITSI KPI Summary** - Splunk ITSI\nSourcetypes: `itsi_summary`\nFreshness: Per-service interval\n\n---\n\n**Panel showing \"No results\"?**\n\n1. **Widen the time range** - some metrics need 4+ hours of data to populate\n2. **Verify the TAs are installed** - check *Manage Apps* for the add-ons listed above\n3. **Confirm data flow** - run `index=* sourcetype=cisco:dnac:* | head 5` to test\n4. **Check saved search status** - some panels depend on scheduled searches; verify they are enabled under *Settings → Searches, Reports, and Alerts*."
 			},
 			"type": "splunk.markdown"
 		},
@@ -275,7 +275,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#649ef5",
 				"fontSize": "small",
-				"markdown": "### Non-Compliant Device Report\nDevices failing Catalyst Center compliance checks — RUNNING_CONFIG, IMAGE, PSIRT, EOX"
+				"markdown": "### Non-Compliant Device Report\nDevices failing Catalyst Center compliance checks - RUNNING_CONFIG, IMAGE, PSIRT, EOX"
 			},
 			"type": "splunk.markdown"
 		},
@@ -417,7 +417,7 @@
 			"dataSources": {
 				"primary": "ds_health_dist"
 			},
-			"description": "By device family and site — Good (8-10), Fair (5-7), Poor (1-4)",
+			"description": "By device family and site - Good (8-10), Fair (5-7), Poor (1-4)",
 			"options": {
 				"backgroundColor": "#131a23",
 				"dataValuesDisplay": "all",
@@ -439,7 +439,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "## Metric Reference — Catalyst Center Intelligence Tab\n\n---\n\n#### Critical Alerts\n\n**Unreachable Devices** — Devices Catalyst Center cannot reach via SNMP/SSH\n**CPU/Memory Alerts** — Devices with utilization > 80% (Warning) or > 90% (Critical)\n**Recent Reboots** — Devices with uptime < 4 hours (unexpected restarts or maintenance)\n**DHCP Pool Events** — DHCP NACK, denial, and pool exhaustion events from Windows servers\n\n---\n\n#### Health Distribution & Trends\n\n**Device Health Score Distribution** — All devices categorized as Good (8–10), Fair (5–7), Poor (1–4) by family and site\n**Issue Trend by Category** — Hourly timechart of categorized DNAC issues\n**Network Health Trend** — Good / Fair / Bad percentages from Catalyst Center health rollup\n\n---\n\n#### Device Deep-Dive\n\n**Unreachable Devices Table** — Full detail: device name, family, platform, site, IP, failure reason\n**CPU/Memory Threshold Alerts** — Resource-constrained devices with CPU/memory status\n**Top 20 Devices by Issue Count** — Most problematic devices ranked by active issues\n**Issues by Site** — Per-site issue counts with critical/high breakdown\n\n---\n\n#### DHCP & Interface\n\n**DHCP Pool Events** — Pool exhaustion and lease denial events\n**Issues by Priority** — P1–P4 distribution across all DNAC-detected issues\n**Interface Utilization Alerts** — Bandwidth saturation hotspots by device and site\n**Guest Client Count Trend** — Connected client count with capacity threshold lines\n**Recently Rebooted Devices** — Devices rebooted within the monitoring window\n\n---\n\n#### ⚡ Power Event Correlation\n\n**Power Events** — Power-related syslog events (RELOAD, PLATFORM_ENV, SWITCHOVER, STACK_CHANGE)\n**Power Event Timeline** — Chronology: Reload → Link Down → Protocol Down → Reconvergence → Recovery\n**Power Event Detection** — Correlated syslog events classified by type with affected devices\n**Link Flap Storm Detection** — Distinguishes mass power events from isolated port issues\n**Routing Reconvergence** — OSPF/EIGRP/BGP neighbor state changes showing Down → Up recovery\n**STP Reconvergence** — Spanning-tree topology changes per device/VLAN after power events\n**Non-Compliant Devices** — Compliance policy failures from Catalyst Center"
+				"markdown": "## Metric Reference - Catalyst Center Intelligence Tab\n\n---\n\n#### Critical Alerts\n\n**Unreachable Devices** - Devices Catalyst Center cannot reach via SNMP/SSH\n**CPU/Memory Alerts** - Devices with utilization > 80% (Warning) or > 90% (Critical)\n**Recent Reboots** - Devices with uptime < 4 hours (unexpected restarts or maintenance)\n**DHCP Pool Events** - DHCP NACK, denial, and pool exhaustion events from Windows servers\n\n---\n\n#### Health Distribution & Trends\n\n**Device Health Score Distribution** - All devices categorized as Good (8–10), Fair (5–7), Poor (1–4) by family and site\n**Issue Trend by Category** - Hourly timechart of categorized DNAC issues\n**Network Health Trend** - Good / Fair / Bad percentages from Catalyst Center health rollup\n\n---\n\n#### Device Deep-Dive\n\n**Unreachable Devices Table** - Full detail: device name, family, platform, site, IP, failure reason\n**CPU/Memory Threshold Alerts** - Resource-constrained devices with CPU/memory status\n**Top 20 Devices by Issue Count** - Most problematic devices ranked by active issues\n**Issues by Site** - Per-site issue counts with critical/high breakdown\n\n---\n\n#### DHCP & Interface\n\n**DHCP Pool Events** - Pool exhaustion and lease denial events\n**Issues by Priority** - P1–P4 distribution across all DNAC-detected issues\n**Interface Utilization Alerts** - Bandwidth saturation hotspots by device and site\n**Guest Client Count Trend** - Connected client count with capacity threshold lines\n**Recently Rebooted Devices** - Devices rebooted within the monitoring window\n\n---\n\n#### ⚡ Power Event Correlation\n\n**Power Events** - Power-related syslog events (RELOAD, PLATFORM_ENV, SWITCHOVER, STACK_CHANGE)\n**Power Event Timeline** - Chronology: Reload → Link Down → Protocol Down → Reconvergence → Recovery\n**Power Event Detection** - Correlated syslog events classified by type with affected devices\n**Link Flap Storm Detection** - Distinguishes mass power events from isolated port issues\n**Routing Reconvergence** - OSPF/EIGRP/BGP neighbor state changes showing Down → Up recovery\n**STP Reconvergence** - Spanning-tree topology changes per device/VLAN after power events\n**Non-Compliant Devices** - Compliance policy failures from Catalyst Center"
 			},
 			"type": "splunk.markdown"
 		},
@@ -519,7 +519,7 @@
 			"dataSources": {
 				"primary": "ds_issue_trend_cat"
 			},
-			"description": "Categorized DNAC issues over time — correlate spikes with incidents",
+			"description": "Categorized DNAC issues over time - correlate spikes with incidents",
 			"options": {
 				"backgroundColor": "#131a23",
 				"legendDisplay": "bottom",
@@ -764,7 +764,7 @@
 			"dataSources": {
 				"primary": "ds_power_detection"
 			},
-			"description": "Correlated syslog events classified by type — affected devices and timing",
+			"description": "Correlated syslog events classified by type - affected devices and timing",
 			"options": {
 				"backgroundColor": "#131a23",
 				"count": 10,
@@ -818,7 +818,7 @@
 			"dataSources": {
 				"primary": "ds_reboots"
 			},
-			"description": "Devices with uptime < 4 hours — check for unexpected restarts",
+			"description": "Devices with uptime < 4 hours - check for unexpected restarts",
 			"options": {
 				"backgroundColor": "#131a23",
 				"count": 10,
@@ -837,7 +837,7 @@
 			"dataSources": {
 				"primary": "ds_routing_reconvergence"
 			},
-			"description": "OSPF/EIGRP/BGP neighbor changes — down then up = recovery",
+			"description": "OSPF/EIGRP/BGP neighbor changes - down then up = recovery",
 			"options": {
 				"backgroundColor": "#131a23",
 				"count": 10,
@@ -902,7 +902,7 @@
 			"dataSources": {
 				"primary": "ds_unreachable"
 			},
-			"description": "Devices Catalyst Center cannot reach — investigate immediately",
+			"description": "Devices Catalyst Center cannot reach - investigate immediately",
 			"options": {
 				"backgroundColor": "#131a23",
 				"count": 10,
@@ -1246,7 +1246,7 @@
 					"headerBackgroundColor": "#1c2738"
 				}
 			},
-			"title": "Live Device Inventory — Catalyst Center",
+			"title": "Live Device Inventory - Catalyst Center",
 			"type": "splunk.table"
 		},
 		"viz_devices_by_role": {
@@ -1276,7 +1276,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "## Metric Reference — Details & KPI Reference Tab\n\n---\n\n#### Reference Data\n\n**WAN Circuit Bandwidth Reference** — Circuit capacity metadata from configuration\n**Site Reference** — Site names, codes, and metadata from configuration\n\n---\n\n#### Site-Level Analysis\n\n**Top 5 Sites by Issue Count** — Most impacted locations ranked by open issues\n**Network vs Client Issues** — Issue type breakdown (infrastructure vs. client)\n**Week-over-Week Health** — Health score delta from prior week\n**Site-level Health** — Per-site network health score\n\n---\n\n#### Issue Drill-Down\n\n**Top 5 Network Issues** — Most frequent network issues by occurrence\n**Top 5 Client Issues** — Most frequent client issues by occurrence\n**Non-Compliant Devices** — Devices failing Catalyst Center compliance checks\n\n---\n\n#### Topology & Inventory\n\n**AP Count by Location** — Access point distribution per site\n**Switch Count by Location** — Switch distribution per site\n**Site Locations** — Geographic map of monitored sites with live device count\n**Live Network Topology** — Interactive topology view from Catalyst Center\n**Devices by Role** — Distribution by role (access, distribution, core, border, etc.)\n**Live Device Inventory** — Full device list with health, IP, platform, and role"
+				"markdown": "## Metric Reference - Details & KPI Reference Tab\n\n---\n\n#### Reference Data\n\n**WAN Circuit Bandwidth Reference** - Circuit capacity metadata from configuration\n**Site Reference** - Site names, codes, and metadata from configuration\n\n---\n\n#### Site-Level Analysis\n\n**Top 5 Sites by Issue Count** - Most impacted locations ranked by open issues\n**Network vs Client Issues** - Issue type breakdown (infrastructure vs. client)\n**Week-over-Week Health** - Health score delta from prior week\n**Site-level Health** - Per-site network health score\n\n---\n\n#### Issue Drill-Down\n\n**Top 5 Network Issues** - Most frequent network issues by occurrence\n**Top 5 Client Issues** - Most frequent client issues by occurrence\n**Non-Compliant Devices** - Devices failing Catalyst Center compliance checks\n\n---\n\n#### Topology & Inventory\n\n**AP Count by Location** - Access point distribution per site\n**Switch Count by Location** - Switch distribution per site\n**Site Locations** - Geographic map of monitored sites with live device count\n**Live Network Topology** - Interactive topology view from Catalyst Center\n**Devices by Role** - Distribution by role (access, distribution, core, border, etc.)\n**Live Device Inventory** - Full device list with health, IP, platform, and role"
 			},
 			"type": "splunk.markdown"
 		},
@@ -1285,7 +1285,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "## Metric Reference — Overview Tab\n\n---\n\n#### Health & Issues\n\n**Network Health** — Composite network health score from Catalyst Center (0–100)\n**Device Health** — Composite device health score from Catalyst Center (0–100)\n**Open Issues** — Current active issues reported by Catalyst Center\n**Issues By Severity** — Issue distribution by P1 / P2 / P3 / P4 priority\n**Syslog Critical** — Emergency + Critical syslog events from Cisco IOS devices\n**Syslog By Severity** — Full syslog event distribution by severity level\n\n---\n\n#### Inventory & Compliance\n\n**Device Inventory** — Total managed device count in Catalyst Center\n**Inventory with Compliance** — Device count by role overlaid with compliance status\n**Audit Events Today** — Configuration change events detected in the current day\n**Config Change Trend** — Configuration changes over time (Catalyst Center audit)\n**Issue Trend** — Open issue count trending over the selected time range\n**Compliance by Status** — Compliant / Non-Compliant / Not Applicable breakdown\n\n---\n\n#### Trends\n\n**Network Health Trend** — Network health score over time\n**Device Health Trend** — Device health score over time\n**Compliance %** — Policy compliance percentage across all managed devices\n**Audit Events** — Audit event volume over time"
+				"markdown": "## Metric Reference - Overview Tab\n\n---\n\n#### Health & Issues\n\n**Network Health** - Composite network health score from Catalyst Center (0–100)\n**Device Health** - Composite device health score from Catalyst Center (0–100)\n**Open Issues** - Current active issues reported by Catalyst Center\n**Issues By Severity** - Issue distribution by P1 / P2 / P3 / P4 priority\n**Syslog Critical** - Emergency + Critical syslog events from Cisco IOS devices\n**Syslog By Severity** - Full syslog event distribution by severity level\n\n---\n\n#### Inventory & Compliance\n\n**Device Inventory** - Total managed device count in Catalyst Center\n**Inventory with Compliance** - Device count by role overlaid with compliance status\n**Audit Events Today** - Configuration change events detected in the current day\n**Config Change Trend** - Configuration changes over time (Catalyst Center audit)\n**Issue Trend** - Open issue count trending over the selected time range\n**Compliance by Status** - Compliant / Non-Compliant / Not Applicable breakdown\n\n---\n\n#### Trends\n\n**Network Health Trend** - Network health score over time\n**Device Health Trend** - Device health score over time\n**Compliance %** - Policy compliance percentage across all managed devices\n**Audit Events** - Audit event volume over time"
 			},
 			"type": "splunk.markdown"
 		},
@@ -1464,7 +1464,7 @@
 			"dataSources": {
 				"primary": "ds_link_graph"
 			},
-			"description": "Device role hierarchy by site — from Catalyst Center",
+			"description": "Device role hierarchy by site - from Catalyst Center",
 			"options": {
 				"backgroundColor": "#131a23",
 				"linkColor": "#a6adb6",
@@ -1514,7 +1514,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#a6adb6",
 				"fontSize": "small",
-				"markdown": "**Catalyst Center (DNAC)** analytics — fabric health, client onboarding, AP performance, and issue correlation. Drill into Catalyst-reported anomalies and their impact on client experience."
+				"markdown": "**Catalyst Center (DNAC)** analytics - fabric health, client onboarding, AP performance, and issue correlation. Drill into Catalyst-reported anomalies and their impact on client experience."
 			},
 			"type": "splunk.markdown"
 		},
@@ -2238,7 +2238,7 @@
 			"dataSources": {
 				"primary": "ds_wow_health"
 			},
-			"description": "Week-over-week health change — positive means improving",
+			"description": "Week-over-week health change - positive means improving",
 			"options": {
 				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
@@ -2396,7 +2396,7 @@
 			"name": "CPU Memory Alerts Base",
 			"options": {
 				"extend": "ds_base_devicehealth_ref",
-				"query": "| where CPUUtilization > 80 OR MemoryUtilization > 80 | eval cpu_status=if(CPUUtilization>90,\"Critical\",if(CPUUtilization>80,\"Warning\",\"OK\")), mem_status=if(MemoryUtilization>90,\"Critical\",if(MemoryUtilization>80,\"Warning\",\"OK\")) | table DeviceName, DeviceFamily, Platform, Site, CPUUtilization, cpu_status, MemoryUtilization, mem_status | sort -CPUUtilization | fillnull value=\"—\""
+				"query": "| where CPUUtilization > 80 OR MemoryUtilization > 80 | eval cpu_status=if(CPUUtilization>90,\"Critical\",if(CPUUtilization>80,\"Warning\",\"OK\")), mem_status=if(MemoryUtilization>90,\"Critical\",if(MemoryUtilization>80,\"Warning\",\"OK\")) | table DeviceName, DeviceFamily, Platform, Site, CPUUtilization, cpu_status, MemoryUtilization, mem_status | sort -CPUUtilization | fillnull value=\"-\""
 			},
 			"type": "ds.chain"
 		},
@@ -2475,7 +2475,7 @@
 			"name": "Interface Utilization Alerts",
 			"options": {
 				"extend": "ds_base_issues_ref",
-				"query": "| where match(IssueName,\"(?i)(high input|high output|interface utilization)\") | stats count as issue_count, values(IssueSpecificEntity) as affected_interfaces, latest(IssueSpecificSeverity) as severity by DeviceName, SiteName | sort -issue_count | fillnull value=\"—\""
+				"query": "| where match(IssueName,\"(?i)(high input|high output|interface utilization)\") | stats count as issue_count, values(IssueSpecificEntity) as affected_interfaces, latest(IssueSpecificSeverity) as severity by DeviceName, SiteName | sort -issue_count | fillnull value=\"-\""
 			},
 			"type": "ds.chain"
 		},
@@ -2712,7 +2712,7 @@
 			"name": "Recent Reboots Base",
 			"options": {
 				"extend": "ds_base_devicehealth_ref",
-				"query": "| where UptimeSeconds<14400 \n| table DeviceName, DeviceFamily, Platform, Site, IpAddress, UpTime, DeviceImgVersion \n| sort UptimeSeconds \n| rename DeviceFamily as \"Device Family\", IpAddress as \"IP Address\", DeviceImgVersion as \"Software\" \n| fillnull value=\"—\""
+				"query": "| where UptimeSeconds<14400 \n| table DeviceName, DeviceFamily, Platform, Site, IpAddress, UpTime, DeviceImgVersion \n| sort UptimeSeconds \n| rename DeviceFamily as \"Device Family\", IpAddress as \"IP Address\", DeviceImgVersion as \"Software\" \n| fillnull value=\"-\""
 			},
 			"type": "ds.chain"
 		},
@@ -2922,7 +2922,7 @@
 			"name": "Live Device Inventory",
 			"options": {
 				"extend": "ds_base_devicehealth_ref",
-				"query": "| table DeviceName, DeviceFamily, DeviceRole, Platform, Site, IpAddress, MACAddress, SerialNumber, OverallHealth, Reachability | fillnull value=\"—\" | sort Site, DeviceRole, DeviceName"
+				"query": "| table DeviceName, DeviceFamily, DeviceRole, Platform, Site, IpAddress, MACAddress, SerialNumber, OverallHealth, Reachability | fillnull value=\"-\" | sort Site, DeviceRole, DeviceName"
 			},
 			"type": "ds.chain"
 		},
@@ -2930,7 +2930,7 @@
 			"name": "Unreachable Devices Base",
 			"options": {
 				"extend": "ds_base_devicehealth_ref",
-				"query": "| where Reachability=\"Unreachable\" | rename ReachabilityFailureReason as Reason, OverallHealth as Health, DeviceFamily as Family | table DeviceName, Family, Platform, Site, IpAddress, Reason, Health | fillnull value=\"—\""
+				"query": "| where Reachability=\"Unreachable\" | rename ReachabilityFailureReason as Reason, OverallHealth as Health, DeviceFamily as Family | table DeviceName, Family, Platform, Site, IpAddress, Reason, Health | fillnull value=\"-\""
 			},
 			"type": "ds.chain"
 		},
@@ -4382,7 +4382,7 @@
 					{
 						"item": "viz_uxh_wireless_gauge",
 						"position": {
-							"h": 200,
+							"h": 190,
 							"w": 400,
 							"x": 35,
 							"y": 160
@@ -4392,7 +4392,7 @@
 					{
 						"item": "viz_uxh_wired_gauge",
 						"position": {
-							"h": 200,
+							"h": 190,
 							"w": 400,
 							"x": 450,
 							"y": 160
@@ -4402,7 +4402,7 @@
 					{
 						"item": "viz_uxh_dev_types_bar",
 						"position": {
-							"h": 200,
+							"h": 190,
 							"w": 555,
 							"x": 865,
 							"y": 160

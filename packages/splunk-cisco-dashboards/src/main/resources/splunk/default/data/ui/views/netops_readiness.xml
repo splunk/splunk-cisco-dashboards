@@ -453,7 +453,7 @@
 			"options": {
 				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Forecast — Capacity Headroom",
+				"markdown": "## Forecast - Capacity Headroom",
 				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
@@ -475,7 +475,7 @@
 			"options": {
 				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Forecast — People per AP",
+				"markdown": "## Forecast - People per AP",
 				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
@@ -502,7 +502,7 @@
 			"options": {
 				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Q4 — Onboarding Success & Concurrent Users",
+				"markdown": "## Q4 - Onboarding Success & Concurrent Users",
 				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
@@ -511,7 +511,7 @@
 			"options": {
 				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Q5 — AP Saturation",
+				"markdown": "## Q5 - AP Saturation",
 				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
@@ -520,7 +520,7 @@
 			"options": {
 				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Q6 — Issues & Occupancy",
+				"markdown": "## Q6 - Issues & Occupancy",
 				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
@@ -529,7 +529,7 @@
 			"options": {
 				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Q7 — SSID Concurrency",
+				"markdown": "## Q7 - SSID Concurrency",
 				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
@@ -538,7 +538,7 @@
 			"options": {
 				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Q9 — Worst-Hit Clients",
+				"markdown": "## Q9 - Worst-Hit Clients",
 				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
@@ -547,7 +547,7 @@
 			"options": {
 				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Q10 — Recovery Trends (Health · Onboarding · Issues)",
+				"markdown": "## Q10 - Recovery Trends (Health · Onboarding · Issues)",
 				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
@@ -556,7 +556,7 @@
 			"options": {
 				"fontColor": "#fa5762",
 				"fontSize": "small",
-				"markdown": "## Q8 — Surge Pattern",
+				"markdown": "## Q8 - Surge Pattern",
 				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
@@ -600,7 +600,7 @@
 			"dataSources": {
 				"primary": "ds_score_a"
 			},
-			"description": "AP reach % — should be ≥ 95 before exercise",
+			"description": "AP reach % - should be ≥ 95 before exercise",
 			"options": {
 				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
@@ -611,7 +611,7 @@
 				"trendColor": "#649ef5",
 				"sparklineStrokeColor": "#649ef5"
 			},
-			"title": "A — Attainability",
+			"title": "A - Attainability",
 			"type": "splunk.singlevalue"
 		},
 		"viz_nrs_drisk": {
@@ -635,7 +635,7 @@
 			"dataSources": {
 				"primary": "ds_score_drisk"
 			},
-			"description": "Risk deflator from P1/P2/saturation — floor 0.5",
+			"description": "Risk deflator from P1/P2/saturation - floor 0.5",
 			"options": {
 				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
@@ -646,7 +646,7 @@
 				"trendColor": "#649ef5",
 				"sparklineStrokeColor": "#649ef5"
 			},
-			"title": "D_risk — Risk Multiplier",
+			"title": "D_risk - Risk Multiplier",
 			"type": "splunk.singlevalue"
 		},
 		"viz_nrs_per_site_bar": {
@@ -668,7 +668,7 @@
 				}
 			],
 			"options": {
-				"dataValuesDisplay": "all",
+				"dataValuesDisplay": "minmax",
 				"legendDisplay": "off",
 				"seriesColors": [
 					"#049fd9"
@@ -678,7 +678,7 @@
 				"yAxisTitleVisibility": "hide",
 				"backgroundColor": "#131a23"
 			},
-			"title": "NRS per site — where am I weak?",
+			"title": "NRS per site - where am I weak?",
 			"type": "splunk.bar"
 		},
 		"viz_nrs_per_site_table": {
@@ -732,7 +732,7 @@
 			"dataSources": {
 				"primary": "ds_score_q"
 			},
-			"description": "Client health · onboarding · RSSI — fix if < 90",
+			"description": "Client health · onboarding · RSSI - fix if < 90",
 			"options": {
 				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
@@ -743,7 +743,7 @@
 				"trendColor": "#649ef5",
 				"sparklineStrokeColor": "#649ef5"
 			},
-			"title": "Q — Quality",
+			"title": "Q - Quality",
 			"type": "splunk.singlevalue"
 		},
 		"viz_nrs_r": {
@@ -767,7 +767,7 @@
 			"dataSources": {
 				"primary": "ds_score_r"
 			},
-			"description": "AP + client health pass rate — fix if < 90",
+			"description": "AP + client health pass rate - fix if < 90",
 			"options": {
 				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
@@ -778,7 +778,7 @@
 				"trendColor": "#649ef5",
 				"sparklineStrokeColor": "#649ef5"
 			},
-			"title": "R — Retainability",
+			"title": "R - Retainability",
 			"type": "splunk.singlevalue"
 		},
 		"viz_nrs_score": {
@@ -802,7 +802,6 @@
 			"dataSources": {
 				"primary": "ds_score_nrs_spark"
 			},
-			"description": "Composite NRS, computed every 5 minutes from DNAC + Spaces telemetry. Max achievable ≈ 85 (see About tab for why). Currently rendered green at ≥ 90, amber 75-89, red < 75 - thresholds will be re-baselined once the weights are re-tuned. Sparkline shows the trend over the selected window.",
 			"options": {
 				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
@@ -871,7 +870,7 @@
 			"options": {
 				"fontColor": "#649ef5",
 				"fontSize": "large",
-				"markdown": "## NetOps Readiness — Op Florida Ready",
+				"markdown": "## NetOps Readiness - Op Florida Ready",
 				"backgroundColor": "#1c2738"
 			},
 			"type": "splunk.markdown"
@@ -881,7 +880,7 @@
 				"annotation": "ds_annotations",
 				"primary": "ds_q10_recovery_health"
 			},
-			"description": "Hourly average client health (0-10). Watch for a tail of degraded health AFTER the exercise — signals stuck sessions or controller stress.",
+			"description": "Hourly average client health (0-10). Watch for a tail of degraded health AFTER the exercise - signals stuck sessions or controller stress.",
 			"options": {
 				"annotationColor": "> annotation | seriesByName('annotation_color')",
 				"annotationLabel": "> annotation | seriesByName('label')",
@@ -899,7 +898,7 @@
 				"backgroundColor": "#131a23",
 				"lineWidth": 2
 			},
-			"title": "Q10a — DNAC: Avg client health score over time (annotation: Op Florida Ready milestones)",
+			"title": "Q10a - DNAC: Avg client health score over time (annotation: Op Florida Ready milestones)",
 			"type": "splunk.line"
 		},
 		"viz_q10_issues": {
@@ -919,7 +918,7 @@
 				"xAxisTitleVisibility": "hide",
 				"backgroundColor": "#131a23"
 			},
-			"title": "Q10c — DNAC: Issue count over time (annotation: Op Florida Ready milestones)",
+			"title": "Q10c - DNAC: Issue count over time (annotation: Op Florida Ready milestones)",
 			"type": "splunk.column"
 		},
 		"viz_q10_onboarding": {
@@ -944,7 +943,7 @@
 				"backgroundColor": "#131a23",
 				"lineWidth": 2
 			},
-			"title": "Q10b — DNAC: Avg onboarding time over time (annotation: Op Florida Ready milestones)",
+			"title": "Q10b - DNAC: Avg onboarding time over time (annotation: Op Florida Ready milestones)",
 			"type": "splunk.line"
 		},
 		"viz_q1_people_per_ap": {
@@ -961,7 +960,7 @@
 					"headerColor": "#ecf0f5"
 				}
 			},
-			"title": "Q1 — Spaces × DNAC: Users-to-AP ratio per site",
+			"title": "Q1 - Spaces × DNAC: Users-to-AP ratio per site",
 			"type": "splunk.table"
 		},
 		"viz_q2_capacity_headroom": {
@@ -978,7 +977,7 @@
 					"headerColor": "#ecf0f5"
 				}
 			},
-			"title": "Q2 — Spaces × DNAC: Capacity headroom per site",
+			"title": "Q2 - Spaces × DNAC: Capacity headroom per site",
 			"type": "splunk.table"
 		},
 		"viz_q3_aps_poor_health": {
@@ -996,7 +995,7 @@
 					"headerColor": "#ecf0f5"
 				}
 			},
-			"title": "Q3 — DNAC: APs to fix before the exercise",
+			"title": "Q3 - DNAC: APs to fix before the exercise",
 			"type": "splunk.table"
 		},
 		"viz_q4_concurrent_users": {
@@ -1034,7 +1033,7 @@
 				],
 				"lineWidth": 2
 			},
-			"title": "Q4b — Spaces: Concurrent users per site (annotation: Op Florida Ready milestones)",
+			"title": "Q4b - Spaces: Concurrent users per site (annotation: Op Florida Ready milestones)",
 			"type": "splunk.line"
 		},
 		"viz_q4_onboarding_per_site": {
@@ -1042,7 +1041,7 @@
 				"annotation": "ds_annotations",
 				"primary": "ds_q4_onboarding_per_site"
 			},
-			"description": "Average client onboarding time (seconds) per site. Pair with Q4b — onboarding spikes when occupancy surges = demand-driven degradation.",
+			"description": "Average client onboarding time (seconds) per site. Pair with Q4b - onboarding spikes when occupancy surges = demand-driven degradation.",
 			"options": {
 				"annotationColor": "> annotation | seriesByName('annotation_color')",
 				"annotationLabel": "> annotation | seriesByName('label')",
@@ -1067,7 +1066,7 @@
 				],
 				"lineWidth": 2
 			},
-			"title": "Q4a — DNAC: Onboarding time per site (annotation: Op Florida Ready milestones)",
+			"title": "Q4a - DNAC: Onboarding time per site (annotation: Op Florida Ready milestones)",
 			"type": "splunk.line"
 		},
 		"viz_q5_at_risk": {
@@ -1103,7 +1102,7 @@
 				"trendColor": "#649ef5",
 				"sparklineStrokeColor": "#649ef5"
 			},
-			"title": "Q5 — Saturated APs (> 30 clients) / total",
+			"title": "Q5 - Saturated APs (> 30 clients) / total",
 			"type": "splunk.singlevalue"
 		},
 		"viz_q5_saturation": {
@@ -1129,7 +1128,7 @@
 					"#f7782f"
 				]
 			},
-			"title": "Q5 — DNAC: Top 30 busiest APs (stacked, threshold overlay)",
+			"title": "Q5 - DNAC: Top 30 busiest APs (stacked, threshold overlay)",
 			"type": "splunk.column"
 		},
 		"viz_q6_issues_severity": {
@@ -1137,7 +1136,7 @@
 				"annotation": "ds_annotations",
 				"primary": "ds_q6_issues_severity"
 			},
-			"description": "Hourly DNAC issue count, stacked by severity (P1/P2/P3/P4). Compare visually with Q6 occupancy below — coincident spikes are root cause for ops review.",
+			"description": "Hourly DNAC issue count, stacked by severity (P1/P2/P3/P4). Compare visually with Q6 occupancy below - coincident spikes are root cause for ops review.",
 			"options": {
 				"annotationColor": "> annotation | seriesByName('annotation_color')",
 				"annotationLabel": "> annotation | seriesByName('label')",
@@ -1159,7 +1158,7 @@
 					"#f7782f"
 				]
 			},
-			"title": "Q6 — DNAC: Issues stacked by severity (annotation: Op Florida Ready milestones)",
+			"title": "Q6 - DNAC: Issues stacked by severity (annotation: Op Florida Ready milestones)",
 			"type": "splunk.column"
 		},
 		"viz_q6_occupancy_overlay": {
@@ -1190,7 +1189,7 @@
 				"backgroundColor": "#131a23",
 				"lineWidth": 2
 			},
-			"title": "Q6 — Spaces: Total concurrent users (paired with Q6 issues above)",
+			"title": "Q6 - Spaces: Total concurrent users (paired with Q6 issues above)",
 			"type": "splunk.line"
 		},
 		"viz_q7_ssid": {
@@ -1198,7 +1197,7 @@
 				"annotation": "ds_annotations",
 				"primary": "ds_q7_ssid_concurrency"
 			},
-			"description": "Concurrent client count per SSID hourly. Tells you if guest is getting hammered while corporate is quiet — informs QoS tuning decisions.",
+			"description": "Concurrent client count per SSID hourly. Tells you if guest is getting hammered while corporate is quiet - informs QoS tuning decisions.",
 			"options": {
 				"annotationColor": "> annotation | seriesByName('annotation_color')",
 				"annotationLabel": "> annotation | seriesByName('label')",
@@ -1248,7 +1247,7 @@
 					"#f7782f"
 				]
 			},
-			"title": "Q8 — Spaces: Surge multiplier per building (baseline week vs exercise)",
+			"title": "Q8 - Spaces: Surge multiplier per building (baseline week vs exercise)",
 			"type": "splunk.bar"
 		},
 		"viz_q9_worst_clients": {
@@ -1266,7 +1265,7 @@
 					"headerColor": "#ecf0f5"
 				}
 			},
-			"title": "Q9 — DNAC: Top 50 worst client experiences",
+			"title": "Q9 - DNAC: Top 50 worst client experiences",
 			"type": "splunk.table"
 		},
 		"viz_section_tab_a": {
@@ -1329,7 +1328,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "**Network Readiness Score (NRS)** — E-Score: NRS = (0.30·A + 0.30·R + 0.25·Q) × D_risk. Updated every 5 min. Green ≥ 90, amber 75-89, red < 75."
+				"markdown": "**Network Readiness Score (NRS)** - E-Score: NRS = (0.30·A + 0.30·R + 0.25·Q) × D_risk. Updated every 5 min. Green ≥ 90, amber 75-89, red < 75."
 			},
 			"type": "splunk.markdown"
 		},
@@ -1338,7 +1337,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "**BEFORE — Capacity Planning** — two weeks out: where am I undersized, where will I hit the ceiling, what must I fix before Friday?"
+				"markdown": "**BEFORE - Capacity Planning** - two weeks out: where am I undersized, where will I hit the ceiling, what must I fix before Friday?"
 			},
 			"type": "splunk.markdown"
 		},
@@ -1347,7 +1346,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "**DURING — Real-Time NetOps (Apr 13-15, 2026)** — saturation, onboarding, issues, SSID load. Refreshed every 5 min and feeding the alerting engine on Tab E."
+				"markdown": "**DURING - Real-Time NetOps (Apr 13-15, 2026)** - saturation, onboarding, issues, SSID load. Refreshed every 5 min and feeding the alerting engine on Tab E."
 			},
 			"type": "splunk.markdown"
 		},
@@ -1356,7 +1355,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "**AFTER — Post-Mortem (Apr 16-22, 2026)** — the lessons-learned tab. Where did the surge land hardest, who suffered most, did the network fully recover?"
+				"markdown": "**AFTER - Post-Mortem (Apr 16-22, 2026)** - the lessons-learned tab. Where did the surge land hardest, who suffered most, did the network fully recover?"
 			},
 			"type": "splunk.markdown"
 		}
@@ -1488,7 +1487,7 @@
 		"ds_q3_aps_poor_health": {
 			"name": "Q3 - DNAC APs to fix before the exercise",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" DeviceFamily=\"Unified AP\"\n| eval site_raw=coalesce(Site, Location, \"Unsited\")\n| stats latest(OverallHealth) as oh,\n latest(Reachability) as Reachability,\n latest(IssueCount) as Issues by DeviceName, site_raw\n| where (oh<7 OR upper(Reachability)!=\"REACHABLE\" OR Issues>0)\n| eval Health = case(upper(Reachability)!=\"REACHABLE\", \"—\", isnull(oh), \"—\", oh<0, \"—\", 1=1, tostring(oh))\n| eval Status=case(upper(Reachability)!=\"REACHABLE\", \"UNREACHABLE\",\n isnotnull(oh) AND oh>=0 AND oh<5, \"Critical\",\n isnotnull(oh) AND oh<7, \"Degraded\",\n Issues>0, \"Has Issues\",\n 1=1, \"Watch\")\n| eval site=replace(site_raw, \"^Global/Florida/\", \"\")\n| sort + oh\n| rename DeviceName as \"AP\", site as \"Site\", Issues as \"Open Issues\"\n| table \"AP\" \"Site\" \"Health\" \"Reachability\" \"Open Issues\" \"Status\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" DeviceFamily=\"Unified AP\"\n| eval site_raw=coalesce(Site, Location, \"Unsited\")\n| stats latest(OverallHealth) as oh,\n latest(Reachability) as Reachability,\n latest(IssueCount) as Issues by DeviceName, site_raw\n| where (oh<7 OR upper(Reachability)!=\"REACHABLE\" OR Issues>0)\n| eval Health = case(upper(Reachability)!=\"REACHABLE\", \"-\", isnull(oh), \"-\", oh<0, \"-\", 1=1, tostring(oh))\n| eval Status=case(upper(Reachability)!=\"REACHABLE\", \"UNREACHABLE\",\n isnotnull(oh) AND oh>=0 AND oh<5, \"Critical\",\n isnotnull(oh) AND oh<7, \"Degraded\",\n Issues>0, \"Has Issues\",\n 1=1, \"Watch\")\n| eval site=replace(site_raw, \"^Global/Florida/\", \"\")\n| sort + oh\n| rename DeviceName as \"AP\", site as \"Site\", Issues as \"Open Issues\"\n| table \"AP\" \"Site\" \"Health\" \"Reachability\" \"Open Issues\" \"Status\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2664,15 +2663,15 @@
 					"layoutId": "layout_tab_a"
 				},
 				{
-					"label": "Before — Capacity Planning",
+					"label": "Before - Capacity Planning",
 					"layoutId": "layout_tab_b"
 				},
 				{
-					"label": "During — Real-Time NetOps",
+					"label": "During - Real-Time NetOps",
 					"layoutId": "layout_tab_c"
 				},
 				{
-					"label": "After — Post-Mortem",
+					"label": "After - Post-Mortem",
 					"layoutId": "layout_tab_d"
 				},
 				{

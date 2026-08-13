@@ -4,7 +4,7 @@
     <description></description>
     <definition><![CDATA[
 {
-	"title": "Workplace — Single Pane of Glass",
+	"title": "Workplace - Single Pane of Glass",
 	"inputs": {
 		"input_global_trp": {
 			"options": {
@@ -54,7 +54,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "# Workplace — Single Pane of Glass\n\n**Audience:** Executive Sponsors, NetOps Leadership, Workplace Services, Cisco Account Team\n\nThis is the executive view aligned to the **Cisco Future-Proof Workplace** strategy paper . It rolls Catalyst Center + Cisco Spaces (Wi-Fi-based, not camera-based) into five Health Tiles. Two tiles are fully wired today; one is a Phase-3 placeholder pending data ingestion. Use this dashboard for monthly business reviews and incident-window readouts. Drill into `NetOps Readiness — Op Florida Ready` for operational detail."
+				"markdown": "# Workplace - Single Pane of Glass\n\n**Audience:** Executive Sponsors, NetOps Leadership, Workplace Services, Cisco Account Team\n\nThis is the executive view aligned to the **Cisco Future-Proof Workplace** strategy paper . It rolls Catalyst Center + Cisco Spaces (Wi-Fi-based, not camera-based) into five Health Tiles. Two tiles are fully wired today; one is a Phase-3 placeholder pending data ingestion. Use this dashboard for monthly business reviews and incident-window readouts. Drill into `NetOps Readiness - Op Florida Ready` for operational detail."
 			},
 			"type": "splunk.markdown"
 		},
@@ -117,7 +117,7 @@
 			"options": {
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
-				"markdown": "## Cross-source correlation strip\n\nWired clients, wireless clients, AP health (all DNAC), Spaces presence (post-Apr 17 only), and Windows auth failures on a shared time axis. \n<span style=\"color:#649ef5\">●</span> **Vertical blue markers:** Op Florida Ready exercise — *Day 1 (Apr 13), Day 2 (Apr 14), Day 3 (Apr 15)*. **Reading pattern:** wireless surges + wired stays flat = mobile-driven event. All signals moving together = full operational mobilization. The point: Splunk is the integration fabric tying disparate Cisco + non-Cisco signals into one story."
+				"markdown": "## Cross-source correlation strip\n\nWired clients, wireless clients, AP health (all DNAC), Spaces presence (post-Apr 17 only), and Windows auth failures on a shared time axis. \n<span style=\"color:#649ef5\">●</span> **Vertical blue markers:** Op Florida Ready exercise - *Day 1 (Apr 13), Day 2 (Apr 14), Day 3 (Apr 15)*. **Reading pattern:** wireless surges + wired stays flat = mobile-driven event. All signals moving together = full operational mobilization. The point: Splunk is the integration fabric tying disparate Cisco + non-Cisco signals into one story."
 			},
 			"type": "splunk.markdown"
 		},
@@ -136,7 +136,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#a6adb6",
 				"fontSize": "small",
-				"markdown": "## Phase roadmap *(per Cisco Future-Proof Workplace strategy)*\n\n**Phase 1 — Done:** NetOps Readiness for Op Florida Ready (separate dashboard) + this Workplace SPoG scaffold.\n\n**Phase 2 — In progress:** Tile 4 frictionless-access via badging integration; per-site Spaces hourly heatmap once firehose Apr 13–15 gap is escalated to vendor.\n\n**Phase 3 — Pending:** Tile 3 Energy Intensity (Catalyst 9300X PoE + utility meters); Tile 4 access-control system; Tile 5 OT life-safety / fire-panel integration via BACnet.\n\n**Phase 4 — Visionary:** AI Agents on the data lake — same agentic pattern Cisco deployed for CoreNet in Kuala Lumpur Malaysia. Splunk is the substrate.\n\n*Source: `reference_design/Cisco_FutureProof_Workplace.md`*"
+				"markdown": "## Phase roadmap *(per Cisco Future-Proof Workplace strategy)*\n\n**Phase 1 - Done:** NetOps Readiness for Op Florida Ready (separate dashboard) + this Workplace SPoG scaffold.\n\n**Phase 2 - In progress:** Tile 4 frictionless-access via badging integration; per-site Spaces hourly heatmap once firehose Apr 13–15 gap is escalated to vendor.\n\n**Phase 3 - Pending:** Tile 3 Energy Intensity (Catalyst 9300X PoE + utility meters); Tile 4 access-control system; Tile 5 OT life-safety / fire-panel integration via BACnet.\n\n**Phase 4 - Visionary:** AI Agents on the data lake - same agentic pattern Cisco deployed for CoreNet in Kuala Lumpur Malaysia. Splunk is the substrate.\n\n*Source: `reference_design/Cisco_FutureProof_Workplace.md`*"
 			},
 			"type": "splunk.markdown"
 		},
@@ -247,7 +247,7 @@
 			"options": {
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
-				"markdown": "## Concurrent endpoints over time — wired vs wireless\n\nDaily concurrent endpoints from DNAC client-health rollup, split by **wired** (desktops, VoIP, kiosks) vs **wireless** (laptops, phones, tablets), overlaid with AP health and active issues. \n<span style=\"color:#649ef5\">●</span> **Vertical blue markers:** Op Florida Ready exercise — *Day 1 (Apr 13), Day 2 (Apr 14), Day 3 (Apr 15)*. **Reading pattern:** wireless surges + wired stays flat = mobile-driven event (responders roaming). Both surge = full-staff mobilization."
+				"markdown": "## Concurrent endpoints over time - wired vs wireless\n\nDaily concurrent endpoints from DNAC client-health rollup, split by **wired** (desktops, VoIP, kiosks) vs **wireless** (laptops, phones, tablets), overlaid with AP health and active issues. \n<span style=\"color:#649ef5\">●</span> **Vertical blue markers:** Op Florida Ready exercise - *Day 1 (Apr 13), Day 2 (Apr 14), Day 3 (Apr 15)*. **Reading pattern:** wireless surges + wired stays flat = mobile-driven event (responders roaming). Both surge = full-staff mobilization."
 			},
 			"type": "splunk.markdown"
 		},
@@ -320,7 +320,7 @@
 			"options": {
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
-				"markdown": "**Tile 1 — Occupancy**\n\nTotal concurrent endpoints (wired + wireless) from DNAC client-health rollup. The authoritative count reported by Catalyst Center, not a per-AP estimate."
+				"markdown": "**Tile 1 - Occupancy**\n\nTotal concurrent endpoints (wired + wireless) from DNAC client-health rollup. The authoritative count reported by Catalyst Center, not a per-AP estimate."
 			},
 			"type": "splunk.markdown"
 		},
@@ -357,7 +357,7 @@
 			"options": {
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
-				"markdown": "**Tile 2 — Network Quality**\n\nComposite Network Quality Index (NQI) blending DNAC AP health and client health, scaled 0–100. Replaces environmental tile (no MT/BMS data ingested)."
+				"markdown": "**Tile 2 - Network Quality**\n\nComposite Network Quality Index (NQI) blending DNAC AP health and client health, scaled 0–100. Replaces environmental tile (no MT/BMS data ingested)."
 			},
 			"type": "splunk.markdown"
 		},
@@ -422,7 +422,7 @@
 			"options": {
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
-				"markdown": "**Tile 3 — Energy Intensity** *(Phase 3 — pending)*\n\nReal-time kWh per square foot vs baseline. Requires Catalyst 9300X port-level PoE telemetry + utility meter ingestion. Not yet flowing into Splunk."
+				"markdown": "**Tile 3 - Energy Intensity** *(Phase 3 - pending)*\n\nReal-time kWh per square foot vs baseline. Requires Catalyst 9300X port-level PoE telemetry + utility meter ingestion. Not yet flowing into Splunk."
 			},
 			"type": "splunk.markdown"
 		},
@@ -440,7 +440,7 @@
 			"options": {
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
-				"markdown": "**Tile 4 — Security Posture**\n\nActive P1+P2 DNAC issues plus Windows authentication failures. Frictionless badging deferred to Phase 3 (no access-control system ingested)."
+				"markdown": "**Tile 4 - Security Posture**\n\nActive P1+P2 DNAC issues plus Windows authentication failures. Frictionless badging deferred to Phase 3 (no access-control system ingested)."
 			},
 			"type": "splunk.markdown"
 		},
@@ -495,7 +495,7 @@
 			"options": {
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
-				"markdown": "**Tile 5 — Operational Resilience**\n\nNetwork Readiness Score (NRS) — composite of attainability, retainability, quality, and risk dampening. Same formula as the NetOps Readiness dashboard."
+				"markdown": "**Tile 5 - Operational Resilience**\n\nNetwork Readiness Score (NRS) - composite of attainability, retainability, quality, and risk dampening. Same formula as the NetOps Readiness dashboard."
 			},
 			"type": "splunk.markdown"
 		},

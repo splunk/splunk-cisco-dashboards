@@ -68,8 +68,8 @@
 
         <collection label="Workplace Intelligence">
             <a href="dashboard_manager#/workplace_building_intelligence">Building Intelligence</a>
-            <a href="dashboard_manager#/workplace_spaces_intelligence">Cisco Spaces — Intelligence</a>
-            <a href="dashboard_manager#/workplace_operations_overview">Workplace — Single Pane of Glass</a>
+            <a href="dashboard_manager#/workplace_spaces_intelligence">Cisco Spaces - Intelligence</a>
+            <a href="dashboard_manager#/workplace_operations_overview">Workplace - Single Pane of Glass</a>
         </collection>
 
         <collection label="Catalyst Operations">

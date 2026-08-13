@@ -209,4 +209,77 @@ assert.match(vizKpiSource, /src="\/static\/app\/splunk-cisco-dashboards\/icn_vie
 assert.ok(fs.existsSync(path.join(STATIC_ROOT, "placeholder.svg")));
 assert.match(vizKpiSource, /splunk-cisco-dashboards\/placeholder\.svg/);
 
+const readStudioDefinition = (fileName) => {
+  const xml = fs.readFileSync(path.join(VIEWS_ROOT, fileName), "utf8");
+  const definitionMatch = xml.match(
+    /<definition><!\[CDATA\[([\s\S]*?)\]\]><\/definition>/,
+  );
+  assert.ok(definitionMatch, `${fileName} must contain a Studio definition`);
+  return JSON.parse(definitionMatch[1]);
+};
+const findLayoutItem = (definition, layoutId, visualizationId) =>
+  definition.layout.layoutDefinitions[layoutId].structure.find(
+    ({ item }) => item === visualizationId,
+  );
+
+const readiness = readStudioDefinition("netops_readiness.xml");
+assert.equal(
+  Object.hasOwn(readiness.visualizations.viz_nrs_score, "description"),
+  false,
+  "The readiness score sparkline must not overflow beneath a long description",
+);
+assert.equal(
+  readiness.visualizations.viz_nrs_per_site_bar.options.dataValuesDisplay,
+  "minmax",
+  "The dense per-site chart should label only its extrema",
+);
+
+const criticalSystems = readStudioDefinition(
+  "netops_critical_systems_health.xml",
+);
+const userExperiencePanel = findLayoutItem(
+  criticalSystems,
+  "layout_user_experience",
+  "viz_uxh_box_gauges",
+);
+for (const visualizationId of [
+  "viz_uxh_wireless_gauge",
+  "viz_uxh_wired_gauge",
+  "viz_uxh_dev_types_bar",
+]) {
+  const item = findLayoutItem(
+    criticalSystems,
+    "layout_user_experience",
+    visualizationId,
+  );
+  const bottomPadding =
+    userExperiencePanel.position.y +
+    userExperiencePanel.position.h -
+    item.position.y -
+    item.position.h;
+  assert.ok(
+    bottomPadding >= 25,
+    `layout_user_experience:${visualizationId} must stay inside its panel`,
+  );
+}
+
+const legacyMacroTuningView = fs.readFileSync(
+  path.join(VIEWS_ROOT, "admin_macro_index_tuning.xml"),
+  "utf8",
+);
+assert.match(
+  legacyMacroTuningView,
+  /<dashboard\b[^>]*\bisVisible="false"/,
+  "The legacy Macro Index Tuning redirect must stay out of the Dashboards inventory",
+);
+const legacyMacroTuningBootstrap = fs.readFileSync(
+  path.join(STATIC_ROOT, "macro_index_tuning_bootstrap.js"),
+  "utf8",
+);
+assert.match(
+  legacyMacroTuningBootstrap,
+  /setup.*setup=1#tune-indexes/s,
+  "Old Macro Index Tuning URLs must continue to redirect into Setup",
+);
+
 console.log("Studio dashboard visual and appserver asset contracts passed");
