@@ -242,7 +242,8 @@ function scdSetupTuningUrl(pathname) {
 }
 
 function scdSetupIsTuningHash(hash) {
-  return String(hash || "").replace(/^#/, "") === "tune-indexes";
+  const setupRoute = String(hash || "").replace(/^#/, "");
+  return setupRoute === "tune-indexes" || setupRoute === "tune-cim";
 }
 
 function scdSetupManageAppsUrl(pathname, appId) {

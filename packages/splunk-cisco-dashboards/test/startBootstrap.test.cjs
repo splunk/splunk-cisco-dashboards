@@ -49,6 +49,7 @@ assert.equal(
 );
 assert.equal(isTuningHash("#tune-indexes"), true);
 assert.equal(isTuningHash("tune-indexes"), true);
+assert.equal(isTuningHash("#tune-cim"), true);
 assert.equal(isTuningHash("#review-packages"), false);
 assert.equal(
   appsEndpoint("/en-US/app/splunk-cisco-dashboards/setup"),
@@ -537,7 +538,7 @@ const macroTuningBootstrapSource = fs.readFileSync(
 assert.match(setupViewSource, /<dashboard\b[^>]*\btheme="dark"/);
 assert.match(setupViewSource, /id="scan-root" hidden="hidden"/);
 assert.match(macroTuningViewSource, /<dashboard\b[^>]*\btheme="dark"/);
-assert.match(macroTuningSource, /scd-admin-dark scd-c3-atmosphere dark/);
+assert.match(macroTuningSource, /scd-admin-dark scd-c3-atmosphere min-h-screen/);
 assert.doesNotMatch(macroTuningSource, /setTheme\("dark"\)/);
 assert.match(macroTuningRenderSource, /mountPageRaw\(MacroIndexTuningPage\)/);
 assert.doesNotMatch(macroTuningRenderSource, /fixedColorScheme/);
@@ -576,12 +577,19 @@ assert.match(macroTuningSource, /Advanced tuning/);
 assert.match(macroTuningSource, /Save and finish setup/);
 assert.match(macroTuningSource, /Setup was not completed/);
 assert.match(macroTuningSource, /setupCimRowsToSave/);
-assert.match(macroTuningSource, /Tune detected CIM data-model macros/);
+assert.match(macroTuningSource, /Tune CIM index macros separately/);
+assert.match(macroTuningSource, /Optional after setup/);
+assert.match(macroTuningSource, /Run CIM discovery/);
+assert.match(macroTuningSource, /isOptionalCimSetupPage/);
 assert.doesNotMatch(macroTuningSource, /properties\/macros/);
 assert.doesNotMatch(macroTuningSource, /could not remove its local/);
 assert.match(
   macroTuningSource,
-  /\.\.\.setupExternalRowsToSave,[\s\S]*\.\.\.setupCimRowsToSave/,
+  /const setupRowsToSave = useMemo\(\s*\(\) => \[\.\.\.setupScdRowsToSave, \.\.\.setupExternalRowsToSave\]/,
+);
+assert.doesNotMatch(
+  macroTuningSource,
+  /const setupRowsToSave = useMemo\(\s*\(\) => \[[^\]]*setupCimRowsToSave/,
 );
 assert.match(
   macroTuningSource,
@@ -589,7 +597,7 @@ assert.match(
 );
 assert.match(
   macroTuningSource,
-  /Finish setup now and retry macro tuning later/,
+  /Finish setup now and retry Tune indexes later from Setup/,
 );
 assert.doesNotMatch(
   macroTuningSource,
@@ -776,11 +784,11 @@ for (const betaDashboardLabel of [
 }
 assert.match(
   navSource,
-  /href="dashboard_manager#\/workplace_spaces_intelligence">Cisco Spaces — Intelligence<\/a>/,
+  /href="dashboard_manager#\/workplace_spaces_intelligence">Cisco Spaces - Intelligence<\/a>/,
 );
 assert.match(
   navSource,
-  /href="dashboard_manager#\/workplace_operations_overview">Workplace — Single Pane of Glass<\/a>/,
+  /href="dashboard_manager#\/workplace_operations_overview">Workplace - Single Pane of Glass<\/a>/,
 );
 assert.match(
   activeNavSource,

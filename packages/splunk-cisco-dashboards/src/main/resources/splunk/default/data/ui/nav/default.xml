@@ -62,7 +62,7 @@
         </collection>
 
         <collection label="Security Operations">
-            <a href="dashboard_manager#/secops_resilience">Security</a>
+            <a href="dashboard_manager#/secops_resilience">Security Resilience</a>
             <a href="secops_overview">Security Operations Overview (Beta)</a>
         </collection>
 

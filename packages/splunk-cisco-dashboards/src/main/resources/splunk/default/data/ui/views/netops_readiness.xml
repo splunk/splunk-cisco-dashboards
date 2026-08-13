@@ -668,7 +668,7 @@
 				}
 			],
 			"options": {
-				"dataValuesDisplay": "minmax",
+				"dataValuesDisplay": "off",
 				"legendDisplay": "off",
 				"seriesColors": [
 					"#049fd9"
@@ -817,7 +817,6 @@
 				"sparklineStrokeColor": "#649ef5",
 				"sparklineAreaColor": "rgba(100,158,245,0.18)"
 			},
-			"title": "Network Readiness Score",
 			"type": "splunk.singlevalue"
 		},
 		"viz_nrs_trend": {

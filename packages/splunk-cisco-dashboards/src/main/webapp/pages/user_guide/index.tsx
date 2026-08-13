@@ -310,15 +310,18 @@ function GuideContents({
                     active ? " scd-guide-toc-item-active" : ""
                   }`}
                 >
-                  <button
-                    type="button"
+                  <a
+                    href={`#${section.id}`}
                     aria-current={active ? "location" : undefined}
-                    onClick={() => goToSection(section.id)}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      goToSection(section.id);
+                    }}
                     className="scd-guide-toc-link"
                   >
                     <span className="scd-guide-toc-chip">{number}</span>
                     <span className="scd-guide-toc-text">{section.label}</span>
-                  </button>
+                  </a>
                 </li>
               );
             })}
@@ -372,13 +375,16 @@ function GuidePageToc({
                 : ""
             }`}
           >
-            <button
-              type="button"
+            <a
+              href={`#${entry.id}`}
               className="scd-guide-page-toc-link"
-              onClick={() => goToHeading(entry.id)}
+              onClick={(event) => {
+                event.preventDefault();
+                goToHeading(entry.id);
+              }}
             >
               {entry.label}
-            </button>
+            </a>
           </li>
         ))}
       </ol>
@@ -610,7 +616,7 @@ const troubleshootingRows = [
   ],
   [
     "CIM panels are blank",
-    "Run the CIM discovery section and save macros into Splunk_SA_CIM/local/macros.conf.",
+    "Open optional CIM tuning, use a short range, and save the detected macros into Splunk_SA_CIM/local/macros.conf.",
   ],
   [
     "Site names are missing",
@@ -625,6 +631,7 @@ const troubleshootingRows = [
 export default function UserGuidePage(): JSX.Element {
   const setupUrl = `${appUrl("setup")}?setup=1`;
   const setupTuningUrl = `${setupUrl}#tune-indexes`;
+  const setupCimTuningUrl = `${setupUrl}#tune-cim`;
   const workspaceUrl = appUrl("workspace_insights");
   const secureNetworkingUrl = `${appUrl("workspace_insights")}?workspace=secure_networking`;
   const scdMacrosUrl = managerUrl(APP_NAME, "data/macros");
@@ -695,7 +702,13 @@ export default function UserGuidePage(): JSX.Element {
         );
       }
       if (shouldScroll) {
-        match.scrollIntoView({ behavior: "smooth", block: "center" });
+        const reduceMotion = window.matchMedia(
+          "(prefers-reduced-motion: reduce)",
+        ).matches;
+        match.scrollIntoView({
+          behavior: reduceMotion ? "auto" : "smooth",
+          block: "center",
+        });
       }
     },
     [searchQuery],
@@ -753,6 +766,8 @@ export default function UserGuidePage(): JSX.Element {
     setActiveSection(id);
     setActiveHeading(id);
     section.scrollIntoView({ behavior: "auto", block: "start" });
+    section.tabIndex = -1;
+    section.focus({ preventScroll: true });
     window.history.replaceState(null, "", `#${id}`);
   }, []);
 
@@ -769,6 +784,8 @@ export default function UserGuidePage(): JSX.Element {
     }
     setActiveHeading(id);
     target.scrollIntoView({ behavior: "auto", block: "start" });
+    target.tabIndex = -1;
+    target.focus({ preventScroll: true });
     window.history.replaceState(null, "", `#${id}`);
   }, []);
 
@@ -1103,6 +1120,10 @@ export default function UserGuidePage(): JSX.Element {
                 <GuideLink href={setupTuningUrl}>
                   <SlidersHorizontal size={15} />
                   Open Tune indexes
+                </GuideLink>
+                <GuideLink href={setupCimTuningUrl}>
+                  <Database size={15} />
+                  Optional CIM tuning
                 </GuideLink>
                 <GuideLink
                   href={searchUrl(
@@ -1459,7 +1480,7 @@ iseval = 0`}</CodeBlock>
                 </InfoCard>
                 <InfoCard title="Dashboard Studio and React">
                   Most operational dashboards are Dashboard Studio XML. Utility
-                  experiences such as Setup's Tune indexes step and this guide
+                  experiences such as Setup&apos;s Tune indexes step and this guide
                   use React bundles mounted inside Simple XML shells.
                 </InfoCard>
               </div>

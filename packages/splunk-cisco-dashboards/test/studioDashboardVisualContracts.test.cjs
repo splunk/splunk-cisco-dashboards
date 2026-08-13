@@ -229,9 +229,14 @@ assert.equal(
   "The readiness score sparkline must not overflow beneath a long description",
 );
 assert.equal(
+  Object.hasOwn(readiness.visualizations.viz_nrs_score, "title"),
+  false,
+  "The readiness score must use the section heading instead of a duplicate title",
+);
+assert.equal(
   readiness.visualizations.viz_nrs_per_site_bar.options.dataValuesDisplay,
-  "minmax",
-  "The dense per-site chart should label only its extrema",
+  "off",
+  "The dense per-site chart should expose exact values on hover instead of labeling every bar",
 );
 
 const criticalSystems = readStudioDefinition(
@@ -280,6 +285,84 @@ assert.match(
   legacyMacroTuningBootstrap,
   /setup.*setup=1#tune-indexes/s,
   "Old Macro Index Tuning URLs must continue to redirect into Setup",
+);
+
+const appNavigation = fs.readFileSync(
+  path.join(
+    APP_ROOT,
+    "src/main/resources/splunk/default/data/ui/nav/default.xml",
+  ),
+  "utf8",
+);
+assert.match(
+  appNavigation,
+  /dashboard_manager#\/secops_resilience">Security Resilience<\/a>/,
+  "The Security Operations menu should use the specific Security Resilience label",
+);
+
+const securityResilience = readStudioDefinition("secops_resilience.xml");
+for (const visualizationId of ["viz_fw_blocked", "viz_fw_allowed"]) {
+  assert.equal(
+    securityResilience.visualizations[visualizationId].options.sparklineDisplay,
+    "off",
+    `${visualizationId} must defer trend detail to the dedicated firewall chart`,
+  );
+  assert.equal(
+    securityResilience.visualizations[visualizationId].options.showTrendIndicator,
+    false,
+    `${visualizationId} must remain a compact headline KPI`,
+  );
+}
+
+const buildingIntelligence = readStudioDefinition(
+  "workplace_building_intelligence.xml",
+);
+assert.match(
+  buildingIntelligence.dataSources.ds_device_by_building.options.query,
+  /rename "AP Count" as AP_Count[\s\S]*max\(AP_Count\) as "Access Points"/,
+  "The building chart must graph the populated access-point inventory",
+);
+
+const spacesIntelligence = readStudioDefinition(
+  "workplace_spaces_intelligence.xml",
+);
+assert.match(
+  spacesIntelligence.visualizations.viz_visitor_map.options.baseLayerTileServer,
+  /dark_all/,
+  "The visitor map must use the approved dark map treatment",
+);
+assert.ok(
+  spacesIntelligence.visualizations.viz_visitor_map.options.zoom <= 3,
+  "The visitor map must open at a whole-US zoom",
+);
+assert.doesNotMatch(
+  spacesIntelligence.dataSources.ds_visitor_map.options.query,
+  /1=1, 0\.0/,
+  "The visitor map must not send unknown campuses to placeholder coordinates",
+);
+assert.match(
+  spacesIntelligence.dataSources.ds_dwell_distribution.options.query,
+  /deviceAssociation\.device\.macAddress[\s\S]*sort 0 mac _time[\s\S]*No completed sessions in selected range/,
+  "Dwell time must pair ordered association events and provide a friendly empty state",
+);
+
+const workplaceOperations = readStudioDefinition(
+  "workplace_operations_overview.xml",
+);
+assert.equal(
+  workplaceOperations.visualizations.viz_t3_value.dataSources.primary,
+  "ds_t3_network_power_kpi",
+  "The energy tile must use measured SD-WAN power telemetry",
+);
+assert.match(
+  workplaceOperations.dataSources.ds_t3_network_power_kpi.options.query,
+  /cisco:sdwan:energy:stats[\s\S]*unit_type="Watts"[\s\S]*"Network Power"/,
+  "The network-energy query must preserve measured watt units",
+);
+assert.match(
+  workplaceOperations.dataSources.ds_t4_security_kpi.options.query,
+  /fillnull value=0 "Active Risks"/,
+  "The security posture tile must not select an empty final time bucket",
 );
 
 console.log("Studio dashboard visual and appserver asset contracts passed");

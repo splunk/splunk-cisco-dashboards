@@ -54,7 +54,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "# Workplace - Single Pane of Glass\n\n**Audience:** Executive Sponsors, NetOps Leadership, Workplace Services, Cisco Account Team\n\nThis is the executive view aligned to the **Cisco Future-Proof Workplace** strategy paper . It rolls Catalyst Center + Cisco Spaces (Wi-Fi-based, not camera-based) into five Health Tiles. Two tiles are fully wired today; one is a Phase-3 placeholder pending data ingestion. Use this dashboard for monthly business reviews and incident-window readouts. Drill into `NetOps Readiness - Op Florida Ready` for operational detail."
+				"markdown": "# Workplace - Single Pane of Glass\n\n**Audience:** Executive Sponsors, NetOps Leadership, Workplace Services, Cisco Account Team\n\nThis executive view aligns with the **Cisco Future-Proof Workplace** strategy paper. It combines Cisco Catalyst Center, Cisco Spaces (Wi-Fi-based, not camera-based), and software-defined wide area network (SD-WAN) telemetry into five health tiles. Each tile is wired to the data currently available in Splunk Enterprise. Use this dashboard for monthly business reviews and incident-window readouts. Drill into `NetOps Readiness - Op Florida Ready` for operational detail."
 			},
 			"type": "splunk.markdown"
 		},
@@ -136,7 +136,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#a6adb6",
 				"fontSize": "small",
-				"markdown": "## Phase roadmap *(per Cisco Future-Proof Workplace strategy)*\n\n**Phase 1 - Done:** NetOps Readiness for Op Florida Ready (separate dashboard) + this Workplace SPoG scaffold.\n\n**Phase 2 - In progress:** Tile 4 frictionless-access via badging integration; per-site Spaces hourly heatmap once firehose Apr 13–15 gap is escalated to vendor.\n\n**Phase 3 - Pending:** Tile 3 Energy Intensity (Catalyst 9300X PoE + utility meters); Tile 4 access-control system; Tile 5 OT life-safety / fire-panel integration via BACnet.\n\n**Phase 4 - Visionary:** AI Agents on the data lake - same agentic pattern Cisco deployed for CoreNet in Kuala Lumpur Malaysia. Splunk is the substrate.\n\n*Source: `reference_design/Cisco_FutureProof_Workplace.md`*"
+				"markdown": "## Phase roadmap *(per Cisco Future-Proof Workplace strategy)*\n\n**Phase 1 - Done:** NetOps Readiness for Op Florida Ready (separate dashboard) and this Workplace single-pane-of-glass dashboard.\n\n**Phase 2 - In progress:** Tile 4 frictionless access through badging integration; per-site Cisco Spaces hourly heatmap once the April 13–15 firehose gap is escalated to the vendor.\n\n**Phase 3 - In progress:** Tile 3 now reports measured SD-WAN edge power. Add Catalyst 9300X PoE and utility-meter telemetry for full building energy intensity; add the Tile 4 access-control system and Tile 5 OT life-safety and fire-panel integration through BACnet.\n\n**Phase 4 - Visionary:** AI Agents on the data lake - same agentic pattern Cisco deployed for CoreNet in Kuala Lumpur Malaysia. Splunk is the substrate.\n\n*Source: `reference_design/Cisco_FutureProof_Workplace.md`*"
 			},
 			"type": "splunk.markdown"
 		},
@@ -404,27 +404,40 @@
 				"fillColor": "#131a23",
 				"rx": 10,
 				"strokeColor": "rgba(100,158,245,0.28)",
-				"strokeDasharray": "4 4",
 				"strokeWidth": 1,
 				"strokeOpacity": 1
 			},
 			"type": "splunk.rectangle"
 		},
-		"viz_t3_placeholder": {
-			"options": {
-				"backgroundColor": "#131a23",
-				"fontColor": "#ecf0f5",
-				"markdown": "## ⏳\n**Pending data**\nIngestion roadmap:\n- Catalyst 9300X PoE telemetry via DNAC API\n- BACnet / Modbus utility meters\n- Building floor area normalization table\n\nETA: dependent on facilities engagement."
-			},
-			"type": "splunk.markdown"
-		},
 		"viz_t3_title": {
 			"options": {
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
-				"markdown": "**Tile 3 - Energy Intensity** *(Phase 3 - pending)*\n\nReal-time kWh per square foot vs baseline. Requires Catalyst 9300X port-level PoE telemetry + utility meter ingestion. Not yet flowing into Splunk."
+				"markdown": "**Tile 3 - Network Energy**\n\nLatest daily power across reporting SD-WAN edge devices, sourced from vManage energy telemetry."
 			},
 			"type": "splunk.markdown"
+		},
+		"viz_t3_value": {
+			"context": {},
+			"dataSources": {
+				"primary": "ds_t3_network_power_kpi"
+			},
+			"options": {
+				"backgroundColor": "#131a23",
+				"majorColor": "#649ef5",
+				"majorFontSize": 60,
+				"majorValue": "> primary | seriesByName('Network Power') | lastPoint()",
+				"shouldAbbreviateMajorValue": false,
+				"shouldAbbreviateTrendValue": true,
+				"sparklineDisplay": "below",
+				"sparklineNullValueDisplay": "connect",
+				"sparklineStrokeColor": "#649ef5",
+				"trendColor": "#649ef5",
+				"unit": "W",
+				"unitPosition": "after"
+			},
+			"title": "SD-WAN power",
+			"type": "splunk.singlevalue"
 		},
 		"viz_t4_box": {
 			"options": {
@@ -616,10 +629,21 @@
 			},
 			"type": "ds.search"
 		},
+		"ds_t3_network_power_kpi": {
+			"name": "Tile 3 - SD-WAN network power with sparkline",
+			"options": {
+				"query": "`index_sdwan` sourcetype=\"cisco:sdwan:energy:stats\" unit_type=\"Watts\"\n| eval device=coalesce(host_name, vdevice_name, vmanage_system_ip)\n| where isnotnull(device) AND isnum(current_reading)\n| bin _time span=1d\n| stats latest(current_reading) as watts by _time, device\n| stats sum(watts) as total_watts by _time\n| eval \"Network Power\"=round(total_watts, 0)\n| fields _time \"Network Power\"\n| sort 0 _time",
+				"queryParameters": {
+					"earliest": "$global_time.earliest$",
+					"latest": "$global_time.latest$"
+				}
+			},
+			"type": "ds.search"
+		},
 		"ds_t4_security_kpi": {
 			"name": "Tile 4 - active P1 P2 risks plus auth failures with sparkline",
 			"options": {
-				"query": "| union\n [ search `index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\" (IssuePriority=\"P1\" OR IssuePriority=\"P2\")\n | bin _time span=1d \n | stats dc(IssueID) as dnac_risk by _time ]\n [ search `index_windows` sourcetype=\"WinEventLog:Security\" (EventCode=4625 OR EventCode=4771)\n | bin _time span=1d \n | stats count as auth_fail by _time ]\n| stats values(dnac_risk) as dnac_risk, values(auth_fail) as auth_fail by _time\n| eval dnac_risk=coalesce(dnac_risk,0), auth_fail=coalesce(auth_fail,0)\n| eval auth_fail_norm = if(auth_fail>0, ceil(auth_fail/100), 0)\n| eval risks = dnac_risk + auth_fail_norm\n| timechart span=1d max(risks) as \"Active Risks\"",
+				"query": "| union\n [ search `index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\" (IssuePriority=\"P1\" OR IssuePriority=\"P2\")\n | bin _time span=1d \n | stats dc(IssueID) as dnac_risk by _time ]\n [ search `index_windows` sourcetype=\"WinEventLog:Security\" (EventCode=4625 OR EventCode=4771)\n | bin _time span=1d \n | stats count as auth_fail by _time ]\n| stats values(dnac_risk) as dnac_risk, values(auth_fail) as auth_fail by _time\n| eval dnac_risk=coalesce(dnac_risk,0), auth_fail=coalesce(auth_fail,0)\n| eval auth_fail_norm = if(auth_fail>0, ceil(auth_fail/100), 0)\n| eval risks = dnac_risk + auth_fail_norm\n| timechart span=1d max(risks) as \"Active Risks\"\n| fillnull value=0 \"Active Risks\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -767,7 +791,7 @@
 						"type": "block"
 					},
 					{
-						"item": "viz_t3_placeholder",
+						"item": "viz_t3_value",
 						"position": {
 							"h": 170,
 							"w": 288,

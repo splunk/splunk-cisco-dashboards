@@ -332,9 +332,9 @@ const focusAndSvgStyles = css`
     color: ${variables.contentColorLink};
   }
   .sui-guidance-content code {
-    background-color: ${variables.statusColorNormalWeak};
-    border-color: ${variables.statusColorNormal};
-    color: ${variables.contentColorPositive};
+    background-color: ${variables.backgroundColorSection};
+    border-color: ${variables.borderColorWeak};
+    color: ${variables.contentColorDefault};
   }
   .sui-important-bg-accent {
     background-color: ${variables.interactiveColorAccent} !important;

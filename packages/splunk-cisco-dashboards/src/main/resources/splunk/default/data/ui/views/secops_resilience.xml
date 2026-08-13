@@ -439,18 +439,7 @@
 			"type": "splunk.singlevalue"
 		},
 		"viz_fw_allowed": {
-			"context": {
-				"trendColorEditorConfig": [
-					{
-						"to": 0,
-						"value": "#a6adb6"
-					},
-					{
-						"from": 0,
-						"value": "#4cbf7f"
-					}
-				]
-			},
+			"context": {},
 			"dataSources": {
 				"primary": "ds_kpi_fw_allowed"
 			},
@@ -460,13 +449,9 @@
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"showSparklineAreaGraph": true,
-				"showSparklineTooltip": true,
-				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049fd9",
-				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#049fd9",
-				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+				"showTrendIndicator": false,
+				"sparklineDisplay": "off",
+				"trendColor": "#649ef5",
 				"trendDisplay": "percent",
 				"backgroundColor": "#131a23"
 			},
@@ -474,18 +459,7 @@
 			"type": "splunk.singlevalue"
 		},
 		"viz_fw_blocked": {
-			"context": {
-				"trendColorEditorConfig": [
-					{
-						"to": 0,
-						"value": "#a6adb6"
-					},
-					{
-						"from": 0,
-						"value": "#4cbf7f"
-					}
-				]
-			},
+			"context": {},
 			"dataSources": {
 				"primary": "ds_kpi_fw_blocked"
 			},
@@ -495,13 +469,9 @@
 				"majorFontSize": 36,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"showSparklineAreaGraph": true,
-				"showSparklineTooltip": true,
-				"showTrendIndicator": true,
-				"sparklineAreaColor": "#049fd9",
-				"sparklineDisplay": "below",
-				"sparklineStrokeColor": "#049fd9",
-				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+				"showTrendIndicator": false,
+				"sparklineDisplay": "off",
+				"trendColor": "#649ef5",
 				"trendDisplay": "percent",
 				"backgroundColor": "#131a23"
 			},

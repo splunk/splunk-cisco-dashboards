@@ -132,7 +132,7 @@
 			"dataSources": {
 				"primary": "ds_device_by_building"
 			},
-			"description": "Network device count per building from Cisco Spaces",
+			"description": "Latest access-point inventory per building from Cisco Spaces",
 			"options": {
 				"backgroundColor": "#131a23",
 				"dataValuesDisplay": "all",
@@ -143,7 +143,7 @@
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleVisibility": "hide"
 			},
-			"title": "Devices by Building",
+			"title": "Access points by building",
 			"type": "splunk.bar"
 		},
 		"viz_device_presence_trend": {
@@ -900,10 +900,10 @@
 			"type": "ds.chain"
 		},
 		"ds_device_by_building": {
-			"name": "Devices by Building",
+			"name": "Access points by building",
 			"options": {
 				"extend": "ds_location_breakdown",
-				"query": "| stats sum(\"Unique Devices\") as \"Unique Devices\" by Building"
+				"query": "| rename \"AP Count\" as AP_Count\n| stats max(AP_Count) as \"Access Points\" by Building\n| where isnotnull('Access Points')\n| sort - \"Access Points\""
 			},
 			"type": "ds.chain"
 		},

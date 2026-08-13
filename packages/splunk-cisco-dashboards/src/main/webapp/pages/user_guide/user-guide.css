@@ -15,23 +15,21 @@
 }
 
 #scan-root .scd-guide-layout {
-    --scd-guide-page-bg: #f5f5f7;
-    --scd-guide-panel-bg: #fbfbfd;
-    --scd-guide-fg: #1d1d1f;
-    --scd-guide-fg-muted: #6e6e73;
-    --scd-guide-accent: #0a66c2;
-    --scd-guide-accent-soft: #e8f0fb;
-    --scd-guide-border: #e2e2e5;
-    --scd-guide-border-strong: #d2d2d7;
-    --scd-guide-control-bg: #ffffff;
-    --scd-guide-link-fg: #424245;
-    --scd-guide-focus-ring: rgba(10, 102, 194, 0.16);
+    --scd-guide-page-bg: var(--sui-background-page);
+    --scd-guide-panel-bg: var(--sui-background-section);
+    --scd-guide-fg: var(--sui-content-active);
+    --scd-guide-fg-muted: var(--sui-content-muted);
+    --scd-guide-accent: var(--sui-content-info);
+    --scd-guide-accent-soft: var(--sui-interactive-selected);
+    --scd-guide-border: var(--sui-border);
+    --scd-guide-border-strong: var(--sui-interactive-border);
+    --scd-guide-control-bg: var(--sui-background-popup);
+    --scd-guide-link-fg: var(--sui-content-default);
+    --scd-guide-focus-ring: var(--sui-focus-color);
     --scd-guide-left-width: 300px;
     --scd-guide-right-width: 360px;
     --scd-guide-gap: 24px;
-    --scd-guide-shadow:
-        0 1px 2px rgba(0, 0, 0, 0.04),
-        0 8px 24px rgba(0, 0, 0, 0.04);
+    --scd-guide-shadow: 0 8px 24px color-mix(in srgb, var(--sui-background-page) 68%, transparent);
 
     background: var(--scd-guide-page-bg);
     box-sizing: border-box;
@@ -42,7 +40,9 @@
         minmax(0, 1fr)
         var(--scd-guide-right-width);
     min-height: 100%;
-    padding: 24px 24px 96px;
+    margin: 0 auto;
+    max-width: 1920px;
+    padding: clamp(16px, 1.6vw, 30px) clamp(14px, 1.6vw, 30px) 96px;
     width: 100%;
 }
 
@@ -183,7 +183,7 @@
 
 #scan-root .scd-guide-toc-group {
     color: var(--scd-guide-fg-muted);
-    font-size: 10.5px;
+    font-size: 12px;
     font-weight: 800;
     letter-spacing: 0.1em;
     margin: 14px 10px 5px;
@@ -249,7 +249,7 @@
 #scan-root .scd-guide-toc-item-active .scd-guide-toc-chip {
     background: var(--scd-guide-accent);
     border-color: var(--scd-guide-accent);
-    color: #ffffff;
+    color: var(--sui-content-active);
 }
 
 #scan-root .scd-guide-toc-text {
@@ -290,7 +290,7 @@
 
 #scan-root .scd-guide-page-toc-kicker {
     color: var(--scd-guide-fg-muted);
-    font-size: 10.5px;
+    font-size: 12px;
     font-weight: 800;
     letter-spacing: 0.1em;
     margin: 0 0 2px;
@@ -357,7 +357,7 @@
 #scan-root .scd-guide-page-toc-footer {
     border-top: 1px solid var(--scd-guide-border);
     color: var(--scd-guide-fg-muted);
-    font-size: 11.5px;
+    font-size: 12px;
     font-weight: 700;
     margin-top: 14px;
     padding-top: 10px;
@@ -369,8 +369,8 @@
 }
 
 #scan-root .scd-guide-code-pre {
-    background: #020617;
-    color: #f1f5f9;
+    background: var(--sui-background-page);
+    color: var(--sui-content-active);
     height: auto !important;
     min-height: 0 !important;
     white-space: pre-wrap;
@@ -383,27 +383,27 @@
 }
 
 #scan-root .scd-guide-section:target {
-    border-color: #7dd3fc;
+    border-color: var(--sui-interactive-border);
     box-shadow:
-        0 0 0 3px rgba(14, 165, 233, 0.11),
-        0 1px 2px rgba(15, 23, 42, 0.05);
+        0 0 0 3px var(--sui-interactive-selected),
+        var(--scd-guide-shadow);
 }
 
 #scan-root .scd-guide-search-match {
-    background: #fef9c3;
+    background: color-mix(in srgb, var(--sui-content-warning) 24%, transparent);
     border-radius: 3px;
-    box-shadow: 0 0 0 2px #fef9c3;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--sui-content-warning) 24%, transparent);
 }
 
 #scan-root .scd-guide-search-current {
-    background: #bae6fd;
+    background: var(--sui-interactive-selected);
     box-shadow:
-        0 0 0 2px #38bdf8,
-        0 0 0 5px rgba(56, 189, 248, 0.15);
+        0 0 0 2px var(--sui-focus-color),
+        0 0 0 5px var(--sui-interactive-selected);
 }
 
-/* The guide keeps its three-column information architecture while all color
- * roles resolve through the fixed SUI theme. */
+/* The guide keeps its three-column information architecture while every
+ * semantic color resolves through the active SUI theme. */
 #scan-root .scd-user-guide {
     color: var(--scd-c3-text);
 }
@@ -414,27 +414,25 @@
     --scd-guide-fg: var(--scd-c3-text);
     --scd-guide-fg-muted: var(--scd-c3-muted);
     --scd-guide-accent: var(--scd-c3-info);
-    --scd-guide-accent-soft: rgb(100 158 245 / 14%);
+    --scd-guide-accent-soft: var(--sui-interactive-selected);
     --scd-guide-border: var(--scd-c3-toolbar-border);
     --scd-guide-border-strong: var(--scd-c3-accent-stroke);
     --scd-guide-control-bg: var(--scd-c3-secondary);
     --scd-guide-link-fg: var(--scd-c3-muted);
-    --scd-guide-focus-ring: rgb(100 158 245 / 24%);
-    --scd-guide-shadow:
-        0 3px 8px rgb(0 0 0 / 18%),
-        inset 0 1px 0 rgb(255 255 255 / 3%);
+    --scd-guide-focus-ring: var(--sui-focus-color);
+    --scd-guide-shadow: 0 8px 24px color-mix(in srgb, var(--sui-background-page) 68%, transparent);
 }
 
 #scan-root .scd-user-guide .scd-guide-search-match {
-    background: rgb(240 194 67 / 24%);
-    box-shadow: 0 0 0 2px rgb(240 194 67 / 24%);
+    background: color-mix(in srgb, var(--sui-content-warning) 24%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--sui-content-warning) 24%, transparent);
 }
 
 #scan-root .scd-user-guide .scd-guide-search-current {
-    background: rgb(100 158 245 / 28%);
+    background: var(--sui-interactive-selected);
     box-shadow:
-        0 0 0 2px var(--scd-c3-info),
-        0 0 0 5px rgb(100 158 245 / 18%);
+        0 0 0 2px var(--sui-focus-color),
+        0 0 0 5px var(--sui-interactive-selected);
 }
 
 @media (max-width: 1540px) {

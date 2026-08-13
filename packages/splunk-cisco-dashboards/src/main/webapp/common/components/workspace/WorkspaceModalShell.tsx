@@ -4,7 +4,7 @@ import { ExternalLink, PanelRightOpen, X } from '@/common/icons/SuiIcon';
 
 import { cn } from '@/common/lib/utils';
 
-export type WorkspaceModalVariant = 'metric' | 'chart' | 'detail';
+export type WorkspaceModalVariant = 'metric' | 'chart' | 'detail' | 'form';
 
 interface WorkspaceModalShellProps {
     isOpen?: boolean;
@@ -22,6 +22,7 @@ interface WorkspaceModalShellProps {
     wide?: boolean;
     renderInDocumentBody?: boolean;
     contentClassName?: string;
+    closeOnBackdrop?: boolean;
     children: React.ReactNode;
 }
 
@@ -38,6 +39,7 @@ const VARIANT_CLASS: Record<WorkspaceModalVariant, string> = {
     metric: 'h-[min(72vh,660px)] max-w-[880px]',
     chart: 'h-[min(78vh,720px)] max-w-[960px]',
     detail: 'h-[min(78vh,800px)] max-w-[1120px]',
+    form: 'max-h-[min(86vh,760px)] max-w-[760px]',
 };
 
 type ResizeAxis = 'width' | 'height' | 'both';
@@ -133,6 +135,7 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
     wide = false,
     renderInDocumentBody = false,
     contentClassName,
+    closeOnBackdrop = true,
     children,
 }) => {
     const generatedTitleId = React.useId();
@@ -410,7 +413,9 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                 tabIndex={-1}
                 aria-hidden="true"
                 className="absolute inset-0 cursor-default border-0 sui-bg-transparent p-0"
-                onClick={() => onCloseRef.current()}
+                onClick={() => {
+                    if (closeOnBackdrop) onCloseRef.current();
+                }}
             />
             <div
                 ref={dialogRef}

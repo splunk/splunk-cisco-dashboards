@@ -81,7 +81,7 @@ const c3VisualizationPalette = read(
 
 assert.match(
   tailwindStyles,
-  /#scan-root\s+:where\([\s\S]*?button:not\(\[data-test='button'\]\)[\s\S]*?color: inherit;/,
+  /:is\(#scan-root, #configure-tile-drawer\)[\s\S]*?:where\([\s\S]*?button:not\(\[data-test=["']button["']\]\)[\s\S]*?color: inherit;/,
   "The custom-button reset must stay low-specificity so component text, surface, border, and spacing utilities remain visible",
 );
 assert.doesNotMatch(
@@ -91,8 +91,8 @@ assert.doesNotMatch(
 );
 assert.match(
   profile,
-  /const \[filtersOpen, setFiltersOpen\] = useState\(true\);[\s\S]*?setFiltersOpen\(true\);/,
-  "The Add Search drawer must restore its full catalogue filters whenever it opens",
+  /const \[filtersOpen, setFiltersOpen\] = useState\(false\);[\s\S]*?setFiltersOpen\(false\);/,
+  "The Add Search drawer must restore its compact filter state whenever it opens",
 );
 
 assert.match(
@@ -112,8 +112,8 @@ assert.match(
 );
 assert.match(
   profile,
-  /<h2 className="text-base font-bold\s+sui-color-info[\s\S]*?\{topologyHeaderName\}[\s\S]*?<\/h2>/,
-  "The connectivity panel title must use the page's level-two section hierarchy",
+  /<Heading[\s\S]*?level=\{2\}[\s\S]*?variant="title3"[\s\S]*?\{topologyHeaderName\}[\s\S]*?<\/Heading>/,
+  "The connectivity panel title must use SUI Heading and the page's level-two section hierarchy",
 );
 assert.match(
   sparkline,
@@ -178,12 +178,12 @@ assert.match(
 );
 assert.match(
   topologyMap,
-  /useState<TopologySurfaceMode>\('geo'\)/,
+  /useState<TopologySurfaceMode>\(["']geo["']\)/,
   "The geographic topology must be the factory connectivity view",
 );
 assert.match(
   topologyMap,
-  /surfaceMode === 'command' \? \([\s\S]*?<TopologyCommandView/,
+  /surfaceMode === ["']command["'] \? \([\s\S]*?<TopologyCommandView/,
   "The connectivity surface must retain a command-view rendering path",
 );
 assert.match(
@@ -193,12 +193,12 @@ assert.match(
 );
 assert.match(
   topologyMap,
-  /requestAnimationFrame[\s\S]*?viewportGroupRef\.current\?\.setAttribute\([\s\S]*?'transform'/,
+  /requestAnimationFrame[\s\S]*?viewportGroupRef\.current\?\.setAttribute\([\s\S]*?["']transform["']/,
   "Command topology navigation must animate one SVG viewport transform instead of rerendering every node",
 );
 assert.match(
   topologyMap,
-  /addEventListener\('wheel', handleWheel, \{ passive: false \}\)/,
+  /addEventListener\(["']wheel["'], handleWheel, \{ passive: false \}\)/,
   "Command topology must support cursor-anchored wheel and trackpad zoom",
 );
 assert.match(
@@ -213,22 +213,22 @@ assert.match(
 );
 assert.match(
   topologyMap,
-  /case '0':[\s\S]*?scheduleViewport\(COMMAND_FIT_VIEWPORT\)/,
+  /case ["']0["']:[\s\S]*?scheduleViewport\(COMMAND_FIT_VIEWPORT\)/,
   "Command topology keyboard navigation must include a fit shortcut",
 );
 assert.match(
   topologyMap,
-  /\['geo', 'Geo'\]/,
+  /\[["']geo["'], ["']Geo["']\]/,
   "The geographic topology must remain available as an explicit presentation",
 );
 assert.match(
   topologyMap,
-  /name: 'Secure Network Command Map',[\s\S]*subtitle: 'Live sites, trust paths, and policy-enforcement health'/,
+  /name: ["']Secure Network Command Map["'],[\s\S]*subtitle: ["']Live sites, trust paths, and policy-enforcement health["']/,
   "Secure Networking must ship its own command-map title and decision-oriented subtitle",
 );
 assert.match(
   topologyMap,
-  /const STATUS_STROKE:[\s\S]*?critical: '#fa5762',[\s\S]*?warning: '#f0c243',[\s\S]*?stable: '#4cbf7f',[\s\S]*?unknown: '#a6adb6'/,
+  /const STATUS_STROKE:[\s\S]*?critical: ["']#fa5762["'],[\s\S]*?warning: ["']#f0c243["'],[\s\S]*?stable: ["']#4cbf7f["'],[\s\S]*?unknown: ["']#a6adb6["']/,
   "Topology status links and beacons must use the shared C3 operational palette",
 );
 const roleChromeBlock = topologyMap.match(
@@ -236,7 +236,7 @@ const roleChromeBlock = topologyMap.match(
 );
 assert.ok(roleChromeBlock, "Topology roles must have a central color contract");
 const roleColors = [
-  ...roleChromeBlock[1].matchAll(/fill: '(#[0-9a-f]{6})'/gi),
+  ...roleChromeBlock[1].matchAll(/fill: ["'](#[0-9a-f]{6})["']/gi),
 ].map((match) => match[1].toLowerCase());
 assert.equal(roleColors.length, 12, "Every built-in topology role must define a color");
 assert.equal(
@@ -306,13 +306,13 @@ assert.match(
 );
 assert.match(
   tailwindStyles,
-  /\.scd-signal-rail-ticker\[data-variant='one-cisco-glass'\][\s\S]*?background:\s*transparent/,
+  /\.scd-signal-rail-ticker\[data-variant=["']one-cisco-glass["']\][\s\S]*?background:\s*transparent/,
   "The 1CD status rail must expose the SUI SpotLight instead of an opaque custom background",
 );
 assert.match(
   tailwindStyles,
-  /\.scd-c3-surface \.scd-c3-panel[\s\S]*?rgb\(19 26 35 \/ 98%\)[\s\S]*?backdrop-filter: blur\(8px\)/,
-  "C3 panels must remain readable, mostly opaque surfaces above the atmospheric canvas",
+  /\.scd-c3-surface \.scd-c3-panel[\s\S]*?background:\s*transparent/,
+  "C3 panels must preserve the shared atmospheric canvas instead of adding a second custom fill",
 );
 for (const color of [
   "#649ef5",

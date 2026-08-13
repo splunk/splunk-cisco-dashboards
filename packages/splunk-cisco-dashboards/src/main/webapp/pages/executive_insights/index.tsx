@@ -6739,7 +6739,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
                 return (
                   <tr
                     key={`${rowKey}-${rowIndex}`}
-                    className="sui-bg-section sui-bg-page transition-colors sui-hover-bg-info"
+                    className="sui-bg-section transition-colors sui-hover-bg-overlay"
                   >
                     {displayColumns.map((column, index) => {
                       const value = row[column.field];
@@ -6939,44 +6939,19 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
     "block text-xs font-bold  sui-color-default " + " tracking-wider mb-1";
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="section-titles-editor-title"
-      className="fixed inset-0 z-[60] flex items-center justify-center"
-      onClick={(e) => {
-        if (!isSaving && e.target === e.currentTarget) onClose();
-      }}
+    <WorkspaceModalShell
+      isOpen={isOpen}
+      variant="form"
+      title="Edit sections"
+      subtitle={`${layoutDraft.length} of ${maxSections} visible`}
+      onClose={onClose}
+      closeOnBackdrop={false}
+      renderInDocumentBody
+      contentClassName="overflow-y-auto"
     >
-      <div className="absolute inset-0 sui-bg-section backdrop-blur-sm" />
-      <div className="relative  sui-bg-section border  sui-border-default rounded-lg shadow-xl w-full max-w-2xl mx-4">
-        <div className="flex items-center justify-between px-4 py-3 border-b  sui-border-default">
-          <h2
-            id="section-titles-editor-title"
-            className="text-sm font-bold  sui-color-active  tracking-wider"
-          >
-            Edit sections
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSaving}
-            title="Close"
-            aria-label="Close"
-            className={cn(
-              "p-1 rounded sui-color-default sui-hover-color-default",
-              "sui-hover-color-default sui-hover-bg-section",
-              "sui-hover-bg-overlay transition-colors",
-              isSaving && "cursor-not-allowed opacity-50",
-            )}
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="px-4 py-4 space-y-4">
+        <div className="space-y-5 px-5 py-5">
           <div className="flex items-center justify-between gap-3">
-            <div className="text-xs font-semibold  sui-color-default">
+            <div className="text-sm font-semibold sui-color-default">
               {layoutDraft.length} of {maxSections} visible
             </div>
             <button
@@ -6985,9 +6960,8 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
               disabled={!canAddSection || isSaving}
               className={cn(
                 "inline-flex items-center gap-1.5 px-3 py-1.5 rounded",
-                "border sui-border-info sui-bg-info text-xs font-bold",
-                "sui-color-info sui-hover-bg-info sui-border-info",
-                "sui-bg-info sui-color-info",
+                "border sui-border-info sui-bg-section text-sm font-bold",
+                "sui-color-info sui-hover-bg-info",
                 (!canAddSection || isSaving) && "cursor-not-allowed opacity-50",
               )}
             >
@@ -7011,8 +6985,8 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
                   className={cn(
                     "rounded-lg border p-3 transition-colors",
                     isVisible
-                      ? "sui-border-info sui-bg-info"
-                      : "sui-border-weak  sui-border-default sui-bg-popup",
+                      ? "sui-border-info sui-bg-section"
+                      : "sui-border-weak sui-bg-page",
                   )}
                 >
                   <div className="mb-2 flex items-center justify-between gap-2">
@@ -7041,10 +7015,10 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
                       }
                       className={cn(
                         "inline-flex h-8 items-center gap-1.5 rounded px-2",
-                        "text-xs font-bold transition-colors",
+                        "text-sm font-bold transition-colors",
                         isVisible
                           ? "sui-bg-section  sui-hover-color-active sui-bg-section sui-color-default"
-                          : "sui-bg-accent sui-color-active sui-hover-bg-accent",
+                          : "sui-bg-info sui-color-info sui-hover-bg-info",
                         (isSaving || (isVisible ? !canHide : !canShow)) &&
                           "cursor-not-allowed opacity-50",
                       )}
@@ -7072,21 +7046,21 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
           </div>
 
           {errorMessage && (
-            <div className="flex items-start gap-2 rounded border   px-3 py-2 text-xs font-semibold  sui-border-negative sui-bg-negative sui-color-negative">
+            <div role="alert" className="flex items-start gap-2 rounded border px-3 py-2 text-sm font-semibold sui-border-negative sui-bg-negative sui-color-negative">
               <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
               <span className="min-w-0 break-words">{errorMessage}</span>
             </div>
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 px-4 py-3 border-t  sui-border-default">
+        <div className="sticky bottom-0 flex items-center justify-between gap-2 border-t sui-border-weak sui-bg-section px-5 py-4">
           <button
             type="button"
             onClick={reset}
             disabled={isSaving}
             className={cn(
               "inline-flex items-center gap-1.5 px-3 py-1.5 rounded border",
-              "sui-border-default text-xs font-bold",
+              "sui-border-default text-sm font-bold",
               "sui-color-default sui-color-active sui-hover-bg-page",
               "sui-hover-bg-overlay transition-colors",
               isSaving && "cursor-not-allowed opacity-50",
@@ -7102,7 +7076,7 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
               disabled={isSaving}
               className={cn(
                 "px-3 py-1.5 rounded border sui-border-default",
-                "sui-border-default text-xs font-bold sui-color-default",
+                "sui-border-default text-sm font-bold sui-color-default",
                 "sui-color-active sui-hover-bg-page",
                 "sui-hover-bg-overlay transition-colors",
                 isSaving && "cursor-not-allowed opacity-50",
@@ -7116,7 +7090,7 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
               disabled={isSaving}
               className={cn(
                 "inline-flex items-center gap-1.5 px-3 py-1.5",
-                "rounded sui-bg-accent text-xs font-bold sui-color-active",
+                "rounded sui-bg-accent text-sm font-bold sui-color-active",
                 "sui-hover-bg-accent transition-colors",
                 isSaving && "cursor-not-allowed opacity-60",
               )}
@@ -7126,8 +7100,7 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </WorkspaceModalShell>
   );
 };
 
@@ -7274,48 +7247,22 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
   const acceptList = BRANDING_ACCEPTED_LOGO_MIME_TYPES.join(",");
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="branding-editor-title"
-      className="fixed inset-0 z-[60] flex items-center justify-center"
-      onClick={(e) => {
-        // Close only when the user clicks the backdrop itself,
-        // not when their drag started inside an input and ended
-        // on the backdrop. The shallow `e.target === e.currentTarget`
-        // check is the standard React idiom.
-        if (e.target === e.currentTarget) onClose();
-      }}
+    <WorkspaceModalShell
+      isOpen={isOpen}
+      variant="form"
+      title="Edit branding"
+      subtitle="Customize this workspace header"
+      onClose={onClose}
+      closeOnBackdrop={false}
+      renderInDocumentBody
+      contentClassName="overflow-y-auto"
     >
-      {/* Backdrop */}
-      <div className="absolute inset-0 sui-bg-section backdrop-blur-sm" />
-
-      {/* Card */}
-      <div className="relative  sui-bg-section border  sui-border-default rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-4 py-3 border-b  sui-border-default">
-          <h2
-            id="branding-editor-title"
-            className="text-sm font-bold  sui-color-active  tracking-wider"
-          >
-            Edit branding
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            title="Close"
-            aria-label="Close"
-            className="p-1 rounded sui-color-default  sui-hover-color-default  sui-hover-bg-overlay transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="px-4 py-4 space-y-4">
+        <div className="space-y-5 px-5 py-5">
           {/* Title */}
           <div>
             <label
               htmlFor="branding-title-input"
-              className="block text-xs font-bold  sui-color-default  tracking-wider mb-1"
+              className="mb-1.5 block text-sm font-bold sui-color-default"
             >
               Title
             </label>
@@ -7328,7 +7275,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
               maxLength={120}
               className="w-full px-2 py-1.5 text-sm  sui-bg-popup border  sui-border-default rounded  sui-color-active sui-placeholder-muted focus:outline-none focus:ring-1 sui-focus-ring"
             />
-            <p className="mt-1 text-xs  sui-color-muted">
+            <p className="mt-1.5 text-sm leading-5 sui-color-muted">
               Leave blank to use the value from the
               <code className="mx-1 px-1 py-0.5  sui-bg-popup rounded">
                 [customer_name]
@@ -7341,7 +7288,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
           <div>
             <label
               htmlFor="branding-subtitle-input"
-              className="block text-xs font-bold  sui-color-default  tracking-wider mb-1"
+              className="mb-1.5 block text-sm font-bold sui-color-default"
             >
               Subtitle
             </label>
@@ -7354,14 +7301,14 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
               maxLength={120}
               className="w-full px-2 py-1.5 text-sm  sui-bg-popup border  sui-border-default rounded  sui-color-active sui-placeholder-muted focus:outline-none focus:ring-1 sui-focus-ring"
             />
-            <p className="mt-1 text-xs  sui-color-muted">
+            <p className="mt-1.5 text-sm leading-5 sui-color-muted">
               Leave blank for the default (&ldquo;{subtitlePlaceholder}&rdquo;).
             </p>
           </div>
 
           {/* Logo */}
           <div>
-            <span className="block text-xs font-bold  sui-color-default  tracking-wider mb-1">
+            <span className="mb-1.5 block text-sm font-bold sui-color-default">
               Logo
             </span>
             <div className="flex items-center gap-3">
@@ -7382,7 +7329,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold  sui-color-info  sui-bg-info  sui-hover-bg-info rounded transition-colors"
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded border sui-border-info sui-bg-section px-3 text-sm font-bold sui-color-info transition-colors sui-hover-bg-info"
                 >
                   <Upload className="w-3 h-3" />
                   {logoDataUri ? "Replace logo" : "Upload logo"}
@@ -7391,7 +7338,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
                   <button
                     type="button"
                     onClick={handleClearLogo}
-                    className="text-xs  sui-color-default  sui-hover-color-active underline"
+                    className="text-sm sui-color-default underline sui-hover-color-active"
                   >
                     Clear (use default)
                   </button>
@@ -7405,7 +7352,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
                 />
               </div>
             </div>
-            <p className="mt-1 text-xs  sui-color-muted">
+            <p className="mt-1.5 text-sm leading-5 sui-color-muted">
               PNG, SVG, JPEG, WebP, or GIF. Max{" "}
               {Math.round(BRANDING_LOGO_DATA_URI_MAX_BYTES / 1024)} KB after
               encoding. Stored in your browser only.
@@ -7415,18 +7362,18 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
           {errorMessage ? (
             <div
               role="alert"
-              className="text-xs  sui-color-negative  sui-bg-negative border  sui-border-negative rounded px-2 py-1.5"
+              className="rounded border sui-border-negative sui-bg-negative px-3 py-2 text-sm sui-color-negative"
             >
               {errorMessage}
             </div>
           ) : null}
         </div>
 
-        <div className="flex items-center justify-between gap-2 px-4 py-3 border-t  sui-border-default  sui-bg-section">
+        <div className="sticky bottom-0 flex items-center justify-between gap-2 border-t sui-border-weak sui-bg-section px-5 py-4">
           <button
             type="button"
             onClick={onResetToDefaults}
-            className="text-xs font-bold  sui-color-default  sui-hover-color-negative underline"
+            className="text-sm font-bold sui-color-default underline sui-hover-color-negative"
           >
             Reset to defaults
           </button>
@@ -7434,21 +7381,20 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 text-xs font-bold  sui-color-default  sui-bg-popup border  sui-border-default rounded  sui-hover-bg-floating transition-colors"
+              className="rounded border sui-border-default sui-bg-page px-3 py-2 text-sm font-bold sui-color-default transition-colors sui-hover-bg-overlay"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleSave}
-              className="px-3 py-1.5 text-xs font-bold sui-color-active sui-bg-accent sui-hover-bg-accent rounded transition-colors"
+              className="rounded sui-bg-accent px-3 py-2 text-sm font-bold sui-color-active transition-colors sui-hover-bg-accent"
             >
               Save
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </WorkspaceModalShell>
   );
 };
 

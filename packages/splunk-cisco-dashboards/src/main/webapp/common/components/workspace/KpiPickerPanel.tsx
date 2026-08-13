@@ -1875,7 +1875,9 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         id="configure-tile-drawer"
         divider="both"
         material="glass"
-        onRequestClose={onClose}
+        onRequestClose={() => {
+          if (!confirmation) onClose();
+        }}
         open={open}
         position="page"
         returnFocus={returnFocus}

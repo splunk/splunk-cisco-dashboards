@@ -6,9 +6,7 @@ import React, {
   useState,
 } from "react";
 import Badge from "@splunk/react-ui/Badge";
-import Heading from "@splunk/react-ui/Heading";
 import Layout from "@splunk/react-ui/Layout";
-import ScreenReaderContent from "@splunk/react-ui/ScreenReaderContent";
 import { variables } from "@splunk/themes";
 import styled from "styled-components";
 import {
@@ -281,10 +279,6 @@ const StatusPill = styled(Badge)<{ $status: SignalRailStatus }>`
   font-weight: ${variables.fontWeightSemiBold};
   line-height: ${variables.lineHeightSingle};
   white-space: nowrap;
-`;
-
-const StatusOverviewHeader = styled(Layout)`
-  margin-bottom: ${variables.spacingXSmall};
 `;
 
 const MetricContent = styled.span`
@@ -1007,25 +1001,14 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
       }}
     >
       <style>{signalRailTickerCss}</style>
-      <StatusOverviewHeader>
-        <Heading
-          level={2}
-          variant="title3"
-          data-sui-heading-variant="title3"
-        >
-          Status overview
-        </Heading>
-        <span role="status" aria-live="polite" aria-atomic="true">
-          {counts.critical > 0 ? (
-            <StatusPill
-              $status="critical"
-              label={`${counts.critical} Critical`}
-            />
-          ) : (
-            <ScreenReaderContent>0 Critical</ScreenReaderContent>
-          )}
-        </span>
-      </StatusOverviewHeader>
+      <span
+        className="sr-only"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        Signal health summary: {counts.critical} critical
+      </span>
       <div
         className={cn(
           "relative z-[70] flex w-full min-w-0 max-w-full items-center overflow-visible",

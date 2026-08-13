@@ -2,11 +2,35 @@
 
 ## 1.0.38
 
+- Setup now uses the wider C3/Splunk UI visual language and more readable type
+  across the discovery, package-status, and macro-tuning steps. CIM macro
+  discovery is an explicitly optional, separate page because it can be
+  time-consuming; required Cisco routing macros can be reviewed, saved, and
+  completed even when the CIM scan is skipped, interrupted, or unavailable.
+- Insights Workspace section and branding editors now share the Configure Tile
+  modal treatment, keep focus and dismissal behavior predictable, and use
+  theme-safe neutral surfaces. Factory reset confirmation remains open until a
+  user explicitly cancels or confirms, table hover no longer introduces a
+  bright blue fill, and the redundant visible status-overview strip is hidden
+  while its accessible live status remains available to assistive technology.
+- Searchbase explanations, section-count badges, inline code, and user-guide
+  navigation now use the shared Splunk UI semantic palette and larger readable
+  text in both dark and light themes. The user guide also documents the optional
+  CIM workflow, uses real fragment links, and restores keyboard focus after
+  in-page navigation.
 - The legacy Macro Index Tuning redirect no longer appears as a separate
   dashboard; existing links still open the integrated Setup tuning step.
   NetOps Studio tiles now keep their content inside panel bounds, the readiness
-  sparkline no longer overlaps the KPI row, and the per-site chart shows only
-  minimum and maximum value labels instead of labeling every bar.
+  sparkline no longer overlaps the KPI row, and the per-site chart removes
+  crowded per-bar labels while retaining exact values in chart hover details.
+- Security Resilience now has a specific navigation label and compact firewall
+  KPI tiles that no longer collide with their dedicated trend chart. Workplace
+  dashboards now chart the populated access-point inventory, pair ordered
+  association events for dwell time, provide a friendly empty state, and map
+  actual reporting campuses on a dark whole-U.S. view. The executive workplace
+  scorecard replaces its energy placeholder with measured software-defined wide
+  area network (SD-WAN) edge power and keeps empty security-risk time buckets
+  from rendering as `N/A`.
 - Native Dashboard Studio single-value tiles now use explicit C3 trend and
   sparkline colors instead of defaults that could render black on dark panels.
   Studio page-title blocks have additional height to prevent text clipping.
