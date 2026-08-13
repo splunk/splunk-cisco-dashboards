@@ -2,6 +2,12 @@
 
 ## 1.0.38
 
+- App packaging now reads a concise developing-resource manifest. Resources
+  not listed are implicitly released. Splunkbase packages exclude listed
+  dashboard views, their navigation entries, and listed Searchbase stanzas;
+  developer packages include them and write a `-developer` artifact. Catalyst
+  Health is the first developing dashboard and remains available in the local
+  development stage without appearing in the Splunkbase package or navigation.
 - Searchbase now includes 12 Catalyst Center interface-telemetry searches for
   Rx/Tx traffic, device throughput, capacity and headroom, traffic anomalies,
   errors and discards, quiet interfaces, collection readiness, and critical

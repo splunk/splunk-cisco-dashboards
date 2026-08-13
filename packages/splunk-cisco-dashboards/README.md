@@ -113,18 +113,25 @@ yarn start                   # webpack --watch
 The webpack build emits to `stage/`, mirroring the deployed Splunk app
 structure (`appserver/`, `default/`, `metadata/`). A production build
 gives you a directory you can symlink into `$SPLUNK_HOME/etc/apps/` or
-package as a tarball.
+package as a tarball. The development stage contains both released and
+developing app resources; release filtering happens only in temporary package
+staging.
 
 ## Production build & packaging
 
 ```bash
-yarn build                   # webpack build → ./stage
-node bin/build.js pack       # build + tar → ./splunk-cisco-dashboards.tar.gz
-node bin/build.js pack --minify  # slower, minified release build + tar
+cd ../..
+./build.sh                    # Splunkbase: released resources only
+./build.sh --developer        # local: released + developing resources
+./build.sh --minify           # slower, minified Splunkbase package
 ```
 
 Minification is opt-in; normal builds and `yarn start` keep fast,
 unminified production-React bundles.
+
+Resource inclusion is controlled by `config/build-profile-manifest.json`.
+The complete workflow and local install command are documented in
+[`../../docs/BUILD_PROFILES.md`](../../docs/BUILD_PROFILES.md).
 
 ## Mounting model
 

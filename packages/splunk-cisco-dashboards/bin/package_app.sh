@@ -10,14 +10,16 @@ SPLUNK_RESOURCES_DIR="${PKG_ROOT}/src/main/resources/splunk"
 APP_NAME="splunk-cisco-dashboards"
 FROM_STAGE=0
 MINIFY=0
+DEVELOPER_PROFILE=0
 ROOT_DIR="${PKG_ROOT}/../.."
 VERSION_FILE="${ROOT_DIR}/VERSION"
 
 usage() {
   cat <<EOF
-Usage: bin/package_app.sh [--from-stage] [--minify]
+Usage: bin/package_app.sh [--from-stage] [--minify] [--developer]
 
-Default behavior: clean stage/, run production webpack, then package stage/.
+Default behavior: clean stage/, run production webpack, then create the
+Splunkbase profile without resources listed as developing in the app manifest.
 
 Options:
   --from-stage, --stage   Package the current stage/ directory without running
@@ -26,6 +28,9 @@ Options:
                           bundles still come from the webpack --watch output.
   --minify                Enable JavaScript minification for a slower, smaller
                           release build. Not valid with --from-stage.
+  --developer             Include all resources listed as developing and write
+                          a clearly labeled developer tarball. Intended for
+                          local use.
   -h, --help              Show this help.
 EOF
 }
@@ -38,6 +43,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --minify)
       MINIFY=1
+      shift
+      ;;
+    --developer)
+      DEVELOPER_PROFILE=1
       shift
       ;;
     -h|--help)
@@ -72,7 +81,13 @@ fi
 
 DIST_DIR="${PKG_ROOT}/../../dist"
 mkdir -p "$DIST_DIR"
-PKG_PATH="${DIST_DIR}/${APP_NAME}-${VERSION}.tar.gz"
+if [[ "$DEVELOPER_PROFILE" -eq 1 ]]; then
+  APP_PROFILE="developer"
+  PKG_PATH="${DIST_DIR}/${APP_NAME}-${VERSION}-developer.tar.gz"
+else
+  APP_PROFILE="splunkbase"
+  PKG_PATH="${DIST_DIR}/${APP_NAME}-${VERSION}.tar.gz"
+fi
 
 if [[ "$FROM_STAGE" -eq 1 ]]; then
   if [[ ! -d "$STAGE_DIR" ]]; then
@@ -158,6 +173,13 @@ fi
 if [[ "$removed_runtime_lookups" -gt 0 ]]; then
   echo "[package] removed ${removed_runtime_lookups} runtime lookup CSV(s) from package staging"
 fi
+
+# Keep the source tree and stage/ complete for local development. The selected
+# app profile is applied only to the temporary app copy that is about to be
+# archived, so a Splunkbase package cannot leak developing resources and a
+# developer package can still install the full staged experience.
+node "${PKG_ROOT}/bin/apply_build_profile.js" \
+  "${TMP_DIR}/${APP_NAME}" "$APP_PROFILE"
 
 # Revert app-wide export = system → export = none for Splunkbase packaging.
 # Preserve stanza-specific exports such as macros/dnac_site_normalize%281%29,

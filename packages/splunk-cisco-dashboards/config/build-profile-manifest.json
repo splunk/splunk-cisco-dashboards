@@ -1,0 +1,9 @@
+{
+    "schemaVersion": 1,
+    "developing": {
+        "views": [
+            "netops_catalyst_health"
+        ],
+        "searchbaseStanzas": []
+    }
+}

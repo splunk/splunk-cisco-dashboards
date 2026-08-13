@@ -47,7 +47,16 @@ To build the Splunk app package locally:
 yarn package:app
 ```
 
-The packaged Splunk app tarball is written to `dist/`.
+The packaged Splunk app tarball is written to `dist/`. Normal packaging uses
+the Splunkbase app profile and excludes resources listed as developing. For a
+local artifact that includes those resources, use:
+
+```bash
+./build.sh --developer
+```
+
+See [`docs/BUILD_PROFILES.md`](docs/BUILD_PROFILES.md) for the manifest
+workflow, local install command, and resource promotion steps.
 
 For a smaller, minified release package (slower to build):
 

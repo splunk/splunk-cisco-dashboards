@@ -8,7 +8,8 @@
 # staged/package app.conf at package time.
 #
 # Default workflow:
-#   ./build.sh                                                # build only; produces dist/<app>-<version>.tar.gz
+#   ./build.sh                                                # Splunkbase profile: released resources only
+#   ./build.sh --developer                                    # developer profile: includes developing resources
 #
 # Install workflows (splunkd-managed; goes through REST mgmt port 8089):
 #   ./build.sh --install --auth admin:********                # build + `splunk install app` against the default Splunk
@@ -29,7 +30,7 @@
 #
 # Watch-mode workflow (keeps splunkd install, skips full webpack rebuild):
 #   cd packages/splunk-cisco-dashboards && yarn start     # terminal 1; maintains stage/
-#   SPLUNK_HOME=/opt/10 ./build.sh --fast --install --auth admin:pw
+#   SPLUNK_HOME=/opt/10 ./build.sh --developer --fast --install --auth admin:pw
 #
 # --install vs --deploy (mutually exclusive; mirrors ta_cisco_common/build.sh
 # and field-solutions-demo-data-gen/build.sh):
@@ -71,6 +72,7 @@ do_deploy=0
 no_build=0
 from_stage=0
 minify=0
+developer_profile=0
 lint_spl_antipatterns=0
 restart_after_install=0
 verbose=0
@@ -220,6 +222,10 @@ Other options:
   --minify               Enable JavaScript minification for this clean release
                          build. Slower, but produces smaller browser bundles.
                          Not valid with --fast or --no-build.
+  --developer            Include resources listed in the app's
+                         config/build-profile-manifest.json. Writes a
+                         *-developer.tar.gz intended only for local testing.
+                         Without this flag, packaging is Splunkbase-safe.
   --lint-spl-antipatterns
                          Run the experimental Searchbase SPL anti-pattern
                          policy gate before packaging. Disabled by default
@@ -237,8 +243,10 @@ Other options:
   -h, --help             Show this help.
 
 Examples:
-  ./build.sh                                                  # build only
+  ./build.sh                                                  # Splunkbase package (released resources only)
+  ./build.sh --developer                                      # local developer package
   ./build.sh --install --auth admin:********                  # build + splunkd install
+  SPLUNK_HOME=/opt/10 ./build.sh --developer --fast --install --auth admin:********
   SPLUNK_HOME=/opt/10 ./build.sh --install --auth admin:******** --restart
   ./build.sh --deploy                                         # build + filesystem swap
   SPLUNK_HOME=/opt/10 ./build.sh --deploy --restart           # ... against /opt/10 + restart
@@ -252,7 +260,7 @@ Examples:
 
   # Keep webpack watch running, then package current stage/ and install via splunkd:
   cd packages/splunk-cisco-dashboards && yarn start
-  SPLUNK_HOME=/opt/10 ./build.sh --fast --install --auth admin:pw
+  SPLUNK_HOME=/opt/10 ./build.sh --developer --fast --install --auth admin:pw
 EOF
 }
 
@@ -279,6 +287,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --minify)
             minify=1
+            shift
+            ;;
+        --developer)
+            developer_profile=1
             shift
             ;;
         --lint-spl-antipatterns)
@@ -460,27 +472,61 @@ fi
 if [[ "$no_build" -eq 1 ]]; then
     hdr "Reusing existing tarball (--no-build)..."
 elif [[ "$from_stage" -eq 1 ]]; then
-    hdr "Packaging current stage/ v${build_version} (--from-stage)..."
-    run_quietly bash "${APP_DIR}/bin/package_app.sh" --from-stage
-else
-    if [[ "$minify" -eq 1 ]]; then
-        hdr "Packaging ${APP_NAME} v${build_version} (minified release build; may take 10+ minutes)..."
-        run_quietly bash -c "cd '$APP_DIR' && yarn run package:app --minify"
+    package_args=(--from-stage)
+    if [[ "$developer_profile" -eq 1 ]]; then
+        package_args+=(--developer)
+        hdr "Packaging current stage/ v${build_version} (--from-stage, developer profile)..."
     else
-        hdr "Packaging ${APP_NAME} v${build_version}..."
-        run_quietly bash -c "cd '$APP_DIR' && yarn run package:app"
+        hdr "Packaging current stage/ v${build_version} (--from-stage, Splunkbase profile)..."
     fi
+    run_quietly bash "${APP_DIR}/bin/package_app.sh" "${package_args[@]}"
+else
+    package_args=()
+    if [[ "$developer_profile" -eq 1 ]]; then
+        package_args+=(--developer)
+    fi
+    if [[ "$minify" -eq 1 ]]; then
+        package_args+=(--minify)
+        if [[ "$developer_profile" -eq 1 ]]; then
+            hdr "Packaging ${APP_NAME} v${build_version} (minified developer profile; may take 10+ minutes)..."
+        else
+            hdr "Packaging ${APP_NAME} v${build_version} (minified Splunkbase profile; may take 10+ minutes)..."
+        fi
+    else
+        if [[ "$developer_profile" -eq 1 ]]; then
+            hdr "Packaging ${APP_NAME} v${build_version} (developer profile)..."
+        else
+            hdr "Packaging ${APP_NAME} v${build_version} (Splunkbase profile)..."
+        fi
+    fi
+    run_quietly bash "${APP_DIR}/bin/package_app.sh" "${package_args[@]}"
 fi
 
 if [[ "$no_build" -eq 1 ]]; then
-    package_path="$(
-        find "$DIST_DIR" -maxdepth 1 -type f -name "${APP_NAME}-*.tar.gz" \
-            -print0 \
-            | xargs -0 ls -t 2>/dev/null \
-            | head -n 1
-    )"
+    if [[ "$developer_profile" -eq 1 ]]; then
+        package_glob="${APP_NAME}-*-developer.tar.gz"
+        package_path="$(
+            find "$DIST_DIR" -maxdepth 1 -type f -name "$package_glob" \
+                -print0 \
+                | xargs -0 ls -t 2>/dev/null \
+                | head -n 1
+        )"
+    else
+        package_glob="${APP_NAME}-*.tar.gz"
+        package_path="$(
+            find "$DIST_DIR" -maxdepth 1 -type f -name "$package_glob" \
+                ! -name "*-developer.tar.gz" \
+                -print0 \
+                | xargs -0 ls -t 2>/dev/null \
+                | head -n 1
+        )"
+    fi
 else
-    package_path="${DIST_DIR}/${APP_NAME}-${build_version}.tar.gz"
+    if [[ "$developer_profile" -eq 1 ]]; then
+        package_path="${DIST_DIR}/${APP_NAME}-${build_version}-developer.tar.gz"
+    else
+        package_path="${DIST_DIR}/${APP_NAME}-${build_version}.tar.gz"
+    fi
 fi
 
 if [[ -z "$package_path" ]]; then
@@ -638,7 +684,12 @@ if [[ "$from_stage" -eq 1 ]]; then
     mode_label="--from-stage (packaged existing stage/) + ${mode_label}"
 fi
 if [[ "$minify" -eq 1 ]]; then
-    mode_label="minified release build + ${mode_label}"
+    mode_label="minified build + ${mode_label}"
+fi
+if [[ "$developer_profile" -eq 1 ]]; then
+    app_profile_label="developer (released + developing resources)"
+else
+    app_profile_label="Splunkbase (released resources only)"
 fi
 
 echo ""
@@ -646,4 +697,5 @@ echo "================================================================"
 echo "  Done: ${APP_NAME} v${PKG_VERSION:-unknown} (build ${PKG_BUILD:-unknown})"
 echo "================================================================"
 echo "  Mode:    ${mode_label}"
+echo "  Profile: ${app_profile_label}"
 echo "  Tarball: ${package_path}"
