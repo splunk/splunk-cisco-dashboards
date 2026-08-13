@@ -384,7 +384,8 @@
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"trendColor": "#649ef5"
 			},
 			"title": "FW Expected",
 			"type": "splunk.singlevalue",
@@ -418,7 +419,8 @@
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"trendColor": "#649ef5"
 			},
 			"title": "FW Missing",
 			"type": "splunk.singlevalue",
@@ -435,7 +437,8 @@
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"trendColor": "#649ef5"
 			},
 			"title": "HA Pairs Detected",
 			"type": "splunk.singlevalue",
@@ -452,7 +455,8 @@
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"trendColor": "#649ef5"
 			},
 			"title": "FW Sending Data",
 			"type": "splunk.singlevalue",
@@ -496,7 +500,8 @@
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"trendColor": "#649ef5"
 			},
 			"title": "No Data",
 			"type": "splunk.singlevalue",
@@ -531,7 +536,8 @@
 				"sparklineDisplay": "off",
 				"unit": "%",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"trendColor": "#649ef5"
 			},
 			"title": "Coverage",
 			"type": "splunk.singlevalue",
@@ -548,7 +554,8 @@
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"trendColor": "#649ef5"
 			},
 			"title": "Sending Data",
 			"type": "splunk.singlevalue",
@@ -565,7 +572,8 @@
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"trendColor": "#649ef5"
 			},
 			"title": "Total Devices",
 			"type": "splunk.singlevalue",
@@ -701,7 +709,8 @@
 				"majorColor": "#ecf0f5",
 				"sparklineDisplay": "off",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"trendColor": "#649ef5"
 			},
 			"title": "Last Lookup Refresh",
 			"type": "splunk.singlevalue",
@@ -737,7 +746,8 @@
 				"unit": "devices",
 				"unitPosition": "after",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"trendColor": "#649ef5"
 			},
 			"title": "Total Devices",
 			"type": "splunk.singlevalue",
@@ -754,7 +764,8 @@
 				"unit": "with IP",
 				"unitPosition": "after",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"trendColor": "#649ef5"
 			},
 			"title": "Known IP Addresses",
 			"type": "splunk.singlevalue",
@@ -771,7 +782,8 @@
 				"unit": "with serial",
 				"unitPosition": "after",
 				"shouldAbbreviateMajorValue": true,
-				"shouldAbbreviateTrendValue": true
+				"shouldAbbreviateTrendValue": true,
+				"trendColor": "#649ef5"
 			},
 			"title": "Known Serials",
 			"type": "splunk.singlevalue",
@@ -1198,7 +1210,7 @@
 					{
 						"item": "viz_p_hdr_title",
 						"position": {
-							"h": 30,
+							"h": 40,
 							"w": 430,
 							"x": 800,
 							"y": 20
@@ -1266,7 +1278,7 @@
 							"x": 500,
 							"y": 20,
 							"w": 430,
-							"h": 30
+							"h": 40
 						}
 					},
 					{
@@ -1514,7 +1526,7 @@
 					{
 						"item": "viz_p_hdr_title",
 						"position": {
-							"h": 30,
+							"h": 40,
 							"w": 430,
 							"x": 500,
 							"y": 20

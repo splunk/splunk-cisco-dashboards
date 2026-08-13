@@ -8,7 +8,8 @@
       "netops_catalyst_operations",
       "network_diagram",
       "sn_topology_canvas",
-      "searchbase_canvas"
+      "searchbase_canvas",
+      "workplace_m365_activity_monitoring"
     ],
     "searchbaseStanzas": [
       "dc_networking_vmware_esx_server_farm",

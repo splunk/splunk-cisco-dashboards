@@ -37,8 +37,12 @@ is stored in the browser as a data URI. Title can still be set globally via
 `customer_name`.
 
 Each React view is mounted from a Simple XML shell through a RequireJS
-bootstrap in `appserver/static/`. Native Dashboard Studio definitions are
-packaged alongside those shells under `default/data/ui/views/`.
+bootstrap in `appserver/static/`. That directory also contains the shared app
+shell styles and the static assets referenced by Dashboard Manager, Setup, and
+the React pages. Native Dashboard Studio definitions are packaged alongside
+those shells under `default/data/ui/views/`. `dashboard.css` is the only
+convention-loaded exception in the static inventory; Splunk Web loads it
+automatically for Simple XML dashboards.
 
 One mount helper is in active use:
 
@@ -97,7 +101,7 @@ packages/splunk-cisco-dashboards/
                 ├── default/
                 │   ├── app.conf
                 │   └── data/ui/{nav,views}/
-                ├── appserver/static/      # bootstrap loaders
+                ├── appserver/static/      # shell styles, loaders, and referenced assets
                 └── metadata/default.meta
 ```
 

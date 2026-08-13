@@ -337,7 +337,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#649ef5",
 				"sparklineNullValueDisplay": "connect",
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5"
 			},
 			"title": "Total concurrent endpoints (wired + wireless)",
 			"type": "splunk.singlevalue"
@@ -392,7 +393,8 @@
 				"unit": "%",
 				"unitPosition": "after",
 				"sparklineNullValueDisplay": "connect",
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5"
 			},
 			"title": "Network Quality Index",
 			"type": "splunk.singlevalue"
@@ -473,7 +475,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#fa5762",
 				"sparklineNullValueDisplay": "connect",
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5"
 			},
 			"title": "Active Risks",
 			"type": "splunk.singlevalue"
@@ -528,7 +531,8 @@
 				"unit": "%",
 				"unitPosition": "after",
 				"sparklineNullValueDisplay": "connect",
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5"
 			},
 			"title": "Network Readiness Score",
 			"type": "splunk.singlevalue"

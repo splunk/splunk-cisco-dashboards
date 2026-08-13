@@ -2,6 +2,11 @@
 
 ## 1.0.38
 
+- Native Dashboard Studio single-value tiles now use explicit C3 trend and
+  sparkline colors instead of defaults that could render black on dark panels.
+  Studio page-title blocks have additional height to prevent text clipping.
+  Twelve unreferenced legacy background and overview assets were removed from
+  `appserver/static`; Dashboard Manager assets that remain in use were kept.
 - App navigation, the user guide, and executive drilldowns now open native
   Dashboard Studio views through Dashboard Manager. This keeps the
   design-approved Fingerprint, NetworkDevices, Globe, ArrowsDoubleLeftRight,

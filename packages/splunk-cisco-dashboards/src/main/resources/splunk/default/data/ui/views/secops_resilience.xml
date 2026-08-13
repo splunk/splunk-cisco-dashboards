@@ -279,7 +279,8 @@
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showTrendIndicator": false,
-				"sparklineDisplay": "off"
+				"sparklineDisplay": "off",
+				"trendColor": "#649ef5"
 			},
 			"title": "Cloud FW Blocked",
 			"type": "splunk.singlevalue"
@@ -680,7 +681,8 @@
 				"shouldAbbreviateTrendValue": true,
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
-				"unit": "%"
+				"unit": "%",
+				"trendColor": "#649ef5"
 			},
 			"title": "ISE Auth",
 			"type": "splunk.singlevalue"
@@ -928,7 +930,8 @@
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"showTrendIndicator": false,
-				"sparklineDisplay": "off"
+				"sparklineDisplay": "off",
+				"trendColor": "#649ef5"
 			},
 			"title": "Security Advisories",
 			"type": "splunk.singlevalue"
@@ -1590,7 +1593,7 @@
 					{
 						"item": "viz_p_hdr_title",
 						"position": {
-							"h": 30,
+							"h": 40,
 							"w": 430,
 							"x": 500,
 							"y": 20
@@ -1677,7 +1680,7 @@
 					{
 						"item": "viz_p_hdr_title",
 						"position": {
-							"h": 30,
+							"h": 40,
 							"w": 500,
 							"x": 500,
 							"y": 20
@@ -1884,7 +1887,7 @@
 					{
 						"item": "viz_p_hdr_title",
 						"position": {
-							"h": 30,
+							"h": 40,
 							"w": 500,
 							"x": 500,
 							"y": 20

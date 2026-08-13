@@ -813,7 +813,8 @@
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
 				"unit": "",
-				"unitPosition": "after"
+				"unitPosition": "after",
+				"trendColor": "> trendValue | rangeValue(trendColorEditorConfig)"
 			},
 			"title": "Devices to Review",
 			"type": "splunk.singlevalue"
@@ -1158,7 +1159,7 @@
 					{
 						"item": "viz_p_hdr_title",
 						"position": {
-							"h": 30,
+							"h": 40,
 							"w": 430,
 							"x": 500,
 							"y": 20
@@ -1255,7 +1256,7 @@
 					{
 						"item": "viz_p_hdr_title",
 						"position": {
-							"h": 30,
+							"h": 40,
 							"w": 430,
 							"x": 500,
 							"y": 20
@@ -1412,7 +1413,7 @@
 					{
 						"item": "viz_p_hdr_title",
 						"position": {
-							"h": 30,
+							"h": 40,
 							"w": 430,
 							"x": 500,
 							"y": 20
@@ -1529,7 +1530,7 @@
 					{
 						"item": "viz_p_hdr_title",
 						"position": {
-							"h": 30,
+							"h": 40,
 							"w": 430,
 							"x": 500,
 							"y": 20

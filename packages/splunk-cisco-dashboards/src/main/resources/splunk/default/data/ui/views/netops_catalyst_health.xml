@@ -1410,7 +1410,9 @@
 				"shouldAbbreviateTrendValue": true,
 				"sparklineNullValueDisplay": "connect",
 				"unit": "",
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Open Issues",
 			"type": "splunk.singlevalue"
@@ -1427,7 +1429,9 @@
 				"shouldAbbreviateTrendValue": true,
 				"sparklineNullValueDisplay": "connect",
 				"unit": "",
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Resolved Issues",
 			"type": "splunk.singlevalue"
@@ -1444,7 +1448,9 @@
 				"shouldAbbreviateTrendValue": true,
 				"sparklineNullValueDisplay": "connect",
 				"unit": "",
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Total Issues",
 			"type": "splunk.singlevalue"
