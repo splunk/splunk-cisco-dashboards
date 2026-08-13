@@ -4498,7 +4498,7 @@
 		}
 	},
 	"applicationProperties": {
-		"collapseNavigation": false,
+		"collapseNavigation": true,
 		"hideEdit": true,
 		"hideOpenInSearch": false
 	}

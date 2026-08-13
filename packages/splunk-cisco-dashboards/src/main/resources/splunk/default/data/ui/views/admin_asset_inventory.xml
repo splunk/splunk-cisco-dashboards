@@ -1556,7 +1556,7 @@
 	},
 	"applicationProperties": {
 		"hideEdit": true,
-		"collapseNavigation": false
+		"collapseNavigation": true
 	}
 }
 ]]></definition>
