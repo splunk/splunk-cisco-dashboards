@@ -36,6 +36,7 @@ const workspacesConf = read(
   "../src/main/resources/splunk/default/insights_workspaces.conf",
 );
 const profile = read("../src/main/webapp/pages/executive_insights/index.tsx");
+const userGuide = read("../src/main/webapp/pages/user_guide/index.tsx");
 const profileRender = read(
   "../src/main/webapp/pages/executive_insights/render.tsx",
 );
@@ -394,6 +395,29 @@ assert.match(
   /<Dropdown[\s\S]*?toggle=\{[\s\S]*?<Button[\s\S]*?appearance="subtle"[\s\S]*?hideLabel[\s\S]*?icon=\{<ChevronDown[\s\S]*?label=\{`Switch workspace\. Current: \$\{insightsWorkspace\.label\}`\}[\s\S]*?<Menu style=\{\{ width: WORKSPACE_MENU_WIDTH_PX \}\}>[\s\S]*?workspaces\.map[\s\S]*?<Menu\.Item[\s\S]*?to=\{`\$\{splunkViewAppUrl\("workspace_insights"\)\}[\s\S]*?selectable[\s\S]*?selected=\{workspace\.id === insightsWorkspace\.id\}/,
   "Workspace switching must use an accessible SUI Dropdown menu beside the page title",
 );
+assert.match(
+  profile,
+  /const MANAGED_STUDIO_VIEW_NAMES = new Set\(\[[\s\S]*?"netops_critical_systems_health"[\s\S]*?"secops_resilience"[\s\S]*?"workplace_building_intelligence"[\s\S]*?\]\);/,
+  "Executive drilldowns must identify native Studio views that require Dashboard Manager",
+);
+assert.match(
+  profile,
+  /isManagedStudioView \? "dashboard_manager" : viewName[\s\S]*?const routeHash = isManagedStudioView \? `#\/\$\{viewName\}` : "";[\s\S]*?`\$\{baseUrl\}\?\$\{params\.toString\(\)\}\$\{routeHash\}`/,
+  "Executive drilldowns must place time parameters before the Dashboard Manager route hash",
+);
+for (const viewName of [
+  "netops_critical_systems_health",
+  "secops_resilience",
+  "workplace_building_intelligence",
+  "workplace_spaces_intelligence",
+  "netops_catalyst_health",
+]) {
+  assert.match(
+    userGuide,
+    new RegExp(`view: "dashboard_manager#/${viewName}"`),
+    `${viewName} must preserve the app shell when opened from the user guide`,
+  );
+}
 assert.match(
   profile,
   /<Menu\.Divider \/>[\s\S]*?<Menu\.Item[\s\S]*?setWorkspaceManagerOpen\(true\)[\s\S]*?Edit workspaces/,

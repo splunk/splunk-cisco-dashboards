@@ -2,6 +2,11 @@
 
 ## 1.0.38
 
+- App navigation, the user guide, and executive drilldowns now open native
+  Dashboard Studio views through Dashboard Manager. This keeps the
+  design-approved Fingerprint, NetworkDevices, Globe, ArrowsDoubleLeftRight,
+  and RobotAgent navigation icons visible instead of falling back to letter
+  monograms, while preserving drilldown time ranges.
 - App packaging now reads a concise developing-resource manifest. Resources
   not listed are implicitly released. Splunkbase packages exclude listed
   dashboard views, their navigation entries, Searchbase stanzas, and saved

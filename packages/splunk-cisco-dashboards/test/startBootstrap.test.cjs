@@ -776,11 +776,11 @@ for (const betaDashboardLabel of [
 }
 assert.match(
   navSource,
-  /name="workplace_spaces_intelligence" label="Cisco Spaces — Intelligence"/,
+  /href="dashboard_manager#\/workplace_spaces_intelligence">Cisco Spaces — Intelligence<\/a>/,
 );
 assert.match(
   navSource,
-  /name="workplace_operations_overview" label="Workplace — Single Pane of Glass"/,
+  /href="dashboard_manager#\/workplace_operations_overview">Workplace — Single Pane of Glass<\/a>/,
 );
 assert.match(
   activeNavSource,
@@ -847,7 +847,9 @@ for (const [dashboardGroup, destinations] of Object.entries(
   for (const destination of destinations) {
     assert.match(
       groupSource,
-      new RegExp(`(?:href|name)="${destination}(?:\\?setup=1)?"`),
+      new RegExp(
+        `(?:href|name)="(?:dashboard_manager#/)?${destination}(?:\\?setup=1)?"`,
+      ),
       `${destination} must remain in ${dashboardGroup}`,
     );
     assert.equal(
@@ -857,6 +859,26 @@ for (const [dashboardGroup, destinations] of Object.entries(
     );
   }
 }
+const nativeStudioViews = fs
+  .readdirSync(viewsRoot)
+  .filter((fileName) => fileName.endsWith(".xml"))
+  .filter((fileName) =>
+    /<dashboard\s+version="2"/.test(
+      fs.readFileSync(path.join(viewsRoot, fileName), "utf8"),
+    ),
+  )
+  .map((fileName) => fileName.replace(/\.xml$/, ""))
+  .sort();
+const dashboardManagerNavViews = [
+  ...activeNavSource.matchAll(/href="dashboard_manager#\/([^"]+)"/g),
+]
+  .map(([, viewName]) => viewName)
+  .sort();
+assert.deepEqual(
+  dashboardManagerNavViews,
+  nativeStudioViews,
+  "Every native Studio navigation link must preserve the app shell through Dashboard Manager",
+);
 assert.doesNotMatch(navSource, /name="secure_networking_overview"/);
 assert.doesNotMatch(navSource, /name="overview"/);
 

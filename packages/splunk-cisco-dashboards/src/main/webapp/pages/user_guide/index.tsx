@@ -404,31 +404,31 @@ const dashboards = [
   },
   {
     title: "IT Health",
-    view: "netops_critical_systems_health",
+    view: "dashboard_manager#/netops_critical_systems_health",
     summary:
       "Catalyst Center, ISE, ThousandEyes, device health, identity, and user experience.",
   },
   {
     title: "Security",
-    view: "secops_resilience",
+    view: "dashboard_manager#/secops_resilience",
     summary:
       "Firewall, IPS, DNS, email, web, identity, endpoint, and security event visibility.",
   },
   {
     title: "Building Intelligence",
-    view: "workplace_building_intelligence",
+    view: "dashboard_manager#/workplace_building_intelligence",
     summary:
       "Cisco Spaces, occupancy, building telemetry, wireless trust, and location intelligence.",
   },
   {
     title: "Cisco Spaces Intelligence",
-    view: "workplace_spaces_intelligence",
+    view: "dashboard_manager#/workplace_spaces_intelligence",
     summary:
       "Environmental, capacity, room, activation, visitor, and network impact analytics.",
   },
   {
     title: "Network Activation Report",
-    view: "netops_catalyst_health",
+    view: "dashboard_manager#/netops_catalyst_health",
     summary:
       "Event operations view for executive, client, device, traffic, and issue summaries.",
   },
