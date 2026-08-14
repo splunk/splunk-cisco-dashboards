@@ -66,6 +66,8 @@ import {
   PanelRightClose,
   PanelTop,
   Sparkles,
+  Sun,
+  Moon,
   Servers,
   NodeModel,
   WallBricks,
@@ -73,6 +75,7 @@ import {
   Building2,
   type SuiIcon,
 } from "@/common/icons/SuiIcon";
+import { useAppThemeControls } from "@/common/theme/AppThemeProvider";
 import { DashboardSection } from "@/common/components/workspace/DashboardSection";
 import { OneCdRadioBar } from "@/common/components/workspace/OneCdPrimitives";
 import { MetricItem } from "@/common/components/workspace/MetricItem";
@@ -2220,6 +2223,11 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     spacingSmall,
     spacingXSmall,
   } = useSplunkTheme();
+  const {
+    colorScheme,
+    canChooseColorScheme,
+    setColorScheme,
+  } = useAppThemeControls();
   const tilePagerHeight =
     Number.parseFloat(inputHeight) +
     Number.parseFloat(spacingXSmall) * 2 +
@@ -2241,12 +2249,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     availableDashboardHeight < COMPACT_HEIGHT_THRESHOLD_PX;
   const dashboardShellStyle = useMemo<React.CSSProperties>(
     () => ({
+      colorScheme,
       height:
         availableDashboardHeight !== null
           ? `${availableDashboardHeight}px`
           : "100vh",
     }),
-    [availableDashboardHeight],
+    [availableDashboardHeight, colorScheme],
   );
   const workspaceSectionIds = useMemo(
     () => sectionIdsForWorkspace(insightsWorkspace),
@@ -3039,6 +3048,14 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   const activeMapPosition: MapPosition | "hidden" = mapVisible
     ? mapPosition
     : "hidden";
+  const updateMapLayout = useCallback((next: MapLayout) => {
+    if (next === "hidden") {
+      setMapVisible(false);
+      return;
+    }
+    setMapPosition(next);
+    setMapVisible(true);
+  }, []);
   // Convenience flag for the drag / keyboard handlers and the
   // splitter styling: `right` mode drags on the X axis, `below` /
   // `above` modes drag on the Y axis.
@@ -4340,8 +4357,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         compactDensity && "scd-overview-compact",
         "sui-bg-page sui-color-active",
         "sui-bg-page sui-color-active",
-        "dark scd-one-cisco-spotlight-canvas sui-bg-page sui-color-default",
+        "scd-one-cisco-spotlight-canvas sui-bg-page sui-color-default",
       )}
+      data-color-scheme={colorScheme}
     >
       <SpotLight
         aria-hidden="true"
@@ -4466,17 +4484,12 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           className="flex flex-shrink-0 items-center"
           style={{ columnGap: spacingXSmall }}
         >
-          <MapLayoutRadioBar
-            value={activeMapPosition}
-            onChange={(next) => {
-              if (next === "hidden") {
-                setMapVisible(false);
-                return;
-              }
-              setMapPosition(next);
-              setMapVisible(true);
-            }}
-          />
+          <div className="scd-header-map-layout">
+            <MapLayoutRadioBar
+              value={activeMapPosition}
+              onChange={updateMapLayout}
+            />
+          </div>
           <Select
             appearance="subtle"
             data-shortcut-search
@@ -4501,6 +4514,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           </Select>
           <Select
             appearance="subtle"
+            className="scd-header-refresh-rate"
             inline
             onChange={(_event, { value }) =>
               setAutoRefreshSeconds(Number(value))
@@ -4572,6 +4586,62 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               >
                 Export as PDF
               </Menu.Item>
+              <Menu.Heading>Map layout</Menu.Heading>
+              {MAP_LAYOUT_OPTIONS.map((option) => (
+                <Menu.Item
+                  key={option.value}
+                  onClick={() => {
+                    updateMapLayout(option.value);
+                    closeHeaderActions();
+                  }}
+                  selectable
+                  selected={activeMapPosition === option.value}
+                  startAdornment={option.startAdornment}
+                >
+                  {option.ariaLabel}
+                </Menu.Item>
+              ))}
+              <Menu.Heading>Refresh rate</Menu.Heading>
+              {AUTO_REFRESH_OPTIONS.map((option) => (
+                <Menu.Item
+                  key={option.seconds}
+                  onClick={() => {
+                    setAutoRefreshSeconds(option.seconds);
+                    closeHeaderActions();
+                  }}
+                  selectable
+                  selected={autoRefreshSeconds === option.seconds}
+                >
+                  {option.label}
+                </Menu.Item>
+              ))}
+              {canChooseColorScheme && (
+                <>
+                  <Menu.Heading>Appearance</Menu.Heading>
+                  <Menu.Item
+                    onClick={() => {
+                      setColorScheme("light");
+                      closeHeaderActions();
+                    }}
+                    selectable
+                    selected={colorScheme === "light"}
+                    startAdornment={<Sun aria-hidden="true" />}
+                  >
+                    Light
+                  </Menu.Item>
+                  <Menu.Item
+                    onClick={() => {
+                      setColorScheme("dark");
+                      closeHeaderActions();
+                    }}
+                    selectable
+                    selected={colorScheme === "dark"}
+                    startAdornment={<Moon aria-hidden="true" />}
+                  >
+                    Dark
+                  </Menu.Item>
+                </>
+              )}
               {overrideCount > 0 && (
                 <Menu.Item
                   description={`${overrideCount} customised`}

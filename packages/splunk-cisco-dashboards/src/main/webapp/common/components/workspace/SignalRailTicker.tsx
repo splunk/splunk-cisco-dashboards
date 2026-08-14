@@ -305,6 +305,57 @@ const MetricValue = styled.span<{ $status: SignalRailStatus }>`
   white-space: nowrap;
 `;
 
+const SignalGlassCard = styled(OneCdGlassCard)`
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+
+  &::after {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 2px;
+    border-radius: ${variables.borderRadius} ${variables.borderRadius} 0 0;
+    content: "";
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &[data-status="warning"]::after {
+    background-color: ${variables.severityColorNotice};
+    opacity: 0.78;
+  }
+
+  &[data-status="critical"]::after {
+    background-color: ${variables.severityColorAlert};
+    opacity: 0.92;
+  }
+
+  &[data-status="healthy"] ${MetricValue} {
+    color: ${variables.contentColorDefault};
+    font-size: 2.35rem;
+  }
+
+  &[data-status="healthy"] ${StatusPill} {
+    opacity: 0.72;
+  }
+
+  &[data-status="healthy"]:hover ${MetricValue},
+  &[data-status="healthy"]:focus-within ${MetricValue} {
+    color: ${variables.severityColorNormal};
+  }
+
+  &[data-status="healthy"]:hover ${StatusPill},
+  &[data-status="healthy"]:focus-within ${StatusPill} {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+`;
+
 const isSignalRailVariant = (
   value: string | null,
 ): value is SignalRailVariant =>
@@ -475,7 +526,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
 
   if (variant === "one-cisco-glass") {
     return (
-      <OneCdGlassCard
+      <SignalGlassCard
         tag="article"
         className={cn(
           "scd-signal-rail-item flex flex-col gap-0 overflow-hidden",
@@ -513,7 +564,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
           <MetricValue $status={kpi.status}>{valueText(kpi)}</MetricValue>
           <StatusPill $status={kpi.status} label={STATUS_LABEL[kpi.status]} />
         </MetricContent>
-      </OneCdGlassCard>
+      </SignalGlassCard>
     );
   }
 

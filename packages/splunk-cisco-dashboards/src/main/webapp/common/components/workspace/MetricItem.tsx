@@ -1,4 +1,5 @@
 import React from 'react';
+import useSplunkTheme from '@splunk/themes/useSplunkTheme';
 import {
     ArrowDown,
     ArrowUp,
@@ -185,14 +186,6 @@ const STATUS_TREND_COLOR: Record<MetricStatus, string> = {
 //   color is still honoured upstream (singlevalue tile background,
 //   tile accent edge) so the resting-state identity isn't lost.
 //
-// Values come from the shared C3 visualization palette so custom React
-// charts use the same operational semantics as the 1CD surfaces around them.
-const STATUS_VIZ_COLOR: Partial<Record<MetricStatus, string>> = {
-    healthy: C3_VISUALIZATION_COLORS.positive,
-    warning: C3_VISUALIZATION_COLORS.caution,
-    critical: C3_VISUALIZATION_COLORS.critical,
-};
-
 const MOCK_VIZ_COLOR = C3_VISUALIZATION_COLORS.neutral;
 const MOCK_HEADLINE_COLOR = 'sui-color-muted sui-color-default';
 const MOCK_DATA_HELP =
@@ -294,6 +287,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     sparklineDensity = 'auto',
     className,
 }) => {
+    const theme = useSplunkTheme();
     const [isFocusOpen, setIsFocusOpen] = React.useState(false);
     const isMock = source === 'mock';
     const numericValue = toFiniteNumber(value);
@@ -313,9 +307,14 @@ export const MetricItem: React.FC<MetricItemProps> = ({
             : change;
     const isNoData = typeof value === 'number' && Number.isNaN(value);
     const renderedText = `${displayValue}${unit}`;
+    const statusVizColor: Partial<Record<MetricStatus, string>> = {
+        healthy: theme.severityColorNormal,
+        warning: theme.severityColorWarning,
+        critical: theme.severityColorCritical,
+    };
     const focusChartColor = isMock
         ? MOCK_VIZ_COLOR
-        : STATUS_VIZ_COLOR[status] ?? color;
+        : statusVizColor[status] ?? color;
     const focusFormatValue = (n: number): string =>
         abbreviateMajorValue &&
         unit !== '%' &&
@@ -558,7 +557,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                         clickable wrapper is gone. */}
                     <Sparkline
                         data={sparkData}
-                        color={isMock ? MOCK_VIZ_COLOR : STATUS_VIZ_COLOR[status] ?? color}
+                        color={isMock ? MOCK_VIZ_COLOR : statusVizColor[status] ?? color}
                         vizType={vizType}
                         dataValuesDisplay={dataValuesDisplay}
                         density={sparklineDensity}

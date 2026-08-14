@@ -103,7 +103,12 @@ assert.match(
 assert.match(
   dashboardSection,
   /Visible tiles[\s\S]*?TileCountValue[\s\S]*?Show all[\s\S]*?Paginator\.Compact/,
-  "Dashboard sections must keep tile count, paging, and show-all controls visible",
+  "Dashboard sections must retain tile count, paging, and show-all controls",
+);
+assert.match(
+  dashboardSection,
+  /const ProgressiveSectionActions = styled[\s\S]*?opacity: 0;[\s\S]*?\.scd-dashboard-section:hover &[\s\S]*?\.scd-dashboard-section:focus-within &[\s\S]*?@media \(hover: none\)[\s\S]*?opacity: 1;/,
+  "Secondary section controls must reveal progressively for pointer, keyboard, and touch users",
 );
 assert.match(
   dashboardSection,
@@ -306,8 +311,8 @@ assert.match(
 );
 assert.match(
   profileRender,
-  /mountPageRaw\(ExecutiveInsightsPage, \{ showCopyrightMark: false \}\);/,
-  "Insights Workspace must suppress the floating copyright mark",
+  /mountPageRaw\(ExecutiveInsightsPage, \{[\s\S]*?showCopyrightMark: false,[\s\S]*?allowColorSchemeChoice: true,[\s\S]*?\}\);/,
+  "Insights Workspace must suppress the floating copyright mark and opt into theme choice",
 );
 assert.match(
   dashboardSection,
@@ -316,8 +321,8 @@ assert.match(
 );
 assert.match(
   profile,
-  /"dark scd-one-cisco-spotlight-canvas sui-bg-page sui-color-default"/,
-  "The Figma-led workspace must keep a neutral canvas for the SUI SpotLight preset",
+  /"scd-one-cisco-spotlight-canvas sui-bg-page sui-color-default"[\s\S]*?data-color-scheme=\{colorScheme\}/,
+  "The Figma-led workspace must use a theme-aware neutral canvas for the SUI SpotLight preset",
 );
 assert.match(
   profile,
@@ -326,8 +331,13 @@ assert.match(
 );
 assert.match(
   tailwindStyles,
-  /\.scd-one-cisco-spotlight-canvas[\s\S]*?background-color:\s*#0b1118[\s\S]*?background-image:\s*none/,
-  "The dark workspace must not place the legacy custom gradient behind SUI SpotLight",
+  /\.scd-one-cisco-spotlight-canvas[\s\S]*?background-color:\s*var\(--sui-background-page, #0b1118\)[\s\S]*?background-image:\s*none/,
+  "The workspace canvas must follow the active SUI color scheme without restoring the legacy gradient",
+);
+assert.match(
+  tailwindStyles,
+  /@media \(max-width: 1279px\)[\s\S]*?\.scd-header-map-layout,[\s\S]*?\.scd-header-refresh-rate[\s\S]*?display: none;/,
+  "Narrow headers must move secondary map-layout and refresh controls into responsive overflow",
 );
 assert.match(
   tailwindStyles,
@@ -357,8 +367,8 @@ for (const color of [
 }
 assert.match(
   metricItem,
-  /healthy: C3_VISUALIZATION_COLORS\.positive,[\s\S]*?warning: C3_VISUALIZATION_COLORS\.caution,[\s\S]*?critical: C3_VISUALIZATION_COLORS\.critical/,
-  "Metric status charts must use the shared C3 operational palette",
+  /healthy: theme\.severityColorNormal,[\s\S]*?warning: theme\.severityColorWarning,[\s\S]*?critical: theme\.severityColorCritical/,
+  "Metric status charts must use theme-aware SUI operational colors",
 );
 assert.match(
   kpiPicker,
@@ -400,11 +410,12 @@ assert.match(
   /<OneCdRadioBar[\s\S]*?ariaLabel="Map layout"[\s\S]*?options=\{MAP_LAYOUT_OPTIONS\}/,
   "The map layout control must use the shared SUI RadioBar and include map visibility",
 );
-assert.doesNotMatch(
+assert.match(
   profile,
-  /<MapPositionToggle|toggleMapVisibility|<SlidingPanels/,
-  "Map layout, time range, and refresh rate must not be duplicated in the map card or actions menu",
+  /<Menu\.Heading>Map layout<\/Menu\.Heading>[\s\S]*?MAP_LAYOUT_OPTIONS\.map[\s\S]*?<Menu\.Heading>Refresh rate<\/Menu\.Heading>[\s\S]*?AUTO_REFRESH_OPTIONS\.map/,
+  "Responsive overflow must preserve map-layout and refresh-rate choices",
 );
+assert.doesNotMatch(profile, /<MapPositionToggle|toggleMapVisibility|<SlidingPanels/);
 assert.match(
   profile,
   /<Button[\s\S]*?appearance="subtle"[\s\S]*?<RefreshCw[\s\S]*?label=\{`Refresh dashboard data now\./,
@@ -468,10 +479,16 @@ assert.doesNotMatch(
   /aria-label="Close workspace manager"|<X className=/,
   "WorkspaceManager must use Modal.Header's built-in close control",
 );
-assert.doesNotMatch(
+assert.match(
   profile,
-  /ThemeToggle|cycleTheme/,
-  "The dashboard header must not expose theme-toggle button wiring",
+  /<Menu\.Heading>Appearance<\/Menu\.Heading>[\s\S]*?setColorScheme\("light"\)[\s\S]*?selected=\{colorScheme === "light"\}[\s\S]*?setColorScheme\("dark"\)[\s\S]*?selected=\{colorScheme === "dark"\}/,
+  "The dashboard actions menu must expose a reversible light/dark workspace choice",
+);
+assert.doesNotMatch(profile, /ThemeToggle|cycleTheme/);
+assert.match(
+  topologyMap,
+  /const \{ colorScheme \} = useSplunkTheme\(\);[\s\S]*?const isDark = colorScheme === "dark";[\s\S]*?const tileUrl = isDark \? tilePreset\.dark : tilePreset\.light;/,
+  "The command map must choose tiles from the active workspace color scheme",
 );
 assert.doesNotMatch(
   profile,

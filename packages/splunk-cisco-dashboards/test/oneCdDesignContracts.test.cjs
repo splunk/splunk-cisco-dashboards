@@ -183,7 +183,7 @@ assert.match(
 );
 assert.match(
   signalRail,
-  /const StatusPill = styled\(Badge\)[\s\S]*?<OneCdGlassCard[\s\S]*?tag="article"[\s\S]*?<StatusPill/,
+  /const StatusPill = styled\(Badge\)[\s\S]*?const SignalGlassCard = styled\(OneCdGlassCard\)[\s\S]*?<SignalGlassCard[\s\S]*?tag="article"[\s\S]*?<StatusPill/,
   "The live KPI row must use SUI glass cards and styled SUI badges",
 );
 assert.doesNotMatch(
@@ -210,13 +210,18 @@ assert.doesNotMatch(signalRail, /OneCdSurface|SpotLight|spotlight=/);
 assert.doesNotMatch(topologyMap, /OneCdSurface|SpotLight|spotlight=/);
 assert.match(
   signalRail,
-  /healthy: variables\.severityColorNormal,[\s\S]*?warning: variables\.severityColorWarning,[\s\S]*?critical: variables\.severityColorCritical,[\s\S]*?unknown: variables\.severityColorUnknown/,
+  /healthy: variables\.severityColorNormal,[\s\S]*?warning: variables\.severityColorNotice,[\s\S]*?critical: variables\.severityColorAlert,[\s\S]*?unknown: variables\.severityColorUnknown/,
   "Status pills must use Splunk semantic severity tokens",
 );
 assert.match(
   signalRail,
-  /const MetricValue = styled\.span[\s\S]*?color: \$\{\(\{ \$status \}\) => STATUS_PILL_TOKENS\[\$status\]\};[\s\S]*?font-size: 48px;/,
-  "Glass status card values must use the matching severity token at 48px",
+  /const MetricValue = styled\.span[\s\S]*?color: \$\{\(\{ \$status \}\) => STATUS_PILL_TOKENS\[\$status\]\};[\s\S]*?font-size: 2\.65rem;/,
+  "Exception status values must retain the large matching semantic color",
+);
+assert.match(
+  signalRail,
+  /\[data-status="warning"\]::after[\s\S]*?severityColorNotice[\s\S]*?\[data-status="critical"\]::after[\s\S]*?severityColorAlert[\s\S]*?\[data-status="healthy"\] \$\{MetricValue\}[\s\S]*?contentColorDefault[\s\S]*?font-size: 2\.35rem/,
+  "Signal Rail must emphasize exceptions while keeping healthy cards readable and quieter",
 );
 assert.match(
   signalRail,
@@ -275,7 +280,7 @@ assert.equal(
 );
 assert.match(
   topologyMap,
-  /from '@splunk\/react-ui\/Slider'/,
+  /from ["']@splunk\/react-ui\/Slider["']/,
   "Connector motion speed must use the native SUI Slider",
 );
 assert.match(
@@ -325,20 +330,20 @@ assert.match(
 for (const [title, key, componentName, navigationIcon] of approvedPillarIcons) {
   assert.match(
     secureNetworkingSectionConfig[0],
-    new RegExp(`title: '${title}'[\\s\\S]*?icon: '${key}'`),
+    new RegExp(`title: ["']${title}["'][\\s\\S]*?icon: ["']${key}["']`),
     `${title} must use ${componentName}`,
   );
   assert.match(
     suiIcons,
     new RegExp(
-      `import ${componentName}Icon from '@splunk/react-icons/${componentName}'`,
+      `import ${componentName}Icon from ["']@splunk/react-icons/${componentName}["']`,
     ),
     `${componentName} must come directly from @splunk/react-icons`,
   );
   assert.match(
     suiIcons,
     new RegExp(
-      `export const ${componentName} = adaptSuiIcon\\(${componentName}Icon, '${componentName}'\\)`,
+      `export const ${componentName} = adaptSuiIcon\\(${componentName}Icon, ["']${componentName}["']\\)`,
     ),
     `${componentName} must be exposed through the shared SUI icon adapter`,
   );
