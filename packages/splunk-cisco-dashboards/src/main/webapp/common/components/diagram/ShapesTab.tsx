@@ -1157,7 +1157,7 @@ export const ShapesTab: React.FC = () => {
                     {importMessage}
                 </div>
             ) : null}
-            <div className="rounded-md border   px-2 py-1.5 text-xs leading-snug  sui-border-info sui-bg-info sui-color-default">
+            <div className="rounded-md border px-2 py-1.5 text-xs leading-snug sui-border-notification-info sui-bg-notification-info sui-color-default">
                 Need Cisco device artwork? Download stencil ZIPs from{' '}
                 <a
                     href={CISCO_VISIO_STENCIL_LIBRARY_URL}

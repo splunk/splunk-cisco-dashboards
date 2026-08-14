@@ -23,6 +23,7 @@ import {
 import { getDefaultFetchInit } from "@splunk/splunk-utils/fetch";
 import { versionLabel } from "@splunk/splunk-utils/config";
 import TimeRangeDropdown from "@splunk/react-time-range/Dropdown";
+import ScreenReaderContent from '@splunk/react-ui/ScreenReaderContent';
 
 import {
   getSearchAppContext,
@@ -2864,18 +2865,24 @@ export default function MacroIndexTuningPage(): JSX.Element {
             </div>
             <ol className="grid grid-cols-3 overflow-hidden rounded-md sui-bg-section text-xs font-bold">
               <li className="flex min-h-10 items-center gap-2 border sui-border-positive sui-bg-section px-3 sui-color-positive">
-                <span className="grid h-5 w-5 place-items-center rounded-full sui-bg-positive text-xs">
+                <ScreenReaderContent>Completed: </ScreenReaderContent>
+                <span className="grid h-5 w-5 place-items-center rounded-full sui-bg-status-positive text-xs sui-color-inverted">
                   <Check size={12} />
                 </span>
                 Check data
               </li>
               <li className="flex min-h-10 items-center gap-2 border-y border-r sui-border-positive sui-bg-section px-3 sui-color-positive">
-                <span className="grid h-5 w-5 place-items-center rounded-full sui-bg-positive text-xs">
+                <ScreenReaderContent>Completed: </ScreenReaderContent>
+                <span className="grid h-5 w-5 place-items-center rounded-full sui-bg-status-positive text-xs sui-color-inverted">
                   <Check size={12} />
                 </span>
                 Packages
               </li>
-              <li className="flex min-h-10 items-center gap-2 border-y border-r sui-border-info sui-bg-section px-3 sui-color-info">
+              <li
+                aria-current="step"
+                className="flex min-h-10 items-center gap-2 border-y border-r sui-border-info sui-bg-section px-3 sui-color-info"
+              >
+                <ScreenReaderContent>Current step: </ScreenReaderContent>
                 <span className="grid h-5 w-5 place-items-center rounded-full sui-bg-accent text-xs">
                   3
                 </span>
@@ -3012,7 +3019,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                       size={18}
                     />
                   ) : (
-                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full sui-bg-positive sui-color-active">
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full sui-bg-status-positive sui-color-inverted">
                       <Check size={14} />
                     </span>
                   )}

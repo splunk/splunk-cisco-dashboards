@@ -206,13 +206,13 @@ export const KPIBrowser: React.FC<KPIBrowserProps> = ({
                                     className={cn(
                                         'rounded-xl border p-4 transition',
                                         binding
-                                            ? 'sui-border-info sui-bg-info'
+                                            ? 'sui-border-notification-info sui-bg-notification-info'
                                             : 'sui-border-weak sui-hover-border-info'
                                     )}
                                 >
                                     {binding && (
                                         <div className="mb-3 flex items-center justify-between gap-3">
-                                            <span className="rounded-full border   px-3 py-1 text-xs font-black uppercase tracking-wide  sui-border-positive sui-bg-positive sui-color-positive">
+                                            <span className="rounded-full border px-3 py-1 text-xs font-black uppercase tracking-wide sui-border-notification-positive sui-bg-notification-positive sui-color-active">
                                                 Bound: {KPI_SECTION_TITLES[binding.sectionId]}
                                             </span>
                                             <button

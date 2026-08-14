@@ -10,6 +10,8 @@ import Button from '@splunk/react-ui/Button';
 import Checkbox from '@splunk/react-ui/Checkbox';
 import CollapsiblePanel from '@splunk/react-ui/CollapsiblePanel';
 import ControlGroup from '@splunk/react-ui/ControlGroup';
+import Link from '@splunk/react-ui/Link';
+import Message from '@splunk/react-ui/Message';
 import Multiselect from '@splunk/react-ui/Multiselect';
 import SearchInput from '@splunk/react-ui/Search';
 import Select from '@splunk/react-ui/Select';
@@ -140,6 +142,10 @@ const StyledSearch = styled(SearchInput)`
     && input[role='searchbox'] {
         background-color: ${variables.transparent};
     }
+`;
+
+const CanvasFeedbackMessage = styled(Message)`
+    height: 100%;
 `;
 
 const catalogueAppLabel = (
@@ -993,23 +999,25 @@ const MissingSearchbaseTile: React.FC<{
     onRemove: (tileId: string) => void;
     presentationMode?: boolean;
 }> = ({ tile, onRemove, presentationMode = false }) => (
-    <div className="rounded-md border   p-3 text-sm  sui-border-negative sui-bg-negative sui-color-negative">
-        <div className="flex items-center gap-2 font-bold">
-            <AlertCircle className="h-4 w-4" />
-            Missing searchbase entry
-        </div>
+    <CanvasFeedbackMessage
+        appearance="fill"
+        aria-atomic="true"
+        role="alert"
+        type="error"
+    >
+        <Message.Title>Missing searchbase entry</Message.Title>
         <div className="mt-1 font-mono text-xs">{tile.searchName}</div>
         {!presentationMode && (
-            <button
-                type="button"
-                onClick={() => onRemove(tile.id)}
-                className="mt-3 inline-flex items-center gap-1 rounded border   px-2 py-1 text-xs font-semibold  sui-hover-bg-negative sui-border-negative sui-bg-negative sui-color-negative"
-            >
-                <Trash2 className="h-3.5 w-3.5" />
-                Remove
-            </button>
+            <div className="mt-3">
+                <Button
+                    appearance="destructive"
+                    icon={<Trash2 className="h-3.5 w-3.5" />}
+                    label="Remove"
+                    onClick={() => onRemove(tile.id)}
+                />
+            </div>
         )}
-    </div>
+    </CanvasFeedbackMessage>
 );
 
 type ResolvedSearchbaseCanvasTileProps = Omit<
@@ -1131,11 +1139,11 @@ const SearchbaseNoDataPanel: React.FC<{
     record: SearchbaseRecord;
     description: string;
     noDataReason?: NoDataReason;
+    range: TimeRange;
     rangeLabel?: string;
     failureMessage?: string;
     failureHttpStatus?: number;
     onConfigure: () => void;
-    onOpenSearch: () => void;
     onOpenDrilldown?: () => void;
     drilldownTitle?: string;
     presentationMode?: boolean;
@@ -1143,11 +1151,11 @@ const SearchbaseNoDataPanel: React.FC<{
     record,
     description,
     noDataReason,
+    range,
     rangeLabel,
     failureMessage,
     failureHttpStatus,
     onConfigure,
-    onOpenSearch,
     onOpenDrilldown,
     drilldownTitle,
     presentationMode = false,
@@ -1162,84 +1170,61 @@ const SearchbaseNoDataPanel: React.FC<{
         noDataReason === 'error' ||
         noDataReason === 'dispatch_failed' ||
         noDataReason === 'job_failed';
+    const searchUrl = splunkSearchAppUrl(
+        record.search,
+        range,
+        record.dispatchContext
+    );
 
     return (
-        <div
-            className={cn(
-                'flex h-full min-h-[220px] flex-col rounded-md border border-dashed p-4',
-                isError
-                    ? 'sui-border-negative sui-bg-negative sui-color-negative'
-                    : 'sui-border-info sui-bg-popup sui-color-active'
-            )}
+        <CanvasFeedbackMessage
+            appearance="fill"
+            aria-atomic="true"
+            role={isError ? 'alert' : 'status'}
+            type={isError ? 'error' : 'info'}
         >
-            <div className="flex items-start gap-3">
-                <div
-                    className={cn(
-                        'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md',
-                        isError
-                            ? 'sui-bg-negative sui-color-negative'
-                            : 'sui-bg-section  shadow-sm sui-bg-page sui-color-info'
-                    )}
-                >
-                    <AlertCircle className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                    <div className="text-sm font-black uppercase tracking-wide">
-                        {copy.title}
+            <div className="flex h-full min-h-[188px] flex-col">
+                <Message.Title>{copy.title}</Message.Title>
+                <p className="mt-1 text-xs leading-snug sui-color-default">
+                    {copy.detail}
+                </p>
+
+                <div className="mt-4 min-w-0">
+                    <div className="truncate text-xs font-black uppercase tracking-wide sui-color-default">
+                        {record.searchName}
                     </div>
-                    <p
-                        className={cn(
-                            'mt-1 text-xs leading-snug',
-                            isError
-                                ? 'sui-color-negative'
-                                : 'sui-color-default sui-color-active'
-                        )}
-                    >
-                        {copy.detail}
+                    <p className="mt-1 line-clamp-3 text-xs leading-snug sui-color-default">
+                        {description || record.id}
                     </p>
                 </div>
-            </div>
 
-            <div className="mt-4 min-w-0">
-                <div className="truncate text-xs font-black uppercase tracking-wide  sui-color-default">
-                    {record.searchName}
+                <div className="mt-auto flex flex-wrap gap-2 pt-4">
+                    <Link
+                        appearance="standalone"
+                        openInNewContext
+                        to={searchUrl}
+                    >
+                        Open in Search
+                    </Link>
+                    {onOpenDrilldown && (
+                        <Button
+                            appearance="secondary"
+                            icon={<Table2 className="h-3.5 w-3.5" />}
+                            label={drilldownTitle ?? 'View detail'}
+                            onClick={() => onOpenDrilldown()}
+                        />
+                    )}
+                    {!presentationMode && (
+                        <Button
+                            appearance="secondary"
+                            icon={<Settings2 className="h-3.5 w-3.5" />}
+                            label="Replace"
+                            onClick={() => onConfigure()}
+                        />
+                    )}
                 </div>
-                <p className="mt-1 line-clamp-3 text-xs leading-snug  sui-color-active">
-                    {description || record.id}
-                </p>
             </div>
-
-            <div className="mt-auto flex flex-wrap gap-2 pt-4">
-                <button
-                    type="button"
-                    onClick={onOpenSearch}
-                    className="inline-flex items-center gap-1 rounded-md  px-2.5 py-1.5 text-xs font-black  transition  focus:outline-none focus:ring-2 sui-focus-ring sui-bg-section sui-color-active sui-hover-bg-info"
-                >
-                    <Search className="h-3.5 w-3.5" />
-                    Open in Search
-                </button>
-                {onOpenDrilldown && (
-                    <button
-                        type="button"
-                        onClick={onOpenDrilldown}
-                        className="inline-flex items-center gap-1 rounded-md border   px-2.5 py-1.5 text-xs font-black  transition sui-hover-border-info  focus:outline-none focus:ring-2 sui-focus-ring sui-border-info sui-bg-page sui-color-info sui-hover-bg-info"
-                    >
-                        <Table2 className="h-3.5 w-3.5" />
-                        {drilldownTitle ?? 'View detail'}
-                    </button>
-                )}
-                {!presentationMode && (
-                    <button
-                        type="button"
-                        onClick={onConfigure}
-                        className="inline-flex items-center gap-1 rounded-md border   px-2.5 py-1.5 text-xs font-black  transition   focus:outline-none focus:ring-2 sui-focus-ring sui-border-default sui-bg-page sui-color-active sui-hover-border-info sui-hover-color-info"
-                    >
-                        <Settings2 className="h-3.5 w-3.5" />
-                        Replace
-                    </button>
-                )}
-            </div>
-        </div>
+        </CanvasFeedbackMessage>
     );
 };
 
@@ -1414,11 +1399,11 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
                 record={record}
                 description={description}
                 noDataReason={metric.noDataReason}
+                range={range}
                 rangeLabel={metric.rangeLabel}
                 failureMessage={metric.failureMessage}
                 failureHttpStatus={metric.failureHttpStatus}
                 onConfigure={onConfigure}
-                onOpenSearch={onOpenSearch}
                 onOpenDrilldown={onOpenDrilldown}
                 drilldownTitle={drilldownTitle}
                 presentationMode={presentationMode}
@@ -1615,11 +1600,11 @@ const SearchbaseTableTileBody: React.FC<
                 record={record}
                 description={description}
                 noDataReason={table.noDataReason}
+                range={range}
                 rangeLabel={table.rangeLabel}
                 failureMessage={table.failureMessage}
                 failureHttpStatus={table.failureHttpStatus}
                 onConfigure={onConfigure}
-                onOpenSearch={onOpenSearch}
                 onOpenDrilldown={onOpenDrilldown}
                 drilldownTitle={drilldownTitle}
                 presentationMode={presentationMode}
@@ -1987,12 +1972,12 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
                         {formatVizLabel(viz)}
                     </span>
                     {tile.vizOverride && (
-                        <span className="rounded  px-2 py-1 text-xs font-black uppercase  sui-bg-info sui-color-info">
+                        <span className="rounded px-2 py-1 text-xs font-black uppercase sui-bg-notification-info sui-color-active">
                             Override
                         </span>
                     )}
                     {record.drilldownSearchName && (
-                        <span className="rounded  px-2 py-1 text-xs font-black uppercase  sui-bg-info sui-color-info">
+                        <span className="rounded px-2 py-1 text-xs font-black uppercase sui-bg-notification-info sui-color-active">
                             Drilldown
                         </span>
                     )}
@@ -3297,7 +3282,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     return (
         <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[560px] flex-col border-l   shadow-2xl sui-border-weak sui-bg-page">
             <div className="flex items-center gap-3 border-b  px-5 py-4 sui-border-weak">
-                <div className="flex h-10 w-10 items-center justify-center rounded-md   sui-bg-info sui-color-info">
+                <div className="flex h-10 w-10 items-center justify-center rounded-md sui-bg-notification-info sui-color-active">
                     <SlidersHorizontal className="h-5 w-5" />
                 </div>
                 <div className="min-w-0">
@@ -3504,7 +3489,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
 
             <div className="flex flex-wrap items-center gap-2 border-b  px-4 py-3 text-xs  sui-border-weak sui-color-default">
                 <span
-                    className="inline-flex items-center rounded-full border   px-2.5 py-1 font-black uppercase tracking-wider  sui-border-info sui-bg-info sui-color-info"
+                    className="inline-flex items-center rounded-full border px-2.5 py-1 font-black uppercase tracking-wider sui-border-notification-info sui-bg-notification-info sui-color-active"
                     title={`${browserRecords.length.toLocaleString()} searches are in the current app and visibility scope before category, tag, viz, and text filters`}
                 >
                     {availableSearchLabel}
@@ -4983,7 +4968,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     className={cn(
                                         'inline-flex h-6 items-center rounded-md border px-2 text-xs font-bold',
                                         runningTileIds.size > 0
-                                            ? 'sui-border-info sui-bg-info sui-color-info'
+                                            ? 'sui-border-notification-info sui-bg-notification-info sui-color-active'
                                             : 'sui-border-weak sui-bg-section sui-color-default'
                                     )}
                                     title="Tiles with an active result view"
@@ -4996,7 +4981,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     className={cn(
                                         'inline-flex h-6 items-center rounded-md border px-2 text-xs font-bold transition focus:outline-none focus:ring-2 sui-focus-ring',
                                         observedNoDataRows.length > 0
-                                            ? 'sui-border-warning   sui-hover-border-warning  sui-border-warning sui-bg-warning sui-color-warning sui-hover-bg-warning'
+                                            ? 'sui-border-notification-warning sui-hover-border-warning sui-bg-notification-warning sui-color-active sui-hover-bg-notification-warning'
                                             : 'sui-border-weak   sui-hover-border-default  sui-border-weak sui-bg-section sui-color-default sui-hover-bg-overlay'
                                     )}
                                     title="Open needs attention report"
@@ -5023,33 +5008,30 @@ const SearchbaseCanvasPage: React.FC = () => {
                                   (canvasDirty ? 'Unsaved changes' : '')}
                         </span>
                         <div className="flex flex-wrap items-center justify-end gap-2">
-                            <button
-                                type="button"
-                                onClick={saveCurrentCanvas}
+                            <Button
+                                appearance="secondary"
                                 disabled={savingCanvas || tiles.length === 0}
-                                title="Save canvas"
-                                className="inline-flex h-10 items-center gap-1.5 rounded-md sui-bg-positive px-3 text-sm font-black sui-color-active transition sui-hover-bg-positive disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 sui-focus-ring"
-                            >
-                                <Save className="h-3.5 w-3.5" />
-                                Save
-                            </button>
-                            <button
-                                type="button"
+                                icon={<Save className="h-3.5 w-3.5" />}
+                                label="Save"
+                                onClick={saveCurrentCanvas}
+                            />
+                            <Button
+                                appearance="primary"
+                                disabled={autoAdvanceActive}
+                                icon={<Plus className="h-4 w-4" />}
+                                label="Add"
                                 onClick={() => {
                                     setReplaceTileId(null);
                                     setBrowserOpen(true);
                                 }}
-                                disabled={autoAdvanceActive}
-                                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-md sui-bg-accent px-4 text-sm font-black sui-color-active transition sui-hover-bg-accent disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 sui-focus-ring"
-                            >
-                                <Plus className="h-4 w-4" />
-                                Add
-                            </button>
-                            <button
-                                type="button"
+                            />
+                            <Button
+                                appearance="secondary"
                                 disabled={
                                     autoAdvanceActive || idleVisibleTileCount === 0
                                 }
+                                icon={<Play className="h-3.5 w-3.5" />}
+                                label="Run"
                                 onClick={() => {
                                     canvasDebug('[canvas/run-visible] click', {
                                         idleVisibleTileCount,
@@ -5058,11 +5040,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     runVisibleTiles();
                                 }}
                                 title={runVisibleTitle}
-                                className="inline-flex h-10 items-center gap-1.5 rounded-md border   px-3 text-sm font-black  transition sui-hover-border-positive  disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 sui-focus-ring sui-border-positive sui-bg-positive sui-color-positive sui-hover-bg-positive"
-                            >
-                                <Play className="h-3.5 w-3.5" />
-                                Run
-                            </button>
+                            />
                             <button
                                 type="button"
                                 role="switch"
@@ -5100,19 +5078,17 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     {autoAdvanceProgressLabel}
                                 </span>
                             </button>
-                            <button
-                                type="button"
+                            <Button
+                                appearance="destructiveSecondary"
                                 disabled={
                                     runningTileIds.size === 0 &&
                                     !autoAdvanceActive
                                 }
+                                icon={<Square className="h-3.5 w-3.5" />}
+                                label="Stop"
                                 onClick={stopAllTiles}
                                 title="Stop all running tiles"
-                                className="inline-flex h-10 items-center gap-1.5 rounded-md border   px-3 text-sm font-black  transition sui-hover-border-negative  disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 sui-focus-ring sui-border-negative sui-bg-negative sui-color-negative sui-hover-bg-negative"
-                            >
-                                <Square className="h-3.5 w-3.5" />
-                                Stop
-                            </button>
+                            />
                             <button
                                 type="button"
                                 onClick={enterPresentationMode}
@@ -5319,7 +5295,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                             'inline-flex min-w-0 items-center gap-1.5 rounded px-2.5 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-55 focus:outline-none focus:ring-2 sui-focus-ring sm:px-3',
                                             selected
                                                 ? option.value === 'failed'
-                                                    ? 'sui-bg-negative  shadow-sm sui-bg-negative sui-color-active'
+                                                    ? 'sui-bg-notification-negative shadow-sm sui-color-active'
                                                     : 'sui-bg-section  shadow-sm sui-bg-section sui-color-active'
                                                 : option.value === 'failed'
                                                 ? 'sui-color-negative sui-hover-bg-negative sui-hover-color-negative'
@@ -5421,7 +5397,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                     {tiles.length === 0 ? (
                         <div className="flex min-h-[calc(100vh-280px)] items-center justify-center rounded-md border border-dashed   shadow-sm sui-border-weak sui-bg-transparent">
                             <div className="mx-auto max-w-sm px-6 text-center">
-                                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-md   ring-1 sui-focus-ring sui-bg-info sui-color-info sui-focus-ring">
+                                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-md ring-1 sui-bg-notification-info sui-color-active sui-focus-ring">
                                     <Plus className="h-7 w-7" />
                                 </div>
                                 <h2 className="mt-4 text-2xl font-black  sui-color-active">

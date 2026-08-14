@@ -99,31 +99,31 @@ const accentClasses = (
         case 'sky-500':
             return {
                 border: 'sui-border-info',
-                tint: 'sui-bg-info',
+                tint: 'sui-bg-notification-info',
                 pill: 'sui-bg-accent  sui-color-info',
             };
         case 'emerald-500':
             return {
                 border: 'sui-border-positive',
-                tint: 'sui-bg-positive',
-                pill: 'sui-bg-positive  sui-color-positive',
+                tint: 'sui-bg-notification-positive',
+                pill: 'sui-bg-notification-positive sui-color-active',
             };
         case 'amber-500':
             return {
                 border: 'sui-border-warning',
-                tint: 'sui-bg-warning',
-                pill: 'sui-bg-warning  sui-color-warning',
+                tint: 'sui-bg-notification-warning',
+                pill: 'sui-bg-notification-warning sui-color-active',
             };
         case 'rose-500':
             return {
                 border: 'sui-border-negative',
-                tint: 'sui-bg-negative',
-                pill: 'sui-bg-negative  sui-color-negative',
+                tint: 'sui-bg-notification-negative',
+                pill: 'sui-bg-notification-negative sui-color-active',
             };
         case 'violet-500':
             return {
                 border: 'sui-border-info',
-                tint: 'sui-bg-info',
+                tint: 'sui-bg-notification-info',
                 pill: 'sui-bg-accent  sui-color-info',
             };
         case 'slate-500':
@@ -131,7 +131,7 @@ const accentClasses = (
             return {
                 border: 'sui-border-default',
                 tint: 'sui-bg-page sui-bg-section',
-                pill: 'sui-bg-floating  sui-color-default',
+                pill: 'sui-bg-section sui-color-default',
             };
     }
 };
@@ -158,7 +158,7 @@ export const RegionGroupNode: React.FC<{
                 // separate highlight overlay and survives the
                 // dark-mode swap.
                 isHovered &&
-                    'border-solid sui-important-border-info ring-2 sui-focus-ring sui-bg-info shadow-lg sui-shadow-overlay'
+                    'border-solid sui-important-border-info ring-2 sui-focus-ring sui-bg-notification-info shadow-lg sui-shadow-overlay'
             )}
             style={{ width: '100%', height: '100%' }}
         >

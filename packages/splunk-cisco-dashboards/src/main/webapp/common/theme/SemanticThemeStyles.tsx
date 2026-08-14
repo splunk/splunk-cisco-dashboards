@@ -106,6 +106,7 @@ const stateStyles = css`
   [class*="group/"]:hover .sui-group-hover-color-negative {
     color: ${variables.contentColorNegative};
   }
+
 `;
 
 const backgroundStyles = css`
@@ -158,6 +159,47 @@ const backgroundStyles = css`
   }
   .sui-bg-negative {
     background-color: ${variables.statusColorCriticalWeak};
+  }
+
+  /*
+   * Semantic fills have two deliberately separate roles. Notification
+   * surfaces hold text and therefore use the subdued SUI notification
+   * palette. Status fills are reserved for compact signals such as dots,
+   * markers, and progress values where a solid color is required.
+   */
+  .sui-bg-notification-info,
+  .sui-hover-bg-notification-info:hover {
+    background-color: ${variables.notificationColorInfoWeak};
+  }
+  .sui-bg-notification-positive,
+  .sui-hover-bg-notification-positive:hover {
+    background-color: ${variables.notificationColorPositiveWeak};
+  }
+  .sui-bg-notification-warning,
+  .sui-hover-bg-notification-warning:hover {
+    background-color: ${variables.notificationColorCautionWeak};
+  }
+  .sui-bg-notification-negative,
+  .sui-hover-bg-notification-negative:hover {
+    background-color: ${variables.notificationColorNegativeWeak};
+  }
+  .sui-bg-status-info {
+    background-color: ${variables.severityColorInfo};
+  }
+  .sui-bg-status-positive {
+    background-color: ${variables.severityColorNormal};
+  }
+  .sui-bg-status-warning {
+    background-color: ${variables.severityColorWarning};
+  }
+  .sui-bg-status-negative {
+    background-color: ${variables.severityColorCritical};
+  }
+  .sui-bg-status-unknown {
+    background-color: ${variables.severityColorUnknown};
+  }
+  .sui-bg-progress-track {
+    background-color: ${variables.neutral100};
   }
   .sui-bg-accent {
     background-color: ${variables.interactiveColorAccent};
@@ -239,6 +281,18 @@ const borderStyles = css`
   }
   .sui-border-negative {
     border-color: ${variables.statusColorCritical};
+  }
+  .sui-border-notification-info {
+    border-color: ${variables.notificationColorInfoStrong};
+  }
+  .sui-border-notification-positive {
+    border-color: ${variables.notificationColorPositiveStrong};
+  }
+  .sui-border-notification-warning {
+    border-color: ${variables.notificationColorCautionStrong};
+  }
+  .sui-border-notification-negative {
+    border-color: ${variables.notificationColorNegativeStrong};
   }
   .sui-border-transparent {
     border-color: transparent;
@@ -452,7 +506,7 @@ const GlobalSemanticThemeStyles = createGlobalStyle`
         padding-inline: ${variables.spacingLarge};
     }
 
-    // have to patch these for now as Heading styles are colliding with all the other stuff pre-SUI
+    /* Temporary compatibility for Heading styles colliding with pre-SUI CSS. */
     body.scd-overview-active #scan-root [data-sui-heading-variant="title1"] {
         ${headingTypography("title1")}
     }

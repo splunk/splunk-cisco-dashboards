@@ -139,7 +139,7 @@ function Section({
     >
       <div className="border-b sui-border-weak px-5 py-4">
         <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border sui-border-info sui-bg-info sui-color-info">
+          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border sui-border-notification-info sui-bg-notification-info sui-color-active">
             {icon}
           </div>
           <div className="min-w-0">
@@ -1431,7 +1431,7 @@ iseval = 0`}</CodeBlock>
                   investigation.
                 </InfoCard>
               </div>
-              <div className="mt-4 border sui-border-warning sui-bg-warning p-4 text-sm leading-6 sui-color-warning">
+              <div className="mt-4 border sui-border-notification-warning sui-bg-notification-warning p-4 text-sm leading-6 sui-color-active">
                 <strong>When no test is available:</strong> create an
                 agent-to-agent test between the two enterprise agents in
                 ThousandEyes, allow metric events to arrive in Splunk, then

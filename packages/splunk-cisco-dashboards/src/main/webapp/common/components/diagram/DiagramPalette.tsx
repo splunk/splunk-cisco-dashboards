@@ -58,7 +58,7 @@ export const DiagramPalette: React.FC<{ className?: string }> = ({ className }) 
                             className={cn(
                                 'flex-1 flex items-center justify-center gap-1.5 px-2 py-2 text-xs font-medium border-b-2 transition-colors',
                                 isActive
-                                    ? 'sui-border-info  sui-color-info  sui-bg-info'
+                                    ? 'sui-border-notification-info sui-color-active sui-bg-notification-info'
                                     : 'sui-border-transparent  sui-color-default  sui-hover-color-active'
                             )}
                             type="button"

@@ -125,7 +125,7 @@ export const ExpandedKPIModal: React.FC<ExpandedKPIModalProps> = ({
                             <p className="mt-2 text-4xl font-black tracking-tight">
                                 {kpi.progress}%
                             </p>
-                            <div className="mt-3 h-2 overflow-hidden rounded-full  sui-bg-floating">
+                            <div className="mt-3 h-2 overflow-hidden rounded-full sui-bg-progress-track">
                                 <div
                                     className={cn('h-full rounded-full', tone.progress)}
                                     style={{ width: `${kpi.progress}%` }}
@@ -134,7 +134,7 @@ export const ExpandedKPIModal: React.FC<ExpandedKPIModalProps> = ({
                         </div>
                     </div>
 
-                    <div className="mt-6 rounded-xl border   p-5  sui-border-info sui-bg-info sui-color-info">
+                    <div className="mt-6 rounded-xl border p-5 sui-border-notification-info sui-bg-notification-info sui-color-active">
                         <p className="text-sm font-black">Description</p>
                         <p className="mt-2 text-sm leading-6">{kpi.description}</p>
                     </div>
@@ -153,11 +153,11 @@ export const ExpandedKPIModal: React.FC<ExpandedKPIModalProps> = ({
                                         className={cn(
                                             'rounded-full border px-3 py-1 text-xs font-semibold',
                                             threshold.label === 'Healthy' &&
-                                                'sui-border-positive sui-bg-positive sui-color-positive',
+                                                'sui-border-notification-positive sui-bg-notification-positive sui-color-active',
                                             threshold.label === 'Warning' &&
-                                                'sui-border-warning sui-bg-warning sui-color-warning',
+                                                'sui-border-notification-warning sui-bg-notification-warning sui-color-active',
                                             threshold.label === 'Critical' &&
-                                                'sui-border-negative sui-bg-negative sui-color-negative'
+                                                'sui-border-notification-negative sui-bg-notification-negative sui-color-active'
                                         )}
                                     >
                                         {threshold.label}

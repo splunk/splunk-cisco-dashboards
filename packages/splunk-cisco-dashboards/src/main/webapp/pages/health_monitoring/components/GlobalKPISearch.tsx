@@ -48,7 +48,7 @@ export const GlobalKPISearch: React.FC<GlobalKPISearchProps> = ({
             <button
                 type="button"
                 onClick={onOpenLibrary}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md border   px-2 py-1 text-xs font-black uppercase tracking-wider  transition sui-hover-color-info sui-border-default sui-bg-floating sui-color-default"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md border px-2 py-1 text-xs font-black uppercase tracking-wider transition sui-hover-color-info sui-border-default sui-bg-section sui-color-default"
                 title="Open KPI library"
             >
                 Cmd K

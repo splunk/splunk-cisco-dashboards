@@ -18,11 +18,22 @@
   longer introduces a bright blue fill, and the redundant visible
   status-overview strip is hidden while its accessible live status remains
   available to assistive technology.
+- Insights Workspace now offers a private light or dark appearance choice from
+  Dashboard actions without changing Splunk's global theme. Its SpotLight
+  canvas, semantic charts, glass Signal Rail, and topology map follow the
+  selected appearance. Exception KPIs lead over healthy signals, section
+  controls progressively disclose on hover or keyboard focus, and narrower
+  headers retain map-layout and refresh controls in the actions menu.
 - Searchbase explanations, section-count badges, inline code, and user-guide
   navigation now use the shared Splunk UI semantic palette and larger readable
   text in both dark and light themes. The user guide also documents the optional
   CIM workflow, uses real fragment links, and restores keyboard focus after
   in-page navigation.
+- React dashboards now share the Insights Workspace's restrained C3 surface
+  treatment for notifications, status signals, progress tracks, and controls.
+  Searchbase no-data and search-error tiles use native Splunk UI messages and
+  actions instead of saturated full-card fills, while compact severity markers
+  retain clear semantic color without reducing text contrast.
 - The legacy Macro Index Tuning redirect no longer appears as a separate
   dashboard; existing links still open the integrated Setup tuning step.
   NetOps Studio tiles now keep their content inside panel bounds, the readiness

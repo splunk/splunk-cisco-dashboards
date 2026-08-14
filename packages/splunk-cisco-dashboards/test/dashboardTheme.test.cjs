@@ -11,28 +11,128 @@ const provider = source("common/theme/AppThemeProvider.tsx");
 const semanticStyles = source("common/theme/SemanticThemeStyles.tsx");
 const render = source("common/render.jsx");
 const rawRender = source("common/render-raw.tsx");
+const insightsRender = source("pages/executive_insights/render.tsx");
 const editor = source("pages/dashboardbuilder/DashboardStudioEditor.jsx");
 const dashboardBuilderEntry = source("pages/dashboardbuilder/index.jsx");
 
+const collectSourceFiles = (relativeRoot) => {
+  const absoluteRoot = path.resolve(__dirname, "../src/main/webapp", relativeRoot);
+  return fs.readdirSync(absoluteRoot, { withFileTypes: true }).flatMap((entry) => {
+    const relativePath = path.join(relativeRoot, entry.name);
+    if (entry.isDirectory()) return collectSourceFiles(relativePath);
+    return /\.(?:ts|tsx)$/.test(entry.name) ? [relativePath] : [];
+  });
+};
+
 assert.match(provider, /<SplunkThemeProvider[\s\S]*?family="prisma"/);
-assert.match(provider, /colorScheme="dark"/);
+assert.match(provider, /colorScheme=\{colorScheme\}/);
 assert.match(provider, /density="comfortable"/);
 assert.match(provider, /unstable_splunk1cdThemeCustomizer/);
 assert.match(provider, /<SemanticThemeStyles \/>/);
-assert.doesNotMatch(provider, /localStorage|storage|useState|useEffect|getUserTheme/);
+assert.match(
+  provider,
+  /allowColorSchemeChoice = false[\s\S]*?readStoredColorScheme[\s\S]*?: 'dark'/,
+  "Custom pages must remain dark unless they explicitly opt into a color-scheme choice",
+);
+assert.match(
+  provider,
+  /INSIGHTS_WORKSPACE_COLOR_SCHEME_STORAGE_KEY[\s\S]*?insights-workspace-color-scheme/,
+  "Insights Workspace theme choice must use a private storage key",
+);
+assert.match(
+  provider,
+  /if \(!allowColorSchemeChoice\) return;[\s\S]*?localStorage\.setItem\(colorSchemeStorageKey, next\)/,
+  "Theme persistence must be gated behind the page-level opt-in",
+);
+assert.doesNotMatch(provider, /getUserTheme|syncSplunkShellTheme/);
 
 assert.match(render, /theme: 'dark'/);
 assert.match(render, /themeFamily: 'prisma'/);
 assert.match(render, /themeDensity: 'comfortable'/);
 assert.match(render, /<AppThemeProvider>/);
-assert.match(rawRender, /<AppThemeProvider>/);
-assert.doesNotMatch(rawRender, /fixedColorScheme/);
+assert.match(
+  rawRender,
+  /allowColorSchemeChoice\?: boolean;[\s\S]*?<AppThemeProvider allowColorSchemeChoice=\{options\.allowColorSchemeChoice\}>/,
+);
+assert.match(
+  insightsRender,
+  /showCopyrightMark: false,[\s\S]*?allowColorSchemeChoice: true/,
+  "Insights Workspace must explicitly opt into its private light/dark choice",
+);
 
 assert.match(semanticStyles, /variables\.backgroundColorPage/);
 assert.match(semanticStyles, /variables\.contentColorDefault/);
 assert.match(semanticStyles, /variables\.borderColorWeak/);
 assert.match(semanticStyles, /variables\.focusShadow/);
+assert.match(
+  semanticStyles,
+  /\.sui-bg-notification-info[\s\S]*?variables\.notificationColorInfoWeak/,
+);
+assert.match(
+  semanticStyles,
+  /\.sui-bg-notification-positive[\s\S]*?variables\.notificationColorPositiveWeak/,
+);
+assert.match(
+  semanticStyles,
+  /\.sui-bg-notification-warning[\s\S]*?variables\.notificationColorCautionWeak/,
+);
+assert.match(
+  semanticStyles,
+  /\.sui-bg-notification-negative[\s\S]*?variables\.notificationColorNegativeWeak/,
+);
+assert.match(
+  semanticStyles,
+  /\.sui-border-notification-info[\s\S]*?variables\.notificationColorInfoStrong/,
+);
+assert.match(
+  semanticStyles,
+  /\.sui-border-notification-negative[\s\S]*?variables\.notificationColorNegativeStrong/,
+);
+assert.match(
+  semanticStyles,
+  /\.sui-bg-status-info[\s\S]*?variables\.severityColorInfo/,
+);
+assert.match(
+  semanticStyles,
+  /\.sui-bg-status-positive[\s\S]*?variables\.severityColorNormal/,
+);
+assert.match(
+  semanticStyles,
+  /\.sui-bg-status-warning[\s\S]*?variables\.severityColorWarning/,
+);
+assert.match(
+  semanticStyles,
+  /\.sui-bg-status-negative[\s\S]*?variables\.severityColorCritical/,
+);
+assert.match(
+  semanticStyles,
+  /\.sui-bg-status-unknown[\s\S]*?variables\.severityColorUnknown/,
+);
+assert.match(
+  semanticStyles,
+  /\.sui-bg-progress-track[\s\S]*?variables\.neutral100/,
+);
 assert.doesNotMatch(semanticStyles, /useSplunkTheme<Record|string-index|token\(/);
+
+const migratedSemanticRoots = [
+  "pages/searchbase_canvas",
+  "pages/health_monitoring",
+  "pages/m365_activity_monitoring",
+  "pages/macro_index_tuning",
+  "pages/network_diagram",
+  "pages/secure_operations_glass",
+  "pages/topology_canvas_v1",
+  "pages/user_guide",
+  "common/components/diagram",
+  "common/components/topology",
+];
+for (const relativePath of migratedSemanticRoots.flatMap(collectSourceFiles)) {
+  assert.doesNotMatch(
+    source(relativePath),
+    /sui-bg-(?:info|positive|warning|negative|floating)(?![\w-])/,
+    `${relativePath} must use explicit notification, status, or neutral semantic background roles`,
+  );
+}
 
 assert.match(editor, /const dashboardColorScheme = 'dark'/);
 assert.match(editor, /const editorTheme = useSplunkTheme\(\)/);
@@ -64,4 +164,4 @@ for (const viewFile of fs.readdirSync(viewsPath).filter((name) => name.endsWith(
   assert.match(viewSource, /<dashboard\b[^>]*\btheme="dark"/);
 }
 
-console.log("✓ Fixed dark SUI theme regression test passed");
+console.log("✓ Theme-scoped SUI light/dark regression test passed");

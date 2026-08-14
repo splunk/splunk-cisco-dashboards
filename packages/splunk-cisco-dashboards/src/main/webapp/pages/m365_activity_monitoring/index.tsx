@@ -100,11 +100,11 @@ interface CustomTooltipProps {
 }
 
 const toneClasses: Record<MetricTone, string> = {
-    indigo: 'sui-border-info sui-bg-info',
-    teal: 'sui-border-info sui-bg-info',
-    rose: 'sui-border-negative sui-bg-negative',
-    amber: 'sui-border-warning sui-bg-warning',
-    violet: 'sui-border-info sui-bg-info',
+    indigo: 'sui-border-notification-info sui-bg-notification-info',
+    teal: 'sui-border-notification-info sui-bg-notification-info',
+    rose: 'sui-border-notification-negative sui-bg-notification-negative',
+    amber: 'sui-border-notification-warning sui-bg-notification-warning',
+    violet: 'sui-border-notification-info sui-bg-notification-info',
     slate: 'sui-border-weak sui-bg-section',
 };
 
@@ -286,7 +286,7 @@ const AppHeader: React.FC = () => (
         </div>
         <div className="flex items-center gap-4 sui-color-default">
             <div className="inline-flex items-center gap-2 text-sm font-semibold">
-                <span className="h-2 w-2 animate-pulse rounded-full sui-bg-positive sui-shadow-overlay" />
+                <span className="h-2 w-2 animate-pulse rounded-full sui-bg-status-positive sui-shadow-overlay" />
                 Live Data
             </div>
             <div className="h-6 w-px sui-bg-popup" />
