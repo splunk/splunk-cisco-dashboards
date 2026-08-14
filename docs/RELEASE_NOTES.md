@@ -62,6 +62,16 @@
   WAN or firewall handoff assurance. Missing Rx/Tx telemetry remains visible
   as an assurance finding, and candidate circuits require validation before
   assigning an internet-provider identity.
+- SD-WAN circuit monitoring now counts actual reporting TLOC circuits instead
+  of ordinary device interfaces and adds per-circuit availability, health,
+  latency, loss, peer-tunnel, sample-count, and last-seen detail derived from
+  the indexed tunnel-health feed.
+- A full Catalyst SD-WAN Monitor coverage audit adds real Manager event detail,
+  severity trends, top event types, current fleet power, energy-consumption
+  trends, per-site/device energy detail, access-action and ACL/SGACL detail,
+  plus decoded Stream traffic volume. The searches retain
+  `splunk-cisco-dashboards` as their dispatch context while identifying
+  `TA_cisco_catalyst` or `Splunk_TA_stream` as the onboarding origin.
 - Dashboard Manager now creates, clones, and generates dashboards in the
   authenticated Splunk user's private namespace instead of attempting an
   app-shared `nobody` write. Personal dashboards remain visible and editable

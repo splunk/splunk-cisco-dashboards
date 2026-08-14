@@ -110,7 +110,7 @@ SOURCE_CONTRACTS = {
     "it_critical_systems_site_link_availability_pct_trend": "`index_catalyst`",
     "monitoring_sdwan_tunnel_health_poor_trend": 'sourcetype="cisco:sdwan:tunnelhealth"',
     "monitoring_sdwan_site_state_summary": "Cisco_Catalyst_SDWAN_Site_Health_Events",
-    "monitoring_sdwan_circuit_state_summary": 'sourcetype="cisco:sdwan:linkhealth"',
+    "monitoring_sdwan_circuit_state_summary": 'sourcetype="cisco:sdwan:tunnelhealth"',
     "security_resilience_sdwan_utd_ips_trend_by_priority": 'sourcetype="cisco:sdwan:utd:logs"',
     "security_ai_defense_action_trend": 'sourcetype="cisco:ai:defense"',
     "security_multicloud_defense_action_breakdown_kpi": 'sourcetype="cisco:multicloud:defense:*"',
@@ -134,6 +134,39 @@ class SecureNetworkingOverviewContractsTest(unittest.TestCase):
         self.assertEqual(len(expected), 17)
         self.assertFalse(set(TIME_SERIES_CONTRACTS) & set(CATEGORICAL_CONTRACTS))
         self.assertFalse(expected - set(self.searches))
+
+    def test_sdwan_circuit_detail_uses_tloc_grain(self):
+        stanza = self.searches["monitoring_sdwan_circuit_availability_table"]
+        search = stanza["search"]
+        self.assertIn('sourcetype="cisco:sdwan:tunnelhealth"', search)
+        self.assertIn("by local_system_ip, local_color", search)
+        self.assertIn("dc(name) as peer_tunnels", search)
+        for field in (
+            "Circuit",
+            "Health",
+            "Availability (%)",
+            "Avg Loss (%)",
+            "Avg Latency (ms)",
+            "Peer Tunnels",
+            "Tunnel Samples",
+            "Last Seen",
+        ):
+            self.assertIn(field, search)
+
+    def test_sdwan_circuit_searches_preserve_dispatch_provenance(self):
+        for stanza_id in (
+            "monitoring_sdwan_circuit_state_summary",
+            "monitoring_sdwan_circuit_availability_table",
+        ):
+            with self.subTest(stanza=stanza_id):
+                fields = self.searches[stanza_id]
+                self.assertEqual(
+                    fields["dispatch_context"], "splunk-cisco-dashboards"
+                )
+                self.assertEqual(
+                    fields["dispatch_context_origin"], "TA_cisco_catalyst"
+                )
+                self.assertEqual(fields["dispatch_context_force"], "1")
 
     def test_time_series_overview_fields_exist_for_data_and_empty_results(self):
         for stanza_id, (value_field, spark_field) in TIME_SERIES_CONTRACTS.items():
