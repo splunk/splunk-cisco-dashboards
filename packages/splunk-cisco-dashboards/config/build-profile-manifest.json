@@ -179,8 +179,6 @@
       "cybervision_assets_count_by_center",
       "cybervision_assets_vulnerable_by_center",
       "cybervision_assets_high_risk_by_center",
-      "cybervision_assets_new_devices_by_type",
-      "cybervision_assets_inactive_trend",
       "cybervision_events_severity_trend",
       "cybervision_events_severity_distribution",
       "cybervision_events_type_distribution",
@@ -199,18 +197,7 @@
       "cybervision_sensors_inactive_by_center",
       "cybervision_sensors_state_distribution",
       "cybervision_sensors_location_detail",
-      "cybervision_sensors_inactive_detail",
-      "cybervision_vulnerabilities_distinct_total",
-      "cybervision_vulnerabilities_affected_devices_total",
-      "cybervision_vulnerabilities_top_cves",
-      "cybervision_vulnerabilities_top_devices",
-      "cybervision_vulnerabilities_severity_distribution",
-      "cybervision_vulnerabilities_detail",
-      "cybervision_vulnerabilities_high_critical_devices",
-      "cybervision_vulnerabilities_by_device_type",
-      "cybervision_vulnerabilities_by_vendor",
-      "cybervision_vulnerabilities_firmware_top_devices",
-      "cybervision_vulnerabilities_firmware_detail"
+      "cybervision_sensors_inactive_detail"
     ],
     "savedSearches": [
       "Executive Dashboard - Score Pipeline",
