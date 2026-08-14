@@ -13,6 +13,7 @@ const MAX_RETRIES = 100;
 interface MountPageRawOptions {
     showCopyrightMark?: boolean;
     allowColorSchemeChoice?: boolean;
+    colorSchemeStorageKey?: string;
 }
 
 export default function mountPageRaw(
@@ -37,7 +38,10 @@ export default function mountPageRaw(
         }
         reactRoot.render(
             <React.StrictMode>
-                <AppThemeProvider allowColorSchemeChoice={options.allowColorSchemeChoice}>
+                <AppThemeProvider
+                    allowColorSchemeChoice={options.allowColorSchemeChoice}
+                    colorSchemeStorageKey={options.colorSchemeStorageKey}
+                >
                     <>
                         <PageComponent />
                         {options.showCopyrightMark !== false && <CopyrightMark />}

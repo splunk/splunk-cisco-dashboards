@@ -12,6 +12,13 @@ const semanticStyles = source("common/theme/SemanticThemeStyles.tsx");
 const render = source("common/render.jsx");
 const rawRender = source("common/render-raw.tsx");
 const insightsRender = source("pages/executive_insights/render.tsx");
+const searchbaseRender = source("pages/searchbase_canvas/render.tsx");
+const searchbaseCanvas = source("pages/searchbase_canvas/index.tsx");
+const themeAwareSearch = source("common/components/ThemeAwareSearch.tsx");
+const diagramShapes = source("common/components/diagram/ShapesTab.tsx");
+const m365Dashboard = source("pages/m365_activity_monitoring/index.tsx");
+const m365Data = source("pages/m365_activity_monitoring/data.ts");
+const healthMetricCard = source("pages/health_monitoring/components/MetricCard.tsx");
 const editor = source("pages/dashboardbuilder/DashboardStudioEditor.jsx");
 const dashboardBuilderEntry = source("pages/dashboardbuilder/index.jsx");
 
@@ -52,13 +59,24 @@ assert.match(render, /themeDensity: 'comfortable'/);
 assert.match(render, /<AppThemeProvider>/);
 assert.match(
   rawRender,
-  /allowColorSchemeChoice\?: boolean;[\s\S]*?<AppThemeProvider allowColorSchemeChoice=\{options\.allowColorSchemeChoice\}>/,
+  /allowColorSchemeChoice\?: boolean;[\s\S]*?colorSchemeStorageKey\?: string;[\s\S]*?<AppThemeProvider[\s\S]*?allowColorSchemeChoice=\{options\.allowColorSchemeChoice\}[\s\S]*?colorSchemeStorageKey=\{options\.colorSchemeStorageKey\}/,
 );
 assert.match(
   insightsRender,
   /showCopyrightMark: false,[\s\S]*?allowColorSchemeChoice: true/,
   "Insights Workspace must explicitly opt into its private light/dark choice",
 );
+assert.match(
+  searchbaseRender,
+  /allowColorSchemeChoice: true,[\s\S]*?searchbase-canvas-color-scheme/,
+  "Searchbase Canvas must keep its color-scheme choice separate from the home dashboard",
+);
+assert.match(searchbaseCanvas, /<Drawer[\s\S]*?position="page"/);
+assert.doesNotMatch(searchbaseCanvas, /aria-label="Close catalogue"/);
+assert.match(themeAwareSearch, /styled\(Search\)[\s\S]*?input\[role='searchbox'\]/);
+assert.match(searchbaseCanvas, /<ThemeAwareSearch/);
+assert.match(diagramShapes, /<ThemeAwareSearch/);
+assert.doesNotMatch(diagramShapes, /sui-hover-bg-info/);
 
 assert.match(semanticStyles, /variables\.backgroundColorPage/);
 assert.match(semanticStyles, /variables\.contentColorDefault/);
@@ -134,6 +152,16 @@ for (const relativePath of migratedSemanticRoots.flatMap(collectSourceFiles)) {
   );
 }
 
+assert.doesNotMatch(
+  `${m365Dashboard}\n${m365Data}`,
+  /#[0-9a-fA-F]{3,8}/,
+  "M365 visualizations must use shared C3 colors and resolved SUI theme tokens",
+);
+assert.match(m365Dashboard, /useSplunkTheme/);
+assert.match(m365Data, /C3_VISUALIZATION_COLORS/);
+assert.doesNotMatch(healthMetricCard, /bg-(?:emerald|amber|red)-500/);
+assert.match(healthMetricCard, /C3_VISUALIZATION_COLORS\.critical/);
+
 assert.match(editor, /const dashboardColorScheme = 'dark'/);
 assert.match(editor, /const editorTheme = useSplunkTheme\(\)/);
 assert.doesNotMatch(editor, /SplunkThemeProvider/);
@@ -161,6 +189,10 @@ const viewsPath = path.resolve(
 for (const viewFile of fs.readdirSync(viewsPath).filter((name) => name.endsWith(".xml"))) {
   const viewSource = fs.readFileSync(path.join(viewsPath, viewFile), "utf8");
   if (!/<dashboard\b[^>]*\bversion="2"/.test(viewSource)) continue;
+  assert.match(viewSource, /<dashboard\b[^>]*\btheme="dark"/);
+}
+for (const viewFile of ["searchbase_canvas.xml", "network_diagram.xml"]) {
+  const viewSource = fs.readFileSync(path.join(viewsPath, viewFile), "utf8");
   assert.match(viewSource, /<dashboard\b[^>]*\btheme="dark"/);
 }
 

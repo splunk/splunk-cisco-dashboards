@@ -109,7 +109,6 @@
     margin: 4px 0 0;
 }
 
-#scan-root .scd-glass-menu-button,
 #scan-root .scd-glass-icon-button {
     align-items: center;
     background: transparent;
@@ -123,7 +122,6 @@
     padding: 0;
 }
 
-#scan-root .scd-glass-menu-button:hover,
 #scan-root .scd-glass-icon-button:hover {
     background: var(--glass-panel-strong);
     color: var(--glass-accent-strong);

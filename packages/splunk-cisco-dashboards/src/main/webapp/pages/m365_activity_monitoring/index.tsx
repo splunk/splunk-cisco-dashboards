@@ -1,4 +1,6 @@
 import React from 'react';
+import Button from '@splunk/react-ui/Button';
+import useSplunkTheme from '@splunk/themes/useSplunkTheme';
 import {
     Link,
     RouterProvider,
@@ -17,7 +19,6 @@ import {
     Globe2,
     Laptop,
     MoreVertical,
-    Search,
     Settings,
     Shield,
     ShieldAlert,
@@ -44,6 +45,8 @@ import {
     YAxis,
 } from 'recharts';
 import { cn } from '@/common/lib/utils';
+import ThemeAwareSearch from '@/common/components/ThemeAwareSearch';
+import { C3_VISUALIZATION_COLORS } from '@/common/theme/c3VisualizationPalette';
 import {
     authTrend,
     clientActivity,
@@ -223,14 +226,15 @@ const FilterBar: React.FC<FilterBarProps> = ({ filters }) => (
                 <ChevronDown className="h-4 w-4 sui-color-default" />
             </button>
         ))}
-        <label className="relative ml-auto min-w-[250px] flex-1 sm:max-w-xs">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 sui-color-muted" />
-            <input
-                aria-label="Search dashboard"
+        <div className="ml-auto min-w-[250px] flex-1 sm:max-w-xs">
+            <span id="m365-dashboard-search-label" className="sr-only">
+                Search dashboard
+            </span>
+            <ThemeAwareSearch
+                labelledBy="m365-dashboard-search-label"
                 placeholder="Search in dashboard..."
-                className="h-9 w-full rounded-md border sui-border-weak sui-bg-page py-0 pl-9 pr-3 text-sm  outline-none transition sui-color-muted sui-focus-border-info focus:ring-2 sui-focus-ring"
             />
-        </label>
+        </div>
     </Panel>
 );
 
@@ -253,7 +257,10 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
                         <span className="flex items-center gap-2 sui-color-default">
                             <span
                                 className="h-2 w-2 rounded-full"
-                                style={{ backgroundColor: item.color ?? '#6366f1' }}
+                                style={{
+                                    backgroundColor:
+                                        item.color ?? C3_VISUALIZATION_COLORS.info,
+                                }}
                             />
                             {formatTooltipName(item.name ?? item.dataKey)}
                         </span>
@@ -290,14 +297,19 @@ const AppHeader: React.FC = () => (
                 Live Data
             </div>
             <div className="h-6 w-px sui-bg-popup" />
-            {[Download, Share2, Settings, MoreVertical].map((Icon, index) => (
-                <button
-                    key={index}
-                    type="button"
-                    className="flex h-8 w-8 items-center justify-center rounded-md sui-color-default transition sui-hover-bg-overlay sui-hover-color-info"
-                >
-                    <Icon className="h-4 w-4" />
-                </button>
+            {[
+                { Icon: Download, label: 'Download dashboard' },
+                { Icon: Share2, label: 'Share dashboard' },
+                { Icon: Settings, label: 'Dashboard settings' },
+                { Icon: MoreVertical, label: 'More dashboard actions' },
+            ].map(({ Icon, label }) => (
+                <Button
+                    appearance="subtle"
+                    hideLabel
+                    icon={<Icon className="h-4 w-4" />}
+                    key={label}
+                    label={label}
+                />
             ))}
         </div>
     </header>
@@ -318,6 +330,7 @@ const NavigationInner: React.FC = () => {
 
                 return (
                     <Link
+                        aria-current={isActive ? 'page' : undefined}
                         key={item.tab}
                         to={item.to}
                         className={cn(
@@ -371,8 +384,10 @@ const ChartLegend: React.FC<{ items: Array<{ name: string; color: string }> }> =
     </div>
 );
 
-const Overview: React.FC = () => (
-    <div className="space-y-6">
+const Overview: React.FC = () => {
+    const theme = useSplunkTheme();
+    return (
+        <div className="space-y-6">
         <FilterBar
             filters={[
                 { label: 'Workload', value: 'All' },
@@ -397,28 +412,28 @@ const Overview: React.FC = () => (
                     <AreaChart data={overviewTimeline} margin={chartMargins}>
                         <defs>
                             <linearGradient id="m365Exchange" x1="0" x2="0" y1="0" y2="1">
-                                <stop offset="0%" stopColor="#6366f1" stopOpacity={0.45} />
-                                <stop offset="100%" stopColor="#6366f1" stopOpacity={0.03} />
+                                <stop offset="0%" stopColor={C3_VISUALIZATION_COLORS.info} stopOpacity={0.45} />
+                                <stop offset="100%" stopColor={C3_VISUALIZATION_COLORS.info} stopOpacity={0.03} />
                             </linearGradient>
                             <linearGradient id="m365Teams" x1="0" x2="0" y1="0" y2="1">
-                                <stop offset="0%" stopColor="#14b8a6" stopOpacity={0.4} />
-                                <stop offset="100%" stopColor="#14b8a6" stopOpacity={0.03} />
+                                <stop offset="0%" stopColor={C3_VISUALIZATION_COLORS.positive} stopOpacity={0.4} />
+                                <stop offset="100%" stopColor={C3_VISUALIZATION_COLORS.positive} stopOpacity={0.03} />
                             </linearGradient>
                             <linearGradient id="m365Azure" x1="0" x2="0" y1="0" y2="1">
-                                <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.42} />
-                                <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.03} />
+                                <stop offset="0%" stopColor={C3_VISUALIZATION_COLORS.lavender} stopOpacity={0.42} />
+                                <stop offset="100%" stopColor={C3_VISUALIZATION_COLORS.lavender} stopOpacity={0.03} />
                             </linearGradient>
                         </defs>
-                        <CartesianGrid stroke="#334155" strokeDasharray="3 4" opacity={0.55} />
+                        <CartesianGrid stroke={theme.borderColor} strokeDasharray="3 4" opacity={0.55} />
                         <XAxis
                             axisLine={false}
                             dataKey="date"
-                            tick={{ fill: '#94a3b8', fontSize: 12 }}
+                            tick={{ fill: theme.contentColorMuted, fontSize: 12 }}
                             tickLine={false}
                         />
                         <YAxis
                             axisLine={false}
-                            tick={{ fill: '#94a3b8', fontSize: 12 }}
+                            tick={{ fill: theme.contentColorMuted, fontSize: 12 }}
                             tickFormatter={formatShortNumber}
                             tickLine={false}
                         />
@@ -428,7 +443,7 @@ const Overview: React.FC = () => (
                             fill="url(#m365Exchange)"
                             name="Exchange"
                             stackId="1"
-                            stroke="#6366f1"
+                            stroke={C3_VISUALIZATION_COLORS.info}
                             strokeWidth={1.6}
                             type="monotone"
                         />
@@ -437,7 +452,7 @@ const Overview: React.FC = () => (
                             fill="url(#m365Teams)"
                             name="Teams"
                             stackId="1"
-                            stroke="#14b8a6"
+                            stroke={C3_VISUALIZATION_COLORS.positive}
                             strokeWidth={1.6}
                             type="monotone"
                         />
@@ -446,25 +461,28 @@ const Overview: React.FC = () => (
                             fill="url(#m365Azure)"
                             name="Azure AD"
                             stackId="1"
-                            stroke="#8b5cf6"
+                            stroke={C3_VISUALIZATION_COLORS.lavender}
                             strokeWidth={1.6}
                             type="monotone"
                         />
-                        <Legend iconType="circle" wrapperStyle={{ color: '#cbd5e1' }} />
+                        <Legend iconType="circle" wrapperStyle={{ color: theme.contentColorDefault }} />
                     </AreaChart>
                 </ResponsiveContainer>
             </Panel>
             <HorizontalBarPanel
-                color="#6366f1"
+                color={C3_VISUALIZATION_COLORS.info}
                 data={topOperations}
                 title="Top Operations"
             />
         </div>
-    </div>
-);
+        </div>
+    );
+};
 
-const ExecutiveSummary: React.FC = () => (
-    <div className="space-y-6">
+const ExecutiveSummary: React.FC = () => {
+    const theme = useSplunkTheme();
+    return (
+        <div className="space-y-6">
         <FilterBar filters={[{ label: 'Workload', value: 'All' }]} />
         <div className="grid gap-6 lg:grid-cols-3">
             <Metric {...executiveMetrics[0]} icon={ShieldCheck} />
@@ -485,7 +503,7 @@ const ExecutiveSummary: React.FC = () => (
                             innerRadius="58%"
                             outerRadius="82%"
                             paddingAngle={2}
-                            stroke="#0f172a"
+                            stroke={theme.backgroundColorSection}
                             strokeWidth={3}
                         >
                             {workloadDistribution.map((entry) => (
@@ -503,17 +521,17 @@ const ExecutiveSummary: React.FC = () => (
             >
                 <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={authTrend} margin={chartMargins}>
-                        <CartesianGrid stroke="#334155" strokeDasharray="3 4" opacity={0.55} />
+                        <CartesianGrid stroke={theme.borderColor} strokeDasharray="3 4" opacity={0.55} />
                         <XAxis
                             axisLine={false}
                             dataKey="date"
                             interval={2}
-                            tick={{ fill: '#94a3b8', fontSize: 12 }}
+                            tick={{ fill: theme.contentColorMuted, fontSize: 12 }}
                             tickLine={false}
                         />
                         <YAxis
                             axisLine={false}
-                            tick={{ fill: '#94a3b8', fontSize: 12 }}
+                            tick={{ fill: theme.contentColorMuted, fontSize: 12 }}
                             tickFormatter={formatShortNumber}
                             tickLine={false}
                         />
@@ -522,7 +540,7 @@ const ExecutiveSummary: React.FC = () => (
                             dataKey="successful"
                             dot={false}
                             name="Successful Logins"
-                            stroke="#14b8a6"
+                            stroke={C3_VISUALIZATION_COLORS.positive}
                             strokeWidth={2}
                             type="monotone"
                         />
@@ -530,20 +548,23 @@ const ExecutiveSummary: React.FC = () => (
                             dataKey="failed"
                             dot={false}
                             name="Failed Logins"
-                            stroke="#f43f5e"
+                            stroke={C3_VISUALIZATION_COLORS.critical}
                             strokeWidth={2}
                             type="monotone"
                         />
-                        <Legend iconType="circle" wrapperStyle={{ color: '#cbd5e1' }} />
+                        <Legend iconType="circle" wrapperStyle={{ color: theme.contentColorDefault }} />
                     </LineChart>
                 </ResponsiveContainer>
             </Panel>
         </div>
-    </div>
-);
+        </div>
+    );
+};
 
-const ClientSummary: React.FC = () => (
-    <div className="space-y-6">
+const ClientSummary: React.FC = () => {
+    const theme = useSplunkTheme();
+    return (
+        <div className="space-y-6">
         <FilterBar
             filters={[
                 { label: 'User', value: 'All' },
@@ -563,20 +584,20 @@ const ClientSummary: React.FC = () => (
                 <AreaChart data={clientActivity} margin={chartMargins}>
                     <defs>
                         <linearGradient id="m365ClientActivity" x1="0" x2="0" y1="0" y2="1">
-                            <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.5} />
-                            <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.03} />
+                            <stop offset="0%" stopColor={C3_VISUALIZATION_COLORS.cyan} stopOpacity={0.5} />
+                            <stop offset="100%" stopColor={C3_VISUALIZATION_COLORS.cyan} stopOpacity={0.03} />
                         </linearGradient>
                     </defs>
-                    <CartesianGrid stroke="#334155" strokeDasharray="3 4" opacity={0.55} />
+                    <CartesianGrid stroke={theme.borderColor} strokeDasharray="3 4" opacity={0.55} />
                     <XAxis
                         axisLine={false}
                         dataKey="date"
-                        tick={{ fill: '#94a3b8', fontSize: 12 }}
+                        tick={{ fill: theme.contentColorMuted, fontSize: 12 }}
                         tickLine={false}
                     />
                     <YAxis
                         axisLine={false}
-                        tick={{ fill: '#94a3b8', fontSize: 12 }}
+                        tick={{ fill: theme.contentColorMuted, fontSize: 12 }}
                         tickFormatter={formatShortNumber}
                         tickLine={false}
                     />
@@ -585,7 +606,7 @@ const ClientSummary: React.FC = () => (
                         dataKey="events"
                         fill="url(#m365ClientActivity)"
                         name="Events"
-                        stroke="#3b82f6"
+                        stroke={C3_VISUALIZATION_COLORS.cyan}
                         strokeWidth={1.8}
                         type="monotone"
                     />
@@ -593,11 +614,12 @@ const ClientSummary: React.FC = () => (
             </ResponsiveContainer>
         </Panel>
         <div className="grid gap-6 xl:grid-cols-2">
-            <HorizontalBarPanel color="#14b8a6" data={topUsers} title="Top 10 Active Users" />
-            <HorizontalBarPanel color="#f59e0b" data={topClientIps} title="Top 10 Client IPs" />
+            <HorizontalBarPanel color={C3_VISUALIZATION_COLORS.positive} data={topUsers} title="Top 10 Active Users" />
+            <HorizontalBarPanel color={C3_VISUALIZATION_COLORS.caution} data={topClientIps} title="Top 10 Client IPs" />
         </div>
-    </div>
-);
+        </div>
+    );
+};
 
 const About: React.FC = () => (
     <div className="mx-auto max-w-4xl">
@@ -685,32 +707,40 @@ const HorizontalBarPanel: React.FC<{
     color: string;
     data: OperationPoint[];
     title: string;
-}> = ({ color, data, title }) => (
-    <Panel title={title} bodyClassName="h-[330px] p-4">
-        <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data} layout="vertical" margin={verticalChartMargins}>
-                <CartesianGrid horizontal={false} stroke="#334155" strokeDasharray="3 4" opacity={0.55} />
-                <XAxis
-                    axisLine={false}
-                    tick={{ fill: '#94a3b8', fontSize: 12 }}
-                    tickFormatter={formatShortNumber}
-                    tickLine={false}
-                    type="number"
-                />
-                <YAxis
-                    axisLine={false}
-                    dataKey="name"
-                    tick={{ fill: '#e2e8f0', fontSize: 12 }}
-                    tickLine={false}
-                    type="category"
-                    width={128}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value" fill={color} radius={[0, 5, 5, 0]} />
-            </BarChart>
-        </ResponsiveContainer>
-    </Panel>
-);
+}> = ({ color, data, title }) => {
+    const theme = useSplunkTheme();
+    return (
+        <Panel title={title} bodyClassName="h-[330px] p-4">
+            <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data} layout="vertical" margin={verticalChartMargins}>
+                    <CartesianGrid
+                        horizontal={false}
+                        opacity={0.55}
+                        stroke={theme.borderColor}
+                        strokeDasharray="3 4"
+                    />
+                    <XAxis
+                        axisLine={false}
+                        tick={{ fill: theme.contentColorMuted, fontSize: 12 }}
+                        tickFormatter={formatShortNumber}
+                        tickLine={false}
+                        type="number"
+                    />
+                    <YAxis
+                        axisLine={false}
+                        dataKey="name"
+                        tick={{ fill: theme.contentColorDefault, fontSize: 12 }}
+                        tickLine={false}
+                        type="category"
+                        width={128}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="value" fill={color} radius={[0, 5, 5, 0]} />
+                </BarChart>
+            </ResponsiveContainer>
+        </Panel>
+    );
+};
 
 const router = createBrowserRouter(
     [

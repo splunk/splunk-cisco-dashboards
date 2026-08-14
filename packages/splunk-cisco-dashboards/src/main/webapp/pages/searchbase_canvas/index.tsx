@@ -10,12 +10,11 @@ import Button from '@splunk/react-ui/Button';
 import Checkbox from '@splunk/react-ui/Checkbox';
 import CollapsiblePanel from '@splunk/react-ui/CollapsiblePanel';
 import ControlGroup from '@splunk/react-ui/ControlGroup';
+import Drawer from '@splunk/react-ui/Drawer';
 import Link from '@splunk/react-ui/Link';
 import Message from '@splunk/react-ui/Message';
 import Multiselect from '@splunk/react-ui/Multiselect';
-import SearchInput from '@splunk/react-ui/Search';
 import Select from '@splunk/react-ui/Select';
-import { variables } from '@splunk/themes';
 import {
     DndContext,
     KeyboardSensor,
@@ -43,6 +42,7 @@ import {
     Gauge,
     Maximize2,
     Minimize2,
+    Moon,
     MoreVertical,
     PanelRightOpen,
     Play,
@@ -54,10 +54,12 @@ import {
     Settings2,
     SlidersHorizontal,
     Square,
+    Sun,
     Table2,
     Trash2,
     X,
 } from '@/common/icons/SuiIcon';
+import ThemeAwareSearch from '@/common/components/ThemeAwareSearch';
 import { BarBreakdownTile } from '@/common/components/workspace/BarBreakdownTile';
 import {
     resolveBaselineField,
@@ -86,6 +88,8 @@ import {
     sparklineVizTypeFromSplunkViz,
 } from '@/common/components/workspace/Sparkline';
 import { C3_ATMOSPHERE_BACKGROUND_STYLE } from '@/common/theme/c3Atmosphere';
+import { C3_VISUALIZATION_COLORS } from '@/common/theme/c3VisualizationPalette';
+import { useAppThemeControls } from '@/common/theme/AppThemeProvider';
 import {
     isBarBreakdownViz,
     isTableViz,
@@ -136,13 +140,6 @@ import { recordMatchesCatalogueQuery } from './catalogueSearch';
 const APP_NAME = 'splunk-cisco-dashboards';
 const STORAGE_KEY = 'scd_searchbase_canvas_v1';
 const MAX_BATCH_RUNS = 10;
-
-// Splunk Web's legacy input rule outranks SUI, so restore the themed search background here.
-const StyledSearch = styled(SearchInput)`
-    && input[role='searchbox'] {
-        background-color: ${variables.transparent};
-    }
-`;
 
 const CanvasFeedbackMessage = styled(Message)`
     height: 100%;
@@ -502,7 +499,7 @@ const cycleTileSpan = (span: TileSpan): TileSpan => {
 
 const firstSeriesColor = (
     options: Record<string, unknown> | undefined,
-    fallback = '#0ea5e9'
+    fallback = C3_VISUALIZATION_COLORS.cyan
 ): string => {
     const colors = options?.seriesColors;
     if (!Array.isArray(colors)) return fallback;
@@ -2783,6 +2780,7 @@ interface SearchbaseBrowserProps {
     canvasTiles: CanvasTile[];
     replaceTileId: string | null;
     includeHiddenSearches: boolean;
+    returnFocus: () => void;
     onClose: () => void;
     onAddRecord: (record: SearchbaseRecord) => void;
     onAddRecords: (records: SearchbaseRecord[]) => void;
@@ -2877,12 +2875,15 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     canvasTiles,
     replaceTileId,
     includeHiddenSearches,
+    returnFocus,
     onClose,
     onAddRecord,
     onAddRecords,
     onIncludeHiddenSearchesChange,
 }) => {
+    const searchInputElementRef = useRef<HTMLInputElement | null>(null);
     const searchInputRef = useCallback((node: HTMLInputElement | null) => {
+        searchInputElementRef.current = node;
         // SUI 5.13 overwrites aria-controls passed to Search, so associate the input directly.
         if (node) {
             node.setAttribute('aria-controls', 'searchbase-catalogue-results');
@@ -2916,6 +2917,14 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
         if (open) {
             setFiltersOpen(false);
         }
+    }, [open]);
+
+    useEffect(() => {
+        if (!open) return undefined;
+        const frame = window.requestAnimationFrame(() => {
+            searchInputElementRef.current?.focus();
+        });
+        return () => window.cancelAnimationFrame(frame);
     }, [open]);
 
     const drilldownSearchNames = useMemo(
@@ -3275,39 +3284,33 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
         setSelectedTags((current) => (current.includes(tag) ? current : [...current, tag]));
     };
 
-    if (!open) return null;
-
     const replaceMode = replaceTileId !== null;
 
     return (
-        <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[560px] flex-col border-l   shadow-2xl sui-border-weak sui-bg-page">
-            <div className="flex items-center gap-3 border-b  px-5 py-4 sui-border-weak">
-                <div className="flex h-10 w-10 items-center justify-center rounded-md sui-bg-notification-info sui-color-active">
-                    <SlidersHorizontal className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                    <div className="text-xs font-black uppercase tracking-[0.22em] sui-color-default">
-                        {replaceMode ? 'Replace tile' : 'Add tiles'}
-                    </div>
-                    <h2 className="truncate text-lg font-black  sui-color-active">
-                        Searchbase catalogue
-                    </h2>
-                </div>
-                <button
-                    type="button"
-                    onClick={onClose}
-                    title="Close"
-                    aria-label="Close"
-                    className="ml-auto rounded p-2 sui-color-default transition-colors   focus:outline-none focus:ring-2 sui-focus-ring sui-hover-bg-overlay sui-hover-color-active"
-                >
-                    <X className="h-5 w-5" />
-                </button>
-            </div>
+        <Drawer
+            className="flex flex-col"
+            closeOnClickAway
+            divider="header"
+            onRequestClose={() => onClose()}
+            open={open}
+            position="page"
+            returnFocus={returnFocus}
+            width="min(560px, 100vw)"
+        >
+            <Drawer.Header
+                icon={<SlidersHorizontal className="h-5 w-5" />}
+                subtitle={replaceMode ? 'Replace tile' : 'Add tiles'}
+                title="Searchbase catalogue"
+            />
 
             <div className="border-b px-4 py-3 sui-border-weak">
+                <span id="searchbase-catalogue-search-label" className="sr-only">
+                    Search the Searchbase catalogue
+                </span>
                 <ControlGroup hideLabel label="Search">
-                    <StyledSearch
+                    <ThemeAwareSearch
                         inputRef={searchInputRef}
+                        labelledBy="searchbase-catalogue-search-label"
                         onChange={(_event, { value }) => setQuery(value)}
                         placeholder="Search by name, description, or tag"
                         value={query}
@@ -3651,11 +3654,13 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                     </div>
                 )}
             </div>
-        </aside>
+        </Drawer>
     );
 };
 
 const SearchbaseCanvasPage: React.FC = () => {
+    const { colorScheme, canChooseColorScheme, setColorScheme } =
+        useAppThemeControls();
     const initial = useMemo(readPersistedState, []);
     const [canvasName, setCanvasName] = useState(initial.canvasName);
     const [pageSize, setPageSize] = useState<PageSize>(initial.pageSize);
@@ -3697,6 +3702,7 @@ const SearchbaseCanvasPage: React.FC = () => {
     autoAdvanceRunRef.current = autoAdvanceRun;
     const autoAdvanceExpectedTokensRef = useRef<Map<string, number>>(new Map());
     const autoAdvanceSessionIdRef = useRef(0);
+    const catalogueTriggerRef = useRef<HTMLButtonElement | null>(null);
     const runnableVisibleTilesRef = useRef<CanvasTile[]>([]);
     const runVisibleTilesRef = useRef<() => void>(() => undefined);
     const [observedNoDataByTile, setObservedNoDataByTile] = useState<
@@ -4925,7 +4931,12 @@ const SearchbaseCanvasPage: React.FC = () => {
     return (
         <div
             className="relative min-h-screen overflow-x-hidden font-sans sui-bg-page sui-color-default"
-            style={C3_ATMOSPHERE_BACKGROUND_STYLE}
+            data-color-scheme={colorScheme}
+            style={
+                colorScheme === 'dark'
+                    ? C3_ATMOSPHERE_BACKGROUND_STYLE
+                    : undefined
+            }
         >
             <div className="flex min-h-screen min-w-0 flex-col overflow-x-hidden">
                 <header className="border-b   shadow-sm sui-border-weak sui-bg-page">
@@ -5018,6 +5029,12 @@ const SearchbaseCanvasPage: React.FC = () => {
                             <Button
                                 appearance="primary"
                                 disabled={autoAdvanceActive}
+                                elementRef={(element) => {
+                                    catalogueTriggerRef.current =
+                                        element instanceof HTMLButtonElement
+                                            ? element
+                                            : null;
+                                }}
                                 icon={<Plus className="h-4 w-4" />}
                                 label="Add"
                                 onClick={() => {
@@ -5099,6 +5116,29 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 <Presentation className="h-3.5 w-3.5" />
                                 Present
                             </button>
+                            {canChooseColorScheme && (
+                                <Button
+                                    appearance="secondary"
+                                    hideLabel
+                                    icon={
+                                        colorScheme === 'dark' ? (
+                                            <Sun className="h-4 w-4" />
+                                        ) : (
+                                            <Moon className="h-4 w-4" />
+                                        )
+                                    }
+                                    label={
+                                        colorScheme === 'dark'
+                                            ? 'Use light dashboard theme'
+                                            : 'Use dark dashboard theme'
+                                    }
+                                    onClick={() =>
+                                        setColorScheme(
+                                            colorScheme === 'dark' ? 'light' : 'dark'
+                                        )
+                                    }
+                                />
+                            )}
                             <button
                                 type="button"
                                 onClick={refreshRunningTiles}
@@ -5236,28 +5276,19 @@ const SearchbaseCanvasPage: React.FC = () => {
 
                 <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden  p-4 sui-bg-transparent">
                     <div className="mb-3 flex min-w-0 flex-wrap items-center gap-3 rounded-md border   p-3 shadow-sm sui-border-weak sui-bg-page">
-                        <div className="relative w-full max-w-[520px]">
-                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2  sui-color-default" />
-                            <input
-                                type="search"
+                        <div className="w-full max-w-[520px]">
+                            <span id="searchbase-tile-search-label" className="sr-only">
+                                Search tiles by name or query
+                            </span>
+                            <ThemeAwareSearch
                                 value={tileSearchQuery}
-                                onChange={(event) => setTileSearchQuery(event.target.value)}
+                                onChange={(_event, { value }) =>
+                                    setTileSearchQuery(value)
+                                }
                                 placeholder="Search tiles by name or query..."
                                 disabled={tiles.length === 0 || autoAdvanceActive}
-                                className="h-11 w-full rounded-md border   pl-10 pr-10 text-sm font-medium  outline-none transition   focus:ring-2 sui-focus-ring disabled:cursor-not-allowed  sui-disabled-color-default sui-border-default sui-bg-page  sui-color-muted sui-focus-border-info sui-focus-ring sui-disabled-bg-section"
-                                aria-label="Search tiles by name or query"
+                                labelledBy="searchbase-tile-search-label"
                             />
-                            {tileSearchQuery.trim().length > 0 && (
-                                <button
-                                    type="button"
-                                    onClick={() => setTileSearchQuery('')}
-                                    title="Clear tile search"
-                                    aria-label="Clear tile search"
-                                    className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-sm  transition   focus:outline-none focus:ring-2 sui-focus-ring sui-color-default sui-hover-bg-overlay sui-hover-color-active sui-focus-ring"
-                                >
-                                    <X className="h-4 w-4" />
-                                </button>
-                            )}
                         </div>
                         <div
                             role="group"
@@ -5471,7 +5502,11 @@ const SearchbaseCanvasPage: React.FC = () => {
             {presentationMode && (
                 <div
                     className="absolute inset-0 z-[70] min-h-screen overflow-y-auto  p-4  sui-bg-transparent sui-color-active"
-                    style={C3_ATMOSPHERE_BACKGROUND_STYLE}
+                    style={
+                        colorScheme === 'dark'
+                            ? C3_ATMOSPHERE_BACKGROUND_STYLE
+                            : undefined
+                    }
                 >
                     <div className="mb-4 flex min-w-0 items-center gap-3 rounded-md border   px-4 py-3 shadow-sm sui-border-weak sui-bg-section">
                         <div className="min-w-0 flex-1">
@@ -5514,23 +5549,13 @@ const SearchbaseCanvasPage: React.FC = () => {
                 </div>
             )}
 
-            {!presentationMode && browserOpen && (
-                <button
-                    type="button"
-                    aria-label="Close catalogue"
-                    className="fixed inset-0 z-40  backdrop-blur-[1px] sui-bg-page"
-                    onClick={() => {
-                        setBrowserOpen(false);
-                        setReplaceTileId(null);
-                    }}
-                />
-            )}
             <SearchbaseBrowser
                 open={!presentationMode && browserOpen}
                 records={records}
                 canvasTiles={tiles}
                 replaceTileId={replaceTileId}
                 includeHiddenSearches={includeHiddenSearches}
+                returnFocus={() => catalogueTriggerRef.current?.focus()}
                 onClose={() => {
                     setBrowserOpen(false);
                     setReplaceTileId(null);

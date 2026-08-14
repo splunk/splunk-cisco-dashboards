@@ -1,3 +1,5 @@
+import { C3_VISUALIZATION_COLORS } from '@/common/theme/c3VisualizationPalette';
+
 export type MetricTone = 'indigo' | 'teal' | 'rose' | 'amber' | 'violet' | 'slate';
 
 export interface MetricData {
@@ -147,11 +149,11 @@ export const topOperations: OperationPoint[] = [
 ];
 
 export const workloadDistribution: DistributionPoint[] = [
-    { name: 'Azure AD', value: 44, color: '#6366f1' },
-    { name: 'Teams', value: 30, color: '#14b8a6' },
-    { name: 'Exchange', value: 15, color: '#f43f5e' },
-    { name: 'SharePoint', value: 7, color: '#f59e0b' },
-    { name: 'OneDrive', value: 4, color: '#8b5cf6' },
+    { name: 'Azure AD', value: 44, color: C3_VISUALIZATION_COLORS.info },
+    { name: 'Teams', value: 30, color: C3_VISUALIZATION_COLORS.positive },
+    { name: 'Exchange', value: 15, color: C3_VISUALIZATION_COLORS.critical },
+    { name: 'SharePoint', value: 7, color: C3_VISUALIZATION_COLORS.caution },
+    { name: 'OneDrive', value: 4, color: C3_VISUALIZATION_COLORS.lavender },
 ];
 
 export const authTrend: AuthTrendPoint[] = [

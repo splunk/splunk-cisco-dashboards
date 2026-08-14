@@ -577,8 +577,14 @@ assert.match(macroTuningSource, /Advanced tuning/);
 assert.match(macroTuningSource, /Save and finish setup/);
 assert.match(macroTuningSource, /Setup was not completed/);
 assert.match(macroTuningSource, /setupCimRowsToSave/);
-assert.match(macroTuningSource, /Tune CIM index macros separately/);
-assert.match(macroTuningSource, /Optional after setup/);
+assert.match(macroTuningSource, /Tune CIM index macros on their own screen/);
+assert.match(macroTuningSource, /Optional · Highly recommended after setup/);
+assert.match(macroTuningSource, /Install and update the relevant Cisco TAs first/);
+assert.match(macroTuningSource, /Plan for several minutes before you start/);
+assert.doesNotMatch(
+  macroTuningSource,
+  /void runScan\(\);\s*if \(setupCimAvailable\) void runCimDiscovery\(\);/,
+);
 assert.match(macroTuningSource, /Run CIM discovery/);
 assert.match(macroTuningSource, /isOptionalCimSetupPage/);
 assert.doesNotMatch(macroTuningSource, /properties\/macros/);

@@ -2628,16 +2628,16 @@ export default function MacroIndexTuningPage(): JSX.Element {
           <div className="mx-auto flex max-w-[1920px] flex-wrap items-center justify-between gap-4 px-7 py-6">
             <div className="min-w-0">
               <div className="text-xs font-bold uppercase tracking-[0.08em] sui-color-info">
-                Setup tools · Optional
+                Setup tools · Optional · Highly recommended
               </div>
               <h1 className="mt-1 text-2xl font-bold leading-tight sui-color-active">
                 Tune CIM index macros
               </h1>
               <p className="mt-2 max-w-4xl text-sm leading-6 sui-color-default">
-                CIM discovery evaluates shipped tag constraints across the selected
-                time range and can take several minutes in large environments. It
-                is separate from required setup: your main Cisco routing macros can
-                be saved and setup can finish without running this scan.
+                Run this guided task after required setup to map tagged Cisco data
+                to the indexes used by Splunk Common Information Model (CIM) data
+                models. It is separate from the required save, so your main Cisco
+                routing macros remain safe if you leave or interrupt this page.
               </p>
             </div>
             <a
@@ -2651,20 +2651,29 @@ export default function MacroIndexTuningPage(): JSX.Element {
         </section>
 
         <div className="mx-auto max-w-[1920px] px-7 py-6">
-          <section className="mb-4 rounded-xl border sui-border-info sui-bg-section p-5">
+          <section className="mb-4 rounded-xl border sui-border-notification-warning sui-bg-notification-warning p-5">
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-center">
-              <div>
-                <div className="text-xs font-bold uppercase tracking-wide sui-color-info">
-                  Long-running discovery
+              <div className="flex items-start gap-3">
+                <AlertTriangle
+                  aria-hidden="true"
+                  className="mt-0.5 shrink-0 sui-color-warning"
+                  size={20}
+                />
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-wide sui-color-default">
+                    Time-consuming discovery
+                  </div>
+                  <h2 className="mt-1 text-lg font-bold sui-color-active">
+                    Plan for several minutes before you start
+                  </h2>
+                  <p className="mt-1 max-w-3xl text-sm leading-6 sui-color-default">
+                    CIM discovery runs tag-based searches across the selected time
+                    range, sourcetypes, and candidate data models. Large data volumes
+                    and longer ranges require more search work, so start with a short
+                    range and review the detected definitions before saving them to
+                    Splunk_SA_CIM/local/macros.conf.
+                  </p>
                 </div>
-                <h2 className="mt-1 text-lg font-bold sui-color-active">
-                  Run only when you are ready to wait
-                </h2>
-                <p className="mt-1 max-w-3xl text-sm leading-6 sui-color-default">
-                  Start with a short range. Review the detected definitions before
-                  saving them to Splunk_SA_CIM/local/macros.conf. Leaving this page
-                  does not undo the Cisco macro tuning already saved during setup.
-                </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <div className="flex h-10 items-center gap-2 text-sm font-semibold sui-color-default">
@@ -2712,6 +2721,32 @@ export default function MacroIndexTuningPage(): JSX.Element {
             </div>
           </section>
 
+          <section className="mb-4 rounded-xl border sui-border-notification-info sui-bg-notification-info p-5">
+            <div className="flex items-start gap-3">
+              <Info
+                aria-hidden="true"
+                className="mt-0.5 shrink-0 sui-color-info"
+                size={20}
+              />
+              <div>
+                <div className="text-xs font-bold uppercase tracking-wide sui-color-default">
+                  Required knowledge objects
+                </div>
+                <h2 className="mt-1 text-lg font-bold sui-color-active">
+                  Install and update the relevant Cisco TAs first
+                </h2>
+                <p className="mt-1 max-w-5xl text-sm leading-6 sui-color-default">
+                  Cisco technology add-ons provide the sourcetype definitions,
+                  eventtypes, tags, field aliases, and calculated fields that identify
+                  and normalize the data. Keep those TAs and Splunk_SA_CIM current;
+                  otherwise CIM discovery can miss events or map incomplete data to
+                  the wrong data model. After TA updates have been deployed and data
+                  has arrived, return here and run discovery again.
+                </p>
+              </div>
+            </div>
+          </section>
+
           <section
             aria-busy={isCimLoading}
             className="overflow-hidden rounded-xl border sui-border-weak sui-bg-section"
@@ -2741,8 +2776,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
             </div>
 
             {cimError ? (
-              <div role="alert" className="flex items-start gap-2 border-b sui-border-negative sui-bg-section px-5 py-3 text-sm sui-color-negative">
-                <AlertTriangle className="mt-0.5 shrink-0" size={17} />
+              <div role="alert" className="flex items-start gap-2 border-b sui-border-notification-negative sui-bg-notification-negative px-5 py-3 text-sm sui-color-default">
+                <AlertTriangle className="mt-0.5 shrink-0 sui-color-negative" size={17} />
                 <div><strong>CIM discovery failed.</strong> {cimError}</div>
               </div>
             ) : null}
@@ -2821,15 +2856,15 @@ export default function MacroIndexTuningPage(): JSX.Element {
       "Balanced mode is ready with no extra action.";
     if (summariesOnlyEnabled && accelerationCheckInProgress) {
       performanceStatusClass =
-        "border sui-border-info sui-bg-section sui-color-info";
+        "border sui-border-notification-info sui-bg-notification-info sui-color-default";
       performanceStatusMessage = "Checking required data-model acceleration…";
     } else if (summariesOnlyBlocked) {
       performanceStatusClass =
-        "border sui-border-negative sui-bg-section sui-color-negative";
+        "border sui-border-notification-negative sui-bg-notification-negative sui-color-default";
       performanceStatusMessage = `${acceleratedRequiredModels} of ${requiredDataModels.length} required data models are accelerated.`;
     } else if (summariesOnlyEnabled) {
       performanceStatusClass =
-        "border sui-border-positive sui-bg-section sui-color-positive";
+        "border sui-border-notification-positive sui-bg-notification-positive sui-color-default";
       performanceStatusMessage =
         "All required Cisco data models are accelerated.";
     }
@@ -2945,9 +2980,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
           {setupStatus.state === "error" && setupStatus.message && (
             <div
               role="alert"
-              className="mb-4 flex items-start gap-2 rounded-lg border sui-border-negative sui-bg-section px-4 py-3 text-sm sui-color-negative"
+              className="mb-4 flex items-start gap-2 rounded-lg border sui-border-notification-negative sui-bg-notification-negative px-4 py-3 text-sm sui-color-default"
             >
-              <AlertTriangle className="mt-0.5 shrink-0" size={17} />
+              <AlertTriangle className="mt-0.5 shrink-0 sui-color-negative" size={17} />
               <div>
                 <div className="font-bold">Setup was not completed.</div>
                 <div className="mt-0.5">{setupStatus.message}</div>
@@ -2991,7 +3026,6 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   type="button"
                   onClick={() => {
                     void runScan();
-                    if (setupCimAvailable) void runCimDiscovery();
                   }}
                   disabled={setupScanInProgress}
                   className={`${compactButtonBase} sui-border-default sui-bg-section sui-color-default sui-hover-border-info sui-hover-color-info`}
@@ -3162,25 +3196,27 @@ export default function MacroIndexTuningPage(): JSX.Element {
               </section>
 
               {setupCimAvailable && (
-                <section className="mt-4 rounded-lg border sui-border-weak sui-bg-page p-4">
-                  <div className="text-xs font-bold uppercase tracking-wide sui-color-muted">
-                    Optional after setup
+                <section className="mt-4 rounded-lg border sui-border-notification-info sui-bg-notification-info p-4">
+                  <div className="text-xs font-bold uppercase tracking-wide sui-color-default">
+                    Optional · Highly recommended after setup
                   </div>
                   <h3 className="mt-1 text-base font-bold sui-color-active">
-                    Tune CIM index macros separately
+                    Tune CIM index macros on their own screen
                   </h3>
                   <p className="mt-1 text-sm leading-6 sui-color-default">
-                    CIM tag discovery is intentionally not part of the required
-                    save. It can take several minutes, so run it on its own page
-                    when you have time. Main Cisco macros remain safe even if the
-                    CIM scan is interrupted or fails.
+                    This scan is separate because tag-based discovery can take
+                    several minutes. Install and update the relevant Cisco TAs
+                    first so their sourcetypes, eventtypes, tags, and field
+                    normalization let CIM place the data in the appropriate data
+                    models. Main Cisco macros remain safe if this optional scan is
+                    interrupted or fails.
                   </p>
                   <a
                     href={`${splunkAppViewUrl(APP_SETUP_VIEW)}?setup=1#tune-cim`}
                     className={`${compactButtonBase} mt-3 sui-border-info sui-bg-section sui-color-info sui-hover-border-info sui-hover-color-info`}
                   >
                     <ChevronRight size={14} />
-                    Open optional CIM tuning
+                    Open recommended CIM tuning
                   </a>
                 </section>
               )}
@@ -3311,10 +3347,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 <div
                   className={`mt-3 rounded-md px-3 py-2 text-xs font-semibold ${
                     accelerationCheckInProgress
-                      ? "border sui-border-info sui-bg-section sui-color-info"
+                      ? "border sui-border-notification-info sui-bg-notification-info sui-color-default"
                       : dataModelsNeedingAttention.length
-                        ? "border sui-border-warning sui-bg-section sui-color-warning"
-                        : "border sui-border-positive sui-bg-section sui-color-positive"
+                        ? "border sui-border-notification-warning sui-bg-notification-warning sui-color-default"
+                        : "border sui-border-notification-positive sui-bg-notification-positive sui-color-default"
                   }`}
                   role="status"
                 >
@@ -3568,9 +3604,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
               {setupStatus.state === "error" && setupStatus.message && (
                 <div
                   role="alert"
-                  className="mt-3 flex items-start gap-2 border sui-border-negative sui-bg-section px-3 py-2 text-sm sui-color-negative"
+                  className="mt-3 flex items-start gap-2 border sui-border-notification-negative sui-bg-notification-negative px-3 py-2 text-sm sui-color-default"
                 >
-                  <AlertTriangle className="mt-0.5 shrink-0" size={16} />
+                  <AlertTriangle className="mt-0.5 shrink-0 sui-color-negative" size={16} />
                   <span>{setupStatus.message}</span>
                 </div>
               )}
@@ -3882,7 +3918,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               </div>
             )}
             {appInventoryError && (
-              <div className="border-t sui-border-warning sui-bg-section px-4 py-3 text-sm sui-color-warning">
+              <div className="border-t sui-border-notification-warning sui-bg-notification-warning px-4 py-3 text-sm sui-color-default">
                 {appInventoryError}
               </div>
             )}
@@ -3917,8 +3953,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
             <span
               className={`rounded-full px-3 py-1 text-xs font-semibold ${
                 dataModelsNeedingAttention.length
-                  ? "border sui-border-warning sui-bg-section sui-color-warning"
-                  : "border sui-border-positive sui-bg-section sui-color-positive"
+                  ? "border sui-border-notification-warning sui-bg-notification-warning sui-color-default"
+                  : "border sui-border-notification-positive sui-bg-notification-positive sui-color-default"
               }`}
             >
               {formatNumber(acceleratedDataModelCount)} /{" "}
@@ -4174,17 +4210,17 @@ export default function MacroIndexTuningPage(): JSX.Element {
           {summariesOnlyEnabled && accelerationCheckInProgress ? (
             <div
               role="status"
-              className="mt-3 flex items-start gap-2 border sui-border-info sui-bg-section px-3 py-2 text-sm sui-color-info"
+              className="mt-3 flex items-start gap-2 border sui-border-notification-info sui-bg-notification-info px-3 py-2 text-sm sui-color-default"
             >
-              <Loader2 className="mt-0.5 shrink-0 animate-spin" size={16} />
+              <Loader2 className="mt-0.5 shrink-0 animate-spin sui-color-info" size={16} />
               Checking the required data-model acceleration settings.
             </div>
           ) : summariesOnlyBlocked ? (
             <div
               role="alert"
-              className="mt-3 flex items-start gap-2 border sui-border-negative sui-bg-section px-3 py-2 text-sm sui-color-negative"
+              className="mt-3 flex items-start gap-2 border sui-border-notification-negative sui-bg-notification-negative px-3 py-2 text-sm sui-color-default"
             >
-              <AlertTriangle className="mt-0.5 shrink-0" size={16} />
+              <AlertTriangle className="mt-0.5 shrink-0 sui-color-negative" size={16} />
               <span>
                 <code className="font-mono">summariesonly=true</code> cannot be
                 saved yet. Enable acceleration for all three required Cisco data
@@ -4194,9 +4230,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
           ) : summariesOnlyEnabled ? (
             <div
               role="status"
-              className="mt-3 flex items-start gap-2 border sui-border-positive sui-bg-section px-3 py-2 text-sm sui-color-positive"
+              className="mt-3 flex items-start gap-2 border sui-border-notification-positive sui-bg-notification-positive px-3 py-2 text-sm sui-color-default"
             >
-              <Check className="mt-0.5 shrink-0" size={16} />
+              <Check className="mt-0.5 shrink-0 sui-color-positive" size={16} />
               All required Cisco data models have acceleration enabled.
             </div>
           ) : (
@@ -4216,8 +4252,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
       </section>
 
       {error && (
-        <section className="mb-4 flex items-start gap-2 border sui-border-negative sui-bg-section px-4 py-3 text-sm sui-color-negative">
-          <AlertTriangle className="mt-0.5 shrink-0" size={17} />
+        <section className="mb-4 flex items-start gap-2 border sui-border-notification-negative sui-bg-notification-negative px-4 py-3 text-sm sui-color-default">
+          <AlertTriangle className="mt-0.5 shrink-0 sui-color-negative" size={17} />
           <div>
             <div className="font-bold">Macro tuning scan failed.</div>
             <div>{error}</div>
@@ -4226,8 +4262,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
       )}
 
       {hasUnknown && (
-        <section className="mb-4 flex items-start gap-2 border sui-border-warning sui-bg-section px-4 py-3 text-sm sui-color-warning">
-          <AlertTriangle className="mt-0.5 shrink-0" size={17} />
+        <section className="mb-4 flex items-start gap-2 border sui-border-notification-warning sui-bg-notification-warning px-4 py-3 text-sm sui-color-default">
+          <AlertTriangle className="mt-0.5 shrink-0 sui-color-warning" size={17} />
           <div>
             <div className="font-bold">
               One or more sourcetypes were classified as unknown.

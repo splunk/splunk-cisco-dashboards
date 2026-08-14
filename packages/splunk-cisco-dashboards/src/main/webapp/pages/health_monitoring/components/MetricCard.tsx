@@ -36,6 +36,7 @@ import {
     YAxis,
 } from 'recharts';
 import { cn } from '@/common/lib/utils';
+import { C3_VISUALIZATION_COLORS } from '@/common/theme/c3VisualizationPalette';
 import type {
     KPIChartType,
     KPIIconName,
@@ -140,21 +141,21 @@ const statusTone: Record<
 > = {
     healthy: {
         text: 'sui-color-positive',
-        progress: 'bg-emerald-500',
-        soft: 'bg-emerald-500/15',
-        border: 'sui-border-positive',
+        progress: 'sui-bg-status-positive',
+        soft: 'sui-bg-notification-positive',
+        border: 'sui-border-notification-positive',
     },
     warning: {
         text: 'sui-color-warning',
-        progress: 'bg-amber-500',
-        soft: 'bg-amber-500/15',
-        border: 'sui-border-warning',
+        progress: 'sui-bg-status-warning',
+        soft: 'sui-bg-notification-warning',
+        border: 'sui-border-notification-warning',
     },
     critical: {
         text: 'sui-color-negative',
-        progress: 'bg-red-500',
-        soft: 'bg-red-500/15',
-        border: 'sui-border-negative',
+        progress: 'sui-bg-status-negative',
+        soft: 'sui-bg-notification-negative',
+        border: 'sui-border-notification-negative',
     },
 };
 
@@ -186,8 +187,8 @@ const formatThreshold = (
 };
 
 const chartColor = (kpi: KPIInstance, status: KPIStatus): string => {
-    if (status === 'critical') return '#ef4444';
-    if (status === 'warning') return '#f59e0b';
+    if (status === 'critical') return C3_VISUALIZATION_COLORS.critical;
+    if (status === 'warning') return C3_VISUALIZATION_COLORS.caution;
     return kpi.color;
 };
 

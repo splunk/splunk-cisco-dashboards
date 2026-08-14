@@ -4,9 +4,18 @@
 
 - Setup now uses the wider C3/Splunk UI visual language and more readable type
   across the discovery, package-status, and macro-tuning steps. CIM macro
-  discovery is an explicitly optional, separate page because it can be
-  time-consuming; required Cisco routing macros can be reviewed, saved, and
-  completed even when the CIM scan is skipped, interrupted, or unavailable.
+  discovery is an explicitly optional, highly recommended separate page because
+  it can be time-consuming. The page explains how current Cisco technology
+  add-ons provide the tags and normalized fields CIM needs, while required Cisco
+  routing macros can still be reviewed, saved, and completed when the CIM scan
+  is skipped, interrupted, or unavailable.
+- Searchbase Canvas again offers its own saved light or dark appearance without
+  changing Insights Workspace, keeps the Splunk navigation rail dark, and uses
+  theme-safe native search controls. Its Add catalogue now opens as a Splunk UI
+  page drawer so the canvas remains visible instead of being replaced by an
+  opaque overlay. Network Diagram uses the same themed search treatment and a
+  neutral object-hover surface, while Security Operations removes its unused
+  dashboard-menu control.
 - Insights Workspace section and branding editors now share the Configure Tile
   modal treatment, keep focus and dismissal behavior predictable, and use
   theme-safe neutral surfaces. Metric sections again expose their per-user
