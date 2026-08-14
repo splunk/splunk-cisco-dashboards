@@ -11,7 +11,6 @@ const provider = source("common/theme/AppThemeProvider.tsx");
 const semanticStyles = source("common/theme/SemanticThemeStyles.tsx");
 const render = source("common/render.jsx");
 const rawRender = source("common/render-raw.tsx");
-const insightsRender = source("pages/executive_insights/render.tsx");
 const editor = source("pages/dashboardbuilder/DashboardStudioEditor.jsx");
 const dashboardBuilderEntry = source("pages/dashboardbuilder/index.jsx");
 
@@ -25,40 +24,18 @@ const collectSourceFiles = (relativeRoot) => {
 };
 
 assert.match(provider, /<SplunkThemeProvider[\s\S]*?family="prisma"/);
-assert.match(provider, /colorScheme=\{colorScheme\}/);
+assert.match(provider, /colorScheme="dark"/);
 assert.match(provider, /density="comfortable"/);
 assert.match(provider, /unstable_splunk1cdThemeCustomizer/);
 assert.match(provider, /<SemanticThemeStyles \/>/);
-assert.match(
-  provider,
-  /allowColorSchemeChoice = false[\s\S]*?readStoredColorScheme[\s\S]*?: 'dark'/,
-  "Custom pages must remain dark unless they explicitly opt into a color-scheme choice",
-);
-assert.match(
-  provider,
-  /INSIGHTS_WORKSPACE_COLOR_SCHEME_STORAGE_KEY[\s\S]*?insights-workspace-color-scheme/,
-  "Insights Workspace theme choice must use a private storage key",
-);
-assert.match(
-  provider,
-  /if \(!allowColorSchemeChoice\) return;[\s\S]*?localStorage\.setItem\(colorSchemeStorageKey, next\)/,
-  "Theme persistence must be gated behind the page-level opt-in",
-);
-assert.doesNotMatch(provider, /getUserTheme|syncSplunkShellTheme/);
+assert.doesNotMatch(provider, /localStorage|storage|useState|useEffect|getUserTheme/);
 
 assert.match(render, /theme: 'dark'/);
 assert.match(render, /themeFamily: 'prisma'/);
 assert.match(render, /themeDensity: 'comfortable'/);
 assert.match(render, /<AppThemeProvider>/);
-assert.match(
-  rawRender,
-  /allowColorSchemeChoice\?: boolean;[\s\S]*?<AppThemeProvider allowColorSchemeChoice=\{options\.allowColorSchemeChoice\}>/,
-);
-assert.match(
-  insightsRender,
-  /showCopyrightMark: false,[\s\S]*?allowColorSchemeChoice: true/,
-  "Insights Workspace must explicitly opt into its private light/dark choice",
-);
+assert.match(rawRender, /<AppThemeProvider>/);
+assert.doesNotMatch(rawRender, /fixedColorScheme/);
 
 assert.match(semanticStyles, /variables\.backgroundColorPage/);
 assert.match(semanticStyles, /variables\.contentColorDefault/);
@@ -164,4 +141,4 @@ for (const viewFile of fs.readdirSync(viewsPath).filter((name) => name.endsWith(
   assert.match(viewSource, /<dashboard\b[^>]*\btheme="dark"/);
 }
 
-console.log("✓ Theme-scoped SUI light/dark regression test passed");
+console.log("✓ Fixed dark SUI theme regression test passed");

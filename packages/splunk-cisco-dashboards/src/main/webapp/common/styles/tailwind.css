@@ -137,7 +137,7 @@ body.scd-overview-active .panel-body,
  */
 #scan-root .scd-overview-page.scd-c3-surface {
   position: relative;
-  background-color: var(--sui-background-page, #0b1118);
+  background-color: #0b1118;
   isolation: isolate;
 }
 
@@ -153,18 +153,8 @@ body.scd-overview-active .panel-body,
  * for its atmosphere. Keep its canvas neutral so the preset is the visible
  * gradient instead of layering it over the legacy custom SVG atmosphere. */
 #scan-root .scd-one-cisco-spotlight-canvas {
-  background-color: var(--sui-background-page, #0b1118) !important;
+  background-color: #0b1118 !important;
   background-image: none !important;
-}
-
-/* Preserve the page title and primary time/refresh actions before secondary
- * layout controls at narrower desktop widths. Every hidden option remains
- * available from the dashboard actions menu. */
-@media (max-width: 1279px) {
-  #scan-root .scd-header-map-layout,
-  #scan-root .scd-header-refresh-rate {
-    display: none;
-  }
 }
 
 #scan-root .scd-c3-surface .scd-c3-toolbar {

@@ -89,38 +89,6 @@ const SectionHeaderActions = styled.div`
   gap: ${variables.spacingSmall};
 `;
 
-const ProgressiveSectionActions = styled.div`
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  min-width: 0;
-  gap: ${variables.spacingSmall};
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(${variables.spacingXSmall});
-  transition:
-    opacity 140ms ease,
-    transform 140ms ease;
-
-  .scd-dashboard-section:hover &,
-  .scd-dashboard-section:focus-within &,
-  .scd-dashboard-section[data-section-state="focused"] & {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateX(0);
-  }
-
-  @media (hover: none) {
-    opacity: 1;
-    pointer-events: auto;
-    transform: none;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    transition: none;
-  }
-`;
-
 const TileCountControl = styled.div`
   display: inline-flex;
   align-items: center;
@@ -395,19 +363,17 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
 
   const actions = (
     <SectionHeaderActions>
-      <ProgressiveSectionActions>
-        {tileCountControl}
-        {showAllControl}
-        {href && (
-          <Link
-            appearance="standalone"
-            openInNewContext
-            to={href}
-          >
-            <ScreenReaderContent>{linkText}</ScreenReaderContent>
-          </Link>
-        )}
-      </ProgressiveSectionActions>
+      {tileCountControl}
+      {showAllControl}
+      {href && (
+        <Link
+          appearance="standalone"
+          openInNewContext
+          to={href}
+        >
+          <ScreenReaderContent>{linkText}</ScreenReaderContent>
+        </Link>
+      )}
       {actionMenu}
     </SectionHeaderActions>
   );
@@ -446,7 +412,7 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
   return (
     <CollapsiblePanel
       actions={actions}
-      className={cn("scd-dashboard-section min-w-0 flex-shrink-0", className)}
+      className={cn("min-w-0 flex-shrink-0", className)}
       data-section-density={compactHeight ? "compact" : "standard"}
       data-section-state={sectionState}
       headingLevel={2}

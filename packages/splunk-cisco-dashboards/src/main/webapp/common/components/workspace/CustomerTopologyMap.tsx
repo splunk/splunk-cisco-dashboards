@@ -22,6 +22,7 @@ import Button from "@splunk/react-ui/Button";
 import Popover from "@splunk/react-ui/Popover";
 import Select from "@splunk/react-ui/Select";
 import Slider from "@splunk/react-ui/Slider";
+import SpotLight from "@splunk/react-ui/SpotLight";
 import {
   Circle,
   MapContainer,
@@ -5694,8 +5695,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   onOpenInSearch,
   onSummaryMetricsChange,
 }) => {
-  const { colorScheme } = useSplunkTheme();
-  const isDark = colorScheme === "dark";
+  const isDark = true;
   const [selected, setSelected] = useState<SelectedTarget | null>(null);
   const [surfaceMode, setSurfaceMode] = useState<TopologySurfaceMode>("geo");
   const [spotlightSite, setSpotlightSite] = useState<TopologySite | null>(null);
@@ -5724,7 +5724,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   const [motionSettingsAnchor, setMotionSettingsAnchor] =
     useState<HTMLAnchorElement | HTMLButtonElement | null>(null);
   const [tilePresetId, setTilePresetId] = useState<TileLayerPreset["id"]>(() =>
-    defaultTileLayerPresetId(isDark),
+    defaultTileLayerPresetId(true),
   );
   const [catalogueByName, setCatalogueByName] = useState<Record<
     string,
@@ -6677,10 +6677,10 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   const tilePreset =
     TILE_LAYER_PRESETS.find((preset) => preset.id === tilePresetId) ??
     TILE_LAYER_PRESETS.find(
-      (preset) => preset.id === defaultTileLayerPresetId(isDark),
+      (preset) => preset.id === defaultTileLayerPresetId(true),
     ) ??
     TILE_LAYER_PRESETS[0];
-  const tileUrl = isDark ? tilePreset.dark : tilePreset.light;
+  const tileUrl = tilePreset.dark;
   const effectiveMapBounds = boundsForTopologySites(
     resolvedTopology.map.bounds,
     resolvedTopology.sites,
@@ -7023,6 +7023,13 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             key={`${tilePreset.id}-${tileUrl}`}
             attribution=""
             url={tileUrl}
+          />
+          <SpotLight
+            inset={{ bottom: "-55%" }}
+            intensity="low"
+            scale={{ x: 0.8, y: 0.45 }}
+            style={{ opacity: 0.36, zIndex: 450 }}
+            variant="element"
           />
           <ZoomControl position="bottomleft" />
 

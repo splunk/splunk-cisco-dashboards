@@ -1,114 +1,32 @@
-import React, {
-    createContext,
-    useCallback,
-    useContext,
-    useEffect,
-    useMemo,
-    useState,
-} from 'react';
+import React from 'react';
 import {
     SplunkThemeProvider,
     unstable_splunk1cdThemeCustomizer,
 } from '@splunk/themes';
 import SemanticThemeStyles from './SemanticThemeStyles';
 
-export type AppColorScheme = 'light' | 'dark';
-
-export const INSIGHTS_WORKSPACE_COLOR_SCHEME_STORAGE_KEY =
-    'splunk-cisco-dashboards:insights-workspace-color-scheme';
-
 interface AppThemeProviderProps {
     children: React.ReactNode;
-    allowColorSchemeChoice?: boolean;
-    colorSchemeStorageKey?: string;
 }
-
-interface AppThemeControls {
-    colorScheme: AppColorScheme;
-    canChooseColorScheme: boolean;
-    setColorScheme: (next: AppColorScheme) => void;
-}
-
-const AppThemeControlsContext = createContext<AppThemeControls>({
-    colorScheme: 'dark',
-    canChooseColorScheme: false,
-    setColorScheme: () => undefined,
-});
-
-const readStoredColorScheme = (storageKey: string): AppColorScheme => {
-    if (typeof window === 'undefined') return 'dark';
-    try {
-        return window.localStorage.getItem(storageKey) === 'light' ? 'light' : 'dark';
-    } catch {
-        return 'dark';
-    }
-};
-
-export const useAppThemeControls = (): AppThemeControls =>
-    useContext(AppThemeControlsContext);
 
 /**
  * The single application theme boundary.
  *
- * The app ships in Prisma/1CD dark mode by default. A page may explicitly opt
- * into a private light/dark choice without changing the Splunk shell or any
- * other dashboard. Keeping the resolved scheme here ensures SUI components,
- * portals, semantic utilities, and product-owned styled-components consume
- * one coherent theme.
+ * The app intentionally ships in Prisma/1CD dark mode for now. Keeping the
+ * color scheme here means every SUI component, portal, and product-owned
+ * styled-component consumes the same theme instead of coordinating separate
+ * page, browser-preference, Tailwind, and shell theme state.
  */
-export default function AppThemeProvider({
-    children,
-    allowColorSchemeChoice = false,
-    colorSchemeStorageKey = INSIGHTS_WORKSPACE_COLOR_SCHEME_STORAGE_KEY,
-}: AppThemeProviderProps): JSX.Element {
-    const [colorScheme, setColorSchemeState] = useState<AppColorScheme>(() =>
-        allowColorSchemeChoice ? readStoredColorScheme(colorSchemeStorageKey) : 'dark'
-    );
-
-    useEffect(() => {
-        if (!allowColorSchemeChoice || typeof window === 'undefined') return undefined;
-        const handleStorage = (event: StorageEvent) => {
-            if (event.key === colorSchemeStorageKey) {
-                setColorSchemeState(readStoredColorScheme(colorSchemeStorageKey));
-            }
-        };
-        window.addEventListener('storage', handleStorage);
-        return () => window.removeEventListener('storage', handleStorage);
-    }, [allowColorSchemeChoice, colorSchemeStorageKey]);
-
-    const setColorScheme = useCallback(
-        (next: AppColorScheme) => {
-            if (!allowColorSchemeChoice) return;
-            setColorSchemeState(next);
-            try {
-                window.localStorage.setItem(colorSchemeStorageKey, next);
-            } catch {
-                // Storage is best effort in restricted or private browser contexts.
-            }
-        },
-        [allowColorSchemeChoice, colorSchemeStorageKey]
-    );
-
-    const controls = useMemo<AppThemeControls>(
-        () => ({
-            colorScheme,
-            canChooseColorScheme: allowColorSchemeChoice,
-            setColorScheme,
-        }),
-        [allowColorSchemeChoice, colorScheme, setColorScheme]
-    );
-
+export default function AppThemeProvider({ children }: AppThemeProviderProps): JSX.Element {
     return (
-        <AppThemeControlsContext.Provider value={controls}>
-            <SplunkThemeProvider
-                family="prisma"
-                colorScheme={colorScheme}
-                density="comfortable"
-                customizeTheme={unstable_splunk1cdThemeCustomizer}
-            >
-                <SemanticThemeStyles />
-                {children}
-            </SplunkThemeProvider>
-        </AppThemeControlsContext.Provider>
+        <SplunkThemeProvider
+            family="prisma"
+            colorScheme="dark"
+            density="comfortable"
+            customizeTheme={unstable_splunk1cdThemeCustomizer}
+        >
+            <SemanticThemeStyles />
+            {children}
+        </SplunkThemeProvider>
     );
 }
