@@ -267,7 +267,7 @@ const SECTION_HEIGHT_STEP_PX = 120;
 // caused the third row to be clipped at H1 when a section showed 9 tiles.
 const SECTION_WRAPPED_TILE_ROW_STEP_PX = 176;
 const SECTION_WRAPPED_H1_TILE_ROW_STEP_PX = 148;
-const SECTION_WRAP_TILE_COUNT = 5;
+const SECTION_WRAP_TILE_COUNT = 4;
 const SECTION_WRAPPED_TILE_COLUMNS = 3;
 const VERTICAL_MAP_MIN_HEIGHT_PX = 420;
 const VERTICAL_MAP_COMPACT_MIN_HEIGHT_PX = 360;
@@ -2214,7 +2214,16 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   signalTickerDefault,
 }) => {
   // ------------------------------ Theme ------------------------------
-  const { spacingSmall, spacingXSmall } = useSplunkTheme();
+  const {
+    inputBorderWidth,
+    inputHeight,
+    spacingSmall,
+    spacingXSmall,
+  } = useSplunkTheme();
+  const tilePagerHeight =
+    Number.parseFloat(inputHeight) +
+    Number.parseFloat(spacingXSmall) * 2 +
+    Number.parseFloat(inputBorderWidth);
   const workspaceToggleRef = useRef<HTMLAnchorElement | HTMLButtonElement>(
     null,
   );
@@ -2563,8 +2572,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   //
   // Per-user, per-section "how many tiles do I want visible". The
   // user dials it via the small `−  N  +` pill on each section
-  // header. Trailing tiles (from the bottom of the searchbase-backed catalogue for
-  // that section) are the ones that hide first when narrowing —
+  // header. The selected count is the page size; all configured
+  // catalogue tiles remain reachable through paging or temporary show-all.
+  // Trailing tiles are the ones that leave the first page when narrowing —
   // picker overrides on hidden tiles are NOT cleared, so a user
   // who customises tile #5, dials down to 3, then back up to 5,
   // gets their customisation back unchanged.
@@ -2627,10 +2637,48 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     availableSections,
   });
   const [focusedSection, setFocusedSection] = useState<SectionId | null>(null);
+  const [sectionTilePages, setSectionTilePages] = useState<
+    Partial<Record<SectionId, number>>
+  >({});
+  const [showAllTileSections, setShowAllTileSections] = useState<
+    Partial<Record<SectionId, boolean>>
+  >({});
 
   useEffect(() => {
     setFocusedSection(null);
+    setSectionTilePages({});
+    setShowAllTileSections({});
   }, [insightsWorkspace.id]);
+
+  const setSectionTilePage = useCallback(
+    (section: SectionId, page: number) => {
+      setSectionTilePages((current) => ({
+        ...current,
+        [section]: Math.max(0, Math.round(page)),
+      }));
+    },
+    [],
+  );
+
+  const toggleSectionShowAllTiles = useCallback((section: SectionId) => {
+    setShowAllTileSections((current) => ({
+      ...current,
+      [section]: !current[section],
+    }));
+    setSectionTilePages((current) => ({ ...current, [section]: 0 }));
+  }, []);
+
+  const changeSectionTileCount = useCallback(
+    (section: SectionId, count: number) => {
+      setSectionTileCount(section, count);
+      setSectionTilePages((current) => ({ ...current, [section]: 0 }));
+      setShowAllTileSections((current) => ({
+        ...current,
+        [section]: false,
+      }));
+    },
+    [setSectionTileCount],
+  );
 
   const toggleSectionFocus = useCallback((section: SectionId) => {
     setFocusedSection((current) => (current === section ? null : section));
@@ -2701,13 +2749,14 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   // dialled the section count down), its last reported status
   // would otherwise stick around in `statuses` and skew the
   // aggregate. Recompute the visible-tile id set whenever the
-  // per-section count preference changes and use it as the gate
-  // both for the badge and (below) for the section render.
+  // per-section count, page, or temporary show-all state changes and
+  // use it as the gate both for the badge and (below) for the section render.
   const visibleMetricIds = useMemo(() => {
     const out = new Set<string>();
     for (const section of visibleSections) {
       // Same pipeline the render below uses: canonical ids ->
-      // apply user reorder -> slice to visible count. Keeping
+      // apply user reorder -> clamp to the workspace catalogue ->
+      // apply the active page or temporary show-all state. Keeping
       // the summary filter and the render in lockstep means a
       // tile dragged into the visible window also gets its
       // status counted in the aggregate, and a tile dragged
@@ -2717,13 +2766,38 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       );
       const canonicalIds = getFactoryTileOrder(section, sectionMetrics);
       const orderedIds = getSectionTileOrder(section, canonicalIds);
-      const visible = orderedIds.slice(0, sectionTileCounts[section]);
+      const sectionMaxAvailable = Math.min(
+        sectionTileBounds.maxCount,
+        orderedIds.length,
+      );
+      const catalogueIds = orderedIds.slice(0, sectionMaxAvailable);
+      const visibleCount = Math.min(
+        sectionTileCounts[section],
+        sectionMaxAvailable,
+      );
+      if (visibleCount <= 0) continue;
+      const pageCount = Math.max(
+        1,
+        Math.ceil(sectionMaxAvailable / visibleCount),
+      );
+      const page = Math.min(
+        sectionTilePages[section] ?? 0,
+        pageCount - 1,
+      );
+      const showingAll = Boolean(showAllTileSections[section]);
+      const start = showingAll ? 0 : page * visibleCount;
+      const visible = showingAll
+        ? catalogueIds
+        : catalogueIds.slice(start, start + visibleCount);
       for (const id of visible) out.add(id);
     }
     return out;
   }, [
     visibleSections,
     sectionTileCounts,
+    sectionTileBounds.maxCount,
+    sectionTilePages,
+    showAllTileSections,
     renderMetricConfig,
     getFactoryTileOrder,
     getSectionTileOrder,
@@ -3159,13 +3233,20 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     const sectionMetricCount = renderMetricConfig.filter(
       (metric) => metric.section === section,
     ).length;
+    const sectionMaxAvailable = Math.min(
+      sectionTileBounds.maxCount,
+      sectionMetricCount,
+    );
     const visibleCount = Math.min(
       sectionTileCounts[section],
-      Math.min(sectionTileBounds.maxCount, sectionMetricCount),
+      sectionMaxAvailable,
     );
+    const renderedTileCount = showAllTileSections[section]
+      ? sectionMaxAvailable
+      : visibleCount;
     const estimatedTileRows =
-      visibleCount >= SECTION_WRAP_TILE_COUNT
-        ? Math.ceil(visibleCount / SECTION_WRAPPED_TILE_COLUMNS)
+      renderedTileCount >= SECTION_WRAP_TILE_COUNT
+        ? Math.ceil(renderedTileCount / SECTION_WRAPPED_TILE_COLUMNS)
         : 1;
     const heightLevel =
       sectionHeights[section] ?? sectionHeightBounds.defaultLevel;
@@ -3182,7 +3263,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       verticalMetricsMinHeight,
       baseMinHeight +
         (heightLevel - sectionHeightBounds.minLevel) * SECTION_HEIGHT_STEP_PX +
-        (estimatedTileRows - 1) * wrappedRowStep,
+        (estimatedTileRows - 1) * wrappedRowStep +
+        (sectionMaxAvailable > visibleCount ? tilePagerHeight : 0),
     );
   }, [
     compactDensity,
@@ -3191,6 +3273,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     sectionHeights,
     sectionTileBounds.maxCount,
     sectionTileCounts,
+    showAllTileSections,
+    tilePagerHeight,
     renderMetricConfig,
     verticalMetricsMinHeight,
     visibleSections,
@@ -3404,7 +3488,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       );
       const applyPersonalViewState = () => {
         setSectionTileOrder(section, nextOrder);
-        setSectionTileCount(section, nextVisibleCount);
+        changeSectionTileCount(section, nextVisibleCount);
       };
       if (destination === "personal") {
         applyPersonalViewState();
@@ -3456,7 +3540,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       renderMetricConfig,
       sectionTileBounds.maxCount,
       sectionTileCounts,
-      setSectionTileCount,
+      changeSectionTileCount,
       setSectionTileOrder,
       workspaceLayout,
     ],
@@ -3548,7 +3632,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
 
       showSectionTile(section, target.id);
       setSectionTileOrder(section, nextOrder);
-      setSectionTileCount(
+      changeSectionTileCount(
         section,
         Math.min(
           sectionTileBounds.maxCount,
@@ -3565,7 +3649,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       renderMetricConfig,
       sectionTileBounds.maxCount,
       sectionTileCounts,
-      setSectionTileCount,
+      changeSectionTileCount,
       setSectionTileOrder,
       showSectionTile,
     ],
@@ -3993,6 +4077,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     resetAllSectionHeights();
     resetAllSectionPresentation();
     resetAllSectionTileOrder();
+    setSectionTilePages({});
+    setShowAllTileSections({});
     resetSignalTickerConfig();
     clearCustomerTopologyStorage();
     setTopologyResetKey((n) => n + 1);
@@ -4743,9 +4829,17 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 sectionTileCounts[section],
                 sectionMaxAvailable,
               );
-              const wrapTiles = visibleCount >= SECTION_WRAP_TILE_COUNT;
+              const isShowingAllTiles =
+                Boolean(showAllTileSections[section]) &&
+                sectionMaxAvailable > visibleCount;
+              const renderedTileCount = isShowingAllTiles
+                ? sectionMaxAvailable
+                : visibleCount;
+              const wrapTiles = renderedTileCount >= SECTION_WRAP_TILE_COUNT;
               const estimatedTileRows = wrapTiles
-                ? Math.ceil(visibleCount / SECTION_WRAPPED_TILE_COLUMNS)
+                ? Math.ceil(
+                    renderedTileCount / SECTION_WRAPPED_TILE_COLUMNS,
+                  )
                 : 1;
               const isSectionFocused = focusedSection === section;
               const isSectionCollapsed = isSectionFocused
@@ -4768,12 +4862,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 baseMinHeight +
                 (heightLevel - sectionHeightBounds.minLevel) *
                   SECTION_HEIGHT_STEP_PX +
-                (estimatedTileRows - 1) * wrappedRowStep;
+                (estimatedTileRows - 1) * wrappedRowStep +
+                (sectionMaxAvailable > visibleCount ? tilePagerHeight : 0);
 
               // Apply the user's drag-reorder
               // preference (if any) to the canonical
-              // tile list, then slice to the visible
-              // count. The id-keyed `byId` lookup lets
+              // tile list, then select the current page
+              // or the temporary show-all set. The id-keyed `byId` lookup lets
               // the render iterate ordered ids while
               // still resolving each id back to its
               // full MetricConfig — no per-iteration
@@ -4783,7 +4878,25 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 allSectionMetrics,
               );
               const orderedIds = getSectionTileOrder(section, canonicalIds);
-              const visibleIds = orderedIds.slice(0, visibleCount);
+              const catalogueIds = orderedIds.slice(0, sectionMaxAvailable);
+              const tilePageCount = Math.max(
+                1,
+                Math.ceil(sectionMaxAvailable / Math.max(visibleCount, 1)),
+              );
+              const tilePage = Math.min(
+                sectionTilePages[section] ?? 0,
+                tilePageCount - 1,
+              );
+              const tilePageStart = isShowingAllTiles
+                ? 0
+                : tilePage * visibleCount;
+              const visibleIds = isShowingAllTiles
+                ? catalogueIds
+                : catalogueIds.slice(
+                    tilePageStart,
+                    tilePageStart + visibleCount,
+                  );
+              const tilePageEnd = tilePageStart + visibleIds.length;
               const byId = new Map(allSectionMetrics.map((m) => [m.id, m]));
               let sectionFlexGrow = heightLevel;
               if (isSectionCollapsed) sectionFlexGrow = 0;
@@ -4837,6 +4950,22 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   focused={isSectionFocused}
                   onToggleCollapsed={() => toggleSectionCollapsed(section)}
                   onToggleFocus={() => toggleSectionFocus(section)}
+                  tilePager={
+                    sectionMaxAvailable > visibleCount
+                      ? {
+                          page: tilePage,
+                          pageCount: tilePageCount,
+                          start: tilePageStart,
+                          end: tilePageEnd,
+                          total: sectionMaxAvailable,
+                          showingAll: isShowingAllTiles,
+                          onPageChange: (next) =>
+                            setSectionTilePage(section, next),
+                          onToggleShowAll: () =>
+                            toggleSectionShowAllTiles(section),
+                        }
+                      : undefined
+                  }
                   tileCount={
                     sectionMaxAvailable > 0
                       ? {
@@ -4847,7 +4976,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                           ),
                           max: sectionMaxAvailable,
                           onChange: (next) =>
-                            setSectionTileCount(section, next),
+                            changeSectionTileCount(section, next),
                           label: `${meta.title} tiles`,
                         }
                       : undefined

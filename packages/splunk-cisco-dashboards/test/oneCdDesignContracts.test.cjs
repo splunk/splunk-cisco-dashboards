@@ -119,7 +119,37 @@ assert.doesNotMatch(
 assert.match(
   dashboardSection,
   /<Dropdown[\s\S]*?<Menu[\s\S]*?addTileAction\.label[\s\S]*?Edit section titles[\s\S]*?Focus this section[\s\S]*?Decrease height[\s\S]*?Show fewer tiles/,
-  "Non-navigation section actions must live in the SUI kebab menu",
+  "Secondary section actions must remain available in the SUI kebab menu",
+);
+assert.match(
+  dashboardSection,
+  /const TileCountControl = styled[\s\S]*?Visible tiles[\s\S]*?Show fewer[\s\S]*?Show more/,
+  "Workspace sections must expose the restored inline visible-tile stepper",
+);
+assert.match(
+  dashboardSection,
+  /const TileCountStepper = styled[\s\S]*?backgroundColorPopup[\s\S]*?const TileCountValue = styled[\s\S]*?actionColorBorderSecondary[\s\S]*?backgroundColorPopup/,
+  "Visible-tile controls must use the unified elevated control surface instead of the page canvas",
+);
+assert.match(
+  dashboardSection,
+  /const ShowAllButton = styled\(Button\)[\s\S]*?backgroundColorPopup[\s\S]*?actionColorContentStandalone/,
+  "Show-all actions must use the bordered elevated surface with standalone action color",
+);
+assert.match(
+  dashboardSection,
+  /Show all \$\{tilePager\.total\}[\s\S]*?Paginator\.Compact[\s\S]*?configured/,
+  "Workspace sections must expose configured-tile paging and temporary show-all controls",
+);
+assert.match(
+  dashboardSection,
+  /effectiveTileCount[\s\S]*?tilePager\?\.showingAll[\s\S]*?Math\.min\(tilePager\.total, tileCount\.max\)[\s\S]*?TileCountValue[\s\S]*?effectiveTileCount/,
+  "Show-all mode must report the effective number of visible tiles without overwriting the compact preference",
+);
+assert.match(
+  profile,
+  /sectionTilePages[\s\S]*?showAllTileSections[\s\S]*?tilePageStart[\s\S]*?catalogueIds\.slice/,
+  "Tile paging and show-all state must remain transient and separate from persisted tile counts",
 );
 assert.doesNotMatch(
   dashboardSection,

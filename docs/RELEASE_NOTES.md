@@ -9,10 +9,15 @@
   completed even when the CIM scan is skipped, interrupted, or unavailable.
 - Insights Workspace section and branding editors now share the Configure Tile
   modal treatment, keep focus and dismissal behavior predictable, and use
-  theme-safe neutral surfaces. Factory reset confirmation remains open until a
-  user explicitly cancels or confirms, table hover no longer introduces a
-  bright blue fill, and the redundant visible status-overview strip is hidden
-  while its accessible live status remains available to assistive technology.
+  theme-safe neutral surfaces. Metric sections again expose their per-user
+  visible-tile controls in a unified elevated segmented treatment, page through
+  configured tiles without changing the saved count, and offer a temporary
+  show-all view whose visible count reflects the full expanded set. Factory
+  reset confirmation
+  remains open until a user explicitly cancels or confirms, table hover no
+  longer introduces a bright blue fill, and the redundant visible
+  status-overview strip is hidden while its accessible live status remains
+  available to assistive technology.
 - Searchbase explanations, section-count badges, inline code, and user-guide
   navigation now use the shared Splunk UI semantic palette and larger readable
   text in both dark and light themes. The user guide also documents the optional

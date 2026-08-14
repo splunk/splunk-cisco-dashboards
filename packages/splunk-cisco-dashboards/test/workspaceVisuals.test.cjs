@@ -100,6 +100,31 @@ assert.match(
   /<CollapsiblePanel[\s\S]*?headingLevel=\{2\}[\s\S]*?title=\{[\s\S]*?\{title\}[\s\S]*?<\/span>/,
   "Dashboard section titles must use CollapsiblePanel's level-two heading semantics",
 );
+assert.match(
+  dashboardSection,
+  /Visible tiles[\s\S]*?TileCountValue[\s\S]*?Show all[\s\S]*?Paginator\.Compact/,
+  "Dashboard sections must keep tile count, paging, and show-all controls visible",
+);
+assert.match(
+  dashboardSection,
+  /TileCountStepper = styled[\s\S]*?backgroundColorPopup[\s\S]*?ShowAllButton = styled\(Button\)[\s\S]*?actionColorContentStandalone[\s\S]*?Show all \$\{tilePager\.total\}/,
+  "Visible-tile controls must match the bordered secondary-surface design",
+);
+assert.match(
+  dashboardSection,
+  /effectiveTileCount[\s\S]*?tilePager\?\.showingAll[\s\S]*?tilePager\.total[\s\S]*?TileCountValue[\s\S]*?\{effectiveTileCount\}[\s\S]*?role="status"[\s\S]*?aria-pressed=\{tilePager\.showingAll\}/,
+  "Tile-count changes and repeated show-all toggles must expose complete accessible context",
+);
+assert.match(
+  profile,
+  /const SECTION_WRAP_TILE_COUNT = 4;[\s\S]*?const SECTION_WRAPPED_TILE_COLUMNS = 3;/,
+  "A fourth visible tile must start a second three-column row",
+);
+assert.match(
+  profile,
+  /changeSectionTileCount[\s\S]*?setSectionTileCount\(section, count\)[\s\S]*?\[section\]: false/,
+  "Changing the persisted count must reset transient page and show-all state",
+);
 assert.doesNotMatch(
   dashboardSection,
   /ArrowUpRight/,
