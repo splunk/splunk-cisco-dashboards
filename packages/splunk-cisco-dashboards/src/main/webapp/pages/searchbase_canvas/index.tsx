@@ -5,6 +5,30 @@ import React, {
     useRef,
     useState,
 } from 'react';
+import styled from 'styled-components';
+import Button from '@splunk/react-ui/Button';
+import Checkbox from '@splunk/react-ui/Checkbox';
+import CollapsiblePanel from '@splunk/react-ui/CollapsiblePanel';
+import ControlGroup from '@splunk/react-ui/ControlGroup';
+import Multiselect from '@splunk/react-ui/Multiselect';
+import SearchInput from '@splunk/react-ui/Search';
+import Select from '@splunk/react-ui/Select';
+import { variables } from '@splunk/themes';
+import {
+    DndContext,
+    KeyboardSensor,
+    PointerSensor,
+    closestCenter,
+    useSensor,
+    useSensors,
+    type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+    SortableContext,
+    arrayMove,
+    rectSortingStrategy,
+    sortableKeyboardCoordinates,
+} from '@dnd-kit/sortable';
 import {
     AlertCircle,
     Check,
@@ -32,21 +56,6 @@ import {
     Trash2,
     X,
 } from '@/common/icons/SuiIcon';
-import {
-    DndContext,
-    KeyboardSensor,
-    PointerSensor,
-    closestCenter,
-    useSensor,
-    useSensors,
-    type DragEndEvent,
-} from '@dnd-kit/core';
-import {
-    SortableContext,
-    arrayMove,
-    rectSortingStrategy,
-    sortableKeyboardCoordinates,
-} from '@dnd-kit/sortable';
 import { BarBreakdownTile } from '@/common/components/workspace/BarBreakdownTile';
 import {
     resolveBaselineField,
@@ -125,6 +134,13 @@ import { recordMatchesCatalogueQuery } from './catalogueSearch';
 const APP_NAME = 'splunk-cisco-dashboards';
 const STORAGE_KEY = 'scd_searchbase_canvas_v1';
 const MAX_BATCH_RUNS = 10;
+
+// Splunk Web's legacy input rule outranks SUI, so restore the themed search background here.
+const StyledSearch = styled(SearchInput)`
+    && input[role='searchbox'] {
+        background-color: ${variables.transparent};
+    }
+`;
 
 const catalogueAppLabel = (
     app: string,
@@ -2870,407 +2886,6 @@ const recordMatchesBrowserVisibility = (
     return true;
 };
 
-interface SearchableFilterSelectProps {
-    value: string;
-    options: string[];
-    allLabel: string;
-    searchPlaceholder: string;
-    ariaLabel: string;
-    onChange: (value: string) => void;
-}
-
-const SearchableFilterSelect: React.FC<SearchableFilterSelectProps> = ({
-    value,
-    options,
-    allLabel,
-    searchPlaceholder,
-    ariaLabel,
-    onChange,
-}) => {
-    const rootRef = useRef<HTMLDivElement>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
-    const [open, setOpen] = useState(false);
-    const [search, setSearch] = useState('');
-
-    const selectOptions = useMemo(
-        () => [
-            { value: ALL, label: allLabel },
-            ...options.map((option) => ({ value: option, label: option })),
-        ],
-        [allLabel, options]
-    );
-
-    const selectedLabel = useMemo(() => {
-        if (value === ALL) return allLabel;
-        return selectOptions.find((option) => option.value === value)?.label ?? value;
-    }, [allLabel, selectOptions, value]);
-
-    const filteredOptions = useMemo(() => {
-        const normalized = search.trim().toLowerCase();
-        if (!normalized) return selectOptions;
-        return selectOptions.filter((option) =>
-            option.label.toLowerCase().includes(normalized)
-        );
-    }, [search, selectOptions]);
-
-    useEffect(() => {
-        if (!open) {
-            setSearch('');
-            return undefined;
-        }
-
-        const focusHandle = window.setTimeout(() => {
-            inputRef.current?.focus();
-        }, 0);
-        const handlePointerDown = (event: MouseEvent | TouchEvent) => {
-            if (
-                rootRef.current &&
-                event.target instanceof Node &&
-                !rootRef.current.contains(event.target)
-            ) {
-                setOpen(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handlePointerDown);
-        document.addEventListener('touchstart', handlePointerDown);
-        return () => {
-            window.clearTimeout(focusHandle);
-            document.removeEventListener('mousedown', handlePointerDown);
-            document.removeEventListener('touchstart', handlePointerDown);
-        };
-    }, [open]);
-
-    const selectValue = (nextValue: string) => {
-        onChange(nextValue);
-        setOpen(false);
-        setSearch('');
-    };
-
-    return (
-        <div ref={rootRef} className="relative">
-            <button
-                type="button"
-                aria-label={ariaLabel}
-                aria-haspopup="listbox"
-                aria-expanded={open}
-                onClick={() => setOpen((current) => !current)}
-                onKeyDown={(event) => {
-                    if (event.key === 'ArrowDown' || event.key === 'Enter') {
-                        event.preventDefault();
-                        setOpen(true);
-                    }
-                    if (event.key === 'Escape') {
-                        setOpen(false);
-                    }
-                }}
-                className="flex h-10 w-full items-center gap-2 rounded-md border   px-3 text-left text-sm  outline-none transition sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-section sui-color-active sui-focus-ring"
-            >
-                <span className="min-w-0 flex-1 truncate">{selectedLabel}</span>
-                <ChevronDown
-                    className={cn(
-                        'h-4 w-4 flex-shrink-0 sui-color-muted transition-transform',
-                        open && 'rotate-180'
-                    )}
-                />
-            </button>
-
-            {open && (
-                <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md border   shadow-xl sui-border-default sui-bg-page">
-                    <label className="relative block border-b  sui-border-weak">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 sui-color-default" />
-                        <input
-                            ref={inputRef}
-                            value={search}
-                            onChange={(event) => setSearch(event.target.value)}
-                            onKeyDown={(event) => {
-                                if (event.key === 'Escape') {
-                                    event.stopPropagation();
-                                    setOpen(false);
-                                }
-                                if (
-                                    event.key === 'Enter' &&
-                                    filteredOptions.length === 1
-                                ) {
-                                    event.preventDefault();
-                                    selectValue(filteredOptions[0].value);
-                                }
-                            }}
-                            placeholder={searchPlaceholder}
-                            className="h-10 w-full  pl-9 pr-3 text-sm  outline-none sui-bg-page sui-color-active"
-                        />
-                    </label>
-                    <div role="listbox" aria-label={ariaLabel} className="max-h-56 overflow-y-auto p-1">
-                        {filteredOptions.length === 0 ? (
-                            <div className="px-3 py-3 text-sm  sui-color-default">
-                                No matches
-                            </div>
-                        ) : (
-                            filteredOptions.map((option) => {
-                                const selected = option.value === value;
-                                return (
-                                    <button
-                                        key={option.value}
-                                        type="button"
-                                        role="option"
-                                        aria-selected={selected}
-                                        onClick={() => selectValue(option.value)}
-                                        className={cn(
-                                            'flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm transition-colors',
-                                            selected
-                                                ? 'sui-bg-info font-bold  sui-bg-info sui-color-info'
-                                                : 'sui-color-default  sui-color-active sui-hover-bg-section'
-                                        )}
-                                    >
-                                        <span className="min-w-0 flex-1 truncate">
-                                            {option.label}
-                                        </span>
-                                        {selected && (
-                                            <Check className="h-4 w-4 flex-shrink-0" />
-                                        )}
-                                    </button>
-                                );
-                            })
-                        )}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
-
-interface SearchableAppMultiSelectProps {
-    selectedApps: ReadonlySet<string>;
-    options: string[];
-    countsByApp: Map<string, number>;
-    labelsByApp: ReadonlyMap<string, string>;
-    ariaLabel: string;
-    onChange: (selection: Set<string>) => void;
-}
-
-const SearchableAppMultiSelect: React.FC<SearchableAppMultiSelectProps> = ({
-    selectedApps,
-    options,
-    countsByApp,
-    labelsByApp,
-    ariaLabel,
-    onChange,
-}) => {
-    const rootRef = useRef<HTMLDivElement>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
-    const [open, setOpen] = useState(false);
-    const [search, setSearch] = useState('');
-
-    const selectableApps = useMemo(() => {
-        const values = new Set(options);
-        values.add(APP_NAME);
-        for (const selectedApp of selectedApps) {
-            values.add(selectedApp);
-        }
-        return Array.from(values).sort((left, right) =>
-            (labelsByApp.get(left) ?? left).localeCompare(labelsByApp.get(right) ?? right)
-        );
-    }, [labelsByApp, options, selectedApps]);
-
-    const appLabel = useCallback(
-        (app: string): string => catalogueAppLabel(app, labelsByApp),
-        [labelsByApp]
-    );
-
-    const totalCount = useMemo(
-        () =>
-            Array.from(countsByApp.values()).reduce(
-                (total, count) => total + count,
-                0
-            ),
-        [countsByApp]
-    );
-
-    const selectedLabel = useMemo(() => {
-        if (selectedApps.size === 0) return `All apps (${totalCount})`;
-        const selected = Array.from(selectedApps).sort((left, right) =>
-            left.localeCompare(right)
-        );
-        if (selected.length === 1) return appLabel(selected[0]);
-        return `${selected.length} apps selected`;
-    }, [appLabel, selectedApps, totalCount]);
-
-    const filteredApps = useMemo(() => {
-        const normalized = search.trim().toLowerCase();
-        if (!normalized) return selectableApps;
-        return selectableApps.filter((option) =>
-            option.toLowerCase().includes(normalized) ||
-            appLabel(option).toLowerCase().includes(normalized)
-        );
-    }, [appLabel, search, selectableApps]);
-
-    const allAppsMatches = useMemo(() => {
-        const normalized = search.trim().toLowerCase();
-        return !normalized || 'all apps'.includes(normalized);
-    }, [search]);
-
-    useEffect(() => {
-        if (!open) {
-            setSearch('');
-            return undefined;
-        }
-
-        const focusHandle = window.setTimeout(() => {
-            inputRef.current?.focus();
-        }, 0);
-        const handlePointerDown = (event: MouseEvent | TouchEvent) => {
-            if (
-                rootRef.current &&
-                event.target instanceof Node &&
-                !rootRef.current.contains(event.target)
-            ) {
-                setOpen(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handlePointerDown);
-        document.addEventListener('touchstart', handlePointerDown);
-        return () => {
-            window.clearTimeout(focusHandle);
-            document.removeEventListener('mousedown', handlePointerDown);
-            document.removeEventListener('touchstart', handlePointerDown);
-        };
-    }, [open]);
-
-    const setAllApps = () => onChange(new Set());
-
-    const toggleApp = (option: string) => {
-        const next = selectedApps.size === 0 ? new Set<string>() : new Set(selectedApps);
-        if (next.has(option)) next.delete(option);
-        else next.add(option);
-        onChange(next);
-    };
-
-    return (
-        <div ref={rootRef} className="relative">
-            <button
-                type="button"
-                aria-label={ariaLabel}
-                aria-haspopup="listbox"
-                aria-expanded={open}
-                onClick={() => setOpen((current) => !current)}
-                onKeyDown={(event) => {
-                    if (event.key === 'ArrowDown' || event.key === 'Enter') {
-                        event.preventDefault();
-                        setOpen(true);
-                    }
-                    if (event.key === 'Escape') {
-                        setOpen(false);
-                    }
-                }}
-                className="flex h-10 w-full items-center gap-2 rounded-md border   px-3 text-left text-sm font-semibold  outline-none transition sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-page sui-color-active sui-focus-ring"
-            >
-                <span className="min-w-0 flex-1 truncate">{selectedLabel}</span>
-                <ChevronDown
-                    className={cn(
-                        'h-4 w-4 flex-shrink-0 sui-color-muted transition-transform',
-                        open && 'rotate-180'
-                    )}
-                />
-            </button>
-
-            {open && (
-                <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md border   shadow-xl sui-border-default sui-bg-page">
-                    <label className="relative block border-b  sui-border-weak">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 sui-color-default" />
-                        <input
-                            ref={inputRef}
-                            value={search}
-                            onChange={(event) => setSearch(event.target.value)}
-                            onKeyDown={(event) => {
-                                if (event.key === 'Escape') {
-                                    event.stopPropagation();
-                                    setOpen(false);
-                                }
-                                if (
-                                    event.key === 'Enter' &&
-                                    filteredApps.length === 1 &&
-                                    !allAppsMatches
-                                ) {
-                                    event.preventDefault();
-                                    toggleApp(filteredApps[0]);
-                                }
-                            }}
-                            placeholder="Search apps..."
-                            className="h-10 w-full  pl-9 pr-3 text-sm  outline-none sui-bg-page sui-color-active"
-                        />
-                    </label>
-                    <div
-                        role="listbox"
-                        aria-label={ariaLabel}
-                        aria-multiselectable="true"
-                        className="max-h-56 overflow-y-auto p-1"
-                    >
-                        {allAppsMatches && (
-                            <button
-                                type="button"
-                                role="option"
-                                aria-selected={selectedApps.size === 0}
-                                onClick={setAllApps}
-                                className={cn(
-                                    'flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm transition-colors',
-                                    selectedApps.size === 0
-                                        ? 'sui-bg-info font-bold  sui-bg-info sui-color-info'
-                                        : 'sui-color-default  sui-color-active sui-hover-bg-section'
-                                )}
-                            >
-                                <span className="min-w-0 flex-1 truncate">All apps</span>
-                                <span className="text-xs font-bold sui-color-default">
-                                    {totalCount}
-                                </span>
-                                {selectedApps.size === 0 && (
-                                    <Check className="h-4 w-4 flex-shrink-0" />
-                                )}
-                            </button>
-                        )}
-                        {filteredApps.length === 0 && !allAppsMatches ? (
-                            <div className="px-3 py-3 text-sm  sui-color-default">
-                                No matches
-                            </div>
-                        ) : (
-                            filteredApps.map((option) => {
-                                const selected =
-                                    selectedApps.size > 0 && selectedApps.has(option);
-                                return (
-                                    <button
-                                        key={option}
-                                        type="button"
-                                        role="option"
-                                        aria-selected={selected}
-                                        onClick={() => toggleApp(option)}
-                                        title={`Folder name: ${option}`}
-                                        className={cn(
-                                            'flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm transition-colors',
-                                            selected
-                                                ? 'sui-bg-info font-bold  sui-bg-info sui-color-info'
-                                                : 'sui-color-default  sui-color-active sui-hover-bg-section'
-                                        )}
-                                    >
-                                        <span className="min-w-0 flex-1 truncate">
-                                            {appLabel(option)}
-                                        </span>
-                                        <span className="text-xs font-bold sui-color-default">
-                                            {countsByApp.get(option) ?? 0}
-                                        </span>
-                                        {selected && (
-                                            <Check className="h-4 w-4 flex-shrink-0" />
-                                        )}
-                                    </button>
-                                );
-                            })
-                        )}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
-
 const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     open,
     records,
@@ -3282,6 +2897,12 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     onAddRecords,
     onIncludeHiddenSearchesChange,
 }) => {
+    const searchInputRef = useCallback((node: HTMLInputElement | null) => {
+        // SUI 5.13 overwrites aria-controls passed to Search, so associate the input directly.
+        if (node) {
+            node.setAttribute('aria-controls', 'searchbase-catalogue-results');
+        }
+    }, []);
     const [query, setQuery] = useState('');
     const [selectedApps, setSelectedApps] = useState<Set<string>>(
         makeDefaultAppSelection
@@ -3289,12 +2910,11 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     const [category, setCategory] = useState(ALL);
     const [subCategory, setSubCategory] = useState(ALL);
     const [vizType, setVizType] = useState(ALL);
-    const [tagInput, setTagInput] = useState('');
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [includeDrilldownSearches, setIncludeDrilldownSearches] =
         useState(false);
     const [includeTableSearches, setIncludeTableSearches] = useState(false);
-    const [filtersCollapsed, setFiltersCollapsed] = useState(true);
+    const [filtersOpen, setFiltersOpen] = useState(false);
     const [selectedNames, setSelectedNames] = useState<Set<string>>(
         () => new Set()
     );
@@ -3309,7 +2929,7 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
 
     useEffect(() => {
         if (open) {
-            setFiltersCollapsed(true);
+            setFiltersOpen(false);
         }
     }, [open]);
 
@@ -3463,7 +3083,6 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
             setSubCategory(ALL);
             setVizType(ALL);
             setSelectedTags([]);
-            setTagInput('');
         }
     }, [category, categoryOptions]);
 
@@ -3492,7 +3111,6 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
             setSubCategory(ALL);
             setVizType(ALL);
             setSelectedTags([]);
-            setTagInput('');
         }
     }, [subCategory, subCategoryOptions]);
 
@@ -3552,28 +3170,16 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
         [facetScopedRecords, selectedTags]
     );
 
-    const availableTagCount = useMemo(
-        () => new Set(facetScopedRecords.flatMap((record) => record.tags)).size,
-        [facetScopedRecords]
-    );
-
-    const tagOptions = useMemo(() => {
+    const allTagsWithCounts = useMemo(() => {
         const tagCounts = new Map<string, number>();
         for (const record of tagScopedRecords) {
             for (const tag of record.tags) {
                 tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
             }
         }
-        const normalizedInput = tagInput.trim().toLowerCase();
         return Array.from(tagCounts.entries())
-            .filter(([tag]) => !selectedTags.includes(tag))
-            .filter(([tag]) =>
-                normalizedInput ? tag.toLowerCase().includes(normalizedInput) : true
-            )
-            .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-            .slice(0, 18)
-            .map(([tag, count]) => ({ tag, count }));
-    }, [selectedTags, tagInput, tagScopedRecords]);
+            .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    }, [tagScopedRecords]);
 
     const filteredRecords = useMemo(() => {
         return tagScopedRecords.filter((record) =>
@@ -3656,11 +3262,10 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
         vizType,
     ]);
 
-    const hasActiveFilters =
-        query.trim().length > 0 || activeFilterChips.length > 0;
+    const activeFilterCount = activeFilterChips.length;
+    const facetsActive = activeFilterCount > 0;
 
-    const resetFilters = () => {
-        setQuery('');
+    const handleClearFacets = () => {
         setSelectedApps(new Set(defaultAppSelection));
         onIncludeHiddenSearchesChange(false);
         setIncludeDrilldownSearches(false);
@@ -3669,8 +3274,6 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
         setSubCategory(ALL);
         setVizType(ALL);
         setSelectedTags([]);
-        setTagInput('');
-        setSelectedNames(new Set());
     };
 
     const toggleSelected = (searchName: string) => {
@@ -3685,7 +3288,6 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
 
     const selectTag = (tag: string) => {
         setSelectedTags((current) => (current.includes(tag) ? current : [...current, tag]));
-        setTagInput('');
     };
 
     if (!open) return null;
@@ -3717,242 +3319,187 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                 </button>
             </div>
 
-            <div className="border-b  px-4 py-3 sui-border-weak">
-                <label className="relative block">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 sui-color-default" />
-                    <input
+            <div className="border-b px-4 py-3 sui-border-weak">
+                <ControlGroup hideLabel label="Search">
+                    <StyledSearch
+                        inputRef={searchInputRef}
+                        onChange={(_event, { value }) => setQuery(value)}
+                        placeholder="Search by name, description, or tag"
                         value={query}
-                        onChange={(event) => setQuery(event.target.value)}
-                        placeholder="Filter by stanza, name, SPL, or description..."
-                        className="h-11 w-full rounded-md border   pl-10 pr-3 text-sm font-medium  outline-none transition sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-section sui-color-active sui-focus-ring"
                     />
-                </label>
+                </ControlGroup>
 
-                <div className="mt-3 flex items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={() => setFiltersCollapsed((current) => !current)}
-                        aria-expanded={!filtersCollapsed}
-                        className="inline-flex min-w-0 items-center gap-2 rounded-md  px-3 py-2 text-xs font-black uppercase tracking-[0.16em]  transition  focus:outline-none focus:ring-2 sui-focus-ring sui-bg-popup sui-color-active sui-hover-bg-floating sui-focus-ring"
-                    >
-                        <span>Filters</span>
-                        {hasActiveFilters && (
-                            <span className="rounded-full  px-2 py-0.5 text-xs tracking-normal  sui-bg-info sui-color-info">
-                                active
-                            </span>
-                        )}
-                        <ChevronDown
-                            className={cn(
-                                'h-4 w-4 flex-shrink-0  transition-transform sui-color-default',
-                                filtersCollapsed && '-rotate-90'
-                            )}
+                <CollapsiblePanel
+                    actions={
+                        <Button
+                            appearance="subtle"
+                            disabled={!facetsActive}
+                            label="Clear filters"
+                            onClick={handleClearFacets}
                         />
-                    </button>
-                    <div className="ml-auto flex items-center gap-3">
-                        <span
-                            title="Searchbase stanzas matching the current app, visibility, category, sub-category, viz, tag, and text filters"
-                            className="inline-flex items-center rounded-full border   px-2.5 py-1 text-xs font-black uppercase tracking-wider  shadow-sm sui-border-info sui-bg-info sui-color-info"
+                    }
+                    appearance="subtle"
+                    description={availableSearchLabel}
+                    inset
+                    onChange={(_event, { action }) =>
+                        setFiltersOpen(action === 'open')
+                    }
+                    open={filtersOpen}
+                    title={
+                        activeFilterCount > 0
+                            ? `Filters (${activeFilterCount} active)`
+                            : 'Filters'
+                    }
+                >
+                    <ControlGroup label="App">
+                        <Multiselect
+                            compact
+                            filter
+                            onChange={(_event, { values }) => {
+                                setSelectedApps(new Set(values.map(String)));
+                                setCategory(ALL);
+                                setSubCategory(ALL);
+                                setVizType(ALL);
+                                setSelectedTags([]);
+                            }}
+                            placeholder={`All apps (${appOptions.length})`}
+                            showSelectedValuesFirst="nextOpen"
+                            values={Array.from(selectedApps)}
                         >
-                            {availableSearchLabel}
-                        </span>
-                        <button
-                            type="button"
-                            onClick={resetFilters}
-                            className="text-xs font-black uppercase tracking-[0.18em] sui-color-default transition-colors  sui-hover-color-info"
-                        >
-                            Clear filters
-                        </button>
-                    </div>
-                </div>
-
-                {filtersCollapsed ? (
-                    activeFilterChips.length > 0 && (
-                        <div className="mt-2 flex max-h-14 flex-wrap gap-1 overflow-y-auto">
-                            {activeFilterChips.slice(0, 10).map((chip) => (
-                                <span
-                                    key={chip.id}
-                                    className="inline-flex rounded-full  px-2 py-1 text-xs font-bold  sui-bg-popup sui-color-default"
-                                >
-                                    {chip.label}
-                                </span>
-                            ))}
-                            {activeFilterChips.length > 10 && (
-                                <span className="inline-flex rounded-full  px-2 py-1 text-xs font-bold  sui-bg-popup sui-color-default">
-                                    +{activeFilterChips.length - 10}
-                                </span>
-                            )}
-                        </div>
-                    )
-                ) : (
-                    <div className="mt-3 rounded-xl border   p-3 sui-border-weak sui-bg-section">
-                        <div className="grid grid-cols-[76px_minmax(0,1fr)] gap-x-3 gap-y-3">
-                            <span className="self-center text-xs font-black uppercase tracking-[0.16em] sui-color-default">
-                                App
-                            </span>
-                            <SearchableAppMultiSelect
-                                selectedApps={selectedApps}
-                                options={appOptions}
-                                countsByApp={appCountsByName}
-                                labelsByApp={appLabelsById}
-                                ariaLabel="Filter searches by app"
-                                onChange={(nextSelection) => {
-                                    setSelectedApps(nextSelection);
-                                    setCategory(ALL);
-                                    setSubCategory(ALL);
-                                    setVizType(ALL);
-                                    setSelectedTags([]);
-                                    setTagInput('');
-                                }}
-                            />
-
-                            <span className="self-start pt-4 text-xs font-black uppercase tracking-[0.16em] sui-color-default">
-                                Visibility
-                            </span>
-                            <div className="grid gap-2 sm:grid-cols-3">
-                                <label className="flex min-h-16 items-center gap-2 rounded-lg border   px-3 py-3 text-sm font-bold leading-tight  shadow-sm sui-border-weak sui-bg-page sui-color-active">
-                                    <input
-                                        type="checkbox"
-                                        checked={includeHiddenSearches}
-                                        onChange={(event) =>
-                                            onIncludeHiddenSearchesChange(
-                                                event.target.checked
-                                            )
-                                        }
-                                        className="h-4 w-4 rounded  sui-color-info sui-focus-ring sui-border-default sui-bg-page"
-                                    />
-                                    <span>Show hidden searches</span>
-                                </label>
-                                <label className="flex min-h-16 items-center gap-2 rounded-lg border   px-3 py-3 text-sm font-bold leading-tight  shadow-sm sui-border-weak sui-bg-page sui-color-active">
-                                    <input
-                                        type="checkbox"
-                                        checked={includeDrilldownSearches}
-                                        onChange={(event) =>
-                                            setIncludeDrilldownSearches(
-                                                event.target.checked
-                                            )
-                                        }
-                                        className="h-4 w-4 rounded  sui-color-info sui-focus-ring sui-border-default sui-bg-page"
-                                    />
-                                    <span>Show drill-down searches</span>
-                                </label>
-                                <label className="flex min-h-16 items-center gap-2 rounded-lg border   px-3 py-3 text-sm font-bold leading-tight  shadow-sm sui-border-weak sui-bg-page sui-color-active">
-                                    <input
-                                        type="checkbox"
-                                        checked={includeTableSearches}
-                                        onChange={(event) =>
-                                            setIncludeTableSearches(event.target.checked)
-                                        }
-                                        className="h-4 w-4 rounded  sui-color-info sui-focus-ring sui-border-default sui-bg-page"
-                                    />
-                                    <span>Show table searches</span>
-                                </label>
-                            </div>
-
-                            <label className="self-center text-xs font-black uppercase tracking-[0.16em] sui-color-default">
-                                Category
-                            </label>
-                            <SearchableFilterSelect
-                                value={category}
-                                options={categoryOptions}
-                                allLabel="All categories"
-                                searchPlaceholder="Search categories..."
-                                ariaLabel="Category"
-                                onChange={(value) => {
-                                    setCategory(value);
-                                    setSubCategory(ALL);
-                                    setVizType(ALL);
-                                    setSelectedTags([]);
-                                    setTagInput('');
-                                }}
-                            />
-
-                            {category !== ALL && subCategoryOptions.length > 0 && (
-                                <>
-                                    <label className="self-center text-xs font-black uppercase tracking-[0.16em] sui-color-default">
-                                        Sub-cat
-                                    </label>
-                                    <SearchableFilterSelect
-                                        value={subCategory}
-                                        options={subCategoryOptions}
-                                        allLabel={`All sub-categories (${subCategoryOptions.length})`}
-                                        searchPlaceholder="Search sub-categories..."
-                                        ariaLabel="Sub-category"
-                                        onChange={(value) => {
-                                            setSubCategory(value);
-                                            setVizType(ALL);
-                                            setSelectedTags([]);
-                                            setTagInput('');
-                                        }}
-                                    />
-                                </>
-                            )}
-
-                            <label className="self-center text-xs font-black uppercase tracking-[0.16em] sui-color-default">
-                                Viz
-                            </label>
-                            <select
-                                value={vizType}
-                                onChange={(event) => {
-                                    setVizType(event.target.value);
-                                    setSelectedTags([]);
-                                    setTagInput('');
-                                }}
-                                className="h-10 rounded-md border   px-3 text-sm font-semibold  outline-none sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-page sui-color-active sui-focus-ring"
-                            >
-                                <option value={ALL}>All viz types</option>
-                                {vizTypeOptions.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                        {option.label} ({option.count})
-                                    </option>
-                                ))}
-                            </select>
-
-                            <label className="self-center text-xs font-black uppercase tracking-[0.16em] sui-color-default">
-                                Tags
-                            </label>
-                            <div>
-                                <input
-                                    value={tagInput}
-                                    onChange={(event) => setTagInput(event.target.value)}
-                                    placeholder={`Filter by tag (${availableTagCount} tags available, AND combined)...`}
-                                    className="h-10 w-full rounded-md border   px-3 text-sm  outline-none transition sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-page sui-color-active sui-focus-ring"
+                            {appOptions.map((app) => (
+                                <Multiselect.Option
+                                    description={`${appCountsByName.get(app) ?? 0} searches`}
+                                    descriptionPosition="right"
+                                    key={app}
+                                    label={catalogueAppLabel(app, appLabelsById)}
+                                    value={app}
                                 />
-                                {(selectedTags.length > 0 || tagOptions.length > 0) && (
-                                    <div className="mt-2 flex max-h-20 flex-wrap gap-1 overflow-y-auto">
-                                        {selectedTags.map((tag) => (
-                                            <button
-                                                key={tag}
-                                                type="button"
-                                                onClick={() =>
-                                                    setSelectedTags((current) =>
-                                                        current.filter(
-                                                            (value) => value !== tag
-                                                        )
-                                                    )
-                                                }
-                                                className="inline-flex items-center gap-1 rounded-full  px-2 py-1 text-xs font-bold   sui-bg-info sui-color-info sui-hover-bg-info"
-                                            >
-                                                {tag}
-                                                <X className="h-3 w-3" />
-                                            </button>
-                                        ))}
-                                        {tagOptions.map(({ tag, count }) => (
-                                            <button
-                                                key={tag}
-                                                type="button"
-                                                onClick={() => selectTag(tag)}
-                                                className="inline-flex items-center gap-1 rounded-full border   px-2 py-1 text-xs font-semibold    sui-border-default sui-bg-page sui-color-default sui-hover-border-info sui-hover-color-info"
-                                            >
-                                                {tag}
-                                                <span className="sui-color-default">{count}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
+                            ))}
+                        </Multiselect>
+                    </ControlGroup>
+
+                    <ControlGroup controlsLayout="stack" label="Visibility">
+                        <Checkbox
+                            checked={includeHiddenSearches}
+                            onChange={(_event, { checked }) =>
+                                onIncludeHiddenSearchesChange(checked)
+                            }
+                        >
+                            Show hidden searches
+                        </Checkbox>
+                        <Checkbox
+                            checked={includeDrilldownSearches}
+                            onChange={(_event, { checked }) =>
+                                setIncludeDrilldownSearches(checked)
+                            }
+                        >
+                            Show drill-down searches
+                        </Checkbox>
+                        <Checkbox
+                            checked={includeTableSearches}
+                            onChange={(_event, { checked }) =>
+                                setIncludeTableSearches(checked)
+                            }
+                        >
+                            Show table searches
+                        </Checkbox>
+                    </ControlGroup>
+
+                    {categoryOptions.length > 0 && (
+                        <ControlGroup label="Category">
+                            <Select
+                                onChange={(_event, { value }) => {
+                                    setCategory(String(value));
+                                    setSubCategory(ALL);
+                                    setVizType(ALL);
+                                    setSelectedTags([]);
+                                }}
+                                value={category}
+                            >
+                                <Select.Option label="All categories" value={ALL} />
+                                {categoryOptions.map((option) => (
+                                    <Select.Option
+                                        key={option}
+                                        label={option}
+                                        value={option}
+                                    />
+                                ))}
+                            </Select>
+                        </ControlGroup>
+                    )}
+
+                    {category !== ALL && subCategoryOptions.length > 0 && (
+                        <ControlGroup label="Subcategory">
+                            <Select
+                                onChange={(_event, { value }) => {
+                                    setSubCategory(String(value));
+                                    setVizType(ALL);
+                                    setSelectedTags([]);
+                                }}
+                                value={subCategory}
+                            >
+                                <Select.Option
+                                    label={`All subcategories (${subCategoryOptions.length})`}
+                                    value={ALL}
+                                />
+                                {subCategoryOptions.map((option) => (
+                                    <Select.Option
+                                        key={option}
+                                        label={option}
+                                        value={option}
+                                    />
+                                ))}
+                            </Select>
+                        </ControlGroup>
+                    )}
+
+                    <ControlGroup label="Visualization">
+                        <Select
+                            onChange={(_event, { value }) => {
+                                setVizType(String(value));
+                                setSelectedTags([]);
+                            }}
+                            value={vizType}
+                        >
+                            <Select.Option label="All visualization types" value={ALL} />
+                            {vizTypeOptions.map((option) => (
+                                <Select.Option
+                                    key={option.value}
+                                    label={`${option.label} (${option.count})`}
+                                    value={option.value}
+                                />
+                            ))}
+                        </Select>
+                    </ControlGroup>
+
+                    {(allTagsWithCounts.length > 0 || selectedTags.length > 0) && (
+                        <ControlGroup
+                            help="Selected tags are combined with AND."
+                            label="Tags"
+                        >
+                            <Multiselect
+                                compact
+                                filter
+                                onChange={(_event, { values }) =>
+                                    setSelectedTags(values.map(String))
+                                }
+                                placeholder={`All tags (${allTagsWithCounts.length})`}
+                                showSelectedValuesFirst="nextOpen"
+                                values={selectedTags}
+                            >
+                                {allTagsWithCounts.map(([tag, count]) => (
+                                    <Multiselect.Option
+                                        description={`${count} searches`}
+                                        descriptionPosition="right"
+                                        key={tag}
+                                        label={tag}
+                                        value={tag}
+                                    />
+                                ))}
+                            </Multiselect>
+                        </ControlGroup>
+                    )}
+                </CollapsiblePanel>
             </div>
 
             <div className="flex flex-wrap items-center gap-2 border-b  px-4 py-3 text-xs  sui-border-weak sui-color-default">
@@ -3998,7 +3545,10 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                 )}
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto p-3">
+            <div
+                id="searchbase-catalogue-results"
+                className="min-h-0 flex-1 overflow-y-auto p-3"
+            >
                 {browserRecords.length === 0 ? (
                     <div className="rounded-md border border-dashed  p-5 text-sm  sui-border-default sui-color-default">
                         Searchbase catalogue is empty in this runtime.

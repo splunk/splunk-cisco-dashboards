@@ -1667,9 +1667,12 @@ iseval = 0`}</CodeBlock>
                 </InfoCard>
                 <InfoCard title="Searchbase and tile selection">
                   Searchbase Canvas distinguishes failed searches from other
-                  attention states and adds app filtering. Catalogue and tile
-                  pickers display friendly app labels with the on-disk name
-                  available as hover detail.
+                  attention states and adds app filtering. Its catalogue now
+                  uses the same native Splunk UI filter pattern as Insights
+                  Workspace, with consistent app, visibility, category,
+                  visualization, tag, active-count, and clear controls.
+                  Catalogue and tile pickers display friendly app labels with
+                  the on-disk name available as hover detail.
                 </InfoCard>
                 <InfoCard title="Contextual empty results">
                   Searchbase-backed Secure Networking panels now explain when no
