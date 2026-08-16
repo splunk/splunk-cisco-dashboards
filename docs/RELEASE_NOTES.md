@@ -2,6 +2,16 @@
 
 ## 1.0.38
 
+- Signal Rail settings now use theme-selected and neutral surfaces instead of
+  large status-color fills. Setup removes the redundant AI analytics grouping
+  row, and the optional CIM macro table can be expanded or collapsed with the
+  native Splunk UI panel control.
+- Insights Workspace now labels personal tile additions as browser-local and
+  shared additions as the workspace default. The Add Search drawer starts with
+  workspace-and-section suggestions, keeps the full Searchbase catalogue as an
+  explicit alternative, and groups detailed discovery options under a collapsed
+  Advanced filters panel. Long catalogue titles remain readable beside both
+  browser-local and workspace-default actions.
 - Setup now uses the wider C3/Splunk UI visual language and more readable type
   across the discovery, package-status, and macro-tuning steps. CIM macro
   discovery is an explicitly optional, highly recommended separate page because
@@ -13,9 +23,12 @@
   changing Insights Workspace, keeps the Splunk navigation rail dark, and uses
   theme-safe native search controls. Its Add catalogue now opens as a Splunk UI
   page drawer so the canvas remains visible instead of being replaced by an
-  opaque overlay. Network Diagram uses the same themed search treatment and a
-  neutral object-hover surface, while Security Operations removes its unused
-  dashboard-menu control.
+  opaque overlay. The catalogue now shares the Insights Workspace drawer,
+  card, filter, and action treatment; its body scrolls independently, card
+  pages stay bounded for large catalogues, and Canvas-only bulk-add actions
+  remain fixed in the footer. Network Diagram uses the same themed search
+  treatment and a neutral object-hover surface, while Security Operations
+  removes its unused dashboard-menu control.
 - Insights Workspace section and branding editors now share the Configure Tile
   modal treatment, keep focus and dismissal behavior predictable, and use
   theme-safe neutral surfaces. Metric sections again expose their per-user

@@ -6,14 +6,23 @@ import React, {
     useState,
 } from 'react';
 import styled from 'styled-components';
+import Badge from '@splunk/react-ui/Badge';
 import Button from '@splunk/react-ui/Button';
+import Card from '@splunk/react-ui/Card';
+import CardLayout from '@splunk/react-ui/CardLayout';
 import Checkbox from '@splunk/react-ui/Checkbox';
 import CollapsiblePanel from '@splunk/react-ui/CollapsiblePanel';
 import ControlGroup from '@splunk/react-ui/ControlGroup';
 import Drawer from '@splunk/react-ui/Drawer';
+import Heading from '@splunk/react-ui/Heading';
 import Link from '@splunk/react-ui/Link';
+import Layout from '@splunk/react-ui/Layout';
 import Message from '@splunk/react-ui/Message';
 import Multiselect from '@splunk/react-ui/Multiselect';
+import Paginator, {
+    type PaginatorCompactChangeHandler,
+} from '@splunk/react-ui/Paginator';
+import ScreenReaderContent from '@splunk/react-ui/ScreenReaderContent';
 import Select from '@splunk/react-ui/Select';
 import {
     DndContext,
@@ -140,6 +149,7 @@ import { recordMatchesCatalogueQuery } from './catalogueSearch';
 const APP_NAME = 'splunk-cisco-dashboards';
 const STORAGE_KEY = 'scd_searchbase_canvas_v1';
 const MAX_BATCH_RUNS = 10;
+const CATALOGUE_PAGE_SIZE = 25;
 
 const CanvasFeedbackMessage = styled(Message)`
     height: 100%;
@@ -2882,6 +2892,12 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     onIncludeHiddenSearchesChange,
 }) => {
     const searchInputElementRef = useRef<HTMLInputElement | null>(null);
+    const catalogueResultsRef = useRef<HTMLDivElement | null>(null);
+    const focusCatalogueResults = useCallback(() => {
+        window.requestAnimationFrame(() => {
+            catalogueResultsRef.current?.focus();
+        });
+    }, []);
     const searchInputRef = useCallback((node: HTMLInputElement | null) => {
         searchInputElementRef.current = node;
         // SUI 5.13 overwrites aria-controls passed to Search, so associate the input directly.
@@ -2904,6 +2920,8 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     const [selectedNames, setSelectedNames] = useState<Set<string>>(
         () => new Set()
     );
+    const [cataloguePage, setCataloguePage] = useState(1);
+    const [catalogueAnnouncement, setCatalogueAnnouncement] = useState('');
 
     const countsBySearch = useMemo(() => {
         const counts = new Map<string, number>();
@@ -3180,6 +3198,40 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
             recordMatchesCatalogueQuery(record, query, plainTextFromHtml)
         );
     }, [query, tagScopedRecords]);
+    useEffect(() => {
+        setCataloguePage(1);
+        setCatalogueAnnouncement('');
+    }, [filteredRecords]);
+    const cataloguePageCount = Math.max(
+        1,
+        Math.ceil(filteredRecords.length / CATALOGUE_PAGE_SIZE)
+    );
+    const cataloguePageStart = (cataloguePage - 1) * CATALOGUE_PAGE_SIZE;
+    const cataloguePageRecords = filteredRecords.slice(
+        cataloguePageStart,
+        cataloguePageStart + CATALOGUE_PAGE_SIZE
+    );
+    const cataloguePageEnd = Math.min(
+        filteredRecords.length,
+        cataloguePageStart + CATALOGUE_PAGE_SIZE
+    );
+    const cataloguePageLabel =
+        filteredRecords.length === 0
+            ? '0 of 0'
+            : `${cataloguePageStart + 1}–${cataloguePageEnd} of ${
+                  filteredRecords.length
+              }`;
+    const handleCataloguePageChange: PaginatorCompactChangeHandler = (
+        _event,
+        { page }
+    ) => {
+        if (!page) {
+            return;
+        }
+        setCataloguePage(page);
+        setCatalogueAnnouncement('');
+        focusCatalogueResults();
+    };
     const availableSearchCount = filteredRecords.length;
     const availableSearchLabel = `${availableSearchCount.toLocaleString()} ${
         availableSearchCount === 1 ? 'search' : 'searches'
@@ -3281,64 +3333,64 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     };
 
     const selectTag = (tag: string) => {
-        setSelectedTags((current) => (current.includes(tag) ? current : [...current, tag]));
+        setSelectedTags((current) =>
+            current.includes(tag) ? current : [...current, tag]
+        );
+        setCataloguePage(1);
+        setCatalogueAnnouncement('');
+        focusCatalogueResults();
     };
 
     const replaceMode = replaceTileId !== null;
 
     return (
         <Drawer
-            className="flex flex-col"
-            closeOnClickAway
             divider="header"
             onRequestClose={() => onClose()}
             open={open}
             position="page"
             returnFocus={returnFocus}
-            width="min(560px, 100vw)"
+            width="min(650px, 100vw)"
         >
             <Drawer.Header
-                icon={<SlidersHorizontal className="h-5 w-5" />}
-                subtitle={replaceMode ? 'Replace tile' : 'Add tiles'}
-                title="Searchbase catalogue"
+                subtitle={`Searchbase Canvas · ${availableSearchLabel}`}
+                title={replaceMode ? 'Replace search' : 'Add search'}
             />
 
-            <div className="border-b px-4 py-3 sui-border-weak">
-                <span id="searchbase-catalogue-search-label" className="sr-only">
-                    Search the Searchbase catalogue
-                </span>
-                <ControlGroup hideLabel label="Search">
-                    <ThemeAwareSearch
-                        inputRef={searchInputRef}
-                        labelledBy="searchbase-catalogue-search-label"
-                        onChange={(_event, { value }) => setQuery(value)}
-                        placeholder="Search by name, description, or tag"
-                        value={query}
-                    />
-                </ControlGroup>
-
-                <CollapsiblePanel
-                    actions={
-                        <Button
-                            appearance="subtle"
-                            disabled={!facetsActive}
-                            label="Clear filters"
-                            onClick={handleClearFacets}
+            <Drawer.Body>
+                <div>
+                    <ControlGroup hideLabel label="Search">
+                        <ThemeAwareSearch
+                            inputRef={searchInputRef}
+                            onChange={(_event, { value }) => setQuery(value)}
+                            placeholder="Search by name, description, or tag"
+                            value={query}
                         />
-                    }
-                    appearance="subtle"
-                    description={availableSearchLabel}
-                    inset
-                    onChange={(_event, { action }) =>
-                        setFiltersOpen(action === 'open')
-                    }
-                    open={filtersOpen}
-                    title={
-                        activeFilterCount > 0
-                            ? `Filters (${activeFilterCount} active)`
-                            : 'Filters'
-                    }
-                >
+                    </ControlGroup>
+
+                    <CollapsiblePanel
+                        actions={
+                            facetsActive ? (
+                                <Button
+                                    appearance="subtle"
+                                    label="Clear filters"
+                                    onClick={handleClearFacets}
+                                />
+                            ) : null
+                        }
+                        appearance="subtle"
+                        description={availableSearchLabel}
+                        inset
+                        onChange={(_event, { action }) =>
+                            setFiltersOpen(action === 'open')
+                        }
+                        open={filtersOpen}
+                        title={
+                            activeFilterCount > 0
+                                ? `Advanced filters (${activeFilterCount} active)`
+                                : 'Advanced filters'
+                        }
+                    >
                     <ControlGroup label="App">
                         <Multiselect
                             compact
@@ -3487,173 +3539,188 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
                             </Multiselect>
                         </ControlGroup>
                     )}
-                </CollapsiblePanel>
-            </div>
+                    </CollapsiblePanel>
+                </div>
 
-            <div className="flex flex-wrap items-center gap-2 border-b  px-4 py-3 text-xs  sui-border-weak sui-color-default">
-                <span
-                    className="inline-flex items-center rounded-full border px-2.5 py-1 font-black uppercase tracking-wider sui-border-notification-info sui-bg-notification-info sui-color-active"
-                    title={`${browserRecords.length.toLocaleString()} searches are in the current app and visibility scope before category, tag, viz, and text filters`}
+                <div
+                    aria-label="Searchbase catalogue results"
+                    id="searchbase-catalogue-results"
+                    ref={catalogueResultsRef}
+                    role="region"
+                    tabIndex={-1}
                 >
-                    {availableSearchLabel}
-                </span>
-                {!replaceMode && addableFilteredRecords.length !== filteredRecords.length && (
-                    <span>{addableFilteredRecords.length.toLocaleString()} addable</span>
-                )}
-                {!replaceMode && selectedNames.size > 0 && (
-                    <span>{selectedNames.size.toLocaleString()} selected</span>
-                )}
-                {!replaceMode && (
-                    <div className="ml-auto flex flex-wrap justify-end gap-2">
-                        <button
-                            type="button"
-                            disabled={addableFilteredRecords.length === 0}
-                            onClick={() => {
-                                onAddRecords(addableFilteredRecords);
-                                setSelectedNames(new Set());
-                            }}
-                            className="inline-flex items-center gap-1 rounded-md border   px-3 py-1.5 text-xs font-black  transition sui-hover-border-info  disabled:cursor-not-allowed    sui-border-info sui-bg-page sui-color-info sui-hover-bg-info sui-disabled-border-weak sui-disabled-bg-section sui-disabled-color-default"
-                        >
-                            <Plus className="h-3.5 w-3.5" />
-                            Add all filtered
-                        </button>
-                        <button
-                            type="button"
-                            disabled={selectedRecords.length === 0}
-                            onClick={() => {
-                                onAddRecords(selectedRecords);
-                                setSelectedNames(new Set());
-                            }}
-                            className="inline-flex items-center gap-1 rounded-md sui-bg-accent px-3 py-1.5 text-xs font-black sui-color-active transition sui-hover-bg-accent disabled:cursor-not-allowed  sui-disabled-bg-floating"
-                        >
-                            <Plus className="h-3.5 w-3.5" />
-                            Add selected
-                        </button>
-                    </div>
-                )}
-            </div>
-
-            <div
-                id="searchbase-catalogue-results"
-                className="min-h-0 flex-1 overflow-y-auto p-3"
-            >
-                {browserRecords.length === 0 ? (
-                    <div className="rounded-md border border-dashed  p-5 text-sm  sui-border-default sui-color-default">
-                        Searchbase catalogue is empty in this runtime.
-                    </div>
-                ) : filteredRecords.length === 0 ? (
-                    <div className="rounded-md border border-dashed  p-5 text-sm  sui-border-default sui-color-default">
-                        No matches.
-                    </div>
-                ) : (
-                    <div className="space-y-2">
-                        {filteredRecords.map((record) => {
-                            const canvasCount = countsBySearch.get(record.searchName) ?? 0;
-                            const duplicateBlocked = blockedSearchNames.has(
-                                record.searchName
-                            );
-                            const checked = selectedNames.has(record.searchName);
-                            return (
-                                <div
-                                    key={record.id || record.searchName}
-                                    className={cn(
-                                        'rounded-md border  p-3 transition-colors sui-bg-page',
-                                        checked
-                                            ? 'sui-border-info ring-1 sui-focus-ring sui-border-info sui-focus-ring'
-                                            : 'sui-border-weak sui-hover-border-info'
-                                    )}
-                                >
-                                    <div className="flex items-start gap-2">
-                                        {!replaceMode && (
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    toggleSelected(record.searchName)
+                    <ScreenReaderContent role="status">
+                        {catalogueAnnouncement ||
+                            `${availableSearchLabel}. Showing ${cataloguePageLabel}.`}
+                    </ScreenReaderContent>
+                    {browserRecords.length === 0 && (
+                        <Message type="info">
+                            Searchbase catalogue is empty in this runtime.
+                        </Message>
+                    )}
+                    {browserRecords.length > 0 && filteredRecords.length === 0 && (
+                        <Message type="info">
+                            No searches match the current filters.
+                        </Message>
+                    )}
+                    {filteredRecords.length > 0 && (
+                        <>
+                            {cataloguePageCount > 1 && (
+                                <Paginator.Compact
+                                    aria-label="Searchbase catalogue pages above results"
+                                    current={cataloguePage}
+                                    onChange={handleCataloguePageChange}
+                                    renderLabel={() => cataloguePageLabel}
+                                    totalPages={cataloguePageCount}
+                                />
+                            )}
+                            <CardLayout cardWidth="100%">
+                            {cataloguePageRecords.map((record) => {
+                                const canvasCount =
+                                    countsBySearch.get(record.searchName) ?? 0;
+                                const duplicateBlocked = blockedSearchNames.has(
+                                    record.searchName
+                                );
+                                const checked = selectedNames.has(record.searchName);
+                                const actionLabel = replaceMode ? 'Replace' : 'Add';
+                                const actions = (
+                                    <Layout>
+                                        {!replaceMode && !duplicateBlocked && (
+                                            <Checkbox
+                                                checked={checked}
+                                                onChange={() =>
+                                                    toggleSelected(
+                                                        record.searchName
+                                                    )
                                                 }
-                                                disabled={duplicateBlocked}
-                                                aria-label={`Select ${record.searchName}`}
-                                                aria-checked={checked}
-                                                role="checkbox"
-                                                className={cn(
-                                                    'mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md border-2 shadow-sm transition-colors focus:outline-none focus:ring-2 sui-focus-ring',
-                                                    checked
-                                                        ? 'sui-border-info sui-bg-accent sui-color-active'
-                                                        : duplicateBlocked
-                                                        ? 'cursor-not-allowed   sui-color-transparent opacity-60 sui-border-weak sui-bg-section'
-                                                        : 'sui-border-default  sui-color-transparent   sui-border-default sui-bg-page sui-hover-border-info sui-hover-bg-info'
-                                                )}
                                             >
-                                                <Check className="h-3.5 w-3.5" />
-                                            </button>
+                                                <ScreenReaderContent>
+                                                    Select {record.searchName}
+                                                </ScreenReaderContent>
+                                            </Checkbox>
                                         )}
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex items-center gap-2">
-                                                <h3 className="truncate text-sm font-black  sui-color-active">
-                                                    {record.searchName}
-                                                </h3>
-                                                <span className="rounded  px-1.5 py-0.5 text-xs font-black uppercase  sui-bg-popup sui-color-default">
-                                                    {formatVizLabel(record.defaultViz)}
-                                                </span>
-                                            </div>
-                                            <div className="mt-0.5 truncate text-xs font-semibold uppercase tracking-wide sui-color-default">
-                                                {[
-                                                    record.category,
-                                                    record.subCategory,
-                                                    recordCatalogueApp(record),
-                                                ]
-                                                    .filter(Boolean)
-                                                    .join(' / ')}
-                                            </div>
-                                            <p className="mt-1 line-clamp-2 text-xs leading-snug  sui-color-default">
+                                        {duplicateBlocked ? (
+                                            <Badge
+                                                icon={<Check aria-hidden="true" />}
+                                                label="Added"
+                                            />
+                                        ) : (
+                                            <Button
+                                                aria-label={`${actionLabel}: ${
+                                                    record.searchName
+                                                }`}
+                                                appearance="standalone"
+                                                icon={<Plus aria-hidden="true" />}
+                                                label={actionLabel}
+                                                onClick={() => {
+                                                    onAddRecord(record);
+                                                    setCatalogueAnnouncement(
+                                                        `${
+                                                            replaceMode
+                                                                ? 'Replaced'
+                                                                : 'Added'
+                                                        } ${record.searchName}.`
+                                                    );
+                                                    focusCatalogueResults();
+                                                }}
+                                            />
+                                        )}
+                                    </Layout>
+                                );
+                                const renderActions = () => actions;
+                                return (
+                                    <Card
+                                        key={record.id || record.searchName}
+                                        tag="article"
+                                    >
+                                        <Card.Header
+                                            actions={renderActions}
+                                            subtitle={[
+                                                record.category,
+                                                record.subCategory,
+                                                recordCatalogueApp(record),
+                                            ]
+                                                .filter(Boolean)
+                                                .join(' / ')}
+                                            truncateTitle={false}
+                                            title={
+                                                <Heading level={3} variant="title4">
+                                                    {record.searchName}{' '}
+                                                    <Badge
+                                                        label={formatVizLabel(
+                                                            record.defaultViz
+                                                        )}
+                                                    />
+                                                </Heading>
+                                            }
+                                        />
+                                        <Card.Body>
+                                            <p>
                                                 {recordPlainText(record) || record.id}
                                             </p>
                                             {record.tags.length > 0 && (
-                                                <div className="mt-2 flex flex-wrap gap-1">
-                                                    {record.tags.slice(0, 5).map((tag) => (
-                                                        <button
-                                                            key={tag}
-                                                            type="button"
-                                                            onClick={() => selectTag(tag)}
-                                                            className="rounded-full  px-2 py-0.5 text-xs font-bold    sui-bg-popup sui-color-default sui-hover-bg-info sui-hover-color-info"
-                                                        >
-                                                            {tag}
-                                                        </button>
-                                                    ))}
-                                                </div>
+                                                <Layout>
+                                                    {record.tags
+                                                        .slice(0, 5)
+                                                        .map((tag) => (
+                                                            <Button
+                                                                aria-label={`Filter by tag ${tag}`}
+                                                                appearance="subtle"
+                                                                key={tag}
+                                                                label={tag}
+                                                                onClick={() =>
+                                                                    selectTag(tag)
+                                                                }
+                                                            />
+                                                        ))}
+                                                </Layout>
                                             )}
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => onAddRecord(record)}
-                                            disabled={duplicateBlocked}
-                                            title={
-                                                duplicateBlocked
-                                                    ? 'Already on the canvas'
-                                                    : replaceMode
-                                                    ? 'Replace tile'
-                                                    : 'Add tile'
-                                            }
-                                            className="inline-flex flex-shrink-0 items-center gap-1 rounded-md  px-2.5 py-1.5 text-xs font-black  transition  disabled:cursor-not-allowed   sui-bg-section sui-color-active sui-hover-bg-info sui-disabled-bg-popup sui-disabled-color-muted"
-                                        >
-                                            <Plus className="h-3.5 w-3.5" />
-                                            {duplicateBlocked
-                                                ? 'Added'
-                                                : replaceMode
-                                                ? 'Replace'
-                                                : 'Add'}
-                                        </button>
-                                    </div>
-                                    {canvasCount > 0 && (
-                                        <div className="mt-2 text-xs font-semibold  sui-color-info">
-                                            In canvas: {canvasCount}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
+                                            {canvasCount > 0 && (
+                                                <p>In canvas: {canvasCount}</p>
+                                            )}
+                                        </Card.Body>
+                                    </Card>
+                                );
+                            })}
+                            </CardLayout>
+                            {cataloguePageCount > 1 && (
+                                <Paginator.Compact
+                                    aria-label="Searchbase catalogue pages below results"
+                                    current={cataloguePage}
+                                    onChange={handleCataloguePageChange}
+                                    renderLabel={() => cataloguePageLabel}
+                                    totalPages={cataloguePageCount}
+                                />
+                            )}
+                        </>
+                    )}
+                </div>
+            </Drawer.Body>
+
+            {!replaceMode && (
+                <Drawer.Footer>
+                    <Button
+                        aria-label={`Add all filtered: ${addableFilteredRecords.length} searches`}
+                        appearance="secondary"
+                        disabled={addableFilteredRecords.length === 0}
+                        label="Add all filtered"
+                        onClick={() => {
+                            onAddRecords(addableFilteredRecords);
+                            setSelectedNames(new Set());
+                        }}
+                    />
+                    <Button
+                        aria-label={`Add selected: ${selectedRecords.length} searches`}
+                        appearance="primary"
+                        disabled={selectedRecords.length === 0}
+                        label="Add selected"
+                        onClick={() => {
+                            onAddRecords(selectedRecords);
+                            setSelectedNames(new Set());
+                        }}
+                    />
+                </Drawer.Footer>
+            )}
         </Drawer>
     );
 };

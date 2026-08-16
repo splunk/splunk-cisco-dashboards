@@ -5661,7 +5661,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     "personal" | "workspace"
   >("personal");
   const [addingRecordId, setAddingRecordId] = useState<string | null>(null);
-  const [showAllProfileSearches, setShowAllProfileSearches] = useState(true);
+  const [showAllProfileSearches, setShowAllProfileSearches] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -5677,7 +5677,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     setFiltersOpen(false);
     setAddDestination("personal");
     setAddingRecordId(null);
-    setShowAllProfileSearches(true);
+    setShowAllProfileSearches(false);
     if (typeof window === "undefined") return;
     const id = window.setTimeout(() => searchInputRef.current?.focus(), 30);
     return () => window.clearTimeout(id);
@@ -5733,7 +5733,9 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
 
   const suggestedRecords =
     sectionRecords.length > 0 ? sectionRecords : profileRecords;
-  const browseRecords = showAllProfileSearches
+  const browsingEntireCatalogue =
+    showAllProfileSearches || suggestedRecords.length === 0;
+  const browseRecords = browsingEntireCatalogue
     ? addableRecords
     : suggestedRecords;
   const showScopeToggle =
@@ -5939,7 +5941,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   ]);
 
   const activeFilterCount =
-    (!showAllProfileSearches ? 1 : 0) +
+    (showAllProfileSearches && showScopeToggle ? 1 : 0) +
     (!isDefaultAddTileAppSelection(selectedApps) ? 1 : 0) +
     (includeHiddenSearches ? 1 : 0) +
     (includeDrilldownSearches ? 1 : 0) +
@@ -5948,7 +5950,9 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     (selectedSubCategory !== ALL_ADD_TILE_SUB_CATEGORIES ? 1 : 0) +
     activeTags.size;
   const facetsActive = activeFilterCount > 0;
-  const availableSearchLabel = `${filteredRecords.length.toLocaleString()} ${
+  const availableSearchLabel = `${
+    browsingEntireCatalogue ? "Entire catalogue" : "Suggested"
+  } · ${filteredRecords.length.toLocaleString()} ${
     filteredRecords.length === 1 ? "search" : "searches"
   } available`;
 
@@ -5960,7 +5964,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     setSelectedCategory(ALL_ADD_TILE_CATEGORIES);
     setSelectedSubCategory(ALL_ADD_TILE_SUB_CATEGORIES);
     setActiveTags(new Set());
-    setShowAllProfileSearches(true);
+    setShowAllProfileSearches(false);
   };
 
   const handleDrawerClose = () => {
@@ -6012,9 +6016,12 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
               }
               value={addDestination}
             >
-              <RadioBar.Option label="For me" value="personal" />
+              <RadioBar.Option label="This browser" value="personal" />
               {canManageWorkspace && (
-                <RadioBar.Option label="Shared workspace" value="workspace" />
+                <RadioBar.Option
+                  label="Workspace default"
+                  value="workspace"
+                />
               )}
             </RadioBar>
           </ControlGroup>
@@ -6036,8 +6043,8 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
             open={filtersOpen}
             title={
               activeFilterCount > 0
-                ? `Filters (${activeFilterCount} active)`
-                : "Filters"
+                ? `Advanced filters (${activeFilterCount} active)`
+                : "Advanced filters"
             }
           >
             {showScopeToggle && (
@@ -6049,7 +6056,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                   value={showAllProfileSearches ? "all" : "suggested"}
                 >
                   <RadioBar.Option label="Suggested" value="suggested" />
-                  <RadioBar.Option label="All searches" value="all" />
+                  <RadioBar.Option label="Entire catalogue" value="all" />
                 </RadioBar>
               </ControlGroup>
             )}
@@ -6211,13 +6218,16 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                   plainTextFromHtml(record.description);
                 const tags = record.tags.slice(0, 3);
                 const isAdding = addingRecordId === record.id;
-                const addActionLabel = alreadyInSection
-                  ? "Added"
-                  : isAdding
-                    ? "Adding"
-                    : addDestination === "workspace"
-                      ? "Add shared"
-                      : "Add for me";
+                let addActionLabel = "Added";
+                if (!alreadyInSection && addDestination === "workspace") {
+                  addActionLabel = isAdding
+                    ? "Adding as workspace default"
+                    : "Add as workspace default";
+                } else if (!alreadyInSection) {
+                  addActionLabel = isAdding
+                    ? "Adding to this browser"
+                    : "Add to this browser";
+                }
                 const action = hiddenInSection ? (
                   <Button
                     aria-label={`Show ${record.searchName} in ${sectionTitle}`}
@@ -6239,9 +6249,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                     aria-label={
                       alreadyInSection
                         ? `Added: ${record.searchName} in ${sectionTitle}`
-                        : isAdding
-                          ? `Adding ${record.searchName} to ${sectionTitle}`
-                          : `${addActionLabel}: ${record.searchName} to ${sectionTitle}`
+                        : `${addActionLabel}: ${record.searchName} to ${sectionTitle}`
                     }
                     aria-busy={isAdding}
                     appearance="standalone"
@@ -6266,19 +6274,29 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                           .filter(Boolean)
                           .join(" / ") || record.id
                       }
+                      truncateTitle={false}
                       title={
-                        <Layout>
-                          <span>{record.searchName}</span>
+                        <>
+                          {record.searchName}
                           {hiddenInSection && (
-                            <Badge label="Hidden in section" />
+                            <>
+                              {" "}
+                              <Badge label="Hidden in section" />
+                            </>
                           )}
                           {!hiddenInSection && alreadyInSection && (
-                            <Badge label="Added" />
+                            <>
+                              {" "}
+                              <Badge label="Added" />
+                            </>
                           )}
                           {record.searchHidden && (
-                            <Badge label="Hidden search" />
+                            <>
+                              {" "}
+                              <Badge label="Hidden search" />
+                            </>
                           )}
-                        </Layout>
+                        </>
                       }
                     />
                     {(description || tags.length > 0) && (

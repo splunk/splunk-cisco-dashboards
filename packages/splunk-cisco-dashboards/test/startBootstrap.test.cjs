@@ -455,7 +455,7 @@ assert.match(bootstrapSource, /pages\/macro_index_tuning\.js/);
 assert.doesNotMatch(bootstrapSource, /Open the full index macro tuner/);
 assert.match(bootstrapSource, /aria-current/);
 assert.match(bootstrapSource, /Splunk_SA_Scientific_Python_<os>/);
-assert.match(bootstrapSource, /AI analytics runtime/);
+assert.doesNotMatch(bootstrapSource, /AI analytics runtime/);
 assert.match(bootstrapSource, /scd-setup__package-table/);
 assert.match(bootstrapSource, /Installed package status/);
 assert.match(bootstrapSource, /Latest known/);
@@ -587,6 +587,10 @@ assert.doesNotMatch(
 );
 assert.match(macroTuningSource, /Run CIM discovery/);
 assert.match(macroTuningSource, /isOptionalCimSetupPage/);
+assert.match(
+  macroTuningSource,
+  /import CollapsiblePanel from '@splunk\/react-ui\/CollapsiblePanel';[\s\S]*?<CollapsiblePanel[\s\S]*?defaultOpen[\s\S]*?headingLevel=\{2\}[\s\S]*?title="CIM macro definitions"/,
+);
 assert.doesNotMatch(macroTuningSource, /properties\/macros/);
 assert.doesNotMatch(macroTuningSource, /could not remove its local/);
 assert.match(

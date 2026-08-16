@@ -23,6 +23,8 @@ import {
 import { getDefaultFetchInit } from "@splunk/splunk-utils/fetch";
 import { versionLabel } from "@splunk/splunk-utils/config";
 import TimeRangeDropdown from "@splunk/react-time-range/Dropdown";
+import Button from '@splunk/react-ui/Button';
+import CollapsiblePanel from '@splunk/react-ui/CollapsiblePanel';
 import ScreenReaderContent from '@splunk/react-ui/ScreenReaderContent';
 
 import {
@@ -2619,6 +2621,12 @@ export default function MacroIndexTuningPage(): JSX.Element {
     });
 
   if (isOptionalCimSetupPage) {
+    const cimDefinitionsStatus = isCimLoading
+      ? "Discovery is running. You can leave this optional page if needed."
+      : cimScanState === "ready"
+        ? `${setupCimRowsToSave.length} definitions have matching data in this range.`
+        : "Current definitions are loaded. Run discovery to detect indexes from data.";
+
     return (
       <main
         ref={setupSurfaceRef}
@@ -2747,33 +2755,26 @@ export default function MacroIndexTuningPage(): JSX.Element {
             </div>
           </section>
 
-          <section
-            aria-busy={isCimLoading}
-            className="overflow-hidden rounded-xl border sui-border-weak sui-bg-section"
-          >
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b sui-border-weak px-5 py-4">
-              <div>
-                <h2 className="text-lg font-bold sui-color-active">
-                  CIM macro definitions
-                </h2>
-                <p className="mt-1 text-sm sui-color-default" role="status" aria-live="polite">
-                  {isCimLoading
-                    ? "Discovery is running. You can leave this optional page if needed."
-                    : cimScanState === "ready"
-                      ? `${setupCimRowsToSave.length} definitions have matching data in this range.`
-                      : "Current definitions are loaded. Run discovery to detect indexes from data."}
-                </p>
-              </div>
-              <a
-                href={openCimSearchUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`${compactButtonBase} sui-border-default sui-bg-section sui-color-default sui-hover-border-info sui-hover-color-info`}
-              >
-                <ExternalLink size={14} />
-                Open in Search
-              </a>
-            </div>
+          <section aria-busy={isCimLoading}>
+            <ScreenReaderContent role="status">
+              {cimDefinitionsStatus}
+            </ScreenReaderContent>
+            <CollapsiblePanel
+              actions={
+                <Button
+                  appearance="secondary"
+                  label="Open in Search"
+                  openInNewContext
+                  to={openCimSearchUrl}
+                />
+              }
+              defaultOpen
+              description={cimDefinitionsStatus}
+              headingLevel={2}
+              inset={false}
+              overflow="visible"
+              title="CIM macro definitions"
+            >
 
             {cimError ? (
               <div role="alert" className="flex items-start gap-2 border-b sui-border-notification-negative sui-bg-notification-negative px-5 py-3 text-sm sui-color-default">
@@ -2805,6 +2806,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   : "No CIM macro definitions are available. Confirm that Splunk_SA_CIM is installed and enabled."}
               </div>
             )}
+            </CollapsiblePanel>
           </section>
         </div>
       </main>

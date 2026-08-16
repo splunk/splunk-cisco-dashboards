@@ -36,6 +36,9 @@ const workspacesConf = read(
   "../src/main/resources/splunk/default/insights_workspaces.conf",
 );
 const profile = read("../src/main/webapp/pages/executive_insights/index.tsx");
+const searchbaseCanvas = read(
+  "../src/main/webapp/pages/searchbase_canvas/index.tsx",
+);
 const userGuide = read("../src/main/webapp/pages/user_guide/index.tsx");
 const profileRender = read(
   "../src/main/webapp/pages/executive_insights/render.tsx",
@@ -93,6 +96,131 @@ assert.match(
   profile,
   /const \[filtersOpen, setFiltersOpen\] = useState\(false\);[\s\S]*?setFiltersOpen\(false\);/,
   "The Add Search drawer must restore its compact filter state whenever it opens",
+);
+assert.match(
+  profile,
+  /const \[showAllProfileSearches, setShowAllProfileSearches\] = useState\(false\);[\s\S]*?setShowAllProfileSearches\(false\);/,
+  "The Add Search drawer must default to workspace and section suggestions",
+);
+assert.match(
+  profile,
+  /const browsingEntireCatalogue =[\s\S]*?showAllProfileSearches \|\| suggestedRecords\.length === 0;[\s\S]*?const browseRecords = browsingEntireCatalogue[\s\S]*?\? addableRecords[\s\S]*?: suggestedRecords/,
+  "The Add Search drawer must fall back to the entire catalogue when no suggestions exist",
+);
+assert.match(
+  profile,
+  /const availableSearchLabel = `[\s\S]*?browsingEntireCatalogue \? "Entire catalogue" : "Suggested"[\s\S]*?available`/,
+  "The collapsed filter summary and live result status must identify the active catalogue scope",
+);
+assert.match(
+  profile,
+  /<Card key=\{record\.id\} tag="article">[\s\S]*?<Card\.Header[\s\S]*?truncateTitle=\{false\}[\s\S]*?title=\{[\s\S]*?<>[\s\S]*?\{record\.searchName\}/,
+  "Add Search cards must wrap long titles instead of truncating them beside destination actions",
+);
+for (const drawerLabel of [
+  "This browser",
+  "Workspace default",
+  "Advanced filters",
+  "Suggested",
+  "Entire catalogue",
+  "Add to this browser",
+  "Add as workspace default",
+]) {
+  assert.ok(
+    profile.includes(drawerLabel),
+    `The Add Search drawer must include the ${drawerLabel} label`,
+  );
+}
+for (const retiredDrawerLabel of [
+  "For me",
+  "Shared workspace",
+  "All searches",
+  "Add for me",
+  "Add shared",
+]) {
+  assert.ok(
+    !profile.includes(`label="${retiredDrawerLabel}"`),
+    `The Add Search drawer must not use the retired ${retiredDrawerLabel} label`,
+  );
+}
+
+const searchbaseCanvasCatalogue = searchbaseCanvas.slice(
+  searchbaseCanvas.indexOf("const SearchbaseBrowser"),
+  searchbaseCanvas.indexOf("const SearchbaseCanvasPage"),
+);
+assert.match(
+  searchbaseCanvasCatalogue,
+  /<Drawer[\s\S]*?<Drawer\.Body>[\s\S]*?<CardLayout cardWidth="100%">[\s\S]*?<Card[\s\S]*?<Card\.Header[\s\S]*?truncateTitle=\{false\}/,
+  "Searchbase Canvas must reuse the scrollable Insights Workspace drawer and card composition",
+);
+assert.match(
+  searchbaseCanvasCatalogue,
+  /width="min\(650px, 100vw\)"[\s\S]*?<Paginator\.Compact[\s\S]*?cataloguePageRecords\.map/,
+  "The catalogue drawer must remain responsive and render a bounded, paginated card page",
+);
+assert.doesNotMatch(
+  searchbaseCanvasCatalogue,
+  /closeOnClickAway/,
+  "Catalogue dismissal must not discard add or replace context through an incidental scrim click",
+);
+assert.match(
+  searchbaseCanvasCatalogue,
+  /filteredRecords\.slice\([\s\S]*?CATALOGUE_PAGE_SIZE/,
+  "Catalogue pagination must bound the number of cards rendered on each page",
+);
+assert.match(
+  searchbaseCanvasCatalogue,
+  /aria-label="Searchbase catalogue results"[\s\S]*?role="region"[\s\S]*?tabIndex=\{-1\}[\s\S]*?catalogueAnnouncement \|\|[\s\S]*?cataloguePageLabel/,
+  "Result changes must have a stable focus target and announce the visible range",
+);
+for (const pagerLabel of [
+  "Searchbase catalogue pages above results",
+  "Searchbase catalogue pages below results",
+]) {
+  assert.ok(
+    searchbaseCanvasCatalogue.includes(pagerLabel),
+    `Catalogue pagination must include the unique ${pagerLabel} label`,
+  );
+}
+assert.match(
+  searchbaseCanvasCatalogue,
+  /record\.tags[\s\S]*?<Button[\s\S]*?appearance="subtle"[\s\S]*?selectTag\(tag\)/,
+  "Catalogue tag actions must remain interactive while using native Splunk UI buttons",
+);
+assert.match(
+  searchbaseCanvasCatalogue,
+  /duplicateBlocked \? \([\s\S]*?<Badge[\s\S]*?label="Added"[\s\S]*?: \([\s\S]*?<Button/,
+  "Already-added searches must render as status instead of a disabled add action",
+);
+assert.match(
+  searchbaseCanvasCatalogue,
+  /<Checkbox[\s\S]*?checked=\{checked\}[\s\S]*?toggleSelected\([\s\S]*?record\.searchName[\s\S]*?<ScreenReaderContent>[\s\S]*?Select \{record\.searchName\}/,
+  "Bulk catalogue selection must use checkbox semantics with an accessible search label",
+);
+assert.match(
+  searchbaseCanvasCatalogue,
+  /<Heading level=\{3\} variant="title4">[\s\S]*?record\.searchName[\s\S]*?<Badge/,
+  "Catalogue cards must retain level-three heading navigation and visualization metadata",
+);
+assert.match(
+  searchbaseCanvasCatalogue,
+  /onAddRecord\(record\);[\s\S]*?setCatalogueAnnouncement[\s\S]*?focusCatalogueResults\(\)/,
+  "A completed per-card add must announce success and move focus before its action becomes status",
+);
+assert.match(
+  searchbaseCanvasCatalogue,
+  /aria-label=\{`Add all filtered: \$\{[\s\S]*?aria-label=\{`Add selected: \$\{/,
+  "Footer accessible names must begin with their visible action labels",
+);
+assert.match(
+  searchbaseCanvasCatalogue,
+  /<Drawer\.Footer>[\s\S]*?Add all filtered[\s\S]*?Add selected/,
+  "Canvas-only bulk catalogue actions must remain in the fixed drawer footer",
+);
+assert.doesNotMatch(
+  searchbaseCanvasCatalogue,
+  /className="min-h-0 flex-1 overflow-y-auto p-3"/,
+  "Searchbase Canvas must not recreate Drawer.Body scrolling with a custom flex wrapper",
 );
 
 assert.match(
@@ -597,8 +725,18 @@ assert.match(
 );
 assert.match(
   signalTickerRail,
-  /disabled=\{isWorkspaceDefault\}[\s\S]*?'Using workspace default'[\s\S]*?'Restore workspace default'/,
+  /<Button[\s\S]*?disabled=\{isWorkspaceDefault\}[\s\S]*?appearance=\{[\s\S]*?'secondary'[\s\S]*?'destructiveSecondary'[\s\S]*?'Using workspace default'[\s\S]*?'Restore workspace default'/,
   "Signal Rail settings must distinguish the no-op default state from an available restore action",
+);
+assert.match(
+  signalTickerRail,
+  /aria-pressed=\{config\.enabled\}[\s\S]*?'sui-border-interactive sui-bg-selected sui-color-active'/,
+  "Signal Rail toggles must use the theme-selected surface instead of a semantic status fill",
+);
+assert.match(
+  signalTickerRail,
+  /id=\{descriptionId\}[\s\S]*?sui-border-interactive sui-bg-selected sui-color-default/,
+  "Expanded Signal Rail descriptions must use a readable selected surface",
 );
 assert.match(
   profile,
