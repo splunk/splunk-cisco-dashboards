@@ -49,6 +49,7 @@ assert.equal(
 );
 assert.equal(isTuningHash("#tune-indexes"), true);
 assert.equal(isTuningHash("tune-indexes"), true);
+assert.equal(isTuningHash("#tune-cim"), true);
 assert.equal(isTuningHash("#review-packages"), false);
 assert.equal(
   appsEndpoint("/en-US/app/splunk-cisco-dashboards/setup"),
@@ -454,7 +455,7 @@ assert.match(bootstrapSource, /pages\/macro_index_tuning\.js/);
 assert.doesNotMatch(bootstrapSource, /Open the full index macro tuner/);
 assert.match(bootstrapSource, /aria-current/);
 assert.match(bootstrapSource, /Splunk_SA_Scientific_Python_<os>/);
-assert.match(bootstrapSource, /AI analytics runtime/);
+assert.doesNotMatch(bootstrapSource, /AI analytics runtime/);
 assert.match(bootstrapSource, /scd-setup__package-table/);
 assert.match(bootstrapSource, /Installed package status/);
 assert.match(bootstrapSource, /Latest known/);
@@ -537,7 +538,7 @@ const macroTuningBootstrapSource = fs.readFileSync(
 assert.match(setupViewSource, /<dashboard\b[^>]*\btheme="dark"/);
 assert.match(setupViewSource, /id="scan-root" hidden="hidden"/);
 assert.match(macroTuningViewSource, /<dashboard\b[^>]*\btheme="dark"/);
-assert.match(macroTuningSource, /scd-admin-dark scd-c3-atmosphere dark/);
+assert.match(macroTuningSource, /scd-admin-dark scd-c3-atmosphere min-h-screen/);
 assert.doesNotMatch(macroTuningSource, /setTheme\("dark"\)/);
 assert.match(macroTuningRenderSource, /mountPageRaw\(MacroIndexTuningPage\)/);
 assert.doesNotMatch(macroTuningRenderSource, /fixedColorScheme/);
@@ -576,12 +577,29 @@ assert.match(macroTuningSource, /Advanced tuning/);
 assert.match(macroTuningSource, /Save and finish setup/);
 assert.match(macroTuningSource, /Setup was not completed/);
 assert.match(macroTuningSource, /setupCimRowsToSave/);
-assert.match(macroTuningSource, /Tune detected CIM data-model macros/);
+assert.match(macroTuningSource, /Tune CIM index macros on their own screen/);
+assert.match(macroTuningSource, /Optional · Highly recommended after setup/);
+assert.match(macroTuningSource, /Install and update the relevant Cisco TAs first/);
+assert.match(macroTuningSource, /Plan for several minutes before you start/);
+assert.doesNotMatch(
+  macroTuningSource,
+  /void runScan\(\);\s*if \(setupCimAvailable\) void runCimDiscovery\(\);/,
+);
+assert.match(macroTuningSource, /Run CIM discovery/);
+assert.match(macroTuningSource, /isOptionalCimSetupPage/);
+assert.match(
+  macroTuningSource,
+  /import CollapsiblePanel from '@splunk\/react-ui\/CollapsiblePanel';[\s\S]*?<CollapsiblePanel[\s\S]*?defaultOpen[\s\S]*?headingLevel=\{2\}[\s\S]*?title="CIM macro definitions"/,
+);
 assert.doesNotMatch(macroTuningSource, /properties\/macros/);
 assert.doesNotMatch(macroTuningSource, /could not remove its local/);
 assert.match(
   macroTuningSource,
-  /\.\.\.setupExternalRowsToSave,[\s\S]*\.\.\.setupCimRowsToSave/,
+  /const setupRowsToSave = useMemo\(\s*\(\) => \[\.\.\.setupScdRowsToSave, \.\.\.setupExternalRowsToSave\]/,
+);
+assert.doesNotMatch(
+  macroTuningSource,
+  /const setupRowsToSave = useMemo\(\s*\(\) => \[[^\]]*setupCimRowsToSave/,
 );
 assert.match(
   macroTuningSource,
@@ -589,7 +607,7 @@ assert.match(
 );
 assert.match(
   macroTuningSource,
-  /Finish setup now and retry macro tuning later/,
+  /Finish setup now and retry Tune indexes later from Setup/,
 );
 assert.doesNotMatch(
   macroTuningSource,
@@ -776,11 +794,11 @@ for (const betaDashboardLabel of [
 }
 assert.match(
   navSource,
-  /name="workplace_spaces_intelligence" label="Cisco Spaces — Intelligence"/,
+  /href="dashboard_manager#\/workplace_spaces_intelligence">Cisco Spaces - Intelligence<\/a>/,
 );
 assert.match(
   navSource,
-  /name="workplace_operations_overview" label="Workplace — Single Pane of Glass"/,
+  /href="dashboard_manager#\/workplace_operations_overview">Workplace - Single Pane of Glass<\/a>/,
 );
 assert.match(
   activeNavSource,
@@ -847,7 +865,9 @@ for (const [dashboardGroup, destinations] of Object.entries(
   for (const destination of destinations) {
     assert.match(
       groupSource,
-      new RegExp(`(?:href|name)="${destination}(?:\\?setup=1)?"`),
+      new RegExp(
+        `(?:href|name)="(?:dashboard_manager#/)?${destination}(?:\\?setup=1)?"`,
+      ),
       `${destination} must remain in ${dashboardGroup}`,
     );
     assert.equal(
@@ -857,6 +877,26 @@ for (const [dashboardGroup, destinations] of Object.entries(
     );
   }
 }
+const nativeStudioViews = fs
+  .readdirSync(viewsRoot)
+  .filter((fileName) => fileName.endsWith(".xml"))
+  .filter((fileName) =>
+    /<dashboard\s+version="2"/.test(
+      fs.readFileSync(path.join(viewsRoot, fileName), "utf8"),
+    ),
+  )
+  .map((fileName) => fileName.replace(/\.xml$/, ""))
+  .sort();
+const dashboardManagerNavViews = [
+  ...activeNavSource.matchAll(/href="dashboard_manager#\/([^"]+)"/g),
+]
+  .map(([, viewName]) => viewName)
+  .sort();
+assert.deepEqual(
+  dashboardManagerNavViews,
+  nativeStudioViews,
+  "Every native Studio navigation link must preserve the app shell through Dashboard Manager",
+);
 assert.doesNotMatch(navSource, /name="secure_networking_overview"/);
 assert.doesNotMatch(navSource, /name="overview"/);
 

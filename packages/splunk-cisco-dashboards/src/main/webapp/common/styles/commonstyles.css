@@ -4411,16 +4411,6 @@ code {
     color: #ffffff !important;
 }
 
-.dashboardbuilder-searchbase-toolbar-tooltip {
-    display: grid;
-    gap: 3px;
-    max-width: 310px;
-}
-
-.dashboardbuilder-searchbase-toolbar-tooltip span {
-    line-height: 1.35;
-}
-
 .dashboardbuilder-edit-context-message {
     background: var(--dashboard-builder-background-section, #ffffff) !important;
     border: 1px solid var(--dashboard-builder-border-strong, #a8b3bd) !important;
@@ -5803,13 +5793,13 @@ body.dashboard-builder-drilldown-open .dashboard-builder-drilldown-modal {
     min-height: auto;
     margin-left: 2px;
     padding: 2px 5px;
-    border: 1px solid rgba(52, 211, 153, 0.26);
+    border: 1px solid var(--sui-border);
     border-radius: 4px;
-    background: rgba(2, 44, 34, 0.72);
-    color: #a7f3d0;
+    background: var(--sui-background-section);
+    color: var(--sui-content-default);
     box-decoration-break: clone;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
-    font-size: 0.92em;
+    font-size: 0.94em;
     line-height: 1.45;
     overflow-wrap: anywhere;
 }

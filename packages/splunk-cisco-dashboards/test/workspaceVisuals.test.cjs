@@ -36,6 +36,10 @@ const workspacesConf = read(
   "../src/main/resources/splunk/default/insights_workspaces.conf",
 );
 const profile = read("../src/main/webapp/pages/executive_insights/index.tsx");
+const searchbaseCanvas = read(
+  "../src/main/webapp/pages/searchbase_canvas/index.tsx",
+);
+const userGuide = read("../src/main/webapp/pages/user_guide/index.tsx");
 const profileRender = read(
   "../src/main/webapp/pages/executive_insights/render.tsx",
 );
@@ -80,24 +84,179 @@ const c3VisualizationPalette = read(
 
 assert.match(
   tailwindStyles,
-  /#scan-root\s+:where\([\s\S]*?button:not\(\[data-test='button'\]\)[\s\S]*?color: inherit;/,
+  /:where\(#scan-root, #configure-tile-drawer\)[\s\S]*?:where\([\s\S]*?button:not\(\[data-test=["']button["']\]\)[\s\S]*?color: inherit;/,
   "The custom-button reset must stay low-specificity so component text, surface, border, and spacing utilities remain visible",
 );
 assert.doesNotMatch(
   tailwindStyles,
-  /#scan-root\s+button:not\(\[data-test='button'\]\)/,
+  /:is\(#scan-root, #configure-tile-drawer\)\s*:where\(\s*button:not/,
   "The custom-button reset must not outrank Tailwind dark-mode utilities",
 );
 assert.match(
   profile,
-  /const \[filtersOpen, setFiltersOpen\] = useState\(true\);[\s\S]*?setFiltersOpen\(true\);/,
-  "The Add Search drawer must restore its full catalogue filters whenever it opens",
+  /const \[filtersOpen, setFiltersOpen\] = useState\(false\);[\s\S]*?setFiltersOpen\(false\);/,
+  "The Add Search drawer must restore its compact filter state whenever it opens",
+);
+assert.match(
+  profile,
+  /const \[showAllProfileSearches, setShowAllProfileSearches\] = useState\(false\);[\s\S]*?setShowAllProfileSearches\(false\);/,
+  "The Add Search drawer must default to workspace and section suggestions",
+);
+assert.match(
+  profile,
+  /const browsingEntireCatalogue =[\s\S]*?showAllProfileSearches \|\| suggestedRecords\.length === 0;[\s\S]*?const browseRecords = browsingEntireCatalogue[\s\S]*?\? addableRecords[\s\S]*?: suggestedRecords/,
+  "The Add Search drawer must fall back to the entire catalogue when no suggestions exist",
+);
+assert.match(
+  profile,
+  /const availableSearchLabel = `[\s\S]*?browsingEntireCatalogue \? "Entire catalogue" : "Suggested"[\s\S]*?available`/,
+  "The collapsed filter summary and live result status must identify the active catalogue scope",
+);
+assert.match(
+  profile,
+  /<Card key=\{record\.id\} tag="article">[\s\S]*?<Card\.Header[\s\S]*?truncateTitle=\{false\}[\s\S]*?title=\{[\s\S]*?<>[\s\S]*?\{record\.searchName\}/,
+  "Add Search cards must wrap long titles instead of truncating them beside destination actions",
+);
+for (const drawerLabel of [
+  "This browser",
+  "Workspace default",
+  "Advanced filters",
+  "Suggested",
+  "Entire catalogue",
+  "Add to this browser",
+  "Add as workspace default",
+]) {
+  assert.ok(
+    profile.includes(drawerLabel),
+    `The Add Search drawer must include the ${drawerLabel} label`,
+  );
+}
+for (const retiredDrawerLabel of [
+  "For me",
+  "Shared workspace",
+  "All searches",
+  "Add for me",
+  "Add shared",
+]) {
+  assert.ok(
+    !profile.includes(`label="${retiredDrawerLabel}"`),
+    `The Add Search drawer must not use the retired ${retiredDrawerLabel} label`,
+  );
+}
+
+const searchbaseCanvasCatalogue = searchbaseCanvas.slice(
+  searchbaseCanvas.indexOf("const SearchbaseBrowser"),
+  searchbaseCanvas.indexOf("const SearchbaseCanvasPage"),
+);
+assert.match(
+  searchbaseCanvasCatalogue,
+  /<Drawer[\s\S]*?<Drawer\.Body>[\s\S]*?<CardLayout cardWidth="100%">[\s\S]*?<Card[\s\S]*?<Card\.Header[\s\S]*?truncateTitle=\{false\}/,
+  "Searchbase Canvas must reuse the scrollable Insights Workspace drawer and card composition",
+);
+assert.match(
+  searchbaseCanvasCatalogue,
+  /width="min\(650px, 100vw\)"[\s\S]*?<Paginator\.Compact[\s\S]*?cataloguePageRecords\.map/,
+  "The catalogue drawer must remain responsive and render a bounded, paginated card page",
+);
+assert.doesNotMatch(
+  searchbaseCanvasCatalogue,
+  /closeOnClickAway/,
+  "Catalogue dismissal must not discard add or replace context through an incidental scrim click",
+);
+assert.match(
+  searchbaseCanvasCatalogue,
+  /filteredRecords\.slice\([\s\S]*?CATALOGUE_PAGE_SIZE/,
+  "Catalogue pagination must bound the number of cards rendered on each page",
+);
+assert.match(
+  searchbaseCanvasCatalogue,
+  /aria-label="Searchbase catalogue results"[\s\S]*?role="region"[\s\S]*?tabIndex=\{-1\}[\s\S]*?catalogueAnnouncement \|\|[\s\S]*?cataloguePageLabel/,
+  "Result changes must have a stable focus target and announce the visible range",
+);
+for (const pagerLabel of [
+  "Searchbase catalogue pages above results",
+  "Searchbase catalogue pages below results",
+]) {
+  assert.ok(
+    searchbaseCanvasCatalogue.includes(pagerLabel),
+    `Catalogue pagination must include the unique ${pagerLabel} label`,
+  );
+}
+assert.match(
+  searchbaseCanvasCatalogue,
+  /record\.tags[\s\S]*?<Button[\s\S]*?appearance="subtle"[\s\S]*?selectTag\(tag\)/,
+  "Catalogue tag actions must remain interactive while using native Splunk UI buttons",
+);
+assert.match(
+  searchbaseCanvasCatalogue,
+  /duplicateBlocked \? \([\s\S]*?<Badge[\s\S]*?label="Added"[\s\S]*?: \([\s\S]*?<Button/,
+  "Already-added searches must render as status instead of a disabled add action",
+);
+assert.match(
+  searchbaseCanvasCatalogue,
+  /<Checkbox[\s\S]*?checked=\{checked\}[\s\S]*?toggleSelected\([\s\S]*?record\.searchName[\s\S]*?<ScreenReaderContent>[\s\S]*?Select \{record\.searchName\}/,
+  "Bulk catalogue selection must use checkbox semantics with an accessible search label",
+);
+assert.match(
+  searchbaseCanvasCatalogue,
+  /<Heading level=\{3\} variant="title4">[\s\S]*?record\.searchName[\s\S]*?<Badge/,
+  "Catalogue cards must retain level-three heading navigation and visualization metadata",
+);
+assert.match(
+  searchbaseCanvasCatalogue,
+  /onAddRecord\(record\);[\s\S]*?setCatalogueAnnouncement[\s\S]*?focusCatalogueResults\(\)/,
+  "A completed per-card add must announce success and move focus before its action becomes status",
+);
+assert.match(
+  searchbaseCanvasCatalogue,
+  /aria-label=\{`Add all filtered: \$\{[\s\S]*?aria-label=\{`Add selected: \$\{/,
+  "Footer accessible names must begin with their visible action labels",
+);
+assert.match(
+  searchbaseCanvasCatalogue,
+  /<Drawer\.Footer>[\s\S]*?Add all filtered[\s\S]*?Add selected/,
+  "Canvas-only bulk catalogue actions must remain in the fixed drawer footer",
+);
+assert.doesNotMatch(
+  searchbaseCanvasCatalogue,
+  /className="min-h-0 flex-1 overflow-y-auto p-3"/,
+  "Searchbase Canvas must not recreate Drawer.Body scrolling with a custom flex wrapper",
 );
 
 assert.match(
   dashboardSection,
   /<CollapsiblePanel[\s\S]*?headingLevel=\{2\}[\s\S]*?title=\{[\s\S]*?\{title\}[\s\S]*?<\/span>/,
   "Dashboard section titles must use CollapsiblePanel's level-two heading semantics",
+);
+assert.match(
+  dashboardSection,
+  /Visible tiles[\s\S]*?TileCountValue[\s\S]*?Show all[\s\S]*?Paginator\.Compact/,
+  "Dashboard sections must retain tile count, paging, and show-all controls",
+);
+assert.match(
+  dashboardSection,
+  /const ProgressiveSectionActions = styled[\s\S]*?opacity: 0;[\s\S]*?\.scd-dashboard-section:hover &[\s\S]*?\.scd-dashboard-section:focus-within &[\s\S]*?@media \(hover: none\)[\s\S]*?opacity: 1;/,
+  "Secondary section controls must reveal progressively for pointer, keyboard, and touch users",
+);
+assert.match(
+  dashboardSection,
+  /TileCountStepper = styled[\s\S]*?backgroundColorPopup[\s\S]*?ShowAllButton = styled\(Button\)[\s\S]*?actionColorContentStandalone[\s\S]*?Show all \$\{tilePager\.total\}/,
+  "Visible-tile controls must match the bordered secondary-surface design",
+);
+assert.match(
+  dashboardSection,
+  /effectiveTileCount[\s\S]*?tilePager\?\.showingAll[\s\S]*?tilePager\.total[\s\S]*?TileCountValue[\s\S]*?\{effectiveTileCount\}[\s\S]*?role="status"[\s\S]*?aria-pressed=\{tilePager\.showingAll\}/,
+  "Tile-count changes and repeated show-all toggles must expose complete accessible context",
+);
+assert.match(
+  profile,
+  /const SECTION_WRAP_TILE_COUNT = 4;[\s\S]*?const SECTION_WRAPPED_TILE_COLUMNS = 3;/,
+  "A fourth visible tile must start a second three-column row",
+);
+assert.match(
+  profile,
+  /changeSectionTileCount[\s\S]*?setSectionTileCount\(section, count\)[\s\S]*?\[section\]: false/,
+  "Changing the persisted count must reset transient page and show-all state",
 );
 assert.doesNotMatch(
   dashboardSection,
@@ -111,8 +270,8 @@ assert.match(
 );
 assert.match(
   profile,
-  /<h2 className="text-base font-bold\s+sui-color-info[\s\S]*?\{topologyHeaderName\}[\s\S]*?<\/h2>/,
-  "The connectivity panel title must use the page's level-two section hierarchy",
+  /<Heading[\s\S]*?level=\{2\}[\s\S]*?variant="title3"[\s\S]*?\{topologyHeaderName\}[\s\S]*?<\/Heading>/,
+  "The connectivity panel title must use SUI Heading and the page's level-two section hierarchy",
 );
 assert.match(
   sparkline,
@@ -177,12 +336,12 @@ assert.match(
 );
 assert.match(
   topologyMap,
-  /useState<TopologySurfaceMode>\('geo'\)/,
+  /useState<TopologySurfaceMode>\(["']geo["']\)/,
   "The geographic topology must be the factory connectivity view",
 );
 assert.match(
   topologyMap,
-  /surfaceMode === 'command' \? \([\s\S]*?<TopologyCommandView/,
+  /surfaceMode === ["']command["'] \? \([\s\S]*?<TopologyCommandView/,
   "The connectivity surface must retain a command-view rendering path",
 );
 assert.match(
@@ -192,12 +351,12 @@ assert.match(
 );
 assert.match(
   topologyMap,
-  /requestAnimationFrame[\s\S]*?viewportGroupRef\.current\?\.setAttribute\([\s\S]*?'transform'/,
+  /requestAnimationFrame[\s\S]*?viewportGroupRef\.current\?\.setAttribute\([\s\S]*?["']transform["']/,
   "Command topology navigation must animate one SVG viewport transform instead of rerendering every node",
 );
 assert.match(
   topologyMap,
-  /addEventListener\('wheel', handleWheel, \{ passive: false \}\)/,
+  /addEventListener\(["']wheel["'], handleWheel, \{ passive: false \}\)/,
   "Command topology must support cursor-anchored wheel and trackpad zoom",
 );
 assert.match(
@@ -212,22 +371,22 @@ assert.match(
 );
 assert.match(
   topologyMap,
-  /case '0':[\s\S]*?scheduleViewport\(COMMAND_FIT_VIEWPORT\)/,
+  /case ["']0["']:[\s\S]*?scheduleViewport\(COMMAND_FIT_VIEWPORT\)/,
   "Command topology keyboard navigation must include a fit shortcut",
 );
 assert.match(
   topologyMap,
-  /\['geo', 'Geo'\]/,
+  /\[["']geo["'], ["']Geo["']\]/,
   "The geographic topology must remain available as an explicit presentation",
 );
 assert.match(
   topologyMap,
-  /name: 'Secure Network Command Map',[\s\S]*subtitle: 'Live sites, trust paths, and policy-enforcement health'/,
+  /name: ["']Secure Network Command Map["'],[\s\S]*subtitle: ["']Live sites, trust paths, and policy-enforcement health["']/,
   "Secure Networking must ship its own command-map title and decision-oriented subtitle",
 );
 assert.match(
   topologyMap,
-  /const STATUS_STROKE:[\s\S]*?critical: '#fa5762',[\s\S]*?warning: '#f0c243',[\s\S]*?stable: '#4cbf7f',[\s\S]*?unknown: '#a6adb6'/,
+  /const STATUS_STROKE:[\s\S]*?critical: ["']#fa5762["'],[\s\S]*?warning: ["']#f0c243["'],[\s\S]*?stable: ["']#4cbf7f["'],[\s\S]*?unknown: ["']#a6adb6["']/,
   "Topology status links and beacons must use the shared C3 operational palette",
 );
 const roleChromeBlock = topologyMap.match(
@@ -235,7 +394,7 @@ const roleChromeBlock = topologyMap.match(
 );
 assert.ok(roleChromeBlock, "Topology roles must have a central color contract");
 const roleColors = [
-  ...roleChromeBlock[1].matchAll(/fill: '(#[0-9a-f]{6})'/gi),
+  ...roleChromeBlock[1].matchAll(/fill: ["'](#[0-9a-f]{6})["']/gi),
 ].map((match) => match[1].toLowerCase());
 assert.equal(roleColors.length, 12, "Every built-in topology role must define a color");
 assert.equal(
@@ -280,8 +439,8 @@ assert.match(
 );
 assert.match(
   profileRender,
-  /mountPageRaw\(ExecutiveInsightsPage, \{ showCopyrightMark: false \}\);/,
-  "Insights Workspace must suppress the floating copyright mark",
+  /mountPageRaw\(ExecutiveInsightsPage, \{[\s\S]*?showCopyrightMark: false,[\s\S]*?allowColorSchemeChoice: true,[\s\S]*?\}\);/,
+  "Insights Workspace must suppress the floating copyright mark and opt into theme choice",
 );
 assert.match(
   dashboardSection,
@@ -290,8 +449,8 @@ assert.match(
 );
 assert.match(
   profile,
-  /"dark scd-one-cisco-spotlight-canvas sui-bg-page sui-color-default"/,
-  "The Figma-led workspace must keep a neutral canvas for the SUI SpotLight preset",
+  /"scd-one-cisco-spotlight-canvas sui-bg-page sui-color-default"[\s\S]*?data-color-scheme=\{colorScheme\}/,
+  "The Figma-led workspace must use a theme-aware neutral canvas for the SUI SpotLight preset",
 );
 assert.match(
   profile,
@@ -300,18 +459,23 @@ assert.match(
 );
 assert.match(
   tailwindStyles,
-  /\.scd-one-cisco-spotlight-canvas[\s\S]*?background-color:\s*#0b1118[\s\S]*?background-image:\s*none/,
-  "The dark workspace must not place the legacy custom gradient behind SUI SpotLight",
+  /\.scd-one-cisco-spotlight-canvas[\s\S]*?background-color:\s*var\(--sui-background-page, #0b1118\)[\s\S]*?background-image:\s*none/,
+  "The workspace canvas must follow the active SUI color scheme without restoring the legacy gradient",
 );
 assert.match(
   tailwindStyles,
-  /\.scd-signal-rail-ticker\[data-variant='one-cisco-glass'\][\s\S]*?background:\s*transparent/,
+  /@media \(max-width: 1279px\)[\s\S]*?\.scd-header-map-layout,[\s\S]*?\.scd-header-refresh-rate[\s\S]*?display: none;/,
+  "Narrow headers must move secondary map-layout and refresh controls into responsive overflow",
+);
+assert.match(
+  tailwindStyles,
+  /\.scd-signal-rail-ticker\[data-variant=["']one-cisco-glass["']\][\s\S]*?background:\s*transparent/,
   "The 1CD status rail must expose the SUI SpotLight instead of an opaque custom background",
 );
 assert.match(
   tailwindStyles,
-  /\.scd-c3-surface \.scd-c3-panel[\s\S]*?rgb\(19 26 35 \/ 98%\)[\s\S]*?backdrop-filter: blur\(8px\)/,
-  "C3 panels must remain readable, mostly opaque surfaces above the atmospheric canvas",
+  /\.scd-c3-surface \.scd-c3-panel[\s\S]*?background:\s*transparent/,
+  "C3 panels must preserve the shared atmospheric canvas instead of adding a second custom fill",
 );
 for (const color of [
   "#649ef5",
@@ -331,8 +495,8 @@ for (const color of [
 }
 assert.match(
   metricItem,
-  /healthy: C3_VISUALIZATION_COLORS\.positive,[\s\S]*?warning: C3_VISUALIZATION_COLORS\.caution,[\s\S]*?critical: C3_VISUALIZATION_COLORS\.critical/,
-  "Metric status charts must use the shared C3 operational palette",
+  /healthy: theme\.severityColorNormal,[\s\S]*?warning: theme\.severityColorWarning,[\s\S]*?critical: theme\.severityColorCritical/,
+  "Metric status charts must use theme-aware SUI operational colors",
 );
 assert.match(
   kpiPicker,
@@ -374,11 +538,12 @@ assert.match(
   /<OneCdRadioBar[\s\S]*?ariaLabel="Map layout"[\s\S]*?options=\{MAP_LAYOUT_OPTIONS\}/,
   "The map layout control must use the shared SUI RadioBar and include map visibility",
 );
-assert.doesNotMatch(
+assert.match(
   profile,
-  /<MapPositionToggle|toggleMapVisibility|<SlidingPanels/,
-  "Map layout, time range, and refresh rate must not be duplicated in the map card or actions menu",
+  /<Menu\.Heading>Map layout<\/Menu\.Heading>[\s\S]*?MAP_LAYOUT_OPTIONS\.map[\s\S]*?<Menu\.Heading>Refresh rate<\/Menu\.Heading>[\s\S]*?AUTO_REFRESH_OPTIONS\.map/,
+  "Responsive overflow must preserve map-layout and refresh-rate choices",
 );
+assert.doesNotMatch(profile, /<MapPositionToggle|toggleMapVisibility|<SlidingPanels/);
 assert.match(
   profile,
   /<Button[\s\S]*?appearance="subtle"[\s\S]*?<RefreshCw[\s\S]*?label=\{`Refresh dashboard data now\./,
@@ -394,6 +559,29 @@ assert.match(
   /<Dropdown[\s\S]*?toggle=\{[\s\S]*?<Button[\s\S]*?appearance="subtle"[\s\S]*?hideLabel[\s\S]*?icon=\{<ChevronDown[\s\S]*?label=\{`Switch workspace\. Current: \$\{insightsWorkspace\.label\}`\}[\s\S]*?<Menu style=\{\{ width: WORKSPACE_MENU_WIDTH_PX \}\}>[\s\S]*?workspaces\.map[\s\S]*?<Menu\.Item[\s\S]*?to=\{`\$\{splunkViewAppUrl\("workspace_insights"\)\}[\s\S]*?selectable[\s\S]*?selected=\{workspace\.id === insightsWorkspace\.id\}/,
   "Workspace switching must use an accessible SUI Dropdown menu beside the page title",
 );
+assert.match(
+  profile,
+  /const MANAGED_STUDIO_VIEW_NAMES = new Set\(\[[\s\S]*?"netops_critical_systems_health"[\s\S]*?"secops_resilience"[\s\S]*?"workplace_building_intelligence"[\s\S]*?\]\);/,
+  "Executive drilldowns must identify native Studio views that require Dashboard Manager",
+);
+assert.match(
+  profile,
+  /isManagedStudioView \? "dashboard_manager" : viewName[\s\S]*?const routeHash = isManagedStudioView \? `#\/\$\{viewName\}` : "";[\s\S]*?`\$\{baseUrl\}\?\$\{params\.toString\(\)\}\$\{routeHash\}`/,
+  "Executive drilldowns must place time parameters before the Dashboard Manager route hash",
+);
+for (const viewName of [
+  "netops_critical_systems_health",
+  "secops_resilience",
+  "workplace_building_intelligence",
+  "workplace_spaces_intelligence",
+  "netops_catalyst_health",
+]) {
+  assert.match(
+    userGuide,
+    new RegExp(`view: "dashboard_manager#/${viewName}"`),
+    `${viewName} must preserve the app shell when opened from the user guide`,
+  );
+}
 assert.match(
   profile,
   /<Menu\.Divider \/>[\s\S]*?<Menu\.Item[\s\S]*?setWorkspaceManagerOpen\(true\)[\s\S]*?Edit workspaces/,
@@ -419,10 +607,16 @@ assert.doesNotMatch(
   /aria-label="Close workspace manager"|<X className=/,
   "WorkspaceManager must use Modal.Header's built-in close control",
 );
-assert.doesNotMatch(
+assert.match(
   profile,
-  /ThemeToggle|cycleTheme/,
-  "The dashboard header must not expose theme-toggle button wiring",
+  /<Menu\.Heading>Appearance<\/Menu\.Heading>[\s\S]*?setColorScheme\("light"\)[\s\S]*?selected=\{colorScheme === "light"\}[\s\S]*?setColorScheme\("dark"\)[\s\S]*?selected=\{colorScheme === "dark"\}/,
+  "The dashboard actions menu must expose a reversible light/dark workspace choice",
+);
+assert.doesNotMatch(profile, /ThemeToggle|cycleTheme/);
+assert.match(
+  topologyMap,
+  /const \{ colorScheme \} = useSplunkTheme\(\);[\s\S]*?const isDark = colorScheme === "dark";[\s\S]*?const tileUrl = isDark \? tilePreset\.dark : tilePreset\.light;/,
+  "The command map must choose tiles from the active workspace color scheme",
 );
 assert.doesNotMatch(
   profile,
@@ -531,8 +725,18 @@ assert.match(
 );
 assert.match(
   signalTickerRail,
-  /disabled=\{isWorkspaceDefault\}[\s\S]*?'Using workspace default'[\s\S]*?'Restore workspace default'/,
+  /<Button[\s\S]*?disabled=\{isWorkspaceDefault\}[\s\S]*?appearance=\{[\s\S]*?'secondary'[\s\S]*?'destructiveSecondary'[\s\S]*?'Using workspace default'[\s\S]*?'Restore workspace default'/,
   "Signal Rail settings must distinguish the no-op default state from an available restore action",
+);
+assert.match(
+  signalTickerRail,
+  /aria-pressed=\{config\.enabled\}[\s\S]*?'sui-border-interactive sui-bg-selected sui-color-active'/,
+  "Signal Rail toggles must use the theme-selected surface instead of a semantic status fill",
+);
+assert.match(
+  signalTickerRail,
+  /id=\{descriptionId\}[\s\S]*?sui-border-interactive sui-bg-selected sui-color-default/,
+  "Expanded Signal Rail descriptions must use a readable selected surface",
 );
 assert.match(
   profile,

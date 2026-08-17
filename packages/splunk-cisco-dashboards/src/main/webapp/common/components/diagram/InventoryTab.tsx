@@ -308,7 +308,7 @@ const FilterDropdown: React.FC<{
                     'sui-border-weak sui-border-default',
                     'sui-hover-border-info',
                     selected.size > 0 &&
-                        'sui-border-info  sui-bg-info sui-border-info'
+                        'sui-border-notification-info sui-bg-notification-info'
                 )}
                 aria-expanded={open}
             >
@@ -353,12 +353,13 @@ const FilterDropdown: React.FC<{
                             return (
                                 <button
                                     type="button"
+                                    aria-pressed={active}
                                     key={opt.value}
                                     onClick={() => onToggle(opt.value)}
                                     className={cn(
                                         'w-full flex items-center justify-between gap-2 px-2 py-1 text-xs',
                                         active
-                                            ? 'sui-bg-info  sui-color-info'
+                                            ? 'sui-bg-notification-info sui-color-active'
                                             : 'sui-color-default sui-color-active  sui-hover-bg-overlay'
                                     )}
                                 >
@@ -736,7 +737,7 @@ export const InventoryTab: React.FC = () => {
                     ))}
                 </div>
                 {overflow > 0 && (
-                    <p className="mt-2 px-2 py-1 rounded  sui-bg-warning text-xs  sui-color-warning leading-snug">
+                    <p className="mt-2 px-2 py-1 rounded sui-bg-notification-warning text-xs sui-color-active leading-snug">
                         {overflow} more match — filter to narrow.
                     </p>
                 )}

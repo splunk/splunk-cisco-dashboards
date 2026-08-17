@@ -55,6 +55,11 @@ const insightKpiButtonPath = path.resolve(
   "../src/main/webapp/pages/dashboardbuilder/InsightKpiButton.jsx",
 );
 const insightKpiButton = fs.readFileSync(insightKpiButtonPath, "utf8");
+const dropdownWithSearchPath = path.resolve(
+  __dirname,
+  "../src/main/webapp/pages/dashboardbuilder/DropdownWithSearch.jsx",
+);
+const dropdownWithSearch = fs.readFileSync(dropdownWithSearchPath, "utf8");
 const wrapperSelector =
   "body > div[role='main'] > div:has(> #collection_container.dashboardbuilderview)";
 const ruleStart = styles.indexOf(wrapperSelector);
@@ -131,8 +136,20 @@ assert.match(editor, /\[apiRef, dashID, dashMode, isDashboardMounted\]/);
 assert.match(styles, /body\.dashboardbuilder-navigation-hidden header/);
 assert.match(styles, /body\.dashboardbuilder-navigation-hidden nav/);
 assert.match(insightKpiButton, /label="Add Searchbase"/);
-assert.match(insightKpiButton, /<strong>Add Searchbase searches<\/strong>/);
 assert.match(insightKpiButton, /ariaLabel="Add Searchbase searches"/);
+assert.doesNotMatch(insightKpiButton, /@splunk\/react-ui\/Tooltip/);
+assert.doesNotMatch(insightKpiButton, /dashboardbuilder-searchbase-toolbar-tooltip/);
+assert.match(insightKpiButton, /import Layout from '@splunk\/react-ui\/Layout'/);
+assert.match(insightKpiButton, /import Typography from '@splunk\/react-ui\/Typography'/);
+assert.match(insightKpiButton, /color="inherit"/);
+assert.match(insightKpiButton, /<Layout>/);
+assert.match(insightKpiButton, /<Typography[\s\S]*?as="span"/);
+assert.match(insightKpiButton, /describedBy=\{helpTextId\}/);
+assert.match(
+  insightKpiButton,
+  /Browse reusable, centrally managed searches from the Cisco Searchbase catalogue\./,
+);
+assert.match(dropdownWithSearch, /aria-describedby=\{describedBy\}/);
 assert.doesNotMatch(insightKpiButton, /Add visualizations from Searchbase/);
 assert.match(insightKpiButton, /dashboardbuilder-searchbase-toolbar-control/);
 assert.match(styles, /\.dashboardbuilder-searchbase-toolbar-control \[data-test='button'\]/);

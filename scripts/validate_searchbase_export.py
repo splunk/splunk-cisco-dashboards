@@ -13,12 +13,12 @@ from build_searchbase_export import parse_stanzas, format_stanza
 from audit_searchbase_quality import split_spl_commands
 from lint_spl_antipatterns import lint_search
 
-# Export artifacts live outside the Splunk app's default/ tree so they are
-# never bundled into the shipped package; this validator reads/writes them in
-# the repo-only exports/ directory produced by build_searchbase_export.py.
+# Export artifacts live outside the Splunk app source tree so they are never
+# bundled into the shipped package. This validator reads and writes the
+# repository artifact directory produced by build_searchbase_export.py.
 EXPORT_DIR = (
     Path(__file__).resolve().parents[1]
-    / "packages/splunk-cisco-dashboards/exports"
+    / "artifacts/searchbase/exports"
 )
 EXPORT = EXPORT_DIR / "searchbase_export.conf"
 PASS_OUT = EXPORT_DIR / "searchbase_export_pass.conf"

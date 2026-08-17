@@ -118,7 +118,8 @@ export interface TopologyLink {
      * ThousandEyes-side agent identity for path measurements. When the link
      * is sourced from a TE agent-to-agent test, these surface the actual
      * agents being probed (vs the test name, which can be misleading — see
-     * SESSION_LOG 2026-05-12 misnamed-test lesson). Multi-valued from
+     * `docs/history/SESSION_LOG.md` 2026-05-12 misnamed-test lesson).
+     * Multi-valued from
      * Splunk; a string here is whatever Splunk delivers (usually one name,
      * occasionally newline-joined for multi-pair tests).
      */

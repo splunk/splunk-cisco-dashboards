@@ -56,25 +56,25 @@
         </collection> -->
 
         <collection label="Network &amp; IT Operations">
-            <a href="netops_critical_systems_health">IT Health</a>
-            <a href="netops_readiness">NetOps Readiness</a>
+            <a href="dashboard_manager#/netops_critical_systems_health">IT Health</a>
+            <a href="dashboard_manager#/netops_readiness">NetOps Readiness</a>
             <a href="netops_health_monitoring">Health Monitoring (Beta)</a>
         </collection>
 
         <collection label="Security Operations">
-            <a href="secops_resilience">Security</a>
+            <a href="dashboard_manager#/secops_resilience">Security Resilience</a>
             <a href="secops_overview">Security Operations Overview (Beta)</a>
         </collection>
 
         <collection label="Workplace Intelligence">
-            <a href="workplace_building_intelligence">Building Intelligence</a>
-            <view name="workplace_spaces_intelligence" label="Cisco Spaces — Intelligence" />
-            <view name="workplace_operations_overview" label="Workplace — Single Pane of Glass" />
+            <a href="dashboard_manager#/workplace_building_intelligence">Building Intelligence</a>
+            <a href="dashboard_manager#/workplace_spaces_intelligence">Cisco Spaces - Intelligence</a>
+            <a href="dashboard_manager#/workplace_operations_overview">Workplace - Single Pane of Glass</a>
         </collection>
 
         <collection label="Catalyst Operations">
-            <a href="netops_catalyst_health">Catalyst Health</a>
-            <a href="netops_catalyst_operations">Catalyst Operations (Beta)</a>
+            <a href="dashboard_manager#/netops_catalyst_health">Catalyst Health</a>
+            <a href="dashboard_manager#/netops_catalyst_operations">Catalyst Operations (Beta)</a>
         </collection>
 
         <collection label="Visual Labs (Beta)">
@@ -86,12 +86,12 @@
         <collection label="Help &amp; Resources">
             <a href="user_guide">User Guide</a>
             <a href="search">Search</a>
+            <a href="search" target="_blank" rel="noopener"></a>
         </collection>
 
         <collection label="Administration">
-            <a href="admin_asset_inventory">Asset Inventory</a>
+            <a href="dashboard_manager#/admin_asset_inventory">Asset Inventory</a>
             <a href="setup?setup=1">Setup</a>
         </collection>
-        <a href="search" target="_blank" rel="noopener"></a>
     </collection>
 </nav>

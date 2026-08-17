@@ -55,7 +55,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "# Statewide Network Exercise\n\nComprehensive view of **client connectivity and network readiness** across all statewide sites. Use this dashboard to validate operational posture, compare site performance, and support readiness exercises.\n\n**Audience:** Network Operations, Field Engineers, IT Leadership\n**Primary Sources:** Cisco Catalyst Center (DNAC) — Client Health, Device Health, AP Health\n**Refresh:** All panels follow the global time picker; client health data refreshes every 15 minutes\n\n---\n\n## How to Navigate This Dashboard\n\n**Overview** — Wired and wireless client trends, health scores, and connection counts across all sites.\n*Start here — confirm client onboarding is healthy statewide.*\n\n**Executive Summary** — Aggregated KPIs, site health rankings, and trend indicators for leadership briefings.\n*Use for operational readiness reviews and cross-site comparisons.*\n\n**Client Summary** — Device types, OS distribution, connection methods, and per-site client breakdowns.\n*Drill in to identify client population shifts and troubleshoot device-specific issues.*\n\n> **Reading pattern:** Healthy client counts + green health scores = normal ops. Dropping counts or degraded scores = switch to Client Summary for device-level root cause."
+				"markdown": "# Statewide Network Exercise\n\nComprehensive view of **client connectivity and network readiness** across all statewide sites. Use this dashboard to validate operational posture, compare site performance, and support readiness exercises.\n\n**Audience:** Network Operations, Field Engineers, IT Leadership\n**Primary Sources:** Cisco Catalyst Center (DNAC) - Client Health, Device Health, AP Health\n**Refresh:** All panels follow the global time picker; client health data refreshes every 15 minutes\n\n---\n\n## How to Navigate This Dashboard\n\n**Overview** - Wired and wireless client trends, health scores, and connection counts across all sites.\n*Start here - confirm client onboarding is healthy statewide.*\n\n**Executive Summary** - Aggregated KPIs, site health rankings, and trend indicators for leadership briefings.\n*Use for operational readiness reviews and cross-site comparisons.*\n\n**Client Summary** - Device types, OS distribution, connection methods, and per-site client breakdowns.\n*Drill in to identify client population shifts and troubleshoot device-specific issues.*\n\n> **Reading pattern:** Healthy client counts + green health scores = normal ops. Dropping counts or degraded scores = switch to Client Summary for device-level root cause."
 			},
 			"type": "splunk.markdown"
 		},
@@ -64,7 +64,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "## Data Sources & Troubleshooting\n\n---\n\n**Cisco Catalyst Center** — Cisco DNA Center App for Splunk\nSourcetypes: `cisco:dnac:clienthealth`, `cisco:dnac:networkhealth`, `cisco:dnac:devicehealth`\nFreshness: ~15 min\n\n**Cisco Catalyst Center (AP)** — Cisco DNA Center App for Splunk\nSourcetypes: `cisco:dnac:aphealth`\nFreshness: ~15 min\n\n---\n\n**Panel showing \"No results\"?**\n\n1. **Widen the time range** — client health data needs at least 4 hours\n2. **Verify the DNAC App is installed** — check *Manage Apps*\n3. **Confirm data flow** — run `index=* sourcetype=cisco:dnac:clienthealth | head 5`\n4. **Check saved search status** — verify scheduled searches are enabled."
+				"markdown": "## Data Sources & Troubleshooting\n\n---\n\n**Cisco Catalyst Center** - Cisco DNA Center App for Splunk\nSourcetypes: `cisco:dnac:clienthealth`, `cisco:dnac:networkhealth`, `cisco:dnac:devicehealth`\nFreshness: ~15 min\n\n**Cisco Catalyst Center (AP)** - Cisco DNA Center App for Splunk\nSourcetypes: `cisco:dnac:aphealth`\nFreshness: ~15 min\n\n---\n\n**Panel showing \"No results\"?**\n\n1. **Widen the time range** - client health data needs at least 4 hours\n2. **Verify the DNAC App is installed** - check *Manage Apps*\n3. **Confirm data flow** - run `index=* sourcetype=cisco:dnac:clienthealth | head 5`\n4. **Check saved search status** - verify scheduled searches are enabled."
 			},
 			"type": "splunk.markdown"
 		},
@@ -326,7 +326,7 @@
 			"dataSources": {
 				"primary": "ds_cs_by_ssid_table"
 			},
-			"description": "Client count per SSID — which networks are busiest",
+			"description": "Client count per SSID - which networks are busiest",
 			"options": {
 				"count": 15,
 				"fontSize": "small",
@@ -370,7 +370,7 @@
 				"lineWidth": 2,
 				"markerDisplay": "outlined"
 			},
-			"title": "Client Count Over Time — Health Distribution",
+			"title": "Client Count Over Time - Health Distribution",
 			"type": "splunk.area"
 		},
 		"viz_cs_hdr_activity": {
@@ -425,7 +425,7 @@
 			"dataSources": {
 				"primary": "ds_cs_health_by_loc_table"
 			},
-			"description": "Per-site client health breakdown — identify problem locations",
+			"description": "Per-site client health breakdown - identify problem locations",
 			"options": {
 				"count": 15,
 				"fontSize": "small",
@@ -442,7 +442,7 @@
 			"dataSources": {
 				"primary": "ds_cs_health_dist"
 			},
-			"description": "Client health distribution — Healthy, Fair, Poor, Idle",
+			"description": "Client health distribution - Healthy, Fair, Poor, Idle",
 			"options": {
 				"seriesColorsByField": {
 					"FAIR": "#f0c243",
@@ -888,7 +888,7 @@
 			"dataSources": {
 				"primary": "ds_exec_client_site_bottom"
 			},
-			"description": "Sites with the worst client health scores — investigate first",
+			"description": "Sites with the worst client health scores - investigate first",
 			"options": {
 				"count": 10,
 				"fontSize": "small",
@@ -961,7 +961,7 @@
 		"viz_ex_hdr_client": {
 			"options": {
 				"fontColor": "#649ef5",
-				"markdown": "# Overall Health Summary — Client Devices",
+				"markdown": "# Overall Health Summary - Client Devices",
 				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
@@ -986,7 +986,7 @@
 			"options": {
 				"fontColor": "#649ef5",
 				"fontSize": "large",
-				"markdown": "# Overall Health Summary — Network Devices",
+				"markdown": "# Overall Health Summary - Network Devices",
 				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
@@ -1040,7 +1040,7 @@
 			"dataSources": {
 				"primary": "ds_exec_device_inv_bar"
 			},
-			"description": "Network device count by type — AP, Switch, Router, WLC",
+			"description": "Network device count by type - AP, Switch, Router, WLC",
 			"options": {
 				"dataValuesDisplay": "all",
 				"seriesColorsByField": {
@@ -1080,7 +1080,7 @@
 					"headerColor": "#ecf0f5"
 				}
 			},
-			"title": "Device Inventory — Detail",
+			"title": "Device Inventory - Detail",
 			"type": "splunk.table"
 		},
 		"viz_ex_issue_details_table": {
@@ -1098,7 +1098,7 @@
 					"headerColor": "#ecf0f5"
 				}
 			},
-			"title": "Active Issue Details — Why is it unhealthy?",
+			"title": "Active Issue Details - Why is it unhealthy?",
 			"type": "splunk.table"
 		},
 		"viz_ex_issue_pie": {
@@ -1170,7 +1170,7 @@
 			"dataSources": {
 				"primary": "ds_exec_issue_trend"
 			},
-			"description": "Issue volume trending — watch for spikes during activations",
+			"description": "Issue volume trending - watch for spikes during activations",
 			"options": {
 				"nullValueDisplay": "connect",
 				"stackMode": "stacked",
@@ -1368,7 +1368,7 @@
 					"headerColor": "#ecf0f5"
 				}
 			},
-			"title": "KPI Deltas — This Week vs Last Week",
+			"title": "KPI Deltas - This Week vs Last Week",
 			"type": "splunk.table"
 		},
 		"viz_info_cl": {
@@ -1376,7 +1376,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "## Metric Reference — Client Summary Tab\n\n---\n\n**Client Health Score** — Composite client health\n**Total Connected Clients** — Active client count\n**Wireless vs Wired** — Client type distribution\n**Health Distribution** — Good/Fair/Poor breakdown\n\n---\n\n**Client Count Over Time** — Health distribution trend\n\n---\n\n**Top Networks by Client Count** — Busiest network segments\n**Client Health by Location** — Per-site client health\n**Clients by Device Type** — Device category breakdown\n\n---\n\n**Client OS Distribution** — Operating system breakdown\n**Connection Type Breakdown** — Wired vs wireless vs VPN\n**Top SSIDs by Client Count** — Busiest wireless networks"
+				"markdown": "## Metric Reference - Client Summary Tab\n\n---\n\n**Client Health Score** - Composite client health\n**Total Connected Clients** - Active client count\n**Wireless vs Wired** - Client type distribution\n**Health Distribution** - Good/Fair/Poor breakdown\n\n---\n\n**Client Count Over Time** - Health distribution trend\n\n---\n\n**Top Networks by Client Count** - Busiest network segments\n**Client Health by Location** - Per-site client health\n**Clients by Device Type** - Device category breakdown\n\n---\n\n**Client OS Distribution** - Operating system breakdown\n**Connection Type Breakdown** - Wired vs wireless vs VPN\n**Top SSIDs by Client Count** - Busiest wireless networks"
 			},
 			"type": "splunk.markdown"
 		},
@@ -1385,7 +1385,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "## Metric Reference — Executive Summary Tab\n\n---\n\n#### Device & Network Health\n\n**Healthy Devices** — Count of devices in good health\n**Network Health** — Overall network health percentage\n**Access Points** — Total AP count\n**AP Reachability** — Percentage of APs responding\n\n---\n\n**Network Health Trend** — Health score over time\n**Sites with Lowest/Highest Health** — Best and worst performing sites\n\n---\n\n#### Client Health\n\n**Client Health** — Composite client health score\n**Client Health Trend** — Client score over time\n**Sites with Lowest/Highest Client Health** — Site rankings by client health\n\n---\n\n#### Site-Level Summary\n\n**Device Health by Site** — Per-site device health scores\n**Client Health by Site** — Per-site client health scores\n**AP Count by Site** — Access point distribution"
+				"markdown": "## Metric Reference - Executive Summary Tab\n\n---\n\n#### Device & Network Health\n\n**Healthy Devices** - Count of devices in good health\n**Network Health** - Overall network health percentage\n**Access Points** - Total AP count\n**AP Reachability** - Percentage of APs responding\n\n---\n\n**Network Health Trend** - Health score over time\n**Sites with Lowest/Highest Health** - Best and worst performing sites\n\n---\n\n#### Client Health\n\n**Client Health** - Composite client health score\n**Client Health Trend** - Client score over time\n**Sites with Lowest/Highest Client Health** - Site rankings by client health\n\n---\n\n#### Site-Level Summary\n\n**Device Health by Site** - Per-site device health scores\n**Client Health by Site** - Per-site client health scores\n**AP Count by Site** - Access point distribution"
 			},
 			"type": "splunk.markdown"
 		},
@@ -1394,7 +1394,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "## Metric Reference — Overview Tab\n\n---\n\n**Wireless Health** — Composite wireless client health score\n**Wireless Clients** — Total connected wireless clients\n**Healthy (Wireless)** — Count of wireless clients in good health\n**Wired Health** — Composite wired client health score\n**Wired Clients** — Total connected wired clients\n**Healthy (Wired)** — Count of wired clients in good health\n\n---\n\n**Wireless Client Trend (24h)** — Wireless client count over time\n**Wired Client Trend (24h)** — Wired client count over time"
+				"markdown": "## Metric Reference - Overview Tab\n\n---\n\n**Wireless Health** - Composite wireless client health score\n**Wireless Clients** - Total connected wireless clients\n**Healthy (Wireless)** - Count of wireless clients in good health\n**Wired Health** - Composite wired client health score\n**Wired Clients** - Total connected wired clients\n**Healthy (Wired)** - Count of wired clients in good health\n\n---\n\n**Wireless Client Trend (24h)** - Wireless client count over time\n**Wired Client Trend (24h)** - Wired client count over time"
 			},
 			"type": "splunk.markdown"
 		},
@@ -1410,7 +1410,9 @@
 				"shouldAbbreviateTrendValue": true,
 				"sparklineNullValueDisplay": "connect",
 				"unit": "",
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Open Issues",
 			"type": "splunk.singlevalue"
@@ -1427,7 +1429,9 @@
 				"shouldAbbreviateTrendValue": true,
 				"sparklineNullValueDisplay": "connect",
 				"unit": "",
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Resolved Issues",
 			"type": "splunk.singlevalue"
@@ -1444,7 +1448,9 @@
 				"shouldAbbreviateTrendValue": true,
 				"sparklineNullValueDisplay": "connect",
 				"unit": "",
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Total Issues",
 			"type": "splunk.singlevalue"
@@ -1454,7 +1460,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "**Client-level detail** — device types, OS distribution, and per-site breakdowns. Use this tab to identify client population shifts and troubleshoot device-specific issues."
+				"markdown": "**Client-level detail** - device types, OS distribution, and per-site breakdowns. Use this tab to identify client population shifts and troubleshoot device-specific issues."
 			},
 			"type": "splunk.markdown"
 		},
@@ -1463,7 +1469,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "**Executive-level posture summary** — aggregated KPIs, site comparisons, and trend indicators. Use this tab for leadership briefings and operational readiness reviews."
+				"markdown": "**Executive-level posture summary** - aggregated KPIs, site comparisons, and trend indicators. Use this tab for leadership briefings and operational readiness reviews."
 			},
 			"type": "splunk.markdown"
 		},
@@ -1506,7 +1512,7 @@
 				"lineWidth": 2,
 				"markerDisplay": "outlined"
 			},
-			"title": "Internet — Bandwidth by Protocol",
+			"title": "Internet - Bandwidth by Protocol",
 			"type": "splunk.area"
 		},
 		"viz_ov_bw_header": {
@@ -1547,7 +1553,7 @@
 				"lineWidth": 2,
 				"markerDisplay": "outlined"
 			},
-			"title": "Public Internet — Bandwidth by Protocol",
+			"title": "Public Internet - Bandwidth by Protocol",
 			"type": "splunk.area"
 		},
 		"viz_ov_client_header": {
@@ -1612,7 +1618,7 @@
 				"lineWidth": 2,
 				"markerDisplay": "outlined"
 			},
-			"title": "Client Count per SSID — Past Week",
+			"title": "Client Count per SSID - Past Week",
 			"type": "splunk.line"
 		},
 		"viz_ov_ssid_header": {
@@ -1626,7 +1632,7 @@
 		"viz_ov_week_header": {
 			"options": {
 				"fontColor": "#ecf0f5",
-				"markdown": "## Past Week — Client Trends",
+				"markdown": "## Past Week - Client Trends",
 				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
@@ -1635,7 +1641,7 @@
 			"dataSources": {
 				"primary": "ds_wired_trend_24h"
 			},
-			"description": "Wired client count trend — last 24 hours",
+			"description": "Wired client count trend - last 24 hours",
 			"options": {
 				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
@@ -1669,7 +1675,7 @@
 			"dataSources": {
 				"primary": "ds_wired_trend_7d"
 			},
-			"description": "Wired client count trend — last 7 days",
+			"description": "Wired client count trend - last 7 days",
 			"options": {
 				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
@@ -1696,7 +1702,7 @@
 				"lineWidth": 2,
 				"markerDisplay": "outlined"
 			},
-			"title": "Wired Clients — Past Week",
+			"title": "Wired Clients - Past Week",
 			"type": "splunk.area"
 		},
 		"viz_ov_wired_health": {
@@ -1796,7 +1802,7 @@
 			"dataSources": {
 				"primary": "ds_wireless_trend_24h"
 			},
-			"description": "Wireless client count trend — last 24 hours",
+			"description": "Wireless client count trend - last 24 hours",
 			"options": {
 				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
@@ -1830,7 +1836,7 @@
 			"dataSources": {
 				"primary": "ds_wireless_trend_7d"
 			},
-			"description": "Wireless client count trend — last 7 days",
+			"description": "Wireless client count trend - last 7 days",
 			"options": {
 				"nullValueDisplay": "connect",
 				"seriesColorsByField": {
@@ -1857,7 +1863,7 @@
 				"lineWidth": 2,
 				"markerDisplay": "outlined"
 			},
-			"title": "Wireless Clients — Past Week",
+			"title": "Wireless Clients - Past Week",
 			"type": "splunk.area"
 		},
 		"viz_ov_wireless_health": {
@@ -3974,7 +3980,7 @@
 		}
 	},
 	"applicationProperties": {
-		"collapseNavigation": false,
+		"collapseNavigation": true,
 		"hideEdit": true
 	}
 }

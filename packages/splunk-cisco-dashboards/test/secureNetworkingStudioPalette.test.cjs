@@ -803,8 +803,8 @@ const menuDashboardFiles = [
   .sort();
 assert.deepEqual(
   menuDashboardFiles,
-  EXPECTED_STUDIO_FILES,
-  "the five pillar menus must wire all 16 managed Studio dashboards",
+  nativeStudioFiles,
+  "every native Studio dashboard in app navigation must stay inside Dashboard Manager",
 );
 
 const menuDashboardLabels = Object.fromEntries(

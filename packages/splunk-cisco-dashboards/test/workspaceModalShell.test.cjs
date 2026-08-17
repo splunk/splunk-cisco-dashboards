@@ -33,8 +33,9 @@ const profile = read("../src/main/webapp/pages/executive_insights/index.tsx");
 for (const expectedClass of [
   "max-w-[880px]",
   "max-w-[960px]",
-  "max-w-[1120px]",
-  "max-w-[1320px]",
+    "max-w-[1120px]",
+    "max-w-[1320px]",
+    "max-w-[760px]",
 ]) {
   assert.ok(
     shell.includes(expectedClass),
@@ -126,6 +127,26 @@ assert.match(
   shell,
   /previouslyFocused\?\.isConnected[\s\S]*previouslyFocused\.focus/,
   "Shared modal shell must restore focus after closing",
+);
+assert.match(
+  shell,
+  /closeOnBackdrop = true[\s\S]*if \(closeOnBackdrop\) onCloseRef\.current\(\)/,
+  "Shared modal shell must let stateful forms opt out of click-away dismissal",
+);
+assert.match(
+  profile,
+  /variant="form"[\s\S]*title="Edit sections"[\s\S]*closeOnBackdrop=\{false\}/,
+  "Section editing must use the shared form dialog without click-away dismissal",
+);
+assert.match(
+  profile,
+  /variant="form"[\s\S]*title="Edit branding"[\s\S]*closeOnBackdrop=\{false\}/,
+  "Branding editing must use the shared form dialog without click-away dismissal",
+);
+assert.match(
+  kpiPicker,
+  /onRequestClose=\{\(\) => \{[\s\S]*if \(!confirmation\) onClose\(\);/,
+  "Configure Tile must remain mounted while a confirmation dialog is open",
 );
 assert.match(
   metricItem,

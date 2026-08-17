@@ -89,6 +89,7 @@ export default function DropdownWithSearch({
     appearance,
     ariaLabel,
     className,
+    describedBy,
     style,
     onSelect,
     searches,
@@ -388,6 +389,7 @@ export default function DropdownWithSearch({
                     label={label}
                     icon={icon}
                     aria-label={ariaLabel || label}
+                    aria-describedby={describedBy}
                 />
 
                 {isOpen && (

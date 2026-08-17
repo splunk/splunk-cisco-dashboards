@@ -1300,3 +1300,133 @@ body {
     border-color: #475569;
     border-top-color: #6ccfff;
 }
+
+/*
+ * Large-screen setup composition.
+ *
+ * Setup is a page-level task, not a compact dashboard card. The canvas uses
+ * the available viewport while capping the working area so long explanations
+ * and package rows remain scannable on ultrawide displays.
+ */
+.scd-setup {
+    --scd-setup-panel: #131a23;
+    --scd-setup-panel-secondary: #1c2738;
+    --scd-setup-text: #ecf0f5;
+    --scd-setup-muted: #a6adb6;
+    --scd-setup-info: #649ef5;
+    --scd-setup-positive: #4cbf7f;
+    --scd-setup-warning: #f0c243;
+    --scd-setup-negative: #fa5762;
+    box-sizing: border-box;
+    font-size: 14px;
+    padding: clamp(12px, 1.4vw, 28px);
+}
+
+.scd-setup__shell {
+    width: min(1920px, calc(100vw - clamp(24px, 3vw, 64px)));
+    max-width: none;
+}
+
+.scd-setup__header,
+.scd-setup__content,
+.scd-setup__actions {
+    padding-right: clamp(18px, 2vw, 36px);
+    padding-left: clamp(18px, 2vw, 36px);
+}
+
+.scd-setup__eyebrow,
+.scd-setup__package-table thead th,
+.scd-setup__package-group-heading,
+.scd-setup__package-group-heading span,
+.scd-setup__requirement-role,
+.scd-setup__status,
+.scd-setup__version-pill {
+    font-size: 11px;
+}
+
+.scd-setup__steps,
+.scd-setup__section-intro,
+.scd-setup__package-table,
+.scd-setup__package-name,
+.scd-setup__package-id,
+.scd-setup__package-subtle,
+.scd-setup__package-note,
+.scd-setup__package-purpose,
+.scd-setup__disclosure summary small,
+.scd-setup__caption,
+.scd-setup__action-note,
+.scd-setup__loading,
+.scd-setup__capability p,
+.scd-setup__impact span,
+.scd-setup__table {
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.scd-setup__button,
+.scd-setup__external,
+.scd-setup__secondary-link,
+.scd-setup__package-action {
+    font-size: 13px;
+}
+
+.scd-setup__section,
+.scd-setup__disclosure,
+.scd-setup__scan {
+    background: linear-gradient(
+        145deg,
+        color-mix(in srgb, var(--scd-setup-panel) 98%, transparent),
+        color-mix(in srgb, var(--scd-setup-panel-secondary) 88%, transparent)
+    );
+}
+
+.scd-setup__section-intro,
+.scd-setup__disclosure summary small,
+.scd-setup__caption,
+.scd-setup__action-note,
+.scd-setup__loading,
+.scd-setup__metric span,
+.scd-setup__package-id,
+.scd-setup__package-subtle,
+.scd-setup__package-note,
+.scd-setup__package-purpose,
+.scd-setup__capability p,
+.scd-setup__impact span {
+    color: var(--scd-setup-muted);
+}
+
+.scd-setup__metric strong {
+    color: var(--scd-setup-info);
+}
+
+.scd-setup__metric:nth-child(2) strong {
+    color: var(--scd-setup-positive);
+}
+
+.scd-setup__metric:nth-child(3) strong {
+    color: var(--scd-setup-warning);
+}
+
+.scd-setup__package-action,
+.scd-setup__external,
+.scd-setup__secondary-link,
+.scd-setup__external.is-inverse,
+.scd-setup__disclosure summary::after {
+    color: var(--scd-setup-info);
+}
+
+.scd-setup__package-action:hover:not(:disabled),
+.scd-setup__package-status-cell .scd-setup__external:hover,
+.scd-setup__button.is-secondary:hover:not(:disabled) {
+    border-color: var(--scd-setup-info);
+}
+
+@media (max-width: 760px) {
+    .scd-setup {
+        padding: 0;
+    }
+
+    .scd-setup__shell {
+        width: 100%;
+    }
+}

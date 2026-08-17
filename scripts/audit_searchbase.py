@@ -27,7 +27,7 @@ TRANSFORMS = CONF_DIR / "transforms.conf"
 
 # ---------- 1. Ground truth ----------------------------------------------------
 
-# Sourcetypes observed on the customer stack (per SESSION_LOG.md / DNAC field
+# Sourcetypes observed on the customer stack (per docs/history/SESSION_LOG.md / DNAC field
 # rule). Anything else is "may not return data on the demo/dev stack".
 CUSTOMER_DNAC_SOURCETYPES = {
     "cisco:dnac:devicehealth",
@@ -76,7 +76,7 @@ OTHER_AVAILABLE_SOURCETYPES = {
     "cisco:cloud_security:dns",
     "cisco:sdwan:utd",
 }
-# Sourcetypes we know are NOT on the customer stack today (per SESSION_LOG
+# Sourcetypes we know are NOT on the customer stack today (per docs/history/SESSION_LOG.md
 # inquiries). Anything matching these will be flagged as "data gap".
 KNOWN_MISSING_SOURCETYPES = {
     "cisco:sdwan:linkhealth",  # Sarav investigated; no TA path yet

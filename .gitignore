@@ -21,7 +21,7 @@ local.meta
 *.conf.bak
 backups/
 
-### UCC UI extensions
+### Node.js build artifacts
 yarn-error.log
 node_modules/
 output/

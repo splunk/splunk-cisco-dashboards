@@ -2,17 +2,121 @@
 
 ## 1.0.38
 
+- Signal Rail settings now use theme-selected and neutral surfaces instead of
+  large status-color fills. Setup removes the redundant AI analytics grouping
+  row, and the optional CIM macro table can be expanded or collapsed with the
+  native Splunk UI panel control.
+- Insights Workspace now labels personal tile additions as browser-local and
+  shared additions as the workspace default. The Add Search drawer starts with
+  workspace-and-section suggestions, keeps the full Searchbase catalogue as an
+  explicit alternative, and groups detailed discovery options under a collapsed
+  Advanced filters panel. Long catalogue titles remain readable beside both
+  browser-local and workspace-default actions.
+- Setup now uses the wider C3/Splunk UI visual language and more readable type
+  across the discovery, package-status, and macro-tuning steps. CIM macro
+  discovery is an explicitly optional, highly recommended separate page because
+  it can be time-consuming. The page explains how current Cisco technology
+  add-ons provide the tags and normalized fields CIM needs, while required Cisco
+  routing macros can still be reviewed, saved, and completed when the CIM scan
+  is skipped, interrupted, or unavailable.
+- Searchbase Canvas again offers its own saved light or dark appearance without
+  changing Insights Workspace, keeps the Splunk navigation rail dark, and uses
+  theme-safe native search controls. Its Add catalogue now opens as a Splunk UI
+  page drawer so the canvas remains visible instead of being replaced by an
+  opaque overlay. The catalogue now shares the Insights Workspace drawer,
+  card, filter, and action treatment; its body scrolls independently, card
+  pages stay bounded for large catalogues, and Canvas-only bulk-add actions
+  remain fixed in the footer. Network Diagram uses the same themed search
+  treatment and a neutral object-hover surface, while Security Operations
+  removes its unused dashboard-menu control.
+- Insights Workspace section and branding editors now share the Configure Tile
+  modal treatment, keep focus and dismissal behavior predictable, and use
+  theme-safe neutral surfaces. Metric sections again expose their per-user
+  visible-tile controls in a unified elevated segmented treatment, page through
+  configured tiles without changing the saved count, and offer a temporary
+  show-all view whose visible count reflects the full expanded set. Factory
+  reset confirmation
+  remains open until a user explicitly cancels or confirms, table hover no
+  longer introduces a bright blue fill, and the redundant visible
+  status-overview strip is hidden while its accessible live status remains
+  available to assistive technology.
+- Insights Workspace now offers a private light or dark appearance choice from
+  Dashboard actions without changing Splunk's global theme. Its SpotLight
+  canvas, semantic charts, glass Signal Rail, and topology map follow the
+  selected appearance. Exception KPIs lead over healthy signals, section
+  controls progressively disclose on hover or keyboard focus, and narrower
+  headers retain map-layout and refresh controls in the actions menu.
+- Searchbase explanations, section-count badges, inline code, and user-guide
+  navigation now use the shared Splunk UI semantic palette and larger readable
+  text in both dark and light themes. The user guide also documents the optional
+  CIM workflow, uses real fragment links, and restores keyboard focus after
+  in-page navigation.
+- React dashboards now share the Insights Workspace's restrained C3 surface
+  treatment for notifications, status signals, progress tracks, and controls.
+  Searchbase no-data and search-error tiles use native Splunk UI messages and
+  actions instead of saturated full-card fills, while compact severity markers
+  retain clear semantic color without reducing text contrast.
+- The legacy Macro Index Tuning redirect no longer appears as a separate
+  dashboard; existing links still open the integrated Setup tuning step.
+  NetOps Studio tiles now keep their content inside panel bounds, the readiness
+  sparkline no longer overlaps the KPI row, and the per-site chart removes
+  crowded per-bar labels while retaining exact values in chart hover details.
+- Security Resilience now has a specific navigation label and compact firewall
+  KPI tiles that no longer collide with their dedicated trend chart. Workplace
+  dashboards now chart the populated access-point inventory, pair ordered
+  association events for dwell time, provide a friendly empty state, and map
+  actual reporting campuses on a dark whole-U.S. view. The executive workplace
+  scorecard replaces its energy placeholder with measured software-defined wide
+  area network (SD-WAN) edge power and keeps empty security-risk time buckets
+  from rendering as `N/A`.
+- Native Dashboard Studio single-value tiles now use explicit C3 trend and
+  sparkline colors instead of defaults that could render black on dark panels.
+  Studio page-title blocks have additional height to prevent text clipping.
+  Twelve unreferenced legacy background and overview assets were removed from
+  `appserver/static`; Dashboard Manager assets that remain in use were kept.
+- App navigation, the user guide, and executive drilldowns now open native
+  Dashboard Studio views through Dashboard Manager. This keeps the
+  design-approved Fingerprint, NetworkDevices, Globe, ArrowsDoubleLeftRight,
+  and RobotAgent navigation icons visible instead of falling back to letter
+  monograms, while preserving drilldown time ranges.
+- App packaging now reads a concise developing-resource manifest. Resources
+  not listed are implicitly released. Splunkbase packages exclude listed
+  dashboard views, their navigation entries, Searchbase stanzas, and saved
+  searches; developer packages include them and write a `-developer` artifact.
+  Stanzas previously stored in `searchbase.bak` now use the manifest and carry
+  a searchable migration-origin tag. The two disabled Executive Dashboard
+  pipeline saved searches are developer-only. Catalyst Health and Security
+  Operations Overview remain available in the local development stage without
+  appearing in the Splunkbase package or navigation.
+- Removed the unused FDSE Universal Configuration Console repository-template
+  scaffold. App packaging and development do not reference that template.
+- Repository-only Searchbase exports, machine-readable reports, CIM audit
+  outputs, and the historical session log now use dedicated `artifacts` and
+  `docs/history` directories. Generator and validator paths follow the new
+  structure without changing packaged app content.
 - Searchbase now includes 12 Catalyst Center interface-telemetry searches for
   Rx/Tx traffic, device throughput, capacity and headroom, traffic anomalies,
   errors and discards, quiet interfaces, collection readiness, and critical
   WAN or firewall handoff assurance. Missing Rx/Tx telemetry remains visible
   as an assurance finding, and candidate circuits require validation before
   assigning an internet-provider identity.
+- SD-WAN circuit monitoring now counts actual reporting TLOC circuits instead
+  of ordinary device interfaces and adds per-circuit availability, health,
+  latency, loss, peer-tunnel, sample-count, and last-seen detail derived from
+  the indexed tunnel-health feed.
+- A full Catalyst SD-WAN Monitor coverage audit adds real Manager event detail,
+  severity trends, top event types, current fleet power, energy-consumption
+  trends, per-site/device energy detail, access-action and ACL/SGACL detail,
+  plus decoded Stream traffic volume. The searches retain
+  `splunk-cisco-dashboards` as their dispatch context while identifying
+  `TA_cisco_catalyst` or `Splunk_TA_stream` as the onboarding origin.
 - Dashboard Manager now creates, clones, and generates dashboards in the
   authenticated Splunk user's private namespace instead of attempting an
   app-shared `nobody` write. Personal dashboards remain visible and editable
   to their owner, shared factory dashboard permissions stay protected, and
-  REST failures surface useful error details even for non-JSON responses.
+  REST failures surface useful error details even for non-JSON responses. The
+  Add Searchbase editor control now keeps its catalogue guidance visible beside
+  the button instead of showing a hover tooltip that obscures the search field.
 
 ## 1.0.37
 

@@ -66,6 +66,8 @@ import {
   PanelRightClose,
   PanelTop,
   Sparkles,
+  Sun,
+  Moon,
   Servers,
   NodeModel,
   WallBricks,
@@ -73,6 +75,7 @@ import {
   Building2,
   type SuiIcon,
 } from "@/common/icons/SuiIcon";
+import { useAppThemeControls } from "@/common/theme/AppThemeProvider";
 import { DashboardSection } from "@/common/components/workspace/DashboardSection";
 import { OneCdRadioBar } from "@/common/components/workspace/OneCdPrimitives";
 import { MetricItem } from "@/common/components/workspace/MetricItem";
@@ -267,7 +270,7 @@ const SECTION_HEIGHT_STEP_PX = 120;
 // caused the third row to be clipped at H1 when a section showed 9 tiles.
 const SECTION_WRAPPED_TILE_ROW_STEP_PX = 176;
 const SECTION_WRAPPED_H1_TILE_ROW_STEP_PX = 148;
-const SECTION_WRAP_TILE_COUNT = 5;
+const SECTION_WRAP_TILE_COUNT = 4;
 const SECTION_WRAPPED_TILE_COLUMNS = 3;
 const VERTICAL_MAP_MIN_HEIGHT_PX = 420;
 const VERTICAL_MAP_COMPACT_MIN_HEIGHT_PX = 360;
@@ -1004,9 +1007,24 @@ const clearPriorityDrilldownView = (): void => {
 // Splunk Search drilldown URL builder
 // =============================================================================
 
-// Locale-aware URL builder for a sibling Splunk view inside this app
-// (e.g. netops_catalyst_health). Mirrors splunkSearchAppUrl's locale
-// detection so the URL stays valid in non-en-US Splunk installs.
+// Native Dashboard Studio does not load this app's CSS. Keep those dashboards
+// inside Dashboard Manager so the approved navigation icons and managed Studio
+// presentation remain available. Other sibling views continue to use their
+// normal app route.
+const MANAGED_STUDIO_VIEW_NAMES = new Set([
+  "admin_asset_inventory",
+  "netops_catalyst_health",
+  "netops_critical_systems_health",
+  "netops_readiness",
+  "secops_resilience",
+  "workplace_building_intelligence",
+  "workplace_operations_overview",
+  "workplace_spaces_intelligence",
+]);
+
+// Locale-aware URL builder for a sibling Splunk view inside this app. Mirrors
+// splunkSearchAppUrl's locale detection so the URL stays valid in non-en-US
+// Splunk installs.
 const splunkViewAppUrl = (
   viewName: string,
   range?: TimeRange,
@@ -1016,13 +1034,17 @@ const splunkViewAppUrl = (
     typeof window !== "undefined" ? window.location.pathname : "/en-US";
   const localeMatch = path.match(/^\/([a-z]{2}-[A-Z]{2})\//);
   const locale = localeMatch ? localeMatch[1] : "en-US";
-  const baseUrl = `/${locale}/app/${APP_NAME}/${viewName}`;
-  if (!range || !timeToken) return baseUrl;
+  const isManagedStudioView = MANAGED_STUDIO_VIEW_NAMES.has(viewName);
+  const baseUrl = `/${locale}/app/${APP_NAME}/${
+    isManagedStudioView ? "dashboard_manager" : viewName
+  }`;
+  const routeHash = isManagedStudioView ? `#/${viewName}` : "";
+  if (!range || !timeToken) return `${baseUrl}${routeHash}`;
 
   const params = new URLSearchParams();
   params.set(`form.${timeToken}.earliest`, range.earliest);
   params.set(`form.${timeToken}.latest`, range.latest);
-  return `${baseUrl}?${params.toString()}`;
+  return `${baseUrl}?${params.toString()}${routeHash}`;
 };
 
 const SEARCH_APP_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_\-.]{0,127}$/;
@@ -2195,7 +2217,21 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   signalTickerDefault,
 }) => {
   // ------------------------------ Theme ------------------------------
-  const { spacingSmall, spacingXSmall } = useSplunkTheme();
+  const {
+    inputBorderWidth,
+    inputHeight,
+    spacingSmall,
+    spacingXSmall,
+  } = useSplunkTheme();
+  const {
+    colorScheme,
+    canChooseColorScheme,
+    setColorScheme,
+  } = useAppThemeControls();
+  const tilePagerHeight =
+    Number.parseFloat(inputHeight) +
+    Number.parseFloat(spacingXSmall) * 2 +
+    Number.parseFloat(inputBorderWidth);
   const workspaceToggleRef = useRef<HTMLAnchorElement | HTMLButtonElement>(
     null,
   );
@@ -2213,12 +2249,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     availableDashboardHeight < COMPACT_HEIGHT_THRESHOLD_PX;
   const dashboardShellStyle = useMemo<React.CSSProperties>(
     () => ({
+      colorScheme,
       height:
         availableDashboardHeight !== null
           ? `${availableDashboardHeight}px`
           : "100vh",
     }),
-    [availableDashboardHeight],
+    [availableDashboardHeight, colorScheme],
   );
   const workspaceSectionIds = useMemo(
     () => sectionIdsForWorkspace(insightsWorkspace),
@@ -2544,8 +2581,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   //
   // Per-user, per-section "how many tiles do I want visible". The
   // user dials it via the small `−  N  +` pill on each section
-  // header. Trailing tiles (from the bottom of the searchbase-backed catalogue for
-  // that section) are the ones that hide first when narrowing —
+  // header. The selected count is the page size; all configured
+  // catalogue tiles remain reachable through paging or temporary show-all.
+  // Trailing tiles are the ones that leave the first page when narrowing —
   // picker overrides on hidden tiles are NOT cleared, so a user
   // who customises tile #5, dials down to 3, then back up to 5,
   // gets their customisation back unchanged.
@@ -2608,10 +2646,48 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     availableSections,
   });
   const [focusedSection, setFocusedSection] = useState<SectionId | null>(null);
+  const [sectionTilePages, setSectionTilePages] = useState<
+    Partial<Record<SectionId, number>>
+  >({});
+  const [showAllTileSections, setShowAllTileSections] = useState<
+    Partial<Record<SectionId, boolean>>
+  >({});
 
   useEffect(() => {
     setFocusedSection(null);
+    setSectionTilePages({});
+    setShowAllTileSections({});
   }, [insightsWorkspace.id]);
+
+  const setSectionTilePage = useCallback(
+    (section: SectionId, page: number) => {
+      setSectionTilePages((current) => ({
+        ...current,
+        [section]: Math.max(0, Math.round(page)),
+      }));
+    },
+    [],
+  );
+
+  const toggleSectionShowAllTiles = useCallback((section: SectionId) => {
+    setShowAllTileSections((current) => ({
+      ...current,
+      [section]: !current[section],
+    }));
+    setSectionTilePages((current) => ({ ...current, [section]: 0 }));
+  }, []);
+
+  const changeSectionTileCount = useCallback(
+    (section: SectionId, count: number) => {
+      setSectionTileCount(section, count);
+      setSectionTilePages((current) => ({ ...current, [section]: 0 }));
+      setShowAllTileSections((current) => ({
+        ...current,
+        [section]: false,
+      }));
+    },
+    [setSectionTileCount],
+  );
 
   const toggleSectionFocus = useCallback((section: SectionId) => {
     setFocusedSection((current) => (current === section ? null : section));
@@ -2682,13 +2758,14 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   // dialled the section count down), its last reported status
   // would otherwise stick around in `statuses` and skew the
   // aggregate. Recompute the visible-tile id set whenever the
-  // per-section count preference changes and use it as the gate
-  // both for the badge and (below) for the section render.
+  // per-section count, page, or temporary show-all state changes and
+  // use it as the gate both for the badge and (below) for the section render.
   const visibleMetricIds = useMemo(() => {
     const out = new Set<string>();
     for (const section of visibleSections) {
       // Same pipeline the render below uses: canonical ids ->
-      // apply user reorder -> slice to visible count. Keeping
+      // apply user reorder -> clamp to the workspace catalogue ->
+      // apply the active page or temporary show-all state. Keeping
       // the summary filter and the render in lockstep means a
       // tile dragged into the visible window also gets its
       // status counted in the aggregate, and a tile dragged
@@ -2698,13 +2775,38 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       );
       const canonicalIds = getFactoryTileOrder(section, sectionMetrics);
       const orderedIds = getSectionTileOrder(section, canonicalIds);
-      const visible = orderedIds.slice(0, sectionTileCounts[section]);
+      const sectionMaxAvailable = Math.min(
+        sectionTileBounds.maxCount,
+        orderedIds.length,
+      );
+      const catalogueIds = orderedIds.slice(0, sectionMaxAvailable);
+      const visibleCount = Math.min(
+        sectionTileCounts[section],
+        sectionMaxAvailable,
+      );
+      if (visibleCount <= 0) continue;
+      const pageCount = Math.max(
+        1,
+        Math.ceil(sectionMaxAvailable / visibleCount),
+      );
+      const page = Math.min(
+        sectionTilePages[section] ?? 0,
+        pageCount - 1,
+      );
+      const showingAll = Boolean(showAllTileSections[section]);
+      const start = showingAll ? 0 : page * visibleCount;
+      const visible = showingAll
+        ? catalogueIds
+        : catalogueIds.slice(start, start + visibleCount);
       for (const id of visible) out.add(id);
     }
     return out;
   }, [
     visibleSections,
     sectionTileCounts,
+    sectionTileBounds.maxCount,
+    sectionTilePages,
+    showAllTileSections,
     renderMetricConfig,
     getFactoryTileOrder,
     getSectionTileOrder,
@@ -2946,6 +3048,14 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   const activeMapPosition: MapPosition | "hidden" = mapVisible
     ? mapPosition
     : "hidden";
+  const updateMapLayout = useCallback((next: MapLayout) => {
+    if (next === "hidden") {
+      setMapVisible(false);
+      return;
+    }
+    setMapPosition(next);
+    setMapVisible(true);
+  }, []);
   // Convenience flag for the drag / keyboard handlers and the
   // splitter styling: `right` mode drags on the X axis, `below` /
   // `above` modes drag on the Y axis.
@@ -3140,13 +3250,20 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     const sectionMetricCount = renderMetricConfig.filter(
       (metric) => metric.section === section,
     ).length;
+    const sectionMaxAvailable = Math.min(
+      sectionTileBounds.maxCount,
+      sectionMetricCount,
+    );
     const visibleCount = Math.min(
       sectionTileCounts[section],
-      Math.min(sectionTileBounds.maxCount, sectionMetricCount),
+      sectionMaxAvailable,
     );
+    const renderedTileCount = showAllTileSections[section]
+      ? sectionMaxAvailable
+      : visibleCount;
     const estimatedTileRows =
-      visibleCount >= SECTION_WRAP_TILE_COUNT
-        ? Math.ceil(visibleCount / SECTION_WRAPPED_TILE_COLUMNS)
+      renderedTileCount >= SECTION_WRAP_TILE_COUNT
+        ? Math.ceil(renderedTileCount / SECTION_WRAPPED_TILE_COLUMNS)
         : 1;
     const heightLevel =
       sectionHeights[section] ?? sectionHeightBounds.defaultLevel;
@@ -3163,7 +3280,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       verticalMetricsMinHeight,
       baseMinHeight +
         (heightLevel - sectionHeightBounds.minLevel) * SECTION_HEIGHT_STEP_PX +
-        (estimatedTileRows - 1) * wrappedRowStep,
+        (estimatedTileRows - 1) * wrappedRowStep +
+        (sectionMaxAvailable > visibleCount ? tilePagerHeight : 0),
     );
   }, [
     compactDensity,
@@ -3172,6 +3290,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     sectionHeights,
     sectionTileBounds.maxCount,
     sectionTileCounts,
+    showAllTileSections,
+    tilePagerHeight,
     renderMetricConfig,
     verticalMetricsMinHeight,
     visibleSections,
@@ -3385,7 +3505,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       );
       const applyPersonalViewState = () => {
         setSectionTileOrder(section, nextOrder);
-        setSectionTileCount(section, nextVisibleCount);
+        changeSectionTileCount(section, nextVisibleCount);
       };
       if (destination === "personal") {
         applyPersonalViewState();
@@ -3437,7 +3557,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       renderMetricConfig,
       sectionTileBounds.maxCount,
       sectionTileCounts,
-      setSectionTileCount,
+      changeSectionTileCount,
       setSectionTileOrder,
       workspaceLayout,
     ],
@@ -3529,7 +3649,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
 
       showSectionTile(section, target.id);
       setSectionTileOrder(section, nextOrder);
-      setSectionTileCount(
+      changeSectionTileCount(
         section,
         Math.min(
           sectionTileBounds.maxCount,
@@ -3546,7 +3666,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       renderMetricConfig,
       sectionTileBounds.maxCount,
       sectionTileCounts,
-      setSectionTileCount,
+      changeSectionTileCount,
       setSectionTileOrder,
       showSectionTile,
     ],
@@ -3974,6 +4094,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     resetAllSectionHeights();
     resetAllSectionPresentation();
     resetAllSectionTileOrder();
+    setSectionTilePages({});
+    setShowAllTileSections({});
     resetSignalTickerConfig();
     clearCustomerTopologyStorage();
     setTopologyResetKey((n) => n + 1);
@@ -4235,8 +4357,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         compactDensity && "scd-overview-compact",
         "sui-bg-page sui-color-active",
         "sui-bg-page sui-color-active",
-        "dark scd-one-cisco-spotlight-canvas sui-bg-page sui-color-default",
+        "scd-one-cisco-spotlight-canvas sui-bg-page sui-color-default",
       )}
+      data-color-scheme={colorScheme}
     >
       <SpotLight
         aria-hidden="true"
@@ -4361,17 +4484,12 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           className="flex flex-shrink-0 items-center"
           style={{ columnGap: spacingXSmall }}
         >
-          <MapLayoutRadioBar
-            value={activeMapPosition}
-            onChange={(next) => {
-              if (next === "hidden") {
-                setMapVisible(false);
-                return;
-              }
-              setMapPosition(next);
-              setMapVisible(true);
-            }}
-          />
+          <div className="scd-header-map-layout">
+            <MapLayoutRadioBar
+              value={activeMapPosition}
+              onChange={updateMapLayout}
+            />
+          </div>
           <Select
             appearance="subtle"
             data-shortcut-search
@@ -4396,6 +4514,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           </Select>
           <Select
             appearance="subtle"
+            className="scd-header-refresh-rate"
             inline
             onChange={(_event, { value }) =>
               setAutoRefreshSeconds(Number(value))
@@ -4467,6 +4586,62 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               >
                 Export as PDF
               </Menu.Item>
+              <Menu.Heading>Map layout</Menu.Heading>
+              {MAP_LAYOUT_OPTIONS.map((option) => (
+                <Menu.Item
+                  key={option.value}
+                  onClick={() => {
+                    updateMapLayout(option.value);
+                    closeHeaderActions();
+                  }}
+                  selectable
+                  selected={activeMapPosition === option.value}
+                  startAdornment={option.startAdornment}
+                >
+                  {option.ariaLabel}
+                </Menu.Item>
+              ))}
+              <Menu.Heading>Refresh rate</Menu.Heading>
+              {AUTO_REFRESH_OPTIONS.map((option) => (
+                <Menu.Item
+                  key={option.seconds}
+                  onClick={() => {
+                    setAutoRefreshSeconds(option.seconds);
+                    closeHeaderActions();
+                  }}
+                  selectable
+                  selected={autoRefreshSeconds === option.seconds}
+                >
+                  {option.label}
+                </Menu.Item>
+              ))}
+              {canChooseColorScheme && (
+                <>
+                  <Menu.Heading>Appearance</Menu.Heading>
+                  <Menu.Item
+                    onClick={() => {
+                      setColorScheme("light");
+                      closeHeaderActions();
+                    }}
+                    selectable
+                    selected={colorScheme === "light"}
+                    startAdornment={<Sun aria-hidden="true" />}
+                  >
+                    Light
+                  </Menu.Item>
+                  <Menu.Item
+                    onClick={() => {
+                      setColorScheme("dark");
+                      closeHeaderActions();
+                    }}
+                    selectable
+                    selected={colorScheme === "dark"}
+                    startAdornment={<Moon aria-hidden="true" />}
+                  >
+                    Dark
+                  </Menu.Item>
+                </>
+              )}
               {overrideCount > 0 && (
                 <Menu.Item
                   description={`${overrideCount} customised`}
@@ -4724,9 +4899,17 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 sectionTileCounts[section],
                 sectionMaxAvailable,
               );
-              const wrapTiles = visibleCount >= SECTION_WRAP_TILE_COUNT;
+              const isShowingAllTiles =
+                Boolean(showAllTileSections[section]) &&
+                sectionMaxAvailable > visibleCount;
+              const renderedTileCount = isShowingAllTiles
+                ? sectionMaxAvailable
+                : visibleCount;
+              const wrapTiles = renderedTileCount >= SECTION_WRAP_TILE_COUNT;
               const estimatedTileRows = wrapTiles
-                ? Math.ceil(visibleCount / SECTION_WRAPPED_TILE_COLUMNS)
+                ? Math.ceil(
+                    renderedTileCount / SECTION_WRAPPED_TILE_COLUMNS,
+                  )
                 : 1;
               const isSectionFocused = focusedSection === section;
               const isSectionCollapsed = isSectionFocused
@@ -4749,12 +4932,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 baseMinHeight +
                 (heightLevel - sectionHeightBounds.minLevel) *
                   SECTION_HEIGHT_STEP_PX +
-                (estimatedTileRows - 1) * wrappedRowStep;
+                (estimatedTileRows - 1) * wrappedRowStep +
+                (sectionMaxAvailable > visibleCount ? tilePagerHeight : 0);
 
               // Apply the user's drag-reorder
               // preference (if any) to the canonical
-              // tile list, then slice to the visible
-              // count. The id-keyed `byId` lookup lets
+              // tile list, then select the current page
+              // or the temporary show-all set. The id-keyed `byId` lookup lets
               // the render iterate ordered ids while
               // still resolving each id back to its
               // full MetricConfig — no per-iteration
@@ -4764,7 +4948,25 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 allSectionMetrics,
               );
               const orderedIds = getSectionTileOrder(section, canonicalIds);
-              const visibleIds = orderedIds.slice(0, visibleCount);
+              const catalogueIds = orderedIds.slice(0, sectionMaxAvailable);
+              const tilePageCount = Math.max(
+                1,
+                Math.ceil(sectionMaxAvailable / Math.max(visibleCount, 1)),
+              );
+              const tilePage = Math.min(
+                sectionTilePages[section] ?? 0,
+                tilePageCount - 1,
+              );
+              const tilePageStart = isShowingAllTiles
+                ? 0
+                : tilePage * visibleCount;
+              const visibleIds = isShowingAllTiles
+                ? catalogueIds
+                : catalogueIds.slice(
+                    tilePageStart,
+                    tilePageStart + visibleCount,
+                  );
+              const tilePageEnd = tilePageStart + visibleIds.length;
               const byId = new Map(allSectionMetrics.map((m) => [m.id, m]));
               let sectionFlexGrow = heightLevel;
               if (isSectionCollapsed) sectionFlexGrow = 0;
@@ -4818,6 +5020,22 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   focused={isSectionFocused}
                   onToggleCollapsed={() => toggleSectionCollapsed(section)}
                   onToggleFocus={() => toggleSectionFocus(section)}
+                  tilePager={
+                    sectionMaxAvailable > visibleCount
+                      ? {
+                          page: tilePage,
+                          pageCount: tilePageCount,
+                          start: tilePageStart,
+                          end: tilePageEnd,
+                          total: sectionMaxAvailable,
+                          showingAll: isShowingAllTiles,
+                          onPageChange: (next) =>
+                            setSectionTilePage(section, next),
+                          onToggleShowAll: () =>
+                            toggleSectionShowAllTiles(section),
+                        }
+                      : undefined
+                  }
                   tileCount={
                     sectionMaxAvailable > 0
                       ? {
@@ -4828,7 +5046,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                           ),
                           max: sectionMaxAvailable,
                           onChange: (next) =>
-                            setSectionTileCount(section, next),
+                            changeSectionTileCount(section, next),
                           label: `${meta.title} tiles`,
                         }
                       : undefined
@@ -5443,7 +5661,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     "personal" | "workspace"
   >("personal");
   const [addingRecordId, setAddingRecordId] = useState<string | null>(null);
-  const [showAllProfileSearches, setShowAllProfileSearches] = useState(true);
+  const [showAllProfileSearches, setShowAllProfileSearches] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -5459,7 +5677,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     setFiltersOpen(false);
     setAddDestination("personal");
     setAddingRecordId(null);
-    setShowAllProfileSearches(true);
+    setShowAllProfileSearches(false);
     if (typeof window === "undefined") return;
     const id = window.setTimeout(() => searchInputRef.current?.focus(), 30);
     return () => window.clearTimeout(id);
@@ -5515,7 +5733,9 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
 
   const suggestedRecords =
     sectionRecords.length > 0 ? sectionRecords : profileRecords;
-  const browseRecords = showAllProfileSearches
+  const browsingEntireCatalogue =
+    showAllProfileSearches || suggestedRecords.length === 0;
+  const browseRecords = browsingEntireCatalogue
     ? addableRecords
     : suggestedRecords;
   const showScopeToggle =
@@ -5721,7 +5941,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   ]);
 
   const activeFilterCount =
-    (!showAllProfileSearches ? 1 : 0) +
+    (showAllProfileSearches && showScopeToggle ? 1 : 0) +
     (!isDefaultAddTileAppSelection(selectedApps) ? 1 : 0) +
     (includeHiddenSearches ? 1 : 0) +
     (includeDrilldownSearches ? 1 : 0) +
@@ -5730,7 +5950,9 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     (selectedSubCategory !== ALL_ADD_TILE_SUB_CATEGORIES ? 1 : 0) +
     activeTags.size;
   const facetsActive = activeFilterCount > 0;
-  const availableSearchLabel = `${filteredRecords.length.toLocaleString()} ${
+  const availableSearchLabel = `${
+    browsingEntireCatalogue ? "Entire catalogue" : "Suggested"
+  } · ${filteredRecords.length.toLocaleString()} ${
     filteredRecords.length === 1 ? "search" : "searches"
   } available`;
 
@@ -5742,7 +5964,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     setSelectedCategory(ALL_ADD_TILE_CATEGORIES);
     setSelectedSubCategory(ALL_ADD_TILE_SUB_CATEGORIES);
     setActiveTags(new Set());
-    setShowAllProfileSearches(true);
+    setShowAllProfileSearches(false);
   };
 
   const handleDrawerClose = () => {
@@ -5794,9 +6016,12 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
               }
               value={addDestination}
             >
-              <RadioBar.Option label="For me" value="personal" />
+              <RadioBar.Option label="This browser" value="personal" />
               {canManageWorkspace && (
-                <RadioBar.Option label="Shared workspace" value="workspace" />
+                <RadioBar.Option
+                  label="Workspace default"
+                  value="workspace"
+                />
               )}
             </RadioBar>
           </ControlGroup>
@@ -5818,8 +6043,8 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
             open={filtersOpen}
             title={
               activeFilterCount > 0
-                ? `Filters (${activeFilterCount} active)`
-                : "Filters"
+                ? `Advanced filters (${activeFilterCount} active)`
+                : "Advanced filters"
             }
           >
             {showScopeToggle && (
@@ -5831,7 +6056,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                   value={showAllProfileSearches ? "all" : "suggested"}
                 >
                   <RadioBar.Option label="Suggested" value="suggested" />
-                  <RadioBar.Option label="All searches" value="all" />
+                  <RadioBar.Option label="Entire catalogue" value="all" />
                 </RadioBar>
               </ControlGroup>
             )}
@@ -5993,13 +6218,16 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                   plainTextFromHtml(record.description);
                 const tags = record.tags.slice(0, 3);
                 const isAdding = addingRecordId === record.id;
-                const addActionLabel = alreadyInSection
-                  ? "Added"
-                  : isAdding
-                    ? "Adding"
-                    : addDestination === "workspace"
-                      ? "Add shared"
-                      : "Add for me";
+                let addActionLabel = "Added";
+                if (!alreadyInSection && addDestination === "workspace") {
+                  addActionLabel = isAdding
+                    ? "Adding as workspace default"
+                    : "Add as workspace default";
+                } else if (!alreadyInSection) {
+                  addActionLabel = isAdding
+                    ? "Adding to this browser"
+                    : "Add to this browser";
+                }
                 const action = hiddenInSection ? (
                   <Button
                     aria-label={`Show ${record.searchName} in ${sectionTitle}`}
@@ -6021,9 +6249,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                     aria-label={
                       alreadyInSection
                         ? `Added: ${record.searchName} in ${sectionTitle}`
-                        : isAdding
-                          ? `Adding ${record.searchName} to ${sectionTitle}`
-                          : `${addActionLabel}: ${record.searchName} to ${sectionTitle}`
+                        : `${addActionLabel}: ${record.searchName} to ${sectionTitle}`
                     }
                     aria-busy={isAdding}
                     appearance="standalone"
@@ -6048,19 +6274,29 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                           .filter(Boolean)
                           .join(" / ") || record.id
                       }
+                      truncateTitle={false}
                       title={
-                        <Layout>
-                          <span>{record.searchName}</span>
+                        <>
+                          {record.searchName}
                           {hiddenInSection && (
-                            <Badge label="Hidden in section" />
+                            <>
+                              {" "}
+                              <Badge label="Hidden in section" />
+                            </>
                           )}
                           {!hiddenInSection && alreadyInSection && (
-                            <Badge label="Added" />
+                            <>
+                              {" "}
+                              <Badge label="Added" />
+                            </>
                           )}
                           {record.searchHidden && (
-                            <Badge label="Hidden search" />
+                            <>
+                              {" "}
+                              <Badge label="Hidden search" />
+                            </>
                           )}
-                        </Layout>
+                        </>
                       }
                     />
                     {(description || tags.length > 0) && (
@@ -6720,7 +6956,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
                 return (
                   <tr
                     key={`${rowKey}-${rowIndex}`}
-                    className="sui-bg-section sui-bg-page transition-colors sui-hover-bg-info"
+                    className="sui-bg-section transition-colors sui-hover-bg-overlay"
                   >
                     {displayColumns.map((column, index) => {
                       const value = row[column.field];
@@ -6920,44 +7156,19 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
     "block text-xs font-bold  sui-color-default " + " tracking-wider mb-1";
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="section-titles-editor-title"
-      className="fixed inset-0 z-[60] flex items-center justify-center"
-      onClick={(e) => {
-        if (!isSaving && e.target === e.currentTarget) onClose();
-      }}
+    <WorkspaceModalShell
+      isOpen={isOpen}
+      variant="form"
+      title="Edit sections"
+      subtitle={`${layoutDraft.length} of ${maxSections} visible`}
+      onClose={onClose}
+      closeOnBackdrop={false}
+      renderInDocumentBody
+      contentClassName="overflow-y-auto"
     >
-      <div className="absolute inset-0 sui-bg-section backdrop-blur-sm" />
-      <div className="relative  sui-bg-section border  sui-border-default rounded-lg shadow-xl w-full max-w-2xl mx-4">
-        <div className="flex items-center justify-between px-4 py-3 border-b  sui-border-default">
-          <h2
-            id="section-titles-editor-title"
-            className="text-sm font-bold  sui-color-active  tracking-wider"
-          >
-            Edit sections
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSaving}
-            title="Close"
-            aria-label="Close"
-            className={cn(
-              "p-1 rounded sui-color-default sui-hover-color-default",
-              "sui-hover-color-default sui-hover-bg-section",
-              "sui-hover-bg-overlay transition-colors",
-              isSaving && "cursor-not-allowed opacity-50",
-            )}
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="px-4 py-4 space-y-4">
+        <div className="space-y-5 px-5 py-5">
           <div className="flex items-center justify-between gap-3">
-            <div className="text-xs font-semibold  sui-color-default">
+            <div className="text-sm font-semibold sui-color-default">
               {layoutDraft.length} of {maxSections} visible
             </div>
             <button
@@ -6966,9 +7177,8 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
               disabled={!canAddSection || isSaving}
               className={cn(
                 "inline-flex items-center gap-1.5 px-3 py-1.5 rounded",
-                "border sui-border-info sui-bg-info text-xs font-bold",
-                "sui-color-info sui-hover-bg-info sui-border-info",
-                "sui-bg-info sui-color-info",
+                "border sui-border-info sui-bg-section text-sm font-bold",
+                "sui-color-info sui-hover-bg-info",
                 (!canAddSection || isSaving) && "cursor-not-allowed opacity-50",
               )}
             >
@@ -6992,8 +7202,8 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
                   className={cn(
                     "rounded-lg border p-3 transition-colors",
                     isVisible
-                      ? "sui-border-info sui-bg-info"
-                      : "sui-border-weak  sui-border-default sui-bg-popup",
+                      ? "sui-border-info sui-bg-section"
+                      : "sui-border-weak sui-bg-page",
                   )}
                 >
                   <div className="mb-2 flex items-center justify-between gap-2">
@@ -7022,10 +7232,10 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
                       }
                       className={cn(
                         "inline-flex h-8 items-center gap-1.5 rounded px-2",
-                        "text-xs font-bold transition-colors",
+                        "text-sm font-bold transition-colors",
                         isVisible
                           ? "sui-bg-section  sui-hover-color-active sui-bg-section sui-color-default"
-                          : "sui-bg-accent sui-color-active sui-hover-bg-accent",
+                          : "sui-bg-info sui-color-info sui-hover-bg-info",
                         (isSaving || (isVisible ? !canHide : !canShow)) &&
                           "cursor-not-allowed opacity-50",
                       )}
@@ -7053,21 +7263,21 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
           </div>
 
           {errorMessage && (
-            <div className="flex items-start gap-2 rounded border   px-3 py-2 text-xs font-semibold  sui-border-negative sui-bg-negative sui-color-negative">
+            <div role="alert" className="flex items-start gap-2 rounded border px-3 py-2 text-sm font-semibold sui-border-negative sui-bg-negative sui-color-negative">
               <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
               <span className="min-w-0 break-words">{errorMessage}</span>
             </div>
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 px-4 py-3 border-t  sui-border-default">
+        <div className="sticky bottom-0 flex items-center justify-between gap-2 border-t sui-border-weak sui-bg-section px-5 py-4">
           <button
             type="button"
             onClick={reset}
             disabled={isSaving}
             className={cn(
               "inline-flex items-center gap-1.5 px-3 py-1.5 rounded border",
-              "sui-border-default text-xs font-bold",
+              "sui-border-default text-sm font-bold",
               "sui-color-default sui-color-active sui-hover-bg-page",
               "sui-hover-bg-overlay transition-colors",
               isSaving && "cursor-not-allowed opacity-50",
@@ -7083,7 +7293,7 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
               disabled={isSaving}
               className={cn(
                 "px-3 py-1.5 rounded border sui-border-default",
-                "sui-border-default text-xs font-bold sui-color-default",
+                "sui-border-default text-sm font-bold sui-color-default",
                 "sui-color-active sui-hover-bg-page",
                 "sui-hover-bg-overlay transition-colors",
                 isSaving && "cursor-not-allowed opacity-50",
@@ -7097,7 +7307,7 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
               disabled={isSaving}
               className={cn(
                 "inline-flex items-center gap-1.5 px-3 py-1.5",
-                "rounded sui-bg-accent text-xs font-bold sui-color-active",
+                "rounded sui-bg-accent text-sm font-bold sui-color-active",
                 "sui-hover-bg-accent transition-colors",
                 isSaving && "cursor-not-allowed opacity-60",
               )}
@@ -7107,8 +7317,7 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </WorkspaceModalShell>
   );
 };
 
@@ -7255,48 +7464,22 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
   const acceptList = BRANDING_ACCEPTED_LOGO_MIME_TYPES.join(",");
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="branding-editor-title"
-      className="fixed inset-0 z-[60] flex items-center justify-center"
-      onClick={(e) => {
-        // Close only when the user clicks the backdrop itself,
-        // not when their drag started inside an input and ended
-        // on the backdrop. The shallow `e.target === e.currentTarget`
-        // check is the standard React idiom.
-        if (e.target === e.currentTarget) onClose();
-      }}
+    <WorkspaceModalShell
+      isOpen={isOpen}
+      variant="form"
+      title="Edit branding"
+      subtitle="Customize this workspace header"
+      onClose={onClose}
+      closeOnBackdrop={false}
+      renderInDocumentBody
+      contentClassName="overflow-y-auto"
     >
-      {/* Backdrop */}
-      <div className="absolute inset-0 sui-bg-section backdrop-blur-sm" />
-
-      {/* Card */}
-      <div className="relative  sui-bg-section border  sui-border-default rounded-lg shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-4 py-3 border-b  sui-border-default">
-          <h2
-            id="branding-editor-title"
-            className="text-sm font-bold  sui-color-active  tracking-wider"
-          >
-            Edit branding
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            title="Close"
-            aria-label="Close"
-            className="p-1 rounded sui-color-default  sui-hover-color-default  sui-hover-bg-overlay transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="px-4 py-4 space-y-4">
+        <div className="space-y-5 px-5 py-5">
           {/* Title */}
           <div>
             <label
               htmlFor="branding-title-input"
-              className="block text-xs font-bold  sui-color-default  tracking-wider mb-1"
+              className="mb-1.5 block text-sm font-bold sui-color-default"
             >
               Title
             </label>
@@ -7309,7 +7492,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
               maxLength={120}
               className="w-full px-2 py-1.5 text-sm  sui-bg-popup border  sui-border-default rounded  sui-color-active sui-placeholder-muted focus:outline-none focus:ring-1 sui-focus-ring"
             />
-            <p className="mt-1 text-xs  sui-color-muted">
+            <p className="mt-1.5 text-sm leading-5 sui-color-muted">
               Leave blank to use the value from the
               <code className="mx-1 px-1 py-0.5  sui-bg-popup rounded">
                 [customer_name]
@@ -7322,7 +7505,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
           <div>
             <label
               htmlFor="branding-subtitle-input"
-              className="block text-xs font-bold  sui-color-default  tracking-wider mb-1"
+              className="mb-1.5 block text-sm font-bold sui-color-default"
             >
               Subtitle
             </label>
@@ -7335,14 +7518,14 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
               maxLength={120}
               className="w-full px-2 py-1.5 text-sm  sui-bg-popup border  sui-border-default rounded  sui-color-active sui-placeholder-muted focus:outline-none focus:ring-1 sui-focus-ring"
             />
-            <p className="mt-1 text-xs  sui-color-muted">
+            <p className="mt-1.5 text-sm leading-5 sui-color-muted">
               Leave blank for the default (&ldquo;{subtitlePlaceholder}&rdquo;).
             </p>
           </div>
 
           {/* Logo */}
           <div>
-            <span className="block text-xs font-bold  sui-color-default  tracking-wider mb-1">
+            <span className="mb-1.5 block text-sm font-bold sui-color-default">
               Logo
             </span>
             <div className="flex items-center gap-3">
@@ -7363,7 +7546,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold  sui-color-info  sui-bg-info  sui-hover-bg-info rounded transition-colors"
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded border sui-border-info sui-bg-section px-3 text-sm font-bold sui-color-info transition-colors sui-hover-bg-info"
                 >
                   <Upload className="w-3 h-3" />
                   {logoDataUri ? "Replace logo" : "Upload logo"}
@@ -7372,7 +7555,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
                   <button
                     type="button"
                     onClick={handleClearLogo}
-                    className="text-xs  sui-color-default  sui-hover-color-active underline"
+                    className="text-sm sui-color-default underline sui-hover-color-active"
                   >
                     Clear (use default)
                   </button>
@@ -7386,7 +7569,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
                 />
               </div>
             </div>
-            <p className="mt-1 text-xs  sui-color-muted">
+            <p className="mt-1.5 text-sm leading-5 sui-color-muted">
               PNG, SVG, JPEG, WebP, or GIF. Max{" "}
               {Math.round(BRANDING_LOGO_DATA_URI_MAX_BYTES / 1024)} KB after
               encoding. Stored in your browser only.
@@ -7396,18 +7579,18 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
           {errorMessage ? (
             <div
               role="alert"
-              className="text-xs  sui-color-negative  sui-bg-negative border  sui-border-negative rounded px-2 py-1.5"
+              className="rounded border sui-border-negative sui-bg-negative px-3 py-2 text-sm sui-color-negative"
             >
               {errorMessage}
             </div>
           ) : null}
         </div>
 
-        <div className="flex items-center justify-between gap-2 px-4 py-3 border-t  sui-border-default  sui-bg-section">
+        <div className="sticky bottom-0 flex items-center justify-between gap-2 border-t sui-border-weak sui-bg-section px-5 py-4">
           <button
             type="button"
             onClick={onResetToDefaults}
-            className="text-xs font-bold  sui-color-default  sui-hover-color-negative underline"
+            className="text-sm font-bold sui-color-default underline sui-hover-color-negative"
           >
             Reset to defaults
           </button>
@@ -7415,21 +7598,20 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 text-xs font-bold  sui-color-default  sui-bg-popup border  sui-border-default rounded  sui-hover-bg-floating transition-colors"
+              className="rounded border sui-border-default sui-bg-page px-3 py-2 text-sm font-bold sui-color-default transition-colors sui-hover-bg-overlay"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleSave}
-              className="px-3 py-1.5 text-xs font-bold sui-color-active sui-bg-accent sui-hover-bg-accent rounded transition-colors"
+              className="rounded sui-bg-accent px-3 py-2 text-sm font-bold sui-color-active transition-colors sui-hover-bg-accent"
             >
               Save
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </WorkspaceModalShell>
   );
 };
 

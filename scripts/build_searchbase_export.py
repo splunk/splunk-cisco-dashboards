@@ -18,11 +18,10 @@ from format_searchbase_conf import format_search, emit_search_field
 SOURCE = Path(__file__).resolve().parents[1] / (
     "packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf"
 )
-# Export artifacts live outside the Splunk app's default/ tree so they are
-# never bundled into the shipped package (webpack copies the whole
-# src/main/resources/splunk/ directory). They are repo-only deliverables.
-EXPORT_DIR = Path(__file__).resolve().parents[1] / (
-    "packages/splunk-cisco-dashboards/exports"
+# Export artifacts live outside the Splunk app source tree so they are never
+# bundled into the shipped package. They are repository-only deliverables.
+EXPORT_DIR = (
+    Path(__file__).resolve().parents[1] / "artifacts/searchbase/exports"
 )
 EXPORT = EXPORT_DIR / "searchbase_export.conf"
 REPORT = EXPORT_DIR / "searchbase_export_report.txt"

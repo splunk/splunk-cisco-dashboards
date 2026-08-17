@@ -5,33 +5,25 @@ import React, {
     useRef,
     useState,
 } from 'react';
-import {
-    AlertCircle,
-    Check,
-    ChevronDown,
-    ChevronLeft,
-    ChevronRight,
-    CircleX,
-    Copy,
-    ExternalLink,
-    Gauge,
-    Maximize2,
-    Minimize2,
-    MoreVertical,
-    PanelRightOpen,
-    Play,
-    Plus,
-    Presentation,
-    RefreshCw,
-    Save,
-    Search,
-    Settings2,
-    SlidersHorizontal,
-    Square,
-    Table2,
-    Trash2,
-    X,
-} from '@/common/icons/SuiIcon';
+import styled from 'styled-components';
+import Badge from '@splunk/react-ui/Badge';
+import Button from '@splunk/react-ui/Button';
+import Card from '@splunk/react-ui/Card';
+import CardLayout from '@splunk/react-ui/CardLayout';
+import Checkbox from '@splunk/react-ui/Checkbox';
+import CollapsiblePanel from '@splunk/react-ui/CollapsiblePanel';
+import ControlGroup from '@splunk/react-ui/ControlGroup';
+import Drawer from '@splunk/react-ui/Drawer';
+import Heading from '@splunk/react-ui/Heading';
+import Link from '@splunk/react-ui/Link';
+import Layout from '@splunk/react-ui/Layout';
+import Message from '@splunk/react-ui/Message';
+import Multiselect from '@splunk/react-ui/Multiselect';
+import Paginator, {
+    type PaginatorCompactChangeHandler,
+} from '@splunk/react-ui/Paginator';
+import ScreenReaderContent from '@splunk/react-ui/ScreenReaderContent';
+import Select from '@splunk/react-ui/Select';
 import {
     DndContext,
     KeyboardSensor,
@@ -47,6 +39,36 @@ import {
     rectSortingStrategy,
     sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
+import {
+    AlertCircle,
+    Check,
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
+    CircleX,
+    Copy,
+    ExternalLink,
+    Gauge,
+    Maximize2,
+    Minimize2,
+    Moon,
+    MoreVertical,
+    PanelRightOpen,
+    Play,
+    Plus,
+    Presentation,
+    RefreshCw,
+    Save,
+    Search,
+    Settings2,
+    SlidersHorizontal,
+    Square,
+    Sun,
+    Table2,
+    Trash2,
+    X,
+} from '@/common/icons/SuiIcon';
+import ThemeAwareSearch from '@/common/components/ThemeAwareSearch';
 import { BarBreakdownTile } from '@/common/components/workspace/BarBreakdownTile';
 import {
     resolveBaselineField,
@@ -75,6 +97,8 @@ import {
     sparklineVizTypeFromSplunkViz,
 } from '@/common/components/workspace/Sparkline';
 import { C3_ATMOSPHERE_BACKGROUND_STYLE } from '@/common/theme/c3Atmosphere';
+import { C3_VISUALIZATION_COLORS } from '@/common/theme/c3VisualizationPalette';
+import { useAppThemeControls } from '@/common/theme/AppThemeProvider';
 import {
     isBarBreakdownViz,
     isTableViz,
@@ -125,6 +149,11 @@ import { recordMatchesCatalogueQuery } from './catalogueSearch';
 const APP_NAME = 'splunk-cisco-dashboards';
 const STORAGE_KEY = 'scd_searchbase_canvas_v1';
 const MAX_BATCH_RUNS = 10;
+const CATALOGUE_PAGE_SIZE = 25;
+
+const CanvasFeedbackMessage = styled(Message)`
+    height: 100%;
+`;
 
 const catalogueAppLabel = (
     app: string,
@@ -480,7 +509,7 @@ const cycleTileSpan = (span: TileSpan): TileSpan => {
 
 const firstSeriesColor = (
     options: Record<string, unknown> | undefined,
-    fallback = '#0ea5e9'
+    fallback = C3_VISUALIZATION_COLORS.cyan
 ): string => {
     const colors = options?.seriesColors;
     if (!Array.isArray(colors)) return fallback;
@@ -977,23 +1006,25 @@ const MissingSearchbaseTile: React.FC<{
     onRemove: (tileId: string) => void;
     presentationMode?: boolean;
 }> = ({ tile, onRemove, presentationMode = false }) => (
-    <div className="rounded-md border   p-3 text-sm  sui-border-negative sui-bg-negative sui-color-negative">
-        <div className="flex items-center gap-2 font-bold">
-            <AlertCircle className="h-4 w-4" />
-            Missing searchbase entry
-        </div>
+    <CanvasFeedbackMessage
+        appearance="fill"
+        aria-atomic="true"
+        role="alert"
+        type="error"
+    >
+        <Message.Title>Missing searchbase entry</Message.Title>
         <div className="mt-1 font-mono text-xs">{tile.searchName}</div>
         {!presentationMode && (
-            <button
-                type="button"
-                onClick={() => onRemove(tile.id)}
-                className="mt-3 inline-flex items-center gap-1 rounded border   px-2 py-1 text-xs font-semibold  sui-hover-bg-negative sui-border-negative sui-bg-negative sui-color-negative"
-            >
-                <Trash2 className="h-3.5 w-3.5" />
-                Remove
-            </button>
+            <div className="mt-3">
+                <Button
+                    appearance="destructive"
+                    icon={<Trash2 className="h-3.5 w-3.5" />}
+                    label="Remove"
+                    onClick={() => onRemove(tile.id)}
+                />
+            </div>
         )}
-    </div>
+    </CanvasFeedbackMessage>
 );
 
 type ResolvedSearchbaseCanvasTileProps = Omit<
@@ -1115,11 +1146,11 @@ const SearchbaseNoDataPanel: React.FC<{
     record: SearchbaseRecord;
     description: string;
     noDataReason?: NoDataReason;
+    range: TimeRange;
     rangeLabel?: string;
     failureMessage?: string;
     failureHttpStatus?: number;
     onConfigure: () => void;
-    onOpenSearch: () => void;
     onOpenDrilldown?: () => void;
     drilldownTitle?: string;
     presentationMode?: boolean;
@@ -1127,11 +1158,11 @@ const SearchbaseNoDataPanel: React.FC<{
     record,
     description,
     noDataReason,
+    range,
     rangeLabel,
     failureMessage,
     failureHttpStatus,
     onConfigure,
-    onOpenSearch,
     onOpenDrilldown,
     drilldownTitle,
     presentationMode = false,
@@ -1146,84 +1177,61 @@ const SearchbaseNoDataPanel: React.FC<{
         noDataReason === 'error' ||
         noDataReason === 'dispatch_failed' ||
         noDataReason === 'job_failed';
+    const searchUrl = splunkSearchAppUrl(
+        record.search,
+        range,
+        record.dispatchContext
+    );
 
     return (
-        <div
-            className={cn(
-                'flex h-full min-h-[220px] flex-col rounded-md border border-dashed p-4',
-                isError
-                    ? 'sui-border-negative sui-bg-negative sui-color-negative'
-                    : 'sui-border-info sui-bg-popup sui-color-active'
-            )}
+        <CanvasFeedbackMessage
+            appearance="fill"
+            aria-atomic="true"
+            role={isError ? 'alert' : 'status'}
+            type={isError ? 'error' : 'info'}
         >
-            <div className="flex items-start gap-3">
-                <div
-                    className={cn(
-                        'flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-md',
-                        isError
-                            ? 'sui-bg-negative sui-color-negative'
-                            : 'sui-bg-section  shadow-sm sui-bg-page sui-color-info'
-                    )}
-                >
-                    <AlertCircle className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                    <div className="text-sm font-black uppercase tracking-wide">
-                        {copy.title}
+            <div className="flex h-full min-h-[188px] flex-col">
+                <Message.Title>{copy.title}</Message.Title>
+                <p className="mt-1 text-xs leading-snug sui-color-default">
+                    {copy.detail}
+                </p>
+
+                <div className="mt-4 min-w-0">
+                    <div className="truncate text-xs font-black uppercase tracking-wide sui-color-default">
+                        {record.searchName}
                     </div>
-                    <p
-                        className={cn(
-                            'mt-1 text-xs leading-snug',
-                            isError
-                                ? 'sui-color-negative'
-                                : 'sui-color-default sui-color-active'
-                        )}
-                    >
-                        {copy.detail}
+                    <p className="mt-1 line-clamp-3 text-xs leading-snug sui-color-default">
+                        {description || record.id}
                     </p>
                 </div>
-            </div>
 
-            <div className="mt-4 min-w-0">
-                <div className="truncate text-xs font-black uppercase tracking-wide  sui-color-default">
-                    {record.searchName}
+                <div className="mt-auto flex flex-wrap gap-2 pt-4">
+                    <Link
+                        appearance="standalone"
+                        openInNewContext
+                        to={searchUrl}
+                    >
+                        Open in Search
+                    </Link>
+                    {onOpenDrilldown && (
+                        <Button
+                            appearance="secondary"
+                            icon={<Table2 className="h-3.5 w-3.5" />}
+                            label={drilldownTitle ?? 'View detail'}
+                            onClick={() => onOpenDrilldown()}
+                        />
+                    )}
+                    {!presentationMode && (
+                        <Button
+                            appearance="secondary"
+                            icon={<Settings2 className="h-3.5 w-3.5" />}
+                            label="Replace"
+                            onClick={() => onConfigure()}
+                        />
+                    )}
                 </div>
-                <p className="mt-1 line-clamp-3 text-xs leading-snug  sui-color-active">
-                    {description || record.id}
-                </p>
             </div>
-
-            <div className="mt-auto flex flex-wrap gap-2 pt-4">
-                <button
-                    type="button"
-                    onClick={onOpenSearch}
-                    className="inline-flex items-center gap-1 rounded-md  px-2.5 py-1.5 text-xs font-black  transition  focus:outline-none focus:ring-2 sui-focus-ring sui-bg-section sui-color-active sui-hover-bg-info"
-                >
-                    <Search className="h-3.5 w-3.5" />
-                    Open in Search
-                </button>
-                {onOpenDrilldown && (
-                    <button
-                        type="button"
-                        onClick={onOpenDrilldown}
-                        className="inline-flex items-center gap-1 rounded-md border   px-2.5 py-1.5 text-xs font-black  transition sui-hover-border-info  focus:outline-none focus:ring-2 sui-focus-ring sui-border-info sui-bg-page sui-color-info sui-hover-bg-info"
-                    >
-                        <Table2 className="h-3.5 w-3.5" />
-                        {drilldownTitle ?? 'View detail'}
-                    </button>
-                )}
-                {!presentationMode && (
-                    <button
-                        type="button"
-                        onClick={onConfigure}
-                        className="inline-flex items-center gap-1 rounded-md border   px-2.5 py-1.5 text-xs font-black  transition   focus:outline-none focus:ring-2 sui-focus-ring sui-border-default sui-bg-page sui-color-active sui-hover-border-info sui-hover-color-info"
-                    >
-                        <Settings2 className="h-3.5 w-3.5" />
-                        Replace
-                    </button>
-                )}
-            </div>
-        </div>
+        </CanvasFeedbackMessage>
     );
 };
 
@@ -1398,11 +1406,11 @@ const SearchbaseMetricTileBody: React.FC<SearchbaseTileBodyProps> = ({
                 record={record}
                 description={description}
                 noDataReason={metric.noDataReason}
+                range={range}
                 rangeLabel={metric.rangeLabel}
                 failureMessage={metric.failureMessage}
                 failureHttpStatus={metric.failureHttpStatus}
                 onConfigure={onConfigure}
-                onOpenSearch={onOpenSearch}
                 onOpenDrilldown={onOpenDrilldown}
                 drilldownTitle={drilldownTitle}
                 presentationMode={presentationMode}
@@ -1599,11 +1607,11 @@ const SearchbaseTableTileBody: React.FC<
                 record={record}
                 description={description}
                 noDataReason={table.noDataReason}
+                range={range}
                 rangeLabel={table.rangeLabel}
                 failureMessage={table.failureMessage}
                 failureHttpStatus={table.failureHttpStatus}
                 onConfigure={onConfigure}
-                onOpenSearch={onOpenSearch}
                 onOpenDrilldown={onOpenDrilldown}
                 drilldownTitle={drilldownTitle}
                 presentationMode={presentationMode}
@@ -1971,12 +1979,12 @@ const SearchbasePreviewTile: React.FC<ResolvedSearchbaseCanvasTileProps> = ({
                         {formatVizLabel(viz)}
                     </span>
                     {tile.vizOverride && (
-                        <span className="rounded  px-2 py-1 text-xs font-black uppercase  sui-bg-info sui-color-info">
+                        <span className="rounded px-2 py-1 text-xs font-black uppercase sui-bg-notification-info sui-color-active">
                             Override
                         </span>
                     )}
                     {record.drilldownSearchName && (
-                        <span className="rounded  px-2 py-1 text-xs font-black uppercase  sui-bg-info sui-color-info">
+                        <span className="rounded px-2 py-1 text-xs font-black uppercase sui-bg-notification-info sui-color-active">
                             Drilldown
                         </span>
                     )}
@@ -2782,6 +2790,7 @@ interface SearchbaseBrowserProps {
     canvasTiles: CanvasTile[];
     replaceTileId: string | null;
     includeHiddenSearches: boolean;
+    returnFocus: () => void;
     onClose: () => void;
     onAddRecord: (record: SearchbaseRecord) => void;
     onAddRecords: (records: SearchbaseRecord[]) => void;
@@ -2870,418 +2879,32 @@ const recordMatchesBrowserVisibility = (
     return true;
 };
 
-interface SearchableFilterSelectProps {
-    value: string;
-    options: string[];
-    allLabel: string;
-    searchPlaceholder: string;
-    ariaLabel: string;
-    onChange: (value: string) => void;
-}
-
-const SearchableFilterSelect: React.FC<SearchableFilterSelectProps> = ({
-    value,
-    options,
-    allLabel,
-    searchPlaceholder,
-    ariaLabel,
-    onChange,
-}) => {
-    const rootRef = useRef<HTMLDivElement>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
-    const [open, setOpen] = useState(false);
-    const [search, setSearch] = useState('');
-
-    const selectOptions = useMemo(
-        () => [
-            { value: ALL, label: allLabel },
-            ...options.map((option) => ({ value: option, label: option })),
-        ],
-        [allLabel, options]
-    );
-
-    const selectedLabel = useMemo(() => {
-        if (value === ALL) return allLabel;
-        return selectOptions.find((option) => option.value === value)?.label ?? value;
-    }, [allLabel, selectOptions, value]);
-
-    const filteredOptions = useMemo(() => {
-        const normalized = search.trim().toLowerCase();
-        if (!normalized) return selectOptions;
-        return selectOptions.filter((option) =>
-            option.label.toLowerCase().includes(normalized)
-        );
-    }, [search, selectOptions]);
-
-    useEffect(() => {
-        if (!open) {
-            setSearch('');
-            return undefined;
-        }
-
-        const focusHandle = window.setTimeout(() => {
-            inputRef.current?.focus();
-        }, 0);
-        const handlePointerDown = (event: MouseEvent | TouchEvent) => {
-            if (
-                rootRef.current &&
-                event.target instanceof Node &&
-                !rootRef.current.contains(event.target)
-            ) {
-                setOpen(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handlePointerDown);
-        document.addEventListener('touchstart', handlePointerDown);
-        return () => {
-            window.clearTimeout(focusHandle);
-            document.removeEventListener('mousedown', handlePointerDown);
-            document.removeEventListener('touchstart', handlePointerDown);
-        };
-    }, [open]);
-
-    const selectValue = (nextValue: string) => {
-        onChange(nextValue);
-        setOpen(false);
-        setSearch('');
-    };
-
-    return (
-        <div ref={rootRef} className="relative">
-            <button
-                type="button"
-                aria-label={ariaLabel}
-                aria-haspopup="listbox"
-                aria-expanded={open}
-                onClick={() => setOpen((current) => !current)}
-                onKeyDown={(event) => {
-                    if (event.key === 'ArrowDown' || event.key === 'Enter') {
-                        event.preventDefault();
-                        setOpen(true);
-                    }
-                    if (event.key === 'Escape') {
-                        setOpen(false);
-                    }
-                }}
-                className="flex h-10 w-full items-center gap-2 rounded-md border   px-3 text-left text-sm  outline-none transition sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-section sui-color-active sui-focus-ring"
-            >
-                <span className="min-w-0 flex-1 truncate">{selectedLabel}</span>
-                <ChevronDown
-                    className={cn(
-                        'h-4 w-4 flex-shrink-0 sui-color-muted transition-transform',
-                        open && 'rotate-180'
-                    )}
-                />
-            </button>
-
-            {open && (
-                <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md border   shadow-xl sui-border-default sui-bg-page">
-                    <label className="relative block border-b  sui-border-weak">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 sui-color-default" />
-                        <input
-                            ref={inputRef}
-                            value={search}
-                            onChange={(event) => setSearch(event.target.value)}
-                            onKeyDown={(event) => {
-                                if (event.key === 'Escape') {
-                                    event.stopPropagation();
-                                    setOpen(false);
-                                }
-                                if (
-                                    event.key === 'Enter' &&
-                                    filteredOptions.length === 1
-                                ) {
-                                    event.preventDefault();
-                                    selectValue(filteredOptions[0].value);
-                                }
-                            }}
-                            placeholder={searchPlaceholder}
-                            className="h-10 w-full  pl-9 pr-3 text-sm  outline-none sui-bg-page sui-color-active"
-                        />
-                    </label>
-                    <div role="listbox" aria-label={ariaLabel} className="max-h-56 overflow-y-auto p-1">
-                        {filteredOptions.length === 0 ? (
-                            <div className="px-3 py-3 text-sm  sui-color-default">
-                                No matches
-                            </div>
-                        ) : (
-                            filteredOptions.map((option) => {
-                                const selected = option.value === value;
-                                return (
-                                    <button
-                                        key={option.value}
-                                        type="button"
-                                        role="option"
-                                        aria-selected={selected}
-                                        onClick={() => selectValue(option.value)}
-                                        className={cn(
-                                            'flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm transition-colors',
-                                            selected
-                                                ? 'sui-bg-info font-bold  sui-bg-info sui-color-info'
-                                                : 'sui-color-default  sui-color-active sui-hover-bg-section'
-                                        )}
-                                    >
-                                        <span className="min-w-0 flex-1 truncate">
-                                            {option.label}
-                                        </span>
-                                        {selected && (
-                                            <Check className="h-4 w-4 flex-shrink-0" />
-                                        )}
-                                    </button>
-                                );
-                            })
-                        )}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
-
-interface SearchableAppMultiSelectProps {
-    selectedApps: ReadonlySet<string>;
-    options: string[];
-    countsByApp: Map<string, number>;
-    labelsByApp: ReadonlyMap<string, string>;
-    ariaLabel: string;
-    onChange: (selection: Set<string>) => void;
-}
-
-const SearchableAppMultiSelect: React.FC<SearchableAppMultiSelectProps> = ({
-    selectedApps,
-    options,
-    countsByApp,
-    labelsByApp,
-    ariaLabel,
-    onChange,
-}) => {
-    const rootRef = useRef<HTMLDivElement>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
-    const [open, setOpen] = useState(false);
-    const [search, setSearch] = useState('');
-
-    const selectableApps = useMemo(() => {
-        const values = new Set(options);
-        values.add(APP_NAME);
-        for (const selectedApp of selectedApps) {
-            values.add(selectedApp);
-        }
-        return Array.from(values).sort((left, right) =>
-            (labelsByApp.get(left) ?? left).localeCompare(labelsByApp.get(right) ?? right)
-        );
-    }, [labelsByApp, options, selectedApps]);
-
-    const appLabel = useCallback(
-        (app: string): string => catalogueAppLabel(app, labelsByApp),
-        [labelsByApp]
-    );
-
-    const totalCount = useMemo(
-        () =>
-            Array.from(countsByApp.values()).reduce(
-                (total, count) => total + count,
-                0
-            ),
-        [countsByApp]
-    );
-
-    const selectedLabel = useMemo(() => {
-        if (selectedApps.size === 0) return `All apps (${totalCount})`;
-        const selected = Array.from(selectedApps).sort((left, right) =>
-            left.localeCompare(right)
-        );
-        if (selected.length === 1) return appLabel(selected[0]);
-        return `${selected.length} apps selected`;
-    }, [appLabel, selectedApps, totalCount]);
-
-    const filteredApps = useMemo(() => {
-        const normalized = search.trim().toLowerCase();
-        if (!normalized) return selectableApps;
-        return selectableApps.filter((option) =>
-            option.toLowerCase().includes(normalized) ||
-            appLabel(option).toLowerCase().includes(normalized)
-        );
-    }, [appLabel, search, selectableApps]);
-
-    const allAppsMatches = useMemo(() => {
-        const normalized = search.trim().toLowerCase();
-        return !normalized || 'all apps'.includes(normalized);
-    }, [search]);
-
-    useEffect(() => {
-        if (!open) {
-            setSearch('');
-            return undefined;
-        }
-
-        const focusHandle = window.setTimeout(() => {
-            inputRef.current?.focus();
-        }, 0);
-        const handlePointerDown = (event: MouseEvent | TouchEvent) => {
-            if (
-                rootRef.current &&
-                event.target instanceof Node &&
-                !rootRef.current.contains(event.target)
-            ) {
-                setOpen(false);
-            }
-        };
-
-        document.addEventListener('mousedown', handlePointerDown);
-        document.addEventListener('touchstart', handlePointerDown);
-        return () => {
-            window.clearTimeout(focusHandle);
-            document.removeEventListener('mousedown', handlePointerDown);
-            document.removeEventListener('touchstart', handlePointerDown);
-        };
-    }, [open]);
-
-    const setAllApps = () => onChange(new Set());
-
-    const toggleApp = (option: string) => {
-        const next = selectedApps.size === 0 ? new Set<string>() : new Set(selectedApps);
-        if (next.has(option)) next.delete(option);
-        else next.add(option);
-        onChange(next);
-    };
-
-    return (
-        <div ref={rootRef} className="relative">
-            <button
-                type="button"
-                aria-label={ariaLabel}
-                aria-haspopup="listbox"
-                aria-expanded={open}
-                onClick={() => setOpen((current) => !current)}
-                onKeyDown={(event) => {
-                    if (event.key === 'ArrowDown' || event.key === 'Enter') {
-                        event.preventDefault();
-                        setOpen(true);
-                    }
-                    if (event.key === 'Escape') {
-                        setOpen(false);
-                    }
-                }}
-                className="flex h-10 w-full items-center gap-2 rounded-md border   px-3 text-left text-sm font-semibold  outline-none transition sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-page sui-color-active sui-focus-ring"
-            >
-                <span className="min-w-0 flex-1 truncate">{selectedLabel}</span>
-                <ChevronDown
-                    className={cn(
-                        'h-4 w-4 flex-shrink-0 sui-color-muted transition-transform',
-                        open && 'rotate-180'
-                    )}
-                />
-            </button>
-
-            {open && (
-                <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-md border   shadow-xl sui-border-default sui-bg-page">
-                    <label className="relative block border-b  sui-border-weak">
-                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 sui-color-default" />
-                        <input
-                            ref={inputRef}
-                            value={search}
-                            onChange={(event) => setSearch(event.target.value)}
-                            onKeyDown={(event) => {
-                                if (event.key === 'Escape') {
-                                    event.stopPropagation();
-                                    setOpen(false);
-                                }
-                                if (
-                                    event.key === 'Enter' &&
-                                    filteredApps.length === 1 &&
-                                    !allAppsMatches
-                                ) {
-                                    event.preventDefault();
-                                    toggleApp(filteredApps[0]);
-                                }
-                            }}
-                            placeholder="Search apps..."
-                            className="h-10 w-full  pl-9 pr-3 text-sm  outline-none sui-bg-page sui-color-active"
-                        />
-                    </label>
-                    <div
-                        role="listbox"
-                        aria-label={ariaLabel}
-                        aria-multiselectable="true"
-                        className="max-h-56 overflow-y-auto p-1"
-                    >
-                        {allAppsMatches && (
-                            <button
-                                type="button"
-                                role="option"
-                                aria-selected={selectedApps.size === 0}
-                                onClick={setAllApps}
-                                className={cn(
-                                    'flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm transition-colors',
-                                    selectedApps.size === 0
-                                        ? 'sui-bg-info font-bold  sui-bg-info sui-color-info'
-                                        : 'sui-color-default  sui-color-active sui-hover-bg-section'
-                                )}
-                            >
-                                <span className="min-w-0 flex-1 truncate">All apps</span>
-                                <span className="text-xs font-bold sui-color-default">
-                                    {totalCount}
-                                </span>
-                                {selectedApps.size === 0 && (
-                                    <Check className="h-4 w-4 flex-shrink-0" />
-                                )}
-                            </button>
-                        )}
-                        {filteredApps.length === 0 && !allAppsMatches ? (
-                            <div className="px-3 py-3 text-sm  sui-color-default">
-                                No matches
-                            </div>
-                        ) : (
-                            filteredApps.map((option) => {
-                                const selected =
-                                    selectedApps.size > 0 && selectedApps.has(option);
-                                return (
-                                    <button
-                                        key={option}
-                                        type="button"
-                                        role="option"
-                                        aria-selected={selected}
-                                        onClick={() => toggleApp(option)}
-                                        title={`Folder name: ${option}`}
-                                        className={cn(
-                                            'flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm transition-colors',
-                                            selected
-                                                ? 'sui-bg-info font-bold  sui-bg-info sui-color-info'
-                                                : 'sui-color-default  sui-color-active sui-hover-bg-section'
-                                        )}
-                                    >
-                                        <span className="min-w-0 flex-1 truncate">
-                                            {appLabel(option)}
-                                        </span>
-                                        <span className="text-xs font-bold sui-color-default">
-                                            {countsByApp.get(option) ?? 0}
-                                        </span>
-                                        {selected && (
-                                            <Check className="h-4 w-4 flex-shrink-0" />
-                                        )}
-                                    </button>
-                                );
-                            })
-                        )}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
-
 const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     open,
     records,
     canvasTiles,
     replaceTileId,
     includeHiddenSearches,
+    returnFocus,
     onClose,
     onAddRecord,
     onAddRecords,
     onIncludeHiddenSearchesChange,
 }) => {
+    const searchInputElementRef = useRef<HTMLInputElement | null>(null);
+    const catalogueResultsRef = useRef<HTMLDivElement | null>(null);
+    const focusCatalogueResults = useCallback(() => {
+        window.requestAnimationFrame(() => {
+            catalogueResultsRef.current?.focus();
+        });
+    }, []);
+    const searchInputRef = useCallback((node: HTMLInputElement | null) => {
+        searchInputElementRef.current = node;
+        // SUI 5.13 overwrites aria-controls passed to Search, so associate the input directly.
+        if (node) {
+            node.setAttribute('aria-controls', 'searchbase-catalogue-results');
+        }
+    }, []);
     const [query, setQuery] = useState('');
     const [selectedApps, setSelectedApps] = useState<Set<string>>(
         makeDefaultAppSelection
@@ -3289,15 +2912,16 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     const [category, setCategory] = useState(ALL);
     const [subCategory, setSubCategory] = useState(ALL);
     const [vizType, setVizType] = useState(ALL);
-    const [tagInput, setTagInput] = useState('');
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [includeDrilldownSearches, setIncludeDrilldownSearches] =
         useState(false);
     const [includeTableSearches, setIncludeTableSearches] = useState(false);
-    const [filtersCollapsed, setFiltersCollapsed] = useState(true);
+    const [filtersOpen, setFiltersOpen] = useState(false);
     const [selectedNames, setSelectedNames] = useState<Set<string>>(
         () => new Set()
     );
+    const [cataloguePage, setCataloguePage] = useState(1);
+    const [catalogueAnnouncement, setCatalogueAnnouncement] = useState('');
 
     const countsBySearch = useMemo(() => {
         const counts = new Map<string, number>();
@@ -3309,8 +2933,16 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
 
     useEffect(() => {
         if (open) {
-            setFiltersCollapsed(true);
+            setFiltersOpen(false);
         }
+    }, [open]);
+
+    useEffect(() => {
+        if (!open) return undefined;
+        const frame = window.requestAnimationFrame(() => {
+            searchInputElementRef.current?.focus();
+        });
+        return () => window.cancelAnimationFrame(frame);
     }, [open]);
 
     const drilldownSearchNames = useMemo(
@@ -3463,7 +3095,6 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
             setSubCategory(ALL);
             setVizType(ALL);
             setSelectedTags([]);
-            setTagInput('');
         }
     }, [category, categoryOptions]);
 
@@ -3492,7 +3123,6 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
             setSubCategory(ALL);
             setVizType(ALL);
             setSelectedTags([]);
-            setTagInput('');
         }
     }, [subCategory, subCategoryOptions]);
 
@@ -3552,34 +3182,56 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
         [facetScopedRecords, selectedTags]
     );
 
-    const availableTagCount = useMemo(
-        () => new Set(facetScopedRecords.flatMap((record) => record.tags)).size,
-        [facetScopedRecords]
-    );
-
-    const tagOptions = useMemo(() => {
+    const allTagsWithCounts = useMemo(() => {
         const tagCounts = new Map<string, number>();
         for (const record of tagScopedRecords) {
             for (const tag of record.tags) {
                 tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
             }
         }
-        const normalizedInput = tagInput.trim().toLowerCase();
         return Array.from(tagCounts.entries())
-            .filter(([tag]) => !selectedTags.includes(tag))
-            .filter(([tag]) =>
-                normalizedInput ? tag.toLowerCase().includes(normalizedInput) : true
-            )
-            .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-            .slice(0, 18)
-            .map(([tag, count]) => ({ tag, count }));
-    }, [selectedTags, tagInput, tagScopedRecords]);
+            .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    }, [tagScopedRecords]);
 
     const filteredRecords = useMemo(() => {
         return tagScopedRecords.filter((record) =>
             recordMatchesCatalogueQuery(record, query, plainTextFromHtml)
         );
     }, [query, tagScopedRecords]);
+    useEffect(() => {
+        setCataloguePage(1);
+        setCatalogueAnnouncement('');
+    }, [filteredRecords]);
+    const cataloguePageCount = Math.max(
+        1,
+        Math.ceil(filteredRecords.length / CATALOGUE_PAGE_SIZE)
+    );
+    const cataloguePageStart = (cataloguePage - 1) * CATALOGUE_PAGE_SIZE;
+    const cataloguePageRecords = filteredRecords.slice(
+        cataloguePageStart,
+        cataloguePageStart + CATALOGUE_PAGE_SIZE
+    );
+    const cataloguePageEnd = Math.min(
+        filteredRecords.length,
+        cataloguePageStart + CATALOGUE_PAGE_SIZE
+    );
+    const cataloguePageLabel =
+        filteredRecords.length === 0
+            ? '0 of 0'
+            : `${cataloguePageStart + 1}–${cataloguePageEnd} of ${
+                  filteredRecords.length
+              }`;
+    const handleCataloguePageChange: PaginatorCompactChangeHandler = (
+        _event,
+        { page }
+    ) => {
+        if (!page) {
+            return;
+        }
+        setCataloguePage(page);
+        setCatalogueAnnouncement('');
+        focusCatalogueResults();
+    };
     const availableSearchCount = filteredRecords.length;
     const availableSearchLabel = `${availableSearchCount.toLocaleString()} ${
         availableSearchCount === 1 ? 'search' : 'searches'
@@ -3656,11 +3308,10 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
         vizType,
     ]);
 
-    const hasActiveFilters =
-        query.trim().length > 0 || activeFilterChips.length > 0;
+    const activeFilterCount = activeFilterChips.length;
+    const facetsActive = activeFilterCount > 0;
 
-    const resetFilters = () => {
-        setQuery('');
+    const handleClearFacets = () => {
         setSelectedApps(new Set(defaultAppSelection));
         onIncludeHiddenSearchesChange(false);
         setIncludeDrilldownSearches(false);
@@ -3669,8 +3320,6 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
         setSubCategory(ALL);
         setVizType(ALL);
         setSelectedTags([]);
-        setTagInput('');
-        setSelectedNames(new Set());
     };
 
     const toggleSelected = (searchName: string) => {
@@ -3684,443 +3333,401 @@ const SearchbaseBrowser: React.FC<SearchbaseBrowserProps> = ({
     };
 
     const selectTag = (tag: string) => {
-        setSelectedTags((current) => (current.includes(tag) ? current : [...current, tag]));
-        setTagInput('');
+        setSelectedTags((current) =>
+            current.includes(tag) ? current : [...current, tag]
+        );
+        setCataloguePage(1);
+        setCatalogueAnnouncement('');
+        focusCatalogueResults();
     };
-
-    if (!open) return null;
 
     const replaceMode = replaceTileId !== null;
 
     return (
-        <aside className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[560px] flex-col border-l   shadow-2xl sui-border-weak sui-bg-page">
-            <div className="flex items-center gap-3 border-b  px-5 py-4 sui-border-weak">
-                <div className="flex h-10 w-10 items-center justify-center rounded-md   sui-bg-info sui-color-info">
-                    <SlidersHorizontal className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                    <div className="text-xs font-black uppercase tracking-[0.22em] sui-color-default">
-                        {replaceMode ? 'Replace tile' : 'Add tiles'}
-                    </div>
-                    <h2 className="truncate text-lg font-black  sui-color-active">
-                        Searchbase catalogue
-                    </h2>
-                </div>
-                <button
-                    type="button"
-                    onClick={onClose}
-                    title="Close"
-                    aria-label="Close"
-                    className="ml-auto rounded p-2 sui-color-default transition-colors   focus:outline-none focus:ring-2 sui-focus-ring sui-hover-bg-overlay sui-hover-color-active"
-                >
-                    <X className="h-5 w-5" />
-                </button>
-            </div>
+        <Drawer
+            divider="header"
+            onRequestClose={() => onClose()}
+            open={open}
+            position="page"
+            returnFocus={returnFocus}
+            width="min(650px, 100vw)"
+        >
+            <Drawer.Header
+                subtitle={`Searchbase Canvas · ${availableSearchLabel}`}
+                title={replaceMode ? 'Replace search' : 'Add search'}
+            />
 
-            <div className="border-b  px-4 py-3 sui-border-weak">
-                <label className="relative block">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 sui-color-default" />
-                    <input
-                        value={query}
-                        onChange={(event) => setQuery(event.target.value)}
-                        placeholder="Filter by stanza, name, SPL, or description..."
-                        className="h-11 w-full rounded-md border   pl-10 pr-3 text-sm font-medium  outline-none transition sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-section sui-color-active sui-focus-ring"
-                    />
-                </label>
-
-                <div className="mt-3 flex items-center gap-2">
-                    <button
-                        type="button"
-                        onClick={() => setFiltersCollapsed((current) => !current)}
-                        aria-expanded={!filtersCollapsed}
-                        className="inline-flex min-w-0 items-center gap-2 rounded-md  px-3 py-2 text-xs font-black uppercase tracking-[0.16em]  transition  focus:outline-none focus:ring-2 sui-focus-ring sui-bg-popup sui-color-active sui-hover-bg-floating sui-focus-ring"
-                    >
-                        <span>Filters</span>
-                        {hasActiveFilters && (
-                            <span className="rounded-full  px-2 py-0.5 text-xs tracking-normal  sui-bg-info sui-color-info">
-                                active
-                            </span>
-                        )}
-                        <ChevronDown
-                            className={cn(
-                                'h-4 w-4 flex-shrink-0  transition-transform sui-color-default',
-                                filtersCollapsed && '-rotate-90'
-                            )}
+            <Drawer.Body>
+                <div>
+                    <ControlGroup hideLabel label="Search">
+                        <ThemeAwareSearch
+                            inputRef={searchInputRef}
+                            onChange={(_event, { value }) => setQuery(value)}
+                            placeholder="Search by name, description, or tag"
+                            value={query}
                         />
-                    </button>
-                    <div className="ml-auto flex items-center gap-3">
-                        <span
-                            title="Searchbase stanzas matching the current app, visibility, category, sub-category, viz, tag, and text filters"
-                            className="inline-flex items-center rounded-full border   px-2.5 py-1 text-xs font-black uppercase tracking-wider  shadow-sm sui-border-info sui-bg-info sui-color-info"
+                    </ControlGroup>
+
+                    <CollapsiblePanel
+                        actions={
+                            facetsActive ? (
+                                <Button
+                                    appearance="subtle"
+                                    label="Clear filters"
+                                    onClick={handleClearFacets}
+                                />
+                            ) : null
+                        }
+                        appearance="subtle"
+                        description={availableSearchLabel}
+                        inset
+                        onChange={(_event, { action }) =>
+                            setFiltersOpen(action === 'open')
+                        }
+                        open={filtersOpen}
+                        title={
+                            activeFilterCount > 0
+                                ? `Advanced filters (${activeFilterCount} active)`
+                                : 'Advanced filters'
+                        }
+                    >
+                    <ControlGroup label="App">
+                        <Multiselect
+                            compact
+                            filter
+                            onChange={(_event, { values }) => {
+                                setSelectedApps(new Set(values.map(String)));
+                                setCategory(ALL);
+                                setSubCategory(ALL);
+                                setVizType(ALL);
+                                setSelectedTags([]);
+                            }}
+                            placeholder={`All apps (${appOptions.length})`}
+                            showSelectedValuesFirst="nextOpen"
+                            values={Array.from(selectedApps)}
                         >
-                            {availableSearchLabel}
-                        </span>
-                        <button
-                            type="button"
-                            onClick={resetFilters}
-                            className="text-xs font-black uppercase tracking-[0.18em] sui-color-default transition-colors  sui-hover-color-info"
+                            {appOptions.map((app) => (
+                                <Multiselect.Option
+                                    description={`${appCountsByName.get(app) ?? 0} searches`}
+                                    descriptionPosition="right"
+                                    key={app}
+                                    label={catalogueAppLabel(app, appLabelsById)}
+                                    value={app}
+                                />
+                            ))}
+                        </Multiselect>
+                    </ControlGroup>
+
+                    <ControlGroup controlsLayout="stack" label="Visibility">
+                        <Checkbox
+                            checked={includeHiddenSearches}
+                            onChange={(_event, { checked }) =>
+                                onIncludeHiddenSearchesChange(checked)
+                            }
                         >
-                            Clear filters
-                        </button>
-                    </div>
+                            Show hidden searches
+                        </Checkbox>
+                        <Checkbox
+                            checked={includeDrilldownSearches}
+                            onChange={(_event, { checked }) =>
+                                setIncludeDrilldownSearches(checked)
+                            }
+                        >
+                            Show drill-down searches
+                        </Checkbox>
+                        <Checkbox
+                            checked={includeTableSearches}
+                            onChange={(_event, { checked }) =>
+                                setIncludeTableSearches(checked)
+                            }
+                        >
+                            Show table searches
+                        </Checkbox>
+                    </ControlGroup>
+
+                    {categoryOptions.length > 0 && (
+                        <ControlGroup label="Category">
+                            <Select
+                                onChange={(_event, { value }) => {
+                                    setCategory(String(value));
+                                    setSubCategory(ALL);
+                                    setVizType(ALL);
+                                    setSelectedTags([]);
+                                }}
+                                value={category}
+                            >
+                                <Select.Option label="All categories" value={ALL} />
+                                {categoryOptions.map((option) => (
+                                    <Select.Option
+                                        key={option}
+                                        label={option}
+                                        value={option}
+                                    />
+                                ))}
+                            </Select>
+                        </ControlGroup>
+                    )}
+
+                    {category !== ALL && subCategoryOptions.length > 0 && (
+                        <ControlGroup label="Subcategory">
+                            <Select
+                                onChange={(_event, { value }) => {
+                                    setSubCategory(String(value));
+                                    setVizType(ALL);
+                                    setSelectedTags([]);
+                                }}
+                                value={subCategory}
+                            >
+                                <Select.Option
+                                    label={`All subcategories (${subCategoryOptions.length})`}
+                                    value={ALL}
+                                />
+                                {subCategoryOptions.map((option) => (
+                                    <Select.Option
+                                        key={option}
+                                        label={option}
+                                        value={option}
+                                    />
+                                ))}
+                            </Select>
+                        </ControlGroup>
+                    )}
+
+                    <ControlGroup label="Visualization">
+                        <Select
+                            onChange={(_event, { value }) => {
+                                setVizType(String(value));
+                                setSelectedTags([]);
+                            }}
+                            value={vizType}
+                        >
+                            <Select.Option label="All visualization types" value={ALL} />
+                            {vizTypeOptions.map((option) => (
+                                <Select.Option
+                                    key={option.value}
+                                    label={`${option.label} (${option.count})`}
+                                    value={option.value}
+                                />
+                            ))}
+                        </Select>
+                    </ControlGroup>
+
+                    {(allTagsWithCounts.length > 0 || selectedTags.length > 0) && (
+                        <ControlGroup
+                            help="Selected tags are combined with AND."
+                            label="Tags"
+                        >
+                            <Multiselect
+                                compact
+                                filter
+                                onChange={(_event, { values }) =>
+                                    setSelectedTags(values.map(String))
+                                }
+                                placeholder={`All tags (${allTagsWithCounts.length})`}
+                                showSelectedValuesFirst="nextOpen"
+                                values={selectedTags}
+                            >
+                                {allTagsWithCounts.map(([tag, count]) => (
+                                    <Multiselect.Option
+                                        description={`${count} searches`}
+                                        descriptionPosition="right"
+                                        key={tag}
+                                        label={tag}
+                                        value={tag}
+                                    />
+                                ))}
+                            </Multiselect>
+                        </ControlGroup>
+                    )}
+                    </CollapsiblePanel>
                 </div>
 
-                {filtersCollapsed ? (
-                    activeFilterChips.length > 0 && (
-                        <div className="mt-2 flex max-h-14 flex-wrap gap-1 overflow-y-auto">
-                            {activeFilterChips.slice(0, 10).map((chip) => (
-                                <span
-                                    key={chip.id}
-                                    className="inline-flex rounded-full  px-2 py-1 text-xs font-bold  sui-bg-popup sui-color-default"
-                                >
-                                    {chip.label}
-                                </span>
-                            ))}
-                            {activeFilterChips.length > 10 && (
-                                <span className="inline-flex rounded-full  px-2 py-1 text-xs font-bold  sui-bg-popup sui-color-default">
-                                    +{activeFilterChips.length - 10}
-                                </span>
-                            )}
-                        </div>
-                    )
-                ) : (
-                    <div className="mt-3 rounded-xl border   p-3 sui-border-weak sui-bg-section">
-                        <div className="grid grid-cols-[76px_minmax(0,1fr)] gap-x-3 gap-y-3">
-                            <span className="self-center text-xs font-black uppercase tracking-[0.16em] sui-color-default">
-                                App
-                            </span>
-                            <SearchableAppMultiSelect
-                                selectedApps={selectedApps}
-                                options={appOptions}
-                                countsByApp={appCountsByName}
-                                labelsByApp={appLabelsById}
-                                ariaLabel="Filter searches by app"
-                                onChange={(nextSelection) => {
-                                    setSelectedApps(nextSelection);
-                                    setCategory(ALL);
-                                    setSubCategory(ALL);
-                                    setVizType(ALL);
-                                    setSelectedTags([]);
-                                    setTagInput('');
-                                }}
-                            />
-
-                            <span className="self-start pt-4 text-xs font-black uppercase tracking-[0.16em] sui-color-default">
-                                Visibility
-                            </span>
-                            <div className="grid gap-2 sm:grid-cols-3">
-                                <label className="flex min-h-16 items-center gap-2 rounded-lg border   px-3 py-3 text-sm font-bold leading-tight  shadow-sm sui-border-weak sui-bg-page sui-color-active">
-                                    <input
-                                        type="checkbox"
-                                        checked={includeHiddenSearches}
-                                        onChange={(event) =>
-                                            onIncludeHiddenSearchesChange(
-                                                event.target.checked
-                                            )
-                                        }
-                                        className="h-4 w-4 rounded  sui-color-info sui-focus-ring sui-border-default sui-bg-page"
-                                    />
-                                    <span>Show hidden searches</span>
-                                </label>
-                                <label className="flex min-h-16 items-center gap-2 rounded-lg border   px-3 py-3 text-sm font-bold leading-tight  shadow-sm sui-border-weak sui-bg-page sui-color-active">
-                                    <input
-                                        type="checkbox"
-                                        checked={includeDrilldownSearches}
-                                        onChange={(event) =>
-                                            setIncludeDrilldownSearches(
-                                                event.target.checked
-                                            )
-                                        }
-                                        className="h-4 w-4 rounded  sui-color-info sui-focus-ring sui-border-default sui-bg-page"
-                                    />
-                                    <span>Show drill-down searches</span>
-                                </label>
-                                <label className="flex min-h-16 items-center gap-2 rounded-lg border   px-3 py-3 text-sm font-bold leading-tight  shadow-sm sui-border-weak sui-bg-page sui-color-active">
-                                    <input
-                                        type="checkbox"
-                                        checked={includeTableSearches}
-                                        onChange={(event) =>
-                                            setIncludeTableSearches(event.target.checked)
-                                        }
-                                        className="h-4 w-4 rounded  sui-color-info sui-focus-ring sui-border-default sui-bg-page"
-                                    />
-                                    <span>Show table searches</span>
-                                </label>
-                            </div>
-
-                            <label className="self-center text-xs font-black uppercase tracking-[0.16em] sui-color-default">
-                                Category
-                            </label>
-                            <SearchableFilterSelect
-                                value={category}
-                                options={categoryOptions}
-                                allLabel="All categories"
-                                searchPlaceholder="Search categories..."
-                                ariaLabel="Category"
-                                onChange={(value) => {
-                                    setCategory(value);
-                                    setSubCategory(ALL);
-                                    setVizType(ALL);
-                                    setSelectedTags([]);
-                                    setTagInput('');
-                                }}
-                            />
-
-                            {category !== ALL && subCategoryOptions.length > 0 && (
-                                <>
-                                    <label className="self-center text-xs font-black uppercase tracking-[0.16em] sui-color-default">
-                                        Sub-cat
-                                    </label>
-                                    <SearchableFilterSelect
-                                        value={subCategory}
-                                        options={subCategoryOptions}
-                                        allLabel={`All sub-categories (${subCategoryOptions.length})`}
-                                        searchPlaceholder="Search sub-categories..."
-                                        ariaLabel="Sub-category"
-                                        onChange={(value) => {
-                                            setSubCategory(value);
-                                            setVizType(ALL);
-                                            setSelectedTags([]);
-                                            setTagInput('');
-                                        }}
-                                    />
-                                </>
-                            )}
-
-                            <label className="self-center text-xs font-black uppercase tracking-[0.16em] sui-color-default">
-                                Viz
-                            </label>
-                            <select
-                                value={vizType}
-                                onChange={(event) => {
-                                    setVizType(event.target.value);
-                                    setSelectedTags([]);
-                                    setTagInput('');
-                                }}
-                                className="h-10 rounded-md border   px-3 text-sm font-semibold  outline-none sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-page sui-color-active sui-focus-ring"
-                            >
-                                <option value={ALL}>All viz types</option>
-                                {vizTypeOptions.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                        {option.label} ({option.count})
-                                    </option>
-                                ))}
-                            </select>
-
-                            <label className="self-center text-xs font-black uppercase tracking-[0.16em] sui-color-default">
-                                Tags
-                            </label>
-                            <div>
-                                <input
-                                    value={tagInput}
-                                    onChange={(event) => setTagInput(event.target.value)}
-                                    placeholder={`Filter by tag (${availableTagCount} tags available, AND combined)...`}
-                                    className="h-10 w-full rounded-md border   px-3 text-sm  outline-none transition sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-page sui-color-active sui-focus-ring"
+                <div
+                    aria-label="Searchbase catalogue results"
+                    id="searchbase-catalogue-results"
+                    ref={catalogueResultsRef}
+                    role="region"
+                    tabIndex={-1}
+                >
+                    <ScreenReaderContent role="status">
+                        {catalogueAnnouncement ||
+                            `${availableSearchLabel}. Showing ${cataloguePageLabel}.`}
+                    </ScreenReaderContent>
+                    {browserRecords.length === 0 && (
+                        <Message type="info">
+                            Searchbase catalogue is empty in this runtime.
+                        </Message>
+                    )}
+                    {browserRecords.length > 0 && filteredRecords.length === 0 && (
+                        <Message type="info">
+                            No searches match the current filters.
+                        </Message>
+                    )}
+                    {filteredRecords.length > 0 && (
+                        <>
+                            {cataloguePageCount > 1 && (
+                                <Paginator.Compact
+                                    aria-label="Searchbase catalogue pages above results"
+                                    current={cataloguePage}
+                                    onChange={handleCataloguePageChange}
+                                    renderLabel={() => cataloguePageLabel}
+                                    totalPages={cataloguePageCount}
                                 />
-                                {(selectedTags.length > 0 || tagOptions.length > 0) && (
-                                    <div className="mt-2 flex max-h-20 flex-wrap gap-1 overflow-y-auto">
-                                        {selectedTags.map((tag) => (
-                                            <button
-                                                key={tag}
-                                                type="button"
-                                                onClick={() =>
-                                                    setSelectedTags((current) =>
-                                                        current.filter(
-                                                            (value) => value !== tag
-                                                        )
+                            )}
+                            <CardLayout cardWidth="100%">
+                            {cataloguePageRecords.map((record) => {
+                                const canvasCount =
+                                    countsBySearch.get(record.searchName) ?? 0;
+                                const duplicateBlocked = blockedSearchNames.has(
+                                    record.searchName
+                                );
+                                const checked = selectedNames.has(record.searchName);
+                                const actionLabel = replaceMode ? 'Replace' : 'Add';
+                                const actions = (
+                                    <Layout>
+                                        {!replaceMode && !duplicateBlocked && (
+                                            <Checkbox
+                                                checked={checked}
+                                                onChange={() =>
+                                                    toggleSelected(
+                                                        record.searchName
                                                     )
                                                 }
-                                                className="inline-flex items-center gap-1 rounded-full  px-2 py-1 text-xs font-bold   sui-bg-info sui-color-info sui-hover-bg-info"
                                             >
-                                                {tag}
-                                                <X className="h-3 w-3" />
-                                            </button>
-                                        ))}
-                                        {tagOptions.map(({ tag, count }) => (
-                                            <button
-                                                key={tag}
-                                                type="button"
-                                                onClick={() => selectTag(tag)}
-                                                className="inline-flex items-center gap-1 rounded-full border   px-2 py-1 text-xs font-semibold    sui-border-default sui-bg-page sui-color-default sui-hover-border-info sui-hover-color-info"
-                                            >
-                                                {tag}
-                                                <span className="sui-color-default">{count}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 border-b  px-4 py-3 text-xs  sui-border-weak sui-color-default">
-                <span
-                    className="inline-flex items-center rounded-full border   px-2.5 py-1 font-black uppercase tracking-wider  sui-border-info sui-bg-info sui-color-info"
-                    title={`${browserRecords.length.toLocaleString()} searches are in the current app and visibility scope before category, tag, viz, and text filters`}
-                >
-                    {availableSearchLabel}
-                </span>
-                {!replaceMode && addableFilteredRecords.length !== filteredRecords.length && (
-                    <span>{addableFilteredRecords.length.toLocaleString()} addable</span>
-                )}
-                {!replaceMode && selectedNames.size > 0 && (
-                    <span>{selectedNames.size.toLocaleString()} selected</span>
-                )}
-                {!replaceMode && (
-                    <div className="ml-auto flex flex-wrap justify-end gap-2">
-                        <button
-                            type="button"
-                            disabled={addableFilteredRecords.length === 0}
-                            onClick={() => {
-                                onAddRecords(addableFilteredRecords);
-                                setSelectedNames(new Set());
-                            }}
-                            className="inline-flex items-center gap-1 rounded-md border   px-3 py-1.5 text-xs font-black  transition sui-hover-border-info  disabled:cursor-not-allowed    sui-border-info sui-bg-page sui-color-info sui-hover-bg-info sui-disabled-border-weak sui-disabled-bg-section sui-disabled-color-default"
-                        >
-                            <Plus className="h-3.5 w-3.5" />
-                            Add all filtered
-                        </button>
-                        <button
-                            type="button"
-                            disabled={selectedRecords.length === 0}
-                            onClick={() => {
-                                onAddRecords(selectedRecords);
-                                setSelectedNames(new Set());
-                            }}
-                            className="inline-flex items-center gap-1 rounded-md sui-bg-accent px-3 py-1.5 text-xs font-black sui-color-active transition sui-hover-bg-accent disabled:cursor-not-allowed  sui-disabled-bg-floating"
-                        >
-                            <Plus className="h-3.5 w-3.5" />
-                            Add selected
-                        </button>
-                    </div>
-                )}
-            </div>
-
-            <div className="min-h-0 flex-1 overflow-y-auto p-3">
-                {browserRecords.length === 0 ? (
-                    <div className="rounded-md border border-dashed  p-5 text-sm  sui-border-default sui-color-default">
-                        Searchbase catalogue is empty in this runtime.
-                    </div>
-                ) : filteredRecords.length === 0 ? (
-                    <div className="rounded-md border border-dashed  p-5 text-sm  sui-border-default sui-color-default">
-                        No matches.
-                    </div>
-                ) : (
-                    <div className="space-y-2">
-                        {filteredRecords.map((record) => {
-                            const canvasCount = countsBySearch.get(record.searchName) ?? 0;
-                            const duplicateBlocked = blockedSearchNames.has(
-                                record.searchName
-                            );
-                            const checked = selectedNames.has(record.searchName);
-                            return (
-                                <div
-                                    key={record.id || record.searchName}
-                                    className={cn(
-                                        'rounded-md border  p-3 transition-colors sui-bg-page',
-                                        checked
-                                            ? 'sui-border-info ring-1 sui-focus-ring sui-border-info sui-focus-ring'
-                                            : 'sui-border-weak sui-hover-border-info'
-                                    )}
-                                >
-                                    <div className="flex items-start gap-2">
-                                        {!replaceMode && (
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    toggleSelected(record.searchName)
-                                                }
-                                                disabled={duplicateBlocked}
-                                                aria-label={`Select ${record.searchName}`}
-                                                aria-checked={checked}
-                                                role="checkbox"
-                                                className={cn(
-                                                    'mt-0.5 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md border-2 shadow-sm transition-colors focus:outline-none focus:ring-2 sui-focus-ring',
-                                                    checked
-                                                        ? 'sui-border-info sui-bg-accent sui-color-active'
-                                                        : duplicateBlocked
-                                                        ? 'cursor-not-allowed   sui-color-transparent opacity-60 sui-border-weak sui-bg-section'
-                                                        : 'sui-border-default  sui-color-transparent   sui-border-default sui-bg-page sui-hover-border-info sui-hover-bg-info'
-                                                )}
-                                            >
-                                                <Check className="h-3.5 w-3.5" />
-                                            </button>
+                                                <ScreenReaderContent>
+                                                    Select {record.searchName}
+                                                </ScreenReaderContent>
+                                            </Checkbox>
                                         )}
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex items-center gap-2">
-                                                <h3 className="truncate text-sm font-black  sui-color-active">
-                                                    {record.searchName}
-                                                </h3>
-                                                <span className="rounded  px-1.5 py-0.5 text-xs font-black uppercase  sui-bg-popup sui-color-default">
-                                                    {formatVizLabel(record.defaultViz)}
-                                                </span>
-                                            </div>
-                                            <div className="mt-0.5 truncate text-xs font-semibold uppercase tracking-wide sui-color-default">
-                                                {[
-                                                    record.category,
-                                                    record.subCategory,
-                                                    recordCatalogueApp(record),
-                                                ]
-                                                    .filter(Boolean)
-                                                    .join(' / ')}
-                                            </div>
-                                            <p className="mt-1 line-clamp-2 text-xs leading-snug  sui-color-default">
+                                        {duplicateBlocked ? (
+                                            <Badge
+                                                icon={<Check aria-hidden="true" />}
+                                                label="Added"
+                                            />
+                                        ) : (
+                                            <Button
+                                                aria-label={`${actionLabel}: ${
+                                                    record.searchName
+                                                }`}
+                                                appearance="standalone"
+                                                icon={<Plus aria-hidden="true" />}
+                                                label={actionLabel}
+                                                onClick={() => {
+                                                    onAddRecord(record);
+                                                    setCatalogueAnnouncement(
+                                                        `${
+                                                            replaceMode
+                                                                ? 'Replaced'
+                                                                : 'Added'
+                                                        } ${record.searchName}.`
+                                                    );
+                                                    focusCatalogueResults();
+                                                }}
+                                            />
+                                        )}
+                                    </Layout>
+                                );
+                                const renderActions = () => actions;
+                                return (
+                                    <Card
+                                        key={record.id || record.searchName}
+                                        tag="article"
+                                    >
+                                        <Card.Header
+                                            actions={renderActions}
+                                            subtitle={[
+                                                record.category,
+                                                record.subCategory,
+                                                recordCatalogueApp(record),
+                                            ]
+                                                .filter(Boolean)
+                                                .join(' / ')}
+                                            truncateTitle={false}
+                                            title={
+                                                <Heading level={3} variant="title4">
+                                                    {record.searchName}{' '}
+                                                    <Badge
+                                                        label={formatVizLabel(
+                                                            record.defaultViz
+                                                        )}
+                                                    />
+                                                </Heading>
+                                            }
+                                        />
+                                        <Card.Body>
+                                            <p>
                                                 {recordPlainText(record) || record.id}
                                             </p>
                                             {record.tags.length > 0 && (
-                                                <div className="mt-2 flex flex-wrap gap-1">
-                                                    {record.tags.slice(0, 5).map((tag) => (
-                                                        <button
-                                                            key={tag}
-                                                            type="button"
-                                                            onClick={() => selectTag(tag)}
-                                                            className="rounded-full  px-2 py-0.5 text-xs font-bold    sui-bg-popup sui-color-default sui-hover-bg-info sui-hover-color-info"
-                                                        >
-                                                            {tag}
-                                                        </button>
-                                                    ))}
-                                                </div>
+                                                <Layout>
+                                                    {record.tags
+                                                        .slice(0, 5)
+                                                        .map((tag) => (
+                                                            <Button
+                                                                aria-label={`Filter by tag ${tag}`}
+                                                                appearance="subtle"
+                                                                key={tag}
+                                                                label={tag}
+                                                                onClick={() =>
+                                                                    selectTag(tag)
+                                                                }
+                                                            />
+                                                        ))}
+                                                </Layout>
                                             )}
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => onAddRecord(record)}
-                                            disabled={duplicateBlocked}
-                                            title={
-                                                duplicateBlocked
-                                                    ? 'Already on the canvas'
-                                                    : replaceMode
-                                                    ? 'Replace tile'
-                                                    : 'Add tile'
-                                            }
-                                            className="inline-flex flex-shrink-0 items-center gap-1 rounded-md  px-2.5 py-1.5 text-xs font-black  transition  disabled:cursor-not-allowed   sui-bg-section sui-color-active sui-hover-bg-info sui-disabled-bg-popup sui-disabled-color-muted"
-                                        >
-                                            <Plus className="h-3.5 w-3.5" />
-                                            {duplicateBlocked
-                                                ? 'Added'
-                                                : replaceMode
-                                                ? 'Replace'
-                                                : 'Add'}
-                                        </button>
-                                    </div>
-                                    {canvasCount > 0 && (
-                                        <div className="mt-2 text-xs font-semibold  sui-color-info">
-                                            In canvas: {canvasCount}
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
-        </aside>
+                                            {canvasCount > 0 && (
+                                                <p>In canvas: {canvasCount}</p>
+                                            )}
+                                        </Card.Body>
+                                    </Card>
+                                );
+                            })}
+                            </CardLayout>
+                            {cataloguePageCount > 1 && (
+                                <Paginator.Compact
+                                    aria-label="Searchbase catalogue pages below results"
+                                    current={cataloguePage}
+                                    onChange={handleCataloguePageChange}
+                                    renderLabel={() => cataloguePageLabel}
+                                    totalPages={cataloguePageCount}
+                                />
+                            )}
+                        </>
+                    )}
+                </div>
+            </Drawer.Body>
+
+            {!replaceMode && (
+                <Drawer.Footer>
+                    <Button
+                        aria-label={`Add all filtered: ${addableFilteredRecords.length} searches`}
+                        appearance="secondary"
+                        disabled={addableFilteredRecords.length === 0}
+                        label="Add all filtered"
+                        onClick={() => {
+                            onAddRecords(addableFilteredRecords);
+                            setSelectedNames(new Set());
+                        }}
+                    />
+                    <Button
+                        aria-label={`Add selected: ${selectedRecords.length} searches`}
+                        appearance="primary"
+                        disabled={selectedRecords.length === 0}
+                        label="Add selected"
+                        onClick={() => {
+                            onAddRecords(selectedRecords);
+                            setSelectedNames(new Set());
+                        }}
+                    />
+                </Drawer.Footer>
+            )}
+        </Drawer>
     );
 };
 
 const SearchbaseCanvasPage: React.FC = () => {
+    const { colorScheme, canChooseColorScheme, setColorScheme } =
+        useAppThemeControls();
     const initial = useMemo(readPersistedState, []);
     const [canvasName, setCanvasName] = useState(initial.canvasName);
     const [pageSize, setPageSize] = useState<PageSize>(initial.pageSize);
@@ -4162,6 +3769,7 @@ const SearchbaseCanvasPage: React.FC = () => {
     autoAdvanceRunRef.current = autoAdvanceRun;
     const autoAdvanceExpectedTokensRef = useRef<Map<string, number>>(new Map());
     const autoAdvanceSessionIdRef = useRef(0);
+    const catalogueTriggerRef = useRef<HTMLButtonElement | null>(null);
     const runnableVisibleTilesRef = useRef<CanvasTile[]>([]);
     const runVisibleTilesRef = useRef<() => void>(() => undefined);
     const [observedNoDataByTile, setObservedNoDataByTile] = useState<
@@ -5390,7 +4998,12 @@ const SearchbaseCanvasPage: React.FC = () => {
     return (
         <div
             className="relative min-h-screen overflow-x-hidden font-sans sui-bg-page sui-color-default"
-            style={C3_ATMOSPHERE_BACKGROUND_STYLE}
+            data-color-scheme={colorScheme}
+            style={
+                colorScheme === 'dark'
+                    ? C3_ATMOSPHERE_BACKGROUND_STYLE
+                    : undefined
+            }
         >
             <div className="flex min-h-screen min-w-0 flex-col overflow-x-hidden">
                 <header className="border-b   shadow-sm sui-border-weak sui-bg-page">
@@ -5433,7 +5046,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     className={cn(
                                         'inline-flex h-6 items-center rounded-md border px-2 text-xs font-bold',
                                         runningTileIds.size > 0
-                                            ? 'sui-border-info sui-bg-info sui-color-info'
+                                            ? 'sui-border-notification-info sui-bg-notification-info sui-color-active'
                                             : 'sui-border-weak sui-bg-section sui-color-default'
                                     )}
                                     title="Tiles with an active result view"
@@ -5446,7 +5059,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     className={cn(
                                         'inline-flex h-6 items-center rounded-md border px-2 text-xs font-bold transition focus:outline-none focus:ring-2 sui-focus-ring',
                                         observedNoDataRows.length > 0
-                                            ? 'sui-border-warning   sui-hover-border-warning  sui-border-warning sui-bg-warning sui-color-warning sui-hover-bg-warning'
+                                            ? 'sui-border-notification-warning sui-hover-border-warning sui-bg-notification-warning sui-color-active sui-hover-bg-notification-warning'
                                             : 'sui-border-weak   sui-hover-border-default  sui-border-weak sui-bg-section sui-color-default sui-hover-bg-overlay'
                                     )}
                                     title="Open needs attention report"
@@ -5473,33 +5086,36 @@ const SearchbaseCanvasPage: React.FC = () => {
                                   (canvasDirty ? 'Unsaved changes' : '')}
                         </span>
                         <div className="flex flex-wrap items-center justify-end gap-2">
-                            <button
-                                type="button"
-                                onClick={saveCurrentCanvas}
+                            <Button
+                                appearance="secondary"
                                 disabled={savingCanvas || tiles.length === 0}
-                                title="Save canvas"
-                                className="inline-flex h-10 items-center gap-1.5 rounded-md sui-bg-positive px-3 text-sm font-black sui-color-active transition sui-hover-bg-positive disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 sui-focus-ring"
-                            >
-                                <Save className="h-3.5 w-3.5" />
-                                Save
-                            </button>
-                            <button
-                                type="button"
+                                icon={<Save className="h-3.5 w-3.5" />}
+                                label="Save"
+                                onClick={saveCurrentCanvas}
+                            />
+                            <Button
+                                appearance="primary"
+                                disabled={autoAdvanceActive}
+                                elementRef={(element) => {
+                                    catalogueTriggerRef.current =
+                                        element instanceof HTMLButtonElement
+                                            ? element
+                                            : null;
+                                }}
+                                icon={<Plus className="h-4 w-4" />}
+                                label="Add"
                                 onClick={() => {
                                     setReplaceTileId(null);
                                     setBrowserOpen(true);
                                 }}
-                                disabled={autoAdvanceActive}
-                                className="inline-flex h-10 items-center justify-center gap-1.5 rounded-md sui-bg-accent px-4 text-sm font-black sui-color-active transition sui-hover-bg-accent disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 sui-focus-ring"
-                            >
-                                <Plus className="h-4 w-4" />
-                                Add
-                            </button>
-                            <button
-                                type="button"
+                            />
+                            <Button
+                                appearance="secondary"
                                 disabled={
                                     autoAdvanceActive || idleVisibleTileCount === 0
                                 }
+                                icon={<Play className="h-3.5 w-3.5" />}
+                                label="Run"
                                 onClick={() => {
                                     canvasDebug('[canvas/run-visible] click', {
                                         idleVisibleTileCount,
@@ -5508,11 +5124,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     runVisibleTiles();
                                 }}
                                 title={runVisibleTitle}
-                                className="inline-flex h-10 items-center gap-1.5 rounded-md border   px-3 text-sm font-black  transition sui-hover-border-positive  disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 sui-focus-ring sui-border-positive sui-bg-positive sui-color-positive sui-hover-bg-positive"
-                            >
-                                <Play className="h-3.5 w-3.5" />
-                                Run
-                            </button>
+                            />
                             <button
                                 type="button"
                                 role="switch"
@@ -5550,19 +5162,17 @@ const SearchbaseCanvasPage: React.FC = () => {
                                     {autoAdvanceProgressLabel}
                                 </span>
                             </button>
-                            <button
-                                type="button"
+                            <Button
+                                appearance="destructiveSecondary"
                                 disabled={
                                     runningTileIds.size === 0 &&
                                     !autoAdvanceActive
                                 }
+                                icon={<Square className="h-3.5 w-3.5" />}
+                                label="Stop"
                                 onClick={stopAllTiles}
                                 title="Stop all running tiles"
-                                className="inline-flex h-10 items-center gap-1.5 rounded-md border   px-3 text-sm font-black  transition sui-hover-border-negative  disabled:cursor-not-allowed disabled:opacity-45 focus:outline-none focus:ring-2 sui-focus-ring sui-border-negative sui-bg-negative sui-color-negative sui-hover-bg-negative"
-                            >
-                                <Square className="h-3.5 w-3.5" />
-                                Stop
-                            </button>
+                            />
                             <button
                                 type="button"
                                 onClick={enterPresentationMode}
@@ -5573,6 +5183,29 @@ const SearchbaseCanvasPage: React.FC = () => {
                                 <Presentation className="h-3.5 w-3.5" />
                                 Present
                             </button>
+                            {canChooseColorScheme && (
+                                <Button
+                                    appearance="secondary"
+                                    hideLabel
+                                    icon={
+                                        colorScheme === 'dark' ? (
+                                            <Sun className="h-4 w-4" />
+                                        ) : (
+                                            <Moon className="h-4 w-4" />
+                                        )
+                                    }
+                                    label={
+                                        colorScheme === 'dark'
+                                            ? 'Use light dashboard theme'
+                                            : 'Use dark dashboard theme'
+                                    }
+                                    onClick={() =>
+                                        setColorScheme(
+                                            colorScheme === 'dark' ? 'light' : 'dark'
+                                        )
+                                    }
+                                />
+                            )}
                             <button
                                 type="button"
                                 onClick={refreshRunningTiles}
@@ -5710,28 +5343,19 @@ const SearchbaseCanvasPage: React.FC = () => {
 
                 <main className="min-h-0 min-w-0 flex-1 overflow-x-hidden  p-4 sui-bg-transparent">
                     <div className="mb-3 flex min-w-0 flex-wrap items-center gap-3 rounded-md border   p-3 shadow-sm sui-border-weak sui-bg-page">
-                        <div className="relative w-full max-w-[520px]">
-                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2  sui-color-default" />
-                            <input
-                                type="search"
+                        <div className="w-full max-w-[520px]">
+                            <span id="searchbase-tile-search-label" className="sr-only">
+                                Search tiles by name or query
+                            </span>
+                            <ThemeAwareSearch
                                 value={tileSearchQuery}
-                                onChange={(event) => setTileSearchQuery(event.target.value)}
+                                onChange={(_event, { value }) =>
+                                    setTileSearchQuery(value)
+                                }
                                 placeholder="Search tiles by name or query..."
                                 disabled={tiles.length === 0 || autoAdvanceActive}
-                                className="h-11 w-full rounded-md border   pl-10 pr-10 text-sm font-medium  outline-none transition   focus:ring-2 sui-focus-ring disabled:cursor-not-allowed  sui-disabled-color-default sui-border-default sui-bg-page  sui-color-muted sui-focus-border-info sui-focus-ring sui-disabled-bg-section"
-                                aria-label="Search tiles by name or query"
+                                labelledBy="searchbase-tile-search-label"
                             />
-                            {tileSearchQuery.trim().length > 0 && (
-                                <button
-                                    type="button"
-                                    onClick={() => setTileSearchQuery('')}
-                                    title="Clear tile search"
-                                    aria-label="Clear tile search"
-                                    className="absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-sm  transition   focus:outline-none focus:ring-2 sui-focus-ring sui-color-default sui-hover-bg-overlay sui-hover-color-active sui-focus-ring"
-                                >
-                                    <X className="h-4 w-4" />
-                                </button>
-                            )}
                         </div>
                         <div
                             role="group"
@@ -5769,7 +5393,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                                             'inline-flex min-w-0 items-center gap-1.5 rounded px-2.5 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-55 focus:outline-none focus:ring-2 sui-focus-ring sm:px-3',
                                             selected
                                                 ? option.value === 'failed'
-                                                    ? 'sui-bg-negative  shadow-sm sui-bg-negative sui-color-active'
+                                                    ? 'sui-bg-notification-negative shadow-sm sui-color-active'
                                                     : 'sui-bg-section  shadow-sm sui-bg-section sui-color-active'
                                                 : option.value === 'failed'
                                                 ? 'sui-color-negative sui-hover-bg-negative sui-hover-color-negative'
@@ -5871,7 +5495,7 @@ const SearchbaseCanvasPage: React.FC = () => {
                     {tiles.length === 0 ? (
                         <div className="flex min-h-[calc(100vh-280px)] items-center justify-center rounded-md border border-dashed   shadow-sm sui-border-weak sui-bg-transparent">
                             <div className="mx-auto max-w-sm px-6 text-center">
-                                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-md   ring-1 sui-focus-ring sui-bg-info sui-color-info sui-focus-ring">
+                                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-md ring-1 sui-bg-notification-info sui-color-active sui-focus-ring">
                                     <Plus className="h-7 w-7" />
                                 </div>
                                 <h2 className="mt-4 text-2xl font-black  sui-color-active">
@@ -5945,7 +5569,11 @@ const SearchbaseCanvasPage: React.FC = () => {
             {presentationMode && (
                 <div
                     className="absolute inset-0 z-[70] min-h-screen overflow-y-auto  p-4  sui-bg-transparent sui-color-active"
-                    style={C3_ATMOSPHERE_BACKGROUND_STYLE}
+                    style={
+                        colorScheme === 'dark'
+                            ? C3_ATMOSPHERE_BACKGROUND_STYLE
+                            : undefined
+                    }
                 >
                     <div className="mb-4 flex min-w-0 items-center gap-3 rounded-md border   px-4 py-3 shadow-sm sui-border-weak sui-bg-section">
                         <div className="min-w-0 flex-1">
@@ -5988,23 +5616,13 @@ const SearchbaseCanvasPage: React.FC = () => {
                 </div>
             )}
 
-            {!presentationMode && browserOpen && (
-                <button
-                    type="button"
-                    aria-label="Close catalogue"
-                    className="fixed inset-0 z-40  backdrop-blur-[1px] sui-bg-page"
-                    onClick={() => {
-                        setBrowserOpen(false);
-                        setReplaceTileId(null);
-                    }}
-                />
-            )}
             <SearchbaseBrowser
                 open={!presentationMode && browserOpen}
                 records={records}
                 canvasTiles={tiles}
                 replaceTileId={replaceTileId}
                 includeHiddenSearches={includeHiddenSearches}
+                returnFocus={() => catalogueTriggerRef.current?.focus()}
                 onClose={() => {
                     setBrowserOpen(false);
                     setReplaceTileId(null);

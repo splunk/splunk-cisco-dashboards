@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Button from '@splunk/react-ui/Button';
 import {
     ArrowDown,
     ArrowUp,
@@ -1063,10 +1064,11 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                 onClick={() =>
                                     updateConfig({ enabled: !config.enabled })
                                 }
+                                aria-pressed={config.enabled}
                                 className={cn(
                                     'rounded-lg border px-3 py-2 text-left transition-colors focus:outline-none focus-visible:ring-2 sui-focus-visible-ring',
                                     config.enabled
-                                        ? 'sui-border-info sui-bg-info sui-color-info'
+                                        ? 'sui-border-interactive sui-bg-selected sui-color-active'
                                         : 'sui-border-weak sui-bg-section sui-color-default'
                                 )}
                             >
@@ -1141,10 +1143,11 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                             !config.showPriorityDrilldown,
                                     })
                                 }
+                                aria-pressed={config.showPriorityDrilldown}
                                 className={cn(
                                     'rounded-lg border px-3 py-2 text-left transition-colors focus:outline-none focus-visible:ring-2 sui-focus-visible-ring',
                                     config.showPriorityDrilldown
-                                        ? 'sui-border-info sui-bg-info sui-color-info'
+                                        ? 'sui-border-interactive sui-bg-selected sui-color-active'
                                         : 'sui-border-weak sui-bg-section sui-color-default'
                                 )}
                                 title="Show or hide the Priority Drill-Down row below the Signal Rail"
@@ -1814,7 +1817,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                             className={cn(
                                                 'rounded-lg border p-3 transition-colors',
                                                 selected
-                                                    ? 'sui-border-info sui-bg-info'
+                                                    ? 'sui-border-interactive sui-bg-selected'
                                                     : 'sui-border-weak sui-bg-page sui-hover-border-info'
                                             )}
                                         >
@@ -1847,7 +1850,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                                         className={cn(
                                                             'inline-flex h-8 w-8 items-center justify-center rounded-lg border  transition-colors focus:outline-none focus-visible:ring-2 sui-focus-visible-ring sui-color-default',
                                                             descriptionExpanded
-                                                                ? 'sui-border-info sui-bg-info sui-color-info'
+                                                                ? 'sui-border-interactive sui-bg-selected sui-color-active'
                                                                 : 'sui-border-weak sui-bg-page sui-hover-border-info sui-hover-bg-info sui-hover-color-info'
                                                         )}
                                                     >
@@ -1894,7 +1897,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                             {descriptionExpanded && (
                                                 <div
                                                     id={descriptionId}
-                                                    className="mt-3 rounded-lg border   px-3 py-2 text-xs leading-relaxed  sui-border-info sui-bg-info sui-color-default"
+                                                    className="mt-3 rounded-lg border px-3 py-2 text-xs leading-relaxed sui-border-interactive sui-bg-selected sui-color-default"
                                                 >
                                                     {searchDescription}
                                                 </div>
@@ -1924,26 +1927,27 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between gap-3 border-t  px-5 py-3 sui-border-weak">
-                    <button
-                        type="button"
+                    <Button
                         onClick={onReset}
                         disabled={isWorkspaceDefault}
-                        className={cn(
-                            'inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-bold transition-colors focus:outline-none focus-visible:ring-2',
+                        appearance={
                             isWorkspaceDefault
-                                ? 'cursor-default    sui-focus-visible-ring sui-border-positive sui-bg-positive sui-color-positive'
-                                : 'sui-border-negative   sui-hover-bg-negative sui-focus-visible-ring sui-border-negative sui-bg-negative sui-color-negative'
-                        )}
-                    >
-                        {isWorkspaceDefault ? (
-                            <Check className="h-4 w-4" />
-                        ) : (
-                            <RotateCcw className="h-4 w-4" />
-                        )}
-                        {isWorkspaceDefault
-                            ? 'Using workspace default'
-                            : 'Restore workspace default'}
-                    </button>
+                                ? 'secondary'
+                                : 'destructiveSecondary'
+                        }
+                        icon={
+                            isWorkspaceDefault ? (
+                                <Check className="h-4 w-4 sui-color-positive" />
+                            ) : (
+                                <RotateCcw className="h-4 w-4" />
+                            )
+                        }
+                        label={
+                            isWorkspaceDefault
+                                ? 'Using workspace default'
+                                : 'Restore workspace default'
+                        }
+                    />
                     <button
                         type="button"
                         onClick={onClose}

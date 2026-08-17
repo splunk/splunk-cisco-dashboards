@@ -28,8 +28,9 @@
  */
 
 import React, { useMemo, useRef, useState } from 'react';
-import { ChevronRight, ExternalLink, Search, Trash2, Upload, X } from '@/common/icons/SuiIcon';
 import { strFromU8, unzipSync } from 'fflate';
+import { ChevronRight, ExternalLink, Trash2, Upload } from '@/common/icons/SuiIcon';
+import ThemeAwareSearch from '@/common/components/ThemeAwareSearch';
 import { cn } from '@/common/lib/utils';
 import { CISCO_ICONS } from '@/common/components/topology/ciscoIcons';
 import type { DeviceShapeId } from '@/common/services/topologyDiscovery';
@@ -842,7 +843,7 @@ const ShapeTile: React.FC<ShapeTileSpec> = ({ id, label, description }) => {
             className={cn(
                 'group flex flex-col items-center justify-center gap-1 p-2 rounded-lg cursor-grab active:cursor-grabbing select-none',
                 'border  sui-border-weak  sui-bg-section',
-                'sui-hover-border-info hover:shadow-md  sui-hover-bg-info',
+                'sui-hover-border-info hover:shadow-md sui-hover-bg-overlay sui-focus-visible-bg-overlay',
                 'transition-all duration-150'
             )}
         >
@@ -898,7 +899,7 @@ const CustomStencilTile: React.FC<{ asset: CustomStencilAsset }> = ({ asset }) =
             className={cn(
                 'group flex flex-col items-center justify-center gap-1 p-2 rounded-lg cursor-grab active:cursor-grabbing select-none',
                 'border  sui-border-weak  sui-bg-section',
-                'sui-hover-border-info hover:shadow-md  sui-hover-bg-info',
+                'sui-hover-border-info hover:shadow-md sui-hover-bg-overlay sui-focus-visible-bg-overlay',
                 'transition-all duration-150'
             )}
         >
@@ -1098,30 +1099,16 @@ export const ShapesTab: React.FC = () => {
     return (
         <div className="flex flex-col gap-3 p-3">
             <div className="flex gap-2">
-                <div className="relative min-w-0 flex-1">
-                    <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 sui-color-default" />
-                    <input
+                <div className="min-w-0 flex-1">
+                    <span id="diagram-shape-search-label" className="sr-only">
+                        Search shapes
+                    </span>
+                    <ThemeAwareSearch
                         value={query}
-                        onChange={(event) => setQuery(event.target.value)}
-                        type="search"
+                        onChange={(_event, { value }) => setQuery(value)}
                         placeholder="Search shapes..."
-                        aria-label="Search shapes"
-                        className={cn(
-                            'h-8 w-full rounded-md border sui-border-weak sui-bg-section pl-8 pr-8 text-xs sui-color-default outline-none',
-                            'sui-color-default sui-focus-border-info focus:ring-2 sui-focus-ring',
-                            'sui-border-weak sui-bg-page sui-color-active sui-focus-ring'
-                        )}
+                        labelledBy="diagram-shape-search-label"
                     />
-                    {query ? (
-                        <button
-                            type="button"
-                            onClick={() => setQuery('')}
-                            aria-label="Clear shape search"
-                            className="absolute right-1.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded sui-color-default   sui-hover-bg-overlay sui-hover-color-active"
-                        >
-                            <X className="h-3.5 w-3.5" />
-                        </button>
-                    ) : null}
                 </div>
                 <input
                     ref={fileInputRef}
@@ -1157,7 +1144,7 @@ export const ShapesTab: React.FC = () => {
                     {importMessage}
                 </div>
             ) : null}
-            <div className="rounded-md border   px-2 py-1.5 text-xs leading-snug  sui-border-info sui-bg-info sui-color-default">
+            <div className="rounded-md border px-2 py-1.5 text-xs leading-snug sui-border-notification-info sui-bg-notification-info sui-color-default">
                 Need Cisco device artwork? Download stencil ZIPs from{' '}
                 <a
                     href={CISCO_VISIO_STENCIL_LIBRARY_URL}

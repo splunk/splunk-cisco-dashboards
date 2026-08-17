@@ -64,9 +64,13 @@ class ErrorBoundary extends React.Component<
         if (!this.state.hasError) return this.props.children;
         return (
             <div className="flex min-h-screen items-center justify-center sui-bg-page p-8 sui-color-active">
-                <div className="max-w-xl rounded-xl border sui-border-negative sui-bg-negative p-6 shadow-2xl">
+                <div
+                    aria-atomic="true"
+                    className="max-w-xl rounded-xl border sui-border-notification-negative sui-bg-notification-negative p-6 shadow-2xl"
+                    role="alert"
+                >
                     <h1 className="text-xl font-black">Dashboard Error</h1>
-                    <p className="mt-3 text-sm leading-6 sui-color-negative">
+                    <p className="mt-3 text-sm leading-6 sui-color-active">
                         The Health Monitoring Dashboard hit an unexpected render error.
                     </p>
                     {this.state.message && (
@@ -365,7 +369,7 @@ const DashboardContent: React.FC = () => {
                             onOpenLibrary={() => setBrowserTarget('it-health')}
                         />
                         <div className="hidden items-center gap-2 rounded-lg border   px-3 py-2 text-sm font-black  shadow-sm lg:flex sui-border-default sui-bg-section sui-color-active">
-                            <span className="h-2.5 w-2.5 rounded-full sui-bg-positive" />
+                            <span className="h-2.5 w-2.5 rounded-full sui-bg-status-positive" />
                             All Systems Operational
                         </div>
                         <div className="relative group">

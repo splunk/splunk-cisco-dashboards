@@ -139,7 +139,7 @@ function Section({
     >
       <div className="border-b sui-border-weak px-5 py-4">
         <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border sui-border-info sui-bg-info sui-color-info">
+          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border sui-border-notification-info sui-bg-notification-info sui-color-active">
             {icon}
           </div>
           <div className="min-w-0">
@@ -310,15 +310,18 @@ function GuideContents({
                     active ? " scd-guide-toc-item-active" : ""
                   }`}
                 >
-                  <button
-                    type="button"
+                  <a
+                    href={`#${section.id}`}
                     aria-current={active ? "location" : undefined}
-                    onClick={() => goToSection(section.id)}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      goToSection(section.id);
+                    }}
                     className="scd-guide-toc-link"
                   >
                     <span className="scd-guide-toc-chip">{number}</span>
                     <span className="scd-guide-toc-text">{section.label}</span>
-                  </button>
+                  </a>
                 </li>
               );
             })}
@@ -372,13 +375,16 @@ function GuidePageToc({
                 : ""
             }`}
           >
-            <button
-              type="button"
+            <a
+              href={`#${entry.id}`}
               className="scd-guide-page-toc-link"
-              onClick={() => goToHeading(entry.id)}
+              onClick={(event) => {
+                event.preventDefault();
+                goToHeading(entry.id);
+              }}
             >
               {entry.label}
-            </button>
+            </a>
           </li>
         ))}
       </ol>
@@ -404,31 +410,31 @@ const dashboards = [
   },
   {
     title: "IT Health",
-    view: "netops_critical_systems_health",
+    view: "dashboard_manager#/netops_critical_systems_health",
     summary:
       "Catalyst Center, ISE, ThousandEyes, device health, identity, and user experience.",
   },
   {
     title: "Security",
-    view: "secops_resilience",
+    view: "dashboard_manager#/secops_resilience",
     summary:
       "Firewall, IPS, DNS, email, web, identity, endpoint, and security event visibility.",
   },
   {
     title: "Building Intelligence",
-    view: "workplace_building_intelligence",
+    view: "dashboard_manager#/workplace_building_intelligence",
     summary:
       "Cisco Spaces, occupancy, building telemetry, wireless trust, and location intelligence.",
   },
   {
     title: "Cisco Spaces Intelligence",
-    view: "workplace_spaces_intelligence",
+    view: "dashboard_manager#/workplace_spaces_intelligence",
     summary:
       "Environmental, capacity, room, activation, visitor, and network impact analytics.",
   },
   {
     title: "Network Activation Report",
-    view: "netops_catalyst_health",
+    view: "dashboard_manager#/netops_catalyst_health",
     summary:
       "Event operations view for executive, client, device, traffic, and issue summaries.",
   },
@@ -610,7 +616,7 @@ const troubleshootingRows = [
   ],
   [
     "CIM panels are blank",
-    "Run the CIM discovery section and save macros into Splunk_SA_CIM/local/macros.conf.",
+    "Open optional CIM tuning, use a short range, and save the detected macros into Splunk_SA_CIM/local/macros.conf.",
   ],
   [
     "Site names are missing",
@@ -625,6 +631,7 @@ const troubleshootingRows = [
 export default function UserGuidePage(): JSX.Element {
   const setupUrl = `${appUrl("setup")}?setup=1`;
   const setupTuningUrl = `${setupUrl}#tune-indexes`;
+  const setupCimTuningUrl = `${setupUrl}#tune-cim`;
   const workspaceUrl = appUrl("workspace_insights");
   const secureNetworkingUrl = `${appUrl("workspace_insights")}?workspace=secure_networking`;
   const scdMacrosUrl = managerUrl(APP_NAME, "data/macros");
@@ -695,7 +702,13 @@ export default function UserGuidePage(): JSX.Element {
         );
       }
       if (shouldScroll) {
-        match.scrollIntoView({ behavior: "smooth", block: "center" });
+        const reduceMotion = window.matchMedia(
+          "(prefers-reduced-motion: reduce)",
+        ).matches;
+        match.scrollIntoView({
+          behavior: reduceMotion ? "auto" : "smooth",
+          block: "center",
+        });
       }
     },
     [searchQuery],
@@ -753,6 +766,8 @@ export default function UserGuidePage(): JSX.Element {
     setActiveSection(id);
     setActiveHeading(id);
     section.scrollIntoView({ behavior: "auto", block: "start" });
+    section.tabIndex = -1;
+    section.focus({ preventScroll: true });
     window.history.replaceState(null, "", `#${id}`);
   }, []);
 
@@ -769,6 +784,8 @@ export default function UserGuidePage(): JSX.Element {
     }
     setActiveHeading(id);
     target.scrollIntoView({ behavior: "auto", block: "start" });
+    target.tabIndex = -1;
+    target.focus({ preventScroll: true });
     window.history.replaceState(null, "", `#${id}`);
   }, []);
 
@@ -1104,6 +1121,10 @@ export default function UserGuidePage(): JSX.Element {
                   <SlidersHorizontal size={15} />
                   Open Tune indexes
                 </GuideLink>
+                <GuideLink href={setupCimTuningUrl}>
+                  <Database size={15} />
+                  Optional CIM tuning
+                </GuideLink>
                 <GuideLink
                   href={searchUrl(
                     "| tstats count where index=* by index sourcetype | sort -count",
@@ -1410,7 +1431,7 @@ iseval = 0`}</CodeBlock>
                   investigation.
                 </InfoCard>
               </div>
-              <div className="mt-4 border sui-border-warning sui-bg-warning p-4 text-sm leading-6 sui-color-warning">
+              <div className="mt-4 border sui-border-notification-warning sui-bg-notification-warning p-4 text-sm leading-6 sui-color-active">
                 <strong>When no test is available:</strong> create an
                 agent-to-agent test between the two enterprise agents in
                 ThousandEyes, allow metric events to arrive in Splunk, then
@@ -1459,7 +1480,7 @@ iseval = 0`}</CodeBlock>
                 </InfoCard>
                 <InfoCard title="Dashboard Studio and React">
                   Most operational dashboards are Dashboard Studio XML. Utility
-                  experiences such as Setup's Tune indexes step and this guide
+                  experiences such as Setup&apos;s Tune indexes step and this guide
                   use React bundles mounted inside Simple XML shells.
                 </InfoCard>
               </div>
@@ -1646,9 +1667,12 @@ iseval = 0`}</CodeBlock>
                 </InfoCard>
                 <InfoCard title="Searchbase and tile selection">
                   Searchbase Canvas distinguishes failed searches from other
-                  attention states and adds app filtering. Catalogue and tile
-                  pickers display friendly app labels with the on-disk name
-                  available as hover detail.
+                  attention states and adds app filtering. Its catalogue now
+                  uses the same native Splunk UI filter pattern as Insights
+                  Workspace, with consistent app, visibility, category,
+                  visualization, tag, active-count, and clear controls.
+                  Catalogue and tile pickers display friendly app labels with
+                  the on-disk name available as hover detail.
                 </InfoCard>
                 <InfoCard title="Contextual empty results">
                   Searchbase-backed Secure Networking panels now explain when no

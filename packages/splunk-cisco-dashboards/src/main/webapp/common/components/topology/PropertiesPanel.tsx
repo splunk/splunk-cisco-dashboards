@@ -432,12 +432,12 @@ const BindToHostField: React.FC<{
                 </span>
             </label>
             {boundAsset ? (
-                <div className="flex items-start gap-2 p-2 rounded border  sui-border-positive  sui-bg-positive">
+                <div className="flex items-start gap-2 p-2 rounded border sui-border-notification-positive sui-bg-notification-positive">
                     <div className="flex-1 min-w-0">
-                        <div className="sui-color-default font-medium  sui-color-positive truncate">
+                        <div className="font-medium sui-color-active truncate">
                             {boundAsset.label ?? boundAsset.id}
                         </div>
-                        <div className="text-xs  sui-color-positive truncate">
+                        <div className="text-xs sui-color-active truncate">
                             {boundAsset.shortLabel ?? boundAsset.id}
                             {boundAsset.vendor ? ` · ${boundAsset.vendor}` : ''}
                             {boundAsset.model ? ` ${boundAsset.model}` : ''}
@@ -934,13 +934,14 @@ const RegionPropertiesForm: React.FC<{
                         return (
                             <button
                                 type="button"
+                                aria-pressed={isActive}
                                 key={opt.label}
                                 onClick={() => setAccent(opt.id)}
                                 title={opt.label}
                                 className={cn(
                                     'flex flex-col items-center justify-center gap-1 rounded border py-1.5 text-xs transition-colors',
                                     isActive
-                                        ? 'sui-border-info  sui-bg-info  sui-color-info'
+                                        ? 'sui-border-notification-info sui-bg-notification-info sui-color-active'
                                         : 'sui-border-weak sui-border-default  sui-hover-border-default  sui-color-default'
                                 )}
                             >
@@ -1069,7 +1070,7 @@ const TitlePropertiesForm: React.FC<{
                         className={cn(
                             'flex items-center justify-center w-8 h-7 rounded border text-xs font-medium transition-colors',
                             bold
-                                ? 'sui-bg-info  sui-border-info  sui-color-info'
+                                ? 'sui-bg-notification-info sui-border-notification-info sui-color-active'
                                 : 'sui-bg-section  sui-border-default  sui-color-default sui-hover-border-default'
                         )}
                     >
@@ -1083,7 +1084,7 @@ const TitlePropertiesForm: React.FC<{
                         className={cn(
                             'flex items-center justify-center w-8 h-7 rounded border text-xs font-medium transition-colors',
                             italic
-                                ? 'sui-bg-info  sui-border-info  sui-color-info'
+                                ? 'sui-bg-notification-info sui-border-notification-info sui-color-active'
                                 : 'sui-bg-section  sui-border-default  sui-color-default sui-hover-border-default'
                         )}
                     >
@@ -1317,7 +1318,7 @@ const TextBoxPropertiesForm: React.FC<{
                         className={cn(
                             'flex items-center justify-center w-8 h-7 rounded border text-xs font-medium transition-colors',
                             bold
-                                ? 'sui-bg-info  sui-border-info  sui-color-info'
+                                ? 'sui-bg-notification-info sui-border-notification-info sui-color-active'
                                 : 'sui-bg-section  sui-border-default  sui-color-default sui-hover-border-default'
                         )}
                     >
@@ -1331,7 +1332,7 @@ const TextBoxPropertiesForm: React.FC<{
                         className={cn(
                             'flex items-center justify-center w-8 h-7 rounded border text-xs font-medium transition-colors',
                             italic
-                                ? 'sui-bg-info  sui-border-info  sui-color-info'
+                                ? 'sui-bg-notification-info sui-border-notification-info sui-color-active'
                                 : 'sui-bg-section  sui-border-default  sui-color-default sui-hover-border-default'
                         )}
                     >
@@ -1350,7 +1351,7 @@ const TextBoxPropertiesForm: React.FC<{
                             className={cn(
                                 'flex-1 px-2 py-1 rounded border text-xs font-medium transition-colors',
                                 align === opt.id
-                                    ? 'sui-bg-info  sui-border-info  sui-color-info'
+                                    ? 'sui-bg-notification-info sui-border-notification-info sui-color-active'
                                     : 'sui-bg-section  sui-border-default  sui-color-default sui-hover-border-default'
                             )}
                         >
@@ -1746,7 +1747,7 @@ const EdgePropertiesForm: React.FC<{
                     className={cn(
                         'inline-flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-xs transition-colors w-full justify-start',
                         liveStatus
-                            ? 'sui-bg-positive  sui-border-positive  sui-color-positive'
+                            ? 'sui-bg-notification-positive sui-border-notification-positive sui-color-active'
                             : 'sui-bg-page sui-bg-popup  sui-border-default  sui-color-default'
                     )}
                     title={
@@ -1808,6 +1809,7 @@ const EdgePropertiesForm: React.FC<{
                     })}
                     <button
                         type="button"
+                        aria-pressed={lineColor === ''}
                         onClick={() => {
                             setLineColor('');
                             commit({ lineColor: '' });
@@ -1816,7 +1818,7 @@ const EdgePropertiesForm: React.FC<{
                         className={cn(
                             'h-6 px-2 rounded-full text-xs font-medium border transition-colors',
                             lineColor === ''
-                                ? 'sui-bg-info  sui-border-info  sui-color-info'
+                                ? 'sui-bg-notification-info sui-border-notification-info sui-color-active'
                                 : 'sui-bg-section  sui-border-default  sui-color-default sui-hover-border-default'
                         )}
                     >
@@ -1865,6 +1867,7 @@ const EdgePropertiesForm: React.FC<{
                     })}
                     <button
                         type="button"
+                        aria-pressed={animationColor === ''}
                         onClick={() => {
                             setAnimationColor('');
                             commit({ animationColor: '' });
@@ -1873,7 +1876,7 @@ const EdgePropertiesForm: React.FC<{
                         className={cn(
                             'h-6 px-2 rounded-full text-xs font-medium border transition-colors',
                             animationColor === ''
-                                ? 'sui-bg-info  sui-border-info  sui-color-info'
+                                ? 'sui-bg-notification-info sui-border-notification-info sui-color-active'
                                 : 'sui-bg-section  sui-border-default  sui-color-default sui-hover-border-default'
                         )}
                     >

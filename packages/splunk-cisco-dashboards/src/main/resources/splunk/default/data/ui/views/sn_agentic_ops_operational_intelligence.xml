@@ -118,7 +118,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Summary of Cisco ThousandEyes test health — total tests monitored, healthy tests, and degraded tests — derived from network loss and HTTP availability metrics to provide the Agentic Ops visibility KPI\\."
+                "markdown": "Summary of Cisco ThousandEyes test health - total tests monitored, healthy tests, and degraded tests - derived from network loss and HTTP availability metrics to provide the Agentic Ops visibility KPI\\."
             }
         },
         "viz_card_01_singlevalue": {
@@ -1443,7 +1443,7 @@
         }
     },
     "applicationProperties": {
-        "collapseNavigation": false,
+        "collapseNavigation": true,
         "hideEdit": true,
         "hideExport": false
     }

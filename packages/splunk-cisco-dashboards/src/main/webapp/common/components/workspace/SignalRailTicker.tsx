@@ -6,9 +6,7 @@ import React, {
   useState,
 } from "react";
 import Badge from "@splunk/react-ui/Badge";
-import Heading from "@splunk/react-ui/Heading";
 import Layout from "@splunk/react-ui/Layout";
-import ScreenReaderContent from "@splunk/react-ui/ScreenReaderContent";
 import { variables } from "@splunk/themes";
 import styled from "styled-components";
 import {
@@ -283,10 +281,6 @@ const StatusPill = styled(Badge)<{ $status: SignalRailStatus }>`
   white-space: nowrap;
 `;
 
-const StatusOverviewHeader = styled(Layout)`
-  margin-bottom: ${variables.spacingXSmall};
-`;
-
 const MetricContent = styled.span`
   display: flex;
   flex-wrap: wrap;
@@ -309,6 +303,57 @@ const MetricValue = styled.span<{ $status: SignalRailStatus }>`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+`;
+
+const SignalGlassCard = styled(OneCdGlassCard)`
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+
+  &::after {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 2px;
+    border-radius: ${variables.borderRadius} ${variables.borderRadius} 0 0;
+    content: "";
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &[data-status="warning"]::after {
+    background-color: ${variables.severityColorNotice};
+    opacity: 0.78;
+  }
+
+  &[data-status="critical"]::after {
+    background-color: ${variables.severityColorAlert};
+    opacity: 0.92;
+  }
+
+  &[data-status="healthy"] ${MetricValue} {
+    color: ${variables.contentColorDefault};
+    font-size: 2.35rem;
+  }
+
+  &[data-status="healthy"] ${StatusPill} {
+    opacity: 0.72;
+  }
+
+  &[data-status="healthy"]:hover ${MetricValue},
+  &[data-status="healthy"]:focus-within ${MetricValue} {
+    color: ${variables.severityColorNormal};
+  }
+
+  &[data-status="healthy"]:hover ${StatusPill},
+  &[data-status="healthy"]:focus-within ${StatusPill} {
+    opacity: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 `;
 
 const isSignalRailVariant = (
@@ -481,7 +526,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
 
   if (variant === "one-cisco-glass") {
     return (
-      <OneCdGlassCard
+      <SignalGlassCard
         tag="article"
         className={cn(
           "scd-signal-rail-item flex flex-col gap-0 overflow-hidden",
@@ -519,7 +564,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
           <MetricValue $status={kpi.status}>{valueText(kpi)}</MetricValue>
           <StatusPill $status={kpi.status} label={STATUS_LABEL[kpi.status]} />
         </MetricContent>
-      </OneCdGlassCard>
+      </SignalGlassCard>
     );
   }
 
@@ -1007,25 +1052,14 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
       }}
     >
       <style>{signalRailTickerCss}</style>
-      <StatusOverviewHeader>
-        <Heading
-          level={2}
-          variant="title3"
-          data-sui-heading-variant="title3"
-        >
-          Status overview
-        </Heading>
-        <span role="status" aria-live="polite" aria-atomic="true">
-          {counts.critical > 0 ? (
-            <StatusPill
-              $status="critical"
-              label={`${counts.critical} Critical`}
-            />
-          ) : (
-            <ScreenReaderContent>0 Critical</ScreenReaderContent>
-          )}
-        </span>
-      </StatusOverviewHeader>
+      <span
+        className="sr-only"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        Signal health summary: {counts.critical} critical
+      </span>
       <div
         className={cn(
           "relative z-[70] flex w-full min-w-0 max-w-full items-center overflow-visible",

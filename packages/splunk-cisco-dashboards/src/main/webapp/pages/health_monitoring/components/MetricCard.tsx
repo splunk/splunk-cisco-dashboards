@@ -1,5 +1,6 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import Button from '@splunk/react-ui/Button';
 import { motion } from 'motion/react';
 import {
     Activity,
@@ -35,6 +36,7 @@ import {
     YAxis,
 } from 'recharts';
 import { cn } from '@/common/lib/utils';
+import { C3_VISUALIZATION_COLORS } from '@/common/theme/c3VisualizationPalette';
 import type {
     KPIChartType,
     KPIIconName,
@@ -139,21 +141,21 @@ const statusTone: Record<
 > = {
     healthy: {
         text: 'sui-color-positive',
-        progress: 'bg-emerald-500',
-        soft: 'bg-emerald-500/15',
-        border: 'sui-border-positive',
+        progress: 'sui-bg-status-positive',
+        soft: 'sui-bg-notification-positive',
+        border: 'sui-border-notification-positive',
     },
     warning: {
         text: 'sui-color-warning',
-        progress: 'bg-amber-500',
-        soft: 'bg-amber-500/15',
-        border: 'sui-border-warning',
+        progress: 'sui-bg-status-warning',
+        soft: 'sui-bg-notification-warning',
+        border: 'sui-border-notification-warning',
     },
     critical: {
         text: 'sui-color-negative',
-        progress: 'bg-red-500',
-        soft: 'bg-red-500/15',
-        border: 'sui-border-negative',
+        progress: 'sui-bg-status-negative',
+        soft: 'sui-bg-notification-negative',
+        border: 'sui-border-notification-negative',
     },
 };
 
@@ -185,8 +187,8 @@ const formatThreshold = (
 };
 
 const chartColor = (kpi: KPIInstance, status: KPIStatus): string => {
-    if (status === 'critical') return '#ef4444';
-    if (status === 'warning') return '#f59e0b';
+    if (status === 'critical') return C3_VISUALIZATION_COLORS.critical;
+    if (status === 'warning') return C3_VISUALIZATION_COLORS.caution;
     return kpi.color;
 };
 
@@ -372,9 +374,9 @@ const HelpTooltip: React.FC<HelpTooltipProps> = ({ kpi }) => {
                                   <span
                                       className={cn(
                                           'rounded-full px-2 py-0.5 text-xs font-bold',
-                                          label === 'Healthy' && 'sui-bg-positive sui-color-positive',
-                                          label === 'Warning' && 'sui-bg-warning sui-color-warning',
-                                          label === 'Critical' && 'sui-bg-negative sui-color-negative'
+                                          label === 'Healthy' && 'sui-bg-notification-positive sui-color-active',
+                                          label === 'Warning' && 'sui-bg-notification-warning sui-color-active',
+                                          label === 'Critical' && 'sui-bg-notification-negative sui-color-active'
                                       )}
                                   >
                                       {formatThreshold(label, kpi.thresholds, kpi.unit)}
@@ -448,15 +450,18 @@ export const MetricCard: React.FC<MetricCardProps> = ({
             >
                 <Settings2 className="h-3.5 w-3.5" />
             </button>
-            <button
-                type="button"
-                aria-label={`Remove ${kpi.title}`}
-                title={`Remove ${kpi.title}`}
-                {...getInteractiveControlProps(() => onRemove(kpi))}
-                className="absolute -right-2 -top-2 z-20 inline-flex h-7 w-7 items-center justify-center rounded-full sui-bg-negative sui-color-active opacity-0 shadow-lg ring-2 sui-focus-ring transition sui-hover-bg-negative group-hover:opacity-100 focus:opacity-100 focus:outline-none focus-visible:ring-2 sui-focus-visible-ring sui-focus-ring"
-            >
-                <X className="h-4 w-4 sui-stroke-default" />
-            </button>
+            <Button
+                appearance="destructive"
+                {...stopDragProps}
+                className="absolute -right-2 -top-2 z-20 opacity-0 shadow-lg transition group-hover:opacity-100 focus:opacity-100"
+                hideLabel
+                icon={<X className="h-4 w-4" />}
+                label={`Remove ${kpi.title}`}
+                onClick={(event) => {
+                    event.stopPropagation();
+                    onRemove(kpi);
+                }}
+            />
 
             <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-2">
@@ -515,7 +520,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
                     <span>Progress</span>
                     <span>{kpi.progress}%</span>
                 </div>
-                <div className="h-2 overflow-hidden rounded-full  sui-bg-floating">
+                <div className="h-2 overflow-hidden rounded-full sui-bg-progress-track">
                     <div
                         className={cn('h-full rounded-full', tone.progress)}
                         style={{ width: `${Math.max(0, Math.min(kpi.progress, 100))}%` }}

@@ -5,4 +5,8 @@ import SearchbaseCanvasPage from './index';
 
 import '@/common/styles/tailwind.css';
 
-mountPageRaw(SearchbaseCanvasPage);
+mountPageRaw(SearchbaseCanvasPage, {
+    allowColorSchemeChoice: true,
+    colorSchemeStorageKey:
+        'splunk-cisco-dashboards:searchbase-canvas-color-scheme',
+});

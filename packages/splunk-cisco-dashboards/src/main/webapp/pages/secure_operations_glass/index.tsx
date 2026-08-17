@@ -22,7 +22,6 @@ import {
     Filter,
     Globe2,
     Info,
-    Menu,
     Minus,
     Network,
     PanelRightClose,
@@ -2414,12 +2413,6 @@ const SecureOperationsGlassPage = (): JSX.Element => {
             <header className="scd-glass-header">
                 <div className="scd-glass-title-block">
                     <div className="scd-glass-title-row">
-                        <Button
-                            appearance="subtle"
-                            className="scd-glass-menu-button"
-                            aria-label="Dashboard menu"
-                            icon={<Menu size={18} aria-hidden />}
-                        />
                         <div>
                             <h1>Cisco Secure Networking — Operations Glass</h1>
                             <p>

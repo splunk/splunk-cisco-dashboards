@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
+import Button from '@splunk/react-ui/Button';
 import {
     Activity,
     BarChart3,
@@ -239,7 +240,7 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                                         className={cn(
                                             'flex h-12 flex-col items-center justify-center gap-0.5 rounded-lg border text-xs font-black uppercase transition focus:outline-none focus-visible:ring-2 sui-focus-visible-ring',
                                             active
-                                                ? 'sui-border-info   sui-bg-info sui-color-info'
+                                                ? 'sui-border-notification-info sui-bg-notification-info sui-color-active'
                                                 : 'sui-border-weak  sui-hover-border-info sui-border-default sui-color-default'
                                         )}
                                     >
@@ -388,13 +389,11 @@ export const KPIConfigModal: React.FC<KPIConfigModalProps> = ({
                         <RotateCcw className="h-4 w-4" />
                         Reset Tile
                     </button>
-                    <button
-                        type="button"
+                    <Button
+                        appearance="destructive"
+                        label="Factory reset"
                         onClick={() => onFactoryReset(kpi)}
-                        className="h-9 rounded-lg sui-bg-negative px-3 text-xs font-black uppercase sui-color-active transition sui-hover-bg-negative"
-                    >
-                        Factory Reset
-                    </button>
+                    />
                     <button
                         type="button"
                         onClick={onClose}

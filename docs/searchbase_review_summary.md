@@ -16,7 +16,9 @@ Generated on 2026-07-23 from `packages/splunk-cisco-dashboards/src/main/resource
 | Proposed tag additions, not applied | 275 |
 | Remaining static review notes | 1367 |
 
-The complete per-search original/optimized SPL, metadata, rationale, classification review, tag proposals, and residual findings are in `docs/searchbase_review_report.json`.
+The complete per-search original/optimized SPL, metadata, rationale,
+classification review, tag proposals, and residual findings are in
+`artifacts/searchbase/reports/searchbase_review_report.json`.
 
 ## Applied SPL Changes
 

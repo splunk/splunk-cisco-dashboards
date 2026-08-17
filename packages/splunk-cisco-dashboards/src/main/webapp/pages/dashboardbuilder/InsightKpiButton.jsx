@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import { IconButton } from '@splunk/dashboard-toolbar';
-import Tooltip from '@splunk/react-ui/Tooltip';
+import Layout from '@splunk/react-ui/Layout';
+import Typography from '@splunk/react-ui/Typography';
 import { cloneDeep } from 'lodash-es';
 import {
     getSearchbaseCatalogue,
@@ -167,6 +168,7 @@ const InsightKpiButton = (props) => {
     // get all searches
     const [searches, setSearches] = useState([]);
     const [selectedKpis, setSelectedKpis] = useState([]);
+    const helpTextId = useId();
 
     useEffect(() => {
         if (searches.length == 0) {
@@ -230,17 +232,7 @@ const InsightKpiButton = (props) => {
     };
 
     return (
-        <Tooltip
-            content={
-                <div className="dashboardbuilder-searchbase-toolbar-tooltip">
-                    <strong>Add Searchbase searches</strong>
-                    <span>
-                        Browse the Cisco Searchbase catalogue and add reusable, centrally managed
-                        searches to this dashboard.
-                    </span>
-                </div>
-            }
-        >
+        <Layout>
             <DropdownWithSearch
                 onSelect={(selection) => {
                     if (selection) {
@@ -250,6 +242,7 @@ const InsightKpiButton = (props) => {
                 appearance="primary"
                 ariaLabel="Add Searchbase searches"
                 className="dashboardbuilder-searchbase-toolbar-control"
+                describedBy={helpTextId}
                 label="Add Searchbase"
                 icon={
                     <img
@@ -263,11 +256,18 @@ const InsightKpiButton = (props) => {
                     />
                 }
                 style={{ marginLeft: 10 }}
-                searches={searches.filter(
-                    (s) => s.searchName != undefined && s.id != undefined,
-                )}
+                searches={searches.filter((s) => s.searchName != undefined && s.id != undefined)}
             />
-        </Tooltip>
+            <Typography
+                as="span"
+                color="inherit"
+                id={helpTextId}
+                lineHeight="normal"
+                variant="smallBody"
+            >
+                Browse reusable, centrally managed searches from the Cisco Searchbase catalogue.
+            </Typography>
+        </Layout>
     );
 };
 

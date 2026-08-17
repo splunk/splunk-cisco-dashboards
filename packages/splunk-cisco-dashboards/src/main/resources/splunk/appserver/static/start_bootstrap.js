@@ -242,7 +242,8 @@ function scdSetupTuningUrl(pathname) {
 }
 
 function scdSetupIsTuningHash(hash) {
-  return String(hash || "").replace(/^#/, "") === "tune-indexes";
+  const setupRoute = String(hash || "").replace(/^#/, "");
+  return setupRoute === "tune-indexes" || setupRoute === "tune-cim";
 }
 
 function scdSetupManageAppsUrl(pathname, appId) {
@@ -990,33 +991,6 @@ function scdSetupRenderPrerequisites(parent, prerequisites, appsError) {
       return;
     }
     if (prerequisite.id === "ai-toolkit") {
-      const groupRow = scdSetupElement(
-        "tr",
-        "scd-setup__package-group-row",
-      );
-      const groupHeading = scdSetupElement(
-        "th",
-        "scd-setup__package-group-heading",
-      );
-      groupHeading.colSpan = 5;
-      groupHeading.scope = "rowgroup";
-      const groupCopy = scdSetupElement(
-        "div",
-        "scd-setup__package-group-copy",
-      );
-      groupCopy.appendChild(
-        scdSetupElement("strong", "", "AI analytics runtime"),
-      );
-      groupCopy.appendChild(
-        scdSetupElement(
-          "span",
-          "",
-          "Toolkit and matching Python runtime",
-        ),
-      );
-      groupHeading.appendChild(groupCopy);
-      groupRow.appendChild(groupHeading);
-      body.appendChild(groupRow);
       prerequisites
         .filter((item) => aiRuntimeIds.has(item.id))
         .forEach((item) => body.appendChild(renderPrerequisite(item)));

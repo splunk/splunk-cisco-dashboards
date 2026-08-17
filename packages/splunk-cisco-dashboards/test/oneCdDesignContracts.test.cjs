@@ -119,7 +119,37 @@ assert.doesNotMatch(
 assert.match(
   dashboardSection,
   /<Dropdown[\s\S]*?<Menu[\s\S]*?addTileAction\.label[\s\S]*?Edit section titles[\s\S]*?Focus this section[\s\S]*?Decrease height[\s\S]*?Show fewer tiles/,
-  "Non-navigation section actions must live in the SUI kebab menu",
+  "Secondary section actions must remain available in the SUI kebab menu",
+);
+assert.match(
+  dashboardSection,
+  /const TileCountControl = styled[\s\S]*?Visible tiles[\s\S]*?Show fewer[\s\S]*?Show more/,
+  "Workspace sections must expose the restored inline visible-tile stepper",
+);
+assert.match(
+  dashboardSection,
+  /const TileCountStepper = styled[\s\S]*?backgroundColorPopup[\s\S]*?const TileCountValue = styled[\s\S]*?actionColorBorderSecondary[\s\S]*?backgroundColorPopup/,
+  "Visible-tile controls must use the unified elevated control surface instead of the page canvas",
+);
+assert.match(
+  dashboardSection,
+  /const ShowAllButton = styled\(Button\)[\s\S]*?backgroundColorPopup[\s\S]*?actionColorContentStandalone/,
+  "Show-all actions must use the bordered elevated surface with standalone action color",
+);
+assert.match(
+  dashboardSection,
+  /Show all \$\{tilePager\.total\}[\s\S]*?Paginator\.Compact[\s\S]*?configured/,
+  "Workspace sections must expose configured-tile paging and temporary show-all controls",
+);
+assert.match(
+  dashboardSection,
+  /effectiveTileCount[\s\S]*?tilePager\?\.showingAll[\s\S]*?Math\.min\(tilePager\.total, tileCount\.max\)[\s\S]*?TileCountValue[\s\S]*?effectiveTileCount/,
+  "Show-all mode must report the effective number of visible tiles without overwriting the compact preference",
+);
+assert.match(
+  profile,
+  /sectionTilePages[\s\S]*?showAllTileSections[\s\S]*?tilePageStart[\s\S]*?catalogueIds\.slice/,
+  "Tile paging and show-all state must remain transient and separate from persisted tile counts",
 );
 assert.doesNotMatch(
   dashboardSection,
@@ -153,7 +183,7 @@ assert.match(
 );
 assert.match(
   signalRail,
-  /const StatusPill = styled\(Badge\)[\s\S]*?<OneCdGlassCard[\s\S]*?tag="article"[\s\S]*?<StatusPill/,
+  /const StatusPill = styled\(Badge\)[\s\S]*?const SignalGlassCard = styled\(OneCdGlassCard\)[\s\S]*?<SignalGlassCard[\s\S]*?tag="article"[\s\S]*?<StatusPill/,
   "The live KPI row must use SUI glass cards and styled SUI badges",
 );
 assert.doesNotMatch(
@@ -180,13 +210,18 @@ assert.doesNotMatch(signalRail, /OneCdSurface|SpotLight|spotlight=/);
 assert.doesNotMatch(topologyMap, /OneCdSurface|SpotLight|spotlight=/);
 assert.match(
   signalRail,
-  /healthy: variables\.severityColorNormal,[\s\S]*?warning: variables\.severityColorWarning,[\s\S]*?critical: variables\.severityColorCritical,[\s\S]*?unknown: variables\.severityColorUnknown/,
+  /healthy: variables\.severityColorNormal,[\s\S]*?warning: variables\.severityColorNotice,[\s\S]*?critical: variables\.severityColorAlert,[\s\S]*?unknown: variables\.severityColorUnknown/,
   "Status pills must use Splunk semantic severity tokens",
 );
 assert.match(
   signalRail,
-  /const MetricValue = styled\.span[\s\S]*?color: \$\{\(\{ \$status \}\) => STATUS_PILL_TOKENS\[\$status\]\};[\s\S]*?font-size: 48px;/,
-  "Glass status card values must use the matching severity token at 48px",
+  /const MetricValue = styled\.span[\s\S]*?color: \$\{\(\{ \$status \}\) => STATUS_PILL_TOKENS\[\$status\]\};[\s\S]*?font-size: 2\.65rem;/,
+  "Exception status values must retain the large matching semantic color",
+);
+assert.match(
+  signalRail,
+  /\[data-status="warning"\]::after[\s\S]*?severityColorNotice[\s\S]*?\[data-status="critical"\]::after[\s\S]*?severityColorAlert[\s\S]*?\[data-status="healthy"\] \$\{MetricValue\}[\s\S]*?contentColorDefault[\s\S]*?font-size: 2\.35rem/,
+  "Signal Rail must emphasize exceptions while keeping healthy cards readable and quieter",
 );
 assert.match(
   signalRail,
@@ -245,7 +280,7 @@ assert.equal(
 );
 assert.match(
   topologyMap,
-  /from '@splunk\/react-ui\/Slider'/,
+  /from ["']@splunk\/react-ui\/Slider["']/,
   "Connector motion speed must use the native SUI Slider",
 );
 assert.match(
@@ -295,20 +330,20 @@ assert.match(
 for (const [title, key, componentName, navigationIcon] of approvedPillarIcons) {
   assert.match(
     secureNetworkingSectionConfig[0],
-    new RegExp(`title: '${title}'[\\s\\S]*?icon: '${key}'`),
+    new RegExp(`title: ["']${title}["'][\\s\\S]*?icon: ["']${key}["']`),
     `${title} must use ${componentName}`,
   );
   assert.match(
     suiIcons,
     new RegExp(
-      `import ${componentName}Icon from '@splunk/react-icons/${componentName}'`,
+      `import ${componentName}Icon from ["']@splunk/react-icons/${componentName}["']`,
     ),
     `${componentName} must come directly from @splunk/react-icons`,
   );
   assert.match(
     suiIcons,
     new RegExp(
-      `export const ${componentName} = adaptSuiIcon\\(${componentName}Icon, '${componentName}'\\)`,
+      `export const ${componentName} = adaptSuiIcon\\(${componentName}Icon, ["']${componentName}["']\\)`,
     ),
     `${componentName} must be exposed through the shared SUI icon adapter`,
   );

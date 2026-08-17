@@ -1,11 +1,11 @@
 
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>Cisco Spaces — Intelligence</label>
-    <description>[2026-04-25 18:10] Advanced Cisco Spaces analytics — environmental trends, ML predictions, room utilization, activation readiness, and visitor intelligence.</description>
+    <label>Cisco Spaces - Intelligence</label>
+    <description>[2026-04-25 18:10] Advanced Cisco Spaces analytics - environmental trends, ML predictions, room utilization, activation readiness, and visitor intelligence.</description>
     <definition><![CDATA[
 {
-	"title": "Cisco Spaces — Intelligence",
-	"description": "[2026-04-25 18:10] Advanced Cisco Spaces analytics — environmental trends, ML predictions, room utilization, activation readiness, and visitor intelligence.",
+	"title": "Cisco Spaces - Intelligence",
+	"description": "[2026-04-25 18:10] Advanced Cisco Spaces analytics - environmental trends, ML predictions, room utilization, activation readiness, and visitor intelligence.",
 	"inputs": {
 		"input_global_trp": {
 			"options": {
@@ -25,7 +25,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "## About this dashboard\n\n**Cisco Spaces — Intelligence** answers six questions the customer cares about during and around an emergency-management exercise (Op Florida Ready):\n\n1. **Are the buildings comfortable?** (Environmental Intelligence)\n2. **Are we close to capacity?** (Capacity & Prediction)\n3. **Which rooms get used and which are wasted?** (Room Utilization)\n4. **Did the network handle the surge?** (Activation Readiness)\n5. **Who actually showed up — staff vs guests, repeats vs first-timers?** (Visitor Intelligence)\n6. **Did the wireless network's user experience hold up?** (Network Impact)\n\nThe dashboard cross-correlates **Cisco Spaces firehose** (people-count and presence telemetry from APs), **Cisco Catalyst Center / DNAC** (network-side health) and **Webex device telemetry** (in-room temperature & humidity sensors) to tell one coherent story.\n\n---\n\n## Data sources\n\n- **Cisco Spaces firehose — DEVICE_COUNT** (`cisco:spaces:firehose` `eventType=\"DEVICE_COUNT\"`) — `deviceCounts.userCount`, `associatedCount`, `deviceCount`, `estimatedCapacityPercentage`, location hierarchy. Filtered to floor scope (`inferredLocationTypes=FLOOR`) for per-floor panels, BUILDING scope for the campus map.\n- **Cisco Spaces firehose — DEVICE_ASSOCIATION** (`cisco:spaces:firehose` `eventType=\"DEVICE_ASSOCIATION\" event=\"ASSOCIATE\"`) — `device.macAddress`, `ssid`. Powers unique-visitor / repeat-visitor / SSID composition.\n- **Cisco Spaces firehose — DEVICE_PRESENCE** (`cisco:spaces:firehose` `eventType=\"DEVICE_PRESENCE\"`) — `macAddress`, `location.inferredLocationTypes`. Used for inter-campus traveler analysis (Sankey).\n- **Cisco Spaces firehose — SPACE_OCCUPANCY** (`cisco:spaces:firehose` `eventType=\"SPACE_OCCUPANCY\"`) — `space.name`, `space.capacity`, `peakPeopleCount`, `peoplePresence`. Used by the Room Utilization tab.\n- **Cisco Spaces firehose — WEBEX_TELEMETRY** (`cisco:spaces:firehose` `eventType=\"WEBEX_TELEMETRY\"`) — `ambientTemp`, `relativeHumidity`, `deviceInfo.serialNumber`.\n- **Cisco Catalyst Center — networkhealth** (`cisco:dnac:networkhealth`) — overall network health score (0-100) per category.\n- **Cisco Catalyst Center — clienthealth** (`cisco:dnac:clienthealth`) — overall client health score (0-100) by client type.\n- **Cisco Catalyst Center — client** (`cisco:dnac:client`) — per-client health, RSSI, SSID, band, onboarding time, site hierarchy.\n- **Cisco Catalyst Center — devicehealth** (`cisco:dnac:devicehealth`) — per-AP health, CPU/memory utilization, issue count, reachability, manageability.\n- **Cisco Catalyst Center — issue** (`cisco:dnac:issue`) — active DNAC issues with priority + site.\n- **Cisco Catalyst Center — compliance** (`cisco:dnac:compliance`) — per-device compliance status.\n\n---\n\n## Tab 1 — Environmental Intelligence\n\n- **Avg temperature / Avg humidity** — mean across all Webex room sensors over the selected time range. Temperature converted Celsius → Fahrenheit via `temp_f = round(temp*9/5+32, 2)`.\n- **Current sensor readings** — latest temp + humidity per Webex device, with a comfort verdict: `Optimal` if 68-76 °F and 30-60 % RH; otherwise `Warm/Humid` or `Cool/Dry`.\n- **Temperature / Humidity by floor + exercise annotations** — hourly average per device, with vertical markers for the three Op Florida Ready dates pulled from the shared `ds_annotations` saved search.\n- **Spaces × Webex — occupancy + temperature overlay** — hourly occupancy (`deviceCounts.userCount`) as columns, hourly temperature as overlay line. Visual answer to \"do crowds heat the room?\"\n- **Spaces × Webex — people vs. temperature scatter** — one dot per hour. Upward slope = thermal-load correlation.\n\n---\n\n## Tab 2 — Capacity & Prediction\n\n- **Peak users today** — max value of `max(users) by _time, floor` in the period (busiest hour on busiest floor).\n- **Avg users (period)** — mean of those hourly per-floor maxima — your \"typical concurrent population\" baseline.\n- **Highest / Second-highest capacity floor (period peak)** — per-floor max of `deviceCounts.estimatedCapacityPercentage` over the window, scoped to the two specific buildings.\n- **Users by city over time** — hourly peak `userCount` summed across all floors of a city.\n- **Occupancy forecast (24-hour prediction)** — Splunk `predict` on the hourly user-count series, projecting 24 h forward with 95 % confidence band.\n- **Capacity % by floor over time** — hourly max `estimatedCapacityPercentage` per floor; `useother=t` keeps the top 10 floors visible.\n- **This week vs last week** — hourly user count split by `if(_time >= now()-7d, \"This Week\", \"Last Week\")`.\n\n---\n\n## Tab 3 — Room Utilization\n\nSource: `cisco:spaces:firehose eventType=SPACE_OCCUPANCY`. Each event reports a room, its capacity, peak headcount, and a presence flag.\n\n- **Total rooms** — `dc(spaceOccupancy.space.name)` (distinct rooms reporting any data).\n- **Ghost rooms** — ROOM spaces where `peoplePresence!=\"true\" AND peakPeopleCount==0` for ≥ 80 % of observations in the window. Effectively never used.\n- **Hot rooms** — ROOM spaces where `avg(peakPeopleCount) / capacity ≥ 0.5`. These rooms are consistently above half capacity.\n- **Rooms by utilization tier (pie)** — tiers from `avg(peakPeopleCount)/capacity`: Hot (≥ 80 %), Active (40-80 %), Idle (< 40 %), Empty (≈ 0).\n- **Top 15 rooms by utilization** — bar chart sorted by `avg(peakPeopleCount)/capacity * 100`.\n- **Room utilization detail** — full table: building, floor, room, capacity, avg/peak utilization %, time-occupied %, report count.\n\n---\n\n## Tab 4 — Activation Readiness\n\nTells the \"did the network survive Op Florida Ready\" story. The activation window is configurable via the time-range input.\n\n- **Peak users / Peak capacity % / Peak temperature** — max within the activation window across each metric.\n- **WiFi associations** — total `count` of `eventType=\"DEVICE_ASSOCIATION\" event=\"ASSOCIATE\"` events.\n- **Spaces — occupancy surge + Op Florida Ready annotations** — hourly total occupancy (area chart) with the three exercise dates marked.\n- **Webex — temperature & humidity during activation** — avg temp + humidity on the same hourly axis.\n- **Spaces — WiFi associations by SSID + exercise annotations** — hourly assoc count stacked by SSID, top 10.\n- **Surge multiplier (single value)** — `avg(people) during exercise window / avg(people) during prior baseline week`. ≥ 2.0 means the activation roughly doubled the on-site population.\n- **Same metrics, side-by-side** — bar comparing baseline vs exercise for people / unique users / unique devices.\n\n> **Why some windows are dynamic**: panels that compare \"exercise vs baseline\" use `strptime` hardcoded windows (`2026-04-13` → `2026-04-16` exercise, `2026-04-06` → `2026-04-13` baseline) so they remain stable regardless of the dashboard's time-range input. Panels that visualize \"during the activation\" use the dashboard's time-range input so analysts can probe different sub-windows.\n\n---\n\n## Tab 5 — Visitor Intelligence\n\nSource: `cisco:spaces:firehose eventType=DEVICE_ASSOCIATION` + `DEVICE_PRESENCE`.\n\n- **Unique devices** — `dc(deviceAssociation.device.macAddress)` over the window.\n- **Repeat visitors %** — `(devices seen on ≥ 2 distinct days) / total devices * 100`.\n- **Inter-campus travelers** — devices whose `devicePresence` events include more than one BUILDING. Used as the Sankey input.\n- **Guest vs employee (pie)** — SSID-based: any SSID matching `(?i)guest` is Guest; everything else is Employee.\n- **Daily visitors with 7-day forecast** — `predict` on the daily unique-device count; projects 7 days forward.\n- **Guest vs employee by day** — same SSID classification, daily association counts.\n- **Dwell time distribution** — per-MAC, per-day association window: `latest(_time) - earliest(_time)`. Bucketed 0-15 m / 15 m-1 h / 1-4 h / 4 h+.\n\n---\n\n## Tab 6 — Network Impact\n\nPulls in DNAC alongside Spaces so a single timeline shows what the network was doing while people were on it.\n\n- **Network health / Client health (single value, 0-100)** — DNAC `cisco:dnac:networkhealth` `category=\"All\"` and `cisco:dnac:clienthealth` `clientType=\"ALL\" scoreType=\"ALL\"`, hourly latest, 2-decimal rounded.\n- **Active DNAC issues** — `dc(IssueID)` from `cisco:dnac:issue`.\n- **Compliance rate** — `count(eval(ComplianceStatus=\"COMPLIANT\"))/count` of `cisco:dnac:compliance`.\n- **Spaces × DNAC — occupancy + DNAC issues** — hourly occupancy column chart; high-severity DNAC issues drawn as overlay markers; exercise dates annotated.\n- **DNAC × DNAC — network & client health + DNAC issues** — both health series + issue overlay on one timeline.\n- **Spaces × DNAC — occupancy vs. client-health scatter** — one dot per hour. Negative slope = \"more people, worse network.\"\n- **Spaces × DNAC — occupancy + RSSI overlay** — hourly assoc count (column) + avg `connection.rssi` (line). Does signal degrade with crowd?\n- **Client health by site over time** — `health.overallScore` per site, per hour.\n- **Spaces × DNAC — occupancy + onboarding-time overlay** — hourly assoc count + avg onboarding-time.\n- **DNAC issues by severity stacked + occupancy overlay** — stacked-bar of issue severity (HIGH/MED/LOW) with occupancy line.\n- **AP health distribution (pie)** — APs grouped by `latest(OverallHealth)`: Excellent (9-10) / Good (7-8) / Fair (5-6) / Poor (0-4).\n- **Client radio band split** — `connection.band` distribution (2.4 vs 5 GHz).\n- **DNAC issues by site** — `dc(IssueID)` per `SiteName`.\n- **AP detail table** — per-AP latest health, CPU %, mem %, issue count, client counts per band, air quality.\n\n---\n\n## Color coding (table cells)\n\nA subset of tables across the dashboard suite uses cell-background tints to highlight what needs attention. Palette is dark-mode-safe (rgba):\n\n- 🔴 **Critical** `rgba(214,69,80,0.35)` — needs attention now (Unreachable, Unmanaged, NON_COMPLIANT, P1, Critical CPU/memory).\n- 🟠 **Warning** `rgba(229,168,35,0.30)` — watch (Managed With Errors, P2, Warning CPU/memory, At-Risk site).\n- 🟢 **Healthy** `rgba(110,190,74,0.15)` — subtle green tint (Reachable, Managed, P3/P4, OK).\n\nCurrently colored on **this** dashboard: none — Spaces tables are mostly numeric ranges. We can add tier coloring to AP detail and Room utilization tables in a follow-up if useful.\n\n---\n\n## Architecture\n\nAll active panels now use inline `ds.search` data sources. Earlier versions chained many panels from raw hidden base searches, but Dashboard Studio can render those post-process chains inconsistently even when the same SPL works in Search. Keeping each panel self-contained makes dashboard results match Open in Search and keeps time-token handling explicit.\n\n---\n\n## Known caveats\n\n1. **Field extraction multivalues**: `healthScore` and `scoreValue` from `cisco:dnac:networkhealth` / `cisco:dnac:clienthealth` arrive as multivalue arrays (e.g., `['99','99']`) due to JSON path duplication during indexing. The Network Impact KPIs collapse this with `bin _time | stats latest(field) by _time` rather than `timechart latest(eval(round(...)))` (which silently returns null on multivalues).\n2. **Forecast accuracy**: `predict` panels (capacity 24 h, daily visitors 7 d) need at least ~3 weeks of data for stable projections. With less, the confidence bands will look very wide.\n3. **Op Florida Ready windows are hardcoded** in the activation comparison panels (`2026-04-13` → `2026-04-16` exercise, baseline = preceding week). Update the `strptime` calls if the exercise dates shift.\n4. **No Meraki, no SD-WAN data in this environment**. Any panel referencing those would be empty by definition; they've been removed across the dashboard suite."
+				"markdown": "## About this dashboard\n\n**Cisco Spaces - Intelligence** answers six questions the customer cares about during and around an emergency-management exercise (Op Florida Ready):\n\n1. **Are the buildings comfortable?** (Environmental Intelligence)\n2. **Are we close to capacity?** (Capacity & Prediction)\n3. **Which rooms get used and which are wasted?** (Room Utilization)\n4. **Did the network handle the surge?** (Activation Readiness)\n5. **Who actually showed up - staff vs guests, repeats vs first-timers?** (Visitor Intelligence)\n6. **Did the wireless network's user experience hold up?** (Network Impact)\n\nThe dashboard cross-correlates **Cisco Spaces firehose** (people-count and presence telemetry from APs), **Cisco Catalyst Center / DNAC** (network-side health) and **Webex device telemetry** (in-room temperature & humidity sensors) to tell one coherent story.\n\n---\n\n## Data sources\n\n- **Cisco Spaces firehose - DEVICE_COUNT** (`cisco:spaces:firehose` `eventType=\"DEVICE_COUNT\"`) - `deviceCounts.userCount`, `associatedCount`, `deviceCount`, `estimatedCapacityPercentage`, location hierarchy. Filtered to floor scope (`inferredLocationTypes=FLOOR`) for per-floor panels, BUILDING scope for the campus map.\n- **Cisco Spaces firehose - DEVICE_ASSOCIATION** (`cisco:spaces:firehose` `eventType=\"DEVICE_ASSOCIATION\" event=\"ASSOCIATE\"`) - `device.macAddress`, `ssid`. Powers unique-visitor / repeat-visitor / SSID composition.\n- **Cisco Spaces firehose - DEVICE_PRESENCE** (`cisco:spaces:firehose` `eventType=\"DEVICE_PRESENCE\"`) - `macAddress`, `location.inferredLocationTypes`. Used for inter-campus traveler analysis (Sankey).\n- **Cisco Spaces firehose - SPACE_OCCUPANCY** (`cisco:spaces:firehose` `eventType=\"SPACE_OCCUPANCY\"`) - `space.name`, `space.capacity`, `peakPeopleCount`, `peoplePresence`. Used by the Room Utilization tab.\n- **Cisco Spaces firehose - WEBEX_TELEMETRY** (`cisco:spaces:firehose` `eventType=\"WEBEX_TELEMETRY\"`) - `ambientTemp`, `relativeHumidity`, `deviceInfo.serialNumber`.\n- **Cisco Catalyst Center - networkhealth** (`cisco:dnac:networkhealth`) - overall network health score (0-100) per category.\n- **Cisco Catalyst Center - clienthealth** (`cisco:dnac:clienthealth`) - overall client health score (0-100) by client type.\n- **Cisco Catalyst Center - client** (`cisco:dnac:client`) - per-client health, RSSI, SSID, band, onboarding time, site hierarchy.\n- **Cisco Catalyst Center - devicehealth** (`cisco:dnac:devicehealth`) - per-AP health, CPU/memory utilization, issue count, reachability, manageability.\n- **Cisco Catalyst Center - issue** (`cisco:dnac:issue`) - active DNAC issues with priority + site.\n- **Cisco Catalyst Center - compliance** (`cisco:dnac:compliance`) - per-device compliance status.\n\n---\n\n## Tab 1 - Environmental Intelligence\n\n- **Avg temperature / Avg humidity** - mean across all Webex room sensors over the selected time range. Temperature converted Celsius → Fahrenheit via `temp_f = round(temp*9/5+32, 2)`.\n- **Current sensor readings** - latest temp + humidity per Webex device, with a comfort verdict: `Optimal` if 68-76 °F and 30-60 % RH; otherwise `Warm/Humid` or `Cool/Dry`.\n- **Temperature / Humidity by floor + exercise annotations** - hourly average per device, with vertical markers for the three Op Florida Ready dates pulled from the shared `ds_annotations` saved search.\n- **Spaces × Webex - occupancy + temperature overlay** - hourly occupancy (`deviceCounts.userCount`) as columns, hourly temperature as overlay line. Visual answer to \"do crowds heat the room?\"\n- **Spaces × Webex - people vs. temperature scatter** - one dot per hour. Upward slope = thermal-load correlation.\n\n---\n\n## Tab 2 - Capacity & Prediction\n\n- **Peak users today** - max value of `max(users) by _time, floor` in the period (busiest hour on busiest floor).\n- **Avg users (period)** - mean of those hourly per-floor maxima - your \"typical concurrent population\" baseline.\n- **Highest / Second-highest capacity floor (period peak)** - per-floor max of `deviceCounts.estimatedCapacityPercentage` over the window, scoped to the two specific buildings.\n- **Users by city over time** - hourly peak `userCount` summed across all floors of a city.\n- **Occupancy forecast (24-hour prediction)** - Splunk `predict` on the hourly user-count series, projecting 24 h forward with 95 % confidence band.\n- **Capacity % by floor over time** - hourly max `estimatedCapacityPercentage` per floor; `useother=t` keeps the top 10 floors visible.\n- **This week vs last week** - hourly user count split by `if(_time >= now()-7d, \"This Week\", \"Last Week\")`.\n\n---\n\n## Tab 3 - Room Utilization\n\nSource: `cisco:spaces:firehose eventType=SPACE_OCCUPANCY`. Each event reports a room, its capacity, peak headcount, and a presence flag.\n\n- **Total rooms** - `dc(spaceOccupancy.space.name)` (distinct rooms reporting any data).\n- **Ghost rooms** - ROOM spaces where `peoplePresence!=\"true\" AND peakPeopleCount==0` for ≥ 80 % of observations in the window. Effectively never used.\n- **Hot rooms** - ROOM spaces where `avg(peakPeopleCount) / capacity ≥ 0.5`. These rooms are consistently above half capacity.\n- **Rooms by utilization tier (pie)** - tiers from `avg(peakPeopleCount)/capacity`: Hot (≥ 80 %), Active (40-80 %), Idle (< 40 %), Empty (≈ 0).\n- **Top 15 rooms by utilization** - bar chart sorted by `avg(peakPeopleCount)/capacity * 100`.\n- **Room utilization detail** - full table: building, floor, room, capacity, avg/peak utilization %, time-occupied %, report count.\n\n---\n\n## Tab 4 - Activation Readiness\n\nTells the \"did the network survive Op Florida Ready\" story. The activation window is configurable via the time-range input.\n\n- **Peak users / Peak capacity % / Peak temperature** - max within the activation window across each metric.\n- **WiFi associations** - total `count` of `eventType=\"DEVICE_ASSOCIATION\" event=\"ASSOCIATE\"` events.\n- **Spaces - occupancy surge + Op Florida Ready annotations** - hourly total occupancy (area chart) with the three exercise dates marked.\n- **Webex - temperature & humidity during activation** - avg temp + humidity on the same hourly axis.\n- **Spaces - WiFi associations by SSID + exercise annotations** - hourly assoc count stacked by SSID, top 10.\n- **Surge multiplier (single value)** - `avg(people) during exercise window / avg(people) during prior baseline week`. ≥ 2.0 means the activation roughly doubled the on-site population.\n- **Same metrics, side-by-side** - bar comparing baseline vs exercise for people / unique users / unique devices.\n\n> **Why some windows are dynamic**: panels that compare \"exercise vs baseline\" use `strptime` hardcoded windows (`2026-04-13` → `2026-04-16` exercise, `2026-04-06` → `2026-04-13` baseline) so they remain stable regardless of the dashboard's time-range input. Panels that visualize \"during the activation\" use the dashboard's time-range input so analysts can probe different sub-windows.\n\n---\n\n## Tab 5 - Visitor Intelligence\n\nSource: `cisco:spaces:firehose eventType=DEVICE_ASSOCIATION` + `DEVICE_PRESENCE`.\n\n- **Unique devices** - `dc(deviceAssociation.device.macAddress)` over the window.\n- **Repeat visitors %** - `(devices seen on ≥ 2 distinct days) / total devices * 100`.\n- **Inter-campus travelers** - devices whose `devicePresence` events include more than one BUILDING. Used as the Sankey input.\n- **Guest vs employee (pie)** - SSID-based: any SSID matching `(?i)guest` is Guest; everything else is Employee.\n- **Daily visitors with 7-day forecast** - `predict` on the daily unique-device count; projects 7 days forward.\n- **Guest vs employee by day** - same SSID classification, daily association counts.\n- **Dwell time distribution** - completed per-device sessions derived from ordered `ASSOCIATE` → `DISASSOCIATE` event pairs. Bucketed < 30 m / 30-60 m / 1-2 h / 2-4 h / 4-8 h / 8 h+; a zero-session row explains when the selected range has no completed sessions.\n\n---\n\n## Tab 6 - Network Impact\n\nPulls in DNAC alongside Spaces so a single timeline shows what the network was doing while people were on it.\n\n- **Network health / Client health (single value, 0-100)** - DNAC `cisco:dnac:networkhealth` `category=\"All\"` and `cisco:dnac:clienthealth` `clientType=\"ALL\" scoreType=\"ALL\"`, hourly latest, 2-decimal rounded.\n- **Active DNAC issues** - `dc(IssueID)` from `cisco:dnac:issue`.\n- **Compliance rate** - `count(eval(ComplianceStatus=\"COMPLIANT\"))/count` of `cisco:dnac:compliance`.\n- **Spaces × DNAC - occupancy + DNAC issues** - hourly occupancy column chart; high-severity DNAC issues drawn as overlay markers; exercise dates annotated.\n- **DNAC × DNAC - network & client health + DNAC issues** - both health series + issue overlay on one timeline.\n- **Spaces × DNAC - occupancy vs. client-health scatter** - one dot per hour. Negative slope = \"more people, worse network.\"\n- **Spaces × DNAC - occupancy + RSSI overlay** - hourly assoc count (column) + avg `connection.rssi` (line). Does signal degrade with crowd?\n- **Client health by site over time** - `health.overallScore` per site, per hour.\n- **Spaces × DNAC - occupancy + onboarding-time overlay** - hourly assoc count + avg onboarding-time.\n- **DNAC issues by severity stacked + occupancy overlay** - stacked-bar of issue severity (HIGH/MED/LOW) with occupancy line.\n- **AP health distribution (pie)** - APs grouped by `latest(OverallHealth)`: Excellent (9-10) / Good (7-8) / Fair (5-6) / Poor (0-4).\n- **Client radio band split** - `connection.band` distribution (2.4 vs 5 GHz).\n- **DNAC issues by site** - `dc(IssueID)` per `SiteName`.\n- **AP detail table** - per-AP latest health, CPU %, mem %, issue count, client counts per band, air quality.\n\n---\n\n## Color coding (table cells)\n\nA subset of tables across the dashboard suite uses cell-background tints to highlight what needs attention. Palette is dark-mode-safe (rgba):\n\n- 🔴 **Critical** `rgba(214,69,80,0.35)` - needs attention now (Unreachable, Unmanaged, NON_COMPLIANT, P1, Critical CPU/memory).\n- 🟠 **Warning** `rgba(229,168,35,0.30)` - watch (Managed With Errors, P2, Warning CPU/memory, At-Risk site).\n- 🟢 **Healthy** `rgba(110,190,74,0.15)` - subtle green tint (Reachable, Managed, P3/P4, OK).\n\nCurrently colored on **this** dashboard: none - Spaces tables are mostly numeric ranges. We can add tier coloring to AP detail and Room utilization tables in a follow-up if useful.\n\n---\n\n## Architecture\n\nAll active panels now use inline `ds.search` data sources. Earlier versions chained many panels from raw hidden base searches, but Dashboard Studio can render those post-process chains inconsistently even when the same SPL works in Search. Keeping each panel self-contained makes dashboard results match Open in Search and keeps time-token handling explicit.\n\n---\n\n## Known caveats\n\n1. **Field extraction multivalues**: `healthScore` and `scoreValue` from `cisco:dnac:networkhealth` / `cisco:dnac:clienthealth` arrive as multivalue arrays (e.g., `['99','99']`) due to JSON path duplication during indexing. The Network Impact KPIs collapse this with `bin _time | stats latest(field) by _time` rather than `timechart latest(eval(round(...)))` (which silently returns null on multivalues).\n2. **Forecast accuracy**: `predict` panels (capacity 24 h, daily visitors 7 d) need at least ~3 weeks of data for stable projections. With less, the confidence bands will look very wide.\n3. **Op Florida Ready windows are hardcoded** in the activation comparison panels (`2026-04-13` → `2026-04-16` exercise, baseline = preceding week). Update the `strptime` calls if the exercise dates shift.\n4. **SD-WAN energy telemetry is available** and powers the Network Energy tile in Workplace Operations. This Cisco Spaces dashboard does not consume that feed directly. Meraki telemetry is not currently available."
 			},
 			"type": "splunk.markdown"
 		},
@@ -33,7 +33,7 @@
 			"options": {
 				"fontColor": "#049fd9",
 				"fontSize": "small",
-				"markdown": "## About — Metrics Reference",
+				"markdown": "## About - Metrics Reference",
 				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
@@ -63,23 +63,25 @@
 				"xAxisTitleVisibility": "hide",
 				"yAxisTitleText": "Avg per hour"
 			},
-			"title": "Spaces baseline × exercise — same metrics, side-by-side",
+			"title": "Spaces baseline × exercise - same metrics, side-by-side",
 			"type": "splunk.column"
 		},
 		"viz_act_compare_kpi": {
 			"dataSources": {
 				"primary": "ds_act_compare_kpi"
 			},
-			"description": "Surge multiplier — second half vs first half of the selected time range.",
+			"description": "Surge multiplier - second half vs first half of the selected time range.",
 			"options": {
 				"backgroundColor": "#131a23",
 				"majorColor": "> primary | seriesByName('multiplier') | lastPoint() | rangeValue(thresholds=[1.5, 3], colors=[\"#a6adb6\", \"#f7782f\", \"#fa5762\"])",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"unit": "x",
-				"unitPosition": "after"
+				"unitPosition": "after",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
-			"title": "Spaces baseline × exercise — surge multiplier",
+			"title": "Spaces baseline × exercise - surge multiplier",
 			"type": "splunk.singlevalue"
 		},
 		"viz_act_env": {
@@ -97,7 +99,7 @@
 				"lineWidth": 2,
 				"markerDisplay": "outlined"
 			},
-			"title": "Webex — temperature & humidity during activation",
+			"title": "Webex - temperature & humidity during activation",
 			"type": "splunk.line"
 		},
 		"viz_act_hdr": {
@@ -117,7 +119,9 @@
 				"majorColor": "#f7782f",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Peak capacity %",
 			"type": "splunk.singlevalue"
@@ -131,7 +135,9 @@
 				"majorColor": "#049fd9",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Peak users",
 			"type": "splunk.singlevalue"
@@ -145,7 +151,9 @@
 				"majorColor": "#4cbf7f",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "WiFi associations",
 			"type": "splunk.singlevalue"
@@ -160,7 +168,9 @@
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"unit": "°F",
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Peak temperature",
 			"type": "splunk.singlevalue"
@@ -186,7 +196,7 @@
 				"lineWidth": 2,
 				"markerDisplay": "outlined"
 			},
-			"title": "Spaces — occupancy surge + Op Florida Ready annotations",
+			"title": "Spaces - occupancy surge + Op Florida Ready annotations",
 			"type": "splunk.area"
 		},
 		"viz_act_wifi": {
@@ -211,7 +221,7 @@
 				"stackMode": "stacked",
 				"backgroundColor": "#131a23"
 			},
-			"title": "Spaces — WiFi associations by SSID + exercise annotations",
+			"title": "Spaces - WiFi associations by SSID + exercise annotations",
 			"type": "splunk.column"
 		},
 		"viz_ap_health_dist": {
@@ -232,7 +242,7 @@
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
-			"title": "DNAC — access-point health distribution",
+			"title": "DNAC - access-point health distribution",
 			"type": "splunk.pie"
 		},
 		"viz_ap_health_table": {
@@ -250,7 +260,7 @@
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
-			"title": "DNAC — access-point detail",
+			"title": "DNAC - access-point detail",
 			"type": "splunk.table"
 		},
 		"viz_band_distribution": {
@@ -269,7 +279,7 @@
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
-			"title": "DNAC — client radio band split (2.4 vs. 5 GHz)",
+			"title": "DNAC - client radio band split (2.4 vs. 5 GHz)",
 			"type": "splunk.pie"
 		},
 		"viz_cap_box": {
@@ -293,7 +303,9 @@
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"unit": "%",
-				"unitPosition": "after"
+				"unitPosition": "after",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Highest capacity floor (period peak)",
 			"type": "splunk.singlevalue"
@@ -302,14 +314,16 @@
 			"dataSources": {
 				"primary": "ds_capacity_gauge_second"
 			},
-			"description": "Second-busiest floor — the next pressure point you'd address.",
+			"description": "Second-busiest floor - the next pressure point you'd address.",
 			"options": {
 				"backgroundColor": "#131a23",
 				"majorColor": "> primary | seriesByName('Capacity %') | lastPoint() | rangeValue(thresholds=[50, 80], colors=[\"#4cbf7f\", \"#f7782f\", \"#fa5762\"])",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"unit": "%",
-				"unitPosition": "after"
+				"unitPosition": "after",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Second highest capacity floor (period peak)",
 			"type": "splunk.singlevalue"
@@ -408,7 +422,7 @@
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
-			"title": "DNAC — client health by site over time",
+			"title": "DNAC - client health by site over time",
 			"type": "splunk.line"
 		},
 		"viz_convergence_health": {
@@ -436,7 +450,7 @@
 				"backgroundColor": "#131a23",
 				"lineWidth": 2
 			},
-			"title": "DNAC × DNAC — network & client health + DNAC issues + date annotations",
+			"title": "DNAC × DNAC - network & client health + DNAC issues + date annotations",
 			"type": "splunk.line"
 		},
 		"viz_convergence_occupancy": {
@@ -460,7 +474,7 @@
 				"yAxisTitleText": "Occupancy (people)",
 				"backgroundColor": "#131a23"
 			},
-			"title": "Spaces × DNAC — occupancy + DNAC issues + date annotations",
+			"title": "Spaces × DNAC - occupancy + DNAC issues + date annotations",
 			"type": "splunk.column"
 		},
 		"viz_dwell_bar": {
@@ -507,7 +521,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049fd9",
 				"unit": "%",
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5"
 			},
 			"title": "Avg humidity",
 			"type": "splunk.singlevalue"
@@ -524,7 +539,8 @@
 				"sparklineDisplay": "below",
 				"sparklineStrokeColor": "#049fd9",
 				"unit": "°F",
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5"
 			},
 			"title": "Avg temperature",
 			"type": "splunk.singlevalue"
@@ -552,21 +568,21 @@
 				"lineWidth": 2,
 				"markerDisplay": "outlined"
 			},
-			"title": "Spaces × Webex — occupancy (columns) + temperature overlay",
+			"title": "Spaces × Webex - occupancy (columns) + temperature overlay",
 			"type": "splunk.area"
 		},
 		"viz_env_scatter": {
 			"dataSources": {
 				"primary": "ds_env_scatter"
 			},
-			"description": "Each dot is one hour — look for upward trend",
+			"description": "Each dot is one hour - look for upward trend",
 			"options": {
 				"seriesColors": [
 					"#049fd9"
 				],
 				"backgroundColor": "#131a23"
 			},
-			"title": "Spaces × Webex — people vs. temperature correlation",
+			"title": "Spaces × Webex - people vs. temperature correlation",
 			"type": "splunk.scatter"
 		},
 		"viz_env_table": {
@@ -611,7 +627,7 @@
 				"backgroundColor": "#131a23",
 				"lineWidth": 2
 			},
-			"title": "Webex sensors — humidity by floor + exercise annotations",
+			"title": "Webex sensors - humidity by floor + exercise annotations",
 			"type": "splunk.line"
 		},
 		"viz_issues_by_site": {
@@ -630,7 +646,7 @@
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
-			"title": "DNAC — issues by site",
+			"title": "DNAC - issues by site",
 			"type": "splunk.column"
 		},
 		"viz_issues_timeline": {
@@ -664,7 +680,7 @@
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
-			"title": "DNAC × Spaces — issues by severity (stacked) + occupancy overlay",
+			"title": "DNAC × Spaces - issues by severity (stacked) + occupancy overlay",
 			"type": "splunk.column"
 		},
 		"viz_kpi_avg_week": {
@@ -676,7 +692,9 @@
 				"majorColor": "#4cbf7f",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Avg users (period)",
 			"type": "splunk.singlevalue"
@@ -690,7 +708,9 @@
 				"majorColor": "#049fd9",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Peak users today",
 			"type": "splunk.singlevalue"
@@ -705,7 +725,9 @@
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"unit": "%",
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Repeat visitors",
 			"type": "splunk.singlevalue"
@@ -719,7 +741,9 @@
 				"majorColor": "#9b5ff5",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Inter-campus travelers",
 			"type": "splunk.singlevalue"
@@ -733,7 +757,9 @@
 				"majorColor": "#049fd9",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Unique devices",
 			"type": "splunk.singlevalue"
@@ -751,14 +777,14 @@
 		"viz_net_hdr": {
 			"options": {
 				"fontColor": "#fa5762",
-				"markdown": "**Network Impact — Cross-Domain Intelligence**",
+				"markdown": "**Network Impact - Cross-Domain Intelligence**",
 				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
 		},
 		"viz_net_intro": {
 			"options": {
-				"markdown": "Correlating **Cisco Spaces** occupancy & presence with **Cisco DNA Center** network health, client experience, and compliance data. These insights exist nowhere else — not in Spaces, not in DNAC.",
+				"markdown": "Correlating **Cisco Spaces** occupancy & presence with **Cisco DNA Center** network health, client experience, and compliance data. These insights exist nowhere else - not in Spaces, not in DNAC.",
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5"
 			},
@@ -776,7 +802,9 @@
 				"shouldAbbreviateTrendValue": true,
 				"unit": "/100",
 				"unitPosition": "after",
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Client health",
 			"type": "splunk.singlevalue"
@@ -793,7 +821,9 @@
 				"shouldAbbreviateTrendValue": true,
 				"unit": "%",
 				"unitPosition": "after",
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Compliance rate",
 			"type": "splunk.singlevalue"
@@ -810,7 +840,9 @@
 				"shouldAbbreviateTrendValue": true,
 				"unit": "/100",
 				"unitPosition": "after",
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Network health",
 			"type": "splunk.singlevalue"
@@ -824,7 +856,9 @@
 				"majorColor": "#fa5762",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Active DNAC issues",
 			"type": "splunk.singlevalue"
@@ -832,7 +866,7 @@
 		"viz_net_sub_hero": {
 			"options": {
 				"fontColor": "#ecf0f5",
-				"markdown": "**The Convergence View** — occupancy alongside DNAC health, with issue markers",
+				"markdown": "**The Convergence View** - occupancy alongside DNAC health, with issue markers",
 				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
@@ -840,7 +874,7 @@
 		"viz_net_sub_infra": {
 			"options": {
 				"fontColor": "#ecf0f5",
-				"markdown": "**Infrastructure Stress** — DNAC issues correlated with occupancy",
+				"markdown": "**Infrastructure Stress** - DNAC issues correlated with occupancy",
 				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
@@ -856,7 +890,7 @@
 		"viz_net_sub_xp": {
 			"options": {
 				"fontColor": "#ecf0f5",
-				"markdown": "**Client Experience** — does occupancy degrade WiFi quality?",
+				"markdown": "**Client Experience** - does occupancy degrade WiFi quality?",
 				"backgroundColor": "#131a23"
 			},
 			"type": "splunk.markdown"
@@ -879,7 +913,7 @@
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
-			"title": "Spaces × DNAC — occupancy vs. client-health correlation",
+			"title": "Spaces × DNAC - occupancy vs. client-health correlation",
 			"type": "splunk.scatter"
 		},
 		"viz_onboarding_vs_occupancy": {
@@ -909,7 +943,7 @@
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
-			"title": "Spaces × DNAC — occupancy (columns) + WiFi onboarding-time overlay",
+			"title": "Spaces × DNAC - occupancy (columns) + WiFi onboarding-time overlay",
 			"type": "splunk.column"
 		},
 		"viz_p_hdr_bg": {
@@ -925,7 +959,7 @@
 		"viz_p_hdr_title": {
 			"options": {
 				"fontColor": "#ecf0f5",
-				"markdown": "### Cisco Spaces — Intelligence",
+				"markdown": "### Cisco Spaces - Intelligence",
 				"backgroundColor": "#1c2738"
 			},
 			"type": "splunk.markdown"
@@ -957,7 +991,9 @@
 				"majorColor": "#f7782f",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Ghost rooms",
 			"type": "splunk.singlevalue"
@@ -971,7 +1007,9 @@
 				"majorColor": "#fa5762",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Hot rooms",
 			"type": "splunk.singlevalue"
@@ -985,7 +1023,9 @@
 				"majorColor": "#049fd9",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"backgroundColor": "#131a23"
+				"backgroundColor": "#131a23",
+				"trendColor": "#649ef5",
+				"sparklineStrokeColor": "#649ef5"
 			},
 			"title": "Total rooms",
 			"type": "splunk.singlevalue"
@@ -1097,7 +1137,7 @@
 			"dataSources": {
 				"primary": "ds_ssid_composition"
 			},
-			"description": "Based on SSID — guest SSIDs vs corporate SSIDs",
+			"description": "Based on SSID - guest SSIDs vs corporate SSIDs",
 			"options": {
 				"seriesColors": [
 					"#4cbf7f",
@@ -1133,7 +1173,7 @@
 				"backgroundColor": "#131a23",
 				"lineWidth": 2
 			},
-			"title": "Webex sensors — temperature by floor + exercise annotations",
+			"title": "Webex sensors - temperature by floor + exercise annotations",
 			"type": "splunk.line"
 		},
 		"viz_user_count_city": {
@@ -1183,10 +1223,10 @@
 			"dataSources": {
 				"primary": "ds_visitor_map"
 			},
-			"description": "buildings on a map; tooltips show latest counts. Generic two-site template — update the building match logic, coordinates, and map center/zoom below for the deployment's actual sites.",
+			"description": "Latest associated-device and visitor counts at reporting U.S. campuses",
 			"options": {
 				"backgroundColor": "#131a23",
-				"baseLayerTileServer": "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+				"baseLayerTileServer": "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
 				"baseLayerTileServerType": "raster",
 				"center": [
 					39.8283,
@@ -1196,6 +1236,7 @@
 					{
 						"additionalTooltipFields": [
 							"city",
+							"building",
 							"devices",
 							"visitors"
 						],
@@ -1206,8 +1247,8 @@
 					}
 				],
 				"showScale": false,
-				"showZoomControls": false,
-				"zoom": 4
+				"showZoomControls": true,
+				"zoom": 3
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
@@ -1293,7 +1334,7 @@
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
-			"title": "Spaces × DNAC — occupancy (columns) + RSSI overlay",
+			"title": "Spaces × DNAC - occupancy (columns) + RSSI overlay",
 			"type": "splunk.column"
 		}
 	},
@@ -1532,7 +1573,7 @@
 		"ds_dwell_distribution": {
 			"name": "Dwell time distribution",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_ASSOCIATION\" \n| rename devicePresence.device.macAddress as mac, deviceAssociation.event as event \n| streamstats current=f last(event) as prev_event, last(_time) as prev_time by mac \n| where event=\"DISASSOCIATE\" AND prev_event=\"ASSOCIATE\" \n| eval dwell_min=round((_time-prev_time)/60, 2) \n| eval bucket=case(dwell_min<30, \"< 30 min\",\n    dwell_min<60, \"30-60 min\",\n    dwell_min<120, \"1-2 hrs\",\n    dwell_min<240, \"2-4 hrs\",\n    dwell_min<480, \"4-8 hrs\",\n    1=1, \"8+ hrs\") \n| stats count by bucket \n| rename bucket as \"Dwell Time\"",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_ASSOCIATION\"\n| eval mac='deviceAssociation.device.macAddress', event=upper('deviceAssociation.event')\n| where isnotnull(mac) AND (event=\"ASSOCIATE\" OR event=\"DISASSOCIATE\")\n| sort 0 mac _time\n| streamstats current=f last(event) as prev_event, last(_time) as prev_time by mac\n| where event=\"DISASSOCIATE\" AND prev_event=\"ASSOCIATE\"\n| eval dwell_min=round((_time-prev_time)/60, 2)\n| where dwell_min>=0\n| eval bucket=case(dwell_min<30, \"< 30 min\",\n    dwell_min<60, \"30-60 min\",\n    dwell_min<120, \"1-2 hrs\",\n    dwell_min<240, \"2-4 hrs\",\n    dwell_min<480, \"4-8 hrs\",\n    1=1, \"8+ hrs\")\n| stats count as Sessions by bucket\n| rename bucket as \"Dwell Time\"\n| appendpipe [ stats count | where count=0 | eval \"Dwell Time\"=\"No completed sessions in selected range\", Sessions=0 | fields \"Dwell Time\" Sessions ]",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1906,7 +1947,7 @@
 		"ds_visitor_map": {
 			"name": "Visitor volume by campus",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=BUILDING\n| eval building='deviceCounts.location.name',\n devices='deviceCounts.deviceCount',\n users='deviceCounts.userCount'\n| stats latest(devices) as devices, latest(users) as visitors by building\n| eval lat=case(match(building, \"(?i)site ?1\"), 0.0,\n match(building, \"(?i)site ?2\"), 1.0,\n 1=1, 0.0),\n lon=case(match(building, \"(?i)site ?1\"), 0.0,\n match(building, \"(?i)site ?2\"), 1.0,\n 1=1, 0.0)\n| where isnotnull(lat)\n| eval devices=round(devices, 2), visitors=round(visitors, 2)\n| rename building as city\n| table city devices visitors lat lon",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=BUILDING\n| eval building='deviceCounts.location.name',\n city='deviceCounts.location.parent.name',\n devices='deviceCounts.associatedCount',\n visitors='deviceCounts.userCount'\n| stats latest(devices) as devices, latest(visitors) as visitors by city, building\n| eval lat=case(match(city, \"(?i)^Austin-?TX$\"), 30.2672,\n match(city, \"(?i)^Boston-?MA$\"), 42.3601,\n match(city, \"(?i)^Chicago-?IL$\"), 41.8781,\n match(city, \"(?i)^Plano-?TX$\"), 33.0198),\n lon=case(match(city, \"(?i)^Austin-?TX$\"), -97.7431,\n match(city, \"(?i)^Boston-?MA$\"), -71.0589,\n match(city, \"(?i)^Chicago-?IL$\"), -87.6298,\n match(city, \"(?i)^Plano-?TX$\"), -96.6989)\n| where isnotnull(lat) AND isnotnull(lon)\n| eval city=replace(city, \"-\", \", \"), devices=round(devices, 0), visitors=round(visitors, 0)\n| table city building devices visitors lat lon",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2980,7 +3021,9 @@
 				"type": "absolute"
 			}
 		},
-		"options": {},
+		"options": {
+			"showTitleAndDescription": false
+		},
 		"tabs": {
 			"items": [
 				{

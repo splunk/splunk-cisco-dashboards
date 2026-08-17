@@ -37,8 +37,12 @@ is stored in the browser as a data URI. Title can still be set globally via
 `customer_name`.
 
 Each React view is mounted from a Simple XML shell through a RequireJS
-bootstrap in `appserver/static/`. Native Dashboard Studio definitions are
-packaged alongside those shells under `default/data/ui/views/`.
+bootstrap in `appserver/static/`. That directory also contains the shared app
+shell styles and the static assets referenced by Dashboard Manager, Setup, and
+the React pages. Native Dashboard Studio definitions are packaged alongside
+those shells under `default/data/ui/views/`. `dashboard.css` is the only
+convention-loaded exception in the static inventory; Splunk Web loads it
+automatically for Simple XML dashboards.
 
 One mount helper is in active use:
 
@@ -97,7 +101,7 @@ packages/splunk-cisco-dashboards/
                 ├── default/
                 │   ├── app.conf
                 │   └── data/ui/{nav,views}/
-                ├── appserver/static/      # bootstrap loaders
+                ├── appserver/static/      # shell styles, loaders, and referenced assets
                 └── metadata/default.meta
 ```
 
@@ -113,18 +117,25 @@ yarn start                   # webpack --watch
 The webpack build emits to `stage/`, mirroring the deployed Splunk app
 structure (`appserver/`, `default/`, `metadata/`). A production build
 gives you a directory you can symlink into `$SPLUNK_HOME/etc/apps/` or
-package as a tarball.
+package as a tarball. The development stage contains both released and
+developing app resources; release filtering happens only in temporary package
+staging.
 
 ## Production build & packaging
 
 ```bash
-yarn build                   # webpack build → ./stage
-node bin/build.js pack       # build + tar → ./splunk-cisco-dashboards.tar.gz
-node bin/build.js pack --minify  # slower, minified release build + tar
+cd ../..
+./build.sh                    # Splunkbase: released resources only
+./build.sh --developer        # local: released + developing resources
+./build.sh --minify           # slower, minified Splunkbase package
 ```
 
 Minification is opt-in; normal builds and `yarn start` keep fast,
 unminified production-React bundles.
+
+Resource inclusion is controlled by `config/build-profile-manifest.json`.
+The complete workflow and local install command are documented in
+[`../../docs/BUILD_PROFILES.md`](../../docs/BUILD_PROFILES.md).
 
 ## Mounting model
 

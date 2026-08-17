@@ -63,22 +63,22 @@ const STATUS_LED: Record<
     { dot: string; glow: string; label: string }
 > = {
     healthy: {
-        dot: 'sui-bg-positive',
+        dot: 'sui-bg-status-positive',
         glow: 'sui-shadow-overlay',
         label: 'Healthy',
     },
     warning: {
-        dot: 'sui-bg-warning',
+        dot: 'sui-bg-status-warning',
         glow: 'sui-shadow-overlay',
         label: 'Warning',
     },
     critical: {
-        dot: 'sui-bg-negative',
+        dot: 'sui-bg-status-negative',
         glow: 'sui-shadow-overlay',
         label: 'Critical',
     },
     unknown: {
-        dot: 'sui-bg-floating',
+        dot: 'sui-bg-status-unknown',
         glow: 'sui-shadow-overlay',
         label: 'No telemetry',
     },

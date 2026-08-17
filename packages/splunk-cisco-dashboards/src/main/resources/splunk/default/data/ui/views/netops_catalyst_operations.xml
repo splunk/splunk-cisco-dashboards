@@ -366,7 +366,8 @@
 				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "> majorValue | rangeValue(healthColorRange)",
 				"trendDisplay": "percent",
-				"unit": "%"
+				"unit": "%",
+				"trendColor": "#649ef5"
 			},
 			"title": "Active Client Score",
 			"type": "splunk.singlevalue"
@@ -430,7 +431,8 @@
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#649ef5",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"trendColor": "#649ef5"
 			},
 			"title": "Total Active Clients",
 			"type": "splunk.singlevalue"
@@ -887,7 +889,8 @@
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#9b5ff5",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"trendColor": "#649ef5"
 			},
 			"title": "Wired Clients",
 			"type": "splunk.singlevalue"
@@ -929,7 +932,8 @@
 				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "> majorValue | rangeValue(healthColorRange)",
 				"trendDisplay": "percent",
-				"unit": "%"
+				"unit": "%",
+				"trendColor": "#649ef5"
 			},
 			"title": "Wired Health",
 			"type": "splunk.singlevalue"
@@ -953,7 +957,8 @@
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#649ef5",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"trendColor": "#649ef5"
 			},
 			"title": "Healthy Wired Clients",
 			"type": "splunk.singlevalue"
@@ -1023,7 +1028,8 @@
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#649ef5",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"trendColor": "#649ef5"
 			},
 			"title": "Wireless Clients",
 			"type": "splunk.singlevalue"
@@ -1065,7 +1071,8 @@
 				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "> majorValue | rangeValue(healthColorRange)",
 				"trendDisplay": "percent",
-				"unit": "%"
+				"unit": "%",
+				"trendColor": "#649ef5"
 			},
 			"title": "Wireless Health",
 			"type": "splunk.singlevalue"
@@ -1089,7 +1096,8 @@
 				"sparklineDisplay": "below",
 				"sparklineNullValueDisplay": "connect",
 				"sparklineStrokeColor": "#649ef5",
-				"trendDisplay": "percent"
+				"trendDisplay": "percent",
+				"trendColor": "#649ef5"
 			},
 			"title": "Healthy Wireless Clients",
 			"type": "splunk.singlevalue"
@@ -1921,7 +1929,7 @@
 		"eval": {}
 	},
 	"applicationProperties": {
-		"collapseNavigation": false,
+		"collapseNavigation": true,
 		"hideEdit": true,
 		"hideExport": false
 	}

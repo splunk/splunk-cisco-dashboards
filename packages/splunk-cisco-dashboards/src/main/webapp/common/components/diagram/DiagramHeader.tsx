@@ -24,6 +24,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
+import Button from '@splunk/react-ui/Button';
 import {
     Save,
     FolderOpen,
@@ -756,11 +757,14 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                             <li key={d.name}>
                                 <button
                                     type="button"
+                                    aria-current={
+                                        d.name === diagramName ? 'true' : undefined
+                                    }
                                     onClick={() => handlePickerSelect(d.name)}
                                     className={cn(
                                         'w-full flex items-center justify-between gap-2 px-3 py-1.5 text-left text-xs',
                                         d.name === diagramName
-                                            ? 'sui-bg-info  sui-color-info'
+                                            ? 'sui-bg-notification-info sui-color-active'
                                             : 'sui-hover-bg-page sui-hover-bg-overlay  sui-color-active'
                                     )}
                                     title={d.name}
@@ -853,33 +857,25 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
                 role="alert"
                 className={cn(
                     'flex items-start gap-3 px-6 py-2.5 border-b',
-                    'sui-bg-negative',
-                    'sui-border-negative',
-                    'sui-color-negative'
+                    'sui-bg-notification-negative',
+                    'sui-border-notification-negative',
+                    'sui-color-active'
                 )}
             >
                 <AlertTriangle
-                    className="w-4 h-4 mt-0.5 flex-shrink-0  sui-color-negative"
+                    className="w-4 h-4 mt-0.5 flex-shrink-0 sui-color-active"
                     aria-hidden
                 />
                 <div className="flex-1 min-w-0 text-xs leading-relaxed">
                     {statusMessage.text}
                 </div>
                 {isCsrfError && (
-                    <button
-                        type="button"
+                    <Button
+                        appearance="secondary"
+                        icon={<RefreshCw className="w-3.5 h-3.5" aria-hidden />}
+                        label="Reload page"
                         onClick={() => window.location.reload()}
-                        className={cn(
-                            'flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium',
-                            'sui-bg-negative sui-hover-bg-negative sui-color-active',
-                            'sui-bg-negative sui-hover-bg-negative',
-                            'transition-colors flex-shrink-0'
-                        )}
-                        title="Reload the page to refresh the CSRF cookie"
-                    >
-                        <RefreshCw className="w-3.5 h-3.5" aria-hidden />
-                        Reload page
-                    </button>
+                    />
                 )}
                 {onDismissStatus && (
                     <button

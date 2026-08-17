@@ -49,6 +49,7 @@ import React, {
     useRef,
     useState,
 } from 'react';
+import Button from '@splunk/react-ui/Button';
 import {
     Trash2,
     Undo2,
@@ -4057,18 +4058,18 @@ const CanvasViewportControls: React.FC<{
                     )}
                 >
                     <ViewportButton {...controls[0]} />
-                    <div className="my-1.5 h-px w-9  sui-bg-floating" />
+                    <div className="my-1.5 w-9 border-t sui-border-default" />
                     <div
                         aria-label={`Zoom ${zoomPct}%`}
                         className="h-8 flex items-center justify-center text-base font-semibold  sui-color-active"
                     >
                         {zoomPct}%
                     </div>
-                    <div className="my-1.5 h-px w-9  sui-bg-floating" />
+                    <div className="my-1.5 w-9 border-t sui-border-default" />
                     <ViewportButton {...controls[1]} />
-                    <div className="my-2 h-px w-9  sui-bg-floating" />
+                    <div className="my-2 w-9 border-t sui-border-default" />
                     <ViewportButton {...controls[2]} />
-                    <div className="my-2 h-px w-9  sui-bg-floating" />
+                    <div className="my-2 w-9 border-t sui-border-default" />
                     <ViewportButton {...controls[3]} />
                 </div>
                 <button
@@ -4278,8 +4279,8 @@ const DeleteConfirmDialog: React.FC<{
                 )}
             >
                 <div className="flex items-start gap-3">
-                    <div className="shrink-0 mt-0.5 rounded-full  sui-bg-negative p-1.5">
-                        <AlertTriangle className="w-4 h-4  sui-color-negative" />
+                    <div className="shrink-0 mt-0.5 rounded-full sui-bg-notification-negative p-1.5">
+                        <AlertTriangle className="w-4 h-4 sui-color-active" />
                     </div>
                     <div className="flex-1 min-w-0">
                         <div className="text-sm font-semibold  sui-color-active">
@@ -4308,22 +4309,14 @@ const DeleteConfirmDialog: React.FC<{
                     </div>
                 </div>
                 <div className="mt-4 flex items-center justify-end gap-2">
-                    <button
-                        type="button"
-                        onClick={onCancel}
-                        className="px-3 py-1.5 text-xs rounded-md border  sui-border-default  sui-color-active  sui-hover-bg-overlay"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        type="button"
-                        onClick={onConfirm}
+                    <Button label="Cancel" onClick={onCancel} />
+                    <Button
+                        appearance="destructive"
                         autoFocus
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md sui-bg-negative sui-hover-bg-negative sui-color-active shadow-sm focus:outline-none focus:ring-2 sui-focus-ring"
-                    >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Delete
-                    </button>
+                        icon={<Trash2 className="w-3.5 h-3.5" />}
+                        label="Delete"
+                        onClick={onConfirm}
+                    />
                 </div>
             </div>
         </div>
