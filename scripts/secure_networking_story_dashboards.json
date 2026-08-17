@@ -74,6 +74,65 @@
       }
     ]
   },
+  "sn_agentic_ops_secure_networking_assurance": {
+    "label": "Secure Networking Assurance",
+    "description": "Connect protected application access, session continuity, path quality, distributed enforcement, and live threat context in one decision-ready score.",
+    "header_icon": "/static/app/splunk-cisco-dashboards/images/nav-icons/RobotAgent.svg",
+    "cards": [
+      {
+        "primary": "secure_networking_assurance_score_trend",
+        "targets": ["xdr_incident_status_severity_pressure", "secure_networking_zta_ise_auth_by_device_fail_rate", "secure_networking_thousandeyes_http_availability_by_test"],
+        "title": "Secure Networking Assurance Score",
+        "valueField": "SNAS",
+        "graphFields": ["SNAS"],
+        "numberPrecision": 1,
+        "shouldAbbreviateMajorValue": false
+      },
+      {
+        "primary": "secure_networking_assurance_attainability_trend",
+        "targets": ["secure_networking_thousandeyes_http_availability_by_test", "secure_networking_thousandeyes_http_trace_log"],
+        "title": "A - Attainability",
+        "valueField": "WindowAttainability",
+        "graphFields": ["Attainability"],
+        "numberPrecision": 1,
+        "shouldAbbreviateMajorValue": false
+      },
+      {
+        "primary": "secure_networking_assurance_retainability_trend",
+        "targets": ["secure_networking_zta_ise_auth_by_device_fail_rate", "secure_networking_zta_ztna_app_access_summary"],
+        "title": "R - Retainability",
+        "valueField": "WindowRetainability",
+        "graphFields": ["Retainability"],
+        "numberPrecision": 1,
+        "shouldAbbreviateMajorValue": false
+      },
+      {
+        "primary": "secure_networking_assurance_quality_trend",
+        "targets": ["secure_networking_thousandeyes_latency_by_agent", "secure_networking_thousandeyes_http_trace_log"],
+        "title": "Q - Quality",
+        "valueField": "WindowQuality",
+        "graphFields": ["Quality"],
+        "numberPrecision": 1,
+        "shouldAbbreviateMajorValue": false
+      },
+      {
+        "primary": "secure_networking_assurance_contextual_risk_trend",
+        "targets": ["xdr_incident_status_severity_pressure", "xdr_incident_global_risk_leaderboard"],
+        "title": "Contextual risk multiplier",
+        "valueField": "WindowRiskMultiplier",
+        "graphFields": ["D_risk"],
+        "numberPrecision": 3,
+        "shouldAbbreviateMajorValue": false,
+        "unit": "×",
+        "unitPosition": "after"
+      },
+      {
+        "primary": "secure_networking_hmf_unified_blocks_trend",
+        "targets": ["secure_networking_fmc_blocked_connection_detail", "secure_networking_sse_security_event_detail"],
+        "title": "Distributed enforcement evidence"
+      }
+    ]
+  },
   "sn_hmf_dlp_cloud_native_security": {
     "label": "DLP and Cloud Native Security",
     "description": "Expose data-loss risk and cloud-native workload controls in one operational view.",

@@ -7,6 +7,7 @@ const path = require("path");
 const EXPECTED_STUDIO_FILES = [
   "sn_agentic_ops_operational_intelligence.xml",
   "sn_agentic_ops_executive_assurance.xml",
+  "sn_agentic_ops_secure_networking_assurance.xml",
   "sn_hmf_dlp_cloud_native_security.xml",
   "sn_hmf_sdwan_network_health.xml",
   "sn_hmf_threat_detection_enforcement.xml",
@@ -33,6 +34,7 @@ const PILLAR_STUDIO_FILES = new Set([
 const TEMPLATED_MENU_FILES = [
   "sn_agentic_ops_operational_intelligence.xml",
   "sn_agentic_ops_executive_assurance.xml",
+  "sn_agentic_ops_secure_networking_assurance.xml",
   "sn_hmf_dlp_cloud_native_security.xml",
   "sn_hmf_sdwan_network_health.xml",
   "sn_hmf_threat_detection_enforcement.xml",
@@ -80,7 +82,7 @@ const SIMPLE_TIME_PICKER = {
 };
 
 const EXPECTED_GRAPH_COUNTS = {
-  "splunk.area": 84,
+  "splunk.area": 90,
   "splunk.bar": 6,
   "splunk.column": 4,
   "splunk.pie": 2,
@@ -281,12 +283,12 @@ const actualStudioFiles = fs
 assert.deepEqual(
   actualStudioFiles,
   EXPECTED_STUDIO_FILES,
-  "Secure Networking must ship the authoritative set of 16 Studio story dashboards",
+  "Secure Networking must ship the authoritative set of 17 Studio story dashboards",
 );
 assert.deepEqual(
   TEMPLATED_MENU_FILES,
   EXPECTED_STUDIO_FILES,
-  "all 16 five-pillar dashboards must use the approved template",
+  "all 17 five-pillar dashboards must use the approved template",
 );
 
 const dashboardViews = actualStudioFiles.map(readDashboard);
@@ -721,12 +723,12 @@ for (const primaryRef of [
 assert.deepEqual(
   totalGraphCounts,
   EXPECTED_GRAPH_COUNTS,
-  "The 16 story dashboards must preserve their 96 intentionally selected graph types",
+  "The 17 story dashboards must preserve their 102 intentionally selected graph types",
 );
 assert.equal(
   Object.values(totalGraphCounts).reduce((total, count) => total + count, 0),
-  96,
-  "The story dashboard set must contain exactly 96 graphs",
+  102,
+  "The story dashboard set must contain exactly 102 graphs",
 );
 
 const applicationCss = fs.readFileSync(APPLICATION_CSS_PATH, "utf8");
@@ -991,5 +993,5 @@ for (let cardNumber = 1; cardNumber <= 6; cardNumber += 1) {
 }
 
 console.log(
-  "✓ Secure Networking palette and 16-dashboard six-card story contract passed",
+  "✓ Secure Networking palette and 17-dashboard six-card story contract passed",
 );

@@ -33,6 +33,7 @@ Manager drilldown route.
 from __future__ import annotations
 
 import argparse
+import base64
 import html
 import importlib.util
 import json
@@ -61,6 +62,18 @@ APP_DEFAULT = (
 )
 DEFAULT_SEARCHBASE = APP_DEFAULT / "searchbase.conf"
 DEFAULT_VIEWS_DIR = APP_DEFAULT / "data" / "ui" / "views"
+C3_BACKGROUND_PATH = (
+    REPO_ROOT
+    / "packages"
+    / "splunk-cisco-dashboards"
+    / "src"
+    / "main"
+    / "resources"
+    / "splunk"
+    / "appserver"
+    / "static"
+    / "c3-atmosphere.svg"
+)
 
 CARD_COUNT = 6
 CANVAS_WIDTH = 1440
@@ -81,6 +94,14 @@ SUPPORTED_GRAPH_TYPES = {
     "splunk.column": "splunk.column",
     "splunk.pie": "splunk.pie",
 }
+
+
+def c3_background_data_uri(path: Path = C3_BACKGROUND_PATH) -> str:
+    """Return the repository-owned C3 atmosphere as an embedded Studio asset."""
+
+    normalized_svg = path.read_text(encoding="utf-8").strip().encode("utf-8")
+    encoded = base64.b64encode(normalized_svg).decode("ascii")
+    return f"data:image/svg+xml;base64,{encoded}"
 
 
 class StoryConfigurationError(ValueError):
@@ -569,7 +590,7 @@ def _graph_options(
     options: dict[str, Any] = {
         "backgroundColor": "transparent",
         "legendDisplay": "off" if graph_type == "splunk.area" else "right",
-        "seriesColors": ["#7dd3fc", "#6ee7b7", "#fdba74", "#fda4af"],
+        "seriesColors": ["#649ef5", "#4cbf7f", "#f0c243", "#fa5762"],
     }
     if graph_type == "splunk.area":
         options.update(
@@ -634,8 +655,8 @@ def build_dashboard_definition(
         "viz_header_bg": {
             "type": "splunk.rectangle",
             "options": {
-                "fillColor": "#1e293b",
-                "strokeColor": "rgba(14,165,233,0.42)",
+                "fillColor": "#1c2738",
+                "strokeColor": "rgba(100,158,245,0.28)",
                 "rx": 10,
             },
         },
@@ -651,7 +672,7 @@ def build_dashboard_definition(
             "showProgressBar": False,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#f1f5f9",
+                "fontColor": "#ecf0f5",
                 "markdown": f"# {escape_markdown(label)}\n{escape_markdown(description)}",
             },
         },
@@ -660,7 +681,7 @@ def build_dashboard_definition(
     structure: list[dict[str, Any]] = [
         _block("viz_header_bg", 20, 0, 1400, 104),
         _block("viz_header_icon", 38, 18, 64, 64),
-        _block("viz_header", 118, 8, 1280, 88),
+        _block("viz_header", 118, 8, 886, 88),
     ]
 
     for card_index, raw_card in enumerate(config["cards"], start=1):
@@ -708,8 +729,8 @@ def build_dashboard_definition(
         visualizations[background_id] = {
             "type": "splunk.rectangle",
             "options": {
-                "fillColor": "#0f172a",
-                "strokeColor": "rgba(14,165,233,0.42)",
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
                 "rx": 12,
             },
         }
@@ -720,7 +741,7 @@ def build_dashboard_definition(
             "showProgressBar": False,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#f1f5f9",
+                "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
                 "markdown": f"**{escape_markdown(card_title)}**",
@@ -733,9 +754,9 @@ def build_dashboard_definition(
             "showProgressBar": False,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#7dd3fc",
+                "fontColor": "#649ef5",
                 "fontSize": "custom",
-                "customFontSize": 11,
+                "customFontSize": 14,
                 "markdown": (
                     f"{escape_markdown(category)}  •  "
                     f"{escape_markdown(sub_category)}"
@@ -749,28 +770,45 @@ def build_dashboard_definition(
             "showProgressBar": False,
             "options": {
                 "backgroundColor": "transparent",
-                "fontColor": "#cbd5e1",
+                "fontColor": "#a6adb6",
                 "fontSize": "custom",
-                "customFontSize": 12,
+                "customFontSize": 15,
                 "markdown": escape_markdown(card_description),
             },
         }
+        singlevalue_options: dict[str, Any] = {
+            "backgroundColor": "transparent",
+            "majorColor": "#ecf0f5",
+            "majorFontSize": 44,
+            "majorValue": "> sparklineValues | lastPoint()",
+            "shouldAbbreviateMajorValue": card.get(
+                "shouldAbbreviateMajorValue", True
+            ),
+            "sparklineDisplay": "off",
+            "trendDisplay": "percent",
+            "shouldAbbreviateTrendValue": True,
+            "showTrendIndicator": True,
+            "sparklineValues": _series_dsl(field_bindings.value_field),
+            "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
+            "trendFontSize": 28,
+            "trendValue": "> sparklineValues | delta(-2)",
+        }
+        for option_name in ("numberPrecision", "unit", "unitPosition"):
+            if option_name in card:
+                singlevalue_options[option_name] = card[option_name]
+
         visualizations[singlevalue_id] = {
             "type": "splunk.singlevalue",
             "title": "",
             "dataSources": {"primary": data_source_id},
             "showLastUpdated": False,
             "showProgressBar": False,
-            "options": {
-                "backgroundColor": "transparent",
-                "majorColor": "#f1f5f9",
-                "majorFontSize": 38,
-                "majorValue": (
-                    f"{_series_dsl(field_bindings.value_field)} | lastPoint()"
-                ),
-                "shouldAbbreviateMajorValue": True,
-                "sparklineDisplay": "off",
-                "trendDisplay": "off",
+            "options": singlevalue_options,
+            "context": {
+                "trendColorEditorConfig": [
+                    {"value": "#649ef5", "to": 0},
+                    {"value": "#649ef5", "from": 0},
+                ]
             },
         }
         visualizations[trend_id] = {
@@ -825,9 +863,20 @@ def build_dashboard_definition(
         "description": description,
         "inputs": {
             "input_time_range": {
-                "options": {"defaultValue": "-24h@h,now", "token": "time_tok"},
-                "title": "Time Range",
-                "type": "input.timerange",
+                "options": {
+                    "defaultValue": "-24h,now,1h",
+                    "showAdvanced": True,
+                    "selections": [
+                        {"value": "-4h,now,30m", "label": "4h"},
+                        {"value": "-24h,now,1h", "label": "24h"},
+                        {"value": "-48h,now,2h", "label": "48h"},
+                        {"value": "-7d@d,now,1d", "label": "7d"},
+                        {"value": "-30d@d,now,1d", "label": "30d"},
+                    ],
+                    "token": "time_tok",
+                },
+                "title": "Time range",
+                "type": "input.simpleTimePicker",
             }
         },
         "defaults": {
@@ -838,16 +887,29 @@ def build_dashboard_definition(
         "visualizations": visualizations,
         "dataSources": data_sources,
         "layout": {
-            "globalInputs": ["input_time_range"],
+            "globalInputs": [],
             "layoutDefinitions": {
                 "layout_overview": {
                     "options": {
-                        "backgroundColor": "#020617",
+                        "backgroundColor": "#0f1117",
+                        "backgroundImage": {
+                            "sizeType": "contain",
+                            "src": c3_background_data_uri(),
+                            "x": 0,
+                            "y": 0,
+                        },
                         "display": "auto-scale",
                         "height": CANVAS_HEIGHT,
                         "width": CANVAS_WIDTH,
                     },
-                    "structure": structure,
+                    "structure": [
+                        *structure,
+                        {
+                            "item": "input_time_range",
+                            "position": {"x": 1034, "y": 12, "w": 370, "h": 80},
+                            "type": "input",
+                        },
+                    ],
                     "type": "absolute",
                 }
             },
@@ -862,7 +924,7 @@ def build_dashboard_definition(
         },
         "applicationProperties": {
             "collapseNavigation": False,
-            "hideEdit": False,
+            "hideEdit": True,
             "hideExport": False,
         },
     }

@@ -24,9 +24,16 @@ const searchbasePath = path.join(
 const dataSource = fs.readFileSync(dataSourcePath, "utf8");
 const editor = fs.readFileSync(editorPath, "utf8");
 const searchbase = fs.readFileSync(searchbasePath, "utf8");
+const intentionalDataGapRefs = new Set([
+    "secure_networking_assurance_score_trend",
+    "secure_networking_assurance_attainability_trend",
+    "secure_networking_assurance_retainability_trend",
+    "secure_networking_assurance_quality_trend",
+    "secure_networking_assurance_contextual_risk_trend",
+]);
 const secureNetworkingViews = fs
     .readdirSync(viewsRoot)
-    .filter((name) => /^secure_networking_.*\.xml$/.test(name));
+    .filter((name) => /^sn_.*\.xml$/.test(name));
 
 assert.ok(secureNetworkingViews.length > 0, "Secure Networking dashboards must exist");
 
@@ -75,6 +82,14 @@ searchbaseRefs.forEach((ref) => {
     assert.notEqual(start, -1, `${ref} must exist in searchbase.conf`);
     const next = searchbase.indexOf("\n[", start + marker.length);
     const stanza = searchbase.slice(start, next === -1 ? searchbase.length : next);
+    if (intentionalDataGapRefs.has(ref)) {
+        assert.doesNotMatch(
+            stanza,
+            /\|\s*appendpipe\b|^search\s*=\s*\|\s*makeresults\b/m,
+            `${ref} must expose missing required telemetry as a data gap`,
+        );
+        return;
+    }
     assert.match(
         stanza,
         /\|\s*appendpipe\b|^search\s*=\s*\|\s*makeresults\b/m,

@@ -44,6 +44,11 @@ const expectedEnabled = new Set([
     'secure_networking_thousandeyes_latency_by_agent_trend:overview:secure_networking_thousandeyes_latency_by_agent_trend',
     'secure_networking_thousandeyes_http_availability_by_test_trend:overview:secure_networking_thousandeyes_http_availability_by_test_trend',
     'secure_networking_webex_join_time_trend:overview:secure_networking_webex_join_time_trend',
+    'secure_networking_assurance_score_trend:overview:secure_networking_assurance_score_trend',
+    'secure_networking_assurance_attainability_trend:overview:secure_networking_assurance_attainability_trend',
+    'secure_networking_assurance_retainability_trend:overview:secure_networking_assurance_retainability_trend',
+    'secure_networking_assurance_quality_trend:overview:secure_networking_assurance_quality_trend',
+    'secure_networking_assurance_contextual_risk_trend:overview:secure_networking_assurance_contextual_risk_trend',
 ]);
 
 const expectedBands = new Map([
@@ -65,6 +70,11 @@ const expectedBands = new Map([
     ['secure_networking_thousandeyes_web_transaction_errors:overview:secure_networking_thousandeyes_web_transaction_errors', [0, 10]],
     ['secure_networking_sdwan_apps_health_breakdown:overview:secure_networking_sdwan_apps_health_breakdown', [0, 3]],
     ['secure_networking_zta_ise_auth_failure_rate_trend:overview:secure_networking_zta_ise_auth_failure_rate_trend', [5, 15]],
+    ['secure_networking_assurance_score_trend:overview:secure_networking_assurance_score_trend', [80, 65]],
+    ['secure_networking_assurance_attainability_trend:overview:secure_networking_assurance_attainability_trend', [99, 95]],
+    ['secure_networking_assurance_retainability_trend:overview:secure_networking_assurance_retainability_trend', [95, 85]],
+    ['secure_networking_assurance_quality_trend:overview:secure_networking_assurance_quality_trend', [80, 65]],
+    ['secure_networking_assurance_contextual_risk_trend:overview:secure_networking_assurance_contextual_risk_trend', [0.8, 0.65]],
 ]);
 
 const thresholdEntries = [];
@@ -96,8 +106,8 @@ for (const block of searchbase.split(/(?=^\[)/m)) {
     }
 }
 
-assert.equal(thresholdEntries.length, 92, 'Every known threshold object must remain in the audit');
-assert.equal(new Set(thresholdEntries.map(({ id }) => id)).size, 92, 'Threshold audit IDs must be unique');
+assert.equal(thresholdEntries.length, 97, 'Every known threshold object must remain in the audit');
+assert.equal(new Set(thresholdEntries.map(({ id }) => id)).size, 97, 'Threshold audit IDs must be unique');
 
 for (const { id, thresholds } of thresholdEntries) {
     assert.equal(typeof thresholds.enabled, 'boolean', `${id} must declare an explicit enabled state`);

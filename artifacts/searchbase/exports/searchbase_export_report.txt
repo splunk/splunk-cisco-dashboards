@@ -1,5 +1,5 @@
-Total source stanzas: 1319
-Kept: 1111
+Total source stanzas: 1324
+Kept: 1116
 Dropped: 208
 Drop reasons:
   admin_internal: 4
@@ -11,16 +11,17 @@ Drop reasons:
   makeresults_placeholder: 18
 By category (kept):
   Asset: 21
+  Assurance: 1
   Building: 47
   Catalyst Center: 38
   Cisco Spaces: 69
   Data Center Networking: 174
   IT Health: 28
-  Identity: 84
+  Identity: 85
   Monitoring: 127
   NetOps Readiness: 15
-  Network: 241
-  Security: 254
+  Network: 243
+  Security: 255
   ThousandEyes: 6
   Workplace: 7
 Index macro prose normalizations (<code>index_*</code>): 116

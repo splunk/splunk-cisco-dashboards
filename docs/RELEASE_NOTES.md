@@ -2,6 +2,14 @@
 
 ## 1.0.38
 
+- Agentic Operations adds a Secure Networking Assurance example for protected
+  application access. It applies an attainability-retainability-quality score
+  to ThousandEyes, ISE, and Secure Access telemetry, then adjusts it with active
+  XDR incident pressure. Hybrid Mesh Firewall blocks remain visible as evidence
+  of distributed policy enforcement instead of being misclassified as service
+  failures, and missing score inputs remain explicit data gaps. The example is
+  documented as a KTP v2.0.0-inspired operational adaptation, not protocol
+  conformance.
 - Deployment-specific operation names, agencies, places, topology details,
   event dates, and historical session notes were removed. Reusable dashboards
   now use IT Operations, neutral site examples, and time-range-derived

@@ -2,12 +2,12 @@
 
 > Layer 2 of the SCD framework. See `COMPASS.md` for the QUESTION layer and `CONTEXT_TENSOR.md` for the CATALOG layer.
 
-This document specifies the **closed set of 11 canonical macros** that compute every executive metric in the Splunk App for Secure Networking (SCD) app. The macros are defined in `default/macros.conf` and called by every saved search, every dashboard panel, and every drilldown.
+This document specifies the canonical metric formulas used by the Splunk App for Secure Networking (SCD) app. The historical `scd_*` macro names below remain the formula contract, but those math macros are not currently shipped in `default/macros.conf`; the runtime presently ships index, structural, and NRS tuning macros. NRS and Secure Networking Assurance therefore keep their explicitly documented, contract-tested math in their owning searches.
 
 **Hard rules:**
 
-1. **Never inline this math anywhere.** Quality, retainability, E-Score, uptime SLA, and MTTR are computed only by their respective macros. Panel SPL that copy-pastes the formula is a bug.
-2. **The macro count is closed at 11.** If you find yourself wanting a 12th macro, stop and tell me. Panel-specific transformations live as inline SPL inside the dashboard, not as reusable macros.
+1. **Do not duplicate this math.** Use a shipped canonical macro when one exists. When it does not, keep the formula in one named Searchbase search, document the exception here, and protect it with a contract test.
+2. **Do not add another math macro ad hoc.** Reintroducing the historical `scd_*` formulas as runtime macros requires a deliberate migration of callers and tests. Panel-specific transformations remain local to their owning search.
 3. **No `makeresults | eval random()` to fake values.** When data is missing, the panel is a `[DATA-GAP]` placeholder, not a synthetic chart. See [Data inventory](#data-inventory) below.
 
 ---
@@ -145,6 +145,43 @@ standing and derives `R` from six named risk inputs, with a separate Soul veto.
 The dashboard does not implement autonomous-agent authorization, Trust Proofs,
 KTP trust tiers, Silent Veto, or the Soul veto. Its readiness bands are local
 operations thresholds, not KTP trust tiers.
+
+### 4b. Secure Networking Assurance Score — protected application access example
+
+The Agentic Ops Secure Networking Assurance dashboard applies the same
+base-times-contextual-risk shape to a protected application journey spanning
+Cisco ISE, Cisco Secure Access ZTNA, Cisco ThousandEyes, Cisco XDR, and Hybrid
+Mesh Firewall evidence.
+
+```
+A = mean ThousandEyes HTTP availability
+
+R = 0.50 * ISE authentication success percentage
+  + 0.50 * Secure Access ZTNA connection success percentage
+
+latency_score = 100 * clamp((300 - p95_latency_ms) / 250, 0, 1)
+loss_score = clamp(100 - 20 * mean_packet_loss_pct, 0, 100)
+Q = 0.60 * latency_score + 0.40 * loss_score
+
+E_base = 0.40 * A + 0.30 * R + 0.30 * Q
+
+risk_pressure = mean active XDR global score / 1000
+D_risk = max(0.50, 1.00 - 0.50 * risk_pressure)
+
+SNAS = E_base * D_risk
+```
+
+The ARQ weights use the app's balanced preset and sum to 1.0. The selected
+window must contain ISE authentication, ZTNA connection, ThousandEyes HTTP and
+path, and XDR incident telemetry; a missing input produces a data gap instead
+of assuming a healthy value. Hybrid Mesh Firewall block activity is displayed
+beside the score as enforcement evidence. Blocks are not automatically treated
+as failures because successful policy enforcement can increase block volume.
+
+The local example bands are healthy at 80 or above, watch from 65 through 79,
+and act-now below 65. These are operational demo bands, not KTP trust tiers.
+Like NRS, SNAS is a KTP v2.0.0-inspired operational adaptation and does not
+claim KTP conformance or implement its agent-authorization controls.
 
 ### 5. Uptime SLA % — `scd_uptime_sla(availability_field, target_pct)`
 

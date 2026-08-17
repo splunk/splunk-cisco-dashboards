@@ -110,8 +110,8 @@ for (const fileName of fs.readdirSync(VIEWS_DIR).filter((name) => name.endsWith(
     }
 }
 
-assert.equal(studioFiles.length, 25, 'all 25 Dashboard Studio dashboards must be covered');
-assert.equal(studioLayoutCount, 53, 'all 53 Dashboard Studio layouts must be covered');
+assert.equal(studioFiles.length, 26, 'all 26 Dashboard Studio dashboards must be covered');
+assert.equal(studioLayoutCount, 54, 'all 54 Dashboard Studio layouts must be covered');
 assert.equal(spotlightLayoutCount, 5, 'the five pillar landing layouts must use the spotlight');
 assert.deepEqual(
     simpleXmlDashboards.sort(),
