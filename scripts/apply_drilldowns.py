@@ -210,7 +210,7 @@ BEST_FIT = {
     "executive_dashboard_ds_ux_score": ("user_experience_ds_wireless_signal_quality", "Inspect wireless signal quality"),
     "it_critical_systems_ds_ap_by_location": ("it_critical_systems_topology_device_table", "View per-AP device detail"),
     "it_critical_systems_ds_site_health": ("it_critical_systems_ds_base_devicehealth", "Open device health detail"),
-    "overview_inter_site_latency": ("overview_link_auburndale_tallahassee_health", "Open inter-site link detail"),
+    "overview_inter_site_latency": ("overview_link_site_1_site_2_health", "Open inter-site link detail"),
     # === User Experience ===
     "user_experience_client_count_trend": ("user_experience_ds_base_client", "View client detail"),
     "user_experience_client_health_by_type": ("user_experience_ds_base_client", "View client detail"),
@@ -231,8 +231,8 @@ BEST_FIT = {
     # === Other mapped ===
     "asset_inventory_build_lookup": ("asset_inventory_ds_gap_analysis", "View inventory gap analysis"),
     "asset_inventory_firewall_gap": ("asset_inventory_ds_gap_analysis", "View inventory gap analysis"),
-    "catalyst_center_wired_health_kpi": ("statewide_client_wired_drilldown", "View wired health detail"),
-    "network_activation_wireless_health_kpi": ("network_activation_ds_wireless_health", "View wireless health detail"),
+    "catalyst_center_wired_health_kpi": ("enterprise_client_wired_drilldown", "View wired health detail"),
+    "network_operations_wireless_health_kpi": ("network_operations_ds_wireless_health", "View wireless health detail"),
 }
 
 # Reviewed against the current Searchbase catalogue on 2026-07-28. These

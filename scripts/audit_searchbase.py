@@ -3,7 +3,7 @@
 Audit packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf
 for structural problems that almost certainly produce "no results":
 
-  - Sourcetype not present on the customer/dev stack
+  - Sourcetype outside the documented baseline
   - Macro not defined in macros.conf
   - Lookup not defined in transforms.conf
   - Bare `index=*` not wrapped by an index_* macro
@@ -27,9 +27,9 @@ TRANSFORMS = CONF_DIR / "transforms.conf"
 
 # ---------- 1. Ground truth ----------------------------------------------------
 
-# Sourcetypes observed on the customer stack (per docs/history/SESSION_LOG.md / DNAC field
-# rule). Anything else is "may not return data on the demo/dev stack".
-CUSTOMER_DNAC_SOURCETYPES = {
+# DNAC sourcetypes documented by the app's field-reference rule. Anything else
+# might require an optional input or a newer TA version.
+BASELINE_DNAC_SOURCETYPES = {
     "cisco:dnac:devicehealth",
     "cisco:dnac:issue",
     "cisco:dnac:networkhealth",
@@ -76,14 +76,7 @@ OTHER_AVAILABLE_SOURCETYPES = {
     "cisco:cloud_security:dns",
     "cisco:sdwan:utd",
 }
-# Sourcetypes we know are NOT on the customer stack today (per docs/history/SESSION_LOG.md
-# inquiries). Anything matching these will be flagged as "data gap".
-KNOWN_MISSING_SOURCETYPES = {
-    "cisco:sdwan:linkhealth",  # Sarav investigated; no TA path yet
-}
-ALL_KNOWN_SOURCETYPES = (
-    CUSTOMER_DNAC_SOURCETYPES | OTHER_AVAILABLE_SOURCETYPES | KNOWN_MISSING_SOURCETYPES
-)
+ALL_KNOWN_SOURCETYPES = BASELINE_DNAC_SOURCETYPES | OTHER_AVAILABLE_SOURCETYPES
 
 # Built-in lookups the splunk install always ships
 BUILTIN_LOOKUPS = {"geo_us_states", "geo_attr_us_states", "geo_attr_countries"}
@@ -227,10 +220,8 @@ def detect_issues(stanza: Stanza, defined_macros: set[str], defined_lookups: set
     # Drop ones that look like a wildcard or partial match (TA filters use "cisco:*")
     concrete = {s for s in sourcetypes if "*" not in s}
     for st in concrete:
-        if st in KNOWN_MISSING_SOURCETYPES:
-            issues.append(("HIGH", f'sourcetype "{st}" is known-missing on the customer stack (data gap)'))
-        elif st.startswith("cisco:dnac:") and st not in CUSTOMER_DNAC_SOURCETYPES:
-            issues.append(("HIGH", f'DNAC sourcetype "{st}" not seen on the customer stack'))
+        if st.startswith("cisco:dnac:") and st not in BASELINE_DNAC_SOURCETYPES:
+            issues.append(("HIGH", f'DNAC sourcetype "{st}" is outside the documented baseline'))
         elif st not in ALL_KNOWN_SOURCETYPES:
             issues.append(("LOW", f'unknown sourcetype "{st}" — verify it exists'))
 

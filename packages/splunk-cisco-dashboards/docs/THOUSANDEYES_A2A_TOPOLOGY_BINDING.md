@@ -7,8 +7,8 @@ Last updated: 2026-06-17
 This document explains the portable ThousandEyes agent-to-agent topology binding
 architecture used by the Overview customer topology map.
 
-The old model relied on customer-specific SPL such as an Auburndale to
-Tallahassee link search. That worked for one known topology, but it did not
+The old model relied on customer-specific SPL, such as a hard-coded Site 1 to
+Site 2 link search. That worked for one known topology, but it did not
 scale across customers because it assumed city names, site IDs, agent names, or
 test names inside the search.
 
@@ -63,31 +63,31 @@ agent tuple. Important fields include:
 
 ## How It Works
 
-1. Customer sites are configured in the topology editor.
+1. Deployment sites are configured in the topology editor.
 
    Example:
 
-   - Site name: `Tallahassee`
-   - Short name: `TLH`
-   - Aliases: `TLH`, `Tallahassee`, `State EOC`
+   - Site name: `North Campus`
+   - Short name: `NTH`
+   - Aliases: `NTH`, `North Campus`, `Operations Center`
 
    Example:
 
-   - Site name: `Auburndale`
-   - Short name: `AUB`
-   - Aliases: `AUB`, `Auburndale`, `Logistics`
+   - Site name: `South Campus`
+   - Short name: `STH`
+   - Aliases: `STH`, `South Campus`, `Logistics`
 
-2. Customer links are configured between those sites.
+2. Deployment links are configured between those sites.
 
    Example:
 
    ```text
-   Tallahassee to Auburndale
+   North Campus to South Campus
    ```
 
 3. The generic inventory search runs once for the topology editor and map.
 
-   The search does not assume Florida, TLH, AUB, or any customer-specific naming
+   The search does not assume a particular region, site code, or naming
    convention. It simply lists the A2A tests Splunk can observe from
    ThousandEyes metric events.
 
@@ -151,7 +151,7 @@ agent tuple. Important fields include:
    associated with the TE test and keeps the ThousandEyes deep link when
    possible. The popup reports that the binding is awaiting recent metrics.
 
-## Why This Is Better
+## Why this is better
 
 The old model was:
 
@@ -162,7 +162,7 @@ A customer-specific SPL search decides the topology link.
 The new model is:
 
 ```text
-Customer topology link + aliases + generic TE inventory + saved TE test binding.
+Deployment topology link + aliases + generic TE inventory + saved TE test binding.
 ```
 
 This avoids hard-coding:
@@ -173,16 +173,16 @@ This avoids hard-coding:
 - Test names
 - Customer-specific topology assumptions
 
-It also handles cases where the customer's ThousandEyes test name does not match
+It also handles cases where a ThousandEyes test name does not match
 the real source and target agents. The UI can show and bind to the actual
 agent-to-agent tuple instead of trusting the display name alone.
 
-## Setup Steps
+## Setup steps
 
-1. Add or confirm the customer sites.
+1. Add or confirm the deployment sites.
 
-   For FDEM, that means adding sites such as `TLH` and `AUB` if they are not
-   already present.
+   For example, add generic sites such as `North Campus` and `South Campus`
+   if they are not already present.
 
 2. Add useful aliases to each site.
 
@@ -220,7 +220,7 @@ If the `ThousandEyes A2A` picker is empty:
 - Confirm Splunk is receiving `cisco:thousandeyes:metric` events.
 - Confirm the events have `"thousandeyes.test.type"="agent-to-agent"`.
 - Confirm the `index_thousandeyes` macro points at the right index.
-- Increase the search window temporarily if the customer has no recent A2A
+- Increase the search window temporarily if the deployment has no recent A2A
   samples.
 - Check whether a firewall or path issue is preventing the A2A test from
   producing current metrics.
@@ -236,18 +236,18 @@ If the link is bound but still shows awaiting data:
 
 - The binding is probably fine.
 - Splunk may not have recent matching TE metric rows.
-- The customer may have a firewall/path issue between the two A2A agents.
+- The deployment may have a firewall or path issue between the two A2A agents.
 - The `View in ThousandEyes` link can still be useful for validating the TE-side
   test status.
 
-## Legacy Searches
+## Legacy searches
 
 The following older searches are not the canonical topology-binding model
 anymore:
 
 ```text
-Overview - Link Auburndale to Tallahassee Health
-[overview_link_auburndale_tallahassee_health]
+Overview - Link Site 1 to Site 2 Health
+[overview_link_site_1_site_2_health]
 ```
 
 ```text
@@ -256,7 +256,7 @@ Overview - Link ThousandEyes A2A Health
 ```
 
 They may remain temporarily for backward compatibility with saved topologies or
-older demos, but new customer deployments should use:
+older demos, but new deployments should use:
 
 ```text
 Overview - Link ThousandEyes A2A Inventory

@@ -16,7 +16,7 @@ HIGH,31,security_resilience_ds_ise_fail_count,kpi,ISE,Security Resilience - ISE 
 HIGH,31,it_health_thousandeyes_network_latency,trend,ThousandEyes,IT Health - ThousandEyes Network Latency,it_health_thousandeyes_alerts_table,detail,IT Health - ThousandEyes Active Alerts (Recent 20),3
 HIGH,31,it_health_thousandeyes_network_loss,trend,ThousandEyes,IT Health - ThousandEyes Network Loss,it_health_thousandeyes_alerts_table,detail,IT Health - ThousandEyes Active Alerts (Recent 20),3
 HIGH,31,it_health_thousandeyes_network_jitter,trend,ThousandEyes,IT Health - ThousandEyes Network Jitter,it_health_thousandeyes_alerts_table,detail,IT Health - ThousandEyes Active Alerts (Recent 20),3
-HIGH,30,user_experience_wireless_client_health,kpi,Client Health,User Experience - Wireless Client Health,statewide_client_wireless_drilldown,detail,Statewide - Wireless Client Health Drilldown,3
+HIGH,30,user_experience_wireless_client_health,kpi,Client Health,User Experience - Wireless Client Health,enterprise_client_wireless_drilldown,detail,Enterprise - Wireless Client Health Drilldown,3
 HIGH,30,security_resilience_ds_identity_trend,trend,ISE,Security Resilience - Identity Trend,security_resilience_ds_failed_detail_users,detail,Security Resilience - Failed Auth Users,0
 HIGH,30,it_health_te_alerts_severity_hourly_trend,trend,TE Alerts,ThousandEyes - Alerts - Severity Hourly Trend,it_health_te_alerts_recent_detail,detail,ThousandEyes - Alerts - Recent Alerts Detail Table,0
 HIGH,30,it_health_te_app_http_server_availability_trend,trend,TE Application,ThousandEyes - Application - HTTP Server Availability Trend,it_health_te_app_tests_by_domain,detail,ThousandEyes - Application - Tests by Domain,0
@@ -53,7 +53,7 @@ MED,28,it_health_te_app_page_load_duration_by_server,trend,TE Application,Thousa
 MED,27,security_resilience_ds_base_fw,unknown,Firewall,Security Resilience - Firewall Base Search,security_resilience_ds_fw_top_blocked,detail,Security Resilience - Top Firewall Blocks,3
 MED,26,security_resilience_ds_privileged_logons,unknown,Privileged Access,Security Resilience - Privileged Logons,security_resilience_ds_priv_detail,detail,Security Resilience - Privileged Logon Detail,0
 MED,25,it_critical_systems_ds_base_issues,unknown,Issues,IT - Critical Systems - Active Catalyst Center Issues,executive_dashboard_issue_summary_kpis_drilldown,detail,Executive Dashboard - Issue Summary KPIs Drilldown,1
-MED,25,overview_active_critical_alerts,kpi,Operations Pressure,Overview - Active Critical Alerts,overview_inter_site_latency,detail,Overview - Inter-Site Latency (TLH <-> AUB),0
+MED,25,overview_active_critical_alerts,kpi,Operations Pressure,Overview - Active Critical Alerts,overview_inter_site_latency,detail,Overview - Inter-Site Latency (NTH <-> STH),0
 MED,24,teuc_5_9_25_remote_worker_connectivity_health,unknown,Endpoint,TEUC-5.9.25 — Remote Worker Connectivity Health,teuc_5_9_24_endpoint_experience_score_monitoring,detail,TEUC-5.9.24 — Endpoint Experience Score Monitoring,0
 MED,24,teuc_5_9_26_vpn_path_performance,unknown,Endpoint,TEUC-5.9.26 — VPN Path Performance,teuc_5_9_24_endpoint_experience_score_monitoring,detail,TEUC-5.9.24 — Endpoint Experience Score Monitoring,0
 MED,24,teuc_5_9_27_endpoint_connection_type_and_network_score,unknown,Endpoint,TEUC-5.9.27 — Endpoint Connection Type and Network Score,teuc_5_9_24_endpoint_experience_score_monitoring,detail,TEUC-5.9.24 — Endpoint Experience Score Monitoring,0

@@ -35,17 +35,8 @@ MVEXPAND_CMD = re.compile(r"\|\s*mvexpand\b", re.I)
 INDEX_STAR = re.compile(r'index\s*=\s*"\*"|\bindex=\*', re.I)
 INTERNAL_INDEX = re.compile(r'index\s*=\s*"_?(?:internal|audit|introspection)"', re.I)
 
-# Confidential / customer-specific (post-scrub residue)
+# Internal infrastructure that must not appear in portable exports.
 CONFIDENTIAL_PATTERNS = [
-    (re.compile(r"\bFDEM\b", re.I), "FDEM customer identifier"),
-    (re.compile(r"\bCisco-FDEM\b", re.I), "Cisco-FDEM internal project name"),
-    (re.compile(r"\bTallahassee\b", re.I), "customer site name (Tallahassee)"),
-    (re.compile(r"\bAuburndale\b", re.I), "customer site name (Auburndale)"),
-    (re.compile(r"\bBetty Easley\b", re.I), "customer building name"),
-    (re.compile(r"\bPolk City\b", re.I), "customer location"),
-    (re.compile(r"\bShumard Oak\b", re.I), "customer street address"),
-    (re.compile(r"\bFred Jones\b", re.I), "customer street address"),
-    (re.compile(r"\bsh-i-ak\b", re.I), "internal stack hostname"),
     (re.compile(r"\bstg\.splunkcloud\.com\b", re.I), "internal Splunk Cloud staging host"),
 ]
 

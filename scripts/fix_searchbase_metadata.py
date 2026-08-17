@@ -10,7 +10,7 @@ What this does:
    picker's tag dropdown stops listing the same logical tag twice
    (e.g. ``ActiveDirectory`` vs ``Active_Directory``,
    ``Executive Summary`` vs ``Executive_Summary``, ``SDWAN`` vs
-   ``SD-WAN``, ``Network Activation`` &rarr; ``Network_Activation``).
+   ``SD-WAN``, ``Network Operations`` &rarr; ``Network_Operations``).
 3. **Normalises one sub-category casing variant** (``IDS/IPS`` &rarr;
    ``IDS / IPS``).
 4. **Bumps version + date_updated + updated_author** on every stanza
@@ -67,7 +67,7 @@ STANZAS_NEEDING_CISCO_TAG = {
 TAG_RENAMES = {
     "ActiveDirectory": "Active_Directory",
     "Executive Summary": "Executive_Summary",
-    "Network Activation": "Network_Activation",
+    "Network Operations": "Network_Operations",
     "Cisco Cloud Security": "Cisco_Cloud_Security",
     "Secure Access": "Secure_Access",
     "Cloud Firewall": "Cloud_Firewall",

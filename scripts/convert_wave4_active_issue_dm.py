@@ -79,7 +79,7 @@ STATS_DC_RE = re.compile(
     re.I,
 )
 STATS_COUNT_BY_RE = re.compile(r"^stats\s+count\s+by\s+(.+?)\s*$", re.I)
-STATEWIDE_EVAL_RE = re.compile(
+ENTERPRISE_EVAL_RE = re.compile(
     r"eval\s+issue_id\s*=\s*coalesce\(IssueID",
     re.I,
 )
@@ -230,11 +230,11 @@ def build_tstats_dc(
     )
 
 
-def convert_statewide_status_pipeline(
+def convert_enterprise_status_pipeline(
     rest: list[str],
     where_filters: list[str],
 ) -> list[str] | None:
-    if not rest or not STATEWIDE_EVAL_RE.search(rest[0]):
+    if not rest or not ENTERPRISE_EVAL_RE.search(rest[0]):
         return None
     stats_idx = next(
         (i for i, s in enumerate(rest) if s.lstrip("| ").strip().lower().startswith("stats ")),
@@ -392,9 +392,9 @@ def convert_stages(stages: list[str]) -> list[str] | None:
     else:
         rest = stages[:]
 
-    statewide = convert_statewide_status_pipeline(rest, opener_filters)
-    if statewide:
-        return statewide
+    enterprise = convert_enterprise_status_pipeline(rest, opener_filters)
+    if enterprise:
+        return enterprise
 
     issue_group = convert_issue_group_timechart(rest, opener_filters)
     if issue_group:

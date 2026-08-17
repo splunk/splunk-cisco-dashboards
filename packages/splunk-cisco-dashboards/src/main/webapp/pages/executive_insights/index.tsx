@@ -894,9 +894,9 @@ const DEFAULT_PRIORITY_DRILLDOWN_VIEW = "netops_catalyst_health";
 const APP_PRIORITY_DRILLDOWNS: readonly AppPriorityDrilldown[] = [
   {
     viewName: "netops_catalyst_health",
-    title: "Statewide Network Activation Report",
+    title: "Enterprise Network Operations Report",
     description:
-      "Client health, readiness, and activation signals across all sites.",
+      "Client health, readiness, and operations signals across all sites.",
     timeToken: "time_tok",
   },
   {

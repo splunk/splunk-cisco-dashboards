@@ -26,6 +26,7 @@
         "test:dashboard-theme": "node test/dashboardTheme.test.cjs",
         "test:dashboard-studio-shell-routing": "node test/dashboardStudioShellRouting.test.cjs",
         "test:studio-dashboard-visual-contracts": "node test/studioDashboardVisualContracts.test.cjs",
+        "test:netops-readiness-score": "node test/netopsReadinessScore.test.cjs",
         "test:build-profile": "node test/buildProfile.test.cjs",
         "test:all-dashboard-atmosphere": "node test/allDashboardAtmosphere.test.cjs",
         "test:it-health-c3-theme": "node test/itHealthC3Theme.test.cjs",

@@ -25,7 +25,7 @@ LEGACY_TABLE_SEARCHES = {
     "executive_dashboard_ds_device_health_current_drilldown",
     "monitoring_sdwan_site_health_table",
     "network_nvm_endpoint_os_inventory",
-    "overview_link_auburndale_tallahassee_health",
+    "overview_link_site_1_site_2_health",
     "overview_link_state_drilldown",
     "overview_topology_overview",
     "secure_networking_excessive_mac_per_port",

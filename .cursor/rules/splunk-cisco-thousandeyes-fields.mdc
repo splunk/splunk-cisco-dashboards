@@ -11,11 +11,10 @@ rule_id: splunk-cisco-thousandeyes-fields
 
 This is the **single source of truth** for the `Cisco_ThousandEyes`
 data model and the canonical field names of `cisco:thousandeyes:*`
-sourcetypes as seen on the FDEM stack. Confirmed against the live
-DM via `| from datamodel:Cisco_ThousandEyes...` and the live raw
-event index via
+sourcetypes used by this app. The field lists were verified from the data model
+and raw events via
 `` `index_thousandeyes` sourcetype="cisco:thousandeyes:metric" | `field_list` ``
-on 2026-05-13 (operator-provided field lists).
+(operator-provided field lists).
 
 **The raw-event field list and the DM field list are NOT the
 same.** Raw events expose ~80 fields (geo, location,
@@ -28,7 +27,7 @@ exists in the DM, and vice versa.
 
 For the underlying DM JSON definition, see
 `/opt/splunk/etc/apps/ta_cisco_thousandeyes/default/data/models/Cisco_ThousandEyes.json`
-on the user's stack. Per the DM-discovery rule, ask the user for
+on the target stack. Per the DM-discovery rule, ask the user for
 that JSON whenever you need to verify a dataset or field name not
 listed here.
 
@@ -54,7 +53,7 @@ listed here.
    it's part of the field identifier, not a quoting hint.
 4. **Use the single TE index macro.** All ThousandEyes feeds (test
    metrics, traces, path viz, activities, events, alerts) land in
-   the same index per FDEM convention. Use `` `index_thousandeyes` ``
+   the same index by app convention. Use `` `index_thousandeyes` ``
    for every raw-event SPL. The per-feed aliases (`stream_index`,
    `path_viz_index`, `event_index`, `activity_index`) were removed
    in Build 78 and must not be reintroduced.
@@ -95,9 +94,9 @@ with no `index=` prefix:
 ### Sourcetypes shipped by `ta_cisco_thousandeyes`
 
 The following list is **authoritative** per the operator on
-2026-05-13 (confirmed against
+and confirmed against
 `/opt/splunk/etc/apps/ta_cisco_thousandeyes/default/props.conf` on
-their FDEM stack). Use these strings verbatim — any other spelling
+the target stack). Use these strings verbatim — any other spelling
 returns no events:
 
 | Sourcetype | Purpose / backing |
@@ -124,7 +123,7 @@ operator to paste their TA `props.conf` (or run
 `| metadata type=sourcetypes index=<te_index> | search sourcetype=cisco:thousandeyes:*`)
 before you write the search.
 
-## Per-dataset field inventory (DM-confirmed 2026-05-13)
+## Per-dataset field inventory
 
 ### `Cisco_ThousandEyes.Test_Metrics` (default root)
 
@@ -208,7 +207,7 @@ If a unit assumption matters for the SPL output (alert thresholds,
 chart axis labels), call it out in the stanza's `description` and
 have the user confirm.
 
-### Raw `cisco:thousandeyes:metric` field inventory (FDEM-confirmed 2026-05-13)
+### Raw `cisco:thousandeyes:metric` field inventory
 
 This is the field list returned by
 `` `index_thousandeyes` sourcetype="cisco:thousandeyes:metric" | `field_list` ``
@@ -306,30 +305,10 @@ transport
 url.scheme
 ```
 
-Test/group "sticky" string fields also seen on this tenant
-(these are FDEM-specific saved-search / test-name tokens, not
-generic schema):
+Test and group label values are deployment-defined data, not schema fields.
+Do not copy observed labels into generic searches or documentation.
 
-```
-Cloud_Agents
-Firewall_Connection
-Florida_Disaster
-Florida_PA
-Microsoft_Teams
-O365
-SWO
-SaaS_Application_Health_Overview
-Salesforce
-Salesforce_Lightning
-Transport_Relay
-Webex
-```
-
-These are not part of the schema; do not use them as
-generic field names. They appear because of how the user's
-saved searches tag results.
-
-### Raw `cisco:thousandeyes:alerts` field inventory (FDEM-confirmed 2026-05-13)
+### Raw `cisco:thousandeyes:alerts` field inventory
 
 This is the field list returned by
 `` `index_thousandeyes` sourcetype="cisco:thousandeyes:alerts" | `field_list` ``
@@ -433,10 +412,9 @@ Notes on alert event shape:
   alert, not two events.
 - `testId` / `testName` / `testType` (and the dotted
   `alert.test.name`) tie the alert back to a specific synthetic
-  test. To attribute alerts to a customer site without a join,
-  use a token match on `testName` (the FDEM convention is to
-  embed the city name in the test title, e.g. `"Auburndale to
-  Tallahassee"`).
+  test. Prefer explicit topology bindings. If a deployment encodes site names
+  in `testName`, treat those values as deployment configuration rather than
+  hard-coding them in generic searches.
 
 ### Raw `cisco:thousandeyes:trace` field inventory (PENDING)
 

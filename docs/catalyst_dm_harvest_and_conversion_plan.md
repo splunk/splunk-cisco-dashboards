@@ -78,7 +78,7 @@ Convert existing raw stanzas in dependency order. Each wave: pick 5–10 pilot s
   - `dashboard_spaces_intelligence_v1_convergence_health`
   - `dashboard_spaces_intelligence_v1_net_kpi_client_health`
   - `dashboard_spaces_intelligence_v1_occupancy_vs_health`
-  - `dashboard_statewide_exercise_v1_cs_health_dist`
+  - `dashboard_network_operations_v1_cs_health_dist`
   - … +41 more
 
 ### Wave 3 — DNAC network health

@@ -44,57 +44,57 @@ AUTHOR_NEW = "codex"
 # ---------------------------------------------------------------------------
 FILLS: dict[str, dict[str, str]] = {
     # ---------- Overview map: per-site health ----------
-    "overview_site_tallahassee_health": {
+    "overview_site_1_health": {
         "related_info": (
             "<ul>"
             "<li><b>Map consumer</b><br>Rendered by <code>CustomerTopologyMap</code> "
-            "as the Tallahassee site marker; the React layer reads "
+            "as the North Campus site marker; the React layer reads "
             "<code>healthPct</code> + <code>status</code> directly.</li>"
-            "<li><b>Sibling stanzas</b><br><code>[overview_site_orlando_health]</code>, "
-            "<code>[overview_site_auburndale_health]</code>; demo variants "
+            "<li><b>Sibling stanzas</b><br><code>[overview_site_3_health]</code>, "
+            "<code>[overview_site_2_health]</code>; demo variants "
             "<code>[overview_site_demo_healthy/warning/critical]</code> back the picker preview.</li>"
             "<li><b>Site normalisation</b><br>The <code>dnac_site_normalize</code> macro "
-            "is the single source of truth for collapsing TLH / SEOC / Betty Easley path "
+            "is the single source of truth for collapsing NTH / OPS / Administration Building path "
             "variants into one rollup.</li>"
             "</ul>"
         ),
     },
-    "overview_site_orlando_health": {
+    "overview_site_3_health": {
         "related_info": (
             "<ul>"
             "<li><b>Map consumer</b><br>Rendered by <code>CustomerTopologyMap</code> "
-            "as the Orlando site marker.</li>"
-            "<li><b>Sibling stanzas</b><br><code>[overview_site_tallahassee_health]</code>, "
-            "<code>[overview_site_auburndale_health]</code>; demo variants "
+            "as the Central Campus site marker.</li>"
+            "<li><b>Sibling stanzas</b><br><code>[overview_site_1_health]</code>, "
+            "<code>[overview_site_2_health]</code>; demo variants "
             "<code>[overview_site_demo_healthy/warning/critical]</code> back the picker preview.</li>"
             "<li><b>Site normalisation</b><br><code>dnac_site_normalize</code> handles the "
-            "ORL / OEM / Florida Hospital path variants.</li>"
+            "Central Campus / Operations / Regional Hospital path variants.</li>"
             "</ul>"
         ),
     },
-    "overview_site_auburndale_health": {
+    "overview_site_2_health": {
         "related_info": (
             "<ul>"
             "<li><b>Map consumer</b><br>Rendered by <code>CustomerTopologyMap</code> "
-            "as the Auburndale site marker.</li>"
-            "<li><b>Sibling stanzas</b><br><code>[overview_site_tallahassee_health]</code>, "
-            "<code>[overview_site_orlando_health]</code>; demo variants "
+            "as the South Campus site marker.</li>"
+            "<li><b>Sibling stanzas</b><br><code>[overview_site_1_health]</code>, "
+            "<code>[overview_site_3_health]</code>; demo variants "
             "<code>[overview_site_demo_healthy/warning/critical]</code> back the picker preview.</li>"
-            "<li><b>Site normalisation</b><br><code>dnac_site_normalize</code> handles the AUB "
-            "and Polk / Auburndale path variants.</li>"
+            "<li><b>Site normalisation</b><br><code>dnac_site_normalize</code> handles the STH "
+            "and Polk / South Campus path variants.</li>"
             "</ul>"
         ),
     },
     # ---------- Overview map: per-link health ----------
-    "overview_link_orlando_tallahassee_health": {
+    "overview_link_site_1_site_3_health": {
         "related_info": (
             "<ul>"
             "<li><b>Map consumer</b><br>Rendered by <code>CustomerTopologyMap</code> as the "
-            "ORL&harr;TLH connectivity line; the React layer reads "
+            "CTR&harr;NTH connectivity line; the React layer reads "
             "<code>linkUtilizationMbps</code>, <code>capacityMbps</code>, and "
             "<code>status</code>.</li>"
-            "<li><b>Sibling stanzas</b><br><code>[overview_link_auburndale_tallahassee_health]</code>, "
-            "<code>[overview_link_orlando_auburndale_health]</code>; demo variants "
+            "<li><b>Sibling stanzas</b><br><code>[overview_link_site_1_site_2_health]</code>, "
+            "<code>[overview_link_site_2_site_3_health]</code>; demo variants "
             "<code>[overview_link_demo_healthy/warning/critical]</code>.</li>"
             "<li><b>Capacity convention</b><br>Static capacity values come from the "
             "design-of-record; tune them via the <code>linkCapacities</code> table in "
@@ -102,13 +102,13 @@ FILLS: dict[str, dict[str, str]] = {
             "</ul>"
         ),
     },
-    "overview_link_auburndale_tallahassee_health": {
+    "overview_link_site_1_site_2_health": {
         "related_info": (
             "<ul>"
             "<li><b>Map consumer</b><br>Rendered by <code>CustomerTopologyMap</code> as the "
-            "AUB&harr;TLH connectivity line.</li>"
-            "<li><b>Sibling stanzas</b><br><code>[overview_link_orlando_tallahassee_health]</code>, "
-            "<code>[overview_link_orlando_auburndale_health]</code>; demo variants "
+            "STH&harr;NTH connectivity line.</li>"
+            "<li><b>Sibling stanzas</b><br><code>[overview_link_site_1_site_3_health]</code>, "
+            "<code>[overview_link_site_2_site_3_health]</code>; demo variants "
             "<code>[overview_link_demo_healthy/warning/critical]</code>.</li>"
             "<li><b>Capacity convention</b><br>Static capacity values come from the "
             "design-of-record; tune via <code>linkCapacities</code> in "
@@ -116,13 +116,13 @@ FILLS: dict[str, dict[str, str]] = {
             "</ul>"
         ),
     },
-    "overview_link_orlando_auburndale_health": {
+    "overview_link_site_2_site_3_health": {
         "related_info": (
             "<ul>"
             "<li><b>Map consumer</b><br>Rendered by <code>CustomerTopologyMap</code> as the "
-            "ORL&harr;AUB connectivity line.</li>"
-            "<li><b>Sibling stanzas</b><br><code>[overview_link_orlando_tallahassee_health]</code>, "
-            "<code>[overview_link_auburndale_tallahassee_health]</code>; demo variants "
+            "CTR&harr;STH connectivity line.</li>"
+            "<li><b>Sibling stanzas</b><br><code>[overview_link_site_1_site_3_health]</code>, "
+            "<code>[overview_link_site_1_site_2_health]</code>; demo variants "
             "<code>[overview_link_demo_healthy/warning/critical]</code>.</li>"
             "<li><b>Capacity convention</b><br>Static capacity values come from the "
             "design-of-record; tune via <code>linkCapacities</code> in "
@@ -140,7 +140,7 @@ FILLS: dict[str, dict[str, str]] = {
             "<li><b>Sibling demo stanzas</b><br><code>[overview_site_demo_warning]</code>, "
             "<code>[overview_site_demo_critical]</code>.</li>"
             "<li><b>Production analogue</b><br>The 3 live <code>overview_site_*_health</code> "
-            "stanzas (Tallahassee / Orlando / Auburndale) emit the same row shape from real data.</li>"
+            "stanzas (North Campus / Central Campus / South Campus) emit the same row shape from real data.</li>"
             "</ul>"
         ),
     },

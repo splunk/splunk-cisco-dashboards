@@ -94,6 +94,58 @@ The `w_a`, `w_r`, `w_q` arguments are normally driven by a dashboard input dropd
 
 Push back if a preset is named that doesn't match the audience for the dashboard.
 
+### 4a. Network Readiness Score — KTP v2.0.0 operational adaptation
+
+The NetOps Readiness dashboard specializes ARQ for wireless operations. This is
+panel-local math built from the existing `nrs_w_nrs_*` and threshold macros; it
+does not add another canonical SCD computation macro.
+
+```
+A = percent of access points whose latest state is REACHABLE
+
+R = 0.50 * percent of access points with OverallHealth >= nrs_th_ap_health
+  + 0.50 * percent of clients with health.overallScore >= nrs_th_cl_health
+
+Q = 0.35 * normalized mean client health
+  + 0.35 * normalized mean onboarding speed
+  + 0.30 * normalized mean RSSI
+
+E_base = A * nrs_w_nrs_a + R * nrs_w_nrs_r + Q * nrs_w_nrs_q
+
+D_risk = max(0.50, 1.00 - 0.05 * active_P1 - 0.02 * active_P2)
+
+NRS = E_base * D_risk
+```
+
+Normalization rules are fixed across the headline, trend, forecast, per-site,
+standalone Q, and alert searches:
+
+- client health is multiplied by 10 to map the Catalyst Center 0–10 value to
+  0–100;
+- onboarding scores 100 at or below one second, 0 at or above five seconds,
+  and decreases linearly between them;
+- RSSI is mapped with `clamp(mean_RSSI + 100, 0, 100)`;
+- the latest status and priority for each distinct issue ID determine the P1 and
+  P2 counts used by `D_risk`.
+
+The top-level ARQ weights intentionally total 0.85, so the present maximum NRS
+is approximately 85. The local operational bands are healthy at 80 or above,
+watch from 70 through 79, and act-now below 70.
+
+#### KTP adaptation boundary
+
+This profile is pinned to the
+[Kinetic Trust Protocol v2.0.0 tag](https://github.com/nmcitra/ktp-rfc/tree/v2.0.0),
+which defines `E_trust = E_base * (1 - R)`. The dashboard adapts that
+base-times-contextual-risk shape: the ARQ composite is its network-readiness
+base and `D_risk` is a deliberately limited operational proxy for `(1 - R)`.
+
+This is not a claim of KTP conformance. KTP v2 defines `E_base` as earned agent
+standing and derives `R` from six named risk inputs, with a separate Soul veto.
+The dashboard does not implement autonomous-agent authorization, Trust Proofs,
+KTP trust tiers, Silent Veto, or the Soul veto. Its readiness bands are local
+operations thresholds, not KTP trust tiers.
+
 ### 5. Uptime SLA % — `scd_uptime_sla(availability_field, target_pct)`
 
 The percentage of time-buckets in which availability met or exceeded the target. Use this for monthly / quarterly SLA rollups.
@@ -296,7 +348,7 @@ This is the **locked** list. New panels never assume sourcetypes outside it. Pus
 
 ### Site naming
 
-DNAC `Site` values are the full hierarchy: `Global/Florida/<City>/<Code>`. **Always filter with LIKE+OR variants — never literal equality.** Use the `scd_site_filter` pattern (port from old app at Gate 3b when needed; not in the canonical 11 because it's a where-clause fragment, not a math macro).
+DNAC `Site` values are the full hierarchy: `Global/Region/<City>/<Code>`. **Always filter with LIKE+OR variants — never literal equality.** Use the `scd_site_filter` pattern (port from old app at Gate 3b when needed; not in the canonical 11 because it's a where-clause fragment, not a math macro).
 
 ### Placeholder convention
 

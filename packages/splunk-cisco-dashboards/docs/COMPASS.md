@@ -117,7 +117,7 @@ Here is **Pilot Panel 3 — Network E-Score Composite** specified end-to-end. Th
 | E | WHEN | sliding 7-day |
 | E | STEP | aggregate across all DNAC-managed devices |
 | E | COMPARE-TO | none |
-| S | WHERE | every Florida site |
+| S | WHERE | every Region site |
 | S | WHO | network operations team |
 | S | CLOCK | continuous |
 | S | BLAST-RADIUS | every scope |
@@ -126,7 +126,7 @@ Here is **Pilot Panel 3 — Network E-Score Composite** specified end-to-end. Th
 | W | NEXT-ASK | per-site E-Score breakdown (panel `network.per_site_escore` — added at Gate 3b) |
 | W | DECISION | approve / hold / escalate |
 
-**MVC8 check:** ✓ all four corners populated (Quantify+decide / composite+sliding-7d / every-Florida-site+every-scope / scorecard+per-site-escore).
+**MVC8 check:** ✓ all four corners populated (Quantify+decide / composite+sliding-7d / every-Region-site+every-scope / scorecard+per-site-escore).
 
 ### Layer 2 — LA28 (the COMPUTATION)
 

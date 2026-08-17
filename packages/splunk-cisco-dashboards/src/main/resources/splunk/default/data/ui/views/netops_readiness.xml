@@ -77,7 +77,7 @@
 			"options": {
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
-				"markdown": "## About this dashboard and shipped NOC alerts\n\n### NRS Formula\n\n**NRS = (0.30 × A + 0.30 × R + 0.25 × Q) × D_risk**\n\n- **A - Attainability (DNAC)**: percentage of access points with `Reachability=REACHABLE`.\n- **R - Retainability (DNAC)**: 50% APs with `OverallHealth >= 7` and 50% clients with `health.overallScore >= 5`.\n- **Q - Quality (DNAC)**: in the headline NRS, 60% mean client health (×10 to scale to 100) and 40% onboarding-time score (100 if avg ≤ 1s, 0 if ≥ 5s, linear in between). The standalone Q tile additionally blends 30% RSSI signal strength.\n- **D_risk - Risk deflator**: 1.0 − 0.05·P1 − 0.02·P2 (count of distinct active P1/P2 IssueIDs from `cisco:dnac:issue`). Floored at 0.5 so a catastrophe still leaves something to recover.\n\n### Why max NRS ≈ 85, not 100\n\nThe top-level weights sum to 0.85, not 1.0. The remaining 15% is reserved for future sub-scores (e.g., per-floor saturation, ThousandEyes path quality). For now, treat ≥ 80 as healthy, 70-79 as watch, < 70 as act-now. Tile thresholds are tunable in the score visualization once the weights are re-tuned via the `nrs_w_nrs_*` macros.\n\n### Data sources\n\n- **DNAC / Catalyst Center** (`cisco:dnac:devicehealth`, `cisco:dnac:client`, `cisco:dnac:issue`): the network-side truth - which APs are up, how clients are doing, what's broken.\n- **Cisco Spaces Firehose** (`cisco:spaces:firehose`, eventType `DEVICE_PRESENCE` and `DEVICE_ASSOCIATION`): the demand-side truth - how many people are actually on the network, where, on which SSID.\n\n### Shipped alerts (savedsearches.conf)\n\n- **NRS Below Threshold** - fires when headline NRS drops below 75.\n- **AP Saturation** - fires when any AP exceeds 30 concurrent clients.\n- **AP Health Degraded** - fires when any AP's `OverallHealth` drops below 7.\n- **Client Health Degraded** - fires when avg client health drops below 5."
+				"markdown": "## About this dashboard and shipped NOC alerts\n\n### NRS Formula\n\n**NRS = E_base × D_risk**\n\n**E_base = 0.30 × A + 0.30 × R + 0.25 × Q**\n\n- **A - Attainability (Catalyst Center)**: percentage of access points with `Reachability=REACHABLE`.\n- **R - Retainability (Catalyst Center)**: 50% APs with `OverallHealth >= 7` and 50% clients with `health.overallScore >= 5`.\n- **Q - Quality (Catalyst Center)**: 35% mean client health (×10 to scale to 100), 35% onboarding-time score (100 if avg ≤ 1s, 0 if ≥ 5s, linear in between), and 30% RSSI signal-strength score. The headline, forecast, per-site, alert, and standalone Q tile all use this definition.\n- **D_risk - Contextual risk multiplier**: 1.0 − 0.05·P1 − 0.02·P2 (count of distinct active P1/P2 IssueIDs from Catalyst Center issue data). Floored at 0.50×.\n\n### KTP v2.0.0 relationship\n\nThis is an operational adaptation of the [Kinetic Trust Protocol v2.0.0](https://github.com/nmcitra/ktp-rfc/tree/v2.0.0) trust-score shape, `E_trust = E_base × (1 − R)`: the ARQ composite is the network-readiness base and `D_risk` is a limited operational proxy for `(1 − R)`. KTP v2 defines `E_base` as earned agent standing and `R` from six named risk inputs, with a separate Soul veto. This dashboard does not implement agent authorization, Trust Proofs, KTP trust tiers, Silent Veto, or the Soul veto, and does not claim KTP conformance.\n\n### Why max NRS ≈ 85, not 100\n\nThe top-level weights sum to 0.85, not 1.0. The remaining 15% is reserved for future sub-scores (e.g., per-floor saturation, ThousandEyes path quality). For now, treat ≥ 80 as healthy, 70-79 as watch, < 70 as act-now. Tile thresholds are tunable in the score visualization once the weights are re-tuned via the `nrs_w_nrs_*` macros. These readiness bands are local operational thresholds, not KTP v2 trust tiers.\n\n### Data sources\n\n- **Catalyst Center** (`cisco:dnac:devicehealth`, `cisco:dnac:client`, `cisco:dnac:issue`): the network-side truth - which APs are up, how clients are doing, what's broken.\n- **Cisco Spaces Firehose** (`cisco:spaces:firehose`, eventType `DEVICE_PRESENCE` and `DEVICE_ASSOCIATION`): the demand-side truth - how many people are actually on the network, where, on which SSID.\n\n### Shipped alerts (savedsearches.conf)\n\n- **NRS Below Threshold** - fires when headline NRS drops below 80.\n- **AP Saturation** - fires when any AP exceeds 30 concurrent clients.\n- **AP Health Degraded** - fires when any AP's `OverallHealth` drops below 7.\n- **Client Health Degraded** - fires when avg client health drops below 5."
 			},
 			"type": "splunk.markdown"
 		},
@@ -85,7 +85,7 @@
 			"options": {
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
-				"markdown": "**NRS = (0.30·A + 0.30·R + 0.25·Q) × D_risk**\n\n- **A** - % of APs with `Reachability=REACHABLE`\n- **R** - 50% APs with health ≥ 7 and 50% clients with health ≥ 5\n- **Q** - 60% mean client health (×10) + 40% onboarding-time score (headline). Standalone Q tile adds 30% RSSI.\n- **D_risk** - 1.0 − 0.05·P1 − 0.02·P2 from `cisco:dnac:issue`, floor 0.5\n\n*Score scale:* max achievable ≈ 85 (see About). ≥ 80 green, 70-79 amber, < 70 red."
+				"markdown": "**NRS = E_base × D_risk**, where **E_base = 0.30·A + 0.30·R + 0.25·Q**\n\n- **A** - % of APs with `Reachability=REACHABLE`\n- **R** - 50% APs with health ≥ 7 and 50% clients with health ≥ 5\n- **Q** - 35% mean client health (×10) + 35% onboarding-time score + 30% RSSI score everywhere NRS is calculated\n- **D_risk** - 1.0 − 0.05·P1 − 0.02·P2 from Catalyst Center issues, floor 0.50×\n\n*KTP relationship:* operational adaptation of KTP v2.0.0's base × contextual-risk shape; not a KTP-conformance claim.\n\n*Readiness scale:* max achievable ≈ 85 (see About). ≥ 80 green, 70-79 amber, < 70 red."
 			},
 			"type": "splunk.markdown"
 		},
@@ -618,16 +618,16 @@
 			"context": {
 				"majorColorEditorConfig": [
 					{
-						"to": 85,
+						"to": 0.75,
 						"value": "#fa5762"
 					},
 					{
-						"from": 85,
-						"to": 95,
+						"from": 0.75,
+						"to": 0.9,
 						"value": "#f0c243"
 					},
 					{
-						"from": 95,
+						"from": 0.9,
 						"value": "#4cbf7f"
 					}
 				]
@@ -635,13 +635,13 @@
 			"dataSources": {
 				"primary": "ds_score_drisk"
 			},
-			"description": "Risk deflator from P1/P2/saturation - floor 0.5",
+			"description": "Contextual risk multiplier from active P1/P2 issues - floor 0.50×",
 			"options": {
 				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
-				"unit": "%",
+				"unit": "×",
 				"unitPosition": "after",
 				"trendColor": "#649ef5",
 				"sparklineStrokeColor": "#649ef5"
@@ -785,16 +785,16 @@
 			"context": {
 				"majorColorEditorConfig": [
 					{
-						"to": 75,
+						"to": 70,
 						"value": "#fa5762"
 					},
 					{
-						"from": 75,
-						"to": 90,
+						"from": 70,
+						"to": 80,
 						"value": "#f0c243"
 					},
 					{
-						"from": 90,
+						"from": 80,
 						"value": "#4cbf7f"
 					}
 				]
@@ -824,7 +824,7 @@
 				"annotation": "ds_annotations",
 				"primary": "ds_score_nrs_trend"
 			},
-			"description": "Hourly NRS for the selected window. Vertical blue lines mark Op Florida Ready exercise days (Apr 13, 14, 15, 2026). Did the score actually hold when the exercise hit?",
+			"description": "Hourly NRS for the selected window. Generic IT Operations checkpoints show whether the score holds across the period.",
 			"options": {
 				"annotationColor": "> annotation | seriesByName('annotation_color')",
 				"annotationLabel": "> annotation | seriesByName('label')",
@@ -852,7 +852,7 @@
 				"backgroundColor": "#131a23",
 				"lineWidth": 2
 			},
-			"title": "NRS over time - with Op Florida Ready operational milestones (annotation: Op Florida Ready milestones)",
+			"title": "NRS over time - with IT Operations operational milestones (annotation: IT Operations milestones)",
 			"type": "splunk.line"
 		},
 		"viz_p_hdr_bg": {
@@ -869,7 +869,7 @@
 			"options": {
 				"fontColor": "#649ef5",
 				"fontSize": "large",
-				"markdown": "## NetOps Readiness - Op Florida Ready",
+				"markdown": "## NetOps Readiness - IT Operations",
 				"backgroundColor": "#1c2738"
 			},
 			"type": "splunk.markdown"
@@ -897,7 +897,7 @@
 				"backgroundColor": "#131a23",
 				"lineWidth": 2
 			},
-			"title": "Q10a - DNAC: Avg client health score over time (annotation: Op Florida Ready milestones)",
+			"title": "Q10a - DNAC: Avg client health score over time (annotation: IT Operations milestones)",
 			"type": "splunk.line"
 		},
 		"viz_q10_issues": {
@@ -917,7 +917,7 @@
 				"xAxisTitleVisibility": "hide",
 				"backgroundColor": "#131a23"
 			},
-			"title": "Q10c - DNAC: Issue count over time (annotation: Op Florida Ready milestones)",
+			"title": "Q10c - DNAC: Issue count over time (annotation: IT Operations milestones)",
 			"type": "splunk.column"
 		},
 		"viz_q10_onboarding": {
@@ -942,7 +942,7 @@
 				"backgroundColor": "#131a23",
 				"lineWidth": 2
 			},
-			"title": "Q10b - DNAC: Avg onboarding time over time (annotation: Op Florida Ready milestones)",
+			"title": "Q10b - DNAC: Avg onboarding time over time (annotation: IT Operations milestones)",
 			"type": "splunk.line"
 		},
 		"viz_q1_people_per_ap": {
@@ -1032,7 +1032,7 @@
 				],
 				"lineWidth": 2
 			},
-			"title": "Q4b - Spaces: Concurrent users per site (annotation: Op Florida Ready milestones)",
+			"title": "Q4b - Spaces: Concurrent users per site (annotation: IT Operations milestones)",
 			"type": "splunk.line"
 		},
 		"viz_q4_onboarding_per_site": {
@@ -1065,7 +1065,7 @@
 				],
 				"lineWidth": 2
 			},
-			"title": "Q4a - DNAC: Onboarding time per site (annotation: Op Florida Ready milestones)",
+			"title": "Q4a - DNAC: Onboarding time per site (annotation: IT Operations milestones)",
 			"type": "splunk.line"
 		},
 		"viz_q5_at_risk": {
@@ -1157,7 +1157,7 @@
 					"#f7782f"
 				]
 			},
-			"title": "Q6 - DNAC: Issues stacked by severity (annotation: Op Florida Ready milestones)",
+			"title": "Q6 - DNAC: Issues stacked by severity (annotation: IT Operations milestones)",
 			"type": "splunk.column"
 		},
 		"viz_q6_occupancy_overlay": {
@@ -1221,7 +1221,7 @@
 				],
 				"lineWidth": 2
 			},
-			"title": "Q7 - Spaces: Per-SSID concurrent associations (top 10, annotation: Op Florida Ready milestones)",
+			"title": "Q7 - Spaces: Per-SSID concurrent associations (top 10, annotation: IT Operations milestones)",
 			"type": "splunk.line"
 		},
 		"viz_q8_surge": {
@@ -1327,7 +1327,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "**Network Readiness Score (NRS)** - E-Score: NRS = (0.30·A + 0.30·R + 0.25·Q) × D_risk. Updated every 5 min. Green ≥ 90, amber 75-89, red < 75."
+				"markdown": "**Network Readiness Score (NRS)** - KTP v2.0.0-inspired operational adaptation: NRS = E_base × D_risk, where E_base = 0.30·A + 0.30·R + 0.25·Q. Updated every 5 min. Healthy ≥ 80, watch 70-79, act-now < 70."
 			},
 			"type": "splunk.markdown"
 		},
@@ -1345,7 +1345,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "**DURING - Real-Time NetOps (Apr 13-15, 2026)** - saturation, onboarding, issues, SSID load. Refreshed every 5 min and feeding the alerting engine on Tab E."
+				"markdown": "**DURING - Real-time NetOps** - saturation, onboarding, issues, SSID load. Refreshed every 5 min and feeding the alerting engine on Tab E."
 			},
 			"type": "splunk.markdown"
 		},
@@ -1363,7 +1363,7 @@
 		"ds_a_nrs_forecast": {
 			"name": "NRS hourly with 24h forecast",
 			"options": {
-				"query": "| union [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" OverallHealth=* \n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\" \n | where OverallHealth >= 0 \n | bin _time span=1h \n | stats latest(Reachability) as reach, latest(OverallHealth) as oh by _time, DeviceName \n | eval is_reach=if(upper(reach)=\"REACHABLE\", 1, 0), ap_ok=if(oh>=`nrs_th_ap_health`, 1, 0) \n | stats avg(is_reach) as ap_reach, avg(ap_ok) as ap_health_ok, count as ap_n by _time ]\n| union [ search `index_catalyst` sourcetype=\"cisco:dnac:client\" \n | eval cl_health = 'health.overallScore' \n | bin _time span=1h \n | stats avg(cl_health) as health_avg, count(eval(cl_health>=`nrs_th_cl_health`)) as ok_n, count as cl_n by _time \n | eval cl_ok=if(cl_n>0, ok_n/cl_n, null()), health100=coalesce(health_avg,8)*10 ] \n| stats values(ap_reach) as ap_reach, values(ap_health_ok) as ap_ok,\n values(cl_ok) as cl_ok, values(health100) as h100,\n values(ap_n) as ap_n, values(cl_n) as cl_n by _time \n| eval ap_reach=coalesce(ap_reach,1), ap_ok=coalesce(ap_ok,1),\n cl_ok=coalesce(cl_ok,1), h100=coalesce(h100,80) \n| eval A=ap_reach*100, R=(ap_ok*0.5 + cl_ok*0.5)*100, Q=h100 \n| eval NRS=A*`nrs_w_nrs_a` + R*`nrs_w_nrs_r` + Q*`nrs_w_nrs_q` \n| timechart span=1h max(eval(round(NRS, 2))) as NRS \n| predict NRS as predicted future_timespan=24 \n| rename \"upper95(prediction(NRS))\" as upper95,\n \"lower95(prediction(NRS))\" as lower95 \n| eval predicted=round(predicted, 2), upper95=round(upper95, 2), lower95=round(lower95, 2)",
+				"query": "| union [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" OverallHealth=* \n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\" \n | where OverallHealth >= 0 \n | bin _time span=1h \n | stats latest(Reachability) as reach, latest(OverallHealth) as oh by _time, DeviceName \n | eval is_reach=if(upper(reach)=\"REACHABLE\", 1, 0), ap_ok=if(oh>=`nrs_th_ap_health`, 1, 0) \n | stats avg(is_reach) as ap_reach, avg(ap_ok) as ap_health_ok, count as ap_n by _time ]\n| union [ search `index_catalyst` sourcetype=\"cisco:dnac:client\" \n | eval cl_health=tonumber('health.overallScore'), ob_ms=tonumber('onboarding.avgRunDuration'), rv=tonumber('connection.rssi') \n | bin _time span=1h \n | stats avg(cl_health) as health_avg, avg(eval(if(ob_ms>0,ob_ms,null()))) as ob_ms, avg(rv) as arv, count(eval(cl_health>=`nrs_th_cl_health`)) as ok_n, count as cl_n by _time \n | eval cl_ok=if(cl_n>0, ok_n/cl_n, null()), h100=coalesce(health_avg,8)*10, ob_s=coalesce(ob_ms,1500)/1000 \n | eval o100=if(ob_s<=1,100,if(ob_s>=5,0,100-((ob_s-1)*25))), r100=max(0,min(100,coalesce(arv,-20)+100)) \n | eval quality=0.35*h100+0.35*o100+0.30*r100 ] \n| stats values(ap_reach) as ap_reach, values(ap_health_ok) as ap_ok,\n values(cl_ok) as cl_ok, values(quality) as quality,\n values(ap_n) as ap_n, values(cl_n) as cl_n by _time \n| where (isnotnull(ap_n) AND ap_n>0) OR (isnotnull(cl_n) AND cl_n>0) \n| eval ap_reach=coalesce(ap_reach,1), ap_ok=coalesce(ap_ok,1),\n cl_ok=coalesce(cl_ok,1), quality=coalesce(quality,80) \n| eval A=ap_reach*100, R=(ap_ok*0.5 + cl_ok*0.5)*100, Q=quality \n| eval E_base=A*`nrs_w_nrs_a` + R*`nrs_w_nrs_r` + Q*`nrs_w_nrs_q` \n| timechart span=1h max(eval(round(E_base, 2))) as E_base \n| appendcols [ search `index_catalyst` sourcetype=\"cisco:dnac:issue\" \n | where isnotnull(IssueID) AND IssueID!=\"\" \n | stats latest(IssueStatus) as issue_status, latest(IssuePriority) as issue_priority by IssueID \n | where lower(issue_status)=\"active\" \n | stats count(eval(upper(issue_priority)=\"P1\")) as p1, count(eval(upper(issue_priority)=\"P2\")) as p2 \n | eval D_risk=max(0.5,1-0.05*p1-0.02*p2) ] \n| eventstats max(D_risk) as D_risk \n| eval D_risk=coalesce(D_risk,1), NRS=round(E_base*D_risk,2) \n| fields - E_base D_risk \n| predict NRS as predicted future_timespan=24 \n| rename \"upper95(prediction(NRS))\" as upper95,\n \"lower95(prediction(NRS))\" as lower95 \n| eval predicted=round(predicted, 2), upper95=round(upper95, 2), lower95=round(lower95, 2)",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1374,9 +1374,9 @@
 			"type": "ds.search"
 		},
 		"ds_annotations": {
-			"name": "Shared - Annotations",
+			"name": "IT Operations milestones",
 			"options": {
-				"query": "| noop",
+				"query": "| makeresults count=4\n| streamstats count as id\n| addinfo\n| eval fraction=case(id=1, 0.1, id=2, 0.4, id=3, 0.7, id=4, 0.95)\n| eval _time=round(info_min_time+((info_max_time-info_min_time)*fraction), 0)\n| eval label=case(id=1, \"IT Operations - Start\", id=2, \"IT Operations - Checkpoint 1\", id=3, \"IT Operations - Checkpoint 2\", id=4, \"IT Operations - Close\")\n| eval color=case(id=1, \"#9E9E9E\", id=2 OR id=3, \"#D64550\", id=4, \"#6EBE4A\")\n| table _time label color",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1486,7 +1486,7 @@
 		"ds_q3_aps_poor_health": {
 			"name": "Q3 - DNAC APs to fix before the exercise",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" DeviceFamily=\"Unified AP\"\n| eval site_raw=coalesce(Site, Location, \"Unsited\")\n| stats latest(OverallHealth) as oh,\n latest(Reachability) as Reachability,\n latest(IssueCount) as Issues by DeviceName, site_raw\n| where (oh<7 OR upper(Reachability)!=\"REACHABLE\" OR Issues>0)\n| eval Health = case(upper(Reachability)!=\"REACHABLE\", \"-\", isnull(oh), \"-\", oh<0, \"-\", 1=1, tostring(oh))\n| eval Status=case(upper(Reachability)!=\"REACHABLE\", \"UNREACHABLE\",\n isnotnull(oh) AND oh>=0 AND oh<5, \"Critical\",\n isnotnull(oh) AND oh<7, \"Degraded\",\n Issues>0, \"Has Issues\",\n 1=1, \"Watch\")\n| eval site=replace(site_raw, \"^Global/Florida/\", \"\")\n| sort + oh\n| rename DeviceName as \"AP\", site as \"Site\", Issues as \"Open Issues\"\n| table \"AP\" \"Site\" \"Health\" \"Reachability\" \"Open Issues\" \"Status\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" DeviceFamily=\"Unified AP\"\n| eval site_raw=coalesce(Site, Location, \"Unsited\")\n| stats latest(OverallHealth) as oh,\n latest(Reachability) as Reachability,\n latest(IssueCount) as Issues by DeviceName, site_raw\n| where (oh<7 OR upper(Reachability)!=\"REACHABLE\" OR Issues>0)\n| eval Health = case(upper(Reachability)!=\"REACHABLE\", \"-\", isnull(oh), \"-\", oh<0, \"-\", 1=1, tostring(oh))\n| eval Status=case(upper(Reachability)!=\"REACHABLE\", \"UNREACHABLE\",\n isnotnull(oh) AND oh>=0 AND oh<5, \"Critical\",\n isnotnull(oh) AND oh<7, \"Degraded\",\n Issues>0, \"Has Issues\",\n 1=1, \"Watch\")\n| eval site=replace(site_raw, \"^Global/Region/\", \"\")\n| sort + oh\n| rename DeviceName as \"AP\", site as \"Site\", Issues as \"Open Issues\"\n| table \"AP\" \"Site\" \"Health\" \"Reachability\" \"Open Issues\" \"Status\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1574,7 +1574,7 @@
 		"ds_q8_surge_per_building": {
 			"name": "Q8 - Spaces surge multiplier per building",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_PRESENCE\"\n| eval lh_t0='devicePresence.location.inferredLocationTypes{}',\n lh_t1='devicePresence.location.parent.inferredLocationTypes{}',\n lh_t2='devicePresence.location.parent.parent.inferredLocationTypes{}',\n lh_t3='devicePresence.location.parent.parent.parent.inferredLocationTypes{}',\n lh_t4='devicePresence.location.parent.parent.parent.parent.inferredLocationTypes{}',\n lh_n0='devicePresence.location.name',\n lh_n1='devicePresence.location.parent.name',\n lh_n2='devicePresence.location.parent.parent.name',\n lh_n3='devicePresence.location.parent.parent.parent.name',\n lh_n4='devicePresence.location.parent.parent.parent.parent.name'\n| eval building=case(mvfind(lh_t0,\"NETWORK\")>=0,lh_n0, mvfind(lh_t1,\"NETWORK\")>=0,lh_n1, mvfind(lh_t2,\"NETWORK\")>=0,lh_n2, mvfind(lh_t3,\"NETWORK\")>=0,lh_n3, mvfind(lh_t4,\"NETWORK\")>=0,lh_n4)\n| eval campus=case(mvfind(lh_t0,\"CAMPUS\")>=0,lh_n0, mvfind(lh_t1,\"CAMPUS\")>=0,lh_n1, mvfind(lh_t2,\"CAMPUS\")>=0,lh_n2, mvfind(lh_t3,\"CAMPUS\")>=0,lh_n3, mvfind(lh_t4,\"CAMPUS\")>=0,lh_n4)\n| where isnotnull(campus) AND isnotnull(building)\n| eval site=campus.\": \".building\n| fields - lh_t0 lh_t1 lh_t2 lh_t3 lh_t4 lh_n0 lh_n1 lh_n2 lh_n3 lh_n4\n| eval mac=coalesce('devicePresence.device.macAddress','devicePresence.macAddress')\n| where isnotnull(mac) AND mac!=\"\"\n| bin _time span=1h\n| stats dc(mac) as users by _time, site\n| eval bucket=case(_time>=relative_time(now(),\"@d-13d\") AND _time<relative_time(now(),\"@d-7d\"), \"Baseline\",\n _time>=relative_time(now(),\"@d-3d\") AND _time<=now(), \"Exercise\")\n| where isnotnull(bucket)\n| stats avg(users) as avg_users by site, bucket\n| xyseries site bucket avg_users\n| eval Multiplier=if(Baseline>0, round(Exercise/Baseline,2), null())\n| sort - Multiplier",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_PRESENCE\"\n| eval lh_t0='devicePresence.location.inferredLocationTypes{}',\n lh_t1='devicePresence.location.parent.inferredLocationTypes{}',\n lh_t2='devicePresence.location.parent.parent.inferredLocationTypes{}',\n lh_t3='devicePresence.location.parent.parent.parent.inferredLocationTypes{}',\n lh_t4='devicePresence.location.parent.parent.parent.parent.inferredLocationTypes{}',\n lh_n0='devicePresence.location.name',\n lh_n1='devicePresence.location.parent.name',\n lh_n2='devicePresence.location.parent.parent.name',\n lh_n3='devicePresence.location.parent.parent.parent.name',\n lh_n4='devicePresence.location.parent.parent.parent.parent.name'\n| eval building=case(mvfind(lh_t0,\"NETWORK\")>=0,lh_n0, mvfind(lh_t1,\"NETWORK\")>=0,lh_n1, mvfind(lh_t2,\"NETWORK\")>=0,lh_n2, mvfind(lh_t3,\"NETWORK\")>=0,lh_n3, mvfind(lh_t4,\"NETWORK\")>=0,lh_n4)\n| eval campus=case(mvfind(lh_t0,\"CAMPUS\")>=0,lh_n0, mvfind(lh_t1,\"CAMPUS\")>=0,lh_n1, mvfind(lh_t2,\"CAMPUS\")>=0,lh_n2, mvfind(lh_t3,\"CAMPUS\")>=0,lh_n3, mvfind(lh_t4,\"CAMPUS\")>=0,lh_n4)\n| where isnotnull(campus) AND isnotnull(building)\n| eval site=campus.\": \".building\n| fields - lh_t0 lh_t1 lh_t2 lh_t3 lh_t4 lh_n0 lh_n1 lh_n2 lh_n3 lh_n4\n| eval mac=coalesce('devicePresence.device.macAddress','devicePresence.macAddress')\n| where isnotnull(mac) AND mac!=\"\"\n| bin _time span=1h\n| stats dc(mac) as users by _time, site\n| eval bucket=case(_time>=relative_time(now(),\"@d-13d\") AND _time<relative_time(now(),\"@d-7d\"), \"Baseline\",\n _time>=relative_time(now(),\"@d-3d\") AND _time<=now(), \"Operations\")\n| where isnotnull(bucket)\n| stats avg(users) as avg_users by site, bucket\n| xyseries site bucket avg_users\n| eval Multiplier=if(Baseline>0, round(Operations/Baseline,2), null())\n| sort - Multiplier",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1585,7 +1585,7 @@
 		"ds_q9_worst_clients": {
 			"name": "Q9 - DNAC top 50 worst client experiences",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval cl_health = 'health.overallScore',\n site = siteHierarchy,\n ssid = 'connection.ssid',\n rssi = 'connection.rssi'\n| where isnotnull(macAddress) AND isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\")\n| stats min(cl_health) as min_h, avg(cl_health) as avg_h,\n latest(ssid) as ssid, latest(rssi) as rssi by macAddress, site\n| where min_h<5\n| sort + min_h\n| head 50\n| eval avg_h=round(avg_h, 2), rssi=round(rssi, 2)\n| eval site=replace(site, \"^Global/Florida/\", \"\")\n| rename macAddress as \"Client MAC\", site as \"Site\", ssid as \"SSID\",\n rssi as \"RSSI\", min_h as \"Min Health\", avg_h as \"Avg Health\"\n| table \"Client MAC\" \"Site\" \"SSID\" \"RSSI\" \"Min Health\" \"Avg Health\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\"\n| eval cl_health = 'health.overallScore',\n site = siteHierarchy,\n ssid = 'connection.ssid',\n rssi = 'connection.rssi'\n| where isnotnull(macAddress) AND isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\")\n| stats min(cl_health) as min_h, avg(cl_health) as avg_h,\n latest(ssid) as ssid, latest(rssi) as rssi by macAddress, site\n| where min_h<5\n| sort + min_h\n| head 50\n| eval avg_h=round(avg_h, 2), rssi=round(rssi, 2)\n| eval site=replace(site, \"^Global/Region/\", \"\")\n| rename macAddress as \"Client MAC\", site as \"Site\", ssid as \"SSID\",\n rssi as \"RSSI\", min_h as \"Min Health\", avg_h as \"Avg Health\"\n| table \"Client MAC\" \"Site\" \"SSID\" \"RSSI\" \"Min Health\" \"Avg Health\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1609,7 +1609,7 @@
 		"ds_score_drisk": {
 			"name": "NRS D_risk - Risk multiplier",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\"\n| stats dc(eval(case(IssuePriority=\"P1\", IssueID))) as p1,\n dc(eval(case(IssuePriority=\"P2\", IssueID))) as p2\n| eval p1=coalesce(p1,0), p2=coalesce(p2,0)\n| eval drisk = 1 - 0.05*p1 - 0.02*p2\n| eval drisk=if(drisk<0.5, 0.5, drisk)\n| eval score=round(drisk, 2)\n| fields score",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\"\n| where isnotnull(IssueID) AND IssueID!=\"\"\n| stats latest(IssueStatus) as issue_status, latest(IssuePriority) as issue_priority by IssueID\n| where lower(issue_status)=\"active\"\n| stats count(eval(upper(issue_priority)=\"P1\")) as p1, count(eval(upper(issue_priority)=\"P2\")) as p2\n| eval score=round(max(0.5,1-0.05*p1-0.02*p2),2)\n| fields score",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1630,7 +1630,7 @@
 		"ds_score_nrs_trend": {
 			"name": "NRS over time hourly",
 			"options": {
-				"query": "| union [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" OverallHealth=*\n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\"\n | where OverallHealth >= 0\n | bin _time span=1h\n | stats latest(Reachability) as reach, latest(OverallHealth) as oh by _time, DeviceName\n | eval is_reach=if(upper(reach)=\"REACHABLE\", 1, 0), ap_ok=if(oh>=`nrs_th_ap_health`, 1, 0)\n | stats avg(is_reach) as ap_reach, avg(ap_ok) as ap_health_ok, count as ap_n by _time ]\n| union [ search `index_catalyst` sourcetype=\"cisco:dnac:client\"\n | eval cl_health = 'health.overallScore'\n | bin _time span=1h\n | stats avg(cl_health) as health_avg, count(eval(cl_health>=`nrs_th_cl_health`)) as ok_n, count as cl_n by _time\n | eval cl_ok=if(cl_n>0, ok_n/cl_n, null()), health100=coalesce(health_avg,8)*10 ]\n| stats values(ap_reach) as ap_reach, values(ap_health_ok) as ap_ok,\n values(cl_ok) as cl_ok, values(health100) as h100,\n values(ap_n) as ap_n, values(cl_n) as cl_n by _time\n| where (isnotnull(ap_n) AND ap_n>0) OR (isnotnull(cl_n) AND cl_n>0)\n| eval ap_reach=coalesce(ap_reach,1), ap_ok=coalesce(ap_ok,1), cl_ok=coalesce(cl_ok,1), h100=coalesce(h100,80)\n| eval A=ap_reach*100, R=(ap_ok*0.5 + cl_ok*0.5)*100, Q=h100\n| eval NRS=A*`nrs_w_nrs_a` + R*`nrs_w_nrs_r` + Q*`nrs_w_nrs_q`\n| timechart span=1h avg(NRS) as \"NRS\"\n| eval \"NRS\" = round('NRS', 2)\n| appendcols\n [ search `index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\"\n | timechart span=1h dc(IssueID) as \"DNAC Active Issues\" ]\n| appendcols\n [ search `index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_PRESENCE\"\n | eval mac=coalesce('devicePresence.device.macAddress','devicePresence.macAddress')\n | where isnotnull(mac) AND mac!=\"\"\n | timechart span=1h dc(mac) as \"Spaces Concurrent Users (overlay)\" ]",
+				"query": "| union [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" OverallHealth=*\n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\"\n | where OverallHealth >= 0\n | bin _time span=1h\n | stats latest(Reachability) as reach, latest(OverallHealth) as oh by _time, DeviceName\n | eval is_reach=if(upper(reach)=\"REACHABLE\", 1, 0), ap_ok=if(oh>=`nrs_th_ap_health`, 1, 0)\n | stats avg(is_reach) as ap_reach, avg(ap_ok) as ap_health_ok, count as ap_n by _time ]\n| union [ search `index_catalyst` sourcetype=\"cisco:dnac:client\"\n | eval cl_health=tonumber('health.overallScore'), ob_ms=tonumber('onboarding.avgRunDuration'), rv=tonumber('connection.rssi')\n | bin _time span=1h\n | stats avg(cl_health) as health_avg, avg(eval(if(ob_ms>0,ob_ms,null()))) as ob_ms, avg(rv) as arv, count(eval(cl_health>=`nrs_th_cl_health`)) as ok_n, count as cl_n by _time\n | eval cl_ok=if(cl_n>0,ok_n/cl_n,null()), h100=coalesce(health_avg,8)*10, ob_s=coalesce(ob_ms,1500)/1000\n | eval o100=if(ob_s<=1,100,if(ob_s>=5,0,100-((ob_s-1)*25))), r100=max(0,min(100,coalesce(arv,-20)+100))\n | eval quality=0.35*h100+0.35*o100+0.30*r100 ]\n| stats values(ap_reach) as ap_reach, values(ap_health_ok) as ap_ok,\n values(cl_ok) as cl_ok, values(quality) as quality,\n values(ap_n) as ap_n, values(cl_n) as cl_n by _time\n| where (isnotnull(ap_n) AND ap_n>0) OR (isnotnull(cl_n) AND cl_n>0)\n| eval ap_reach=coalesce(ap_reach,1), ap_ok=coalesce(ap_ok,1), cl_ok=coalesce(cl_ok,1), quality=coalesce(quality,80)\n| eval A=ap_reach*100, R=(ap_ok*0.5 + cl_ok*0.5)*100, Q=quality\n| eval E_base=A*`nrs_w_nrs_a` + R*`nrs_w_nrs_r` + Q*`nrs_w_nrs_q`\n| timechart span=1h avg(E_base) as E_base\n| appendcols\n [ search `index_catalyst` sourcetype=\"cisco:dnac:issue\"\n | where isnotnull(IssueID) AND IssueID!=\"\"\n | stats latest(IssueStatus) as issue_status, latest(IssuePriority) as issue_priority by IssueID\n | where lower(issue_status)=\"active\"\n | stats count(eval(upper(issue_priority)=\"P1\")) as p1, count(eval(upper(issue_priority)=\"P2\")) as p2\n | eval D_risk=max(0.5,1-0.05*p1-0.02*p2) ]\n| eventstats max(D_risk) as D_risk\n| eval D_risk=coalesce(D_risk,1), NRS=round(E_base*D_risk,2)\n| fields - E_base D_risk\n| appendcols\n [ search `index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\"\n | timechart span=1h dc(IssueID) as \"DNAC Active Issues\" ]\n| appendcols\n [ search `index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_PRESENCE\"\n | eval mac=coalesce('devicePresence.device.macAddress','devicePresence.macAddress')\n | where isnotnull(mac) AND mac!=\"\"\n | timechart span=1h dc(mac) as \"Spaces Concurrent Users (overlay)\" ]",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1643,7 +1643,7 @@
 		"ds_score_per_site": {
 			"name": "NRS per site - DNAC AP and client health",
 			"options": {
-				"query": "| union [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\"\n | eval site=coalesce(Site, Location)\n | where isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\") AND NOT match(site, \"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$\")\n | stats latest(Reachability) as reach, latest(OverallHealth) as oh by DeviceName, site\n | eval is_reach=if(upper(reach)=\"REACHABLE\", 1, 0)\n | eval ap_ok=case(isnull(oh), null(), oh<0, null(), oh>=`nrs_th_ap_health`, 1, 1=1, 0)\n | stats avg(is_reach) as ap_reach, avg(ap_ok) as ap_health_ok, count as ap_n by site ]\n| union [ search `index_catalyst` sourcetype=\"cisco:dnac:client\" siteHierarchy=*\n | eval cl_health = 'health.overallScore', site = siteHierarchy\n | where isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\") AND NOT match(site, \"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$\")\n | stats avg(cl_health) as health_avg, count(eval(cl_health>=`nrs_th_cl_health`)) as ok_n, count as cl_n by site\n | eval cl_ok=if(cl_n>0, ok_n/cl_n, null()), health100=coalesce(health_avg,8)*10 ]\n| stats values(ap_reach) as ap_reach, values(ap_health_ok) as ap_ok,\n values(cl_ok) as cl_ok, values(health100) as h100,\n values(ap_n) as ap_n, values(cl_n) as cl_n by site\n| where isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\")\n| where (isnotnull(ap_n) AND ap_n>0) OR (isnotnull(cl_n) AND cl_n>0)\n| eval ap_reach=coalesce(ap_reach,1), ap_ok=coalesce(ap_ok,1),\n cl_ok=coalesce(cl_ok,1), h100=coalesce(h100,80)\n| eval A=ap_reach*100, R=(ap_ok*0.5 + cl_ok*0.5)*100, Q=h100\n| eval NRS=A*`nrs_w_nrs_a` + R*`nrs_w_nrs_r` + Q*`nrs_w_nrs_q`\n| eval NRS=round(NRS, 2), A=round(A, 2), R=round(R, 2), Q=round(Q, 2)\n| eval site_short=replace(site, \"^Global/Florida/\", \"\")\n| sort -NRS\n| rename site_short as Site, ap_n as APs, cl_n as Clients\n| table Site NRS A R Q APs Clients",
+				"query": "| union [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\"\n | eval site=coalesce(Site, Location)\n | where isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\") AND NOT match(site, \"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$\")\n | stats latest(Reachability) as reach, latest(OverallHealth) as oh by DeviceName, site\n | eval is_reach=if(upper(reach)=\"REACHABLE\", 1, 0)\n | eval ap_ok=case(isnull(oh), null(), oh<0, null(), oh>=`nrs_th_ap_health`, 1, 1=1, 0)\n | stats avg(is_reach) as ap_reach, avg(ap_ok) as ap_health_ok, count as ap_n by site ]\n| union [ search `index_catalyst` sourcetype=\"cisco:dnac:client\" siteHierarchy=*\n | eval cl_health=tonumber('health.overallScore'), ob_ms=tonumber('onboarding.avgRunDuration'), rv=tonumber('connection.rssi'), site=siteHierarchy\n | where isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\") AND NOT match(site, \"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$\")\n | stats avg(cl_health) as health_avg, avg(eval(if(ob_ms>0,ob_ms,null()))) as ob_ms, avg(rv) as arv, count(eval(cl_health>=`nrs_th_cl_health`)) as ok_n, count as cl_n by site\n | eval cl_ok=if(cl_n>0,ok_n/cl_n,null()), h100=coalesce(health_avg,8)*10, ob_s=coalesce(ob_ms,1500)/1000\n | eval o100=if(ob_s<=1,100,if(ob_s>=5,0,100-((ob_s-1)*25))), r100=max(0,min(100,coalesce(arv,-20)+100))\n | eval quality=0.35*h100+0.35*o100+0.30*r100 ]\n| stats values(ap_reach) as ap_reach, values(ap_health_ok) as ap_ok,\n values(cl_ok) as cl_ok, values(quality) as quality,\n values(ap_n) as ap_n, values(cl_n) as cl_n by site\n| where isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\")\n| where (isnotnull(ap_n) AND ap_n>0) OR (isnotnull(cl_n) AND cl_n>0)\n| eval ap_reach=coalesce(ap_reach,1), ap_ok=coalesce(ap_ok,1),\n cl_ok=coalesce(cl_ok,1), quality=coalesce(quality,80)\n| eval A=ap_reach*100, R=(ap_ok*0.5 + cl_ok*0.5)*100, Q=quality\n| eval E_base=A*`nrs_w_nrs_a` + R*`nrs_w_nrs_r` + Q*`nrs_w_nrs_q`\n| appendcols [ search `index_catalyst` sourcetype=\"cisco:dnac:issue\"\n | where isnotnull(IssueID) AND IssueID!=\"\"\n | stats latest(IssueStatus) as issue_status, latest(IssuePriority) as issue_priority by IssueID\n | where lower(issue_status)=\"active\"\n | stats count(eval(upper(issue_priority)=\"P1\")) as p1, count(eval(upper(issue_priority)=\"P2\")) as p2\n | eval D_risk=max(0.5,1-0.05*p1-0.02*p2) ]\n| eventstats max(D_risk) as D_risk\n| eval D_risk=coalesce(D_risk,1), NRS=E_base*D_risk\n| eval NRS=round(NRS,2), A=round(A,2), R=round(R,2), Q=round(Q,2), D_risk=round(D_risk,2)\n| eval site_short=replace(site, \"^Global/Region/\", \"\")\n| sort -NRS\n| rename site_short as Site, ap_n as APs, cl_n as Clients\n| table Site NRS A R Q D_risk APs Clients",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1656,13 +1656,10 @@
 		"ds_score_per_site_nrs_only": {
 			"name": "Score per Site NRS Only",
 			"options": {
-				"query": "| union [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\"\n | eval site=coalesce(Site, Location)\n | where isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\") AND NOT match(site, \"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$\")\n | stats latest(Reachability) as reach, latest(OverallHealth) as oh by DeviceName, site\n | eval is_reach=if(upper(reach)=\"REACHABLE\", 1, 0)\n | eval ap_ok=case(isnull(oh), null(), oh<0, null(), oh>=`nrs_th_ap_health`, 1, 1=1, 0)\n | stats avg(is_reach) as ap_reach, avg(ap_ok) as ap_health_ok, count as ap_n by site ]\n| union [ search `index_catalyst` sourcetype=\"cisco:dnac:client\" siteHierarchy=*\n | eval cl_health = 'health.overallScore', site = siteHierarchy\n | where isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\") AND NOT match(site, \"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$\")\n | stats avg(cl_health) as health_avg, count(eval(cl_health>=`nrs_th_cl_health`)) as ok_n, count as cl_n by site\n | eval cl_ok=if(cl_n>0, ok_n/cl_n, null()), health100=coalesce(health_avg,8)*10 ]\n| stats values(ap_reach) as ap_reach, values(ap_health_ok) as ap_ok,\n values(cl_ok) as cl_ok, values(health100) as h100,\n values(ap_n) as ap_n, values(cl_n) as cl_n by site\n| where isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\")\n| where (isnotnull(ap_n) AND ap_n>0) OR (isnotnull(cl_n) AND cl_n>0)\n| eval ap_reach=coalesce(ap_reach,1), ap_ok=coalesce(ap_ok,1),\n cl_ok=coalesce(cl_ok,1), h100=coalesce(h100,80)\n| eval A=ap_reach*100, R=(ap_ok*0.5 + cl_ok*0.5)*100, Q=h100\n| eval NRS=A*`nrs_w_nrs_a` + R*`nrs_w_nrs_r` + Q*`nrs_w_nrs_q`\n| eval NRS=round(NRS, 2), A=round(A, 2), R=round(R, 2), Q=round(Q, 2)\n| eval site_short=replace(site, \"^Global/Florida/\", \"\")\n| sort -NRS\n| rename site_short as Site, ap_n as APs, cl_n as Clients\n| table Site NRS A R Q APs Clients\n| table Site NRS",
-				"queryParameters": {
-					"earliest": "$global_time.earliest$",
-					"latest": "$global_time.latest$"
-				}
+				"extend": "ds_score_per_site",
+				"query": "| fields Site NRS"
 			},
-			"type": "ds.search"
+			"type": "ds.chain"
 		},
 		"ds_score_q": {
 			"name": "NRS Q - Quality - client health and onboarding",

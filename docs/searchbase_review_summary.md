@@ -4,21 +4,19 @@ Generated on 2026-07-23 from `packages/splunk-cisco-dashboards/src/main/resource
 
 | Measure | Count |
 |---|---:|
-| Searches processed | 1345 |
+| Searches processed | 1319 |
 | SPL searches changed | 5 |
 | Metadata stanzas changed | 12 |
-| Data Model tstats searches | 376 |
-| Other tstats searches | 22 |
-| Raw searches retained for parity validation | 913 |
-| Non-event-source searches | 34 |
-| Secure Networking sub-categories preserved | 159 |
+| Data Model tstats searches | 323 |
+| Other tstats searches | 24 |
+| Raw searches retained for parity validation | 927 |
+| Non-event-source searches | 45 |
+| Secure Networking sub-categories preserved | 217 |
 | Origin tags removed or renamed | 0 |
-| Proposed tag additions, not applied | 275 |
-| Remaining static review notes | 1367 |
+| Proposed tag additions, not applied | 171 |
+| Remaining static review notes | 2576 |
 
-The complete per-search original/optimized SPL, metadata, rationale,
-classification review, tag proposals, and residual findings are in
-`artifacts/searchbase/reports/searchbase_review_report.json`.
+The complete per-search original/optimized SPL, metadata, rationale, classification review, tag proposals, and residual findings are in `artifacts/searchbase/reports/searchbase_review_report.json`.
 
 ## Applied SPL Changes
 
@@ -26,7 +24,7 @@ Three SGACL Data Model searches now use the defined `scd_summariesonly` macro in
 
 ## Tag Proposals
 
-The report proposes adding the picker tag `Cisco` to 275 metric-producing timechart searches. These proposals require approval and were not applied. No tag spelling or casing variants were found.
+The report proposes adding the picker tag `Cisco` to 171 metric-producing timechart searches. These proposals require approval and were not applied. No tag spelling or casing variants were found.
 
 ## Validation Boundary
 

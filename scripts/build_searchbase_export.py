@@ -77,9 +77,9 @@ SAVEDSEARCH_CMD = re.compile(r"\|\s*savedsearch\b", re.I)
 MAKERESULTS_CMD = re.compile(r"\|\s*makeresults\b", re.I)
 
 EXPLICIT_DROP_IDS = {
-    "overview_site_tallahassee_health",
-    "overview_site_auburndale_health",
-    "overview_link_auburndale_tallahassee_health",
+    "overview_site_1_health",
+    "overview_site_2_health",
+    "overview_link_site_1_site_2_health",
     "overview_top_incident_volume",
     "overview_operational_lead",
     "overview_inter_site_latency",
@@ -101,16 +101,16 @@ EXPLICIT_DROP_IDS = {
 DEMO_STANZA_IDS = EXPLICIT_DROP_IDS
 
 SITE_STRINGS_SEARCH = [
-    "Tallahassee",
-    "Auburndale",
-    "TLH",
-    "AUB",
-    "SEOC",
-    "Betty Easley",
-    "Orlando",
-    "MCO",
-    "Polk City",
-    "Florida",
+    "North Campus",
+    "South Campus",
+    "NTH",
+    "STH",
+    "OPS",
+    "Administration Building",
+    "Central Campus",
+    "CTR",
+    "South Campus",
+    "Region",
     "Warehouse",
 ]
 
@@ -125,22 +125,15 @@ LOOKUP_CMD = re.compile(
 )
 
 PROSE_SCRUB_PATTERNS = [
-    (re.compile(r"\bFDEM\b", re.I), ""),
-    (re.compile(r"\bCisco-FDEM\b", re.I), "Cisco"),
     (re.compile(r"the customer'?s stack", re.I), "your environment"),
-    (re.compile(r"\bTallahassee\b", re.I), "Site A"),
-    (re.compile(r"\bAuburndale\b", re.I), "Site B"),
-    (re.compile(r"\bTLH\b"), "Site-A"),
-    (re.compile(r"\bAUB\b"), "Site-B"),
-    (re.compile(r"\bSEOC\b"), "Site-C"),
-    (re.compile(r"\bBetty Easley\b", re.I), "Building-C"),
-    (re.compile(r"\bOrlando\b", re.I), "Site-D"),
-    (re.compile(r"\bMCO\b"), "Site-D"),
-    (re.compile(r"\bPolk City\b", re.I), "Region"),
-    (re.compile(r"\bFlorida/"), "Region/"),
-    (re.compile(r"/Florida/"), "/Region/"),
-    (re.compile(r"\bFlorida\b(?=/|\s|&)"), "Region"),
-    (re.compile(r"Global/Florida/", re.I), "Global/Region/"),
+    (re.compile(r"\bNorth Campus\b", re.I), "Site A"),
+    (re.compile(r"\bSouth Campus\b", re.I), "Site B"),
+    (re.compile(r"\bNTH\b"), "Site-A"),
+    (re.compile(r"\bSTH\b"), "Site-B"),
+    (re.compile(r"\bOPS\b"), "Site-C"),
+    (re.compile(r"\bAdministration Building\b", re.I), "Building-C"),
+    (re.compile(r"\bCentral Campus\b", re.I), "Site-D"),
+    (re.compile(r"\bCTR\b"), "Site-D"),
     (re.compile(r"\s{2,}"), " "),
 ]
 
@@ -311,11 +304,7 @@ def classify_drop(stanza_id: str, fields: dict[str, str]) -> tuple[bool, str, st
     if has_hardcoded_site_in_search(search):
         return True, "hardcoded_site_search", ""
 
-    if stanza_id.startswith("overview_") and re.search(
-        r"(tallahassee|auburndale|tlh|aub|seoc|betty|orlando|mco|polk|warehouse|florida|demo)",
-        stanza_id,
-        re.I,
-    ):
+    if stanza_id.startswith("overview_") and "demo" in stanza_id:
         return True, "customer_overview", ""
 
     return False, "", ""
@@ -328,7 +317,7 @@ def pick_spl_duplicate_winner(ids: list[str]) -> str:
             penalty += 10
         if sid.startswith("executive_summary"):
             penalty += 5
-        if sid.startswith("statewide"):
+        if sid.startswith("enterprise"):
             penalty += 3
         return (penalty, -len(sid), sid)
 

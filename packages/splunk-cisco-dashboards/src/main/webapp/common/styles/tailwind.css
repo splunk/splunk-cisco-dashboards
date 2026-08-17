@@ -340,7 +340,7 @@ body.scd-overview-active .panel-body,
  * a live element (`data-export-hide`) with a static substitute
  * (`data-export-placeholder`); during export the live element
  * disappears and the placeholder takes over in the same layout
- * slot. Used today by the Florida CustomerTopologyMap (Leaflet
+ * slot. Used today by the overview CustomerTopologyMap (Leaflet
  * compositor + SMIL flow lines that html2canvas can't rasterise).
  *
  * !important on the placeholder rule because the inline `hidden`

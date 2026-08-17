@@ -1,5 +1,5 @@
 ---
-description: FDEM Catalyst Center / DNAC field reference and SPL conventions for the Cisco Exec Dashboards app
+description: Catalyst Center / DNAC field reference and SPL conventions for the Cisco Exec Dashboards app
 globs: **/searchbase.conf,**/savedsearches.conf,**/data/ui/views/*.xml,**/webapp/**/*.tsx,**/webapp/**/*.ts
 version: 1.0.0
 alwaysApply: false
@@ -7,29 +7,30 @@ alwaysApply: false
 
 rule_id: splunk-cisco-dnac-fields
 
-# FDEM Catalyst Center / DNAC Field Reference
+# Catalyst Center / DNAC Field Reference
 
-This is the **single source of truth** for canonical field names of `cisco:dnac:*` and `cisco:catalyst:center:*` sourcetypes as confirmed against the FDEM (Florida Division of Emergency Management) production stack on 2026-05-08.
+This is the **single source of truth** for canonical field names of
+`cisco:dnac:*` and `cisco:catalyst:center:*` sourcetypes used by this app.
 
-## Sourcetype onboarding status (FDEM, as of 2026-05-08; demo-stack reconfirm 2026-05-29)
+## Sourcetype coverage
 
-The Catalyst Center TA exposes 11 sourcetypes total. FDEM has onboarded 9 of them; the two `:report` sourcetypes are pending on FDEM but **were confirmed present and populated on the demo `sh-i-ak` stack on 2026-05-29** — see field inventories below.
+The Catalyst Center TA exposes the following sourcetypes. Availability depends
+on the inputs enabled in each deployment. Searches that use scheduled-report
+sourcetypes must include a graceful fallback when those inputs are disabled.
 
-| Sourcetype | FDEM onboarded? | Demo stack onboarded? | Fields documented below? | Demo data available? |
-|---|---|---|---|---|
-| `cisco:dnac:devicehealth` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
-| `cisco:dnac:issue` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
-| `cisco:dnac:client` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
-| `cisco:dnac:clienthealth` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
-| `cisco:dnac:networkhealth` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
-| `cisco:dnac:compliance` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
-| `cisco:dnac:audit:logs` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
-| `cisco:dnac:securityadvisory` | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes |
-| `cisco:dnac:site:topology` | ✅ Yes (added 2026-05-08, passive/snapshot) | ✅ Yes | ✅ Yes | ✅ Yes |
-| `cisco:catalyst:center:inventory:report` | ❌ Pending input add | ✅ Yes (4,460 events on sh-i-ak as of 2026-05-29) | ✅ Yes (see [Catalyst Center scheduled reports](#catalyst-center-scheduled-reports-cisco-catalyst-center-report)) | ✅ Yes |
-| `cisco:catalyst:center:compliance:report` | ❌ Pending input add | ✅ Yes (4,440 events on sh-i-ak as of 2026-05-29) | ✅ Yes (see [Catalyst Center scheduled reports](#catalyst-center-scheduled-reports-cisco-catalyst-center-report)) | ✅ Yes |
-
-**Implication for FDEM-tagged saved searches:** until the missing 2 are onboarded *at FDEM*, FDEM-targeted searches MUST use only the 9 confirmed sourcetypes above. Searches that depend on the `:report` sourcetypes will work against the demo stack today (and against any non-FDEM environment that has the inputs enabled) but must include a graceful fallback or be tagged as demo-only when shipped to FDEM.
+| Sourcetype | Fields documented below? |
+|---|---|
+| `cisco:dnac:devicehealth` | Yes |
+| `cisco:dnac:issue` | Yes |
+| `cisco:dnac:client` | Yes |
+| `cisco:dnac:clienthealth` | Yes |
+| `cisco:dnac:networkhealth` | Yes |
+| `cisco:dnac:compliance` | Yes |
+| `cisco:dnac:audit:logs` | Yes |
+| `cisco:dnac:securityadvisory` | Yes |
+| `cisco:dnac:site:topology` | Yes |
+| `cisco:catalyst:center:inventory:report` | Yes |
+| `cisco:catalyst:center:compliance:report` | Yes |
 
 ## Catalyst Center scheduled reports (`cisco:catalyst:center:*:report`)
 
@@ -56,7 +57,7 @@ Column-named fields (all contain spaces — single-quote in `eval()`):
 | `'Up Time'` | string | `277 days, 07:07:26.265` | Free-text duration string; parse with regex if needed. |
 | `'Role'` | string | `BORDER ROUTER` / `ACCESS` / `DISTRIBUTION` | Sparsely populated. |
 | `'Role Source'` | string | `AUTO` / `MANUAL` | |
-| `'Site Hierarchy'` | string | `Global/USA/San-Jose-CA/East Wing/WAN-Edge` | Sparsely populated. Use with `dnac_site_normalize` if mixing FDEM and demo data. |
+| `'Site Hierarchy'` | string | `Global/USA/San-Jose-CA/East Wing/WAN-Edge` | Sparsely populated. Use with `dnac_site_normalize` when mixing data sources. |
 | `Hostname` | string | (matches `'Device Name'`) | Sparsely populated. |
 | `'Image Version'` | string | `17.15.3` | Same value as `'Software Version'`. |
 | `'Last Sync Time'` | epoch ms | `1780025620360` | Convert with `_time=strftime(...)`. |
@@ -126,7 +127,8 @@ Yields strings like `NETWORK_PROFILE (NON_COMPLIANT), IMAGE (NON_COMPLIANT)`.
 3. **Field names ARE case-sensitive** in Splunk. `Site` ≠ `site` ≠ `SITE`.
 4. **Field names differ per sourcetype** — same concept (e.g. site, device id) is named differently across `devicehealth`, `issue`, `client`, `compliance`, etc. Always look it up; never assume.
 5. **Use OUR app's macros** (in `packages/splunk-cisco-dashboards/src/main/resources/splunk/default/macros.conf`). Do not write `index=*` directly. Index macros are written as the FIRST token, with no `index=` prefix: `` `index_catalyst` sourcetype="..." `` — NOT `` search index=`index_catalyst` ``.
-6. **Customer macro bridging is the user's responsibility** — when running on a non-default stack (e.g. FDEM with `fdem_*` macro names), the user adapts the macro definitions, not the SPL.
+6. **Deployment macro bridging is the user's responsibility** — adapt macro
+   definitions for non-default index names instead of changing the SPL.
 
 ## Index macros (Tier 1 of macros.conf)
 
@@ -149,7 +151,7 @@ Yields strings like `NETWORK_PROFILE (NON_COMPLIANT), IMAGE (NON_COMPLIANT)`.
 
 | Macro | Args | Purpose |
 |---|---|---|
-| `` `dnac_site_normalize(site)` `` | 1 (raw site path) | Normalize any DNAC site path to `"<Campus>: <Building>"` form. Already understands FDEM's TLH / AUB / SEOC / Betty Easley / Warehouse tokens. Returns empty string for null/blank/literal-"null". |
+| `` `dnac_site_normalize(site)` `` | 1 (raw site path) | Normalize a DNAC site path to `"<Campus>: <Building>"` form. Returns empty string for null, blank, or literal `"null"` values. |
 | `` `spaces_hierarchy(prefix)` `` | 1 (event prefix) | Walks Cisco Spaces firehose location tree (5 levels), exposes `floor`, `building`, `campus`, `site`. |
 
 ## Canonical site field per sourcetype
@@ -158,7 +160,7 @@ This is the table I keep getting wrong. **Memorize:**
 
 | Sourcetype | Site field(s) | Notes |
 |---|---|---|
-| `cisco:dnac:devicehealth` | `Site`, `Location` | `Site` is the canonical hierarchical path (e.g. `Global/Florida/Auburndale/AUB`). `Location` is alternate. Use `coalesce(Site, Location)`. |
+| `cisco:dnac:devicehealth` | `Site`, `Location` | `Site` is the canonical hierarchical path (e.g. `Global/Region/South Campus/STH`). `Location` is alternate. Use `coalesce(Site, Location)`. |
 | `cisco:dnac:issue` | `SiteName`, `SiteNameHierarchy`, `SiteType` | `SiteNameHierarchy` is the full path; `SiteName` is the short label. |
 | `cisco:dnac:client` | `siteHierarchy`, `siteHierarchyId`, `siteId` | camelCase. `siteHierarchy` is the full path. |
 | `cisco:dnac:clienthealth` | `siteId` ONLY | No path field. Lookup by ID required to label. |
@@ -166,7 +168,7 @@ This is the table I keep getting wrong. **Memorize:**
 | `cisco:dnac:compliance` | (none in field list) | Device-scoped only. |
 | `cisco:dnac:audit:logs` | `network.siteId` | Dotted JSON path. |
 | `cisco:dnac:securityadvisory` | (none) | Device-scoped only. |
-| `cisco:dnac:site:topology` | `nameHierarchy`, `name`, `id`, `parentId` | `nameHierarchy` is the full path (e.g. `Global/Florida/Tallahassee/TLH`). `name` is the short label. `id`/`parentId` form the hierarchy graph. |
+| `cisco:dnac:site:topology` | `nameHierarchy`, `name`, `id`, `parentId` | `nameHierarchy` is the full path (e.g. `Global/Region/North Campus/NTH`). `name` is the short label. `id`/`parentId` form the hierarchy graph. |
 
 **Site normalization pattern (overwrite in place):**
 
@@ -181,7 +183,7 @@ This is the table I keep getting wrong. **Memorize:**
 | eval siteHierarchy=`dnac_site_normalize(siteHierarchy)`
 ```
 
-## Full field inventory per sourcetype (FDEM-confirmed 2026-05-08)
+## Full field inventory per sourcetype
 
 ### `cisco:dnac:devicehealth`
 
@@ -205,7 +207,7 @@ UtilizationRadio1, cisco_catalyst_host, signature_id, vendor_product
 
 **Key fields for connectivity dashboards:** `InterDeviceLinkAvailHealth`, `InterfaceLinkErrHealth`, `OverallHealth`, `IssueCount`, `Reachability`, `ReachabilityFailureReason`, `Site`, `Location`, `DeviceFamily`, `DeviceRole`, `DeviceSeries`, `Platform`.
 
-**Field scales (FDEM-confirmed 2026-05-08):**
+**Field scales:**
 
 | Field | Scale | "No data" sentinel | Healthy direction |
 |---|---|---|---|
@@ -229,7 +231,7 @@ Or pre-filter:
 ```
 
 **Fields THAT DO NOT EXIST (don't reference them — common mistakes):**
-- ❌ `InterfaceUtilizationPercent` — does not exist in FDEM TA
+- ❌ `InterfaceUtilizationPercent` — does not exist in the documented TA field inventory
 - ❌ `InterfaceLinkErrPercent24Hour` — does not exist; use `InterfaceLinkErrHealth` (a 0–10 score) instead
 - ❌ `WANUtilization` — does not exist
 - ❌ `AvgTrafficNorth` / `AvgTrafficSouth` — do not exist
@@ -326,7 +328,12 @@ signature_id, thirdPartyDeviceCount, time, totalCount, vendor_product
 
 **No site field — global rollup only.**
 
-**WARNING — `kpiMetrics{}` is broken on FDEM (2026-05-08):** the array is populated but `kpiMetrics{}.key` is always `null`. Only `kpiMetrics{}.value` carries data (e.g. `FAIR`, `GOOD`), but without keys we can't tell what KPI each value represents. **Do not use `kpiMetrics{}` in dashboards or saved searches** until/unless the upstream data shape is fixed by Cisco or the TA. Either Cisco's DNAC isn't populating the key field, or the TA's field extraction is mismapping it. Worked around by ignoring the field entirely; the other networkhealth fields (`healthScore`, `goodCount`, `fairCount`, `badCount`, `noHealthCount`, `totalCount`, `category`) are fully usable.
+**WARNING — verify `kpiMetrics{}` before using it:** some observed payloads
+populate `kpiMetrics{}.value` but leave `kpiMetrics{}.key` null. Without keys,
+the values cannot be attributed to a KPI. Do not use this array until the
+deployment confirms that both arrays are populated. The other network-health
+fields (`healthScore`, `goodCount`, `fairCount`, `badCount`, `noHealthCount`,
+`totalCount`, `category`) remain usable.
 
 ### `cisco:dnac:compliance`
 
@@ -450,7 +457,7 @@ signature_id, vendor_product
 | stats count by site
 
 # WRONG — using `index=...` directly instead of macro
-search index=fdem_catalyst_index sourcetype="cisco:dnac:devicehealth"
+search index=hardcoded_index sourcetype="cisco:dnac:devicehealth"
 
 # WRONG — using `search index=` with macro (macro already has index=)
 search index=`index_catalyst` sourcetype="cisco:dnac:devicehealth"
@@ -471,13 +478,13 @@ search index=`index_catalyst` sourcetype="cisco:dnac:devicehealth"
 
 ## `cisco:dnac:site:topology` — Site Hierarchy (NOT Network Topology)
 
-**Onboarded on FDEM as of 2026-05-08.** Critical naming caveat: despite the
+Critical naming caveat: despite the
 sourcetype's name, this is the **site hierarchy** API (areas / buildings / floors),
 **NOT** the network device-and-link topology. There are no device records, no
 neighbor (CDP/LLDP) records, no `linkStatus` fields. Treat this as a
 **slow-changing reference dataset / lookup-like source**, not an event stream.
 
-### Dual-schema warning (CRITICAL — discovered 2026-05-09)
+### Dual-schema warning
 
 This sourcetype is overloaded by the upstream Cisco TA: **two completely
 different payload shapes share the same sourcetype name**. Always filter
@@ -485,7 +492,7 @@ explicitly so you target only the schema you mean.
 
 | Schema | Distinguishing field | Example `name` values | What it represents | Where it shows up on this stack |
 |---|---|---|---|---|
-| **Hierarchy snapshot** | `id` (UUID), `nameHierarchy`, `type IN ("global","area","building","floor")` | `"TLH"`, `"First Floor"`, `"Florida"` | Periodic dump of the site tree (one event per hierarchy node) | FDEM's actual TA input. Polls re-emit identical events; expect 9× duplication per ~hour. |
+| **Hierarchy snapshot** | `id` (UUID), `nameHierarchy`, `type IN ("global","area","building","floor")` | `"NTH"`, `"First Floor"`, `"Region"` | Periodic dump of the site tree (one event per hierarchy node) | Production-style TA input. Polls re-emit identical events. |
 | **Event-style change feed** | `eventId` (e.g. `"NETWORK-DEVICE-1-301"`), `type="NETWORK"`, `details.siteName`, `severity` 1/2/3 | `"device_removed_from_site"`, `"topology_link_added"`, `"site_topology_change"` | Audit/change events about the topology | Cisco's stock TA demo feed. Continuously streams synthetic events. |
 
 **Filtering recipes:**
@@ -508,17 +515,16 @@ silently corrupted on any stack that ingests both schemas.
 
 The `Requires_DNAC_Topology_Events` tag marks every stanza that depends on the
 event-style schema specifically. The hierarchy stanzas don't need a
-counterpart tag because hierarchy is the FDEM default.
+counterpart tag because hierarchy is the production-style default.
 
 ### Polling cadence
 
 Snapshot-style. All events typically share a single `_time` — the timestamp of
 the last DNAC poll. Don't expect to be able to `timechart` against this
 sourcetype. Build lookups or use it inline as enrichment. **Catalyst Center
-re-emits the entire tree on every poll**, so a 9-poll window produces 9×
-duplication of every node. The lookup generator must `dedup id sortby -_time`
-to collapse this. Field-value drift between polls is empirically zero for
-FDEM's stack (verified 2026-05-09 across 9 polling cycles).
+re-emits the entire tree on every poll**, so a multi-poll window contains
+duplicate copies of every node. The lookup generator must
+`dedup id sortby -_time` to collapse this.
 
 ### Field inventory (18 fields)
 
@@ -538,21 +544,17 @@ The `type` field stratifies which other fields are populated. Always filter by
 | `building` | + `latitude`, `longitude`, `address`, `country` |
 | `floor` | + `floorNumber`, `width`, `length`, `height`, `unitsOfMeasure`, `rfModel` |
 
-### Caveats observed in FDEM data
+### Data-quality caveats
 
-- **Floor dimensions are placeholder defaults**, not real measurements. Identical
-  values across multiple floors (e.g. `595.4196 × 389.6426` for both TLH First
-  Floor and SEOC First Floor) indicate the floors were added to DNAC without a
-  real floorplan upload. Don't trust `width` / `length` / `height` for
-  visualizations.
-- **Co-located buildings share GPS and address**. TLH and SEOC both report
-  `30.38617, -84.23846` and `2489 Shumard Oak Blvd, Tallahassee` — they're on
-  one campus. AUB and Warehouse both report `28.152445, -81.808044` and `660 C
-  Fred Jones Blvd, Polk City`. This validates the existing `siteId=tlh` and
-  `siteId=aub` rollups in `[overview_site_*_health]` stanzas.
-- **Orlando / MCO is NOT present** in FDEM's site:topology snapshot. DNAC is
-  not currently managing the Orlando site. Worth raising with FDEM
-  operationally.
+- **Floor dimensions can be placeholder defaults**, not real measurements.
+  Identical dimensions across multiple floors can indicate that the floors were
+  added without a floorplan upload. Validate `width`, `length`, and `height`
+  before using them in visualizations.
+- **Co-located buildings can share GPS coordinates and addresses.** Aggregate
+  them by the normalized logical site instead of assuming each building has a
+  unique coordinate pair.
+- **Expected sites can be absent from a hierarchy snapshot.** Treat missing
+  nodes as unavailable telemetry rather than fabricating site records.
 - **`signature_id` is in the field list but not populated** on the events seen
   so far. May be a TA-standard field that's empty for this sourcetype.
 
@@ -601,12 +603,12 @@ Confirmed absent (do not reference these fields against `cisco:dnac:site:topolog
 
 For real device-and-link topology data, a separate DNAC API endpoint would need
 to be onboarded as a different sourcetype (e.g. `cisco:dnac:physical:topology`
-or `cisco:dnac:device:topology`). FDEM does **not** have this today.
+or `cisco:dnac:device:topology`). Confirm availability before using it.
 
 ## Cross-sourcetype joins on DNAC site UUIDs
 
-A discovery from 2026-05-08: **`cisco:dnac:site:topology.id` is the canonical
-join key for the entire DNAC site graph**. Every other DNAC sourcetype that
+`cisco:dnac:site:topology.id` is the canonical join key for the entire DNAC
+site graph. Every other DNAC sourcetype that
 references a site by UUID resolves directly against `site:topology.id`. This
 unlocks human-readable site labels on three sourcetypes that previously had
 only opaque UUIDs:
@@ -615,7 +617,7 @@ only opaque UUIDs:
 |---|---|---|---|
 | `cisco:dnac:client` | `siteHierarchyId` | `/<global_id>/<area_id>/<building_id>/<floor_id>` (slash-delimited UUID chain, leading and trailing slashes) | Extract leaf via `mvindex(split(rtrim(siteHierarchyId,"/"),"/"),-1)` |
 | `cisco:dnac:client` | `siteId` | leaf UUID directly | Already the leaf — no extraction needed. **Note:** `siteId` and the leaf of `siteHierarchyId` can differ by a few events because DNAC sometimes places the same client at building precision (`siteId=building.id`) and sometimes at floor precision (`siteHierarchyId` ending in a floor UUID). Either field joins correctly to `site_topology_lookup`. |
-| `cisco:dnac:clienthealth` | `siteId` | leaf UUID — **but see FDEM caveat below** | The ONLY site-reference field on this sourcetype. **FDEM caveat (2026-05-08):** every `clienthealth` event on FDEM has `siteId="global"` (literally the string), with NO per-site rollups emitted. Until FDEM/DNAC begins emitting per-site clienthealth, joining this sourcetype to the topology lookup will produce zero rows on FDEM. Demo data has the expected per-site UUIDs. |
+| `cisco:dnac:clienthealth` | `siteId` | leaf UUID or the literal `global` | The only site-reference field on this sourcetype. Some deployments emit only global rollups, so verify that per-site UUIDs exist before joining to the topology lookup. |
 | `cisco:dnac:audit:logs` | `network.siteId` | leaf UUID directly | Dotted JSON path, joins like a regular field |
 
 ### Canonical leaf-extraction recipe
@@ -683,10 +685,9 @@ the same site into separate groups).
 
 ## Awaiting field lists (DO NOT guess at fields for these)
 
-The following sourcetypes are present in our demo data and the Catalyst Center
-TA, but FDEM has not onboarded them yet AND we have not yet recorded their
-field inventories. Do not write SPL that references their fields until the user
-provides the list and we add it here.
+The following sourcetypes are optional Catalyst Center TA inputs. Do not write
+SPL that references their fields until the deployment confirms that the inputs
+are enabled and the field list matches this reference.
 
 ### `cisco:catalyst:center:inventory:report` — MEDIUM VALUE
 
@@ -703,4 +704,5 @@ the executive dashboard. Skip unless a specific need emerges.
 
 If you cannot find a field name in the inventories above, **ask the user before guessing**. Inventing field names that don't exist in the TA wastes search time and produces confusing empty results.
 
-When the user adds a new sourcetype's field list, append it to this rule under "Full field inventory per sourcetype" with the FDEM-confirmed date AND update the onboarding status table at the top.
+When a new sourcetype field list is confirmed, append it under "Full field
+inventory per sourcetype" and update the coverage table at the top.

@@ -49,7 +49,7 @@
       },
       {
         "primary": "it_critical_systems_site_link_availability_pct_trend",
-        "targets": ["overview_link_auburndale_tallahassee_health", "overview_link_state_drilldown"],
+        "targets": ["overview_link_site_1_site_2_health", "overview_link_state_drilldown"],
         "title": "Site Connectivity"
       },
       {

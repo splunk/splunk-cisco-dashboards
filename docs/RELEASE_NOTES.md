@@ -2,6 +2,18 @@
 
 ## 1.0.38
 
+- Deployment-specific operation names, agencies, places, topology details,
+  event dates, and historical session notes were removed. Reusable dashboards
+  now use IT Operations, neutral site examples, and time-range-derived
+  milestones, with a repository hygiene check to prevent those details from
+  returning.
+- NetOps Readiness now uses one Quality definition—35% client health, 35%
+  onboarding speed, and 30% RSSI—across its component tile, headline, trend,
+  forecast, per-site detail, and alert. Every composite now applies the active
+  P1/P2 risk multiplier, the multiplier renders as `×` instead of percent, and
+  score colors follow the achievable 0–85 scale. Dashboard guidance pins the
+  model to a clearly bounded KTP v2.0.0 operational adaptation without claiming
+  protocol conformance.
 - Signal Rail settings now use theme-selected and neutral surfaces instead of
   large status-color fills. Setup removes the redundant AI analytics grouping
   row, and the optional CIM macro table can be expanded or collapsed with the
@@ -241,7 +253,7 @@
   and Searchbase documentation now use the canonical names. Security
   Operations routes deliberately pair `secops_` with the existing `netops_`
   convention. Customer-specific
-  exercise and activation-report wording has been replaced with reusable
+  exercise and operations-report wording has been replaced with reusable
   Catalyst health and operations labels.
 - All 35 dashboards now use the same borderless Cisco Cloud Control atmosphere.
   React and static dashboard shells reference one central blue/violet SVG asset,

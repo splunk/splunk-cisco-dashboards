@@ -120,7 +120,7 @@ If a requested visualization can't be immediately built from what's already avai
 | Security | 186 |
 | Monitoring | 127 |
 | Cisco Spaces | 72 |
-| Network Activation | 54 |
+| Network Operations | 54 |
 | Building | 50 |
 | IT Health | 39 |
 | Identity | 35 |

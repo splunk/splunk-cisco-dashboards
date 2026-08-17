@@ -2795,7 +2795,7 @@ export const usePersistedTopology = (
 /** Connector-trail motion is operator controlled and static by default. */
 type TopologyAnimationLevel = "on" | "subtle" | "off";
 
-const TOPOLOGY_CONNECTOR_SPEED_KEY = "florida-topology-connector-speed.v1";
+const TOPOLOGY_CONNECTOR_SPEED_KEY = "workspace-topology-connector-speed.v1";
 const DEFAULT_TOPOLOGY_CONNECTOR_SPEED = 0;
 const MIN_TOPOLOGY_CONNECTOR_SPEED = 0;
 const MAX_TOPOLOGY_CONNECTOR_SPEED = 2;
@@ -2907,7 +2907,7 @@ const useTopologyConnectorSpeed = (): {
 
 type TopologyRoleLegendMode = "compact" | "expanded";
 
-const TOPOLOGY_ROLE_LEGEND_KEY = "florida-topology-role-legend.v1";
+const TOPOLOGY_ROLE_LEGEND_KEY = "workspace-topology-role-legend.v1";
 
 const readStoredRoleLegendMode = (): TopologyRoleLegendMode => {
   if (typeof window === "undefined") return "compact";

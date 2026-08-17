@@ -883,7 +883,7 @@
         },
         {
           "line_no": 4297,
-          "name": "network_activation_ssid_client_trend_24h"
+          "name": "network_operations_ssid_client_trend_24h"
         },
         {
           "line_no": 5113,
@@ -951,7 +951,7 @@
         },
         {
           "line_no": 9224,
-          "name": "statewide_ds_ssid_client_trend_24h"
+          "name": "enterprise_ds_ssid_client_trend_24h"
         },
         {
           "line_no": 9331,
@@ -1061,19 +1061,19 @@
         },
         {
           "line_no": 4211,
-          "name": "network_activation_wireless_health_kpi"
+          "name": "network_operations_wireless_health_kpi"
         },
         {
           "line_no": 4233,
-          "name": "network_activation_wired_health_kpi"
+          "name": "network_operations_wired_health_kpi"
         },
         {
           "line_no": 4255,
-          "name": "network_activation_wireless_client_trend_24h"
+          "name": "network_operations_wireless_client_trend_24h"
         },
         {
           "line_no": 4276,
-          "name": "network_activation_wired_client_trend_24h"
+          "name": "network_operations_wired_client_trend_24h"
         },
         {
           "line_no": 7414,
@@ -1085,15 +1085,15 @@
         },
         {
           "line_no": 9245,
-          "name": "statewide_ds_wired_client_trend_24h"
+          "name": "enterprise_ds_wired_client_trend_24h"
         },
         {
           "line_no": 9266,
-          "name": "statewide_ds_wireless_client_trend_24h"
+          "name": "enterprise_ds_wireless_client_trend_24h"
         },
         {
           "line_no": 9287,
-          "name": "statewide_ds_wireless_client_trend_7d"
+          "name": "enterprise_ds_wireless_client_trend_7d"
         },
         {
           "line_no": 10417,
@@ -1455,27 +1455,27 @@
         },
         {
           "line_no": 9701,
-          "name": "overview_site_tallahassee_health"
+          "name": "overview_site_1_health"
         },
         {
           "line_no": 9730,
-          "name": "overview_site_orlando_health"
+          "name": "overview_site_3_health"
         },
         {
           "line_no": 9759,
-          "name": "overview_site_auburndale_health"
+          "name": "overview_site_2_health"
         },
         {
           "line_no": 9788,
-          "name": "overview_link_orlando_tallahassee_health"
+          "name": "overview_link_site_1_site_3_health"
         },
         {
           "line_no": 9838,
-          "name": "overview_link_auburndale_tallahassee_health"
+          "name": "overview_link_site_1_site_2_health"
         },
         {
           "line_no": 9888,
-          "name": "overview_link_orlando_auburndale_health"
+          "name": "overview_link_site_2_site_3_health"
         },
         {
           "line_no": 10079,
@@ -3127,15 +3127,15 @@
         },
         {
           "line_no": 9720,
-          "name": "overview_link_orlando_tallahassee_health"
+          "name": "overview_link_site_1_site_3_health"
         },
         {
           "line_no": 9770,
-          "name": "overview_link_auburndale_tallahassee_health"
+          "name": "overview_link_site_1_site_2_health"
         },
         {
           "line_no": 9820,
-          "name": "overview_link_orlando_auburndale_health"
+          "name": "overview_link_site_2_site_3_health"
         }
       ],
       "status": "pass"

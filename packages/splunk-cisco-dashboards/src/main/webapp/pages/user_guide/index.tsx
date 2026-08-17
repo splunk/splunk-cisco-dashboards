@@ -430,10 +430,10 @@ const dashboards = [
     title: "Cisco Spaces Intelligence",
     view: "dashboard_manager#/workplace_spaces_intelligence",
     summary:
-      "Environmental, capacity, room, activation, visitor, and network impact analytics.",
+      "Environmental, capacity, room, operations, visitor, and network impact analytics.",
   },
   {
-    title: "Network Activation Report",
+    title: "Network Operations Report",
     view: "dashboard_manager#/netops_catalyst_health",
     summary:
       "Event operations view for executive, client, device, traffic, and issue summaries.",
@@ -1708,7 +1708,7 @@ iseval = 0`}</CodeBlock>
               </InfoCard>
               <InfoCard title="Experience">
                 <Gauge size={18} className="mb-2 sui-color-positive" />
-                Client health, ThousandEyes, site readiness, and activation
+                Client health, ThousandEyes, site readiness, and operations
                 reporting.
               </InfoCard>
               <InfoCard title="Setup">

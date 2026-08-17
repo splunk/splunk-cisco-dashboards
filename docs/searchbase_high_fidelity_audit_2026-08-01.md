@@ -194,7 +194,7 @@ Final category distribution (1,346 stanzas, 0 blank category):
 | Monitoring | 131 |
 | Identity | 82 |
 | Cisco Spaces | 71 |
-| Network Activation | 54 |
+| Network Operations | 54 |
 | Building | 50 |
 | IT Health | 38 |
 | NetOps Readiness | 26 |

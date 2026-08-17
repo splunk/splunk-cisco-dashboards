@@ -13,7 +13,7 @@
  * Build 1174 — animation freeze + opt-out swap. html2canvas walks the
  * DOM and rebuilds it on a synthetic canvas; it does NOT play through
  * SMIL animations (`<animate>`, `<animateTransform>`) or Leaflet's
- * compositor transforms. The result on the live Florida map was a
+ * compositor transforms. The result on the live topology map was a
  * mangled raster: dashed flow lines snapping to t=0, marker pulses
  * frozen mid-keyframe, and tile transforms drawn at the wrong scale
  * so links extended past the panel bounds. Two-pronged fix:
@@ -42,7 +42,7 @@
  * / PDF output stays diagram-only even if the live editor chrome is
  * visible on screen.
  *
- * Build 1192 — Florida topology link freeze. `pauseAnimations()` from
+ * Build 1192 — topology link freeze. `pauseAnimations()` from
  * Build 1174 freezes SMIL on the LIVE document, but html2canvas works
  * by cloning the DOM into a sandbox iframe and re-parsing it; the
  * cloned `<animate>` children re-trigger from t=0 in that fresh

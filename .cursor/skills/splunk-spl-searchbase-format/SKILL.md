@@ -119,7 +119,7 @@ Tags are the primary fast-filter signal in the UI. Treat them as **what would I 
   - `User Experience`, never `UX`.
   - `Cisco Spaces`, never bare `Spaces`.
   - `Map`, never `Geographic` or `Geolocation` (use `Geo Enriched` only when the data has been joined to a geo lookup and the SPL output shape reflects that).
-- **No noise tags.** Do not add `Cisco`, `Accelerated`, `Cisco_TA`, `TEUC`, `Migrated_From_SavedSearch`, `Composite_Replacement`, capability flags like `Requires_Cisco_ThousandEyes_DM` / `Requires_Cisco_ThousandEyes_Alerts_DM`, vague single-word tags like bare `IT` (use `IT Health` instead), implementation noise like `Macros` / `Index` / `Pipeline`, demo provenance like `Demo` / `Tallahassee` / `Auburndale` / `Statewide`, or generic verbs like `Report` / `Reporting`. The dependency or context belongs in `description` / `explanation`, not the filterable tag set.
+- **No noise tags.** Do not add `Cisco`, `Accelerated`, `Cisco_TA`, `TEUC`, `Migrated_From_SavedSearch`, `Composite_Replacement`, capability flags like `Requires_Cisco_ThousandEyes_DM` / `Requires_Cisco_ThousandEyes_Alerts_DM`, vague single-word tags like bare `IT` (use `IT Health` instead), implementation noise like `Macros` / `Index` / `Pipeline`, demo provenance like `Demo` / `North Campus` / `South Campus` / `Enterprise`, or generic verbs like `Report` / `Reporting`. The dependency or context belongs in `description` / `explanation`, not the filterable tag set.
 - **Be specific.** A bar-chart panel of TE alerts by severity should be tagged `Alerts,ThousandEyes,Severity,Bar`, not `ThousandEyes,Alerts`.
 - **Provenance is fine.** `TA Stock Dashboard` is a useful tag to mark stanzas harvested from upstream TA dashboards because consumers may want to filter for or against them. `ESCU`, `ITSI` are also acceptable provenance tags.
 
@@ -131,7 +131,7 @@ Tags are the primary fast-filter signal in the UI. Treat them as **what would I 
 <Domain> - <Area> - <Specific Title>
 ```
 
-- **Domain** is one of `ThousandEyes`, `Catalyst Center`, `Meraki`, `ISE`, `XDR`, `Cisco Spaces`, `Florida`, `Executive Dashboard`, etc.
+- **Domain** is one of `ThousandEyes`, `Catalyst Center`, `Meraki`, `ISE`, `XDR`, `Cisco Spaces`, `Region`, `Executive Dashboard`, etc.
 - **Area** is the functional grouping (`Network`, `Voice`, `Activity Logs`, `Internet Insights`, `Critical Sites`).
 - **Specific Title** describes the panel: what shape, what metric, what dimension.
 

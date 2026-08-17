@@ -4,7 +4,7 @@
  *
  * Replaces the React Flow built-in animated dash with a flowing
  * coloured dot riding the edge's bezier path — same SVG
- * `<animateMotion>` + `<mpath>` recipe used by the Florida overview
+ * `<animateMotion>` + `<mpath>` recipe used by the overview
  * dashboard's customer-topology map (`CustomerTopologyMap.tsx`),
  * adapted for an in-canvas edge.
  *
@@ -116,7 +116,7 @@ interface AnimatedEdgeData {
     /** Build 115.11 — when true, the stroke colour is driven by
      *  the live `| metadata` reporting status of the bound
      *  endpoints (green / red), and the line renders as
-     *  marching-ants dashes mirroring the Florida overview
+     *  marching-ants dashes mirroring the overview
      *  dashboard's site connector animation. */
     liveStatus?: boolean;
     /** Build 115.11 — arrow tip glyph the edge inspector selected. */
@@ -302,7 +302,7 @@ const isStencilShape = (shape: unknown): boolean =>
     shape === 'custom_stencil';
 
 /** Build 115.11 — palette for the live-status mode. Mirrors the
- *  Florida overview dashboard's site connector colours: emerald
+ *  overview dashboard's site connector colours: emerald
  *  when both ends are reporting, rose when either end is silent
  *  in `| metadata`. Amber bridges the "we don't know yet" middle
  *  state (one end has no status info). */

@@ -1,7 +1,6 @@
 /**
  * Network Diagram page (Build 106) — customer-facing authoring
- * surface for the Visio-style network diagrams referenced in the
- * Florida DEM v8 PDF.
+ * surface for Visio-style network diagrams.
  *
  * Composition:
  *   ┌─────────────────────────────────────────────────────────┐

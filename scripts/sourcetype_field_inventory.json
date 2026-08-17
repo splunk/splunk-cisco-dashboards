@@ -386,7 +386,7 @@
         },
         {
           "line_no": 4658,
-          "name": "network_activation_ssid_client_trend_24h"
+          "name": "network_operations_ssid_client_trend_24h"
         },
         {
           "line_no": 5514,
@@ -454,7 +454,7 @@
         },
         {
           "line_no": 9336,
-          "name": "statewide_ds_ssid_client_trend_24h"
+          "name": "enterprise_ds_ssid_client_trend_24h"
         },
         {
           "line_no": 9453,
@@ -486,7 +486,7 @@
         },
         {
           "line_no": 13008,
-          "name": "statewide_client_ssid_drilldown"
+          "name": "enterprise_client_ssid_drilldown"
         }
       ],
       "status": "fail"
@@ -560,19 +560,19 @@
         },
         {
           "line_no": 4564,
-          "name": "network_activation_wireless_health_kpi"
+          "name": "network_operations_wireless_health_kpi"
         },
         {
           "line_no": 4588,
-          "name": "network_activation_wired_health_kpi"
+          "name": "network_operations_wired_health_kpi"
         },
         {
           "line_no": 4612,
-          "name": "network_activation_wireless_client_trend_24h"
+          "name": "network_operations_wireless_client_trend_24h"
         },
         {
           "line_no": 4635,
-          "name": "network_activation_wired_client_trend_24h"
+          "name": "network_operations_wired_client_trend_24h"
         },
         {
           "line_no": 7880,
@@ -580,15 +580,15 @@
         },
         {
           "line_no": 9359,
-          "name": "statewide_ds_wired_client_trend_24h"
+          "name": "enterprise_ds_wired_client_trend_24h"
         },
         {
           "line_no": 9382,
-          "name": "statewide_ds_wireless_client_trend_24h"
+          "name": "enterprise_ds_wireless_client_trend_24h"
         },
         {
           "line_no": 9405,
-          "name": "statewide_ds_wireless_client_trend_7d"
+          "name": "enterprise_ds_wireless_client_trend_7d"
         },
         {
           "line_no": 10503,
@@ -596,11 +596,11 @@
         },
         {
           "line_no": 12948,
-          "name": "statewide_client_wireless_drilldown"
+          "name": "enterprise_client_wireless_drilldown"
         },
         {
           "line_no": 12978,
-          "name": "statewide_client_wired_drilldown"
+          "name": "enterprise_client_wired_drilldown"
         }
       ],
       "status": "fail"
@@ -876,15 +876,15 @@
         },
         {
           "line_no": 9872,
-          "name": "overview_site_tallahassee_health"
+          "name": "overview_site_1_health"
         },
         {
           "line_no": 9908,
-          "name": "overview_site_auburndale_health"
+          "name": "overview_site_2_health"
         },
         {
           "line_no": 9944,
-          "name": "overview_link_auburndale_tallahassee_health"
+          "name": "overview_link_site_1_site_2_health"
         },
         {
           "line_no": 10186,
@@ -1006,11 +1006,11 @@
         },
         {
           "line_no": 9872,
-          "name": "overview_site_tallahassee_health"
+          "name": "overview_site_1_health"
         },
         {
           "line_no": 9908,
-          "name": "overview_site_auburndale_health"
+          "name": "overview_site_2_health"
         },
         {
           "line_no": 10306,
@@ -1652,7 +1652,7 @@
         },
         {
           "line_no": 9944,
-          "name": "overview_link_auburndale_tallahassee_health"
+          "name": "overview_link_site_1_site_2_health"
         },
         {
           "line_no": 13037,

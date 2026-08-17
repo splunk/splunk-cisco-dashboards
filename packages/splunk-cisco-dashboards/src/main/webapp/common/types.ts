@@ -131,7 +131,7 @@ export interface TopologyLink {
      * (e.g. "Chicago, Illinois, US"). Each A2A event ships full geo
      * metadata; we surface the human-readable location string for the map
      * popup so operators can see *where* each agent is, not just the agent
-     * name. See `[overview_link_auburndale_tallahassee_health]` v1.6.0.
+     * name. See `[overview_link_site_1_site_2_health]` v1.6.0.
      */
     sourceLocation?: string;
     targetLocation?: string;

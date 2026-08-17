@@ -45,8 +45,8 @@ CATALYST_RAW_SOURCE_STANZAS = frozenset(
         "dashboard_workplace_spog_v1_main_trend",
         "dashboard_workplace_spog_v1_persite",
         "dashboard_workplace_spog_v1_t2_nqi_kpi",
-        "statewide_ds_wired_client_trend_24h",
-        "statewide_ds_wireless_client_trend_24h",
+        "enterprise_ds_wired_client_trend_24h",
+        "enterprise_ds_wireless_client_trend_24h",
     }
 )
 

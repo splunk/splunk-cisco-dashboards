@@ -1042,7 +1042,7 @@ const TitlePropertiesForm: React.FC<{
                     className={cn(inputClass, 'min-h-[60px] resize-y')}
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    placeholder="Diagram title (e.g. Florida DEM Network)"
+                    placeholder="Diagram title (for example, Enterprise Network)"
                     autoFocus
                 />
             </Field>
@@ -1731,7 +1731,7 @@ const EdgePropertiesForm: React.FC<{
              *  edge stroke is recoloured by the bound-host
              *  reporting status of its endpoints (green / red),
              *  mirroring the site connector animation in the
-             *  Florida overview dashboard. Override stays
+             *  Region overview dashboard. Override stays
              *  available — the toggle just decides whether the
              *  operator's `lineColor` or live status wins. */}
             <Field label="Live status">

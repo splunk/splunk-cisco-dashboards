@@ -94,7 +94,6 @@ venv.bak/
 
 # PyPI configuration file
 .pypirc
-FDEM.gif
 
 # Playwright MCP — local browser session state (per-machine, contains cookies)
 .cursor/playwright-state.json
@@ -103,11 +102,6 @@ FDEM.gif
 
 # Scratch space for SPL validation queries and data-model dumps
 /tmp/
-packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase_fdem.conf
-
-# Standalone FDEM prototype (never built/shipped) - kept locally, not tracked
-reference_design/splunk-executive-florida-dashboard/
-reference_design/splunk-executive-florida-dashboard.zip
 # /docs/Secure_Networking
 docs/Secure_Networking/Splunk and SN Personas and Pillars.pptx
 docs/Secure_Networking/GSX Accelerator Secure Networking App and TA remediation.pdf

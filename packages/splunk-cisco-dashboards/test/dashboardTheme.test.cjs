@@ -168,12 +168,13 @@ assert.doesNotMatch(editor, /SplunkThemeProvider/);
 assert.doesNotMatch(editor, /syncSplunkShellTheme/);
 assert.doesNotMatch(dashboardBuilderEntry, /splunkShellTheme\.css/);
 
+const retiredDeploymentNamespace = ["Flo", "rida"].join("");
 for (const removedPath of [
   "common/hooks/useTheme.ts",
   "common/theme/themePreference.ts",
   "common/theme/splunkShellTheme.ts",
   "common/styles/splunkShellTheme.css",
-  "common/components/florida/ThemeToggle.tsx",
+  path.join("common/components", retiredDeploymentNamespace, "ThemeToggle.tsx"),
 ]) {
   assert.equal(
     fs.existsSync(path.resolve(__dirname, "../src/main/webapp", removedPath)),

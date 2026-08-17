@@ -159,7 +159,7 @@ for (const relativePath of [
   "bkd-sei-generic-8.svg",
   "bkd-sei-generic-10.svg",
   "bkd-sei-generic-11.svg",
-  "images/background_statewide.png",
+  "images/background_enterprise.png",
   "images/overview/secure-networking/agentic-ops.svg",
   "images/overview/secure-networking/hybrid-mesh-firewalling.svg",
   "images/overview/secure-networking/secure-infrastructure.svg",
