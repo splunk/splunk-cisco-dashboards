@@ -988,7 +988,8 @@ fi
 
 echo ""
 echo "================================================================"
-echo "  Done: ${APP_NAME} v${PKG_VERSION:-unknown} (build ${PKG_BUILD:-unknown})"
+COMPLETED_AT="$(date '+%Y-%m-%d %I:%M:%S %p %Z (%z)')"
+echo "  Done: ${APP_NAME} v${PKG_VERSION:-unknown} (build ${PKG_BUILD:-unknown}) at ${COMPLETED_AT}"
 echo "================================================================"
 echo "  Mode:    ${mode_label}"
 echo "  Profile: ${app_profile_label}"
