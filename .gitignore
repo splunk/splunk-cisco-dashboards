@@ -1,17 +1,8 @@
 .DS_Store
 .vscode
 
-# Ignore Cursor local state (transcripts, history, settings) but keep
-# project-shared rules and skills tracked so team guidance ships with
-# the repo.
-# NOTE: must use `.cursor/*` (not `.cursor/`) so git still descends
-# into the directory and honors the negation patterns below. Parent-
-# directory exclusion would otherwise block re-inclusion of children.
-.cursor/*
-!.cursor/rules/
-!.cursor/rules/**
-!.cursor/skills/
-!.cursor/skills/**
+# Keep all Cursor editor state, rules, skills, and sessions local.
+/.cursor/
 
 ### Splunk local folders
 local/
@@ -95,9 +86,6 @@ venv.bak/
 # PyPI configuration file
 .pypirc
 
-# Playwright MCP — local browser session state (per-machine, contains cookies)
-.cursor/playwright-state.json
-.cursor/playwright-output/
 /.tmp
 
 # Scratch space for SPL validation queries and data-model dumps
