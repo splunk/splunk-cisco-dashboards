@@ -51,6 +51,20 @@
   add-ons provide the tags and normalized fields CIM needs, while required Cisco
   routing macros can still be reviewed, saved, and completed when the CIM scan
   is skipped, interrupted, or unavailable.
+- CIM macro discovery now scopes searches to the configured Cisco routing
+  indexes, groups identical event-type combinations before tag classification,
+  and enriches only CIM-relevant event-type tags. A live four-hour comparison
+  preserved all detected macro, index, and sourcetype mappings while reducing
+  completion time by about 45 percent.
+- The optional CIM setup page now follows the familiar CIM model-settings
+  pattern: a model selector opens one focused index-allowlist editor.
+  Each model shows its current restriction and uses a searchable multi-select
+  populated from the deployment's available indexes. Selections remain
+  comma-separated in the saved macro definition, and users can still enter a
+  custom index name or explicit `*` wildcard. Individual and bulk saving remain
+  available. Consolidated prerequisite and timing guidance and native Splunk UI
+  controls improve readability and keyboard and screen-reader clarity without
+  changing discovery behavior.
 - Searchbase Canvas again offers its own saved light or dark appearance without
   changing Insights Workspace, keeps the Splunk navigation rail dark, and uses
   theme-safe native search controls. Its Add catalogue now opens as a Splunk UI

@@ -579,17 +579,131 @@ assert.match(macroTuningSource, /Setup was not completed/);
 assert.match(macroTuningSource, /setupCimRowsToSave/);
 assert.match(macroTuningSource, /Tune CIM index macros on their own screen/);
 assert.match(macroTuningSource, /Optional · Highly recommended after setup/);
-assert.match(macroTuningSource, /Install and update the relevant Cisco TAs first/);
-assert.match(macroTuningSource, /Plan for several minutes before you start/);
+assert.match(macroTuningSource, /Before you run discovery/);
+assert.match(macroTuningSource, /Discovery can take several minutes/);
+assert.match(macroTuningSource, /Prerequisite:/);
+assert.match(
+  macroTuningSource,
+  /import Select from '@splunk\/react-ui\/Select';/,
+);
+assert.match(
+  macroTuningSource,
+  /import ControlGroup from '@splunk\/react-ui\/ControlGroup';/,
+);
+assert.match(
+  macroTuningSource,
+  /import Message from '@splunk\/react-ui\/Message';/,
+);
+assert.match(
+  macroTuningSource,
+  /import Multiselect from '@splunk\/react-ui\/Multiselect';/,
+);
+assert.match(macroTuningSource, /import \{ variables \} from '@splunk\/themes';/);
+assert.match(
+  macroTuningSource,
+  /const renderCimModelEditor = \(row: EditableMacroRow\)/,
+);
+assert.match(
+  macroTuningSource,
+  /<CimControlGroup[\s\S]*?label="Indexes allowlist"[\s\S]*?<Multiselect/,
+);
+assert.match(
+  macroTuningSource,
+  /const CimControlGroup = styled\(ControlGroup\)`[\s\S]*?max-inline-size: \$\{variables\.lineLength\}/,
+);
+assert.match(
+  macroTuningSource,
+  /const nextValues = values\.map\(String\);[\s\S]*?nextValues\.includes\("\*"\)[\s\S]*?nextValues\.filter\(\(value\) => value !== "\*"\)[\s\S]*?formatMacroDefinition\([\s\S]*?: ""/,
+);
+assert.match(
+  macroTuningSource,
+  /if \(!definition\.trim\(\)\) \{[\s\S]*?return "No indexes entered";[\s\S]*?indexes\.includes\("\*"\)[\s\S]*?return "All indexes";/,
+);
+assert.match(
+  macroTuningSource,
+  /isAllowlistBlank[\s\S]*?Enter at least one index, or \* to allow every index\.[\s\S]*?<Multiselect[\s\S]*?error=\{isAllowlistBlank\}/,
+);
+assert.match(
+  macroTuningSource,
+  /services\/data\/indexes\?count=0&output_mode=json/,
+);
+assert.match(
+  macroTuningSource,
+  /<Multiselect[\s\S]*?allowNewValues[\s\S]*?compact[\s\S]*?filter[\s\S]*?showSelectedValuesFirst="nextOpen"[\s\S]*?values=\{allowlist\}/,
+);
+assert.doesNotMatch(
+  macroTuningSource,
+  /import TextArea from '@splunk\/react-ui\/TextArea';/,
+);
+assert.match(
+  macroTuningSource,
+  /<CimControlGroup[\s\S]*?label="CIM data model"[\s\S]*?<Select[\s\S]*?filteredCimRows\.map/,
+);
+assert.match(
+  macroTuningSource,
+  /<Select\.Option[\s\S]*?description=\{`Restricted to: \$\{formatCimAllowlistSummary/,
+);
+assert.match(
+  macroTuningSource,
+  /setSelectedCimMacro\(String\(value\)\)/,
+);
+assert.match(
+  macroTuningSource,
+  /<CimInventoryMessage type="error" role="alert">/,
+);
+assert.match(
+  macroTuningSource,
+  /indexInventoryState === "loading"[\s\S]*?Loading available indexes…[\s\S]*?available indexes loaded\./,
+);
+assert.match(
+  macroTuningSource,
+  /indexInventoryState === "error"[\s\S]*?<CimInventoryMessage type="warning" role="alert">[\s\S]*?You can still type an[\s\S]*?index name and press Enter/,
+);
+assert.match(macroTuningSource, /label=\{isSaving \? "Saving" : "Save allowlist"\}/);
+assert.doesNotMatch(macroTuningSource, /import Card from '@splunk\/react-ui\/Card';/);
+assert.doesNotMatch(macroTuningSource, /import TabLayout from '@splunk\/react-ui\/TabLayout';/);
+assert.doesNotMatch(macroTuningSource, /const renderCimSetupCard/);
+assert.doesNotMatch(
+  macroTuningSource,
+  /<table className="min-w-\[1500px\] table-fixed[^"]*">[\s\S]*?<col className="w-\[34%\]" \/>/,
+);
+assert.match(
+  macroTuningSource,
+  /appearance="primary"[\s\S]*?label=\{isCimLoading \? "Discovering CIM macros" : "Run CIM discovery"\}/,
+);
+assert.match(
+  macroTuningSource,
+  /appearance="secondary"[\s\S]*?label=\{isSavingCim \? "Saving allowlists" : "Save all allowlists"\}/,
+);
+assert.match(
+  macroTuningSource,
+  /const failedModels: string\[\] = \[\];[\s\S]*?const saved = await saveOne\(row\);[\s\S]*?failedModels\.push\(getCimModelLabel\(row\.macro\)\)/,
+);
+assert.match(
+  macroTuningSource,
+  /aria-busy=\{isCimBulkSaving\}[\s\S]*?cimBulkSaveStatus\.state === "error"[\s\S]*?"cim-bulk-save-error"[\s\S]*?"cim-bulk-save-summary"/,
+);
+assert.match(
+  macroTuningSource,
+  /id="cim-bulk-save-summary"[\s\S]*?role="status"[\s\S]*?cimBulkSaveStatus\.state === "error"[\s\S]*?<CimInventoryMessage[\s\S]*?id="cim-bulk-save-error"[\s\S]*?type="error"[\s\S]*?role="alert"/,
+);
+assert.match(
+  macroTuningSource,
+  /const isCimBulkSaving = cimBulkSaveStatus\.state === "saving";[\s\S]*?if \(isCimBulkSaving \|\| !isTargetAppInstalled\(CIM_APP_NAME\)\) return;/,
+);
+assert.match(
+  macroTuningSource,
+  /disabled=\{isUnknown \|\| isCimBulkSaving \? "dimmed" : false\}[\s\S]*?isSaving \|\|[\s\S]*?isCimBulkSaving/,
+);
 assert.doesNotMatch(
   macroTuningSource,
   /void runScan\(\);\s*if \(setupCimAvailable\) void runCimDiscovery\(\);/,
 );
 assert.match(macroTuningSource, /Run CIM discovery/);
 assert.match(macroTuningSource, /isOptionalCimSetupPage/);
-assert.match(
+assert.doesNotMatch(
   macroTuningSource,
-  /import CollapsiblePanel from '@splunk\/react-ui\/CollapsiblePanel';[\s\S]*?<CollapsiblePanel[\s\S]*?defaultOpen[\s\S]*?headingLevel=\{2\}[\s\S]*?title="CIM macro definitions"/,
+  /import CollapsiblePanel from '@splunk\/react-ui\/CollapsiblePanel';/,
 );
 assert.doesNotMatch(macroTuningSource, /properties\/macros/);
 assert.doesNotMatch(macroTuningSource, /could not remove its local/);
@@ -682,8 +796,21 @@ for (const cimIndexMacro of [
 assert.match(macroTuningSource, /Run all CIM discovery/);
 assert.match(macroTuningSource, /cimHasTag\("filesystem"\)/);
 assert.match(macroTuningSource, /cimHasTag\("performance"\)/);
-assert.match(macroTuningSource, /tags outputfield=cim_tags/);
+assert.match(macroTuningSource, /tags outputfield=cim_tags eventtype/);
 assert.match(macroTuningSource, /mvexpand macro/);
+assert.match(macroTuningSource, /cim_eventtype_key=mvjoin\(mvsort\(eventtype\)/);
+assert.match(macroTuningSource, /sum\(cim_event_count\) as events by macro/);
+assert.match(macroTuningSource, /cim_exclude_authentication==0/);
+assert.match(macroTuningSource, /cim_has_event_signature==1/);
+assert.match(
+  macroTuningSource,
+  /search \(\$\{SCD_INDEX_MACRO_OR_PLACEHOLDER\}\) \(\$\{CIM_DISCOVERY_BASE_TAGS/,
+);
+assert.match(
+  macroTuningSource,
+  /injectIndexMacroOrClause\(\s*CIM_DISCOVERY_SEARCH,\s*discoveredIndexMacroNames,\s*\)/,
+);
+assert.match(macroTuningSource, /splunkSearchAppUrl\(\s*resolvedCimSearchSpl,/);
 for (const supportedCompanionApp of [
   "Splunk_TA_cisco_meraki",
   "Splunk_TA_Cisco_Intersight",
