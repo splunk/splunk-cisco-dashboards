@@ -18,6 +18,8 @@
 /.github/
 /docs/
 /packages/splunk-cisco-dashboards/docs/
+/tests/
+/packages/splunk-cisco-dashboards/test/
 /artifacts/
 /icons/
 *.xlsx
