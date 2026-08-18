@@ -124,3 +124,8 @@ run.sh
 /design-qa.md
 /docs/
 /packages/splunk-cisco-dashboards/docs/
+/implementation-log.md
+/artifacts/
+/scripts/*
+!/scripts/lint_spl_antipatterns.py
+!/scripts/format_searchbase_conf.py
