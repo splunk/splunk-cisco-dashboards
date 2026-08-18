@@ -1,10 +1,15 @@
 /* eslint-disable react/prop-types */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Button from '@splunk/react-ui/Button';
 import Message from '@splunk/react-ui/Message';
+import Paginator from '@splunk/react-ui/Paginator';
+import ScreenReaderContent from '@splunk/react-ui/ScreenReaderContent';
 import WaitSpinner from '@splunk/react-ui/WaitSpinner';
+import { variables } from '@splunk/themes';
 import { DashboardContextProvider } from '@splunk/dashboard-context';
 import { DashboardCore } from '@splunk/dashboard-core';
 import DOMPurify from 'dompurify';
+import styled from 'styled-components';
 import SearchbaseDrilldownGuidance from '../../common/components/workspace/SearchbaseDrilldownGuidance';
 import { WorkspaceModalShell } from '../../common/components/workspace/WorkspaceModalShell';
 import {
@@ -32,6 +37,32 @@ const isTruthyConfValue = (value) =>
     ['1', 'true', 'yes', 'on'].includes(String(value || '').trim().toLowerCase());
 
 const DRILLDOWN_RESULT_HEIGHT = '340px';
+
+const DrilldownWorkflow = styled.div`
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    padding: ${variables.spacingSmall} ${variables.spacingMedium};
+    border-bottom: 1px solid ${variables.borderColorWeak};
+    background: ${variables.backgroundColorPage};
+`;
+
+const DrilldownArrow = styled(Button)`
+    position: absolute;
+    top: 50%;
+    z-index: 2;
+    margin: 0;
+    transform: translateY(-50%);
+`;
+
+const DrilldownArrowBack = styled(DrilldownArrow)`
+    left: ${variables.spacingSmall};
+`;
+
+const DrilldownArrowForward = styled(DrilldownArrow)`
+    right: ${variables.spacingSmall};
+`;
 
 const splunkSearchbaseEditUrl = (stanzaId) => {
     const path = typeof window !== 'undefined' ? window.location.pathname : '/en-US';
@@ -252,20 +283,27 @@ const DashboardStudioDrilldownModal = ({
             )}
 
             {resolvedSearches.length > 1 && (
-                <nav
-                    className="dashboard-builder-drilldown-workflow"
-                    aria-label="Drilldown search navigation"
-                >
-                    <button type="button" disabled={!canGoBack} onClick={showPrevious}>
-                        Back
-                    </button>
-                    <span aria-live="polite">
-                        {activeIndex + 1} / {resolvedSearches.length}
-                    </span>
-                    <button type="button" disabled={!canGoForward} onClick={showNext}>
-                        Forward
-                    </button>
-                </nav>
+                <DrilldownWorkflow>
+                    <Paginator.Compact
+                        aria-label="Drilldown search navigation"
+                        current={activeIndex + 1}
+                        onChange={(_event, { page }) => {
+                            if (page === undefined) {
+                                return;
+                            }
+                            setGenerationState({ type: '', message: '' });
+                            setActiveIndex(page - 1);
+                        }}
+                        renderLabel={({ current, totalPages }) =>
+                            `${current ?? 1} / ${totalPages ?? resolvedSearches.length}`
+                        }
+                        totalPages={resolvedSearches.length}
+                    />
+                    <ScreenReaderContent aria-live="polite">
+                        Showing {activeMetadata.title}, search {activeIndex + 1} of{' '}
+                        {resolvedSearches.length}
+                    </ScreenReaderContent>
+                </DrilldownWorkflow>
             )}
 
             {missingTargetIds.length > 0 && searchEntries !== null && (
@@ -304,15 +342,14 @@ const DashboardStudioDrilldownModal = ({
 
                         <div className="dashboard-builder-drilldown-result-shell">
                             {resolvedSearches.length > 1 && (
-                                <button
-                                    type="button"
-                                    className="dashboard-builder-drilldown-arrow dashboard-builder-drilldown-arrow-back"
-                                    aria-label="Previous drilldown search"
+                                <DrilldownArrowBack
+                                    appearance="secondary"
                                     disabled={!canGoBack}
+                                    hideLabel
+                                    icon={<ChevronLeft size={20} aria-hidden="true" />}
+                                    label="Previous search"
                                     onClick={showPrevious}
-                                >
-                                    <ChevronLeft size={24} aria-hidden="true" />
-                                </button>
+                                />
                             )}
                             <div className="dashboard-builder-drilldown-dashboard">
                                 <DashboardContextProvider
@@ -328,15 +365,14 @@ const DashboardStudioDrilldownModal = ({
                                 </DashboardContextProvider>
                             </div>
                             {resolvedSearches.length > 1 && (
-                                <button
-                                    type="button"
-                                    className="dashboard-builder-drilldown-arrow dashboard-builder-drilldown-arrow-forward"
-                                    aria-label="Next drilldown search"
+                                <DrilldownArrowForward
+                                    appearance="secondary"
                                     disabled={!canGoForward}
+                                    hideLabel
+                                    icon={<ChevronRight size={20} aria-hidden="true" />}
+                                    label="Next search"
                                     onClick={showNext}
-                                >
-                                    <ChevronRight size={24} aria-hidden="true" />
-                                </button>
+                                />
                             )}
                         </div>
 

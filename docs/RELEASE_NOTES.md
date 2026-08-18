@@ -19,6 +19,9 @@
   failures, and missing score inputs remain explicit data gaps. The example is
   documented as a KTP v2.0.0-inspired operational adaptation, not protocol
   conformance.
+- Secure Networking Assurance remains available in developer builds while its
+  design and behavior are refined, but is excluded from Splunkbase release
+  artifacts and navigation until it is explicitly approved for release.
 - Deployment-specific operation names, agencies, places, topology details,
   event dates, and historical session notes were removed. Reusable dashboards
   now use IT Operations, neutral site examples, and time-range-derived
@@ -75,11 +78,12 @@
   selected appearance. Exception KPIs lead over healthy signals, section
   controls progressively disclose on hover or keyboard focus, and narrower
   headers retain map-layout and refresh controls in the actions menu.
-- Searchbase explanations, section-count badges, inline code, and user-guide
-  navigation now use the shared Splunk UI semantic palette and larger readable
-  text in both dark and light themes. The user guide also documents the optional
-  CIM workflow, uses real fragment links, and restores keyboard focus after
-  in-page navigation.
+- Searchbase explanations, section-count badges, drilldown pagination, inline
+  code, and user-guide navigation now use native Splunk UI components or the
+  shared semantic palette, keeping hover, selected, and content states readable
+  in both dark and light themes. The user guide also documents the optional CIM
+  workflow, uses real fragment links, and restores keyboard focus after in-page
+  navigation.
 - React dashboards now share the Insights Workspace's restrained C3 surface
   treatment for notifications, status signals, progress tracks, and controls.
   Searchbase no-data and search-error tiles use native Splunk UI messages and

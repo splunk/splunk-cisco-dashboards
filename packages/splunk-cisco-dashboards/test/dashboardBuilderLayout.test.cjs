@@ -194,15 +194,39 @@ assert.match(
 );
 assert.match(
   styles,
-  /\[data-searchbase-drilldown-guidance='workspace'\] code \{[\s\S]*?background:\s*rgba\(2, 44, 34, 0\.72\);[\s\S]*?color:\s*#a7f3d0;[\s\S]*?font-family:\s*ui-monospace[^;]*!important/,
+  /\[data-searchbase-drilldown-guidance='workspace'\] code \{[\s\S]*?background:\s*var\(--sui-background-section\);[\s\S]*?color:\s*var\(--sui-content-default\);[\s\S]*?font-family:\s*ui-monospace[^;]*!important/,
+  "Workspace guidance code must use semantic SUI surface and content colors",
 );
 assert.match(styles, /\.dashboard-builder-drilldown-classification/);
 assert.match(
   styles,
   /dashboard-builder-themed-modal-dark \.dashboard-builder-drilldown-classification/,
 );
-assert.match(drilldownModal, />\s*Back\s*</);
-assert.match(drilldownModal, />\s*Forward\s*</);
+assert.match(
+  drilldownModal,
+  /<Paginator\.Compact[\s\S]*aria-label="Drilldown search navigation"[\s\S]*renderLabel/,
+  "Dashboard drilldown navigation must use the theme-aware SUI compact paginator",
+);
+assert.doesNotMatch(
+  styles,
+  /\.dashboard-builder-drilldown-workflow button/,
+  "Dashboard drilldown navigation must not override SUI paginator interaction colors",
+);
+assert.match(
+  drilldownModal,
+  /const DrilldownWorkflow = styled\.div`[\s\S]*variables\.borderColorWeak[\s\S]*variables\.backgroundColorPage/,
+  "Dashboard drilldown navigation must use Prisma/1CD surface and divider tokens",
+);
+assert.match(
+  drilldownModal,
+  /<DrilldownArrowBack[\s\S]*hideLabel[\s\S]*label="Previous search"[\s\S]*<DrilldownArrowForward[\s\S]*hideLabel[\s\S]*label="Next search"/,
+  "Dashboard result arrows must use accessible SUI icon Buttons with hover tooltips",
+);
+assert.doesNotMatch(
+  styles,
+  /\.dashboard-builder-drilldown-arrow/,
+  "Dashboard result arrows must not override native SUI Button states",
+);
 assert.match(
   drilldownModal,
   /<SearchbaseDrilldownGuidance[\s\S]*appearance="workspace"/,
@@ -211,6 +235,11 @@ assert.match(drilldownGuidance, /title="Description"/);
 assert.match(drilldownGuidance, /title="Explanation"/);
 assert.match(drilldownGuidance, /title="Solution"/);
 assert.match(drilldownGuidance, /title="Related information"/);
+assert.match(
+  drilldownGuidance,
+  /import Badge from '@splunk\/react-ui\/Badge'[\s\S]*<Badge label=\{`\$\{sectionCount\} sections`\}/,
+  "Search guidance counts must use the theme-aware SUI Badge component",
+);
 assert.match(drilldownModal, /Generate a Dashboard/);
 assert.match(drilldownModal, /DOMPurify\.sanitize/);
 assert.equal(

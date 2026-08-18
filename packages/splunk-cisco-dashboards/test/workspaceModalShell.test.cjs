@@ -229,6 +229,11 @@ assert.match(
   "Dashboard Manager must use the shared Insights Workspace guidance treatment",
 );
 assert.match(
+  dashboardManagerDrilldown,
+  /<Paginator\.Compact[\s\S]*aria-label="Drilldown search navigation"[\s\S]*renderLabel/,
+  "Dashboard Manager drilldown navigation must delegate hover, focus, and disabled states to SUI",
+);
+assert.match(
   profile,
   /<SearchbaseDrilldownGuidance[\s\S]*metadata=\{activeConfig\.metadata\}[\s\S]*appearance="workspace"/,
   "Insights Workspace must use the same Searchbase guidance contract",
@@ -264,6 +269,11 @@ assert.match(
   searchbaseGuidance,
   /DOMPurify\.sanitize[\s\S]*aria-expanded=\{expanded\}/,
   "Workspace guidance must sanitize Searchbase HTML and remain collapsible",
+);
+assert.match(
+  searchbaseGuidance,
+  /import Badge from '@splunk\/react-ui\/Badge'[\s\S]*<Badge label=\{`\$\{sectionCount\} sections`\}/,
+  "Workspace guidance counts must use SUI's theme-aware Badge contrast contract",
 );
 assert.match(
   searchbaseGuidance,
