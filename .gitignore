@@ -116,3 +116,9 @@ docs/Secure_Networking/SN_Pillar_Deep_Dive_v1.xlsx
 docs/Secure_Networking/SN Splunk Use Case mapping - Working Version.csv
 docs/splunk-ai-skills-team-setup.*
 run.sh
+
+# Local planning and design-review artifacts
+/.structured-dev-state
+/plan.md
+/research.md
+/design-qa.md
