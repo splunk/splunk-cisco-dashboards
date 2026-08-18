@@ -783,7 +783,13 @@ else
             hdr "Packaging ${APP_NAME} v${build_version} (Splunkbase profile)..."
         fi
     fi
-    run_quietly bash "${APP_DIR}/bin/package_app.sh" "${package_args[@]}"
+    # macOS ships Bash 3.2, where expanding an empty array under `set -u`
+    # raises "unbound variable" instead of passing zero arguments.
+    if [[ "$developer_profile" -eq 1 || "$minify" -eq 1 ]]; then
+        run_quietly bash "${APP_DIR}/bin/package_app.sh" "${package_args[@]}"
+    else
+        run_quietly bash "${APP_DIR}/bin/package_app.sh"
+    fi
 fi
 
 if [[ "$no_build" -eq 1 ]]; then
