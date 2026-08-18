@@ -95,6 +95,32 @@ SUPPORTED_GRAPH_TYPES = {
     "splunk.pie": "splunk.pie",
 }
 
+# Dashboard Studio definitions cannot import @splunk/themes tokens directly.
+# These literal values resolve Prisma + 1CD + Dark staticA1-staticA20 from
+# @splunk/themes 1.10.0, preserving the approved SUI categorical series order.
+SUI_STATIC_A_DARK = [
+    "#9b5ff4",
+    "#3abdfa",
+    "#0d8e97",
+    "#e2a811",
+    "#e44273",
+    "#a9afda",
+    "#d8580f",
+    "#f88ddc",
+    "#159352",
+    "#9abe2d",
+    "#6574f3",
+    "#ff9297",
+    "#d14baf",
+    "#24c4c9",
+    "#bb6e04",
+    "#6ec641",
+    "#777daf",
+    "#ff9755",
+    "#698c07",
+    "#c69fff",
+]
+
 
 def c3_background_data_uri(path: Path = C3_BACKGROUND_PATH) -> str:
     """Return the repository-owned C3 atmosphere as an embedded Studio asset."""
@@ -590,7 +616,7 @@ def _graph_options(
     options: dict[str, Any] = {
         "backgroundColor": "transparent",
         "legendDisplay": "off" if graph_type == "splunk.area" else "right",
-        "seriesColors": ["#649ef5", "#4cbf7f", "#f0c243", "#fa5762"],
+        "seriesColors": list(SUI_STATIC_A_DARK),
     }
     if graph_type == "splunk.area":
         options.update(

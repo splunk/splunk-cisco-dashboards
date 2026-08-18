@@ -334,7 +334,7 @@ const TARGET_APP_ORDER = [
   CIM_APP_NAME,
 ] as const;
 const TARGET_APP_LABELS: Record<string, string> = {
-  [APP_NAME]: "Splunk App for Secure Networking",
+  [APP_NAME]: "Splunk Secure Networking Essentials",
   [CATALYST_APP_NAME]: "Cisco Enterprise Networking for Splunk Platform",
   [DATA_CENTER_NETWORKING_APP_NAME]: "Cisco DC Networking App for Splunk",
   [MERAKI_APP_NAME]: "Cisco Meraki Add-on for Splunk",
@@ -2890,7 +2890,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           <div className="mx-auto grid max-w-[1920px] gap-6 px-7 py-6 md:grid-cols-[minmax(0,1fr)_460px] md:items-center">
             <div className="min-w-0">
               <div className="text-xs font-bold uppercase tracking-[0.08em] sui-color-info">
-                Splunk App for Secure Networking · Setup · Step 3 of 3
+                Splunk Secure Networking Essentials · Setup · Step 3 of 3
               </div>
               <h1 className="mt-1 text-2xl font-bold leading-tight sui-color-active">
                 Finish setup with the detected routing macros

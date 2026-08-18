@@ -1,6 +1,6 @@
-# Splunk App for Secure Networking
+# Splunk Secure Networking Essentials
 
-A Yarn-workspaces monorepo housing the **Splunk App for Secure Networking** Splunk
+A Yarn-workspaces monorepo housing the **Splunk Secure Networking Essentials** Splunk
 app — a React-based set of dashboards (Overview, Devices, Network,
 Security) that visualize Cisco fleet, network performance, and security
 data inside Splunk Web.

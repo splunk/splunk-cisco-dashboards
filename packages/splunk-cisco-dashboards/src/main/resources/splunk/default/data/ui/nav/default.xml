@@ -1,4 +1,4 @@
-<nav label="Splunk for Secure Networking">
+<nav label="Splunk Secure Networking Essentials">
     <view
         name="workspace_insights"
         default="true"

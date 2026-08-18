@@ -2,7 +2,7 @@
 /* eslint-disable no-console */
 
 /**
- * Minimal build orchestrator for the Splunk App for Secure Networking app.
+ * Minimal build orchestrator for Splunk Secure Networking Essentials.
  *
  * Subcommands:
  *   build   — runs webpack with production React and fast, unminified output

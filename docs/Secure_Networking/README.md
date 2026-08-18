@@ -1,6 +1,6 @@
 # Secure Networking — documentation index
 
-Single entry point for the **Splunk for Secure Networking** effort (Cisco GSX, **August 24–27, 2026**; sales-play launch ~Sept 9). Start here, then open the doc that matches what you need. No single file is the whole-session summary — the work is intentionally split by concern across the files below.
+Single entry point for the **Splunk Secure Networking Essentials** effort (Cisco GSX, **August 24–27, 2026**; sales-play launch ~Sept 9). Start here, then open the doc that matches what you need. No single file is the whole-session summary — the work is intentionally split by concern across the files below.
 
 ## The docs
 

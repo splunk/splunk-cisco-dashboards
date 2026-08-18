@@ -127,7 +127,7 @@ assert.deepEqual(
   [
     {
       id: "secure_networking",
-      headerTitle: "Splunk for Secure Networking",
+      headerTitle: "Splunk Secure Networking Essentials",
       headerSubtitle: "Secure Networking Executive Insights",
     },
     {

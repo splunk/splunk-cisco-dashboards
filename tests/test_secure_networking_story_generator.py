@@ -6,6 +6,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from scripts.generate_secure_networking_story_dashboards import (
+    SUI_STATIC_A_DARK,
     StoryConfigurationError,
     build_dashboard_definition,
     generate_story_dashboards,
@@ -79,6 +80,13 @@ class SecureNetworkingStoryGeneratorTest(unittest.TestCase):
         self.searchbase = parse_searchbase(searchbase_fixture())
         self.dashboard_id = "sn_fixture_story"
         self.story = story_fixture()
+
+    def test_generated_charts_use_complete_sui_static_a_dark_scale(self):
+        definition = build_dashboard_definition(
+            self.dashboard_id, self.story, self.searchbase
+        )
+        graph = definition["visualizations"]["viz_card_01_trend"]
+        self.assertEqual(graph["options"]["seriesColors"], SUI_STATIC_A_DARK)
 
     def test_searchbase_parser_joins_spl_and_strips_html(self):
         entry = self.searchbase["primary_1"]

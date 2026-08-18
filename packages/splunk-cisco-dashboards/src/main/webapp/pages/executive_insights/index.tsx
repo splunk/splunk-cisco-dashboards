@@ -224,7 +224,7 @@ import { cn } from "@/common/lib/utils";
 // =============================================================================
 
 const APP_NAME = "splunk-cisco-dashboards";
-const APP_CATALOG_SEARCH_NAME = "Splunk for Secure Networking";
+const APP_CATALOG_SEARCH_NAME = "Splunk Secure Networking Essentials";
 const WORKSPACE_MENU_WIDTH_PX = 200;
 const HEADER_TIME_RANGE_WIDTH_PX = 130;
 const HEADER_REFRESH_RATE_WIDTH_PX = 140;
@@ -234,7 +234,7 @@ const HEADER_REFRESH_RATE_WIDTH_PX = 140;
 // text per-user via the header pencil → Edit branding panel
 // (`scd_overview_branding`); this constant only defines the
 // out-of-the-box value for fresh deployments.
-const DEFAULT_HEADER_SUBTITLE = "Splunk App for Secure Networking";
+const DEFAULT_HEADER_SUBTITLE = "Splunk Secure Networking Essentials";
 const DEFAULT_HEADER_TITLE_FALLBACK = "Your Organization Name";
 const DEFAULT_LOGO_DATA_URI =
   "data:image/svg+xml;utf8," +
@@ -7334,7 +7334,7 @@ interface BrandingEditorModalProps {
    * matching the precedence rules in the live header. */
   titlePlaceholder: string;
   /** Placeholder text for the subtitle input. Always the
-   * out-of-the-box default ("Splunk App for Secure Networking"). */
+   * out-of-the-box default ("Splunk Secure Networking Essentials"). */
   subtitlePlaceholder: string;
   /** Image src to display in the "current logo" preview when no
    * override logo is set. Lets the user see what they're replacing. */

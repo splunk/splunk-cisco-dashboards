@@ -1,4 +1,4 @@
-# Control app build profiles for Splunk App for Secure Networking
+# Control app build profiles for Splunk Secure Networking Essentials
 
 Keep app resources in source control and use the root `build.sh` to select the
 resources for an installable package. This workflow lets you test unfinished

@@ -7,6 +7,11 @@ const path = require("path");
 
 const repositoryRoot = path.resolve(__dirname, "../../..");
 const webappRoot = path.resolve(__dirname, "../src/main/webapp");
+const splunkResourcesRoot = path.resolve(
+  __dirname,
+  "../src/main/resources/splunk",
+);
+const expectedAppBranding = "Splunk Secure Networking Essentials";
 const legacyNamespace = ["Flo", "rida"].join("");
 const legacyComponentRoot = path.join(webappRoot, "common/components", legacyNamespace);
 const workspaceComponentRoot = path.join(
@@ -23,6 +28,25 @@ assert.equal(
   fs.existsSync(workspaceComponentRoot),
   true,
   "Shared workspace components must remain in the neutral workspace namespace",
+);
+
+const appConf = fs.readFileSync(
+  path.join(splunkResourcesRoot, "default/app.conf"),
+  "utf8",
+);
+const defaultNavigation = fs.readFileSync(
+  path.join(splunkResourcesRoot, "default/data/ui/nav/default.xml"),
+  "utf8",
+);
+assert.match(
+  appConf,
+  new RegExp(`^label = ${expectedAppBranding}$`, "m"),
+  "Splunk launcher metadata must use the current product name",
+);
+assert.match(
+  defaultNavigation,
+  new RegExp(`<nav label="${expectedAppBranding}">`),
+  "Splunk navigation must use the current product name",
 );
 
 const sourceExtensions = new Set([".js", ".jsx", ".ts", ".tsx"]);
@@ -112,6 +136,10 @@ const deploymentTermPattern = new RegExp(
 const deploymentCodePattern = new RegExp(`\\b(?:${deploymentCodes.join("|")})\\b`, "i");
 const operationsOnlyPattern = new RegExp(operationsOnlyTerm, "i");
 const retiredDomainPattern = new RegExp(retiredDomainPrefixes.join("|"), "i");
+const legacyAppBrandingPattern = new RegExp(
+  ["Splunk", "(?: App)? for Secure Networking"].join(""),
+  "i",
+);
 
 for (const { absolutePath, relativePath } of filesToInspect) {
   if (
@@ -132,9 +160,10 @@ for (const { absolutePath, relativePath } of filesToInspect) {
   if (
     deploymentTermPattern.test(sourceText) ||
     deploymentCodePattern.test(sourceText) ||
-    retiredDomainPattern.test(sourceText)
+    retiredDomainPattern.test(sourceText) ||
+    legacyAppBrandingPattern.test(sourceText)
   ) {
-    findings.push(`${relativePath}: deployment-specific content`);
+    findings.push(`${relativePath}: deployment-specific or legacy branded content`);
   }
 
   const technicalIdentifiersRemoved = allowedTechnicalIdentifiers.reduce(
@@ -153,9 +182,10 @@ for (const { absolutePath, relativePath } of filesToInspect) {
       .replace(/data:[^'"\s]*;base64,[A-Za-z0-9+/=]+/g, "");
     if (
       deploymentTermPattern.test(decodedText) ||
-      operationsOnlyPattern.test(decodedText)
+      operationsOnlyPattern.test(decodedText) ||
+      legacyAppBrandingPattern.test(decodedText)
     ) {
-      findings.push(`${relativePath}: deployment-specific embedded text`);
+      findings.push(`${relativePath}: deployment-specific or legacy branded embedded text`);
       break;
     }
   }

@@ -1,6 +1,6 @@
-# Splunk for Secure Networking — Scoping Notes
+# Splunk Secure Networking Essentials — Scoping Notes
 
-Living doc for **Splunk for Secure Networking** (a.k.a. "the Secure Networking App" in the exec thread) — the Cisco Secure Networking app effort tied to **GSX (August 24–27, 2026)** and a **September 9 sales-play launch**, using `splunk-cisco-dashboards` as the proof-of-concept and demo base. Updated as we go — treat this as the source of truth over any single conversation.
+Living doc for **Splunk Secure Networking Essentials** (a.k.a. "the Secure Networking App" in the exec thread) — the Cisco Secure Networking app effort tied to **GSX (August 24–27, 2026)** and a **September 9 sales-play launch**, using `splunk-cisco-dashboards` as the proof-of-concept and demo base. Updated as we go — treat this as the source of truth over any single conversation.
 
 ## Source docs
 
@@ -8,12 +8,12 @@ Living doc for **Splunk for Secure Networking** (a.k.a. "the Secure Networking A
 - `~/Downloads/SN Splunk Use Case mapping.xlsx` — 5 sheets: `Secure Networking Pillars` (~110 rows, leader+operator use cases), `Pillar Deep Dive` (Phase 1/2 tech per pillar, with real Splunkbase hyperlinks), `Pillar Mapping-ish`, `Chris Updates` (KPI-to-tech mapping), `Original` (earlier draft). Contains threaded comments from **Stephen Orr** and **Steven Moore** not visible in flat exports — see Reviewer Notes below.
 - "Secure Networking App Build" daily standup (Webex, 2026-07-20, host Marta Connell) — see Stakeholders below. **Open question:** is this standup's "TA analysis and requirements spreadsheet from Dan's team" the same document as the xlsx above, or a separate one? Unconfirmed as of 2026-07-20.
 - Exec/leadership thread (Alan Ivarson, Marta Connell, Dan Hosaka, Chris Crocco, Hari Won) — org decisions, timeline, and risk framing. See Timeline, Org & Ownership, and Risks sections below.
-- **`GSX Accelerator — Secure Networking App and TA remediation.pdf`** (same folder as this doc) — the formal Workstream 1/2/3 plan: exec alignment on first-party sourcetype ownership, the Secure Networking App's 5-tab structure, and a TA-by-TA overhaul list with named owners/contacts and blocking status. See "TA remediation findings" below.
+- **`GSX Accelerator — Secure Networking App and TA remediation.pdf`** (same folder as this doc) — the formal Workstream 1/2/3 plan: exec alignment on first-party sourcetype ownership, the five-tab Splunk Secure Networking Essentials structure, and a TA-by-TA overhaul list with named owners/contacts and blocking status. See "TA remediation findings" below.
 - **`Novo Nordisk - Customer Video - GSX.pdf`** (same folder) — the "BR12" customer-story script. Confirms Catalyst Center/SD-Access/SD-WAN (Secure Infrastructure/Segmentation) and Cisco Secure Access (ZTA) as the two areas this flagship customer narrative leads with — a signal for demo-content priority.
 
-## Confirmed: this app IS the Secure Networking App
+## Confirmed: this repository ships Splunk Secure Networking Essentials
 
-`splunk-cisco-dashboards` ("Splunk App for Secure Networking") is not a proof-of-concept for a separate app to be built — **it is the Secure Networking App** referenced throughout the exec thread and the TA-remediation PDF's Workstream 2. Confirmed directly by Amir 2026-07-20. The PDF's 5-tab structure (Network Segmentation / Zero Trust Access / Hybrid Mesh Firewalling / Secure Infrastructure / Agentic Ops) matches Chris's pillar taxonomy exactly, and is the taxonomy to build toward — not SCAN's GTM taxonomy.
+`splunk-cisco-dashboards` is not a proof-of-concept for a separate app to be built — **it is Splunk Secure Networking Essentials**, the product referenced throughout the exec thread and the TA-remediation PDF's Workstream 2. Confirmed directly by Amir 2026-07-20. The PDF's 5-tab structure (Network Segmentation / Zero Trust Access / Hybrid Mesh Firewalling / Secure Infrastructure / Agentic Ops) matches Chris's pillar taxonomy exactly, and is the taxonomy to build toward — not SCAN's GTM taxonomy.
 
 ## GSX demo requirement: must run inside C3 — but this is a later-phase workstream, not a GSX blocker
 
@@ -46,7 +46,7 @@ This is the concrete output of the "TA ownership/funding" risk already flagged b
 
 ## Org & Ownership (decided 2026-07-20, per Marta's recap)
 
-- **Alan Ivarson's team** — owns *building* the Secure Networking App.
+- **Alan Ivarson's team** — owns *building* Splunk Secure Networking Essentials.
 - **Chris Crocco** — owns the storyline, based on the 5 pillars + reference architecture (Hari supporting with sales-play content).
 - **Dan Hosaka** — stays on as support for triage/product/publishing.
 - **Tanya (Faddoul)** — advocating to P&T for long-term resourcing/ownership; needs a clear resource ask from the team to make that case (Alan may help scope it).
@@ -106,11 +106,11 @@ If a requested visualization can't be immediately built from what's already avai
 | 7719 | Cisco ThousandEyes App for Splunk | `/opt/splunk/etc/cisco-supported-apps/ta_cisco_thousandeyes` | Cloud/Enterprise/Endpoint Agent tests, event/activity logs, network trace data |
 | 7828 | Cisco Intersight Add-On for Splunk | `~/Downloads/Splunk_TA_Cisco_Intersight` | UCS/compute audit logs, inventory, alarms, perf metrics, HCL compliance, AI-server/GPU visibility (v3.2.0) |
 
-`~/repo/splunk-cisco-dashboards` (this repo, app label **"Splunk App for Secure Networking"**, confirmed via `app.conf`) — dispatches searches into `cisco-catalyst-app` context. **This is the exact app Amir demoed on the 2026-07-20 standup** (React dashboard, IT health/security/building-intelligence sections, site map, signal rail).
+`~/repo/splunk-cisco-dashboards` (this repo, app label **"Splunk Secure Networking Essentials"**, confirmed via `app.conf`) — dispatches searches into `cisco-catalyst-app` context. **This is the exact app Amir demoed on the 2026-07-20 standup** (React dashboard, IT health/security/building-intelligence sections, site map, signal rail).
 
 **Architecture, corrected 2026-07-20:** `searchbase.conf` (814 stanzas) is not just a demo config — it's the live authoritative source driving this app's actual landing dashboard. `data/ui/views/workspace_insights.xml` ("Executive Briefing Workspace") is a thin shell (`hideEdit`/`hideExport`/`hideTitle`, single `div#scan-root`) bootstrapped by `executive_insights_bootstrap.js`; the real tile-building logic lives in `src/main/webapp/pages/executive_insights/index.tsx`, which reads `searchbase.conf` stanzas' `viz_options` JSON metadata at runtime to build the overview tiles and map footer (per `CLAUDE_CODE_HANDOFF.md`). It does not define what raw data/TAs exist (that's the app/TA inventory above) — it defines how this app's own dashboards are configured.
 
-**`~/repo/searchbase`** — confirmed 2026-07-20: this is the "Search Base" app Amir described on the standup. General-purpose Splunk product (not Cisco-specific, part of an "Insights Suite for Splunk"), org `sg-cloud-tools-engineering`. It's a **cross-app aggregator** — its React UI (category/sub-category/tag browser, drag-and-drop custom dashboard building without SPL) is designed to surface `searchbase.conf` stanzas from *any* installed app on a search head, not just one. In practice today, `splunk-cisco-dashboards` is the **only** app in the entire local inventory with its own `searchbase.conf` (checked `app_cisco_common`, `ta_cisco_common`, Meraki/Spaces TAs, `SBG-splunk-security-suite`, and all of `/opt/splunk/etc/cisco-supported-apps` — none have one). Confirmed via screenshot: 576 of the 814 stanzas are indexed and browsable today, filtered to Application = "Splunk App for Secure Networking". This means the planned ~100-150 new SN-pillar searches would naturally land in this repo's `searchbase.conf`, since it's the sole catalog on the search head.
+**`~/repo/searchbase`** — confirmed 2026-07-20: this is the "Search Base" app Amir described on the standup. General-purpose Splunk product (not Cisco-specific, part of an "Insights Suite for Splunk"), org `sg-cloud-tools-engineering`. It's a **cross-app aggregator** — its React UI (category/sub-category/tag browser, drag-and-drop custom dashboard building without SPL) is designed to surface `searchbase.conf` stanzas from *any* installed app on a search head, not just one. In practice today, `splunk-cisco-dashboards` is the **only** app in the entire local inventory with its own `searchbase.conf` (checked `app_cisco_common`, `ta_cisco_common`, Meraki/Spaces TAs, `SBG-splunk-security-suite`, and all of `/opt/splunk/etc/cisco-supported-apps` — none have one). Confirmed via screenshot: 576 of the 814 stanzas are indexed and browsable today, filtered to Application = "Splunk Secure Networking Essentials". This means the planned ~100-150 new SN-pillar searches would naturally land in this repo's `searchbase.conf`, since it's the sole catalog on the search head.
 
 **Existing searchbase.conf category taxonomy** (814 stanzas, all categories) — this is the baseline Amir's planned gap analysis (existing searches vs. 5 SN pillars, ~100-150 new searches estimated) needs to work from. None of these map 1:1 onto the 5 pillars:
 
@@ -187,7 +187,7 @@ Full row-by-row gap analysis of the xlsx `Secure Networking Pillars` sheet again
 4. Two different Secure Access links appear in the xlsx (bare 5558, labeled 7569) — same app family, but worth confirming with Chris/Ray/Elliot which is current for this event.
 5. Is the standup's "TA analysis and requirements spreadsheet from Dan's team" the same as Chris's `SN Splunk Use Case mapping.xlsx`, or a separate document?
 6. ~~Standup flagged "missing data related to Catalyst Center visibility" as a gap~~ — **resolved by the gap analysis**: Catalyst Center/DNAC data is extensively present and queried already throughout searchbase.conf. Not a raw-data gap. If Amir's standup comment referred to something specific, it's more likely one of the buildable gaps in `SN_GAP_ANALYSIS.md` that happens to route through Catalyst Center (e.g. LDOS/EoL tracking, SGT-to-fabric mapping) — still worth a direct follow-up with Chris to pin down exactly which visualization was meant, but the "no Catalyst Center data at all" framing is not accurate.
-7. ~~Is "Splunk for Secure Networking" the whole Cisco Cloud Control marketplace product effort, with the event a milestone inside it?~~ — **resolved 2026-07-20**: it's one initiative. GSX/9-9 is the near-term launch (Splunk-based, developer-supported tier); Cloud Control/marketplace is an explicitly later phase per Marta's recap.
+7. ~~Is "Splunk Secure Networking Essentials" the whole Cisco Cloud Control marketplace product effort, with the event a milestone inside it?~~ — **resolved 2026-07-20**: it's one initiative. GSX/9-9 is the near-term launch (Splunk-based, developer-supported tier); Cloud Control/marketplace is an explicitly later phase per Marta's recap.
 8. ~~What's the actual GSX date?~~ — **resolved 2026-07-21: GSX is August 24–27, 2026** (confirmed by Amir). 9/9 sales-play launch is ~2 weeks after.
 9. What resourcing ask should go to Tanya for P&T advocacy? Alan was asked to help scope this — status unknown.
 

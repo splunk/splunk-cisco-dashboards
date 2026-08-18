@@ -355,7 +355,7 @@ export const PACKAGED_WORKSPACE_FALLBACKS: readonly InsightsWorkspace[] = [
     id: "secure_networking",
     label: "Secure Networking",
     sourceWorkspace: "secure_networking",
-    headerTitle: "Splunk for Secure Networking",
+    headerTitle: "Splunk Secure Networking Essentials",
     headerSubtitle: "Secure Networking Executive Insights",
     hideDefaultLogo: true,
     isBuiltIn: true,

@@ -300,7 +300,7 @@ assert.match(
 );
 assert.match(
   workspacesConf,
-  /header_title = Splunk for Secure Networking[\s\S]*?header_subtitle = Secure Networking Executive Insights/,
+  /header_title = Splunk Secure Networking Essentials[\s\S]*?header_subtitle = Secure Networking Executive Insights/,
   "The primary workspace title must summarize the operational area",
 );
 

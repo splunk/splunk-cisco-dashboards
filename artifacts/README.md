@@ -1,7 +1,7 @@
 # Repository artifacts
 
 This directory contains generated or historical analysis outputs that support
-development but do not ship in the Splunk App for Secure Networking package.
+development but do not ship in the Splunk Secure Networking Essentials package.
 Keep executable tooling in `scripts` and user-facing documentation in `docs`.
 
 ## Searchbase artifacts

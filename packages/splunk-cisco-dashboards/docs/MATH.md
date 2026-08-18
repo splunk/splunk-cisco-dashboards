@@ -2,7 +2,7 @@
 
 > Layer 2 of the SCD framework. See `COMPASS.md` for the QUESTION layer and `CONTEXT_TENSOR.md` for the CATALOG layer.
 
-This document specifies the canonical metric formulas used by the Splunk App for Secure Networking (SCD) app. The historical `scd_*` macro names below remain the formula contract, but those math macros are not currently shipped in `default/macros.conf`; the runtime presently ships index, structural, and NRS tuning macros. NRS and Secure Networking Assurance therefore keep their explicitly documented, contract-tested math in their owning searches.
+This document specifies the canonical metric formulas used by Splunk Secure Networking Essentials (SCD). The historical `scd_*` macro names below remain the formula contract, but those math macros are not currently shipped in `default/macros.conf`; the runtime presently ships index, structural, and NRS tuning macros. NRS and Secure Networking Assurance therefore keep their explicitly documented, contract-tested math in their owning searches.
 
 **Hard rules:**
 

@@ -7,7 +7,7 @@
  * optional override fields:
  *
  *   • title       — overrides the `[customer_name]` macro fetch
- *   • subtitle    — overrides the hardcoded "Splunk App for Secure Networking"
+ *   • subtitle    — overrides the hardcoded "Splunk Secure Networking Essentials"
  *   • logoDataUri — overrides the built-in default header logo.
  *                   Stored as a `data:` URI (the editor uses
  *                   FileReader to encode the uploaded image), so the

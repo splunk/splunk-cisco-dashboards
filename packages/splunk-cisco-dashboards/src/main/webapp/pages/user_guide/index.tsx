@@ -798,7 +798,7 @@ export default function UserGuidePage(): JSX.Element {
     };
 
     document.body.classList.add("scd-guide-printing");
-    document.title = `Splunk App for Secure Networking User Guide ${APP_VERSION_LABEL}`;
+    document.title = `Splunk Secure Networking Essentials User Guide ${APP_VERSION_LABEL}`;
     window.addEventListener("afterprint", cleanup);
     window.setTimeout(() => {
       window.print();
@@ -933,7 +933,7 @@ export default function UserGuidePage(): JSX.Element {
                   User Guide
                 </div>
                 <h1 className="m-0 text-3xl font-bold tracking-normal sui-color-active">
-                  Splunk App for Secure Networking
+                  Splunk Secure Networking Essentials
                 </h1>
               </div>
               <div className="scd-guide-no-print flex items-center gap-2">
@@ -1067,7 +1067,7 @@ export default function UserGuidePage(): JSX.Element {
                 </table>
               </div>
               <p className="mt-4 text-sm leading-6 sui-color-default">
-                Splunk App for Secure Networking currently uses the Cisco
+                Splunk Secure Networking Essentials currently uses the Cisco
                 Security Cloud and Cisco ThousandEyes data models, and will use
                 the Cisco_Catalyst_App data model from Cisco Enterprise
                 Networking for Splunk Platform. For best performance, the data
@@ -1458,8 +1458,8 @@ iseval = 0`}</CodeBlock>
                   dashboard SPL, admin references, and helper tooling. React
                   utilities can read this catalogue when a page needs to expose
                   or run a named search. Each entry can retain its source app
-                  classification while opening locally in Splunk App for Secure
-                  Networking.
+                  classification while opening locally in Splunk Secure
+                  Networking Essentials.
                 </InfoCard>
                 <InfoCard title="Searchbase Canvas">
                   Use the canvas to assemble a working view from catalogue

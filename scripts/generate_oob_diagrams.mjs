@@ -1172,7 +1172,7 @@ const buildCiscoLive2026EventArchitecturePayload = () => ({
       560,
       "Splunk + Executive Briefing",
       "Splunk + Briefing",
-      "Splunk App for Secure Networking",
+      "Splunk Secure Networking Essentials",
       "Splunk",
     ),
   ],

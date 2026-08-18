@@ -152,6 +152,33 @@ const C3_GRAPH_COLORS = new Set([
   "#a6adb6", // neutral
 ]);
 
+// Dashboard Studio cannot import @splunk/themes variables directly. The generator
+// resolves Prisma + 1CD + Dark staticA1-staticA20 from @splunk/themes 1.10.0
+// into the literal seriesColors array accepted by Studio dashboard definitions.
+const SUI_STATIC_A_DARK = [
+  "#9b5ff4",
+  "#3abdfa",
+  "#0d8e97",
+  "#e2a811",
+  "#e44273",
+  "#a9afda",
+  "#d8580f",
+  "#f88ddc",
+  "#159352",
+  "#9abe2d",
+  "#6574f3",
+  "#ff9297",
+  "#d14baf",
+  "#24c4c9",
+  "#bb6e04",
+  "#6ec641",
+  "#777daf",
+  "#ff9755",
+  "#698c07",
+  "#c69fff",
+];
+const SUI_STATIC_A_DARK_COLORS = new Set(SUI_STATIC_A_DARK);
+
 const ALLOWED_COLORS = new Set([
   ...Object.values(HOME_DARK_PALETTE)
     .filter((color) => color.startsWith("#"))
@@ -164,6 +191,7 @@ const ALLOWED_COLORS = new Set([
   "#8b5cf6", // violet-500
   "#0d9488", // teal-600
   ...C3_GRAPH_COLORS,
+  ...SUI_STATIC_A_DARK_COLORS,
 ]);
 
 const RETIRED_STUDIO_COLORS = [
@@ -582,12 +610,17 @@ for (const { fileName, xml, definition } of dashboardViews) {
     );
     assert.ok(
       graph.options?.seriesColors?.length > 0,
-      `${fileName}:${visualizationId} must define an explicit C3 series palette`,
+      `${fileName}:${visualizationId} must define an explicit series palette`,
+    );
+    assert.deepEqual(
+      graph.options.seriesColors.map((color) => color.toLowerCase()),
+      SUI_STATIC_A_DARK,
+      `${fileName}:${visualizationId} must use the complete Prisma 1CD Dark staticA scale`,
     );
     for (const color of graph.options.seriesColors) {
       assert.ok(
-        C3_GRAPH_COLORS.has(color.toLowerCase()),
-        `${fileName}:${visualizationId} uses a graph color outside the C3 palette: ${color}`,
+        SUI_STATIC_A_DARK_COLORS.has(color.toLowerCase()),
+        `${fileName}:${visualizationId} uses a graph color outside its approved palette: ${color}`,
       );
     }
     if (graph.type === "splunk.area") {
@@ -920,22 +953,6 @@ assert.deepEqual(
   },
   "density pilot must reuse the IS4S simple time picker with honest display ranges",
 );
-
-const densityPilotTrendColors = {
-  viz_card_01_trend: "#f7782f",
-  viz_card_02_trend: "#049fd9",
-  viz_card_03_trend: "#fa5762",
-  viz_card_04_trend: "#fa5762",
-  viz_card_05_trend: "#f7782f",
-  viz_card_06_trend: "#00bceb",
-};
-for (const [visualizationId, expectedColor] of Object.entries(densityPilotTrendColors)) {
-  assert.equal(
-    densityPilot.visualizations[visualizationId].options.seriesColors[0],
-    expectedColor,
-    `density pilot ${visualizationId} must lead with its semantic C3 color`,
-  );
-}
 
 const densityPilotSingleValueSeries = {
   viz_card_01_singlevalue: "Failure Rate %",

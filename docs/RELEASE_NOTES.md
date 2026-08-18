@@ -2,6 +2,15 @@
 
 ## 1.0.38
 
+- Product branding is now **Splunk Secure Networking Essentials** across the
+  Splunk launcher, navigation, Insights workspace, setup and user-guide
+  surfaces, generated artifacts, and repository documentation. The internal
+  `splunk-cisco-dashboards` app ID remains unchanged so upgrades, URLs, REST
+  paths, and saved configuration continue to resolve normally.
+- All 17 Secure Networking Dashboard Studio stories now use the complete
+  Prisma/1CD dark `staticA1`–`staticA20` categorical series scale from Splunk
+  UI. Semantic status and single-value trend colors remain independently
+  controlled so healthy, warning, and critical meaning stays consistent.
 - Agentic Operations adds a Secure Networking Assurance example for protected
   application access. It applies an attainability-retainability-quality score
   to ThousandEyes, ISE, and Secure Access telemetry, then adjusts it with active
