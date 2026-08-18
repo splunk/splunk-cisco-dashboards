@@ -4,6 +4,9 @@
 # Keep all Cursor editor state, rules, skills, and sessions local.
 /.cursor/
 
+# Keep GitHub automation and repository-assistant configuration local.
+/.github/
+
 ### Splunk local folders
 local/
 local.meta
