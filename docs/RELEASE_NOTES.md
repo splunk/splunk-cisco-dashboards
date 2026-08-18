@@ -38,12 +38,27 @@
   large status-color fills. Setup removes the redundant AI analytics grouping
   row, and the optional CIM macro table can be expanded or collapsed with the
   native Splunk UI panel control.
+- Signal Rail once again exposes all six visual treatments through an always-
+  available Splunk UI style menu. Configure Tile now opens directly on the
+  restored Options surface—Data Mapping, Drilldown, Chart Style, Display, and
+  Thresholds—with the large Searchbase catalogue in a separate Search view.
 - Insights Workspace now labels personal tile additions as browser-local and
   shared additions as the workspace default. The Add Search drawer starts with
   workspace-and-section suggestions, keeps the full Searchbase catalogue as an
   explicit alternative, and groups detailed discovery options under a collapsed
   Advanced filters panel. Long catalogue titles remain readable beside both
   browser-local and workspace-default actions.
+- The Insights Workspace manager now matches the Add Search experience with
+  native Splunk UI navigation, form controls, validation, and confirmation
+  dialogs. Its two-column editor remains aligned and readable inside the modal,
+  with predictable focus behavior for keyboard and screen-reader users.
+- Insights Workspace permissions now follow one enterprise role policy. Regular
+  users can run workspaces and keep private browser preferences. Users with the
+  `power`, `admin`, or `sc_admin` role can manage shared workspaces and topology.
+  Only `admin`, `sc_admin`, or delegated `admin_all_objects` users can change
+  factory tile searches and configuration. Browser preferences are isolated by
+  signed-in account, workspace managers can remove shared tile additions, and
+  stale shared edits are rejected instead of silently overwriting newer changes.
 - Setup now uses the wider C3/Splunk UI visual language and more readable type
   across the discovery, package-status, and macro-tuning steps. CIM macro
   discovery is an explicitly optional, highly recommended separate page because

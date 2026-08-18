@@ -509,6 +509,38 @@ assert.match(
   "Threshold enablement changes must be included in the shared tile-config patch",
 );
 assert.match(
+  kpiPicker,
+  /const \[detailsCollapsed, setDetailsCollapsed\] = useState\(false\);[\s\S]*?setDetailsCollapsed\(false\);/,
+  "Existing tiles must open directly on the restored Options surface",
+);
+assert.match(
+  kpiPicker,
+  /<ControlGroup hideLabel label="Tile configuration view">[\s\S]*?<RadioBar[\s\S]*?value=\{detailsCollapsed \? "search" : "options"\}[\s\S]*?<RadioBar\.Option label="Options" value="options" \/>[\s\S]*?<RadioBar\.Option label="Search" value="search" \/>/,
+  "Tile configuration must expose explicit SUI Options and Search views",
+);
+assert.match(
+  kpiPicker,
+  /\{detailsCollapsed && \([\s\S]*?<ControlGroup hideLabel label="Search">[\s\S]*?id="kpi-picker-search-results"[\s\S]*?<\/div>[\s\S]*?<\/>[\s\S]*?\)\}/,
+  "The catalogue must render only in Search view so it cannot bury tile options",
+);
+assert.doesNotMatch(
+  kpiPicker,
+  /space-y-2\.5 max-h-\[48%\] overflow-auto/,
+  "The Options editor must use the drawer scroll surface instead of a half-height nested scroller",
+);
+for (const optionGroup of [
+  "Data mapping",
+  "Drilldown",
+  "Chart style",
+  "Display",
+  "Thresholds",
+]) {
+  assert.ok(
+    kpiPicker.includes(`title="${optionGroup}"`),
+    `The restored Options surface must include ${optionGroup}`,
+  );
+}
+assert.match(
   tileConfigService,
   /thresholds\.enabled !== undefined \? \{ enabled: thresholds\.enabled \} : \{\}/,
   "Shared searchbase persistence must save an explicit threshold enabled state",
@@ -608,6 +640,78 @@ assert.doesNotMatch(
   "WorkspaceManager must use Modal.Header's built-in close control",
 );
 assert.match(
+  workspaceManager,
+  /<Modal[\s\S]*?<Modal\.Body>[\s\S]*?<ManagerLayout>[\s\S]*?<Modal\.Footer>/,
+  "Workspace management must use the same SUI header, body, and footer structure as Add Search",
+);
+assert.doesNotMatch(
+  workspaceManager,
+  /material="glass"/,
+  "The dense workspace form must use the default opaque SUI Modal surface",
+);
+for (const suiPrimitive of [
+  "<Button",
+  "<Checkbox",
+  "<ControlGroup",
+  "<Menu.Item",
+  "<Message",
+  "<NumberInput",
+  "<RadioList.Option",
+  "<Select",
+  "<Text",
+]) {
+  assert.ok(
+    workspaceManager.includes(suiPrimitive),
+    `Workspace management must use the native SUI ${suiPrimitive.slice(1)} primitive`,
+  );
+}
+for (const themeToken of [
+  "interactiveColorOverlaySelected",
+  "contentColorMuted",
+  "focusShadow",
+  "spacingXXLarge",
+]) {
+  assert.ok(
+    workspaceManager.includes(`variables.${themeToken}`),
+    `Workspace management must use the ${themeToken} theme token`,
+  );
+}
+assert.doesNotMatch(
+  workspaceManager,
+  /className=|<input|<select|styled\.button/,
+  "Workspace management must not depend on portal-scoped Tailwind classes, native form controls, or custom selection buttons",
+);
+assert.match(
+  workspaceManager,
+  /<Menu\.Heading title>[\s\S]*?Available workspaces[\s\S]*?<Menu\.Item[\s\S]*?selectable[\s\S]*?selected=\{selected\}/,
+  "The workspace selector must be a named, single-select SUI menu",
+);
+assert.match(
+  workspaceManager,
+  /<RadioList[\s\S]*?value=\{draft\.sourceWorkspace\}[\s\S]*?<RadioList\.Option/,
+  "Workspace templates must use SUI radio-group semantics",
+);
+assert.match(
+  workspaceManager,
+  /setValidationAttempted\(true\)[\s\S]*?displayNameRef\.current\?\.focus\(\)[\s\S]*?workspaceIdRef\.current\?\.focus\(\)[\s\S]*?firstSectionRef\.current\?\.focus\(\)/,
+  "Invalid workspace saves must focus the first field that needs attention",
+);
+assert.match(
+  workspaceManager,
+  /role="alert"[\s\S]*?<Message type="error">/,
+  "Workspace service failures must be announced as alerts",
+);
+assert.doesNotMatch(
+  workspaceManager,
+  /window\.confirm/,
+  "Workspace deletion must not use a browser-native confirmation dialog",
+);
+assert.match(
+  workspaceManager,
+  /open=\{deleteConfirmationOpen\}[\s\S]*?<Modal\.Header title="Delete workspace\?"[\s\S]*?appearance="destructive"[\s\S]*?label="Delete"/,
+  "Workspace deletion must use a named SUI confirmation modal and destructive action",
+);
+assert.match(
   profile,
   /<Menu\.Heading>Appearance<\/Menu\.Heading>[\s\S]*?setColorScheme\("light"\)[\s\S]*?selected=\{colorScheme === "light"\}[\s\S]*?setColorScheme\("dark"\)[\s\S]*?selected=\{colorScheme === "dark"\}/,
   "The dashboard actions menu must expose a reversible light/dark workspace choice",
@@ -643,35 +747,30 @@ assert.match(
   /<Info variant="filled" className="h-4 w-4" aria-hidden="true" \/>/,
   "Metric information controls must use the legible filled Splunk React icon",
 );
-assert.match(
-  signalRail,
-  /#scan-root \.scd-signal-rail-ticker:hover \.scd-signal-rail-controls,[\s\S]*?#scan-root \.scd-signal-rail-ticker:focus-within \.scd-signal-rail-controls,[\s\S]*?opacity: 1 !important;[\s\S]*?pointer-events: auto;/,
-  "Signal Rail controls must reveal only on rail hover or keyboard focus",
-);
-assert.match(
-  signalRail,
-  /scd-signal-rail-controls absolute right-2 top-1\/2 z-\[90\]/,
-  "Signal Rail controls must float outside the marquee's flex layout",
-);
 assert.doesNotMatch(
   signalRail,
-  /relative z-\[90\] flex shrink-0 items-center/,
-  "Hidden Signal Rail controls must not reserve space or cover signal tiles",
+  /\.scd-signal-rail-controls\s*\{[\s\S]*?display:\s*none\s*!important/,
+  "Signal Rail controls must never be suppressed by the 1CD stylesheet",
 );
 assert.match(
   signalRail,
-  /#scan-root \.scd-signal-rail-controls\[data-open='true'\][\s\S]*?opacity: 1 !important;[\s\S]*?pointer-events: auto;/,
-  "Signal Rail controls must remain available while the style picker is open",
+  /import Button from "@splunk\/react-ui\/Button";[\s\S]*?import Dropdown from "@splunk\/react-ui\/Dropdown";[\s\S]*?import Menu from "@splunk\/react-ui\/Menu";/,
+  "Signal Rail style selection must use native Splunk UI controls",
 );
 assert.match(
   signalRail,
-  /data-open=\{pickerOpen\}/,
-  "Signal Rail controls must expose the style picker's open state to the scoped CSS",
+  /const SignalRailControls = styled\.div`[\s\S]*?display: flex;[\s\S]*?background-color: \$\{variables\.backgroundColorPopup\}/,
+  "Signal Rail controls must remain visible in the rail layout",
 );
 assert.match(
   signalRail,
-  /border sui-border-transparent sui-bg-transparent shadow-none/,
-  "Signal Rail control buttons must use transparent chrome over signal tiles",
+  /<Dropdown[\s\S]*?label=\{`Signal Rail style: \$\{activeOption\?\.label \?\? "Original"\}`\}[\s\S]*?<Menu\.Heading title>Signal Rail style<\/Menu\.Heading>[\s\S]*?<Menu\.Item[\s\S]*?selectable[\s\S]*?selected=\{variant === option\.id\}/,
+  "Signal Rail must expose an accessible SUI menu for every visual treatment",
+);
+assert.equal(
+  (signalRail.match(/data-variant-option=\{option\.id\}/g) ?? []).length,
+  1,
+  "Signal Rail style options must retain a stable live-verification hook",
 );
 assert.match(
   signalRail,
@@ -695,7 +794,7 @@ assert.match(
 );
 assert.match(
   signalRail,
-  /aria-label=\{`Ticker style:/,
+  /label=\{`Signal Rail style:/,
   "Signal Rail's icon-only style control must have an accessible label",
 );
 assert.doesNotMatch(

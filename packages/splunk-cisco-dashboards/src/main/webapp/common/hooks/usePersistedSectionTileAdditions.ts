@@ -15,6 +15,7 @@ import type { SectionId } from '@/common/hooks/useMetric';
 import { ALL_SECTION_IDS } from '@/common/hooks/usePersistedSectionLayout';
 import {
     EXECUTIVE_WORKSPACE_SOURCE_ID,
+    readUserScopedStorageItem,
     workspaceStorageKey,
     type WorkspaceId,
 } from '@/common/config/insightsWorkspaces';
@@ -65,7 +66,7 @@ const readFromStorage = (
 ): SectionTileAdditionMap => {
     if (typeof window === 'undefined' || !window.localStorage) return {};
     try {
-        const raw = window.localStorage.getItem(storageKey);
+        const raw = readUserScopedStorageItem(storageKey);
         if (!raw) return {};
         const parsed = JSON.parse(raw) as Partial<PersistedShape>;
         if (!parsed || parsed.v !== STORAGE_VERSION || !parsed.additions) return {};

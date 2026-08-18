@@ -45,6 +45,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
     EXECUTIVE_WORKSPACE_SOURCE_ID,
+    readUserScopedStorageItem,
     workspaceStorageKey,
     type WorkspaceId,
 } from '@/common/config/insightsWorkspaces';
@@ -151,7 +152,7 @@ const storageKeyForWorkspace = (workspaceId?: WorkspaceId): string =>
 const readFromStorage = (storageKey: string): MetricOverrideMap => {
     if (typeof window === 'undefined' || !window.localStorage) return {};
     try {
-        const raw = window.localStorage.getItem(storageKey);
+        const raw = readUserScopedStorageItem(storageKey);
         if (!raw) return {};
         const parsed = JSON.parse(raw) as Partial<PersistedShape>;
         if (!parsed || parsed.v !== STORAGE_VERSION || !parsed.overrides) return {};

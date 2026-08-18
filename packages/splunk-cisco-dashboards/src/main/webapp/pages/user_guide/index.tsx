@@ -1362,15 +1362,28 @@ iseval = 0`}</CodeBlock>
             >
               <div className="grid gap-4 md:grid-cols-2">
                 <InfoCard title="Workspace-owned configuration">
-                  A workspace stores its own section layout, selected tiles,
-                  signal rail, map visibility and placement, map presentation,
-                  and dark presentation settings. Shared Signal Rail defaults
-                  are centrally governed, while each signed-in user&apos;s rail
-                  differences are private to that user and workspace and follow
-                  the account across browsers. When adding a search, choose
-                  <strong> For me</strong> for a browser-local tile or
-                  <strong> Shared workspace</strong> to show it to every viewer;
-                  the shared choice is available only to workspace managers.
+                  A workspace stores its shared sections, tile membership and
+                  order, map configuration, and Signal Rail defaults. When
+                  adding a search, choose <strong> This browser</strong> for a
+                  private tile or <strong> Workspace default</strong> to show it
+                  to every viewer; the shared choice is available only to
+                  workspace managers. Browser preferences are isolated by
+                  signed-in account, workspace, and browser. Private Signal
+                  Rail preferences also follow the account across browsers.
+                </InfoCard>
+                <InfoCard title="Role-based change control">
+                  Users with the <code> user</code> role can run workspaces,
+                  drill into results, and personalize their own browser view
+                  without changing another user&apos;s experience. Users with the
+                  <code> power</code>, <code> admin</code>, or
+                  <code> sc_admin</code> role can create and edit shared
+                  workspaces, change shared layouts and section titles, add or
+                  remove workspace default tiles, and edit the customer
+                  topology. Replacing the Searchbase behind a tile or changing
+                  factory tile thresholds, mappings, and drilldowns requires
+                  the <code> admin</code> or <code> sc_admin</code> role, or a
+                  delegated role with the <code> admin_all_objects</code>
+                  capability.
                 </InfoCard>
                 <InfoCard title="Start with a template, then make it yours">
                   Templates are only a starting point for a new workspace.

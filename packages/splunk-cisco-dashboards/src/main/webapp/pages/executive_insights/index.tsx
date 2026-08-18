@@ -23,12 +23,14 @@ import Heading from "@splunk/react-ui/Heading";
 import Layout from "@splunk/react-ui/Layout";
 import Menu from "@splunk/react-ui/Menu";
 import Message from "@splunk/react-ui/Message";
+import Modal from "@splunk/react-ui/Modal";
 import Multiselect from "@splunk/react-ui/Multiselect";
 import RadioBar from "@splunk/react-ui/RadioBar";
 import SearchInput from "@splunk/react-ui/Search";
 import ScreenReaderContent from "@splunk/react-ui/ScreenReaderContent";
 import Select from "@splunk/react-ui/Select";
 import SpotLight from "@splunk/react-ui/SpotLight";
+import StaticContent from "@splunk/react-ui/StaticContent";
 import WaitSpinner from "@splunk/react-ui/WaitSpinner";
 import { variables } from "@splunk/themes";
 import useSplunkTheme from "@splunk/themes/useSplunkTheme";
@@ -170,7 +172,9 @@ import {
   getWorkspaceFromLocation,
   getWorkspaceSectionSource,
   isWorkspaceSourceId,
+  readUserScopedStorageItem,
   sectionIdsForWorkspace,
+  userScopedStorageKey,
   type InsightsWorkspace,
   type WorkspaceId,
   type WorkspaceSourceId,
@@ -215,8 +219,7 @@ import {
   type WorkspaceLayoutConfig,
 } from "@/common/services/insightsWorkspaceService";
 import { saveFactoryTileConfig } from "@/common/services/searchbaseTileConfigService";
-import { useCanManageFactoryTileConfig } from "@/common/hooks/useCanManageFactoryTileConfig";
-import { useCanManageInsightsWorkspaces } from "@/common/hooks/useCanManageInsightsWorkspaces";
+import { useInsightsWorkspacePermissions } from "@/common/hooks/useInsightsWorkspacePermissions";
 import { cn } from "@/common/lib/utils";
 
 // =============================================================================
@@ -971,7 +974,9 @@ const readPriorityDrilldownView = (): string => {
     return DEFAULT_PRIORITY_DRILLDOWN_VIEW;
   }
   try {
-    const raw = window.localStorage.getItem(PRIORITY_DRILLDOWN_STORAGE_KEY);
+    const raw = readUserScopedStorageItem(
+      userScopedStorageKey(PRIORITY_DRILLDOWN_STORAGE_KEY),
+    );
     if (!raw) return DEFAULT_PRIORITY_DRILLDOWN_VIEW;
     const parsed = JSON.parse(raw) as { viewName?: unknown };
     const viewName = typeof parsed.viewName === "string" ? parsed.viewName : "";
@@ -985,7 +990,7 @@ const writePriorityDrilldownView = (viewName: string): void => {
   if (typeof window === "undefined" || !window.localStorage) return;
   try {
     window.localStorage.setItem(
-      PRIORITY_DRILLDOWN_STORAGE_KEY,
+      userScopedStorageKey(PRIORITY_DRILLDOWN_STORAGE_KEY),
       JSON.stringify({ viewName }),
     );
   } catch {
@@ -997,7 +1002,9 @@ const writePriorityDrilldownView = (viewName: string): void => {
 const clearPriorityDrilldownView = (): void => {
   if (typeof window === "undefined" || !window.localStorage) return;
   try {
-    window.localStorage.removeItem(PRIORITY_DRILLDOWN_STORAGE_KEY);
+    window.localStorage.removeItem(
+      userScopedStorageKey(PRIORITY_DRILLDOWN_STORAGE_KEY),
+    );
   } catch {
     // Storage unavailable; ignore.
   }
@@ -2464,8 +2471,11 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     workspaceId: insightsWorkspace.id,
     availableSections,
   });
-  const { canManage: canManageWorkspaceConfig } =
-    useCanManageInsightsWorkspaces();
+  const {
+    canManageWorkspaces: canManageWorkspaceConfig,
+    canManageSharedTopology,
+    canManageFactoryTileConfig: canManageFactoryConfig,
+  } = useInsightsWorkspacePermissions();
   const {
     isHidden: isSectionTileHidden,
     hideTile: hideSectionTile,
@@ -2992,12 +3002,14 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   // Persisted in localStorage so the operator's preference survives
   // reloads, cleared by the factory reset alongside the splitter
   // position.
-  const MAP_POS_KEY = `scd_overview_map_pos.${insightsWorkspace.id}`;
+  const MAP_POS_KEY = userScopedStorageKey(
+    `scd_overview_map_pos.${insightsWorkspace.id}`,
+  );
   const MAP_POS_DEFAULT: MapPosition = "right";
   const [mapPosition, setMapPosition] = useState<MapPosition>(() => {
     if (typeof window === "undefined") return insightsWorkspace.mapPosition;
     try {
-      const saved = window.localStorage.getItem(MAP_POS_KEY);
+      const saved = readUserScopedStorageItem(MAP_POS_KEY);
       return saved === "right" || saved === "below" || saved === "above"
         ? saved
         : insightsWorkspace.mapPosition;
@@ -3015,12 +3027,14 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       // persist it. Mirrors the split-percentage handling.
     }
   }, [mapPosition]);
-  const MAP_VISIBILITY_KEY = `scd_overview_map_visible.${insightsWorkspace.id}`;
+  const MAP_VISIBILITY_KEY = userScopedStorageKey(
+    `scd_overview_map_visible.${insightsWorkspace.id}`,
+  );
   const MAP_VISIBLE_DEFAULT = true;
   const [mapVisible, setMapVisible] = useState<boolean>(() => {
     if (typeof window === "undefined") return insightsWorkspace.mapVisible;
     try {
-      const saved = window.localStorage.getItem(MAP_VISIBILITY_KEY);
+      const saved = readUserScopedStorageItem(MAP_VISIBILITY_KEY);
       return saved === null ? insightsWorkspace.mapVisible : saved !== "false";
     } catch {
       return insightsWorkspace.mapVisible;
@@ -3088,14 +3102,14 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   // 58.33% (= 7/12, matching the legacy fixed grid), but that left
   // the map column too wide for an exec view where the metrics are
   // the primary read.
-  const SPLIT_KEY = "scd_overview_split_pct";
+  const SPLIT_KEY = userScopedStorageKey("scd_overview_split_pct");
   const SPLIT_DEFAULT = 66.67;
   const SPLIT_MIN = 35;
   const SPLIT_MAX = 80;
   const [leftPct, setLeftPct] = useState<number>(() => {
     if (typeof window === "undefined") return SPLIT_DEFAULT;
     try {
-      const saved = window.localStorage.getItem(SPLIT_KEY);
+      const saved = readUserScopedStorageItem(SPLIT_KEY);
       const n = saved ? Number(saved) : NaN;
       return Number.isFinite(n) && n >= SPLIT_MIN && n <= SPLIT_MAX
         ? n
@@ -3531,7 +3545,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       try {
         await saveWorkspaceLayout(insightsWorkspace, {
           [section]: nextSectionLayout,
-        });
+        }, workspaceLayout);
         setWorkspaceLayout(nextLayout);
         applyPersonalViewState();
         setWorkspaceLayoutStatus("saved");
@@ -3601,6 +3615,57 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       removeAddedSearchbaseIdFromSection(section, record.id);
     },
     [removeAddedSearchbaseIdFromSection],
+  );
+
+  const handleRemoveSharedSearchFromSection = useCallback(
+    async (section: SectionId, record: SearchbaseRecord) => {
+      if (!canManageWorkspaceConfig) {
+        throw new Error(
+          "You do not have permission to change this shared workspace.",
+        );
+      }
+      const currentSectionLayout = workspaceLayout[section];
+      if (!currentSectionLayout) return;
+      const nextAdditions = (
+        currentSectionLayout.searchbaseAdditions ?? []
+      ).filter((id) => id !== record.id);
+      if (
+        nextAdditions.length ===
+        (currentSectionLayout.searchbaseAdditions ?? []).length
+      ) {
+        return;
+      }
+
+      const tileId = overviewAdditionTileId(section, record.id);
+      const nextTiles = currentSectionLayout.tiles.filter(
+        (id) => id !== tileId,
+      );
+      const nextSectionLayout = {
+        ...currentSectionLayout,
+        tiles: nextTiles,
+        visibleCount: Math.min(
+          currentSectionLayout.visibleCount ?? nextTiles.length,
+          Math.max(1, nextTiles.length),
+        ),
+        searchbaseAdditions: nextAdditions,
+      };
+      await saveWorkspaceLayout(insightsWorkspace, {
+        [section]: nextSectionLayout,
+      }, workspaceLayout);
+      setWorkspaceLayout((current) => ({
+        ...current,
+        [section]: nextSectionLayout,
+      }));
+      showSectionTile(section, tileId);
+      clearOverride(tileId);
+    },
+    [
+      canManageWorkspaceConfig,
+      clearOverride,
+      insightsWorkspace,
+      showSectionTile,
+      workspaceLayout,
+    ],
   );
 
   const handleHideTileFromSection = useCallback(
@@ -3790,6 +3855,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       locallyAddedSearchbaseIds: new Set(
         getSectionTileAdditions(pickerSection),
       ),
+      workspaceAddedSearchbaseIds: new Set(
+        workspaceLayout[pickerSection]?.searchbaseAdditions ?? [],
+      ),
       currentVisibleCount,
     };
   }, [
@@ -3802,6 +3870,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     renderMetricConfig,
     sectionTileBounds.maxCount,
     sectionTileCounts,
+    workspaceLayout,
   ]);
 
   // Saved-search names already bound across the dashboard, so the
@@ -3905,7 +3974,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   // real enforcement is `metadata/default.meta` restricting
   // searchbase.conf writes to `admin_all_objects`. See
   // `useCanManageFactoryTileConfig` and `searchbaseTileConfigService`.
-  const { canManage: canManageFactoryConfig } = useCanManageFactoryTileConfig();
   const [workspaceManagerOpen, setWorkspaceManagerOpen] = useState(false);
   const [factoryTileConfigStatus, setFactoryTileConfigStatus] = useState<
     "idle" | "saving" | "saved" | "error"
@@ -4163,7 +4231,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
 
     setWorkspaceLayoutStatus("saving");
     try {
-      await saveWorkspaceLayout(insightsWorkspace, next);
+      await saveWorkspaceLayout(insightsWorkspace, next, workspaceLayout);
       setWorkspaceLayout(next);
       setWorkspaceLayoutStatus("saved");
       if (typeof window !== "undefined") {
@@ -5060,7 +5128,11 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                       setAddTileSection(section);
                     },
                   }}
-                  onEditTitle={() => setSectionTitlesEditorOpen(true)}
+                  onEditTitle={
+                    canManageSharedTopology
+                      ? () => setSectionTitlesEditorOpen(true)
+                      : undefined
+                  }
                 >
                   <DndContext
                     sensors={dndSensors}
@@ -5259,6 +5331,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                     <CustomerTopologyMap
                       key={`${insightsWorkspace.id}-${topologyResetKey}`}
                       topology={workspaceTopology}
+                      canManageTopology={canManageSharedTopology}
                       earliestTime={timeRange.earliest}
                       latestTime={timeRange.latest}
                       refreshToken={refreshToken}
@@ -5352,6 +5425,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           locallyAddedSearchbaseIds={
             addTilePickerState.locallyAddedSearchbaseIds
           }
+          workspaceAddedSearchbaseIds={
+            addTilePickerState.workspaceAddedSearchbaseIds
+          }
           currentVisibleCount={addTilePickerState.currentVisibleCount}
           maxTileCount={sectionTileBounds.maxCount}
           canManageWorkspace={canManageWorkspaceConfig}
@@ -5365,6 +5441,12 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           }
           onRemove={(record) =>
             handleRemoveAddedSearchFromSection(
+              addTilePickerState.section,
+              record,
+            )
+          }
+          onRemoveWorkspace={(record) =>
+            handleRemoveSharedSearchFromSection(
               addTilePickerState.section,
               record,
             )
@@ -5601,6 +5683,7 @@ interface OverviewAddTilePanelProps {
   currentSearchbaseIds: ReadonlySet<string>;
   hiddenSearchbaseIds: ReadonlySet<string>;
   locallyAddedSearchbaseIds: ReadonlySet<string>;
+  workspaceAddedSearchbaseIds: ReadonlySet<string>;
   currentVisibleCount: number;
   maxTileCount: number;
   canManageWorkspace: boolean;
@@ -5610,6 +5693,7 @@ interface OverviewAddTilePanelProps {
     destination: "personal" | "workspace",
   ) => void | Promise<void>;
   onRemove: (record: SearchbaseRecord) => void;
+  onRemoveWorkspace: (record: SearchbaseRecord) => void | Promise<void>;
   onUnhide: (record: SearchbaseRecord) => void;
   onClose: () => void;
 }
@@ -5631,12 +5715,14 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   currentSearchbaseIds,
   hiddenSearchbaseIds,
   locallyAddedSearchbaseIds,
+  workspaceAddedSearchbaseIds,
   currentVisibleCount,
   maxTileCount,
   canManageWorkspace,
   returnFocus,
   onAdd,
   onRemove,
+  onRemoveWorkspace,
   onUnhide,
   onClose,
 }) => {
@@ -5661,8 +5747,17 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     "personal" | "workspace"
   >("personal");
   const [addingRecordId, setAddingRecordId] = useState<string | null>(null);
+  const [sharedRemovalRecord, setSharedRemovalRecord] =
+    useState<SearchbaseRecord | null>(null);
+  const [sharedRemovalError, setSharedRemovalError] = useState<string | null>(
+    null,
+  );
+  const [sharedRemovalSaving, setSharedRemovalSaving] = useState(false);
+  const [sharedRemovalAnnouncement, setSharedRemovalAnnouncement] =
+    useState("");
   const [showAllProfileSearches, setShowAllProfileSearches] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const sharedRemovalReturnFocusRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -5677,6 +5772,10 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     setFiltersOpen(false);
     setAddDestination("personal");
     setAddingRecordId(null);
+    setSharedRemovalRecord(null);
+    setSharedRemovalError(null);
+    setSharedRemovalSaving(false);
+    setSharedRemovalAnnouncement("");
     setShowAllProfileSearches(false);
     if (typeof window === "undefined") return;
     const id = window.setTimeout(() => searchInputRef.current?.focus(), 30);
@@ -5689,6 +5788,32 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
       await onAdd(record, addDestination);
     } finally {
       setAddingRecordId(null);
+    }
+  };
+
+  const handleConfirmSharedRemoval = async () => {
+    if (!sharedRemovalRecord || sharedRemovalSaving) return;
+    const recordName = sharedRemovalRecord.searchName;
+    setSharedRemovalSaving(true);
+    setSharedRemovalError(null);
+    setSharedRemovalAnnouncement(
+      `Removing ${recordName} from the workspace default.`,
+    );
+    try {
+      await onRemoveWorkspace(sharedRemovalRecord);
+      setSharedRemovalRecord(null);
+      setSharedRemovalAnnouncement(
+        `Removed ${recordName} from the workspace default.`,
+      );
+    } catch (error) {
+      setSharedRemovalError(
+        error instanceof Error
+          ? error.message
+          : "Could not remove the workspace default tile.",
+      );
+      setSharedRemovalAnnouncement("");
+    } finally {
+      setSharedRemovalSaving(false);
     }
   };
 
@@ -5975,7 +6100,8 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   const countLabel = `${currentVisibleCount}/${maxTileCount} visible`;
 
   return (
-    <Drawer
+    <>
+      <Drawer
       divider="header"
       material="glass"
       onRequestClose={handleDrawerClose}
@@ -6010,20 +6136,22 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
             }
             label="Add to"
           >
-            <RadioBar
-              onChange={(_event, { value }) =>
-                setAddDestination(value as "personal" | "workspace")
-              }
-              value={addDestination}
-            >
-              <RadioBar.Option label="This browser" value="personal" />
-              {canManageWorkspace && (
+            {canManageWorkspace ? (
+              <RadioBar
+                onChange={(_event, { value }) =>
+                  setAddDestination(value as "personal" | "workspace")
+                }
+                value={addDestination}
+              >
+                <RadioBar.Option label="This browser" value="personal" />
                 <RadioBar.Option
                   label="Workspace default"
                   value="workspace"
                 />
-              )}
-            </RadioBar>
+              </RadioBar>
+            ) : (
+              <StaticContent>This browser</StaticContent>
+            )}
           </ControlGroup>
 
           <CollapsiblePanel
@@ -6212,6 +6340,8 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                 const alreadyInSection = currentSearchbaseIds.has(record.id);
                 const hiddenInSection = hiddenSearchbaseIds.has(record.id);
                 const locallyAdded = locallyAddedSearchbaseIds.has(record.id);
+                const workspaceAdded =
+                  workspaceAddedSearchbaseIds.has(record.id);
                 const disabled = alreadyInSection && !hiddenInSection;
                 const description =
                   plainTextFromHtml(record.explanation) ??
@@ -6243,6 +6373,18 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                     icon={<Trash2 aria-hidden="true" />}
                     label="Remove"
                     onClick={() => onRemove(record)}
+                  />
+                ) : workspaceAdded && canManageWorkspace ? (
+                  <Button
+                    aria-label={`Remove default: ${record.searchName} from ${sectionTitle}`}
+                    appearance="destructiveSecondary"
+                    icon={<Trash2 aria-hidden="true" />}
+                    label="Remove default"
+                    onClick={(event) => {
+                      sharedRemovalReturnFocusRef.current = event.currentTarget;
+                      setSharedRemovalError(null);
+                      setSharedRemovalRecord(record);
+                    }}
                   />
                 ) : (
                   <Button
@@ -6284,12 +6426,20 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                               <Badge label="Hidden in section" />
                             </>
                           )}
-                          {!hiddenInSection && alreadyInSection && (
+                          {!hiddenInSection && workspaceAdded && (
+                            <>
+                              {" "}
+                              <Badge label="Workspace default" />
+                            </>
+                          )}
+                          {!hiddenInSection &&
+                            alreadyInSection &&
+                            !workspaceAdded && (
                             <>
                               {" "}
                               <Badge label="Added" />
                             </>
-                          )}
+                            )}
                           {record.searchHidden && (
                             <>
                               {" "}
@@ -6318,7 +6468,57 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
           )}
         </div>
       </Drawer.Body>
-    </Drawer>
+      </Drawer>
+      <div aria-live="polite" role="status">
+        <ScreenReaderContent>{sharedRemovalAnnouncement}</ScreenReaderContent>
+      </div>
+      <Modal
+        onRequestClose={() => {
+          if (!sharedRemovalSaving) setSharedRemovalRecord(null);
+        }}
+        open={sharedRemovalRecord !== null}
+        returnFocus={() => {
+          const previousAction = sharedRemovalReturnFocusRef.current;
+          if (previousAction?.isConnected) previousAction.focus();
+          else searchInputRef.current?.focus();
+        }}
+        style={{ maxWidth: "calc(100vw - 32px)", width: "440px" }}
+      >
+        <Modal.Header title="Remove workspace default tile?" />
+        <Modal.Body>
+          <p>
+            {sharedRemovalRecord?.searchName} will be removed from the shared
+            workspace default. Every viewer will lose this tile unless they
+            added it separately to their browser.
+          </p>
+          {sharedRemovalError && (
+            <div role="alert">
+              <Message type="error">{sharedRemovalError}</Message>
+            </div>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            appearance="secondary"
+            label="Cancel"
+            onClick={() => setSharedRemovalRecord(null)}
+          />
+          <Button
+            appearance="destructive"
+            disabled={sharedRemovalSaving}
+            icon={
+              sharedRemovalSaving ? (
+                <WaitSpinner screenReaderText={null} />
+              ) : (
+                <Trash2 aria-hidden="true" />
+              )
+            }
+            label={sharedRemovalSaving ? "Removing" : "Remove tile"}
+            onClick={() => void handleConfirmSharedRemoval()}
+          />
+        </Modal.Footer>
+      </Modal>
+    </>
   );
 };
 

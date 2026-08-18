@@ -1,5 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import styled from 'styled-components';
+import Button from '@splunk/react-ui/Button';
+import Checkbox from '@splunk/react-ui/Checkbox';
+import ControlGroup from '@splunk/react-ui/ControlGroup';
+import Menu from '@splunk/react-ui/Menu';
+import Message from '@splunk/react-ui/Message';
 import Modal from '@splunk/react-ui/Modal';
+import NumberInput from '@splunk/react-ui/Number';
+import RadioList from '@splunk/react-ui/RadioList';
+import Select from '@splunk/react-ui/Select';
+import Text from '@splunk/react-ui/Text';
+import { variables } from '@splunk/themes';
 import { Copy, Plus, Save, Trash2 } from '@/common/icons/SuiIcon';
 
 import {
@@ -17,7 +28,6 @@ import {
     saveInsightsWorkspace,
     type WorkspaceLayoutConfig,
 } from '@/common/services/insightsWorkspaceService';
-import { cn } from '@/common/lib/utils';
 
 interface WorkspaceManagerProps {
     open: boolean;
@@ -115,6 +125,162 @@ const sourceDescription = (sourceWorkspace: WorkspaceSourceId): string =>
         ? 'Starts with access, infrastructure, segmentation, firewalling, and agentic operations.'
         : 'Starts with IT operations, security operations, digital experience, and executive signals.';
 
+const ManagerLayout = styled.div`
+    display: grid;
+    grid-template-columns: minmax(220px, 272px) minmax(0, 1fr);
+    height: min(640px, calc(100vh - 220px));
+    min-height: 420px;
+    overflow: hidden;
+
+    @media (width <= 760px) {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(148px, 32%) minmax(0, 1fr);
+        min-height: min(560px, calc(100vh - 180px));
+    }
+`;
+
+const WorkspaceNavigation = styled.aside`
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    flex-direction: column;
+    border-right: 1px solid ${variables.borderColorWeak};
+    background-color: ${variables.backgroundColorPage};
+
+    @media (width <= 760px) {
+        border-right: 0;
+        border-bottom: 1px solid ${variables.borderColorWeak};
+    }
+`;
+
+const WorkspaceMenu = styled(Menu)`
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: ${variables.spacingSmall};
+`;
+
+const NavigationActions = styled.div`
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: ${variables.spacingSmall};
+    padding: ${variables.spacingSmall};
+    border-top: 1px solid ${variables.borderColorWeak};
+`;
+
+const WorkspaceEditor = styled.section`
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    flex-direction: column;
+`;
+
+const EditorHeader = styled.header`
+    padding: ${variables.spacingMedium} ${variables.spacingLarge};
+    border-bottom: 1px solid ${variables.borderColorWeak};
+`;
+
+const EditorTitle = styled.h3`
+    margin: 0;
+    color: ${variables.contentColorActive};
+    font-family: ${variables.fontFamilyTitle};
+    font-size: ${variables.fontSizeLarge};
+    font-weight: ${variables.fontWeightSemiBold};
+    line-height: ${variables.lineHeightSingle};
+
+    &:focus-visible {
+        outline: 0;
+        box-shadow: ${variables.focusShadow};
+    }
+`;
+
+const EditorDescription = styled.p`
+    margin: ${variables.spacingXSmall} 0 0;
+    color: ${variables.contentColorMuted};
+    font-size: ${variables.fontSizeSmall};
+`;
+
+const EditorBody = styled.div`
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: ${variables.spacingLarge};
+`;
+
+const FieldsGrid = styled.div`
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: ${variables.spacingLarge};
+
+    @media (width <= 860px) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+`;
+
+const FullWidth = styled.div`
+    grid-column: 1 / -1;
+`;
+
+const SectionFieldset = styled.fieldset`
+    min-width: 0;
+    margin: ${variables.spacingSmall} 0 0;
+    padding: 0;
+    border: 0;
+`;
+
+const FieldsetLegend = styled.legend`
+    margin: 0;
+    padding: 0;
+    color: ${variables.contentColorActive};
+    font-size: ${variables.fontSizeSmall};
+    font-weight: ${variables.fontWeightSemiBold};
+`;
+
+const FieldsetDescription = styled.p`
+    margin: ${variables.spacingXSmall} 0 0;
+    color: ${variables.contentColorMuted};
+    font-size: ${variables.fontSizeSmall};
+    line-height: ${variables.lineHeight};
+`;
+
+const SectionError = styled.p`
+    margin: ${variables.spacingXSmall} 0 0;
+    color: ${variables.contentColorNegative};
+    font-size: ${variables.fontSizeSmall};
+`;
+
+const SectionGrid = styled.div`
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: ${variables.spacingSmall};
+    margin-top: ${variables.spacingSmall};
+
+    @media (width <= 860px) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+`;
+
+const SectionOption = styled.div<{ $selected: boolean }>`
+    min-width: 0;
+    padding: ${variables.spacingSmall};
+    border: 1px solid
+        ${({ $selected }) =>
+            $selected ? variables.interactiveColorBorder : variables.borderColorWeak};
+    border-radius: ${variables.borderRadius};
+    background-color: ${({ $selected }) =>
+        $selected ? variables.interactiveColorOverlaySelected : variables.transparent};
+
+    &:focus-within {
+        box-shadow: ${variables.focusShadow};
+    }
+`;
+
+const MessageStack = styled.div`
+    display: grid;
+    gap: ${variables.spacingSmall};
+    margin-top: ${variables.spacingLarge};
+`;
+
 export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
     open,
     returnFocus,
@@ -133,14 +299,34 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
         'idle',
     );
     const [errorMessage, setErrorMessage] = useState('');
+    const [validationAttempted, setValidationAttempted] = useState(false);
+    const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+    const editorTitleRef = React.useRef<HTMLHeadingElement>(null);
+    const displayNameRef = React.useRef<HTMLInputElement>(null);
+    const workspaceIdRef = React.useRef<HTMLInputElement>(null);
+    const firstSectionRef = React.useRef<HTMLInputElement>(null);
+    const serverErrorRef = React.useRef<HTMLDivElement>(null);
+    const deleteReturnFocusRef = React.useRef<HTMLElement | null>(null);
+    const sectionsDescriptionId = React.useId();
+    const sectionsErrorId = React.useId();
 
     useEffect(() => {
-        if (!open) return;
+        if (!open) {
+            return;
+        }
         setDraft(draftFromWorkspace(currentWorkspace, layouts[currentWorkspace.id]));
         setIdTouched(true);
         setStatus('idle');
         setErrorMessage('');
+        setValidationAttempted(false);
+        setDeleteConfirmationOpen(false);
     }, [currentWorkspace, layouts, open]);
+
+    useEffect(() => {
+        if (errorMessage) {
+            serverErrorRef.current?.focus();
+        }
+    }, [errorMessage]);
 
     const source = WORKSPACE_SOURCES[draft.sourceWorkspace];
     const duplicateId = useMemo(
@@ -152,23 +338,28 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
         [draft.existingWorkspace?.id, draft.id, workspaces],
     );
     const validId = /^[a-z][a-z0-9_]{1,63}$/.test(draft.id);
-    const canSave =
-        status === 'idle' &&
-        Boolean(draft.label.trim()) &&
-        validId &&
-        !duplicateId &&
-        draft.sectionIds.length > 0;
+    const missingDisplayName = !draft.label.trim();
+    const missingSections = draft.sectionIds.length === 0;
+    const validDraft =
+        !missingDisplayName && validId && !duplicateId && !missingSections;
+
+    const focusEditor = () => {
+        window.requestAnimationFrame(() => editorTitleRef.current?.focus());
+    };
 
     const selectWorkspace = (workspace: InsightsWorkspace) => {
         setDraft(draftFromWorkspace(workspace, layouts[workspace.id]));
         setIdTouched(true);
         setErrorMessage('');
+        setValidationAttempted(false);
     };
 
     const startNew = () => {
         setDraft(emptyDraft(currentWorkspace.sourceWorkspace));
         setIdTouched(false);
         setErrorMessage('');
+        setValidationAttempted(false);
+        focusEditor();
     };
 
     const startCopy = () => {
@@ -176,6 +367,8 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
         setDraft(copyDraft(selected, layouts[selected.id]));
         setIdTouched(false);
         setErrorMessage('');
+        setValidationAttempted(false);
+        focusEditor();
     };
 
     const updateLabel = (label: string) => {
@@ -207,7 +400,22 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
     };
 
     const handleSave = async () => {
-        if (!canSave) return;
+        if (status !== 'idle') {
+            return;
+        }
+        setValidationAttempted(true);
+        if (!validDraft) {
+            window.requestAnimationFrame(() => {
+                if (missingDisplayName) {
+                    displayNameRef.current?.focus();
+                } else if (!validId || duplicateId) {
+                    workspaceIdRef.current?.focus();
+                } else {
+                    firstSectionRef.current?.focus();
+                }
+            });
+            return;
+        }
         setStatus('saving');
         setErrorMessage('');
         try {
@@ -240,7 +448,11 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                 mapPosition: draft.mapPosition,
                 regionalView: draft.regionalView,
             };
-            await saveInsightsWorkspace(input, draft.layoutToCopy);
+            await saveInsightsWorkspace(
+                input,
+                draft.layoutToCopy,
+                draft.existingWorkspace,
+            );
             onWorkspaceSaved(draft.id);
         } catch (error) {
             setStatus('error');
@@ -253,14 +465,10 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
 
     const handleDelete = async () => {
         const workspace = draft.existingWorkspace;
-        if (!workspace || workspace.isBuiltIn) return;
-        if (
-            !window.confirm(
-                `Delete the "${workspace.label}" workspace?\n\nIts shared layout will also be removed. This cannot be undone.`,
-            )
-        ) {
+        if (!workspace || workspace.isBuiltIn) {
             return;
         }
+        setDeleteConfirmationOpen(false);
         setStatus('deleting');
         setErrorMessage('');
         try {
@@ -275,316 +483,438 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
         }
     };
 
+    let workspaceIdError: string | boolean = false;
+    if (duplicateId) {
+        workspaceIdError = 'That workspace ID already exists.';
+    } else if (!validId) {
+        workspaceIdError =
+            'Use lowercase letters, numbers, and underscores; start with a letter.';
+    }
+
     return (
-        <Modal
+        <>
+            <Modal
+            divider="both"
             initialFocus="first"
             onRequestClose={onClose}
             open={open}
             returnFocus={returnFocus}
-            style={{ width: 'min(1040px, 96vw)' }}
-        >
-            <Modal.Header
-                subtitle="Reusable customer demo views"
-                title="Insights workspaces"
-            />
-            <div className="flex h-[min(720px,92vh)] overflow-hidden">
-                <aside className="flex w-72 flex-shrink-0 flex-col border-r   sui-border-default sui-bg-page">
-                    <div className="flex-1 space-y-1 overflow-y-auto p-2">
-                        {workspaces.map((workspace) => (
-                            <button
-                                key={workspace.id}
-                                type="button"
-                                onClick={() => selectWorkspace(workspace)}
-                                className={cn(
-                                    'w-full rounded-lg border px-3 py-2 text-left transition-colors',
-                                    draft.existingWorkspace?.id === workspace.id
-                                        ? 'sui-border-info sui-bg-info sui-color-info'
-                                        : 'sui-border-transparent   sui-color-default sui-hover-bg-overlay',
-                                )}
+            style={{
+                width: `min(1040px, calc(100vw - ${variables.spacingXXLarge}))`,
+            }}
+            >
+                <Modal.Header
+                    subtitle="Reusable customer demo views"
+                    title="Insights workspaces"
+                />
+                <Modal.Body>
+                    <ManagerLayout>
+                        <WorkspaceNavigation aria-label="Available workspaces">
+                            <WorkspaceMenu
+                                appearance="subtle"
+                                focusMode="roving"
+                                stopScrollPropagation
                             >
-                                <span className="block truncate text-xs font-bold">
-                                    {workspace.label}
-                                </span>
-                                <span className="mt-0.5 block truncate text-xs  sui-color-default">
-                                    {workspace.id}
-                                    {workspace.isBuiltIn ? ' · built in' : ''}
-                                </span>
-                            </button>
-                        ))}
-                    </div>
-                    <div className="grid grid-cols-2 gap-2 border-t  p-3 sui-border-default">
-                        <button
-                            type="button"
-                            onClick={startNew}
-                            className="inline-flex items-center justify-center gap-1 rounded-md sui-bg-accent px-2 py-2 text-xs font-bold sui-color-active sui-hover-bg-accent"
-                        >
-                            <Plus className="h-3.5 w-3.5" /> New
-                        </button>
-                        <button
-                            type="button"
-                            onClick={startCopy}
-                            className="inline-flex items-center justify-center gap-1 rounded-md border   px-2 py-2 text-xs font-bold   sui-border-default sui-bg-popup sui-color-active sui-hover-bg-floating"
-                        >
-                            <Copy className="h-3.5 w-3.5" /> Duplicate
-                        </button>
-                    </div>
-                </aside>
+                                <Menu.Heading title>
+                                    Available workspaces
+                                </Menu.Heading>
+                            {workspaces.map((workspace) => {
+                                const selected =
+                                    draft.existingWorkspace?.id === workspace.id;
+                                return (
+                                    <Menu.Item
+                                        key={workspace.id}
+                                        description={`${workspace.id}${workspace.isBuiltIn ? ' · built in' : ''}`}
+                                        onClick={() => selectWorkspace(workspace)}
+                                        selectable
+                                        selected={selected}
+                                        truncate
+                                    >
+                                        {workspace.label}
+                                    </Menu.Item>
+                                );
+                            })}
+                            </WorkspaceMenu>
+                        <NavigationActions>
+                            <Button
+                                appearance="primary"
+                                icon={<Plus />}
+                                inline={false}
+                                label="New"
+                                onClick={startNew}
+                            />
+                            <Button
+                                appearance="secondary"
+                                icon={<Copy />}
+                                inline={false}
+                                label="Duplicate"
+                                onClick={startCopy}
+                            />
+                        </NavigationActions>
+                    </WorkspaceNavigation>
 
-                <section className="flex min-w-0 flex-1 flex-col">
-                    <header className="flex items-center justify-between border-b  px-5 py-3 sui-border-default">
-                        <div>
-                            <h3 className="text-sm font-bold  sui-color-active">
+                    <WorkspaceEditor>
+                        <EditorHeader>
+                            <EditorTitle ref={editorTitleRef} tabIndex={-1}>
                                 {draft.existingWorkspace
                                     ? `Edit ${draft.existingWorkspace.label}`
                                     : 'Create workspace'}
-                            </h3>
-                            <p className="mt-0.5 text-xs  sui-color-default">
-                                Metadata and section choices are stored in insights_workspaces.conf.
-                            </p>
-                        </div>
-                    </header>
+                            </EditorTitle>
+                            <EditorDescription>
+                                Metadata and section choices are stored in
+                                insights_workspaces.conf.
+                            </EditorDescription>
+                        </EditorHeader>
 
-                    <div className="flex-1 overflow-y-auto p-5">
-                        <div className="grid grid-cols-2 gap-4">
-                            <label className="text-xs font-bold  sui-color-active">
-                                Display name
-                                <input
-                                    value={draft.label}
-                                    onChange={(event) => updateLabel(event.target.value)}
-                                    maxLength={80}
-                                    className="mt-1 block h-9 w-full rounded-md border   px-3 text-xs font-normal  outline-none sui-focus-border-info focus:ring-2 sui-focus-ring sui-border-default sui-bg-popup sui-color-active sui-focus-ring"
-                                />
-                            </label>
-                            <label className="text-xs font-bold  sui-color-active">
-                                Workspace ID
-                                <input
-                                    value={draft.id}
-                                    disabled={Boolean(draft.existingWorkspace)}
-                                    onChange={(event) => {
-                                        setIdTouched(true);
-                                        setDraft((current) => ({
-                                            ...current,
-                                            id: event.target.value.toLowerCase(),
-                                        }));
-                                    }}
-                                    maxLength={64}
-                                    className="mt-1 block h-9 w-full rounded-md border   px-3 font-mono text-xs font-normal  outline-none sui-focus-border-info focus:ring-2 sui-focus-ring disabled:cursor-not-allowed  sui-disabled-color-muted sui-border-default sui-bg-popup sui-color-active sui-disabled-bg-page"
-                                />
-                                {(!validId || duplicateId) && (
-                                    <span className="mt-1 block font-normal  sui-color-negative">
-                                        {duplicateId
-                                            ? 'That workspace ID already exists.'
-                                            : 'Use lowercase letters, numbers, and underscores; start with a letter.'}
-                                    </span>
-                                )}
-                            </label>
-                            <label className="text-xs font-bold  sui-color-active">
-                                Default visible tiles per section
-                                <input
-                                    type="number"
-                                    min={source.minTileCount}
-                                    max={source.maxTileCount}
-                                    value={draft.defaultTileCount}
-                                    onChange={(event) =>
-                                        setDraft((current) => ({
-                                            ...current,
-                                            defaultTileCount: Number(event.target.value),
-                                        }))
+                        <EditorBody>
+                            <FieldsGrid>
+                                <ControlGroup
+                                    label="Display name"
+                                    required
+                                    error={
+                                        validationAttempted && missingDisplayName
+                                            ? 'Enter a display name.'
+                                            : false
                                     }
-                                    className="mt-1 block h-9 w-full rounded-md border   px-3 text-xs font-normal  outline-none sui-focus-border-info sui-border-default sui-bg-popup sui-color-active"
-                                />
-                            </label>
-                            {!draft.existingWorkspace && (
-                                <div className="col-span-2">
-                                    <fieldset>
-                                        <legend className="text-xs font-bold  sui-color-active">
-                                            Start from a template
-                                        </legend>
-                                        <p className="mt-1 text-xs  sui-color-default">
-                                            Templates only provide a useful first configuration. After creation, this workspace owns its own sections, rail, map, theme, and layouts.
-                                        </p>
-                                        <div className="mt-3 grid grid-cols-2 gap-3">
-                                            {(Object.keys(WORKSPACE_SOURCES) as WorkspaceSourceId[]).map(
-                                                (sourceId) => {
-                                                    const selected = draft.sourceWorkspace === sourceId;
-                                                    const template = WORKSPACE_SOURCES[sourceId];
-                                                    return (
-                                                        <button
-                                                            key={sourceId}
-                                                            type="button"
-                                                            onClick={() => updateSource(sourceId)}
-                                                            aria-pressed={selected}
-                                                            className={cn(
-                                                                'rounded-lg border p-3 text-left transition-colors focus:outline-none focus:ring-2 sui-focus-ring',
-                                                                selected
-                                                                    ? 'sui-border-info  ring-1 sui-focus-ring sui-border-info sui-bg-info sui-focus-ring'
-                                                                    : 'sui-border-weak    sui-border-default sui-bg-popup sui-hover-border-info sui-hover-bg-overlay',
-                                                            )}
-                                                        >
-                                                            <span className="block text-xs font-bold  sui-color-active">
+                                >
+                                    <Text
+                                        error={
+                                            validationAttempted && missingDisplayName
+                                        }
+                                        inputRef={displayNameRef}
+                                        value={draft.label}
+                                        onChange={(_event, { value }) =>
+                                            updateLabel(value)
+                                        }
+                                        maxLength={80}
+                                    />
+                                </ControlGroup>
+                                <ControlGroup
+                                    label="Workspace ID"
+                                    required
+                                    error={workspaceIdError}
+                                >
+                                    <Text
+                                        value={draft.id}
+                                        disabled={
+                                            draft.existingWorkspace ? 'dimmed' : false
+                                        }
+                                        error={!validId || duplicateId}
+                                        inputRef={workspaceIdRef}
+                                        onChange={(_event, { value }) => {
+                                            setIdTouched(true);
+                                            setDraft((current) => ({
+                                                ...current,
+                                                id: value.toLowerCase(),
+                                            }));
+                                        }}
+                                        maxLength={64}
+                                    />
+                                </ControlGroup>
+                                <ControlGroup
+                                    controlsLayout="none"
+                                    label="Default visible tiles per section"
+                                >
+                                    <NumberInput
+                                        inline
+                                        min={source.minTileCount}
+                                        max={source.maxTileCount}
+                                        roundTo={0}
+                                        value={draft.defaultTileCount}
+                                        onChange={(_event, { value }) => {
+                                            if (value === undefined) {
+                                                return;
+                                            }
+                                            setDraft((current) => ({
+                                                ...current,
+                                                defaultTileCount: value,
+                                            }));
+                                        }}
+                                        style={{ width: 120 }}
+                                    />
+                                </ControlGroup>
+                                {!draft.existingWorkspace && (
+                                    <FullWidth>
+                                        <ControlGroup
+                                            label="Start from a template"
+                                            help="Templates provide a useful first configuration. After creation, this workspace owns its sections, rail, map, theme, and layouts."
+                                        >
+                                            <RadioList
+                                                value={draft.sourceWorkspace}
+                                                onChange={(_event, { value }) =>
+                                                    updateSource(
+                                                        value as WorkspaceSourceId,
+                                                    )
+                                                }
+                                            >
+                                                {(Object.keys(
+                                                    WORKSPACE_SOURCES,
+                                                ) as WorkspaceSourceId[]).map(
+                                                    (sourceId) => {
+                                                        const template =
+                                                            WORKSPACE_SOURCES[sourceId];
+                                                        const startingSections =
+                                                            template.sections
+                                                                .filter((section) =>
+                                                                    template.defaultSectionIds.includes(
+                                                                        section.id,
+                                                                    ),
+                                                                )
+                                                                .map(
+                                                                    (section) =>
+                                                                        section.title,
+                                                                )
+                                                                .join(' · ');
+                                                        return (
+                                                            <RadioList.Option
+                                                                key={sourceId}
+                                                                description={`${sourceDescription(sourceId)} Starts with: ${startingSections}`}
+                                                                value={sourceId}
+                                                            >
                                                                 {sourceLabel(sourceId)}
-                                                            </span>
-                                                            <span className="mt-1 block text-xs leading-relaxed  sui-color-default">
-                                                                {sourceDescription(sourceId)}
-                                                            </span>
-                                                            <span className="mt-2 block text-xs font-semibold  sui-color-info">
-                                                                Starts with: {template.sections
-                                                                    .filter((section) => template.defaultSectionIds.includes(section.id))
-                                                                    .map((section) => section.title)
-                                                                    .join(' · ')}
-                                                            </span>
-                                                        </button>
-                                                    );
-                                                },
-                                            )}
-                                        </div>
-                                    </fieldset>
-                                </div>
-                            )}
-                            <label className="text-xs font-bold  sui-color-active">
-                                Map placement
-                                <select
-                                    value={draft.mapPosition}
-                                    onChange={(event) => setDraft((current) => ({
-                                        ...current,
-                                        mapPosition: event.target.value as WorkspaceMapPosition,
-                                    }))}
-                                    className="mt-1 block h-9 w-full rounded-md border   px-3 text-xs font-normal  outline-none sui-focus-border-info sui-border-default sui-bg-popup sui-color-active"
-                                >
-                                    <option value="right">Right of tiles</option>
-                                    <option value="below">Below tiles</option>
-                                    <option value="above">Above tiles</option>
-                                </select>
-                            </label>
-                            <label className="text-xs font-bold  sui-color-active">
-                                Map presentation
-                                <select
-                                    value={draft.regionalView}
-                                    onChange={(event) => setDraft((current) => ({
-                                        ...current,
-                                        regionalView: event.target.value as WorkspaceRegionalView,
-                                    }))}
-                                    className="mt-1 block h-9 w-full rounded-md border   px-3 text-xs font-normal  outline-none sui-focus-border-info sui-border-default sui-bg-popup sui-color-active"
-                                >
-                                    <option value="map">Interactive map</option>
-                                    <option value="table">Site summary table</option>
-                                </select>
-                            </label>
-                            <label className="mt-5 flex items-center gap-2 text-xs font-bold  sui-color-active">
-                                <input
-                                    type="checkbox"
-                                    checked={draft.mapVisible}
-                                    onChange={(event) => setDraft((current) => ({ ...current, mapVisible: event.target.checked }))}
-                                    className="h-4 w-4 accent-sky-600"
-                                />
-                                Show customer connectivity map
-                            </label>
-                            <label className="col-span-2 text-xs font-bold  sui-color-active">
-                                Header title
-                                <input
-                                    value={draft.headerTitle}
-                                    onChange={(event) =>
-                                        setDraft((current) => ({
-                                            ...current,
-                                            headerTitle: event.target.value,
-                                        }))
-                                    }
-                                    maxLength={120}
-                                    className="mt-1 block h-9 w-full rounded-md border   px-3 text-xs font-normal  outline-none sui-focus-border-info sui-border-default sui-bg-popup sui-color-active"
-                                />
-                            </label>
-                            <label className="col-span-2 text-xs font-bold  sui-color-active">
-                                Header subtitle
-                                <input
-                                    value={draft.headerSubtitle}
-                                    onChange={(event) =>
-                                        setDraft((current) => ({
-                                            ...current,
-                                            headerSubtitle: event.target.value,
-                                        }))
-                                    }
-                                    maxLength={180}
-                                    className="mt-1 block h-9 w-full rounded-md border   px-3 text-xs font-normal  outline-none sui-focus-border-info sui-border-default sui-bg-popup sui-color-active"
-                                />
-                            </label>
-                        </div>
-
-                        <fieldset className="mt-5">
-                            <legend className="text-xs font-bold  sui-color-active">
-                                Workspace sections
-                            </legend>
-                            <p className="mt-1 text-xs  sui-color-default">
-                                Mix Secure Networking, SecOps, ITOps, digital experience, and executive signals. Each selected area uses its real Searchbase tile catalogue and can be changed at any time.
-                            </p>
-                            <div className="mt-3 grid grid-cols-2 gap-2">
-                                {source.sections.map((section) => (
-                                    <label
-                                        key={section.id}
-                                        className={cn(
-                                            'flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-xs',
-                                            draft.sectionIds.includes(section.id)
-                                                ? 'sui-border-info sui-bg-info sui-color-info'
-                                                : 'sui-border-weak  sui-border-default sui-color-default',
-                                        )}
+                                                            </RadioList.Option>
+                                                        );
+                                                    },
+                                                )}
+                                            </RadioList>
+                                        </ControlGroup>
+                                    </FullWidth>
+                                )}
+                                <ControlGroup label="Map placement">
+                                    <Select
+                                        value={draft.mapPosition}
+                                        onChange={(_event, { value }) =>
+                                            setDraft((current) => ({
+                                                ...current,
+                                                mapPosition:
+                                                    value as WorkspaceMapPosition,
+                                            }))
+                                        }
                                     >
-                                        <input
-                                            type="checkbox"
-                                            checked={draft.sectionIds.includes(section.id)}
-                                            onChange={() => toggleSection(section.id)}
-                                            className="h-4 w-4 accent-sky-600"
+                                        <Select.Option
+                                            label="Right of tiles"
+                                            value="right"
                                         />
-                                        <span className="font-bold">{section.title}</span>
-                                    </label>
-                                ))}
-                            </div>
-                        </fieldset>
-
-                        <div className="mt-5 rounded-lg border   p-3 text-xs  sui-border-info sui-bg-info sui-color-info">
-                            Open the workspace, arrange its tiles, then use <strong>Publish workspace layout</strong>{' '}
-                            in the tile editor to update the matching layout stanzas.
-                        </div>
-                        {errorMessage && (
-                            <div className="mt-3 rounded-lg border   p-3 text-xs  sui-border-negative sui-bg-negative sui-color-negative">
-                                {errorMessage}
-                            </div>
-                        )}
-                    </div>
-
-                    <footer className="flex items-center justify-between border-t  px-5 py-3 sui-border-default">
-                        <div>
-                            {draft.existingWorkspace && !draft.existingWorkspace.isBuiltIn && (
-                                <button
-                                    type="button"
-                                    onClick={handleDelete}
-                                    disabled={status !== 'idle'}
-                                    className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-xs font-bold   disabled:opacity-50 sui-color-negative sui-hover-bg-negative"
+                                        <Select.Option
+                                            label="Below tiles"
+                                            value="below"
+                                        />
+                                        <Select.Option
+                                            label="Above tiles"
+                                            value="above"
+                                        />
+                                    </Select>
+                                </ControlGroup>
+                                <ControlGroup label="Map presentation">
+                                    <Select
+                                        value={draft.regionalView}
+                                        onChange={(_event, { value }) =>
+                                            setDraft((current) => ({
+                                                ...current,
+                                                regionalView:
+                                                    value as WorkspaceRegionalView,
+                                            }))
+                                        }
+                                    >
+                                        <Select.Option
+                                            label="Interactive map"
+                                            value="map"
+                                        />
+                                        <Select.Option
+                                            label="Site summary table"
+                                            value="table"
+                                        />
+                                    </Select>
+                                </ControlGroup>
+                                <ControlGroup
+                                    controlsLayout="none"
+                                    label="Customer connectivity map"
                                 >
-                                    <Trash2 className="h-3.5 w-3.5" /> Delete workspace
-                                </button>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                disabled={status === 'saving' || status === 'deleting'}
-                                className="rounded-md px-3 py-2 text-xs font-bold   disabled:opacity-50 sui-color-default sui-hover-bg-overlay"
+                                    <Checkbox
+                                        checked={draft.mapVisible}
+                                        onChange={(_event, { checked }) =>
+                                            setDraft((current) => ({
+                                                ...current,
+                                                mapVisible: Boolean(checked),
+                                            }))
+                                        }
+                                    >
+                                        Show map in this workspace
+                                    </Checkbox>
+                                </ControlGroup>
+                                <FullWidth>
+                                    <ControlGroup label="Header title">
+                                        <Text
+                                            value={draft.headerTitle}
+                                            onChange={(_event, { value }) =>
+                                                setDraft((current) => ({
+                                                    ...current,
+                                                    headerTitle: value,
+                                                }))
+                                            }
+                                            maxLength={120}
+                                        />
+                                    </ControlGroup>
+                                </FullWidth>
+                                <FullWidth>
+                                    <ControlGroup label="Header subtitle">
+                                        <Text
+                                            value={draft.headerSubtitle}
+                                            onChange={(_event, { value }) =>
+                                                setDraft((current) => ({
+                                                    ...current,
+                                                    headerSubtitle: value,
+                                                }))
+                                            }
+                                            maxLength={180}
+                                        />
+                                    </ControlGroup>
+                                </FullWidth>
+                            </FieldsGrid>
+
+                            <SectionFieldset
+                                aria-describedby={`${sectionsDescriptionId}${
+                                    validationAttempted && missingSections
+                                        ? ` ${sectionsErrorId}`
+                                        : ''
+                                }`}
                             >
-                                Cancel
-                            </button>
-                            <button
-                                type="button"
-                                onClick={handleSave}
-                                disabled={!canSave}
-                                className="inline-flex items-center gap-1 rounded-md sui-bg-accent px-4 py-2 text-xs font-bold sui-color-active sui-hover-bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                <Save className="h-3.5 w-3.5" />
-                                {status === 'saving' ? 'Saving…' : 'Save workspace'}
-                            </button>
-                        </div>
-                    </footer>
-                </section>
-            </div>
-        </Modal>
+                                <FieldsetLegend>
+                                    Workspace sections (required)
+                                </FieldsetLegend>
+                                <FieldsetDescription id={sectionsDescriptionId}>
+                                    Mix Secure Networking, SecOps, ITOps, digital
+                                    experience, and executive signals. Each selected area
+                                    uses its Searchbase tile catalogue and can be changed at
+                                    any time.
+                                </FieldsetDescription>
+                                {validationAttempted && missingSections && (
+                                    <SectionError id={sectionsErrorId}>
+                                        Select at least one workspace section.
+                                    </SectionError>
+                                )}
+                                <SectionGrid>
+                                    {source.sections.map((section, index) => {
+                                        const selected = draft.sectionIds.includes(
+                                            section.id,
+                                        );
+                                        return (
+                                            <SectionOption
+                                                key={section.id}
+                                                $selected={selected}
+                                            >
+                                                <Checkbox
+                                                    checked={selected}
+                                                    describedBy={`${sectionsDescriptionId}${
+                                                        validationAttempted &&
+                                                        missingSections
+                                                            ? ` ${sectionsErrorId}`
+                                                            : ''
+                                                    }`}
+                                                    error={
+                                                        validationAttempted &&
+                                                        missingSections
+                                                    }
+                                                    inputRef={
+                                                        index === 0
+                                                            ? firstSectionRef
+                                                            : undefined
+                                                    }
+                                                    onChange={() =>
+                                                        toggleSection(section.id)
+                                                    }
+                                                >
+                                                    {section.title}
+                                                </Checkbox>
+                                            </SectionOption>
+                                        );
+                                    })}
+                                </SectionGrid>
+                            </SectionFieldset>
+
+                            <MessageStack>
+                                <Message type="info">
+                                    Open the workspace, arrange its tiles, then use{' '}
+                                    <strong>Publish workspace layout</strong> in the tile
+                                    editor to update the matching layout stanzas.
+                                </Message>
+                                {errorMessage && (
+                                    <div
+                                        ref={serverErrorRef}
+                                        role="alert"
+                                        tabIndex={-1}
+                                    >
+                                        <Message type="error">
+                                            {errorMessage}
+                                        </Message>
+                                    </div>
+                                )}
+                            </MessageStack>
+                        </EditorBody>
+                    </WorkspaceEditor>
+                </ManagerLayout>
+                </Modal.Body>
+                <Modal.Footer>
+                    {draft.existingWorkspace &&
+                        !draft.existingWorkspace.isBuiltIn && (
+                            <Button
+                                appearance="destructiveSecondary"
+                                disabled={status !== 'idle'}
+                                icon={<Trash2 />}
+                                label="Delete workspace"
+                                onClick={(event) => {
+                                    deleteReturnFocusRef.current =
+                                        event.currentTarget;
+                                    setDeleteConfirmationOpen(true);
+                                }}
+                            />
+                        )}
+                    <Button
+                        appearance="secondary"
+                        disabled={status === 'saving' || status === 'deleting'}
+                        label="Cancel"
+                        onClick={onClose}
+                    />
+                    <Button
+                        appearance="primary"
+                        disabled={status !== 'idle'}
+                        icon={<Save />}
+                        label={
+                            status === 'saving' ? 'Saving…' : 'Save workspace'
+                        }
+                        onClick={handleSave}
+                    />
+                </Modal.Footer>
+            </Modal>
+            <Modal
+                onRequestClose={() => setDeleteConfirmationOpen(false)}
+                open={deleteConfirmationOpen}
+                returnFocus={() => deleteReturnFocusRef.current?.focus()}
+                style={{ width: 420 }}
+            >
+                <Modal.Header title="Delete workspace?" />
+                <Modal.Body>
+                    {draft.existingWorkspace && (
+                        <p>
+                            Delete <strong>{draft.existingWorkspace.label}</strong>? Its
+                            shared layout will also be removed. This cannot be undone.
+                        </p>
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button
+                        appearance="secondary"
+                        label="Cancel"
+                        onClick={() => setDeleteConfirmationOpen(false)}
+                    />
+                    <Button
+                        appearance="destructive"
+                        icon={<Trash2 />}
+                        label="Delete"
+                        onClick={handleDelete}
+                    />
+                </Modal.Footer>
+            </Modal>
+        </>
     );
 };

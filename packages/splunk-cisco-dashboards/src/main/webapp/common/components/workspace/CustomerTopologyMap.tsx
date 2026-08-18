@@ -65,6 +65,10 @@ import {
   ZoomOut,
 } from "@/common/icons/SuiIcon";
 import { cn } from "@/common/lib/utils";
+import {
+  readUserScopedStorageItem,
+  userScopedStorageKey,
+} from "@/common/config/insightsWorkspaces";
 import { OneCdGlassCard } from "./OneCdPrimitives";
 import {
   getSearchbaseCatalogue,
@@ -2560,7 +2564,9 @@ const readLegacyPersistedTopology = (
 ): CustomerTopology | null => {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(LEGACY_TOPOLOGY_STORAGE_KEY);
+    const raw = readUserScopedStorageItem(
+      userScopedStorageKey(LEGACY_TOPOLOGY_STORAGE_KEY),
+    );
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<PersistedTopologyPayload>;
     return sanitizeTopology(parsed.topology ?? parsed, fallback);
@@ -2571,6 +2577,9 @@ const readLegacyPersistedTopology = (
 
 const clearLegacyPersistedTopology = (): void => {
   if (typeof window === "undefined") return;
+  window.localStorage.removeItem(
+    userScopedStorageKey(LEGACY_TOPOLOGY_STORAGE_KEY),
+  );
   window.localStorage.removeItem(LEGACY_TOPOLOGY_STORAGE_KEY);
 };
 
@@ -2620,9 +2629,12 @@ const sanitizeTopologyPayload = (
 const writeSharedTopologyConfig = async (
   topology: CustomerTopology,
   sectionTitles: CustomerTopologySectionTitles,
+  expectedTopology: CustomerTopology,
+  expectedSectionTitles: CustomerTopologySectionTitles,
 ): Promise<void> => {
   await saveCustomerTopologyConfig(
     buildTopologyPayload(topology, sectionTitles),
+    buildTopologyPayload(expectedTopology, expectedSectionTitles),
   );
 };
 
@@ -2731,7 +2743,12 @@ export const usePersistedTopology = (
       setTopology(sanitized);
       setError(null);
       try {
-        await writeSharedTopologyConfig(sanitized, sectionTitles);
+        await writeSharedTopologyConfig(
+          sanitized,
+          sectionTitles,
+          topology,
+          sectionTitles,
+        );
         clearLegacyPersistedTopology();
         emitTopologyConfigChanged();
       } catch (err) {
@@ -2749,7 +2766,12 @@ export const usePersistedTopology = (
     setTopology(factory);
     setError(null);
     try {
-      await writeSharedTopologyConfig(factory, sectionTitles);
+      await writeSharedTopologyConfig(
+        factory,
+        sectionTitles,
+        topology,
+        sectionTitles,
+      );
       clearLegacyPersistedTopology();
       emitTopologyConfigChanged();
     } catch (err) {
@@ -2769,7 +2791,12 @@ export const usePersistedTopology = (
       setSectionTitles(sanitized);
       setError(null);
       try {
-        await writeSharedTopologyConfig(topology, sanitized);
+        await writeSharedTopologyConfig(
+          topology,
+          sanitized,
+          topology,
+          sectionTitles,
+        );
         emitTopologyConfigChanged();
       } catch (err) {
         setSectionTitles(previousSectionTitles);
@@ -2817,7 +2844,9 @@ const sanitizeTopologyConnectorSpeed = (value: unknown): number => {
 const readStoredConnectorSpeed = (): number => {
   if (typeof window === "undefined") return DEFAULT_TOPOLOGY_CONNECTOR_SPEED;
   try {
-    const stored = window.localStorage.getItem(TOPOLOGY_CONNECTOR_SPEED_KEY);
+    const stored = readUserScopedStorageItem(
+      userScopedStorageKey(TOPOLOGY_CONNECTOR_SPEED_KEY),
+    );
     if (stored !== null) return sanitizeTopologyConnectorSpeed(stored);
   } catch {
     /* localStorage may be unavailable (private mode etc.) */
@@ -2881,7 +2910,7 @@ const useTopologyConnectorSpeed = (): {
     const sanitized = sanitizeTopologyConnectorSpeed(next);
     try {
       window.localStorage.setItem(
-        TOPOLOGY_CONNECTOR_SPEED_KEY,
+        userScopedStorageKey(TOPOLOGY_CONNECTOR_SPEED_KEY),
         String(sanitized),
       );
       // `storage` events do not fire in the same tab, so dispatch
@@ -2912,7 +2941,9 @@ const TOPOLOGY_ROLE_LEGEND_KEY = "workspace-topology-role-legend.v1";
 const readStoredRoleLegendMode = (): TopologyRoleLegendMode => {
   if (typeof window === "undefined") return "compact";
   try {
-    const stored = window.localStorage.getItem(TOPOLOGY_ROLE_LEGEND_KEY);
+    const stored = readUserScopedStorageItem(
+      userScopedStorageKey(TOPOLOGY_ROLE_LEGEND_KEY),
+    );
     if (stored === "compact" || stored === "expanded") return stored;
   } catch {
     /* localStorage may be unavailable (private mode etc.) */
@@ -2923,7 +2954,10 @@ const readStoredRoleLegendMode = (): TopologyRoleLegendMode => {
 const writeStoredRoleLegendMode = (mode: TopologyRoleLegendMode): void => {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(TOPOLOGY_ROLE_LEGEND_KEY, mode);
+    window.localStorage.setItem(
+      userScopedStorageKey(TOPOLOGY_ROLE_LEGEND_KEY),
+      mode,
+    );
   } catch {
     /* swallow */
   }
@@ -5675,6 +5709,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
 
 interface CustomerTopologyMapProps {
   topology?: CustomerTopology;
+  canManageTopology?: boolean;
   earliestTime?: string;
   latestTime?: string;
   refreshToken?: number;
@@ -5686,6 +5721,7 @@ interface CustomerTopologyMapProps {
 
 export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   topology = CUSTOMER_TOPOLOGY,
+  canManageTopology = false,
   earliestTime = "-24h",
   latestTime = "now",
   refreshToken = 0,
@@ -6832,13 +6868,15 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         />
       )}
 
-      <MapIconButton
-        appearance="subtle"
-        hideLabel
-        icon={<Pencil className="w-4 h-4" />}
-        label="Edit topology"
-        onClick={openEditor}
-      />
+      {canManageTopology && (
+        <MapIconButton
+          appearance="subtle"
+          hideLabel
+          icon={<Pencil className="w-4 h-4" />}
+          label="Edit topology"
+          onClick={openEditor}
+        />
+      )}
 
       <div className="relative">
         <MapIconButton

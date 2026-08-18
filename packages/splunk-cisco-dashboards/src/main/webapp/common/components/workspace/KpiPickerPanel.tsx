@@ -59,7 +59,6 @@ import WaitSpinner from "@splunk/react-ui/WaitSpinner";
 import { variables } from "@splunk/themes";
 import {
   Eye,
-  Maximize2,
   Play,
   RotateCcw,
   Settings2,
@@ -770,10 +769,12 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
   );
   const [chartStyleOpen, setChartStyleOpen] = useState(false);
   const [displayOpen, setDisplayOpen] = useState(false);
-  // Collapses the lower inspector into a compact selected-search
-  // strip so the catalogue list can own most of the drawer while
-  // users are browsing. The full editor is still one click away.
-  const [detailsCollapsed, setDetailsCollapsed] = useState(true);
+  // Two explicit views keep the catalogue and the tile editor from
+  // competing for the same vertical space. `true` is Search; `false`
+  // is Options. Existing tiles open on Options so the configuration
+  // surface is immediately available instead of sitting below the
+  // complete search catalogue.
+  const [detailsCollapsed, setDetailsCollapsed] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const drilldownDraftResetKeyRef = useRef<string>("");
@@ -936,7 +937,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     // tiles the collapsed default keeps the panel compact.
     setChartStyleOpen(Boolean(context.currentVizOverride));
     setDisplayOpen(hidePeakActive || hideDeltaActive || hideOverlayActive);
-    setDetailsCollapsed(true);
+    setDetailsCollapsed(false);
     const defaultThresholds = context.defaultThresholds;
     const currentDirection = cur?.direction ?? "higher_is_better";
     const defaultDirection = defaultThresholds?.direction ?? "higher_is_better";
@@ -945,8 +946,6 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         cur?.critical !== defaultThresholds?.critical ||
         currentDirection !== defaultDirection,
     );
-    const id = window.setTimeout(() => searchInputRef.current?.focus(), 30);
-    return () => window.clearTimeout(id);
   }, [open, context]);
 
   // When the category changes, reset sub-category and active tags.
@@ -1869,6 +1868,14 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     setDrilldownActiveTags(new Set());
   };
 
+  const handleEditorViewChange = (value: unknown) => {
+    const showSearch = value === "search";
+    setDetailsCollapsed(showSearch);
+    if (showSearch && typeof window !== "undefined") {
+      window.setTimeout(() => searchInputRef.current?.focus(), 30);
+    }
+  };
+
   return (
     <>
       <StyledDrawer
@@ -1890,336 +1897,345 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         />
 
         <Drawer.Body>
-          <Button
-            appearance="subtle"
-            disabled={!selectedEntry}
-            icon={
-              detailsCollapsed ? (
-                <Settings2 aria-hidden="true" />
-              ) : (
-                <Maximize2 aria-hidden="true" />
-              )
-            }
-            label={detailsCollapsed ? "Show tile options" : "Hide tile options"}
-            onClick={() => setDetailsCollapsed((value) => !value)}
-          />
-
-          <ControlGroup hideLabel label="Search">
-            <StyledSearch
-              inputRef={searchInputRef}
-              onChange={(_event, { value }) => setQuery(value)}
-              placeholder="Search by name, description, or tag"
-              value={query}
-            />
+          <ControlGroup hideLabel label="Tile configuration view">
+            <RadioBar
+              onChange={(_event, { value }) => handleEditorViewChange(value)}
+              value={detailsCollapsed ? "search" : "options"}
+            >
+              <RadioBar.Option label="Options" value="options" />
+              <RadioBar.Option label="Search" value="search" />
+            </RadioBar>
           </ControlGroup>
 
-          <CollapsiblePanel
-            actions={
-              facetsActive ? (
-                <Button
-                  appearance="subtle"
-                  aria-label="Clear search filters"
-                  label="Clear filters"
-                  onClick={handleClearFacets}
+          {detailsCollapsed && (
+            <>
+              <ControlGroup hideLabel label="Search">
+                <StyledSearch
+                  inputRef={searchInputRef}
+                  onChange={(_event, { value }) => setQuery(value)}
+                  placeholder="Search by name, description, or tag"
+                  value={query}
                 />
-              ) : null
-            }
-            appearance="subtle"
-            description={availableSearchLabel}
-            inset
-            onChange={(_event, { action }) => setFiltersOpen(action === "open")}
-            open={filtersOpen}
-            title={
-              activeFilterCount > 0
-                ? `Filters (${activeFilterCount} active)`
-                : "Filters"
-            }
-          >
-            <ControlGroup label="App">
-              <Multiselect
-                compact
-                filter
-                onChange={(_event, { values }) =>
-                  setSelectedApps(new Set(values.map(String)))
-                }
-                placeholder={`All apps (${apps.length})`}
-                showSelectedValuesFirst="nextOpen"
-                values={Array.from(selectedApps)}
-              >
-                {apps.map((app) => (
-                  <Multiselect.Option
-                    description={`${appCountByName.get(app) ?? 0} searches`}
-                    descriptionPosition="right"
-                    key={app}
-                    label={searchbaseAppLabel(app, appLabelsById)}
-                    value={app}
-                  />
-                ))}
-              </Multiselect>
-            </ControlGroup>
-
-            <ControlGroup controlsLayout="stack" label="Visibility">
-              <Checkbox
-                checked={includeHiddenSearches}
-                onChange={(_event, { checked }) =>
-                  setIncludeHiddenSearches(checked)
-                }
-              >
-                Show hidden searches
-              </Checkbox>
-              <Checkbox
-                checked={includeDrilldownSearches}
-                onChange={(_event, { checked }) =>
-                  setIncludeDrilldownSearches(checked)
-                }
-              >
-                Show drill-down searches
-              </Checkbox>
-              <Checkbox
-                checked={includeTableSearches}
-                onChange={(_event, { checked }) =>
-                  setIncludeTableSearches(checked)
-                }
-              >
-                Show table searches
-              </Checkbox>
-            </ControlGroup>
-
-            {categories.length > 1 && (
-              <ControlGroup label="Category">
-                <Select
-                  onChange={(_event, { value }) =>
-                    setSelectedCategory(String(value))
-                  }
-                  value={selectedCategory}
-                >
-                  <Select.Option
-                    label="All categories"
-                    value={ALL_CATEGORIES}
-                  />
-                  {categories.map((category) => (
-                    <Select.Option
-                      key={category}
-                      label={category}
-                      value={category}
-                    />
-                  ))}
-                </Select>
               </ControlGroup>
-            )}
 
-            {selectedCategory !== ALL_CATEGORIES &&
-              subCategories.length > 0 && (
-                <ControlGroup label="Subcategory">
-                  <Select
-                    onChange={(_event, { value }) =>
-                      setSelectedSubCategory(String(value))
-                    }
-                    value={selectedSubCategory}
-                  >
-                    <Select.Option
-                      label={`All subcategories (${subCategories.length})`}
-                      value={ALL_SUB_CATEGORIES}
+              <CollapsiblePanel
+                actions={
+                  facetsActive ? (
+                    <Button
+                      appearance="subtle"
+                      aria-label="Clear search filters"
+                      label="Clear filters"
+                      onClick={handleClearFacets}
                     />
-                    {subCategories.map((subCategory) => (
-                      <Select.Option
-                        key={subCategory}
-                        label={subCategory}
-                        value={subCategory}
+                  ) : null
+                }
+                appearance="subtle"
+                description={availableSearchLabel}
+                inset
+                onChange={(_event, { action }) => setFiltersOpen(action === "open")}
+                open={filtersOpen}
+                title={
+                  activeFilterCount > 0
+                    ? `Filters (${activeFilterCount} active)`
+                    : "Filters"
+                }
+              >
+                <ControlGroup label="App">
+                  <Multiselect
+                    compact
+                    filter
+                    onChange={(_event, { values }) =>
+                      setSelectedApps(new Set(values.map(String)))
+                    }
+                    placeholder={`All apps (${apps.length})`}
+                    showSelectedValuesFirst="nextOpen"
+                    values={Array.from(selectedApps)}
+                  >
+                    {apps.map((app) => (
+                      <Multiselect.Option
+                        description={`${appCountByName.get(app) ?? 0} searches`}
+                        descriptionPosition="right"
+                        key={app}
+                        label={searchbaseAppLabel(app, appLabelsById)}
+                        value={app}
                       />
                     ))}
-                  </Select>
+                  </Multiselect>
                 </ControlGroup>
-              )}
 
-            {(allTagsWithCounts.length > 0 || activeTags.size > 0) && (
-              <ControlGroup
-                help="Selected tags are combined with AND."
-                label="Tags"
-              >
-                <Multiselect
-                  compact
-                  filter
-                  onChange={(_event, { values }) =>
-                    setActiveTags(new Set(values.map(String)))
-                  }
-                  placeholder={`All tags (${allTagsWithCounts.length})`}
-                  showSelectedValuesFirst="nextOpen"
-                  values={Array.from(activeTags)}
-                >
-                  {allTagsWithCounts.map(([tag, count]) => (
-                    <Multiselect.Option
-                      description={`${count} searches`}
-                      descriptionPosition="right"
-                      key={tag}
-                      label={tag}
-                      value={tag}
-                    />
-                  ))}
-                </Multiselect>
-              </ControlGroup>
-            )}
-          </CollapsiblePanel>
-
-          {currentBoundEntry && !boundDismissed && (
-            <Message
-              appearance="fill"
-              onRequestRemove={() => setBoundDismissed(true)}
-              type="success"
-            >
-              <Message.Title>Bound search</Message.Title>
-              <Paragraph>{currentBoundEntry.searchName}</Paragraph>
-              <Layout data-current-search-actions="true">
-                <Button
-                  appearance="standalone"
-                  label="Jump to"
-                  onClick={jumpToCurrent}
-                />
-                {currentBoundSearchbaseUrl && (
-                  <Button
-                    appearance="standalone"
-                    label="View in Searchbase"
-                    openInNewContext
-                    to={currentBoundSearchbaseUrl}
-                  />
-                )}
-                {onTestInSearch && currentBoundEntry.search && (
-                  <Button
-                    appearance="standalone"
-                    icon={<Play aria-hidden="true" />}
-                    label="Test in Search"
-                    onClick={() =>
-                      onTestInSearch(
-                        currentBoundEntry.search,
-                        currentBoundEntry.dispatchContext,
-                      )
+                <ControlGroup controlsLayout="stack" label="Visibility">
+                  <Checkbox
+                    checked={includeHiddenSearches}
+                    onChange={(_event, { checked }) =>
+                      setIncludeHiddenSearches(checked)
                     }
-                  />
-                )}
-              </Layout>
-            </Message>
-          )}
+                  >
+                    Show hidden searches
+                  </Checkbox>
+                  <Checkbox
+                    checked={includeDrilldownSearches}
+                    onChange={(_event, { checked }) =>
+                      setIncludeDrilldownSearches(checked)
+                    }
+                  >
+                    Show drill-down searches
+                  </Checkbox>
+                  <Checkbox
+                    checked={includeTableSearches}
+                    onChange={(_event, { checked }) =>
+                      setIncludeTableSearches(checked)
+                    }
+                  >
+                    Show table searches
+                  </Checkbox>
+                </ControlGroup>
 
-          <div
-            aria-busy={loadState === "loading"}
-            id="kpi-picker-search-results"
-            ref={listScrollRef}
-          >
-            <ScreenReaderContent aria-live="polite" role="status">
-              {loadState === "loading"
-                ? "Loading searches"
-                : loadState === "idle"
-                  ? availableSearchLabel
-                  : "Searches could not be loaded"}
-            </ScreenReaderContent>
-            {loadState === "loading" && (
-              <Layout>
-                <WaitSpinner screenReaderText={null} size="medium" />
-                <span>Loading searches</span>
-              </Layout>
-            )}
-
-            {loadState === "error" && (
-              <Message role="alert" type="error">
-                <Message.Title>Couldn't load searchbase.conf</Message.Title>
-                {errorMsg}
-              </Message>
-            )}
-
-            {loadState === "idle" && filtered.length === 0 && (
-              <Message type="info">
-                No searches match the current filters.
-              </Message>
-            )}
-
-            {loadState === "idle" && filtered.length > 0 && (
-              <CardLayout cardWidth="100%">
-                {filtered.map((entry) => {
-                  const isSelected = entryMatchesKey(entry, selectedId);
-                  const isCurrent =
-                    currentBoundEntry !== null &&
-                    currentBoundEntry.id === entry.id;
-                  const isInUse = entryIsUsed(entry, context.usedSavedSearches);
-                  const plainDesc = plainTextFromHtml(entry.description);
-                  return (
-                    <Card
-                      aria-pressed={isSelected}
-                      elementRef={setItemRef(entry.id)}
-                      key={entry.id}
-                      onClick={() => setSelectedId(entry.id)}
-                      value={entry.id}
+                {categories.length > 1 && (
+                  <ControlGroup label="Category">
+                    <Select
+                      onChange={(_event, { value }) =>
+                        setSelectedCategory(String(value))
+                      }
+                      value={selectedCategory}
                     >
-                      <Card.Header
-                        icon={
-                          entry.defaultViz ? (
-                            <VizIcon splunkViz={entry.defaultViz} size={16} />
-                          ) : undefined
+                      <Select.Option
+                        label="All categories"
+                        value={ALL_CATEGORIES}
+                      />
+                      {categories.map((category) => (
+                        <Select.Option
+                          key={category}
+                          label={category}
+                          value={category}
+                        />
+                      ))}
+                    </Select>
+                  </ControlGroup>
+                )}
+
+                {selectedCategory !== ALL_CATEGORIES &&
+                  subCategories.length > 0 && (
+                    <ControlGroup label="Subcategory">
+                      <Select
+                        onChange={(_event, { value }) =>
+                          setSelectedSubCategory(String(value))
                         }
-                        subtitle={
-                          [entry.category, entry.subCategory]
-                            .filter(Boolean)
-                            .join(" / ") || entry.id
-                        }
-                        title={
-                          <Layout>
-                            <span>
-                              {highlightMatch(entry.searchName, query)}
-                            </span>
-                            {isSelected && <Badge label="Selected" />}
-                            {isCurrent && <Badge label="Current" />}
-                            {isInUse && !isCurrent && <Badge label="In use" />}
-                          </Layout>
+                        value={selectedSubCategory}
+                      >
+                        <Select.Option
+                          label={`All subcategories (${subCategories.length})`}
+                          value={ALL_SUB_CATEGORIES}
+                        />
+                        {subCategories.map((subCategory) => (
+                          <Select.Option
+                            key={subCategory}
+                            label={subCategory}
+                            value={subCategory}
+                          />
+                        ))}
+                      </Select>
+                    </ControlGroup>
+                  )}
+
+                {(allTagsWithCounts.length > 0 || activeTags.size > 0) && (
+                  <ControlGroup
+                    help="Selected tags are combined with AND."
+                    label="Tags"
+                  >
+                    <Multiselect
+                      compact
+                      filter
+                      onChange={(_event, { values }) =>
+                        setActiveTags(new Set(values.map(String)))
+                      }
+                      placeholder={`All tags (${allTagsWithCounts.length})`}
+                      showSelectedValuesFirst="nextOpen"
+                      values={Array.from(activeTags)}
+                    >
+                      {allTagsWithCounts.map(([tag, count]) => (
+                        <Multiselect.Option
+                          description={`${count} searches`}
+                          descriptionPosition="right"
+                          key={tag}
+                          label={tag}
+                          value={tag}
+                        />
+                      ))}
+                    </Multiselect>
+                  </ControlGroup>
+                )}
+              </CollapsiblePanel>
+
+              {currentBoundEntry && !boundDismissed && (
+                <Message
+                  appearance="fill"
+                  onRequestRemove={() => setBoundDismissed(true)}
+                  type="success"
+                >
+                  <Message.Title>Bound search</Message.Title>
+                  <Paragraph>{currentBoundEntry.searchName}</Paragraph>
+                  <Layout data-current-search-actions="true">
+                    <Button
+                      appearance="standalone"
+                      label="Jump to"
+                      onClick={jumpToCurrent}
+                    />
+                    {currentBoundSearchbaseUrl && (
+                      <Button
+                        appearance="standalone"
+                        label="View in Searchbase"
+                        openInNewContext
+                        to={currentBoundSearchbaseUrl}
+                      />
+                    )}
+                    {onTestInSearch && currentBoundEntry.search && (
+                      <Button
+                        appearance="standalone"
+                        icon={<Play aria-hidden="true" />}
+                        label="Test in Search"
+                        onClick={() =>
+                          onTestInSearch(
+                            currentBoundEntry.search,
+                            currentBoundEntry.dispatchContext,
+                          )
                         }
                       />
-                      {(plainDesc ||
-                        entry.tags.length > 0 ||
-                        (entry.drilldownSearchNames?.length ?? 0) > 0) && (
-                        <Card.Body>
-                          {plainDesc && (
-                            <Paragraph>
-                              {highlightMatch(plainDesc, query)}
-                            </Paragraph>
-                          )}
-                          <Layout>
-                            {entry.tags.slice(0, 4).map((tag) => (
-                              <Chip key={tag}>{tag}</Chip>
-                            ))}
-                            {entry.tags.length > 4 && (
-                              <Chip>+{entry.tags.length - 4}</Chip>
-                            )}
-                            {(entry.drilldownSearchNames?.length ?? 0) > 0 && (
-                              <Chip
-                                appearance="success"
-                                icon={<Table2 aria-hidden="true" />}
-                              >
-                                {entry.drilldownSearchNames?.length} drilldown
-                              </Chip>
-                            )}
-                          </Layout>
-                        </Card.Body>
-                      )}
-                    </Card>
-                  );
-                })}
-              </CardLayout>
-            )}
-          </div>
+                    )}
+                  </Layout>
+                </Message>
+              )}
 
-          {/* Selection preview + form.
-           *
-           * `max-h-[48%]` gives the accordion editor enough
-           * room to breathe when one section is open while the
-           * search result list still owns the majority of the
-           * drawer. The internal `overflow-auto` keeps every
-           * field reachable when the panel content exceeds the
-           * cap, and the footer lives in a separate sibling so
-           * primary actions stay anchored. */}
+              {!canManageFactoryConfig && (
+                <Message type="info">
+                  Search replacement is organization-wide and requires an
+                  administrator. You can still test the current search and change
+                  this browser's chart style or display options.
+                </Message>
+              )}
+
+              <div
+                aria-busy={loadState === "loading"}
+                id="kpi-picker-search-results"
+                ref={listScrollRef}
+              >
+                <ScreenReaderContent aria-live="polite" role="status">
+                  {loadState === "loading"
+                    ? "Loading searches"
+                    : loadState === "idle"
+                      ? availableSearchLabel
+                      : "Searches could not be loaded"}
+                </ScreenReaderContent>
+                {loadState === "loading" && (
+                  <Layout>
+                    <WaitSpinner screenReaderText={null} size="medium" />
+                    <span>Loading searches</span>
+                  </Layout>
+                )}
+
+                {loadState === "error" && (
+                  <Message role="alert" type="error">
+                    <Message.Title>Couldn't load searchbase.conf</Message.Title>
+                    {errorMsg}
+                  </Message>
+                )}
+
+                {loadState === "idle" && filtered.length === 0 && (
+                  <Message type="info">
+                    No searches match the current filters.
+                  </Message>
+                )}
+
+                {loadState === "idle" && filtered.length > 0 && (
+                  <CardLayout cardWidth="100%">
+                    {filtered.map((entry) => {
+                      const isSelected = entryMatchesKey(entry, selectedId);
+                      const isCurrent =
+                        currentBoundEntry !== null &&
+                        currentBoundEntry.id === entry.id;
+                      const isInUse = entryIsUsed(entry, context.usedSavedSearches);
+                      const canSelectSearch =
+                        canManageFactoryConfig || isCurrent;
+                      const plainDesc = plainTextFromHtml(entry.description);
+                      return (
+                        <Card
+                          aria-disabled={!canSelectSearch}
+                          aria-pressed={canSelectSearch ? isSelected : undefined}
+                          elementRef={setItemRef(entry.id)}
+                          key={entry.id}
+                          onClick={
+                            canSelectSearch
+                              ? () => setSelectedId(entry.id)
+                              : undefined
+                          }
+                          value={entry.id}
+                        >
+                          <Card.Header
+                            icon={
+                              entry.defaultViz ? (
+                                <VizIcon splunkViz={entry.defaultViz} size={16} />
+                              ) : undefined
+                            }
+                            subtitle={
+                              [entry.category, entry.subCategory]
+                                .filter(Boolean)
+                                .join(" / ") || entry.id
+                            }
+                            title={
+                              <Layout>
+                                <span>
+                                  {highlightMatch(entry.searchName, query)}
+                                </span>
+                                {isSelected && <Badge label="Selected" />}
+                                {isCurrent && <Badge label="Current" />}
+                                {isInUse && !isCurrent && <Badge label="In use" />}
+                              </Layout>
+                            }
+                          />
+                          {(plainDesc ||
+                            entry.tags.length > 0 ||
+                            (entry.drilldownSearchNames?.length ?? 0) > 0) && (
+                            <Card.Body>
+                              {plainDesc && (
+                                <Paragraph>
+                                  {highlightMatch(plainDesc, query)}
+                                </Paragraph>
+                              )}
+                              <Layout>
+                                {entry.tags.slice(0, 4).map((tag) => (
+                                  <Chip key={tag}>{tag}</Chip>
+                                ))}
+                                {entry.tags.length > 4 && (
+                                  <Chip>+{entry.tags.length - 4}</Chip>
+                                )}
+                                {(entry.drilldownSearchNames?.length ?? 0) > 0 && (
+                                  <Chip
+                                    appearance="success"
+                                    icon={<Table2 aria-hidden="true" />}
+                                  >
+                                    {entry.drilldownSearchNames?.length} drilldown
+                                  </Chip>
+                                )}
+                              </Layout>
+                            </Card.Body>
+                          )}
+                        </Card>
+                      );
+                    })}
+                  </CardLayout>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Selection preview + form. Search mode keeps this compact;
+           * Options mode lets Drawer.Body own scrolling so every
+           * configuration group remains reachable above the footer. */}
           <div
             className={cn(
               "border-t  sui-border-weak flex-shrink-0",
               detailsCollapsed
                 ? "px-3 py-2 max-h-[118px] overflow-hidden"
-                : "px-4 py-3 space-y-2.5 max-h-[48%] overflow-auto",
+                : "px-4 py-3 space-y-2.5 overflow-visible",
             )}
           >
             {selectedEntry ? (
@@ -2270,12 +2286,6 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                       )}
                     </Layout>
                   </div>
-                  <Button
-                    appearance="subtle"
-                    icon={<Settings2 aria-hidden="true" />}
-                    label="Options"
-                    onClick={() => setDetailsCollapsed(false)}
-                  />
                 </Layout>
               ) : (
                 <>
@@ -2324,12 +2334,6 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                       >
                         {resolveVizMapping(selectedEntry.defaultViz).label}
                       </Chip>
-                      <Button
-                        appearance="subtle"
-                        icon={<Maximize2 aria-hidden="true" />}
-                        label="Hide tile options"
-                        onClick={() => setDetailsCollapsed(true)}
-                      />
                     </Layout>
                     <Paragraph title="Drag to select part of the search name for copying.">
                       {selectedEntry.searchName}
@@ -2461,16 +2465,27 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                     title="Drilldown"
                   >
                     <div className="space-y-2">
+                      {!canManageFactoryConfig && (
+                        <Message type="info">
+                          Drilldown targets are organization-wide and require
+                          an administrator to change. Existing targets remain
+                          available below for testing and navigation.
+                        </Message>
+                      )}
                       <div>
                         {selectedDrilldownEntries.length > 0 ? (
                           <>
                             <Layout>
                               <strong>Navigation order</strong>
-                              <Button
-                                appearance="standalone"
-                                label="Clear all"
-                                onClick={() => setDrilldownDraftSearchNames([])}
-                              />
+                              {canManageFactoryConfig && (
+                                <Button
+                                  appearance="standalone"
+                                  label="Clear all"
+                                  onClick={() =>
+                                    setDrilldownDraftSearchNames([])
+                                  }
+                                />
+                              )}
                             </Layout>
                             <CardLayout cardWidth="100%">
                               {selectedDrilldownEntries.map(
@@ -2481,22 +2496,29 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                   return (
                                     <Card key={target}>
                                       <Card.Header
-                                        actions={() => (
-                                          <Button
-                                            appearance="subtle"
-                                            icon={<X aria-hidden="true" />}
-                                            onClick={() =>
-                                              setDrilldownDraftSearchNames(
-                                                (current) =>
-                                                  current.filter(
-                                                    (candidate) =>
-                                                      candidate !== target,
-                                                  ),
+                                        actions={
+                                          canManageFactoryConfig
+                                            ? () => (
+                                                <Button
+                                                  appearance="subtle"
+                                                  icon={
+                                                    <X aria-hidden="true" />
+                                                  }
+                                                  onClick={() =>
+                                                    setDrilldownDraftSearchNames(
+                                                      (current) =>
+                                                        current.filter(
+                                                          (candidate) =>
+                                                            candidate !==
+                                                            target,
+                                                        ),
+                                                    )
+                                                  }
+                                                  label={`Remove ${entry?.searchName ?? target}`}
+                                                />
                                               )
-                                            }
-                                            label={`Remove ${entry?.searchName ?? target}`}
-                                          />
-                                        )}
+                                            : undefined
+                                        }
                                         icon={
                                           <Badge label={String(index + 1)} />
                                         }
@@ -2546,212 +2568,216 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                         )}
                       </div>
 
-                      <ControlGroup hideLabel label="Search drilldowns">
-                        <StyledSearch
-                          onChange={(_event, { value }) =>
-                            setDrilldownQuery(value)
-                          }
-                          placeholder="Search Searchbase drilldowns"
-                          value={drilldownQuery}
-                        />
-                      </ControlGroup>
-
-                      <CollapsiblePanel
-                        actions={
-                          drilldownFacetsActive ? (
-                            <Button
-                              appearance="subtle"
-                              aria-label="Clear drilldown filters"
-                              label="Clear filters"
-                              onClick={handleClearDrilldownFacets}
-                            />
-                          ) : null
-                        }
-                        appearance="subtle"
-                        inset
-                        onChange={(_event, { action }) =>
-                          setDrilldownFiltersOpen(action === "open")
-                        }
-                        open={drilldownFiltersOpen}
-                        title={
-                          drilldownActiveFilterCount > 0
-                            ? `Filters (${drilldownActiveFilterCount} active)`
-                            : "Filters"
-                        }
-                      >
-                        <ControlGroup label="App">
-                          <Multiselect
-                            compact
-                            filter
-                            onChange={(_event, { values }) =>
-                              setDrilldownSelectedApps(
-                                new Set(values.map(String)),
-                              )
-                            }
-                            placeholder={`All apps (${drilldownApps.length})`}
-                            values={Array.from(drilldownSelectedApps)}
-                          >
-                            {drilldownApps.map((app) => (
-                              <Multiselect.Option
-                                description={`${drilldownAppCountByName.get(app) ?? 0} searches`}
-                                descriptionPosition="right"
-                                key={app}
-                                label={searchbaseAppLabel(app, appLabelsById)}
-                                value={app}
-                              />
-                            ))}
-                          </Multiselect>
-                        </ControlGroup>
-
-                        {drilldownCategories.length > 1 && (
-                          <ControlGroup label="Category">
-                            <Select
-                              value={drilldownSelectedCategory}
+                      {canManageFactoryConfig && (
+                        <>
+                          <ControlGroup hideLabel label="Search drilldowns">
+                            <StyledSearch
                               onChange={(_event, { value }) =>
-                                setDrilldownSelectedCategory(String(value))
+                                setDrilldownQuery(value)
                               }
-                            >
-                              <Select.Option
-                                label="All categories"
-                                value={ALL_CATEGORIES}
-                              />
-                              {drilldownCategories.map((category) => (
-                                <Select.Option
-                                  key={category}
-                                  label={category}
-                                  value={category}
-                                />
-                              ))}
-                            </Select>
+                              placeholder="Search Searchbase drilldowns"
+                              value={drilldownQuery}
+                            />
                           </ControlGroup>
-                        )}
 
-                        {drilldownSelectedCategory !== ALL_CATEGORIES &&
-                          drilldownSubCategories.length > 0 && (
-                            <ControlGroup label="Subcategory">
-                              <Select
-                                value={drilldownSelectedSubCategory}
-                                onChange={(_event, { value }) =>
-                                  setDrilldownSelectedSubCategory(String(value))
-                                }
-                              >
-                                <Select.Option
-                                  label={`All subcategories (${drilldownSubCategories.length})`}
-                                  value={ALL_SUB_CATEGORIES}
+                          <CollapsiblePanel
+                            actions={
+                              drilldownFacetsActive ? (
+                                <Button
+                                  appearance="subtle"
+                                  aria-label="Clear drilldown filters"
+                                  label="Clear filters"
+                                  onClick={handleClearDrilldownFacets}
                                 />
-                                {drilldownSubCategories.map((subCategory) => (
-                                  <Select.Option
-                                    key={subCategory}
-                                    label={subCategory}
-                                    value={subCategory}
+                              ) : null
+                            }
+                            appearance="subtle"
+                            inset
+                            onChange={(_event, { action }) =>
+                              setDrilldownFiltersOpen(action === "open")
+                            }
+                            open={drilldownFiltersOpen}
+                            title={
+                              drilldownActiveFilterCount > 0
+                                ? `Filters (${drilldownActiveFilterCount} active)`
+                                : "Filters"
+                            }
+                          >
+                            <ControlGroup label="App">
+                              <Multiselect
+                                compact
+                                filter
+                                onChange={(_event, { values }) =>
+                                  setDrilldownSelectedApps(
+                                    new Set(values.map(String)),
+                                  )
+                                }
+                                placeholder={`All apps (${drilldownApps.length})`}
+                                values={Array.from(drilldownSelectedApps)}
+                              >
+                                {drilldownApps.map((app) => (
+                                  <Multiselect.Option
+                                    description={`${drilldownAppCountByName.get(app) ?? 0} searches`}
+                                    descriptionPosition="right"
+                                    key={app}
+                                    label={searchbaseAppLabel(app, appLabelsById)}
+                                    value={app}
                                   />
                                 ))}
-                              </Select>
+                              </Multiselect>
                             </ControlGroup>
-                          )}
 
-                        {(drilldownAllTagsWithCounts.length > 0 ||
-                          drilldownActiveTags.size > 0) && (
-                          <ControlGroup
-                            help="Selected tags are combined with AND."
-                            label="Tags"
-                          >
-                            <Multiselect
-                              compact
-                              filter
-                              onChange={(_event, { values }) =>
-                                setDrilldownActiveTags(
-                                  new Set(values.map(String)),
-                                )
-                              }
-                              placeholder={`All tags (${drilldownAllTagsWithCounts.length})`}
-                              values={Array.from(drilldownActiveTags)}
-                            >
-                              {drilldownAllTagsWithCounts.map(
-                                ([tag, count]) => (
-                                  <Multiselect.Option
-                                    description={`${count} searches`}
-                                    descriptionPosition="right"
-                                    key={tag}
-                                    label={tag}
-                                    value={tag}
-                                  />
-                                ),
-                              )}
-                            </Multiselect>
-                          </ControlGroup>
-                        )}
-                      </CollapsiblePanel>
-
-                      <Layout>
-                        <Badge
-                          label={`${drilldownCandidates.length.toLocaleString()} ${drilldownCandidates.length === 1 ? "match" : "matches"}`}
-                        />
-                        <Badge
-                          label={`${drilldownBaseEntries.length.toLocaleString()} searchable`}
-                        />
-                      </Layout>
-
-                      {drilldownCandidates.length === 0 ? (
-                        <Paragraph>No matching Searchbase entries.</Paragraph>
-                      ) : (
-                        <CardLayout cardWidth="100%">
-                          {drilldownCandidates.map((entry) => {
-                            const isPicked = drilldownDraftSearchNames.some(
-                              (target) => entryMatchesKey(entry, target),
-                            );
-                            const viz = resolveVizMapping(entry.defaultViz);
-                            const description = plainTextFromHtml(
-                              entry.description,
-                            );
-                            return (
-                              <Card key={entry.id}>
-                                <Card.Header
-                                  actions={() => (
-                                    <Checkbox
-                                      aria-label={`Select ${entry.searchName} for drilldown`}
-                                      checked={isPicked}
-                                      onChange={() =>
-                                        setDrilldownDraftSearchNames(
-                                          (current) =>
-                                            isPicked
-                                              ? current.filter(
-                                                  (target) =>
-                                                    !entryMatchesKey(
-                                                      entry,
-                                                      target,
-                                                    ),
-                                                )
-                                              : current.length <
-                                                  DRILLDOWN_TARGET_LIMIT
-                                                ? [...current, entry.id]
-                                                : current,
-                                        )
-                                      }
-                                    />
-                                  )}
-                                  icon={
-                                    <VizIcon
-                                      splunkViz={entry.defaultViz}
-                                      size={16}
-                                      showTooltip={false}
-                                    />
+                            {drilldownCategories.length > 1 && (
+                              <ControlGroup label="Category">
+                                <Select
+                                  value={drilldownSelectedCategory}
+                                  onChange={(_event, { value }) =>
+                                    setDrilldownSelectedCategory(String(value))
                                   }
-                                  subtitle={viz.label}
-                                  title={highlightMatch(
-                                    entry.searchName,
-                                    drilldownQuery,
+                                >
+                                  <Select.Option
+                                    label="All categories"
+                                    value={ALL_CATEGORIES}
+                                  />
+                                  {drilldownCategories.map((category) => (
+                                    <Select.Option
+                                      key={category}
+                                      label={category}
+                                      value={category}
+                                    />
+                                  ))}
+                                </Select>
+                              </ControlGroup>
+                            )}
+
+                            {drilldownSelectedCategory !== ALL_CATEGORIES &&
+                              drilldownSubCategories.length > 0 && (
+                                <ControlGroup label="Subcategory">
+                                  <Select
+                                    value={drilldownSelectedSubCategory}
+                                    onChange={(_event, { value }) =>
+                                      setDrilldownSelectedSubCategory(String(value))
+                                    }
+                                  >
+                                    <Select.Option
+                                      label={`All subcategories (${drilldownSubCategories.length})`}
+                                      value={ALL_SUB_CATEGORIES}
+                                    />
+                                    {drilldownSubCategories.map((subCategory) => (
+                                      <Select.Option
+                                        key={subCategory}
+                                        label={subCategory}
+                                        value={subCategory}
+                                      />
+                                    ))}
+                                  </Select>
+                                </ControlGroup>
+                              )}
+
+                            {(drilldownAllTagsWithCounts.length > 0 ||
+                              drilldownActiveTags.size > 0) && (
+                              <ControlGroup
+                                help="Selected tags are combined with AND."
+                                label="Tags"
+                              >
+                                <Multiselect
+                                  compact
+                                  filter
+                                  onChange={(_event, { values }) =>
+                                    setDrilldownActiveTags(
+                                      new Set(values.map(String)),
+                                    )
+                                  }
+                                  placeholder={`All tags (${drilldownAllTagsWithCounts.length})`}
+                                  values={Array.from(drilldownActiveTags)}
+                                >
+                                  {drilldownAllTagsWithCounts.map(
+                                    ([tag, count]) => (
+                                      <Multiselect.Option
+                                        description={`${count} searches`}
+                                        descriptionPosition="right"
+                                        key={tag}
+                                        label={tag}
+                                        value={tag}
+                                      />
+                                    ),
                                   )}
-                                />
-                                {description && (
-                                  <Card.Body>
-                                    <Paragraph>{description}</Paragraph>
-                                  </Card.Body>
-                                )}
-                              </Card>
-                            );
-                          })}
-                        </CardLayout>
+                                </Multiselect>
+                              </ControlGroup>
+                            )}
+                          </CollapsiblePanel>
+
+                          <Layout>
+                            <Badge
+                              label={`${drilldownCandidates.length.toLocaleString()} ${drilldownCandidates.length === 1 ? "match" : "matches"}`}
+                            />
+                            <Badge
+                              label={`${drilldownBaseEntries.length.toLocaleString()} searchable`}
+                            />
+                          </Layout>
+
+                          {drilldownCandidates.length === 0 ? (
+                            <Paragraph>No matching Searchbase entries.</Paragraph>
+                          ) : (
+                            <CardLayout cardWidth="100%">
+                              {drilldownCandidates.map((entry) => {
+                                const isPicked = drilldownDraftSearchNames.some(
+                                  (target) => entryMatchesKey(entry, target),
+                                );
+                                const viz = resolveVizMapping(entry.defaultViz);
+                                const description = plainTextFromHtml(
+                                  entry.description,
+                                );
+                                return (
+                                  <Card key={entry.id}>
+                                    <Card.Header
+                                      actions={() => (
+                                        <Checkbox
+                                          aria-label={`Select ${entry.searchName} for drilldown`}
+                                          checked={isPicked}
+                                          onChange={() =>
+                                            setDrilldownDraftSearchNames(
+                                              (current) =>
+                                                isPicked
+                                                  ? current.filter(
+                                                      (target) =>
+                                                        !entryMatchesKey(
+                                                          entry,
+                                                          target,
+                                                        ),
+                                                    )
+                                                  : current.length <
+                                                      DRILLDOWN_TARGET_LIMIT
+                                                    ? [...current, entry.id]
+                                                    : current,
+                                            )
+                                          }
+                                        />
+                                      )}
+                                      icon={
+                                        <VizIcon
+                                          splunkViz={entry.defaultViz}
+                                          size={16}
+                                          showTooltip={false}
+                                        />
+                                      }
+                                      subtitle={viz.label}
+                                      title={highlightMatch(
+                                        entry.searchName,
+                                        drilldownQuery,
+                                      )}
+                                    />
+                                    {description && (
+                                      <Card.Body>
+                                        <Paragraph>{description}</Paragraph>
+                                      </Card.Body>
+                                    )}
+                                  </Card>
+                                );
+                              })}
+                            </CardLayout>
+                          )}
+                        </>
                       )}
                     </div>
                   </CollapsiblePanel>
@@ -3125,10 +3151,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                   </CollapsiblePanel>
                 </>
               )
+            ) : loadState === "loading" ? (
+              <Layout aria-live="polite" role="status">
+                <WaitSpinner screenReaderText={null} size="medium" />
+                <span>Loading tile options</span>
+              </Layout>
             ) : (
-              <Paragraph>
-                Pick a search above to preview SPL and apply.
-              </Paragraph>
+              <Paragraph>Choose Search to select a tile data source.</Paragraph>
             )}
           </div>
         </Drawer.Body>

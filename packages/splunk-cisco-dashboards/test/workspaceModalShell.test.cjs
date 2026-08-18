@@ -65,8 +65,8 @@ assert.match(
 );
 assert.match(
   shell,
-  /localStorage\.getItem\(BACKDROP_OPACITY_STORAGE_KEY\)[\s\S]*localStorage\.setItem\(BACKDROP_OPACITY_STORAGE_KEY, String\(value\)\)/,
-  "Backdrop opacity must persist across workspace dialogs",
+  /readUserScopedStorageItem\([\s\S]*userScopedStorageKey\(BACKDROP_OPACITY_STORAGE_KEY\)[\s\S]*localStorage\.setItem\([\s\S]*userScopedStorageKey\(BACKDROP_OPACITY_STORAGE_KEY\),[\s\S]*String\(value\)/,
+  "Backdrop opacity must persist across workspace dialogs without leaking between users",
 );
 assert.match(
   shell,
@@ -130,7 +130,7 @@ assert.match(
 );
 assert.match(
   shell,
-  /closeOnBackdrop = true[\s\S]*if \(closeOnBackdrop\) onCloseRef\.current\(\)/,
+  /closeOnBackdrop = true[\s\S]*if \(closeOnBackdrop\) \{?\s*onCloseRef\.current\(\);?\s*\}?/,
   "Shared modal shell must let stateful forms opt out of click-away dismissal",
 );
 assert.match(
@@ -145,7 +145,7 @@ assert.match(
 );
 assert.match(
   kpiPicker,
-  /onRequestClose=\{\(\) => \{[\s\S]*if \(!confirmation\) onClose\(\);/,
+  /onRequestClose=\{\(\) => \{[\s\S]*if \(!confirmation\) \{?\s*onClose\(\);?\s*\}?/,
   "Configure Tile must remain mounted while a confirmation dialog is open",
 );
 assert.match(

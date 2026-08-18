@@ -39,6 +39,7 @@
         "test:auto-advance": "node test/autoAdvance.test.cjs",
         "test:tile-result-status": "node test/tileResultStatus.test.cjs",
         "test:insights-workspaces": "node test/insightsWorkspaces.test.cjs",
+        "test:workspace-enterprise-hardening": "node test/workspaceEnterpriseHardening.test.cjs",
         "test:signal-ticker-preferences": "node test/signalTickerPreferences.test.cjs",
         "test:repository-hygiene": "node test/repositoryHygiene.test.cjs",
         "bundle:report": "node bin/report_bundle_sizes.js",
