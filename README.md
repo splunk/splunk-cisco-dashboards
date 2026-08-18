@@ -35,12 +35,6 @@ Install workspace dependencies from the repository root:
 yarn install
 ```
 
-For repository-level Python analysis scripts, install their dependency:
-
-```bash
-python3 -m pip install -r requirements.txt
-```
-
 To build the Splunk app package locally:
 
 ```bash
@@ -48,15 +42,11 @@ yarn package:app
 ```
 
 The packaged Splunk app tarball is written to `dist/`. Normal packaging uses
-the Splunkbase app profile and excludes resources listed as developing. For a
-local artifact that includes those resources, use:
+the Splunkbase app profile. For a local developer artifact, use:
 
 ```bash
 ./build.sh --developer
 ```
-
-See [`docs/BUILD_PROFILES.md`](docs/BUILD_PROFILES.md) for the manifest
-workflow, local install command, and resource promotion steps.
 
 For a smaller, minified release package (slower to build):
 

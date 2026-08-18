@@ -1,57 +1,68 @@
+# Track only the essential repository entry files at the root.
+/*
+!/*/
+!/.gitignore
+!/.npmrc
+!/LICENSE
+!/NOTICE
+!/README.md
+!/VERSION
+!/build.sh
+!/package.json
+!/yarn.lock
+
+# Local editor, automation, documentation, and generated content.
 .DS_Store
-.vscode
-
-# Keep all Cursor editor state, rules, skills, and sessions local.
+/.vscode/
 /.cursor/
-
-# Keep GitHub automation and repository-assistant configuration local.
 /.github/
+/docs/
+/packages/splunk-cisco-dashboards/docs/
+/artifacts/
+/icons/
+*.xlsx
+*.pptx
 
-### Splunk local folders
+# Keep non-build repository scripts local. build.sh requires these two.
+/scripts/*
+!/scripts/format_searchbase_conf.py
+!/scripts/lint_spl_antipatterns.py
+
+# Splunk runtime and maintenance output.
 local/
 local.meta
-
-### Conf backups created by maintenance scripts (e.g. trueup_savedsearches.py)
 *.conf.bak
 backups/
 
-### Node.js build artifacts
-yarn-error.log
+# JavaScript dependencies, build output, and caches.
 node_modules/
 output/
-
-### React build artifacts
 dist/
 build/
 .cache/
 .parcel-cache/
-*.tsbuildinfo
-npm-debug.log*
-
-### Webpack/Babel
 .eslintcache
 coverage/
+*.tsbuildinfo
+yarn-error.log
+npm-debug.log*
 
-### Python template
-# Byte-compiled / optimized / DLL files
+# Python environments, caches, and test output.
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
 .tox/
 .nox/
 .coverage
 .coverage.*
-.cache
+htmlcov/
 nosetests.xml
 coverage.xml
 *.cover
@@ -60,63 +71,12 @@ coverage.xml
 .pytest_cache/
 cover/
 
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Sphinx documentation
-docs/_build/
-
-# Environments
+# Local secrets, logs, installer state, and scratch output.
 .env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-
-# mkdocs documentation
-/site
-
-# PyPI configuration file
+*.log
 .pypirc
-
-/.tmp
-
-# Scratch space for SPL validation queries and data-model dumps
+pip-log.txt
+pip-delete-this-directory.txt
+/.tmp/
 /tmp/
-# /docs/Secure_Networking
-docs/Secure_Networking/Splunk and SN Personas and Pillars.pptx
-docs/Secure_Networking/GSX Accelerator Secure Networking App and TA remediation.pdf
-docs/Secure_Networking/Novo Nordisk - Customer Video - GSX.pdf
-docs/Secure_Networking/SN Splunk Use Case mapping.xlsx
-docs/Secure_Networking/SN_Pillar_Deep_Dive_v1.csv
-docs/Secure_Networking/SN_Pillar_Deep_Dive_v1.xlsx
-/docs/Secure_Networking/SN_TA_APP
-*.xlsx
-*.pptx
-/icons
-docs/Secure_Networking/SN Splunk Use Case mapping - Working Version.csv
-docs/splunk-ai-skills-team-setup.*
-run.sh
-
-# Local planning and design-review artifacts
-/.structured-dev-state
-/plan.md
-/research.md
-/design-qa.md
-/docs/
-/packages/splunk-cisco-dashboards/docs/
-/implementation-log.md
-/artifacts/
-/scripts/*
-!/scripts/lint_spl_antipatterns.py
-!/scripts/format_searchbase_conf.py
+/site/
