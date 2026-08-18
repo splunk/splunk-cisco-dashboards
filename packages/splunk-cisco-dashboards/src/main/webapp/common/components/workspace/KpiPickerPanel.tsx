@@ -1370,6 +1370,18 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
         : null,
     [catalogue, selectedId],
   );
+  const chartStyleOptionIcons = useMemo(
+    () =>
+      CHART_STYLE_OPTIONS.map((option) => (
+        <VizIcon
+          key={option.v ?? "default"}
+          showTooltip={false}
+          size={16}
+          splunkViz={option.splunkViz ?? selectedEntry?.defaultViz}
+        />
+      )),
+    [selectedEntry?.defaultViz],
+  );
   const selectedSearchbaseUrl = selectedEntry
     ? buildSearchbaseEditUrl(selectedEntry)
     : null;
@@ -2822,9 +2834,9 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                   >
                     <ControlGroup
                       help="Default uses the searchbase default_viz setting."
-                      label="Visualization"
+                      label="Visualization type"
                     >
-                      <RadioBar
+                      <Select
                         onChange={(_event, { value }) =>
                           setVizOverrideInput(
                             value === "default"
@@ -2832,19 +2844,26 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                               : (value as Exclude<
                                   MetricOverride["vizOverride"],
                                   undefined
-                                >),
+                              >),
                           )
                         }
                         value={vizOverrideInput ?? "default"}
                       >
-                        {CHART_STYLE_OPTIONS.map((option) => (
-                          <RadioBar.Option
-                            key={option.label}
+                        <Select.Option
+                          icon={chartStyleOptionIcons[0]}
+                          label={CHART_STYLE_OPTIONS[0].label}
+                          value="default"
+                        />
+                        <Select.Divider />
+                        {CHART_STYLE_OPTIONS.slice(1).map((option, index) => (
+                          <Select.Option
+                            icon={chartStyleOptionIcons[index + 1]}
+                            key={option.v}
                             label={option.label}
                             value={option.v ?? "default"}
                           />
                         ))}
-                      </RadioBar>
+                      </Select>
                     </ControlGroup>
                   </CollapsiblePanel>
 
