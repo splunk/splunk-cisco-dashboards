@@ -355,7 +355,7 @@ export const PACKAGED_WORKSPACE_FALLBACKS: readonly InsightsWorkspace[] = [
     id: "secure_networking",
     label: "Secure Networking",
     sourceWorkspace: "secure_networking",
-    headerTitle: "Splunk for Secure Networking",
+    headerTitle: "Splunk Secure Networking Essentials",
     headerSubtitle: "Secure Networking Executive Insights",
     hideDefaultLogo: true,
     isBuiltIn: true,
@@ -454,7 +454,58 @@ export const sectionIdSetForWorkspace = (
   workspace: InsightsWorkspace,
 ): Set<SectionId> => new Set(sectionIdsForWorkspace(workspace));
 
-export const workspaceStorageKey = (
+const USER_STORAGE_SCOPE_MARKER = ".user.";
+
+export const getCurrentSplunkUsername = (): string | null => {
+  if (typeof window === "undefined") return null;
+  const runtime = window as unknown as {
+    $C?: Record<string, unknown>;
+  };
+  const username = runtime.$C?.USERNAME;
+  return typeof username === "string" && username.trim()
+    ? username.trim()
+    : null;
+};
+
+export const userScopedStorageKey = (baseKey: string): string => {
+  const username = getCurrentSplunkUsername();
+  const scope = username ? encodeURIComponent(username) : "anonymous";
+  return `${baseKey}${USER_STORAGE_SCOPE_MARKER}${scope}`;
+};
+
+export const legacyStorageKeyFromUserScoped = (
+  storageKey: string,
+): string | null => {
+  const markerIndex = storageKey.lastIndexOf(USER_STORAGE_SCOPE_MARKER);
+  return markerIndex > 0 ? storageKey.slice(0, markerIndex) : null;
+};
+
+/**
+ * Read account-scoped browser state and migrate the old origin-wide value once.
+ * Removing the legacy key after a successful copy prevents the next Splunk user
+ * in the same browser profile from inheriting the previous user's preferences.
+ */
+export const readUserScopedStorageItem = (storageKey: string): string | null => {
+  if (typeof window === "undefined" || !window.localStorage) return null;
+  try {
+    const scopedValue = window.localStorage.getItem(storageKey);
+    if (scopedValue !== null) return scopedValue;
+    if (!getCurrentSplunkUsername()) return null;
+
+    const legacyKey = legacyStorageKeyFromUserScoped(storageKey);
+    if (!legacyKey) return null;
+    const legacyValue = window.localStorage.getItem(legacyKey);
+    if (legacyValue === null) return null;
+
+    window.localStorage.setItem(storageKey, legacyValue);
+    window.localStorage.removeItem(legacyKey);
+    return legacyValue;
+  } catch {
+    return null;
+  }
+};
+
+export const legacyWorkspaceStorageKey = (
   baseKey: string,
   workspaceId: WorkspaceId,
 ): string => {
@@ -465,3 +516,8 @@ export const workspaceStorageKey = (
   if (!versionMatch) return `${baseKey}.${workspaceId}`;
   return `${baseKey.slice(0, versionMatch.index)}.${workspaceId}${versionMatch[0]}`;
 };
+
+export const workspaceStorageKey = (
+  baseKey: string,
+  workspaceId: WorkspaceId,
+): string => userScopedStorageKey(legacyWorkspaceStorageKey(baseKey, workspaceId));

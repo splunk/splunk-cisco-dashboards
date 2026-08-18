@@ -1,4 +1,5 @@
 import React from 'react';
+import Badge from '@splunk/react-ui/Badge';
 import DOMPurify from 'dompurify';
 
 import { ChevronDown } from '@/common/icons/SuiIcon';
@@ -162,14 +163,14 @@ export const SearchbaseDrilldownGuidance: React.FC<SearchbaseDrilldownGuidancePr
                 onClick={() => setExpanded((current) => !current)}
                 className="flex min-h-12 w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-left transition-colors sui-hover-bg-section focus:outline-none focus-visible:ring-2 focus-visible:ring-inset sui-focus-visible-ring"
             >
-                <h3 className="m-0 text-sm font-black uppercase tracking-[0.1em] sui-color-default">
+                <span className="m-0 text-sm font-black uppercase tracking-[0.1em] sui-color-default">
                     Search guidance
-                </h3>
+                </span>
                 <span className="text-sm sui-color-muted">
                     Description, explanation, remediation, and references
                 </span>
-                <span className="ml-auto rounded-full border sui-border-info sui-bg-info px-2.5 py-1 text-xs font-bold sui-color-info">
-                    {sectionCount} sections
+                <span className="ml-auto">
+                    <Badge label={`${sectionCount} sections`} />
                 </span>
                 <ChevronDown
                     className={cn(

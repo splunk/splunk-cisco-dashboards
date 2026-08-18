@@ -54,7 +54,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "# Workplace - Single Pane of Glass\n\n**Audience:** Executive Sponsors, NetOps Leadership, Workplace Services, Cisco Account Team\n\nThis executive view aligns with the **Cisco Future-Proof Workplace** strategy paper. It combines Cisco Catalyst Center, Cisco Spaces (Wi-Fi-based, not camera-based), and software-defined wide area network (SD-WAN) telemetry into five health tiles. Each tile is wired to the data currently available in Splunk Enterprise. Use this dashboard for monthly business reviews and incident-window readouts. Drill into `NetOps Readiness - Op Florida Ready` for operational detail."
+				"markdown": "# Workplace - Single Pane of Glass\n\n**Audience:** Executive Sponsors, NetOps Leadership, Workplace Services, Cisco Account Team\n\nThis executive view aligns with the **Cisco Future-Proof Workplace** strategy paper. It combines Cisco Catalyst Center, Cisco Spaces (Wi-Fi-based, not camera-based), and software-defined wide area network (SD-WAN) telemetry into five health tiles. Each tile is wired to the data currently available in Splunk Enterprise. Use this dashboard for monthly business reviews and incident-window readouts. Drill into `NetOps Readiness - IT Operations` for operational detail."
 			},
 			"type": "splunk.markdown"
 		},
@@ -117,7 +117,7 @@
 			"options": {
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
-				"markdown": "## Cross-source correlation strip\n\nWired clients, wireless clients, AP health (all DNAC), Spaces presence (post-Apr 17 only), and Windows auth failures on a shared time axis. \n<span style=\"color:#649ef5\">●</span> **Vertical blue markers:** Op Florida Ready exercise - *Day 1 (Apr 13), Day 2 (Apr 14), Day 3 (Apr 15)*. **Reading pattern:** wireless surges + wired stays flat = mobile-driven event. All signals moving together = full operational mobilization. The point: Splunk is the integration fabric tying disparate Cisco + non-Cisco signals into one story."
+				"markdown": "## Cross-source correlation strip\n\nWired clients, wireless clients, AP health (all DNAC), Spaces presence, and Windows auth failures on a shared time axis. \n<span style=\"color:#649ef5\">●</span> **Milestone markers:** Generic IT Operations checkpoints are distributed across the selected time range. **Reading pattern:** wireless surges + wired stays flat = mobile-driven event. All signals moving together = full operational mobilization. The point: Splunk is the integration fabric tying disparate Cisco + non-Cisco signals into one story."
 			},
 			"type": "splunk.markdown"
 		},
@@ -136,7 +136,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#a6adb6",
 				"fontSize": "small",
-				"markdown": "## Phase roadmap *(per Cisco Future-Proof Workplace strategy)*\n\n**Phase 1 - Done:** NetOps Readiness for Op Florida Ready (separate dashboard) and this Workplace single-pane-of-glass dashboard.\n\n**Phase 2 - In progress:** Tile 4 frictionless access through badging integration; per-site Cisco Spaces hourly heatmap once the April 13–15 firehose gap is escalated to the vendor.\n\n**Phase 3 - In progress:** Tile 3 now reports measured SD-WAN edge power. Add Catalyst 9300X PoE and utility-meter telemetry for full building energy intensity; add the Tile 4 access-control system and Tile 5 OT life-safety and fire-panel integration through BACnet.\n\n**Phase 4 - Visionary:** AI Agents on the data lake - same agentic pattern Cisco deployed for CoreNet in Kuala Lumpur Malaysia. Splunk is the substrate.\n\n*Source: `reference_design/Cisco_FutureProof_Workplace.md`*"
+				"markdown": "## Phase roadmap *(per Cisco Future-Proof Workplace strategy)*\n\n**Phase 1 - Done:** NetOps Readiness for IT Operations (separate dashboard) and this Workplace single-pane-of-glass dashboard.\n\n**Phase 2 - In progress:** Tile 4 frictionless access through badging integration; per-site Cisco Spaces hourly heatmap after the required telemetry is available.\n\n**Phase 3 - In progress:** Tile 3 now reports measured SD-WAN edge power. Add Catalyst 9300X PoE and utility-meter telemetry for full building energy intensity; add the Tile 4 access-control system and Tile 5 OT life-safety and fire-panel integration through BACnet.\n\n**Phase 4 - Visionary:** AI Agents on the data lake - same agentic pattern Cisco deployed for CoreNet in Kuala Lumpur Malaysia. Splunk is the substrate.\n\n*Source: `reference_design/Cisco_FutureProof_Workplace.md`*"
 			},
 			"type": "splunk.markdown"
 		},
@@ -247,7 +247,7 @@
 			"options": {
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
-				"markdown": "## Concurrent endpoints over time - wired vs wireless\n\nDaily concurrent endpoints from DNAC client-health rollup, split by **wired** (desktops, VoIP, kiosks) vs **wireless** (laptops, phones, tablets), overlaid with AP health and active issues. \n<span style=\"color:#649ef5\">●</span> **Vertical blue markers:** Op Florida Ready exercise - *Day 1 (Apr 13), Day 2 (Apr 14), Day 3 (Apr 15)*. **Reading pattern:** wireless surges + wired stays flat = mobile-driven event (responders roaming). Both surge = full-staff mobilization."
+				"markdown": "## Concurrent endpoints over time - wired vs wireless\n\nDaily concurrent endpoints from DNAC client-health rollup, split by **wired** (desktops, VoIP, kiosks) vs **wireless** (laptops, phones, tablets), overlaid with AP health and active issues. \n<span style=\"color:#649ef5\">●</span> **Milestone markers:** Generic IT Operations checkpoints are distributed across the selected time range. **Reading pattern:** wireless surges + wired stays flat = mobile-driven event (mobile users roaming). Both surge = broad site activity."
 			},
 			"type": "splunk.markdown"
 		},
@@ -553,9 +553,9 @@
 	},
 	"dataSources": {
 		"ds_annotations": {
-			"name": "Shared - Annotations",
+			"name": "IT Operations milestones",
 			"options": {
-				"query": "| noop",
+				"query": "| makeresults count=4\n| streamstats count as id\n| addinfo\n| eval fraction=case(id=1, 0.1, id=2, 0.4, id=3, 0.7, id=4, 0.95)\n| eval _time=round(info_min_time+((info_max_time-info_min_time)*fraction), 0)\n| eval label=case(id=1, \"IT Operations - Start\", id=2, \"IT Operations - Checkpoint 1\", id=3, \"IT Operations - Checkpoint 2\", id=4, \"IT Operations - Close\")\n| eval color=case(id=1, \"#9E9E9E\", id=2 OR id=3, \"#D64550\", id=4, \"#6EBE4A\")\n| table _time label color",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -599,7 +599,7 @@
 		"ds_persite": {
 			"name": "Per-site Network Quality leaderboard",
 			"options": {
-				"query": "| union\n [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\"\n | eval site=coalesce(Site, Location)\n | where isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\")\n | stats latest(Reachability) as reach, latest(OverallHealth) as oh by DeviceName, site\n | eval is_reach=if(upper(reach)=\"REACHABLE\", 1, 0)\n | eval ap_ok=case(isnull(oh), null(), oh<0, null(), oh>=7, 1, 1=1, 0)\n | stats avg(is_reach) as ap_reach, avg(ap_ok) as ap_health_ok, count as ap_n by site ]\n [ search `index_catalyst` sourcetype=\"cisco:dnac:client\" siteHierarchy=*\n | eval cl_health = 'health.overallScore', site = siteHierarchy\n | where isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\")\n | stats avg(cl_health) as health_avg, count as cl_n by site\n | eval health100=coalesce(health_avg,8)*10 ]\n| stats values(ap_reach) as ap_reach, values(ap_health_ok) as ap_ok,\n values(health100) as h100, values(ap_n) as ap_n, values(cl_n) as cl_n by site\n| where (isnotnull(ap_n) AND ap_n>0) OR (isnotnull(cl_n) AND cl_n>0)\n| eval ap_reach=coalesce(ap_reach,1), ap_ok=coalesce(ap_ok,1), h100=coalesce(h100,80)\n| eval NQI = round((ap_ok*100)*0.6 + h100*0.4, 1)\n| eval Status = case(NQI>=85, \"Good\", NQI>=70, \"Watch\", 1=1, \"At Risk\")\n| eval site_short=replace(site, \"^Global/Florida/\", \"\")\n| sort + NQI\n| rename site_short as Site, ap_n as APs, cl_n as Clients\n| table Site NQI Status APs Clients",
+				"query": "| union\n [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\"\n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\"\n | eval site=coalesce(Site, Location)\n | where isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\")\n | stats latest(Reachability) as reach, latest(OverallHealth) as oh by DeviceName, site\n | eval is_reach=if(upper(reach)=\"REACHABLE\", 1, 0)\n | eval ap_ok=case(isnull(oh), null(), oh<0, null(), oh>=7, 1, 1=1, 0)\n | stats avg(is_reach) as ap_reach, avg(ap_ok) as ap_health_ok, count as ap_n by site ]\n [ search `index_catalyst` sourcetype=\"cisco:dnac:client\" siteHierarchy=*\n | eval cl_health = 'health.overallScore', site = siteHierarchy\n | where isnotnull(site) AND trim(site)!=\"\" AND lower(site)!=\"null\" AND NOT match(site, \"(?i)(^|/)null(/|$)\")\n | stats avg(cl_health) as health_avg, count as cl_n by site\n | eval health100=coalesce(health_avg,8)*10 ]\n| stats values(ap_reach) as ap_reach, values(ap_health_ok) as ap_ok,\n values(health100) as h100, values(ap_n) as ap_n, values(cl_n) as cl_n by site\n| where (isnotnull(ap_n) AND ap_n>0) OR (isnotnull(cl_n) AND cl_n>0)\n| eval ap_reach=coalesce(ap_reach,1), ap_ok=coalesce(ap_ok,1), h100=coalesce(h100,80)\n| eval NQI = round((ap_ok*100)*0.6 + h100*0.4, 1)\n| eval Status = case(NQI>=85, \"Good\", NQI>=70, \"Watch\", 1=1, \"At Risk\")\n| eval site_short=replace(site, \"^Global/Region/\", \"\")\n| sort + NQI\n| rename site_short as Site, ap_n as APs, cl_n as Clients\n| table Site NQI Status APs Clients",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"

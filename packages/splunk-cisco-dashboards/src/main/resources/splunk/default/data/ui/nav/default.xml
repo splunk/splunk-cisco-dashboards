@@ -1,4 +1,4 @@
-<nav label="Splunk for Secure Networking">
+<nav label="Splunk Secure Networking Essentials">
     <view
         name="workspace_insights"
         default="true"
@@ -43,6 +43,7 @@
 
     <collection label="Agentic Ops" icon="RobotAgent">
         <a href="dashboard_manager#/sn_agentic_ops_operational_intelligence">Operational Intelligence</a>
+        <a href="dashboard_manager#/sn_agentic_ops_secure_networking_assurance">Secure Networking Assurance</a>
         <divider />
         <a href="dashboard_manager#/sn_agentic_ops_executive_assurance">Executive Assurance</a>
     </collection>

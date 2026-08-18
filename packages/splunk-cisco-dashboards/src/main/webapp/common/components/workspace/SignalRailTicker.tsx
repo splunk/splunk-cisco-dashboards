@@ -2,15 +2,15 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import Badge from "@splunk/react-ui/Badge";
-import Layout from "@splunk/react-ui/Layout";
+import Button from "@splunk/react-ui/Button";
+import Dropdown from "@splunk/react-ui/Dropdown";
+import Menu from "@splunk/react-ui/Menu";
 import { variables } from "@splunk/themes";
 import styled from "styled-components";
 import {
-  Check,
   ExternalLink,
   Palette,
   Pause,
@@ -18,6 +18,10 @@ import {
   Settings2,
 } from "@/common/icons/SuiIcon";
 import { cn } from "@/common/lib/utils";
+import {
+  readUserScopedStorageItem,
+  userScopedStorageKey,
+} from "@/common/config/insightsWorkspaces";
 import type { MetricStatus } from "@/common/hooks/useMetric";
 import type {
   SignalTickerDensity,
@@ -66,47 +70,82 @@ const VARIANT_OPTIONS: Array<{
   id: SignalRailVariant;
   label: string;
   description: string;
-  swatchClassName: string;
 }> = [
   {
     id: "one-cisco-glass",
     label: "One Cisco Glass",
     description: "1CD spotlight with SUI glass status cards",
-    swatchClassName:
-      "border sui-border-info bg-gradient-to-br sui-gradient-from-section sui-gradient-via-info sui-gradient-to-info",
   },
   {
     id: "original",
     label: "Original",
     description: "White KPI cards with status badges",
-    swatchClassName: "sui-bg-section border sui-border-positive",
   },
   {
     id: "bloomberg",
     label: "Bloomberg Terminal",
     description: "Dark monospace feed with glowing dots",
-    swatchClassName: "sui-bg-section border sui-border-default",
   },
   {
     id: "cisco-blue-gradient",
     label: "Cisco Blue Gradient",
     description: "Brand gradient with scan lines",
-    swatchClassName:
-      "bg-gradient-to-br sui-gradient-from-section sui-gradient-via-section sui-gradient-to-section",
   },
   {
     id: "minimal-enterprise",
     label: "Minimal Enterprise",
     description: "Light chip cards with accent bars",
-    swatchClassName: "sui-bg-section border sui-border-weak",
   },
   {
     id: "telemetry-constellation",
     label: "Telemetry Constellation",
     description: "Orbital glass rail with live signal paths",
-    swatchClassName: "sui-bg-section border sui-border-info",
   },
 ];
+
+const VARIANT_SWATCH_BACKGROUND = {
+  "one-cisco-glass": `linear-gradient(135deg, ${variables.backgroundColorSection}, ${variables.interactiveColorBorder})`,
+  original: variables.backgroundColorSection,
+  bloomberg: variables.backgroundColorPage,
+  "cisco-blue-gradient": `linear-gradient(135deg, ${variables.interactiveColorBorder}, ${variables.backgroundColorSection})`,
+  "minimal-enterprise": variables.backgroundColorSection,
+  "telemetry-constellation": `linear-gradient(135deg, ${variables.backgroundColorPage}, ${variables.interactiveColorBorder})`,
+};
+
+const VARIANT_SWATCH_BORDER = {
+  "one-cisco-glass": variables.interactiveColorBorder,
+  original: variables.severityColorNormal,
+  bloomberg: variables.borderColorStrong,
+  "cisco-blue-gradient": variables.interactiveColorBorder,
+  "minimal-enterprise": variables.borderColorWeak,
+  "telemetry-constellation": variables.interactiveColorBorder,
+};
+
+const SignalRailControls = styled.div`
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: ${variables.spacingXSmall};
+  padding: ${variables.spacingXSmall};
+  border: 1px solid ${variables.borderColorWeak};
+  border-radius: ${variables.borderRadius};
+  background-color: ${variables.backgroundColorPopup};
+  box-shadow: ${variables.overlayShadow};
+`;
+
+const SignalRailStyleMenu = styled(Menu)`
+  width: min(22rem, calc(100vw - ${variables.spacingXXLarge}));
+`;
+
+const SignalRailStyleSwatch = styled.span<{ $variant: SignalRailVariant }>`
+  display: block;
+  width: ${variables.spacingXXLarge};
+  height: ${variables.spacingXLarge};
+  flex: 0 0 auto;
+  border: 1px solid ${({ $variant }) => VARIANT_SWATCH_BORDER[$variant]};
+  border-radius: ${variables.borderRadius};
+  background: ${({ $variant }) => VARIANT_SWATCH_BACKGROUND[$variant]};
+`;
 
 const signalRailTickerCss = `
 @keyframes scd-signal-rail-marquee {
@@ -128,21 +167,6 @@ const signalRailTickerCss = `
         animation: none !important;
         transform: none !important;
     }
-}
-#scan-root .scd-signal-rail-controls {
-    opacity: 0;
-    pointer-events: none;
-    transform: translate(0.25rem, -50%);
-}
-#scan-root .scd-signal-rail-ticker:hover .scd-signal-rail-controls,
-#scan-root .scd-signal-rail-ticker:focus-within .scd-signal-rail-controls,
-#scan-root .scd-signal-rail-controls[data-open='true'] {
-    opacity: 1 !important;
-    pointer-events: auto;
-    transform: translate(0, -50%) !important;
-}
-.scd-signal-rail-controls {
-  display: none !important;
 }
 .scd-signal-rail-cisco {
     background: linear-gradient(135deg, #0d2b5e 0%, #1749a0 52%, #0d4f8a 100%);
@@ -369,7 +393,7 @@ const isSignalRailVariant = (
 const readStoredVariant = (): SignalRailVariant => {
   if (typeof window === "undefined") return DEFAULT_VARIANT;
   try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
+    const stored = readUserScopedStorageItem(userScopedStorageKey(STORAGE_KEY));
     return isSignalRailVariant(stored) ? stored : DEFAULT_VARIANT;
   } catch {
     return DEFAULT_VARIANT;
@@ -379,7 +403,7 @@ const readStoredVariant = (): SignalRailVariant => {
 const writeStoredVariant = (variant: SignalRailVariant): void => {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, variant);
+    window.localStorage.setItem(userScopedStorageKey(STORAGE_KEY), variant);
   } catch {
     // Storage can be disabled; keep the in-session selection.
   }
@@ -945,13 +969,11 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
   );
   const [manualPaused, setManualPaused] = useState(false);
   const [interactionPaused, setInteractionPaused] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const pickerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
     const onStorage = (event: StorageEvent) => {
-      if (event.key !== STORAGE_KEY) return;
+      if (event.key !== userScopedStorageKey(STORAGE_KEY)) return;
       setVariant(readStoredVariant());
     };
     window.addEventListener("storage", onStorage);
@@ -961,7 +983,6 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
   const selectVariant = useCallback((nextVariant: SignalRailVariant) => {
     setVariant(nextVariant);
     writeStoredVariant(nextVariant);
-    setPickerOpen(false);
   }, []);
 
   const tickerRows = useMemo(() => splitRows(kpis, rows), [kpis, rows]);
@@ -982,18 +1003,6 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
     for (const kpi of kpis) map[kpi.status] += 1;
     return map;
   }, [kpis]);
-
-  const controlButtonClassName = cn(
-    "flex items-center justify-center rounded-md border sui-border-transparent sui-bg-transparent shadow-none transition-colors focus:outline-none focus-visible:ring-2 sui-focus-visible-ring",
-    density === "compact" ? "h-8 w-8" : "h-9 w-9",
-    variant === "bloomberg"
-      ? "sui-color-info sui-hover-bg-accent sui-hover-color-active"
-      : variant === "telemetry-constellation"
-        ? "sui-color-info sui-hover-bg-info sui-hover-color-active"
-        : variant === "cisco-blue-gradient"
-          ? "sui-color-active sui-bg-section sui-hover-color-active"
-          : "sui-color-muted   sui-color-default sui-hover-bg-info sui-hover-color-info",
-  );
 
   const renderPass = (row: SignalRailKpi[], pass: number) => (
     <div
@@ -1105,135 +1114,78 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
           ))}
         </div>
 
-        <div
-          className={cn(
-            "scd-signal-rail-controls absolute right-2 top-1/2 z-[90] flex items-center gap-0.5 rounded-xl border p-1 shadow-lg transition-[opacity,transform] duration-150 ease-out motion-reduce:transition-none",
-            variant === "bloomberg"
-              ? "sui-border-info sui-bg-section"
-              : variant === "telemetry-constellation"
-                ? "sui-border-info sui-bg-page sui-shadow-overlay"
-                : variant === "cisco-blue-gradient"
-                  ? "sui-border-weak sui-bg-page"
-                  : "sui-border-default sui-bg-page",
-          )}
+        <SignalRailControls
+          className="scd-signal-rail-controls"
           data-signal-rail-controls="true"
-          data-open={pickerOpen}
-          ref={pickerRef}
         >
           {variant !== "one-cisco-glass" && (
-            <button
-              type="button"
+            <Button
+              appearance="subtle"
               onClick={() => setManualPaused((current) => !current)}
               disabled={staticMode}
               aria-pressed={manualPaused}
-              aria-label={
+              hideLabel
+              icon={
+                manualPaused ? (
+                  <Play aria-hidden="true" />
+                ) : (
+                  <Pause aria-hidden="true" />
+                )
+              }
+              label={
                 staticMode
                   ? "Signal rail is static; configure speed to enable motion"
                   : manualPaused
                     ? "Resume signal rail"
                     : "Pause signal rail"
               }
-              title={
-                staticMode
-                  ? "Static by default — configure speed to enable motion"
-                  : manualPaused
-                    ? "Resume signal rail"
-                    : "Pause signal rail"
-              }
-              className={cn(
-                controlButtonClassName,
-                staticMode && "cursor-not-allowed opacity-45",
-              )}
-            >
-              {manualPaused ? (
-                <Play className="h-4 w-4" />
-              ) : (
-                <Pause className="h-4 w-4" />
-              )}
-            </button>
+            />
           )}
-          <button
-            type="button"
-            onClick={() => setPickerOpen((current) => !current)}
-            aria-haspopup="menu"
-            aria-expanded={pickerOpen}
-            aria-label={`Ticker style: ${activeOption?.label ?? "Original"}`}
-            title={`Ticker style: ${activeOption?.label ?? "Original"}`}
-            className={controlButtonClassName}
+          <Dropdown
+            defaultPlacement="below"
+            repositionMode="any"
+            toggle={
+              <Button
+                appearance="subtle"
+                hideLabel
+                icon={<Palette aria-hidden="true" />}
+                isMenu
+                label={`Signal Rail style: ${activeOption?.label ?? "Original"}`}
+              />
+            }
           >
-            <Palette className="h-4 w-4" />
-          </button>
-          {onOpenEditor && (
-            <button
-              type="button"
-              onClick={onOpenEditor}
-              aria-label="Configure signal rail"
-              title="Configure signal rail"
-              className={controlButtonClassName}
-            >
-              <Settings2 className="h-4 w-4" />
-            </button>
-          )}
-
-          {pickerOpen && (
-            <div
-              role="menu"
-              aria-label="Choose signal rail style"
-              className="absolute right-0 top-[calc(100%+0.75rem)] z-[120] w-[min(25rem,calc(100vw-2rem))] rounded-2xl border   p-2  sui-shadow-overlay ring-1 sui-focus-ring sui-border-weak sui-bg-page sui-color-active"
-            >
-              <div className="flex items-center justify-between px-2.5 pb-2 pt-1.5">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.22em] sui-color-default">
-                    Ticker style
-                  </p>
-                  <p className="mt-0.5 text-xs font-semibold  sui-color-default">
-                    Choose a rail treatment
-                  </p>
-                </div>
-                <span className="rounded-full  px-2 py-1 text-xs font-black uppercase tracking-[0.1em]  sui-bg-info sui-color-info">
-                  {VARIANT_OPTIONS.length} styles
-                </span>
-              </div>
-              <div className="space-y-1">
-                {VARIANT_OPTIONS.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    role="menuitemradio"
-                    aria-checked={variant === option.id}
-                    data-variant-option={option.id}
-                    onClick={() => selectVariant(option.id)}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors  focus:outline-none focus-visible:ring-2 sui-focus-visible-ring sui-hover-bg-section",
-                      variant === option.id && "sui-bg-info",
-                      option.id === "telemetry-constellation" &&
-                        "border    sui-border-info sui-bg-info sui-hover-bg-info",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "h-10 w-12 shrink-0 rounded-lg shadow-inner",
-                        option.swatchClassName,
-                      )}
+            <SignalRailStyleMenu aria-label="Choose Signal Rail style">
+              <Menu.Heading title>Signal Rail style</Menu.Heading>
+              {VARIANT_OPTIONS.map((option) => (
+                <Menu.Item
+                  data-variant-option={option.id}
+                  description={option.description}
+                  key={option.id}
+                  onClick={() => selectVariant(option.id)}
+                  selectable
+                  selected={variant === option.id}
+                  startAdornment={
+                    <SignalRailStyleSwatch
+                      $variant={option.id}
                       aria-hidden="true"
                     />
-                    <span className="min-w-0 flex-1">
-                      <span className="block sui-color-default font-black uppercase tracking-[0.12em]">
-                        {option.label}
-                      </span>
-                      <span className="mt-0.5 block text-xs font-semibold leading-snug  sui-color-default">
-                        {option.description}
-                      </span>
-                    </span>
-                    {variant === option.id && (
-                      <Check className="h-4 w-4 shrink-0 sui-color-info" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
+                  }
+                >
+                  {option.label}
+                </Menu.Item>
+              ))}
+            </SignalRailStyleMenu>
+          </Dropdown>
+          {onOpenEditor && (
+            <Button
+              appearance="subtle"
+              hideLabel
+              icon={<Settings2 aria-hidden="true" />}
+              label="Configure Signal Rail"
+              onClick={onOpenEditor}
+            />
           )}
-        </div>
+        </SignalRailControls>
       </div>
 
       {variant === "bloomberg" && (

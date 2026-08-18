@@ -1098,7 +1098,7 @@ export default function DBHomePage() {
                 <div className="col3">
                   <img
                     className="icn-collection"
-                    alt="Splunk App for Secure Networking"
+                    alt="Splunk Secure Networking Essentials"
                     src={dashboardManagerIconSrc}
                     onError={(event) => {
                       const fallbackSrc = buildAppStaticAssetUrl("appIcon.png");

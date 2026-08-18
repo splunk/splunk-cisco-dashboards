@@ -7,7 +7,7 @@
  * optional override fields:
  *
  *   • title       — overrides the `[customer_name]` macro fetch
- *   • subtitle    — overrides the hardcoded "Splunk App for Secure Networking"
+ *   • subtitle    — overrides the hardcoded "Splunk Secure Networking Essentials"
  *   • logoDataUri — overrides the built-in default header logo.
  *                   Stored as a `data:` URI (the editor uses
  *                   FileReader to encode the uploaded image), so the
@@ -40,6 +40,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   EXECUTIVE_WORKSPACE_SOURCE_ID,
+  readUserScopedStorageItem,
   workspaceStorageKey,
   type WorkspaceId,
 } from "@/common/config/insightsWorkspaces";
@@ -125,7 +126,7 @@ const readFromStorage = (storageKey: string): BrandingOverride => {
   if (typeof window === "undefined" || !window.localStorage)
     return EMPTY_OVERRIDE;
   try {
-    const raw = window.localStorage.getItem(storageKey);
+    const raw = readUserScopedStorageItem(storageKey);
     if (!raw) return EMPTY_OVERRIDE;
     const parsed = JSON.parse(raw) as Partial<PersistedShape>;
     if (!parsed || parsed.v !== STORAGE_VERSION) return EMPTY_OVERRIDE;

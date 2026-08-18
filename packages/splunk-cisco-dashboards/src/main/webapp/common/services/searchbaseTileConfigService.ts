@@ -468,45 +468,161 @@ export interface FactoryTileConfigPatch {
     drilldownSearchNames?: string[] | null;
 }
 
+const normalizedDrilldownFields = (
+    drilldownStanzaIds: readonly string[] | null,
+): Record<string, string> => {
+    const normalizedIds: string[] = [];
+    const seen = new Set<string>();
+    for (const rawId of drilldownStanzaIds ?? []) {
+        const targetId = rawId.trim();
+        if (!STANZA_ID_PATTERN.test(targetId)) {
+            throw new SearchbaseTileConfigError(
+                `Invalid drilldown stanza id: ${rawId}`,
+            );
+        }
+        if (seen.has(targetId)) continue;
+        seen.add(targetId);
+        normalizedIds.push(targetId);
+        if (normalizedIds.length >= DRILLDOWN_TARGET_LIMIT) break;
+    }
+    return {
+        drilldown_stanza_ids: normalizedIds.join(','),
+        drilldown_stanza_id: '',
+        drilldown_search_name: '',
+    };
+};
+
+const existingDrilldownFields = (
+    raw: Record<string, unknown>,
+): Record<string, string> => ({
+    drilldown_stanza_ids:
+        typeof raw.drilldown_stanza_ids === 'string'
+            ? raw.drilldown_stanza_ids
+            : '',
+    drilldown_stanza_id:
+        typeof raw.drilldown_stanza_id === 'string'
+            ? raw.drilldown_stanza_id
+            : '',
+    drilldown_search_name:
+        typeof raw.drilldown_search_name === 'string'
+            ? raw.drilldown_search_name
+            : '',
+});
+
+const patchFactoryEntry = (
+    entry: Record<string, unknown>,
+    patch: FactoryTileConfigPatch,
+): Record<string, unknown> => ({
+        ...entry,
+        ...(patch.dataMapping?.label !== undefined
+            ? { label: patch.dataMapping.label }
+            : {}),
+        ...(patch.dataMapping?.valueField !== undefined
+            ? { valueField: patch.dataMapping.valueField }
+            : {}),
+        ...(patch.thresholds && Object.keys(patch.thresholds).length > 0
+            ? {
+                  thresholds: {
+                      ...(entry.thresholds &&
+                      typeof entry.thresholds === 'object'
+                          ? entry.thresholds
+                          : {}),
+                      ...patch.thresholds,
+                  },
+              }
+            : {}),
+    });
+
+const patchFactoryOverviewEntry = (
+    vizOptions: Record<string, unknown>,
+    patch: FactoryTileConfigPatch,
+    workspaceId: WorkspaceSourceId,
+): Record<string, unknown> =>
+    patchOverviewEntry(vizOptions, patch.tileId, workspaceId, (entry) =>
+        patchFactoryEntry(entry, patch),
+    );
+
 /**
- * Single entry point the UI calls on Apply. Sequences the writes so a
- * partial failure fails safely:
- *   1. Search rebind first (add-to-new before remove-from-old, see
- *      `saveTileSearchBinding`) — if this fails, nothing else has
- *      changed yet.
- *   2. Thresholds / data mapping on whichever stanza now owns the
- *      tile (the new one if rebinding, otherwise the original).
- *   3. Drilldown last, on the same stanza.
- * Throws on the first failure; callers should treat a thrown error as
- * "some of this may have saved, re-open the picker to see the actual
- * current state" rather than assuming an all-or-nothing rollback.
+ * Single entry point the UI calls on Apply. All changes for one owning
+ * stanza are submitted in one REST write. A search rebind necessarily spans
+ * two stanzas; it writes the target first, removes the source second, and
+ * restores the target if the source update fails so a partial operation does
+ * not leave duplicate tile definitions behind.
  */
 export const saveFactoryTileConfig = async (patch: FactoryTileConfigPatch): Promise<void> => {
-    let ownerStanzaId = patch.fromStanzaId;
     const workspaceId = patch.workspaceId ?? EXECUTIVE_WORKSPACE_SOURCE_ID;
+    const drilldownFields =
+        patch.drilldownSearchNames !== undefined
+            ? normalizedDrilldownFields(patch.drilldownSearchNames)
+            : {};
+    const rebindTarget = patch.searchRebind?.toStanzaId;
 
-    if (patch.searchRebind && patch.searchRebind.toStanzaId !== patch.fromStanzaId) {
-        await saveTileSearchBinding(
-            patch.fromStanzaId,
-            patch.searchRebind.toStanzaId,
+    if (!rebindTarget || rebindTarget === patch.fromStanzaId) {
+        const { vizOptions } = await loadEffectiveStanza(patch.fromStanzaId);
+        const hasOverviewChanges =
+            Boolean(patch.thresholds && Object.keys(patch.thresholds).length > 0) ||
+            Boolean(patch.dataMapping && Object.keys(patch.dataMapping).length > 0);
+        const fields: Record<string, string> = { ...drilldownFields };
+        if (hasOverviewChanges) {
+            fields.viz_options = JSON.stringify(
+                patchFactoryOverviewEntry(vizOptions, patch, workspaceId),
+            );
+        }
+        if (Object.keys(fields).length > 0) {
+            await writeStanzaKeys(patch.fromStanzaId, fields);
+            clearSearchbaseCache();
+        }
+        return;
+    }
+
+    const fromState = await loadEffectiveStanza(patch.fromStanzaId);
+    const toState = await loadEffectiveStanza(rebindTarget);
+    const patchedTarget = patchOverviewEntry(
+        toState.vizOptions,
+        patch.tileId,
+        workspaceId,
+        (entry) =>
+            patchFactoryEntry(
+                {
+                    ...entry,
+                    tileId: patch.tileId,
+                    section: patch.section,
+                },
+                patch,
+            ),
+    );
+    await writeStanzaKeys(rebindTarget, {
+        viz_options: JSON.stringify(patchedTarget),
+        ...drilldownFields,
+    });
+
+    try {
+        const patchedSource = removeOverviewEntry(
+            fromState.vizOptions,
             patch.tileId,
-            patch.section,
-            { label: patch.dataMapping?.label, valueField: patch.dataMapping?.valueField, thresholds: patch.thresholds },
-            workspaceId
+            workspaceId,
         );
-        ownerStanzaId = patch.searchRebind.toStanzaId;
-    } else {
-        if (patch.thresholds && Object.keys(patch.thresholds).length > 0) {
-            await saveTileThresholds(ownerStanzaId, patch.tileId, patch.thresholds, workspaceId);
+        await writeStanzaKeys(patch.fromStanzaId, {
+            viz_options: JSON.stringify(patchedSource),
+        });
+    } catch (sourceError) {
+        try {
+            await writeStanzaKeys(rebindTarget, {
+                viz_options: JSON.stringify(toState.vizOptions),
+                ...(patch.drilldownSearchNames !== undefined
+                    ? existingDrilldownFields(toState.raw)
+                    : {}),
+            });
+        } catch (rollbackError) {
+            throw new SearchbaseTileConfigError(
+                `Search replacement could not be completed or rolled back. Reload Searchbase and review both "${patch.fromStanzaId}" and "${rebindTarget}" before retrying. ${
+                    rollbackError instanceof Error ? rollbackError.message : ''
+                }`,
+            );
         }
-        if (patch.dataMapping && Object.keys(patch.dataMapping).length > 0) {
-            await saveTileDataMapping(ownerStanzaId, patch.tileId, patch.dataMapping, workspaceId);
-        }
+        throw sourceError;
     }
-
-    if (patch.drilldownSearchNames !== undefined) {
-        await saveTileDrilldowns(ownerStanzaId, patch.drilldownSearchNames);
-    }
+    clearSearchbaseCache();
 };
 
 export const resetInsightsWorkspaceTileConfig = async (

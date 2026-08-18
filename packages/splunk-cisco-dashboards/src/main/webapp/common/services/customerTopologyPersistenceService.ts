@@ -414,7 +414,8 @@ export const loadCustomerTopologyConfig =
     };
 
 export const saveCustomerTopologyConfig = async (
-    payload: SavedCustomerTopologyPayload
+    payload: SavedCustomerTopologyPayload,
+    expectedPayload?: SavedCustomerTopologyPayload,
 ): Promise<void> => {
     const safePayload = sanitizePayload({
         ...payload,
@@ -434,6 +435,33 @@ export const saveCustomerTopologyConfig = async (
                 payloadJson.length / 1024
             )} KiB; cap is ${Math.round(MAX_PAYLOAD_BYTES / 1024)} KiB).`
         );
+    }
+
+    const safeExpectedPayload = expectedPayload
+        ? sanitizePayload(expectedPayload)
+        : null;
+
+    if (safeExpectedPayload) {
+        const currentRow = await fetchRow(stanzaName);
+        if (currentRow?.payloadJson) {
+            let currentRaw: unknown = null;
+            try {
+                currentRaw = JSON.parse(currentRow.payloadJson);
+            } catch {
+                currentRaw = null;
+            }
+            const currentPayload = sanitizePayload(currentRaw);
+            if (
+                !currentPayload ||
+                JSON.stringify(currentPayload) !==
+                    JSON.stringify(safeExpectedPayload)
+            ) {
+                throw new CustomerTopologyPersistenceError(
+                    'The shared topology changed after this page loaded. Reload and review the latest version before saving.',
+                    409,
+                );
+            }
+        }
     }
 
     if (!isInSplunkRuntime()) {

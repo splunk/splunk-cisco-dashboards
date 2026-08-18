@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
     EXECUTIVE_WORKSPACE_SOURCE_ID,
-    workspaceStorageKey,
+    legacyWorkspaceStorageKey,
+    userScopedStorageKey,
     type WorkspaceId,
 } from '@/common/config/insightsWorkspaces';
 import {
@@ -16,7 +17,6 @@ import {
 } from '@/common/config/signalTicker';
 import {
     deleteSignalTickerPreference,
-    getSignalTickerPreferenceOwner,
     loadSignalTickerPreference,
     saveSignalTickerPreference,
 } from '@/common/services/signalTickerPreferenceService';
@@ -58,15 +58,13 @@ export type SignalTickerPersistenceStatus =
     | 'browser';
 
 const legacyStorageKeyForWorkspace = (workspaceId?: WorkspaceId): string =>
-    workspaceStorageKey(
+    legacyWorkspaceStorageKey(
         LEGACY_STORAGE_KEY,
         workspaceId ?? EXECUTIVE_WORKSPACE_SOURCE_ID
     );
 
-const browserStorageKey = (legacyKey: string): string => {
-    const owner = getSignalTickerPreferenceOwner() ?? 'anonymous';
-    return `${legacyKey}.user.${encodeURIComponent(owner)}`;
-};
+const browserStorageKey = (legacyKey: string): string =>
+    userScopedStorageKey(legacyKey);
 
 const readStoredConfig = (
     storageKey: string,
@@ -101,7 +99,18 @@ const readBrowserFallback = (
     const legacy = readStoredConfig(legacyStorageKey, workspaceId);
     if (!legacy) return null;
     const packagedDefault = getDefaultSignalTickerConfig(workspaceId);
-    return signalTickerConfigsEqual(legacy, packagedDefault) ? null : legacy;
+    if (signalTickerConfigsEqual(legacy, packagedDefault)) return null;
+    try {
+        const raw = window.localStorage.getItem(legacyStorageKey);
+        if (raw) {
+            window.localStorage.setItem(userStorageKey, raw);
+            window.localStorage.removeItem(legacyStorageKey);
+        }
+    } catch {
+        // The account-scoped server preference remains authoritative when
+        // browser storage is unavailable.
+    }
+    return legacy;
 };
 
 const writeBrowserFallback = (

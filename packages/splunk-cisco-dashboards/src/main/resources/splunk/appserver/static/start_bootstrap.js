@@ -1569,7 +1569,7 @@ function scdSetupRender(root, configured) {
     scdSetupElement(
       "p",
       "scd-setup__eyebrow",
-      "SPLUNK APP FOR SECURE NETWORKING · SETUP",
+      "SPLUNK SECURE NETWORKING ESSENTIALS · SETUP",
     ),
   );
   const heading = scdSetupElement(

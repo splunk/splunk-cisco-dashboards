@@ -10,6 +10,10 @@ import {
     SplunkThemeProvider,
     unstable_splunk1cdThemeCustomizer,
 } from '@splunk/themes';
+import {
+    readUserScopedStorageItem,
+    userScopedStorageKey,
+} from '@/common/config/insightsWorkspaces';
 import SemanticThemeStyles from './SemanticThemeStyles';
 
 export type AppColorScheme = 'light' | 'dark';
@@ -38,7 +42,7 @@ const AppThemeControlsContext = createContext<AppThemeControls>({
 const readStoredColorScheme = (storageKey: string): AppColorScheme => {
     if (typeof window === 'undefined') return 'dark';
     try {
-        return window.localStorage.getItem(storageKey) === 'light' ? 'light' : 'dark';
+        return readUserScopedStorageItem(storageKey) === 'light' ? 'light' : 'dark';
     } catch {
         return 'dark';
     }
@@ -61,32 +65,33 @@ export default function AppThemeProvider({
     allowColorSchemeChoice = false,
     colorSchemeStorageKey = INSIGHTS_WORKSPACE_COLOR_SCHEME_STORAGE_KEY,
 }: AppThemeProviderProps): JSX.Element {
+    const scopedColorSchemeStorageKey = userScopedStorageKey(colorSchemeStorageKey);
     const [colorScheme, setColorSchemeState] = useState<AppColorScheme>(() =>
-        allowColorSchemeChoice ? readStoredColorScheme(colorSchemeStorageKey) : 'dark'
+        allowColorSchemeChoice ? readStoredColorScheme(scopedColorSchemeStorageKey) : 'dark'
     );
 
     useEffect(() => {
         if (!allowColorSchemeChoice || typeof window === 'undefined') return undefined;
         const handleStorage = (event: StorageEvent) => {
-            if (event.key === colorSchemeStorageKey) {
-                setColorSchemeState(readStoredColorScheme(colorSchemeStorageKey));
+            if (event.key === scopedColorSchemeStorageKey) {
+                setColorSchemeState(readStoredColorScheme(scopedColorSchemeStorageKey));
             }
         };
         window.addEventListener('storage', handleStorage);
         return () => window.removeEventListener('storage', handleStorage);
-    }, [allowColorSchemeChoice, colorSchemeStorageKey]);
+    }, [allowColorSchemeChoice, scopedColorSchemeStorageKey]);
 
     const setColorScheme = useCallback(
         (next: AppColorScheme) => {
             if (!allowColorSchemeChoice) return;
             setColorSchemeState(next);
             try {
-                window.localStorage.setItem(colorSchemeStorageKey, next);
+                window.localStorage.setItem(scopedColorSchemeStorageKey, next);
             } catch {
                 // Storage is best effort in restricted or private browser contexts.
             }
         },
-        [allowColorSchemeChoice, colorSchemeStorageKey]
+        [allowColorSchemeChoice, scopedColorSchemeStorageKey]
     );
 
     const controls = useMemo<AppThemeControls>(

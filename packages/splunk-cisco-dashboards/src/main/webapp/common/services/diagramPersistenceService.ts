@@ -238,7 +238,7 @@ export interface SavedDiagramNode {
      *  canvas pulls vendor from the bound `assetId`'s row in
      *  `asset_inventory.csv`. Operators can hand-set this for
      *  hand-placed shapes from the palette (e.g. a generic
-     *  router shape representing an MFN provider router that
+     *  router shape representing a WAN provider router that
      *  doesn't appear in asset_inventory). */
     vendor?: string;
     /** Build 115: per-node model override (e.g. `WS-C6504-E`,
@@ -332,7 +332,7 @@ export interface SavedDiagramEdge {
     /** Build 115.11 — when true, the edge stroke colour is driven
      *  by the live reporting status of the bound endpoints rather
      *  than `lineColor` / per-kind defaults. Mirrors the site
-     *  connector animation in the Florida overview dashboard:
+     *  connector animation in the overview dashboard:
      *  green dashes when both ends are healthy, red dashes when
      *  either end is silent in `| metadata type=hosts`. The
      *  visible dash period matches the existing flowing-dot

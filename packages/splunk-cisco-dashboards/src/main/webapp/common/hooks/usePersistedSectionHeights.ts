@@ -13,6 +13,7 @@ import type { SectionId } from '@/common/hooks/useMetric';
 import { ALL_SECTION_IDS } from '@/common/hooks/usePersistedSectionLayout';
 import {
     EXECUTIVE_WORKSPACE_SOURCE_ID,
+    readUserScopedStorageItem,
     workspaceStorageKey,
     type WorkspaceId,
 } from '@/common/config/insightsWorkspaces';
@@ -66,7 +67,7 @@ const readFromStorage = (bounds: SectionHeightBounds): SectionHeightMap => {
     const fallback = buildDefaults(bounds);
     if (typeof window === 'undefined' || !window.localStorage) return fallback;
     try {
-        const raw = window.localStorage.getItem(storageKeyForBounds(bounds));
+        const raw = readUserScopedStorageItem(storageKeyForBounds(bounds));
         if (!raw) return fallback;
         const parsed = JSON.parse(raw) as Partial<PersistedShape>;
         if (!parsed || parsed.v !== STORAGE_VERSION || !parsed.heights) return fallback;

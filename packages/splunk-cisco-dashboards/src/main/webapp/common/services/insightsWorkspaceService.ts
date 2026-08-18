@@ -453,9 +453,81 @@ const workspaceFields = (workspace: InsightsWorkspace): Record<string, string> =
     regional_view: workspace.regionalView,
 });
 
+export class InsightsWorkspaceConflictError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'InsightsWorkspaceConflictError';
+    }
+}
+
+const workspaceDefinitionsEqual = (
+    left: InsightsWorkspace,
+    right: InsightsWorkspace,
+): boolean =>
+    JSON.stringify(workspaceFields(left)) === JSON.stringify(workspaceFields(right));
+
+const normalizedLayoutSection = (
+    section?: WorkspaceLayoutSection,
+): WorkspaceLayoutSection | null =>
+    section
+        ? {
+              tiles: [...section.tiles],
+              visibleCount: section.visibleCount,
+              searchbaseAdditions: splitSearchbaseAdditions(
+                  section.searchbaseAdditions,
+              ),
+          }
+        : null;
+
+const layoutSectionsEqual = (
+    left?: WorkspaceLayoutSection,
+    right?: WorkspaceLayoutSection,
+): boolean =>
+    JSON.stringify(normalizedLayoutSection(left)) ===
+    JSON.stringify(normalizedLayoutSection(right));
+
+const assertWorkspaceIsCurrent = async (
+    expectedWorkspace: InsightsWorkspace,
+): Promise<void> => {
+    if (!isInSplunkRuntime()) return;
+    const latest = await loadInsightsWorkspaces();
+    const current = latest.workspaces.find(
+        (workspace) => workspace.id === expectedWorkspace.id,
+    );
+    if (!current || !workspaceDefinitionsEqual(current, expectedWorkspace)) {
+        throw new InsightsWorkspaceConflictError(
+            'This workspace changed after you opened the editor. Reload the page and review the latest version before saving.',
+        );
+    }
+};
+
+const assertLayoutIsCurrent = async (
+    workspace: InsightsWorkspace,
+    layout: WorkspaceLayoutConfig,
+    expectedLayout: WorkspaceLayoutConfig,
+): Promise<void> => {
+    if (!isInSplunkRuntime()) return;
+    const latest = await loadInsightsWorkspaces();
+    const currentLayout = latest.layouts[workspace.id] ?? {};
+    for (const section of workspace.sections) {
+        if (!layout[section.id]) continue;
+        if (
+            !layoutSectionsEqual(
+                currentLayout[section.id],
+                expectedLayout[section.id],
+            )
+        ) {
+            throw new InsightsWorkspaceConflictError(
+                `The shared ${section.title} layout changed after this page loaded. Reload and review the latest version before publishing.`,
+            );
+        }
+    }
+};
+
 export const saveInsightsWorkspace = async (
     input: WorkspaceDefinitionInput,
     layout?: WorkspaceLayoutConfig,
+    expectedWorkspace?: InsightsWorkspace,
 ): Promise<InsightsWorkspace> => {
     if (!isWorkspaceId(input.id)) {
         throw new Error(
@@ -463,6 +535,7 @@ export const saveInsightsWorkspace = async (
         );
     }
     const workspace = createInsightsWorkspace(input);
+    if (expectedWorkspace) await assertWorkspaceIsCurrent(expectedWorkspace);
     await upsertStanza(workspaceStanzaName(workspace.id), workspaceFields(workspace));
     if (layout) await saveWorkspaceLayout(workspace, layout);
     return workspace;
@@ -471,8 +544,12 @@ export const saveInsightsWorkspace = async (
 export const saveWorkspaceLayout = async (
     workspace: InsightsWorkspace,
     layout: WorkspaceLayoutConfig,
+    expectedLayout?: WorkspaceLayoutConfig,
 ): Promise<void> => {
     if (!isInSplunkRuntime()) return;
+    if (expectedLayout) {
+        await assertLayoutIsCurrent(workspace, layout, expectedLayout);
+    }
     for (const section of workspace.sections) {
         const sectionConfig = layout[section.id];
         if (!sectionConfig) continue;
@@ -495,6 +572,7 @@ export const deleteInsightsWorkspace = async (
     if (workspace.isBuiltIn) {
         throw new Error('Built-in workspaces cannot be deleted.');
     }
+    await assertWorkspaceIsCurrent(workspace);
     await Promise.all(
         workspace.sections.map((section) =>
             deleteStanza(layoutStanzaName(workspace.id, section.id)),

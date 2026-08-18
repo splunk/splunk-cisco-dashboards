@@ -1,6 +1,10 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { ExternalLink, PanelRightOpen, X } from '@/common/icons/SuiIcon';
+import {
+    readUserScopedStorageItem,
+    userScopedStorageKey,
+} from '@/common/config/insightsWorkspaces';
 
 import { cn } from '@/common/lib/utils';
 
@@ -68,7 +72,9 @@ const normalizeBackdropOpacity = (value: number): number =>
 const readBackdropOpacity = (): number => {
     if (typeof window === 'undefined') return DEFAULT_BACKDROP_OPACITY;
     try {
-        const stored = window.localStorage.getItem(BACKDROP_OPACITY_STORAGE_KEY);
+        const stored = readUserScopedStorageItem(
+            userScopedStorageKey(BACKDROP_OPACITY_STORAGE_KEY),
+        );
         if (stored === null) return DEFAULT_BACKDROP_OPACITY;
         const parsed = Number(stored);
         return Number.isFinite(parsed)
@@ -82,7 +88,10 @@ const readBackdropOpacity = (): number => {
 const writeBackdropOpacity = (value: number): void => {
     if (typeof window === 'undefined') return;
     try {
-        window.localStorage.setItem(BACKDROP_OPACITY_STORAGE_KEY, String(value));
+        window.localStorage.setItem(
+            userScopedStorageKey(BACKDROP_OPACITY_STORAGE_KEY),
+            String(value),
+        );
     } catch {
         // Storage may be unavailable in hardened browser contexts.
     }
@@ -334,7 +343,7 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
     React.useEffect(() => {
         if (typeof window === 'undefined') return undefined;
         const onStorage = (event: StorageEvent) => {
-            if (event.key !== BACKDROP_OPACITY_STORAGE_KEY) return;
+            if (event.key !== userScopedStorageKey(BACKDROP_OPACITY_STORAGE_KEY)) return;
             setBackdropOpacity(readBackdropOpacity());
         };
         window.addEventListener('storage', onStorage);

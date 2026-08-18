@@ -5,7 +5,7 @@
  * canvas can render directly.
  *
  * Why this lives in a service module (and not inside the canvas
- * component): the lookups it reads are *the customer's source of
+ * component): the lookups it reads are *the deployment's source of
  * truth*. Every dashboard that ever needs to draw the network
  * (topology canvas, future floor-plan views, capacity reports,
  * DR runbooks) should pull from the same normalised primitives, not
@@ -46,12 +46,8 @@
  *     endpoint. For the spike, edges come exclusively from the
  *     ThousandEyes A2A synthetic-test wiring (see the
  *     `synthetic_edges` field below).
- *   • Synthetic edges (TE A2A) — the existing
- *     `[overview_link_te_a2a_health]` searchbase stanza (one pair
- *     today: AUB ↔ TLH) is the v1 source. Future builds will
- *     dispatch the full mesh once additional A2A tests are
- *     commissioned (TLH ↔ Orlando / Blanding / SLRC / Rudd /
- *     Easley / Sadowski / MCV).
+ *   • Synthetic edges (TE A2A) — generic inventory and saved topology
+ *     bindings provide link candidates without preconfigured site pairs.
  *   • Logical edges (BGP/OSPF/EIGRP adjacencies) — data is
  *     flowing via `cisco:ios` syslog and the existing flap-detection
  *     stanzas, but no aggregator job yet builds an edge inventory.
@@ -73,8 +69,8 @@ import { runSearch } from "./splunkSearchService";
  *  for WAN / internet boundaries. Build 115 added eight more shapes
  *  to cover the standard Cisco / network-engineering Visio palette:
  *  switch stacks, load balancers, VPN concentrators, IDS/IPS, plus
- *  database / storage / IP-phone / internet-cloud archetypes the
- *  Florida DEM v8 reference repeatedly used. Anything unrecognised
+ *  database / storage / IP-phone / internet-cloud archetypes used by
+ *  common network diagrams. Anything unrecognised
  *  falls back to `generic`. */
 export type DeviceShapeId =
   // --- Core network ---

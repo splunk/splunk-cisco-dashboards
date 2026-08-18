@@ -7,12 +7,12 @@ import { isEqual, reduce, intersection } from 'lodash-es';
 const SAMPLE_FLOOR = {
     locationHierarchy: [
         { id: 'sample-campus', name: 'Cisco Spaces', type: 'campus' },
-        { id: 'sample-building', name: 'SEOC', type: 'network' },
+        { id: 'sample-building', name: 'OPS', type: 'network' },
         { id: 'sample-floor', name: 'First Floor', type: 'floor' },
     ],
     maps: [
         {
-            name: 'SEOC First Floor',
+            name: 'OPS First Floor',
             source: 'Sample',
             unit: 'FEET',
             imageWidth: 1200,
@@ -115,11 +115,11 @@ const SAMPLE_FLOOR = {
         },
     ],
     accessPoints: [
-        { id: 'ap-1', name: 'AP-SEOC-101', x: 214, y: 214, model: 'CW9174I', channel: 36 },
-        { id: 'ap-2', name: 'AP-SEOC-119', x: 424, y: 182, model: 'CW9174I', channel: 44 },
-        { id: 'ap-3', name: 'AP-SEOC-142', x: 622, y: 270, model: 'CW9176I', channel: 149 },
-        { id: 'ap-4', name: 'AP-SEOC-177', x: 792, y: 308, model: 'CW9174I', channel: 6 },
-        { id: 'ap-5', name: 'AP-SEOC-214', x: 930, y: 454, model: 'CW9176I', channel: 161 },
+        { id: 'ap-1', name: 'AP-OPS-101', x: 214, y: 214, model: 'CW9174I', channel: 36 },
+        { id: 'ap-2', name: 'AP-OPS-119', x: 424, y: 182, model: 'CW9174I', channel: 44 },
+        { id: 'ap-3', name: 'AP-OPS-142', x: 622, y: 270, model: 'CW9176I', channel: 149 },
+        { id: 'ap-4', name: 'AP-OPS-177', x: 792, y: 308, model: 'CW9174I', channel: 6 },
+        { id: 'ap-5', name: 'AP-OPS-214', x: 930, y: 454, model: 'CW9176I', channel: 161 },
     ],
     devices: [
         { id: 'client-1', x: 228, y: 246, value: 61 },

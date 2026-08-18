@@ -10,6 +10,7 @@ import type { SectionId } from '@/common/hooks/useMetric';
 import { ALL_SECTION_IDS } from '@/common/hooks/usePersistedSectionLayout';
 import {
     EXECUTIVE_WORKSPACE_SOURCE_ID,
+    readUserScopedStorageItem,
     workspaceStorageKey,
     type WorkspaceId,
 } from '@/common/config/insightsWorkspaces';
@@ -53,7 +54,7 @@ const readFromStorage = (
     const fallback = buildDefaults();
     if (typeof window === 'undefined' || !window.localStorage) return fallback;
     try {
-        const raw = window.localStorage.getItem(storageKeyForOptions(options));
+        const raw = readUserScopedStorageItem(storageKeyForOptions(options));
         if (!raw) return fallback;
         const parsed = JSON.parse(raw) as Partial<PersistedShape>;
         if (

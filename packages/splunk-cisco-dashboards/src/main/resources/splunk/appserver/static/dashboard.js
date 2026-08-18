@@ -53,6 +53,7 @@
     "netops_readiness",
     "sn_agentic_ops_operational_intelligence",
     "sn_agentic_ops_executive_assurance",
+    "sn_agentic_ops_secure_networking_assurance",
     "sn_hmf_dlp_cloud_native_security",
     "sn_hmf_sdwan_network_health",
     "sn_hmf_threat_detection_enforcement",

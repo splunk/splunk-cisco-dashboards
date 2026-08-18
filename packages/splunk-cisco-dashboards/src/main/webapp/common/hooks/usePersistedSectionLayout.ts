@@ -11,6 +11,7 @@ import {
     ALL_WORKSPACE_SECTION_IDS,
     EXECUTIVE_WORKSPACE_SOURCE_ID,
     WORKSPACE_SOURCES,
+    readUserScopedStorageItem,
     workspaceStorageKey,
     type WorkspaceId,
 } from '@/common/config/insightsWorkspaces';
@@ -83,7 +84,7 @@ const readFromStorage = (options: ReturnType<typeof buildOptions>): SectionId[] 
         return sanitizeSections(options.defaultSections, options);
     }
     try {
-        const raw = window.localStorage.getItem(options.storageKey);
+        const raw = readUserScopedStorageItem(options.storageKey);
         if (!raw) return sanitizeSections(options.defaultSections, options);
         const parsed = JSON.parse(raw) as Partial<PersistedShape>;
         if (!parsed || parsed.v !== STORAGE_VERSION) {

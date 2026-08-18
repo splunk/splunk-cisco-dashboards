@@ -36,6 +36,7 @@ import { ALL_SECTION_IDS } from '@/common/hooks/usePersistedSectionLayout';
 import {
     EXECUTIVE_WORKSPACE_SOURCE_ID,
     WORKSPACE_SOURCES,
+    readUserScopedStorageItem,
     workspaceStorageKey,
     type WorkspaceId,
 } from '@/common/config/insightsWorkspaces';
@@ -108,7 +109,7 @@ const readFromStorage = (bounds: SectionTileCountBounds): SectionTileCountMap =>
     const fallback = buildDefaults(bounds);
     if (typeof window === 'undefined' || !window.localStorage) return fallback;
     try {
-        const raw = window.localStorage.getItem(storageKeyForBounds(bounds));
+        const raw = readUserScopedStorageItem(storageKeyForBounds(bounds));
         if (!raw) return fallback;
         const parsed = JSON.parse(raw) as Partial<PersistedShape>;
         if (!parsed || parsed.v !== STORAGE_VERSION || !parsed.counts) return fallback;
@@ -150,7 +151,7 @@ const clearStorage = (bounds: SectionTileCountBounds): void => {
 const hasStoredCounts = (bounds: SectionTileCountBounds): boolean => {
     if (typeof window === 'undefined' || !window.localStorage) return false;
     try {
-        return window.localStorage.getItem(storageKeyForBounds(bounds)) !== null;
+        return readUserScopedStorageItem(storageKeyForBounds(bounds)) !== null;
     } catch {
         return false;
     }

@@ -430,10 +430,10 @@ const dashboards = [
     title: "Cisco Spaces Intelligence",
     view: "dashboard_manager#/workplace_spaces_intelligence",
     summary:
-      "Environmental, capacity, room, activation, visitor, and network impact analytics.",
+      "Environmental, capacity, room, operations, visitor, and network impact analytics.",
   },
   {
-    title: "Network Activation Report",
+    title: "Network Operations Report",
     view: "dashboard_manager#/netops_catalyst_health",
     summary:
       "Event operations view for executive, client, device, traffic, and issue summaries.",
@@ -798,7 +798,7 @@ export default function UserGuidePage(): JSX.Element {
     };
 
     document.body.classList.add("scd-guide-printing");
-    document.title = `Splunk App for Secure Networking User Guide ${APP_VERSION_LABEL}`;
+    document.title = `Splunk Secure Networking Essentials User Guide ${APP_VERSION_LABEL}`;
     window.addEventListener("afterprint", cleanup);
     window.setTimeout(() => {
       window.print();
@@ -933,7 +933,7 @@ export default function UserGuidePage(): JSX.Element {
                   User Guide
                 </div>
                 <h1 className="m-0 text-3xl font-bold tracking-normal sui-color-active">
-                  Splunk App for Secure Networking
+                  Splunk Secure Networking Essentials
                 </h1>
               </div>
               <div className="scd-guide-no-print flex items-center gap-2">
@@ -1067,7 +1067,7 @@ export default function UserGuidePage(): JSX.Element {
                 </table>
               </div>
               <p className="mt-4 text-sm leading-6 sui-color-default">
-                Splunk App for Secure Networking currently uses the Cisco
+                Splunk Secure Networking Essentials currently uses the Cisco
                 Security Cloud and Cisco ThousandEyes data models, and will use
                 the Cisco_Catalyst_App data model from Cisco Enterprise
                 Networking for Splunk Platform. For best performance, the data
@@ -1362,15 +1362,28 @@ iseval = 0`}</CodeBlock>
             >
               <div className="grid gap-4 md:grid-cols-2">
                 <InfoCard title="Workspace-owned configuration">
-                  A workspace stores its own section layout, selected tiles,
-                  signal rail, map visibility and placement, map presentation,
-                  and dark presentation settings. Shared Signal Rail defaults
-                  are centrally governed, while each signed-in user&apos;s rail
-                  differences are private to that user and workspace and follow
-                  the account across browsers. When adding a search, choose
-                  <strong> For me</strong> for a browser-local tile or
-                  <strong> Shared workspace</strong> to show it to every viewer;
-                  the shared choice is available only to workspace managers.
+                  A workspace stores its shared sections, tile membership and
+                  order, map configuration, and Signal Rail defaults. When
+                  adding a search, choose <strong> This browser</strong> for a
+                  private tile or <strong> Workspace default</strong> to show it
+                  to every viewer; the shared choice is available only to
+                  workspace managers. Browser preferences are isolated by
+                  signed-in account, workspace, and browser. Private Signal
+                  Rail preferences also follow the account across browsers.
+                </InfoCard>
+                <InfoCard title="Role-based change control">
+                  Users with the <code> user</code> role can run workspaces,
+                  drill into results, and personalize their own browser view
+                  without changing another user&apos;s experience. Users with the
+                  <code> power</code>, <code> admin</code>, or
+                  <code> sc_admin</code> role can create and edit shared
+                  workspaces, change shared layouts and section titles, add or
+                  remove workspace default tiles, and edit the customer
+                  topology. Replacing the Searchbase behind a tile or changing
+                  factory tile thresholds, mappings, and drilldowns requires
+                  the <code> admin</code> or <code> sc_admin</code> role, or a
+                  delegated role with the <code> admin_all_objects</code>
+                  capability.
                 </InfoCard>
                 <InfoCard title="Start with a template, then make it yours">
                   Templates are only a starting point for a new workspace.
@@ -1458,8 +1471,8 @@ iseval = 0`}</CodeBlock>
                   dashboard SPL, admin references, and helper tooling. React
                   utilities can read this catalogue when a page needs to expose
                   or run a named search. Each entry can retain its source app
-                  classification while opening locally in Splunk App for Secure
-                  Networking.
+                  classification while opening locally in Splunk Secure
+                  Networking Essentials.
                 </InfoCard>
                 <InfoCard title="Searchbase Canvas">
                   Use the canvas to assemble a working view from catalogue
@@ -1708,7 +1721,7 @@ iseval = 0`}</CodeBlock>
               </InfoCard>
               <InfoCard title="Experience">
                 <Gauge size={18} className="mb-2 sui-color-positive" />
-                Client health, ThousandEyes, site readiness, and activation
+                Client health, ThousandEyes, site readiness, and operations
                 reporting.
               </InfoCard>
               <InfoCard title="Setup">

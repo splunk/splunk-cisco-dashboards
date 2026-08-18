@@ -13,9 +13,7 @@
         "lint": "yarn workspaces run lint",
         "clean": "yarn workspaces run clean",
         "clean:build": "yarn workspaces run clean:build",
-        "package:app": "cd packages/splunk-cisco-dashboards && yarn package:app",
-        "regen:diagrams": "node scripts/generate_oob_diagrams.mjs",
-        "ship": "yarn regen:diagrams && yarn package:app"
+        "package:app": "cd packages/splunk-cisco-dashboards && yarn package:app"
     },
     "resolutions": {
         "qs": "^6.15.2",
