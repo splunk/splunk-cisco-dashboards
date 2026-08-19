@@ -10,6 +10,7 @@
 import React, {
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useReducer,
   useRef,
@@ -20,6 +21,7 @@ import { useSplunkTheme, variables } from "@splunk/themes";
 import styled, { css } from "styled-components";
 import Button from "@splunk/react-ui/Button";
 import Popover from "@splunk/react-ui/Popover";
+import ScreenReaderContent from "@splunk/react-ui/ScreenReaderContent";
 import Select from "@splunk/react-ui/Select";
 import Slider from "@splunk/react-ui/Slider";
 import {
@@ -8250,6 +8252,105 @@ interface TopologyEditorPanelProps {
   onOpenInSearch?: (spl: string, appContext?: string) => void;
 }
 
+interface TopologyEditorFrame {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface TopologyEditorPointerInteraction {
+  mode: "move" | "resize";
+  pointerId: number | null;
+  startClientX: number;
+  startClientY: number;
+  startFrame: TopologyEditorFrame;
+}
+
+const TOPOLOGY_EDITOR_MARGIN = 12;
+const TOPOLOGY_EDITOR_DEFAULT_WIDTH = 430;
+const TOPOLOGY_EDITOR_MIN_WIDTH = 320;
+const TOPOLOGY_EDITOR_MIN_HEIGHT = 320;
+const TOPOLOGY_EDITOR_KEYBOARD_STEP = 8;
+const TOPOLOGY_EDITOR_KEYBOARD_LARGE_STEP = 32;
+
+const clampTopologyEditorValue = (
+  value: number,
+  minimum: number,
+  maximum: number,
+): number => Math.min(Math.max(value, minimum), maximum);
+
+const defaultTopologyEditorFrame = (
+  container: HTMLElement,
+): TopologyEditorFrame => {
+  const maximumWidth = Math.max(
+    0,
+    container.clientWidth - TOPOLOGY_EDITOR_MARGIN * 2,
+  );
+  const maximumHeight = Math.max(
+    0,
+    container.clientHeight - TOPOLOGY_EDITOR_MARGIN * 2,
+  );
+  const width = Math.min(TOPOLOGY_EDITOR_DEFAULT_WIDTH, maximumWidth);
+
+  return {
+    x: Math.max(
+      TOPOLOGY_EDITOR_MARGIN,
+      container.clientWidth - TOPOLOGY_EDITOR_MARGIN - width,
+    ),
+    y: TOPOLOGY_EDITOR_MARGIN,
+    width,
+    height: maximumHeight,
+  };
+};
+
+const constrainTopologyEditorFrame = (
+  frame: TopologyEditorFrame,
+  container: HTMLElement,
+): TopologyEditorFrame => {
+  const maximumWidth = Math.max(
+    0,
+    container.clientWidth - TOPOLOGY_EDITOR_MARGIN * 2,
+  );
+  const maximumHeight = Math.max(
+    0,
+    container.clientHeight - TOPOLOGY_EDITOR_MARGIN * 2,
+  );
+  const minimumWidth = Math.min(TOPOLOGY_EDITOR_MIN_WIDTH, maximumWidth);
+  const minimumHeight = Math.min(TOPOLOGY_EDITOR_MIN_HEIGHT, maximumHeight);
+  const width = clampTopologyEditorValue(
+    frame.width,
+    minimumWidth,
+    maximumWidth,
+  );
+  const height = clampTopologyEditorValue(
+    frame.height,
+    minimumHeight,
+    maximumHeight,
+  );
+
+  return {
+    x: clampTopologyEditorValue(
+      frame.x,
+      TOPOLOGY_EDITOR_MARGIN,
+      Math.max(
+        TOPOLOGY_EDITOR_MARGIN,
+        container.clientWidth - TOPOLOGY_EDITOR_MARGIN - width,
+      ),
+    ),
+    y: clampTopologyEditorValue(
+      frame.y,
+      TOPOLOGY_EDITOR_MARGIN,
+      Math.max(
+        TOPOLOGY_EDITOR_MARGIN,
+        container.clientHeight - TOPOLOGY_EDITOR_MARGIN - height,
+      ),
+    ),
+    width,
+    height,
+  };
+};
+
 const editorInputClass = (isDark: boolean): string =>
   cn(
     "w-full rounded-md border px-2 py-1.5 text-xs font-semibold outline-none transition-colors focus:ring-1 sui-focus-ring",
@@ -8309,6 +8410,267 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
   );
   const [teEndpointSelectionsByLinkId, setTeEndpointSelectionsByLinkId] =
     useState<Record<string, { source?: string; target?: string }>>({});
+  const editorTitleId = useId();
+  const editorMovementHelpId = useId();
+  const editorResizeHelpId = useId();
+  const panelRef = useRef<HTMLElement | null>(null);
+  const pointerInteractionRef =
+    useRef<TopologyEditorPointerInteraction | null>(null);
+  const [editorFrame, setEditorFrame] =
+    useState<TopologyEditorFrame | null>(null);
+
+  const resetEditorFrame = useCallback(() => {
+    const container = panelRef.current?.parentElement;
+    if (!container) {
+      return;
+    }
+    setEditorFrame(defaultTopologyEditorFrame(container));
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      pointerInteractionRef.current = null;
+      setEditorFrame(null);
+      return undefined;
+    }
+
+    const container = panelRef.current?.parentElement;
+    if (!container) {
+      return undefined;
+    }
+
+    setEditorFrame(defaultTopologyEditorFrame(container));
+    const resizeObserver = new ResizeObserver(() => {
+      setEditorFrame((current) =>
+        current
+          ? constrainTopologyEditorFrame(current, container)
+          : defaultTopologyEditorFrame(container),
+      );
+    });
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, [open]);
+
+  const updateEditorFrame = useCallback(
+    (update: (current: TopologyEditorFrame) => TopologyEditorFrame) => {
+      const container = panelRef.current?.parentElement;
+      if (!container) {
+        return;
+      }
+      setEditorFrame((current) =>
+        constrainTopologyEditorFrame(
+          update(current ?? defaultTopologyEditorFrame(container)),
+          container,
+        ),
+      );
+    },
+    [],
+  );
+
+  const startEditorPointerInteraction = useCallback(
+    (
+      event: React.PointerEvent<HTMLElement>,
+      mode: TopologyEditorPointerInteraction["mode"],
+    ) => {
+      if (
+        !editorFrame ||
+        event.button !== 0 ||
+        event.pointerType === "mouse"
+      ) {
+        return;
+      }
+      if (
+        mode === "move" &&
+        event.target instanceof Element &&
+        event.target.closest("button, input, select, textarea, a") !==
+          event.currentTarget
+      ) {
+        return;
+      }
+
+      pointerInteractionRef.current = {
+        mode,
+        pointerId: event.pointerId,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        startFrame: editorFrame,
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    },
+    [editorFrame],
+  );
+
+  const startEditorMouseInteraction = useCallback(
+    (
+      event: React.MouseEvent<HTMLElement>,
+      mode: TopologyEditorPointerInteraction["mode"],
+    ) => {
+      if (!editorFrame || event.button !== 0) {
+        return;
+      }
+      if (
+        mode === "move" &&
+        event.target instanceof Element &&
+        event.target.closest("button, input, select, textarea, a") !==
+          event.currentTarget
+      ) {
+        return;
+      }
+
+      pointerInteractionRef.current = {
+        mode,
+        pointerId: null,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        startFrame: editorFrame,
+      };
+      event.preventDefault();
+    },
+    [editorFrame],
+  );
+
+  const continueEditorInteraction = useCallback(
+    (clientX: number, clientY: number) => {
+      const interaction = pointerInteractionRef.current;
+      if (!interaction) {
+        return;
+      }
+
+      const deltaX = clientX - interaction.startClientX;
+      const deltaY = clientY - interaction.startClientY;
+      updateEditorFrame((current) =>
+        interaction.mode === "move"
+          ? {
+              ...current,
+              x: interaction.startFrame.x + deltaX,
+              y: interaction.startFrame.y + deltaY,
+            }
+          : {
+              ...current,
+              width: interaction.startFrame.width + deltaX,
+              height: interaction.startFrame.height + deltaY,
+            },
+      );
+    },
+    [updateEditorFrame],
+  );
+
+  const continueEditorPointerInteraction = useCallback(
+    (event: React.PointerEvent<HTMLElement>) => {
+      const interaction = pointerInteractionRef.current;
+      if (
+        !interaction ||
+        interaction.pointerId === null ||
+        interaction.pointerId !== event.pointerId
+      ) {
+        return;
+      }
+
+      continueEditorInteraction(event.clientX, event.clientY);
+      event.preventDefault();
+    },
+    [continueEditorInteraction],
+  );
+
+  const finishEditorPointerInteraction = useCallback(
+    (event: React.PointerEvent<HTMLElement>) => {
+      const interaction = pointerInteractionRef.current;
+      if (
+        !interaction ||
+        interaction.pointerId === null ||
+        interaction.pointerId !== event.pointerId
+      ) {
+        return;
+      }
+      pointerInteractionRef.current = null;
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+
+    const onMouseMove = (event: MouseEvent) => {
+      const interaction = pointerInteractionRef.current;
+      if (!interaction || interaction.pointerId !== null) {
+        return;
+      }
+      continueEditorInteraction(event.clientX, event.clientY);
+      event.preventDefault();
+    };
+    const onMouseUp = () => {
+      if (pointerInteractionRef.current?.pointerId === null) {
+        pointerInteractionRef.current = null;
+      }
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [continueEditorInteraction, open]);
+
+  const moveEditorWithKeyboard = useCallback(
+    (event: React.KeyboardEvent<HTMLElement>) => {
+      if (event.currentTarget !== event.target) {
+        return;
+      }
+      const step = event.shiftKey
+        ? TOPOLOGY_EDITOR_KEYBOARD_LARGE_STEP
+        : TOPOLOGY_EDITOR_KEYBOARD_STEP;
+      const deltaByKey: Record<string, [number, number]> = {
+        ArrowLeft: [-step, 0],
+        ArrowRight: [step, 0],
+        ArrowUp: [0, -step],
+        ArrowDown: [0, step],
+      };
+      const delta = deltaByKey[event.key];
+      if (!delta) {
+        return;
+      }
+      event.preventDefault();
+      updateEditorFrame((current) => ({
+        ...current,
+        x: current.x + delta[0],
+        y: current.y + delta[1],
+      }));
+    },
+    [updateEditorFrame],
+  );
+
+  const resizeEditorWithKeyboard = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      const step = event.shiftKey
+        ? TOPOLOGY_EDITOR_KEYBOARD_LARGE_STEP
+        : TOPOLOGY_EDITOR_KEYBOARD_STEP;
+      const deltaByKey: Record<string, [number, number]> = {
+        ArrowLeft: [-step, 0],
+        ArrowRight: [step, 0],
+        ArrowUp: [0, -step],
+        ArrowDown: [0, step],
+      };
+      const delta = deltaByKey[event.key];
+      if (!delta) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      updateEditorFrame((current) => ({
+        ...current,
+        width: current.width + delta[0],
+        height: current.height + delta[1],
+      }));
+    },
+    [updateEditorFrame],
+  );
 
   useEffect(() => {
     if (!open) return undefined;
@@ -8771,9 +9133,26 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     <AnimatePresence>
       {open && (
         <motion.aside
+          ref={panelRef}
+          aria-labelledby={editorTitleId}
           initial={{ opacity: 0, x: 28, scale: 0.98 }}
           animate={{ opacity: 1, x: 0, scale: 1 }}
           exit={{ opacity: 0, x: 28, scale: 0.98 }}
+          style={
+            editorFrame
+              ? {
+                  left: editorFrame.x,
+                  top: editorFrame.y,
+                  width: editorFrame.width,
+                  height: editorFrame.height,
+                }
+              : {
+                  top: TOPOLOGY_EDITOR_MARGIN,
+                  right: TOPOLOGY_EDITOR_MARGIN,
+                  bottom: TOPOLOGY_EDITOR_MARGIN,
+                  width: `min(${TOPOLOGY_EDITOR_DEFAULT_WIDTH}px, calc(100% - ${TOPOLOGY_EDITOR_MARGIN * 2}px))`,
+                }
+          }
           className={cn(
             // Background is fully opaque so map labels (city
             // names, road outlines) don't bleed through the
@@ -8789,7 +9168,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
             // rounded corners and on top of any drag-handle
             // sticker that pokes out, without sacrificing
             // legibility of the main form area.
-            "absolute top-3 right-3 bottom-3 z-[2200] w-[min(430px,calc(100%-1.5rem))] rounded-xl border shadow-2xl overflow-hidden flex flex-col backdrop-blur-sm",
+            "absolute z-[2200] rounded-xl border shadow-2xl overflow-hidden flex flex-col backdrop-blur-sm",
             isDark
               ? "sui-bg-page sui-border-default sui-color-active"
               : "sui-bg-section sui-border-weak sui-color-active",
@@ -8801,32 +9180,75 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
               isDark ? "sui-border-weak" : "sui-border-weak",
             )}
           >
-            <div className="min-w-0">
-              <p className="text-xs font-black uppercase tracking-[0.18em] sui-color-info">
+            <button
+              type="button"
+              aria-label="Move topology editor"
+              aria-describedby={editorMovementHelpId}
+              aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight"
+              title="Drag to move. With this header focused, use the arrow keys to move; hold Shift for larger steps."
+              onPointerDown={(event) =>
+                startEditorPointerInteraction(event, "move")
+              }
+              onMouseDown={(event) =>
+                startEditorMouseInteraction(event, "move")
+              }
+              onPointerMove={continueEditorPointerInteraction}
+              onPointerUp={finishEditorPointerInteraction}
+              onPointerCancel={finishEditorPointerInteraction}
+              onLostPointerCapture={() => {
+                pointerInteractionRef.current = null;
+              }}
+              onKeyDown={moveEditorWithKeyboard}
+              className="min-w-0 flex-1 cursor-move select-none touch-none rounded text-left focus:outline-none focus:ring-1 sui-focus-ring"
+            >
+              <span
+                id={editorTitleId}
+                className="block text-xs font-black uppercase tracking-[0.18em] sui-color-info"
+              >
                 Topology Editor
-              </p>
-              <p
+              </span>
+              <span
                 className={cn(
-                  "text-xs font-semibold truncate",
+                  "block truncate text-xs font-semibold",
                   isDark ? "sui-color-default" : "sui-color-muted",
                 )}
               >
                 {topology.name}
-              </p>
-            </div>
-            <button
-              type="button"
-              aria-label="Close topology editor"
-              onClick={onClose}
-              className={cn(
-                "p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
-                isDark
-                  ? "sui-hover-bg-overlay sui-color-default"
-                  : "sui-hover-bg-section sui-color-muted",
-              )}
-            >
-              <X className="w-4 h-4" />
+              </span>
+              <ScreenReaderContent id={editorMovementHelpId}>
+                Drag this header or use the arrow keys to move the editor. Hold
+                Shift for larger steps.
+              </ScreenReaderContent>
             </button>
+            <div className="flex flex-shrink-0 items-center gap-1 cursor-default">
+              <button
+                type="button"
+                aria-label="Reset topology editor position and size"
+                title="Reset panel position and size"
+                onClick={resetEditorFrame}
+                className={cn(
+                  "p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
+                  isDark
+                    ? "sui-hover-bg-overlay sui-color-default"
+                    : "sui-hover-bg-section sui-color-muted",
+                )}
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Close topology editor"
+                onClick={onClose}
+                className={cn(
+                  "p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
+                  isDark
+                    ? "sui-hover-bg-overlay sui-color-default"
+                    : "sui-hover-bg-section sui-color-muted",
+                )}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           <div className="flex-1 overflow-auto p-4 space-y-4">
@@ -10283,7 +10705,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
 
           <div
             className={cn(
-              "border-t p-3 flex items-center justify-between gap-2",
+              "border-t p-3 pr-9 flex items-center justify-between gap-2",
               isDark ? "sui-border-weak" : "sui-border-weak",
             )}
           >
@@ -10334,6 +10756,37 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
               Save
             </button>
           </div>
+
+          <button
+            type="button"
+            aria-label="Resize topology editor"
+            aria-describedby={editorResizeHelpId}
+            aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight"
+            title="Drag to resize. With this handle focused, use the arrow keys to resize; hold Shift for larger steps."
+            onPointerDown={(event) =>
+              startEditorPointerInteraction(event, "resize")
+            }
+            onMouseDown={(event) =>
+              startEditorMouseInteraction(event, "resize")
+            }
+            onPointerMove={continueEditorPointerInteraction}
+            onPointerUp={finishEditorPointerInteraction}
+            onPointerCancel={finishEditorPointerInteraction}
+            onLostPointerCapture={() => {
+              pointerInteractionRef.current = null;
+            }}
+            onKeyDown={resizeEditorWithKeyboard}
+            className="absolute bottom-0 right-0 z-10 flex h-7 w-7 cursor-se-resize touch-none items-center justify-center rounded-tl-md sui-color-info sui-hover-bg-accent focus:outline-none focus:ring-1 focus:ring-inset sui-focus-ring"
+          >
+            <span
+              aria-hidden="true"
+              className="h-3 w-3 border-b-2 border-r-2 sui-border-info"
+            />
+            <ScreenReaderContent id={editorResizeHelpId}>
+              Drag this handle or use the arrow keys to resize the editor. Hold
+              Shift for larger steps.
+            </ScreenReaderContent>
+          </button>
         </motion.aside>
       )}
     </AnimatePresence>

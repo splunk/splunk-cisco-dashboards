@@ -1825,7 +1825,10 @@ iseval = 0`}</CodeBlock>
                   stay hidden until hover or focus, and omit
                   the retired Cisco Blue Gradient option. Map-on-right layouts
                   default to the compact height while retaining a Match
-                  workspace choice. Tile paging removes redundant navigation at
+                  workspace choice. The topology editor can now be moved and
+                  resized within the map with mouse, touch, pen, or keyboard
+                  controls, then returned to its default layout in one step.
+                  Tile paging removes redundant navigation at
                   eight or all visible tiles; Configure Tile offers only the
                   supported visualization choices in a dropdown; and Searchbase
                   pickers use native disclosure chevrons with a direct View in
