@@ -266,6 +266,8 @@ export interface KpiPickerContext {
   currentHidePeak?: boolean;
   currentHideDelta?: boolean;
   currentHideOverlay?: boolean;
+  /** False for fixed single-value surfaces that do not render chart/display options. */
+  allowPersonalDisplayControls?: boolean;
   /**
    * Opaque section identifier for this tile (Build 1203). When
    * provided alongside an `onApplyDisplayToSection` handler on the
@@ -1663,19 +1665,21 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
   const handleApply = () => {
     if (!selectedEntry || !canApply || !context) return;
 
-    // ---- Personal display taste: always applies, always local. ----
+    // ---- Personal display taste: applies only to surfaces that render it. ----
     // Viz override (Build 1174) and the three display toggles are
     // the only things left in the localStorage override — chart
     // style and chrome-hiding are genuinely per-viewer taste, not
     // org-wide fact.
-    const displayPayload: MetricOverride = {};
-    if (vizOverrideInput) {
-      displayPayload.vizOverride = vizOverrideInput;
+    if (context.allowPersonalDisplayControls !== false) {
+      const displayPayload: MetricOverride = {};
+      if (vizOverrideInput) {
+        displayPayload.vizOverride = vizOverrideInput;
+      }
+      if (hidePeakInput) displayPayload.hidePeak = true;
+      if (hideDeltaInput) displayPayload.hideDelta = true;
+      if (hideOverlayInput) displayPayload.hideOverlay = true;
+      onApply(context.tileId, displayPayload);
     }
-    if (hidePeakInput) displayPayload.hidePeak = true;
-    if (hideDeltaInput) displayPayload.hideDelta = true;
-    if (hideOverlayInput) displayPayload.hideOverlay = true;
-    onApply(context.tileId, displayPayload);
 
     // ---- Org-wide fields: admin-only, saved server-side. ----
     // Thresholds / Data Mapping / Drilldown inputs render
@@ -2794,6 +2798,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                     </div>
                   </CollapsiblePanel>
 
+                  {context.allowPersonalDisplayControls !== false && (
+                    <>
                   {/* CHART STYLE form.
                    *
                    * Lets the operator override how the tile
@@ -2972,6 +2978,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                         </Layout>
                       )}
                   </CollapsiblePanel>
+                    </>
+                  )}
 
                   <CollapsiblePanel
                     actions={

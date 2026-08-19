@@ -1802,9 +1802,11 @@ iseval = 0`}</CodeBlock>
                   initial canvas to six searches while details dispatch only
                   when opened. Dashboard Manager view mode still provides
                   Studio-style Display, zoom, JSON export, and clone controls.
-                  Cloud Security Activity now reports the full provider event
-                  total and no longer calculates a percentage trend across
-                  provider rows.
+                  Categorical Hybrid Mesh Firewalling cards now report their
+                  full-window totals and no longer calculate percentage trends
+                  across category rows. Command-map controls no longer overlap
+                  its topology summary, and map-footer KPI cards now expose
+                  Search and configuration actions.
                 </InfoCard>
                 <InfoCard title="Guided setup and performance readiness">
                   Setup now brings package checks, index macro discovery, data

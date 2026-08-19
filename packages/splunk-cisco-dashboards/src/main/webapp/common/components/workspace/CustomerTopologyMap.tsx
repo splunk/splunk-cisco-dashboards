@@ -163,10 +163,11 @@ const MapTopRightActions = styled.div`
   pointer-events: auto;
 `;
 
-const MapBottomRightActions = styled.div`
+const MapBottomRightActions = styled.div<{ $reserveCommandSummary: boolean }>`
   position: absolute;
   right: ${variables.spacingMedium};
-  bottom: ${variables.spacingMedium};
+  bottom: ${({ $reserveCommandSummary }) =>
+    $reserveCommandSummary ? "84px" : "12px"};
   z-index: 1100;
   display: flex;
   flex-direction: column;
@@ -7172,6 +7173,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
       />
 
       <MapBottomRightActions
+        $reserveCommandSummary={surfaceMode === "command"}
         aria-label="Map legend and view controls"
         role="region"
         tabIndex={roleLegendExpanded ? 0 : undefined}

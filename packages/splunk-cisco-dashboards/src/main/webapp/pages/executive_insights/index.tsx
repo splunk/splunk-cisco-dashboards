@@ -82,6 +82,7 @@ import { useAppThemeControls } from "@/common/theme/AppThemeProvider";
 import { DashboardSection } from "@/common/components/workspace/DashboardSection";
 import { OneCdRadioBar } from "@/common/components/workspace/OneCdPrimitives";
 import { MetricItem } from "@/common/components/workspace/MetricItem";
+import { TileActionMenu } from "@/common/components/workspace/TileActionMenu";
 import { WorkspaceModalShell } from "@/common/components/workspace/WorkspaceModalShell";
 import SearchbaseDrilldownGuidance, {
   type SearchbaseDrilldownMetadata,
@@ -851,10 +852,14 @@ const buildAddedOverviewMetricConfig = (
 
 const MAP_FOOTER_SLOTS = ["primary", "secondary"] as const;
 type MapFooterSlot = (typeof MAP_FOOTER_SLOTS)[number];
-type MapFooterKpiConfig = KpiConfig & { thresholds?: MetricThresholds };
+type MapFooterKpiConfig = KpiConfig & {
+  slot: MapFooterSlot;
+  thresholds?: MetricThresholds;
+};
 
 const DISABLED_MAP_FOOTER_KPI_CONFIG: MapFooterKpiConfig = {
   id: "__map_footer_unavailable",
+  slot: "primary",
   label: "",
   valueField: "value",
   mockValue: "",
@@ -883,6 +888,7 @@ const buildOverviewMapFooterConfig = (
     const id = readOverviewString(raw, "id", 128) ?? `map_${slot}`;
     discovered.set(slot, {
       id,
+      slot,
       searchbaseId: record.id,
       savedSearch: record.searchName,
       spl: undefined,
@@ -4173,6 +4179,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
          * other behaviour changes.
          */
         section?: SectionId;
+        allowPersonalDisplayControls?: boolean;
       },
       returnFocus?: HTMLElement | null,
     ) => {
@@ -4197,6 +4204,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         currentHidePeak: ov?.hidePeak,
         currentHideDelta: ov?.hideDelta,
         currentHideOverlay: ov?.hideOverlay,
+        allowPersonalDisplayControls:
+          current?.allowPersonalDisplayControls,
         sectionId: current?.section,
         sectionLabel: current?.section
           ? effectiveSectionMeta[current.section]?.title
@@ -4250,6 +4259,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         );
         return;
       }
+      const mapFooter = mapFooterKpiConfig.find(
+        (candidate) => candidate.id === patch.tileId,
+      );
 
       setFactoryTileConfigStatus("saving");
       try {
@@ -4260,6 +4272,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             pickerContext?.sectionId ??
             insightsWorkspace.defaultVisibleSections[0] ??
             "custom",
+          target: mapFooter
+            ? { kind: "mapFooter", slot: mapFooter.slot }
+            : { kind: "overview" },
           fromStanzaId,
           thresholds: patch.thresholds,
           dataMapping: patch.dataMapping,
@@ -4285,7 +4300,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         }
       }
     },
-    [insightsWorkspace, pickerContext, searchbaseByName],
+    [insightsWorkspace, mapFooterKpiConfig, pickerContext, searchbaseByName],
   );
 
   // Drilldown edits now go through `handleSaveFactoryTileConfig`
@@ -5641,6 +5656,40 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                           mapPrimary.value,
                           effectiveMapPrimaryCfg.thresholds,
                         )}
+                        onOpenInSearch={
+                          effectiveMapPrimaryCfg.spl
+                            ? () =>
+                                window.open(
+                                  splunkSearchAppUrl(
+                                    effectiveMapPrimaryCfg.spl as string,
+                                    timeRange,
+                                    effectiveMapPrimaryCfg.dispatchContext,
+                                  ),
+                                  "_blank",
+                                  "noopener,noreferrer",
+                                )
+                            : undefined
+                        }
+                        onConfigure={
+                          canManageFactoryConfig
+                            ? (returnFocus) =>
+                                openPicker(
+                                  mapPrimaryBaseCfg.id,
+                                  effectiveMapPrimaryCfg.label,
+                                  {
+                                    savedSearch:
+                                      mapPrimaryBaseCfg.savedSearch,
+                                    valueField:
+                                      effectiveMapPrimaryCfg.valueField,
+                                    defaultThresholds:
+                                      effectiveMapPrimaryCfg.thresholds,
+                                    unit: effectiveMapPrimaryCfg.unit,
+                                    allowPersonalDisplayControls: false,
+                                  },
+                                  returnFocus,
+                                )
+                            : undefined
+                        }
                       />
                     ) : null}
                     {mapSecondaryBaseCfg ? (
@@ -5651,6 +5700,40 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                           mapSecondary.value,
                           effectiveMapSecondaryCfg.thresholds,
                         )}
+                        onOpenInSearch={
+                          effectiveMapSecondaryCfg.spl
+                            ? () =>
+                                window.open(
+                                  splunkSearchAppUrl(
+                                    effectiveMapSecondaryCfg.spl as string,
+                                    timeRange,
+                                    effectiveMapSecondaryCfg.dispatchContext,
+                                  ),
+                                  "_blank",
+                                  "noopener,noreferrer",
+                                )
+                            : undefined
+                        }
+                        onConfigure={
+                          canManageFactoryConfig
+                            ? (returnFocus) =>
+                                openPicker(
+                                  mapSecondaryBaseCfg.id,
+                                  effectiveMapSecondaryCfg.label,
+                                  {
+                                    savedSearch:
+                                      mapSecondaryBaseCfg.savedSearch,
+                                    valueField:
+                                      effectiveMapSecondaryCfg.valueField,
+                                    defaultThresholds:
+                                      effectiveMapSecondaryCfg.thresholds,
+                                    unit: effectiveMapSecondaryCfg.unit,
+                                    allowPersonalDisplayControls: false,
+                                  },
+                                  returnFocus,
+                                )
+                            : undefined
+                        }
                       />
                     ) : null}
                   </div>
@@ -6998,6 +7081,8 @@ interface KpiCardProps {
   label: string;
   value: string;
   status: MetricStatus;
+  onOpenInSearch?: () => void;
+  onConfigure?: (returnFocus?: HTMLElement | null) => void;
 }
 
 const formatMapKpiValue = (value: string): string => {
@@ -8291,7 +8376,13 @@ const MapLayoutRadioBar: React.FC<MapLayoutRadioBarProps> = ({
   />
 );
 
-const KpiCard: React.FC<KpiCardProps> = ({ label, value, status }) => {
+const KpiCard: React.FC<KpiCardProps> = ({
+  label,
+  value,
+  status,
+  onOpenInSearch,
+  onConfigure,
+}) => {
   const theme = useSplunkTheme();
   const displayValue = formatMapKpiValue(value);
   const statusColor = {
@@ -8304,6 +8395,13 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, value, status }) => {
   return (
     <Card>
       <Card.Header
+        actions={() => (
+          <TileActionMenu
+            label={label}
+            onOpenInSearch={onOpenInSearch}
+            onConfigure={onConfigure}
+          />
+        )}
         title={
           <Heading level={3} data-sui-heading-variant="title3">
             {label}
