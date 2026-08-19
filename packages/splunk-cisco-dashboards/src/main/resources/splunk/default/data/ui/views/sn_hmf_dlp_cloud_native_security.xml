@@ -862,25 +862,9 @@
                 "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"Events\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
-            },
-            "context": {
-                "trendColorEditorConfig": [
-                    {
-                        "value": "#049fd9",
-                        "to": 0
-                    },
-                    {
-                        "value": "#049fd9",
-                        "from": 0
-                    }
-                ]
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "sparklineValues": "> primary | seriesByName(\"WindowTotal\")"
             }
         },
         "viz_card_06_trend": {

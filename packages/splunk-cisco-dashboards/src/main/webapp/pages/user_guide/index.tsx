@@ -1800,6 +1800,9 @@ iseval = 0`}</CodeBlock>
                   initial canvas to six searches while details dispatch only
                   when opened. Dashboard Manager view mode still provides
                   Studio-style Display, zoom, JSON export, and clone controls.
+                  Cloud Security Activity now reports the full provider event
+                  total and no longer calculates a percentage trend across
+                  provider rows.
                 </InfoCard>
                 <InfoCard title="Guided setup and performance readiness">
                   Setup now brings package checks, index macro discovery, data
