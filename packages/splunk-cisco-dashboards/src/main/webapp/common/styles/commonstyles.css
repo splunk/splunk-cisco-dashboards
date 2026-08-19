@@ -2945,10 +2945,22 @@ div.card-trend-footer [data-test='button'] {
     color: var(--dashboard-builder-content-active, #0f4f80);
 }
 
+.dropdown-kpi-filter-toggle:focus-visible {
+    outline: 2px solid var(--dashboard-builder-accent, #0064d7);
+    outline-offset: 2px;
+}
+
 .dropdown-kpi-filter-caret {
     display: inline-flex;
-    width: 10px;
+    width: 12px;
+    align-items: center;
     justify-content: center;
+    transform: rotate(0deg);
+    transition: transform 120ms ease;
+}
+
+.dropdown-kpi-filter-caret.is-open {
+    transform: rotate(90deg);
 }
 
 .dropdown-kpi-filter-active {
@@ -3114,6 +3126,34 @@ div.card-trend-footer [data-test='button'] {
 
 .dropdown-kpi-item {
     align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.dropdown-kpi-item-main {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: flex-start;
+    min-width: 0;
+}
+
+.dropdown-kpi-item-select-button {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+}
+
+.dropdown-kpi-item-select-button:focus-visible {
+    border-radius: 2px;
+    outline: 2px solid var(--dashboard-builder-accent, #0064d7);
+    outline-offset: 2px;
 }
 
 .dropdown-kpi-item-copy {
@@ -3148,6 +3188,19 @@ div.card-trend-footer [data-test='button'] {
     font-size: var(--sui-font-size-small);
     line-height: 1;
     padding: 3px 6px;
+}
+
+.dropdown-kpi-item-searchbase-link {
+    flex: 0 0 auto;
+    margin-top: 1px;
+    font-size: var(--sui-font-size-small);
+    white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dropdown-kpi-filter-caret {
+        transition: none;
+    }
 }
 
 .dropdown-icon {

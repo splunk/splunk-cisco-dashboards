@@ -75,6 +75,8 @@ import {
   WallBricks,
   RobotFaceWrench,
   Building2,
+  Maximize2,
+  Minimize2,
   type SuiIcon,
 } from "@/common/icons/SuiIcon";
 import { useAppThemeControls } from "@/common/theme/AppThemeProvider";
@@ -280,6 +282,20 @@ const VERTICAL_MAP_COMPACT_MIN_HEIGHT_PX = 360;
 const VERTICAL_METRICS_MIN_HEIGHT_PX = 220;
 const VERTICAL_METRICS_COMPACT_MIN_HEIGHT_PX = 180;
 const VERTICAL_SPLIT_CHROME_ALLOWANCE_PX = 32;
+
+const meaningfulTilePageCount = (
+  total: number,
+  pageSize: number,
+  minimumPageSize: number,
+): number => {
+  if (pageSize <= 0 || total <= pageSize) return 1;
+  const fullPages = Math.floor(total / pageSize);
+  const remainder = total % pageSize;
+  return Math.max(
+    1,
+    fullPages + (remainder >= minimumPageSize ? 1 : 0),
+  );
+};
 
 const useAvailableDashboardHeight = (): number | null => {
   const [height, setHeight] = useState<number | null>(null);
@@ -2795,9 +2811,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         sectionMaxAvailable,
       );
       if (visibleCount <= 0) continue;
-      const pageCount = Math.max(
-        1,
-        Math.ceil(sectionMaxAvailable / visibleCount),
+      const pageCount = meaningfulTilePageCount(
+        sectionMaxAvailable,
+        visibleCount,
+        Math.min(sectionTileBounds.minCount, sectionMaxAvailable),
       );
       const page = Math.min(
         sectionTilePages[section] ?? 0,
@@ -2934,7 +2951,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     setConfig: setSignalTickerConfig,
     resetAll: resetSignalTickerConfig,
     isWorkspaceDefault: signalTickerIsWorkspaceDefault,
-    itemCount: signalTickerItemCount,
     persistenceStatus: signalTickerPersistenceStatus,
     persistenceError: signalTickerPersistenceError,
   } = usePersistedSignalTicker(insightsWorkspace.id, signalTickerDefault);
@@ -3049,6 +3065,40 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       // for the current session.
     }
   }, [MAP_VISIBILITY_KEY, mapVisible]);
+  const MAP_HEIGHT_KEY = userScopedStorageKey(
+    `scd_overview_map_height.${insightsWorkspace.id}`,
+  );
+  const MAP_HEIGHT_DEFAULT: MapHeightMode = "compact";
+  const [mapHeightMode, setMapHeightMode] = useState<MapHeightMode>(() => {
+    if (typeof window === "undefined") return MAP_HEIGHT_DEFAULT;
+    try {
+      const saved = readUserScopedStorageItem(MAP_HEIGHT_KEY);
+      return saved === "match-workspace" || saved === "compact"
+        ? saved
+        : MAP_HEIGHT_DEFAULT;
+    } catch {
+      return MAP_HEIGHT_DEFAULT;
+    }
+  });
+  const mapHeightStorageKeyRef = useRef(MAP_HEIGHT_KEY);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (mapHeightStorageKeyRef.current !== MAP_HEIGHT_KEY) {
+        mapHeightStorageKeyRef.current = MAP_HEIGHT_KEY;
+        const saved = readUserScopedStorageItem(MAP_HEIGHT_KEY);
+        setMapHeightMode(
+          saved === "match-workspace" || saved === "compact"
+            ? saved
+            : MAP_HEIGHT_DEFAULT,
+        );
+        return;
+      }
+      window.localStorage.setItem(MAP_HEIGHT_KEY, mapHeightMode);
+    } catch {
+      // Storage unavailable; the height choice still applies for this session.
+    }
+  }, [MAP_HEIGHT_KEY, mapHeightMode]);
   useEffect(() => {
     setRegionalView(insightsWorkspace.regionalView);
     setMapPosition(insightsWorkspace.mapPosition);
@@ -3272,9 +3322,17 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       sectionTileCounts[section],
       sectionMaxAvailable,
     );
-    const renderedTileCount = showAllTileSections[section]
+    const isShowingAllTiles =
+      Boolean(showAllTileSections[section]) &&
+      sectionMaxAvailable > visibleCount;
+    const renderedTileCount = isShowingAllTiles
       ? sectionMaxAvailable
       : visibleCount;
+    const pageCount = meaningfulTilePageCount(
+      sectionMaxAvailable,
+      visibleCount,
+      Math.min(sectionTileBounds.minCount, sectionMaxAvailable),
+    );
     const estimatedTileRows =
       renderedTileCount >= SECTION_WRAP_TILE_COUNT
         ? Math.ceil(renderedTileCount / SECTION_WRAPPED_TILE_COLUMNS)
@@ -3295,7 +3353,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       baseMinHeight +
         (heightLevel - sectionHeightBounds.minLevel) * SECTION_HEIGHT_STEP_PX +
         (estimatedTileRows - 1) * wrappedRowStep +
-        (sectionMaxAvailable > visibleCount ? tilePagerHeight : 0),
+        (isShowingAllTiles || pageCount > 1 ? tilePagerHeight : 0),
     );
   }, [
     compactDensity,
@@ -4134,6 +4192,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   //   • scd_overview_split_pct        — tiles ↔ map splitter position
   //   • scd_overview_map_pos          — map position (right / below / above)
   //   • scd_overview_map_visible      — topology map visibility
+  //   • scd_overview_map_height       — map panel height (workspace / compact)
   //   • priorityDrilldown.v1          — pinned app-local drill-down target
   //   • insights_workspace_preferences.conf — private Signal Rail delta;
   //                                      retired signalTicker.v1 browser data
@@ -4170,6 +4229,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     setLeftPct(SPLIT_DEFAULT);
     setMapPosition(MAP_POS_DEFAULT);
     setMapVisible(MAP_VISIBLE_DEFAULT);
+    setMapHeightMode(MAP_HEIGHT_DEFAULT);
     setSelectedPriorityDrilldownView(DEFAULT_PRIORITY_DRILLDOWN_VIEW);
     setFocusedSection(null);
     clearPriorityDrilldownView();
@@ -4179,6 +4239,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         window.localStorage.removeItem(SPLIT_KEY);
         window.localStorage.removeItem(MAP_POS_KEY);
         window.localStorage.removeItem(MAP_VISIBILITY_KEY);
+        window.localStorage.removeItem(MAP_HEIGHT_KEY);
       } catch {
         // Storage unavailable; the in-memory state resets
         // above are authoritative for this session anyway.
@@ -4205,6 +4266,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     MAP_VISIBILITY_KEY,
     MAP_VISIBLE_DEFAULT,
     setMapVisible,
+    MAP_HEIGHT_KEY,
+    MAP_HEIGHT_DEFAULT,
+    setMapHeightMode,
   ]);
 
   const handlePublishWorkspaceLayout = useCallback(async () => {
@@ -4669,6 +4733,33 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   {option.ariaLabel}
                 </Menu.Item>
               ))}
+              {mapVisible && (
+                <>
+                  <Menu.Heading>Map height</Menu.Heading>
+                  <Menu.Item
+                    onClick={() => {
+                      setMapHeightMode("match-workspace");
+                      closeHeaderActions();
+                    }}
+                    selectable
+                    selected={mapHeightMode === "match-workspace"}
+                    startAdornment={<Maximize2 aria-hidden="true" />}
+                  >
+                    Match workspace
+                  </Menu.Item>
+                  <Menu.Item
+                    onClick={() => {
+                      setMapHeightMode("compact");
+                      closeHeaderActions();
+                    }}
+                    selectable
+                    selected={mapHeightMode === "compact"}
+                    startAdornment={<Minimize2 aria-hidden="true" />}
+                  >
+                    Compact
+                  </Menu.Item>
+                </>
+              )}
               <Menu.Heading>Refresh rate</Menu.Heading>
               {AUTO_REFRESH_OPTIONS.map((option) => (
                 <Menu.Item
@@ -4732,25 +4823,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 </Menu.Item>
               )}
               <Menu.Item
-                description={`${signalTickerItemCount} KPI${
-                  signalTickerItemCount === 1 ? "" : "s"
-                }`}
-                onClick={() => {
-                  closeHeaderActions();
-                  setSignalTickerEditorOpen(true);
-                }}
-                startAdornment={<Sparkles aria-hidden="true" />}
-              >
-                Configure signal rail
-              </Menu.Item>
-              <Menu.Item
                 onClick={() => {
                   closeHeaderActions();
                   setHelpOpen(true);
                 }}
                 startAdornment={<Keyboard aria-hidden="true" />}
               >
-                Help and reference
+                Keyboard shortcuts
               </Menu.Item>
               <Menu.Divider />
               <Menu.Item
@@ -4996,12 +5075,19 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               const wrappedRowStep = renderCompactHeight
                 ? SECTION_WRAPPED_H1_TILE_ROW_STEP_PX
                 : SECTION_WRAPPED_TILE_ROW_STEP_PX;
+              const tilePageCount = meaningfulTilePageCount(
+                sectionMaxAvailable,
+                visibleCount,
+                Math.min(sectionTileBounds.minCount, sectionMaxAvailable),
+              );
               const sectionMinHeight =
                 baseMinHeight +
                 (heightLevel - sectionHeightBounds.minLevel) *
                   SECTION_HEIGHT_STEP_PX +
                 (estimatedTileRows - 1) * wrappedRowStep +
-                (sectionMaxAvailable > visibleCount ? tilePagerHeight : 0);
+                (isShowingAllTiles || tilePageCount > 1
+                  ? tilePagerHeight
+                  : 0);
 
               // Apply the user's drag-reorder
               // preference (if any) to the canonical
@@ -5017,10 +5103,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               );
               const orderedIds = getSectionTileOrder(section, canonicalIds);
               const catalogueIds = orderedIds.slice(0, sectionMaxAvailable);
-              const tilePageCount = Math.max(
-                1,
-                Math.ceil(sectionMaxAvailable / Math.max(visibleCount, 1)),
-              );
               const tilePage = Math.min(
                 sectionTilePages[section] ?? 0,
                 tilePageCount - 1,
@@ -5275,9 +5357,15 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 mapPosition === "right" ? "xl:flex-1" : "flex-1",
               )}
               data-map-position={mapPosition}
+              data-map-height={mapHeightMode}
               style={verticalMapStyle}
             >
-              <div className="scd-c3-panel sui-bg-section rounded-lg border sui-border-weak p-3 shadow-sm flex flex-col">
+              <div
+                className={cn(
+                  "scd-c3-panel sui-bg-section rounded-lg border sui-border-weak p-3 shadow-sm flex flex-col",
+                  mapHeightMode === "match-workspace" && "flex-1 min-h-0",
+                )}
+              >
                 <div className="mb-2 flex flex-shrink-0 flex-wrap items-start justify-between gap-2">
                   <div className="min-w-[12rem] flex-1">
                     <Heading
@@ -7820,6 +7908,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
 // See the splitter / map-position useState block in the Overview page
 // for the wiring and the rationale on defaulting to `right` (Build 83).
 type MapPosition = "right" | "below" | "above";
+type MapHeightMode = "match-workspace" | "compact";
 
 type MapLayout = MapPosition | "hidden";
 

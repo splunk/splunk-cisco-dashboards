@@ -175,26 +175,6 @@ body.scd-overview-active .panel-body,
   background: transparent;
 }
 
-#scan-root .scd-c3-surface .scd-signal-rail-ticker {
-  background: linear-gradient(
-    180deg,
-    rgb(19 26 35 / 97%),
-    rgb(15 17 23 / 94%)
-  ) !important;
-  border-color: var(--scd-c3-toolbar-border) !important;
-  box-shadow: 0 3px 8px rgb(0 0 0 / 8%);
-  backdrop-filter: blur(8px) saturate(106%);
-}
-
-#scan-root
-  .scd-c3-surface
-  .scd-signal-rail-ticker[data-variant="one-cisco-glass"] {
-  background: transparent !important;
-  border-color: transparent !important;
-  box-shadow: none;
-  backdrop-filter: none;
-}
-
 /* C3 uses sentence-case page and card hierarchy. Preserve customer-supplied
  * wording instead of forcing the primary structural headings to uppercase. */
 #scan-root .scd-c3-surface .scd-c3-toolbar h1,
