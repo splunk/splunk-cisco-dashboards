@@ -627,6 +627,7 @@ const discoverProfileDefinitionFromRecord = (
 interface OverviewMetricBuildOptions {
   tileId?: string;
   section?: SectionId;
+  searchbaseId?: string;
   suppressMockOnEmpty?: boolean;
 }
 
@@ -659,7 +660,7 @@ const buildOverviewMetricFromDefinition = (
       record.subCategory ??
       record.category,
     description,
-    searchbaseId: record.id,
+    searchbaseId: options.searchbaseId ?? record.id,
     savedSearch: record.searchName,
     spl: undefined,
     dispatchContext: record.dispatchContext,
@@ -727,6 +728,39 @@ const shortStableHash = (raw: string): string => {
   return hash.toString(36).slice(0, 7);
 };
 
+const SEARCHBASE_RECORD_REFERENCE_SEPARATOR = "::";
+
+const searchbaseRecordReference = (record: SearchbaseRecord): string =>
+  `${record.ownerApp}${SEARCHBASE_RECORD_REFERENCE_SEPARATOR}${record.id}`;
+
+const searchbaseRecordReferenceFromParts = (
+  ownerApp: string,
+  recordId: string,
+): string =>
+  `${ownerApp}${SEARCHBASE_RECORD_REFERENCE_SEPARATOR}${recordId}`;
+
+const searchbaseRecordNameReference = (
+  ownerApp: string,
+  searchName: string,
+): string =>
+  `${ownerApp}${SEARCHBASE_RECORD_REFERENCE_SEPARATOR}${searchName}`;
+
+const searchbaseReferenceMatchesRecord = (
+  reference: string | undefined,
+  record: SearchbaseRecord,
+  currentAppOwner: string,
+): boolean =>
+  reference === searchbaseRecordReference(record) ||
+  (record.ownerApp === currentAppOwner && reference === record.id);
+
+const searchbaseReferenceSetHasRecord = (
+  references: ReadonlySet<string>,
+  record: SearchbaseRecord,
+  currentAppOwner: string,
+): boolean =>
+  references.has(searchbaseRecordReference(record)) ||
+  (record.ownerApp === currentAppOwner && references.has(record.id));
+
 const overviewAdditionTileId = (
   section: SectionId,
   searchbaseId: string,
@@ -742,29 +776,49 @@ const overviewAdditionTileId = (
 };
 
 const buildAddedOverviewMetricConfig = (
-  records: SearchbaseRecord[] | null,
+  currentAppRecords: SearchbaseRecord[] | null,
+  catalogueRecords: SearchbaseRecord[] | null,
   additions: SectionTileAdditionMap,
   profile: InsightsWorkspace,
   existingMetrics: MetricConfig[],
 ): MetricConfig[] => {
-  if (records === null) return [];
+  if (currentAppRecords === null || catalogueRecords === null) return [];
 
-  const recordsById = new Map(records.map((record) => [record.id, record]));
+  const currentAppRecordsById = new Map(
+    currentAppRecords.map((record) => [record.id, record]),
+  );
+  const recordsByReference = new Map(
+    catalogueRecords.map((record) => [searchbaseRecordReference(record), record]),
+  );
   const existingIds = new Set(existingMetrics.map((metric) => metric.id));
   const existingSearchesBySection = new Set(
     existingMetrics
       .filter((metric) => metric.searchbaseId)
-      .map((metric) => `${metric.section}:${metric.searchbaseId}`),
+      .map((metric) => {
+        const searchbaseId = metric.searchbaseId as string;
+        const currentRecord = currentAppRecordsById.get(searchbaseId);
+        const reference = currentRecord
+          ? searchbaseRecordReference(currentRecord)
+          : searchbaseId;
+        return `${metric.section}:${reference}`;
+      }),
   );
   const out: MetricConfig[] = [];
 
   for (const section of sectionIdsForWorkspace(profile)) {
-    const searchbaseIds = additions[section] ?? [];
-    for (const searchbaseId of searchbaseIds) {
-      if (existingSearchesBySection.has(`${section}:${searchbaseId}`)) continue;
-      const record = recordsById.get(searchbaseId);
+    const searchbaseReferences = additions[section] ?? [];
+    for (const searchbaseReference of searchbaseReferences) {
+      const record =
+        recordsByReference.get(searchbaseReference) ??
+        currentAppRecordsById.get(searchbaseReference);
       if (!record?.searchName || !record.search) continue;
-      const tileId = overviewAdditionTileId(section, searchbaseId);
+      const canonicalReference = searchbaseRecordReference(record);
+      if (
+        existingSearchesBySection.has(`${section}:${canonicalReference}`)
+      ) {
+        continue;
+      }
+      const tileId = overviewAdditionTileId(section, searchbaseReference);
       if (existingIds.has(tileId)) continue;
 
       const definitions = overviewDefinitionsFromRecord(record).filter(
@@ -782,13 +836,14 @@ const buildAddedOverviewMetricConfig = (
         {
           tileId,
           section,
+          searchbaseId: searchbaseReference,
           suppressMockOnEmpty: true,
         },
       );
       if (!metric) continue;
       out.push(metric);
       existingIds.add(tileId);
-      existingSearchesBySection.add(`${section}:${searchbaseId}`);
+      existingSearchesBySection.add(`${section}:${canonicalReference}`);
     }
   }
 
@@ -1280,9 +1335,19 @@ const buildMetricDetailTableConfig = (
   const seen = new Set<string>();
   const details = drilldownNames
     .map(
-      (drilldownName) =>
-        searchbaseById?.get(drilldownName) ??
-        searchbaseByName?.get(drilldownName),
+      (drilldownName) => {
+        const ownerApp = source.ownerApp;
+        return (
+          searchbaseById?.get(
+            searchbaseRecordReferenceFromParts(ownerApp, drilldownName),
+          ) ??
+          searchbaseByName?.get(
+            searchbaseRecordNameReference(ownerApp, drilldownName),
+          ) ??
+          searchbaseById?.get(drilldownName) ??
+          searchbaseByName?.get(drilldownName)
+        );
+      },
     )
     .filter((detail): detail is SearchbaseRecord => {
       if (!detail?.search || seen.has(detail.id)) return false;
@@ -2439,6 +2504,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     string,
     SearchbaseRecord
   > | null>(null);
+  const [allSearchbaseRecords, setAllSearchbaseRecords] = useState<
+    SearchbaseRecord[] | null
+  >(null);
 
   // Bumped after an admin saves a Thresholds / Data Mapping /
   // Drilldown change (`searchbaseTileConfigService`) so the catalogue
@@ -2476,6 +2544,48 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       cancelled = true;
     };
   }, [searchbaseRefreshToken]);
+
+  // The factory workspace remains bound to this app's catalogue, while the
+  // add-search drawer can browse every installed Searchbase provider. Added
+  // records are persisted with an app-qualified reference so same-named
+  // stanzas from different apps never collide.
+  useEffect(() => {
+    let cancelled = false;
+    getSearchbaseCatalogue({ allApps: true, includeHidden: true })
+      .then((list) => {
+        if (!cancelled) setAllSearchbaseRecords(list);
+      })
+      .catch(() => {
+        if (!cancelled) setAllSearchbaseRecords([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [searchbaseRefreshToken]);
+
+  const currentSearchbaseOwnerApp =
+    searchbaseRecords?.find((record) => record.ownerApp)?.ownerApp ?? "";
+
+  const runtimeSearchbaseById = useMemo(() => {
+    if (searchbaseById === null || allSearchbaseRecords === null) return null;
+    const map = new Map(searchbaseById);
+    for (const record of allSearchbaseRecords) {
+      map.set(searchbaseRecordReference(record), record);
+    }
+    return map;
+  }, [allSearchbaseRecords, searchbaseById]);
+
+  const runtimeSearchbaseByName = useMemo(() => {
+    if (searchbaseByName === null || allSearchbaseRecords === null) return null;
+    const map = new Map(searchbaseByName);
+    for (const record of allSearchbaseRecords) {
+      map.set(
+        searchbaseRecordNameReference(record.ownerApp, record.searchName),
+        record,
+      );
+    }
+    return map;
+  }, [allSearchbaseRecords, searchbaseByName]);
 
   const {
     additions: sectionTileAdditions,
@@ -2537,12 +2647,14 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     () =>
       buildAddedOverviewMetricConfig(
         searchbaseRecords,
+        allSearchbaseRecords,
         effectiveSectionTileAdditions,
         insightsWorkspace,
         baseMetricConfig,
       ),
     [
       baseMetricConfig,
+      allSearchbaseRecords,
       insightsWorkspace,
       searchbaseRecords,
       effectiveSectionTileAdditions,
@@ -3548,8 +3660,21 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       const visibleSectionMetrics = renderMetricConfig.filter(
         (m) => m.section === section,
       );
+      const canonicalIds = getFactoryTileOrder(
+        section,
+        visibleSectionMetrics,
+      );
+      const orderedIds = getSectionTileOrder(section, canonicalIds);
+      const sectionMaxAvailable = Math.min(
+        sectionTileBounds.maxCount,
+        orderedIds.length,
+      );
+      const configuredMetricIds = new Set(
+        orderedIds.slice(0, sectionMaxAvailable),
+      );
       const currentSearchbaseIds = new Set(
-        sectionMetrics
+        visibleSectionMetrics
+          .filter((metric) => configuredMetricIds.has(metric.id))
           .map((metric) => metric.searchbaseId)
           .filter((id): id is string => Boolean(id)),
       );
@@ -3560,9 +3685,11 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         Math.min(sectionTileBounds.maxCount, visibleSectionMetrics.length),
       );
 
-      const newTileId = overviewAdditionTileId(section, record.id);
-      const canonicalIds = getFactoryTileOrder(section, visibleSectionMetrics);
-      const orderedIds = getSectionTileOrder(section, canonicalIds);
+      const existingMetric = sectionMetrics.find(
+        (metric) => metric.searchbaseId === record.id,
+      );
+      const newTileId =
+        existingMetric?.id ?? overviewAdditionTileId(section, record.id);
       const nextOrder = orderedIds.filter((id) => id !== newTileId);
       const insertAt =
         currentVisibleCount >= sectionTileBounds.maxCount
@@ -3573,7 +3700,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       const nextVisibleCount = Math.min(
         sectionTileBounds.maxCount,
         currentVisibleCount + 1,
-        visibleSectionMetrics.length + 1,
+        visibleSectionMetrics.length + (existingMetric ? 0 : 1),
       );
       const applyPersonalViewState = () => {
         setSectionTileOrder(section, nextOrder);
@@ -3581,7 +3708,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       };
       if (destination === "personal") {
         applyPersonalViewState();
-        addSectionTile(section, record.id);
+        if (!existingMetric) addSectionTile(section, record.id);
         return;
       }
 
@@ -3592,7 +3719,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         tiles: nextOrder,
         visibleCount: nextVisibleCount,
         searchbaseAdditions: Array.from(
-          new Set([...currentSharedAdditions, record.id]),
+          new Set([
+            ...currentSharedAdditions,
+            ...(existingMetric ? [] : [record.id]),
+          ]),
         ),
       };
       const nextLayout: WorkspaceLayoutConfig = {
@@ -3890,8 +4020,20 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     const visibleSectionMetrics = renderMetricConfig.filter(
       (m) => m.section === pickerSection,
     );
+    const canonicalIds = getFactoryTileOrder(
+      pickerSection,
+      visibleSectionMetrics,
+    );
+    const orderedIds = getSectionTileOrder(pickerSection, canonicalIds);
+    const configuredMetricIds = new Set(
+      orderedIds.slice(
+        0,
+        Math.min(sectionTileBounds.maxCount, orderedIds.length),
+      ),
+    );
     const currentSearchbaseIds = new Set(
-      sectionMetrics
+      visibleSectionMetrics
+        .filter((metric) => configuredMetricIds.has(metric.id))
         .map((metric) => metric.searchbaseId)
         .filter((id): id is string => Boolean(id)),
     );
@@ -3917,11 +4059,14 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         workspaceLayout[pickerSection]?.searchbaseAdditions ?? [],
       ),
       currentVisibleCount,
+      currentConfiguredCount: configuredMetricIds.size,
     };
   }, [
     addTileSection,
     effectiveSectionMeta,
     getSectionTileAdditions,
+    getFactoryTileOrder,
+    getSectionTileOrder,
     isSectionTileHidden,
     lastAddTileSection,
     metricConfig,
@@ -5517,7 +5662,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             addTilePickerState.workspaceAddedSearchbaseIds
           }
           currentVisibleCount={addTilePickerState.currentVisibleCount}
-          maxTileCount={sectionTileBounds.maxCount}
+          currentConfiguredCount={
+            addTilePickerState.currentConfiguredCount
+          }
           canManageWorkspace={canManageWorkspaceConfig}
           returnFocus={addTileReturnFocusRef}
           onAdd={(record, destination) =>
@@ -5773,7 +5920,7 @@ interface OverviewAddTilePanelProps {
   locallyAddedSearchbaseIds: ReadonlySet<string>;
   workspaceAddedSearchbaseIds: ReadonlySet<string>;
   currentVisibleCount: number;
-  maxTileCount: number;
+  currentConfiguredCount: number;
   canManageWorkspace: boolean;
   returnFocus: React.MutableRefObject<HTMLElement | null>;
   onAdd: (
@@ -5805,7 +5952,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   locallyAddedSearchbaseIds,
   workspaceAddedSearchbaseIds,
   currentVisibleCount,
-  maxTileCount,
+  currentConfiguredCount,
   canManageWorkspace,
   returnFocus,
   onAdd,
@@ -5843,7 +5990,8 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   const [sharedRemovalSaving, setSharedRemovalSaving] = useState(false);
   const [sharedRemovalAnnouncement, setSharedRemovalAnnouncement] =
     useState("");
-  const [showAllProfileSearches, setShowAllProfileSearches] = useState(false);
+  const [showEntireAppCatalogue, setShowEntireAppCatalogue] = useState(false);
+  const [includeAddedSearches, setIncludeAddedSearches] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const sharedRemovalReturnFocusRef = useRef<HTMLElement | null>(null);
 
@@ -5864,7 +6012,8 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     setSharedRemovalError(null);
     setSharedRemovalSaving(false);
     setSharedRemovalAnnouncement("");
-    setShowAllProfileSearches(false);
+    setShowEntireAppCatalogue(false);
+    setIncludeAddedSearches(false);
     if (typeof window === "undefined") return;
     const id = window.setTimeout(() => searchInputRef.current?.focus(), 30);
     return () => window.clearTimeout(id);
@@ -5944,26 +6093,41 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     [profile, profileRecords, section],
   );
 
+  // Section additions are persisted by stanza id and resolved through the
+  // current app's runtime catalogue. Keep this picker in that same namespace:
+  // presenting a cross-app record here would look addable but could collide
+  // with an identically named stanza or fail to resolve after persistence.
   const suggestedRecords =
     sectionRecords.length > 0 ? sectionRecords : profileRecords;
-  const browsingEntireCatalogue =
-    showAllProfileSearches || suggestedRecords.length === 0;
-  const browseRecords = browsingEntireCatalogue
+  const browsingEntireApp =
+    showEntireAppCatalogue || suggestedRecords.length === 0;
+  const browseRecords = browsingEntireApp
     ? addableRecords
     : suggestedRecords;
   const showScopeToggle =
     suggestedRecords.length > 0 &&
     addableRecords.length > suggestedRecords.length;
 
-  const browseVisibleRecords = useMemo(() => {
+  const addedSearchbaseIds = useMemo(
+    () =>
+      new Set([
+        ...currentSearchbaseIds,
+        ...locallyAddedSearchbaseIds,
+        ...workspaceAddedSearchbaseIds,
+      ]),
+    [
+      currentSearchbaseIds,
+      locallyAddedSearchbaseIds,
+      workspaceAddedSearchbaseIds,
+    ],
+  );
+
+  const browseVisibilityRecords = useMemo(() => {
     return browseRecords.filter((record) => {
       if (
         !includeHiddenSearches &&
         (record.searchHidden || hiddenSearchbaseIds.has(record.id))
       ) {
-        return false;
-      }
-      if (!recordMatchesAddTileAppSelection(record, selectedApps)) {
         return false;
       }
       return recordMatchesAddTileVisibility(
@@ -5980,29 +6144,33 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     includeDrilldownSearches,
     includeHiddenSearches,
     includeTableSearches,
-    selectedApps,
   ]);
+
+  const browseEligibleRecords = useMemo(
+    () =>
+      browseVisibilityRecords.filter((record) =>
+        recordMatchesAddTileAppSelection(record, selectedApps),
+      ),
+    [browseVisibilityRecords, selectedApps],
+  );
+
+  const browseVisibleRecords = useMemo(() => {
+    if (includeAddedSearches) return browseEligibleRecords;
+    return browseEligibleRecords.filter(
+      (record) => !addedSearchbaseIds.has(record.id),
+    );
+  }, [addedSearchbaseIds, browseEligibleRecords, includeAddedSearches]);
 
   const appFacetRecords = useMemo(
     () =>
-      browseRecords.filter(
+      browseVisibilityRecords.filter(
         (record) =>
-          (includeHiddenSearches ||
-            !(record.searchHidden || hiddenSearchbaseIds.has(record.id))) &&
-          recordMatchesAddTileVisibility(
-            record,
-            drilldownSearchNames,
-            includeDrilldownSearches,
-            includeTableSearches,
-          ),
+          includeAddedSearches || !addedSearchbaseIds.has(record.id),
       ),
     [
-      browseRecords,
-      drilldownSearchNames,
-      hiddenSearchbaseIds,
-      includeDrilldownSearches,
-      includeHiddenSearches,
-      includeTableSearches,
+      addedSearchbaseIds,
+      browseVisibilityRecords,
+      includeAddedSearches,
     ],
   );
 
@@ -6153,9 +6321,52 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     selectedSubCategory,
   ]);
 
+  const matchingAddedCount = useMemo(() => {
+    if (!includeAddedSearches) {
+      return browseEligibleRecords.filter((record) => {
+        if (!addedSearchbaseIds.has(record.id)) return false;
+        if (
+          selectedCategory !== ALL_ADD_TILE_CATEGORIES &&
+          record.category !== selectedCategory
+        ) {
+          return false;
+        }
+        if (
+          selectedSubCategory !== ALL_ADD_TILE_SUB_CATEGORIES &&
+          record.subCategory !== selectedSubCategory
+        ) {
+          return false;
+        }
+        if (activeTags.size > 0) {
+          for (const tag of activeTags) {
+            if (!record.tags.includes(tag)) return false;
+          }
+        }
+        return recordMatchesAddTileQuery(record, query);
+      }).length;
+    }
+    return filteredRecords.filter((record) =>
+      addedSearchbaseIds.has(record.id),
+    ).length;
+  }, [
+    activeTags,
+    addedSearchbaseIds,
+    browseEligibleRecords,
+    filteredRecords,
+    includeAddedSearches,
+    query,
+    selectedCategory,
+    selectedSubCategory,
+  ]);
+
+  const matchingAddableCount = includeAddedSearches
+    ? filteredRecords.length - matchingAddedCount
+    : filteredRecords.length;
+
   const activeFilterCount =
-    (showAllProfileSearches && showScopeToggle ? 1 : 0) +
+    (showEntireAppCatalogue && showScopeToggle ? 1 : 0) +
     (!isDefaultAddTileAppSelection(selectedApps) ? 1 : 0) +
+    (includeAddedSearches ? 1 : 0) +
     (includeHiddenSearches ? 1 : 0) +
     (includeDrilldownSearches ? 1 : 0) +
     (includeTableSearches ? 1 : 0) +
@@ -6163,21 +6374,21 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     (selectedSubCategory !== ALL_ADD_TILE_SUB_CATEGORIES ? 1 : 0) +
     activeTags.size;
   const facetsActive = activeFilterCount > 0;
-  const availableSearchLabel = `${
-    browsingEntireCatalogue ? "Entire catalogue" : "Suggested"
-  } · ${filteredRecords.length.toLocaleString()} ${
-    filteredRecords.length === 1 ? "search" : "searches"
-  } available`;
+  const scopeLabel = browsingEntireApp ? "This app" : "Suggested";
+  const availableSearchLabel = includeAddedSearches
+    ? `${scopeLabel} · ${matchingAddableCount.toLocaleString()} to add · ${matchingAddedCount.toLocaleString()} added`
+    : `${scopeLabel} · ${matchingAddableCount.toLocaleString()} to add`;
 
   const handleClearFacets = () => {
     setSelectedApps(makeDefaultAddTileAppSelection());
+    setIncludeAddedSearches(false);
     setIncludeHiddenSearches(false);
     setIncludeDrilldownSearches(false);
     setIncludeTableSearches(false);
     setSelectedCategory(ALL_ADD_TILE_CATEGORIES);
     setSelectedSubCategory(ALL_ADD_TILE_SUB_CATEGORIES);
     setActiveTags(new Set());
-    setShowAllProfileSearches(false);
+    setShowEntireAppCatalogue(false);
   };
 
   const handleDrawerClose = () => {
@@ -6185,7 +6396,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     onClose();
   };
 
-  const countLabel = `${currentVisibleCount}/${maxTileCount} visible`;
+  const countLabel = `${currentVisibleCount} visible · ${currentConfiguredCount} configured`;
 
   return (
     <>
@@ -6264,43 +6475,60 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
             }
           >
             {showScopeToggle && (
-              <ControlGroup controlsLayout="none" label="Scope">
+              <ControlGroup
+                controlsLayout="none"
+                help="Suggested matches this workspace section. This app includes every addable search owned by the current app."
+                label="Scope"
+              >
                 <RadioBar
                   onChange={(_event, { value }) =>
-                    setShowAllProfileSearches(value === "all")
+                    setShowEntireAppCatalogue(value === "all")
                   }
-                  value={showAllProfileSearches ? "all" : "suggested"}
+                  value={showEntireAppCatalogue ? "all" : "suggested"}
                 >
                   <RadioBar.Option label="Suggested" value="suggested" />
-                  <RadioBar.Option label="Entire catalogue" value="all" />
+                  <RadioBar.Option label="This app catalogue" value="all" />
                 </RadioBar>
               </ControlGroup>
             )}
 
-            <ControlGroup label="App">
-              <Multiselect
-                compact
-                filter
-                onChange={(_event, { values }) =>
-                  setSelectedApps(new Set(values.map(String)))
-                }
-                placeholder={`All apps (${apps.length})`}
-                showSelectedValuesFirst="nextOpen"
-                values={Array.from(selectedApps)}
+            {apps.length > 1 && (
+              <ControlGroup
+                help="Narrows results by the app context used to run each search."
+                label="Execution app"
               >
-                {apps.map((app) => (
-                  <Multiselect.Option
-                    description={`${appCountByName.get(app) ?? 0} searches`}
-                    descriptionPosition="right"
-                    key={app}
-                    label={app}
-                    value={app}
-                  />
-                ))}
-              </Multiselect>
-            </ControlGroup>
+                <Multiselect
+                  compact
+                  filter
+                  onChange={(_event, { values }) =>
+                    setSelectedApps(new Set(values.map(String)))
+                  }
+                  placeholder={`All apps (${apps.length})`}
+                  showSelectedValuesFirst="nextOpen"
+                  values={Array.from(selectedApps)}
+                >
+                  {apps.map((app) => (
+                    <Multiselect.Option
+                      description={`${appCountByName.get(app) ?? 0} searches`}
+                      descriptionPosition="right"
+                      key={app}
+                      label={app}
+                      value={app}
+                    />
+                  ))}
+                </Multiselect>
+              </ControlGroup>
+            )}
 
             <ControlGroup controlsLayout="stack" label="Visibility">
+              <Checkbox
+                checked={includeAddedSearches}
+                onChange={(_event, { checked }) =>
+                  setIncludeAddedSearches(checked)
+                }
+              >
+                Show added searches
+              </Checkbox>
               <Checkbox
                 checked={includeHiddenSearches}
                 onChange={(_event, { checked }) =>
@@ -6416,7 +6644,9 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
           )}
           {!loading && filteredRecords.length === 0 && (
             <Message type="info">
-              No searches match the current filters.
+              {!includeAddedSearches && matchingAddedCount > 0
+                ? `All matching searches are already configured in ${sectionTitle}. Turn on Show added searches to review them.`
+                : "No searches match the current filters."}
             </Message>
           )}
           {!loading && filteredRecords.length > 0 && (
@@ -6430,7 +6660,9 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                 const locallyAdded = locallyAddedSearchbaseIds.has(record.id);
                 const workspaceAdded =
                   workspaceAddedSearchbaseIds.has(record.id);
-                const disabled = alreadyInSection && !hiddenInSection;
+                const alreadyAdded =
+                  alreadyInSection || locallyAdded || workspaceAdded;
+                const disabled = alreadyAdded && !hiddenInSection;
                 const description =
                   plainTextFromHtml(record.explanation) ??
                   plainTextFromHtml(record.description);
@@ -6477,7 +6709,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                 ) : (
                   <Button
                     aria-label={
-                      alreadyInSection
+                      alreadyAdded
                         ? `Added: ${record.searchName} in ${sectionTitle}`
                         : `${addActionLabel}: ${record.searchName} to ${sectionTitle}`
                     }
@@ -6521,7 +6753,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
                             </>
                           )}
                           {!hiddenInSection &&
-                            alreadyInSection &&
+                            alreadyAdded &&
                             !workspaceAdded && (
                             <>
                               {" "}
@@ -7059,8 +7291,8 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
     activeConfig.metadata.category,
     activeConfig.metadata.subCategory,
   ].filter(Boolean);
-  const canGoBack = activeIndex > 0;
-  const canGoForward = activeIndex < config.targets.length - 1;
+  const canGoPrevious = activeIndex > 0;
+  const canGoNext = activeIndex < config.targets.length - 1;
   const showTarget = (nextIndex: number) => {
     const boundedIndex = Math.max(
       0,
@@ -7127,12 +7359,14 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
           >
             <button
               type="button"
-              disabled={!canGoBack}
+              disabled={!canGoPrevious}
               onClick={showPrevious}
+              aria-label="Previous drill-down"
+              title="Previous drill-down"
               className="inline-flex items-center gap-1 rounded border sui-border-weak sui-bg-section px-2 py-1 text-xs font-bold sui-color-active transition-colors sui-hover-border-info sui-hover-color-info focus:outline-none focus:ring-2 sui-focus-ring disabled:cursor-not-allowed disabled:opacity-35"
             >
               <ChevronLeft className="h-3 w-3" aria-hidden="true" />
-              Back
+              Previous
             </button>
             <span
               className="min-w-[4.5rem] text-center text-xs font-bold tabular-nums sui-color-default"
@@ -7142,11 +7376,13 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
             </span>
             <button
               type="button"
-              disabled={!canGoForward}
+              disabled={!canGoNext}
               onClick={showNext}
+              aria-label="Next drill-down"
+              title="Next drill-down"
               className="inline-flex items-center gap-1 rounded border sui-border-weak sui-bg-section px-2 py-1 text-xs font-bold sui-color-active transition-colors sui-hover-border-info sui-hover-color-info focus:outline-none focus:ring-2 sui-focus-ring disabled:cursor-not-allowed disabled:opacity-35"
             >
-              Forward
+              Next
               <ChevronRight className="h-3 w-3" aria-hidden="true" />
             </button>
           </nav>

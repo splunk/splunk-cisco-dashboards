@@ -380,9 +380,9 @@ const STATUS_COLOR = {
 
 const STATUS_PILL_TOKENS = {
   healthy: variables.severityColorNormal,
-  warning: variables.severityColorWarning,
-  critical: variables.severityColorCritical,
-  unknown: variables.contentColorDefault,
+  warning: variables.severityColorNotice,
+  critical: variables.severityColorAlert,
+  unknown: variables.severityColorUnknown,
 };
 
 const StatusPill = styled(Badge)<{ $status: SignalRailStatus }>`
@@ -390,9 +390,12 @@ const StatusPill = styled(Badge)<{ $status: SignalRailStatus }>`
   padding: ${variables.spacingXSmall} ${variables.spacingSmall};
   border: 1px solid ${({ $status }) => STATUS_PILL_TOKENS[$status]};
   border-radius: 9999px;
-  background-color: ${variables.backgroundColorPopup};
-  box-shadow: inset 3px 0 ${({ $status }) => STATUS_PILL_TOKENS[$status]};
-  color: ${({ $status }) => STATUS_PILL_TOKENS[$status]};
+  background-color: color-mix(
+    in srgb,
+    ${({ $status }) => STATUS_PILL_TOKENS[$status]} 50%,
+    transparent
+  );
+  color: ${variables.contentColorActive};
   font-family: ${variables.fontFamily};
   font-size: ${variables.fontSizeSmall};
   font-weight: ${variables.fontWeightSemiBold};
@@ -422,57 +425,6 @@ const MetricValue = styled.span<{ $status: SignalRailStatus }>`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-`;
-
-const SignalGlassCard = styled(OneCdGlassCard)`
-  transition:
-    background-color 140ms ease,
-    border-color 140ms ease;
-
-  &::after {
-    position: absolute;
-    top: 0;
-    right: 0;
-    left: 0;
-    height: 2px;
-    border-radius: ${variables.borderRadius} ${variables.borderRadius} 0 0;
-    content: "";
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  &[data-status="warning"]::after {
-    background-color: ${variables.severityColorNotice};
-    opacity: 0.78;
-  }
-
-  &[data-status="critical"]::after {
-    background-color: ${variables.severityColorAlert};
-    opacity: 0.92;
-  }
-
-  &[data-status="healthy"] ${MetricValue} {
-    color: ${variables.contentColorDefault};
-    font-size: 2.35rem;
-  }
-
-  &[data-status="healthy"] ${StatusPill} {
-    opacity: 0.72;
-  }
-
-  &[data-status="healthy"]:hover ${MetricValue},
-  &[data-status="healthy"]:focus-within ${MetricValue} {
-    color: ${variables.severityColorNormal};
-  }
-
-  &[data-status="healthy"]:hover ${StatusPill},
-  &[data-status="healthy"]:focus-within ${StatusPill} {
-    opacity: 1;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    transition: none;
-  }
 `;
 
 const isSignalRailVariant = (
@@ -638,7 +590,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
 
   if (variant === "one-cisco-glass") {
     return (
-      <SignalGlassCard
+      <OneCdGlassCard
         tag="article"
         className={cn(
           "scd-signal-rail-item flex flex-col gap-0 overflow-hidden",
@@ -674,14 +626,9 @@ const KpiItem: React.FC<KpiItemProps> = ({
         </span>
         <MetricContent>
           <MetricValue $status={kpi.status}>{valueText(kpi)}</MetricValue>
-          <StatusPill
-            $status={kpi.status}
-            backgroundColor={variables.backgroundColorPopup}
-            foregroundColor={STATUS_PILL_TOKENS[kpi.status]}
-            label={STATUS_LABEL[kpi.status]}
-          />
+          <StatusPill $status={kpi.status} label={STATUS_LABEL[kpi.status]} />
         </MetricContent>
-      </SignalGlassCard>
+      </OneCdGlassCard>
     );
   }
 

@@ -30,11 +30,15 @@ export const TileActionEnvironmentContext = createContext<TileActionEnvironment 
 interface TileActionMenuProps {
     label: string;
     onOpenInSearch?: () => void;
-    onOpenDetailTable?: () => void;
-    detailTableTitle?: string;
     onExpand?: () => void;
     onConfigure?: (returnFocus?: HTMLElement | null) => void;
     isCustomized?: boolean;
+}
+
+interface TileDrilldownButtonProps {
+    label: string;
+    onOpenDetailTable?: () => void;
+    detailTableTitle?: string;
 }
 
 const ActionIcon: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -43,11 +47,30 @@ const ActionIcon: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     </span>
 );
 
+export const TileDrilldownButton: React.FC<TileDrilldownButtonProps> = ({
+    label,
+    onOpenDetailTable,
+    detailTableTitle,
+}) => {
+    if (!onOpenDetailTable) {
+        return null;
+    }
+
+    return (
+        <Button
+            appearance="subtle"
+            data-tile-control="true"
+            hideLabel
+            icon={<PanelRightOpen aria-hidden="true" />}
+            label={detailTableTitle?.trim() || `View ${label} details`}
+            onClick={onOpenDetailTable}
+        />
+    );
+};
+
 export const TileActionMenu: React.FC<TileActionMenuProps> = ({
     label,
     onOpenInSearch,
-    onOpenDetailTable,
-    detailTableTitle,
     onExpand,
     onConfigure,
     isCustomized = false,
@@ -55,7 +78,7 @@ export const TileActionMenu: React.FC<TileActionMenuProps> = ({
     const toggleRef = React.useRef<HTMLAnchorElement | HTMLButtonElement>(null);
     const removalAction = useContext(TileRemovalActionContext);
     const actionEnvironment = useContext(TileActionEnvironmentContext);
-    if (!onOpenInSearch && !onOpenDetailTable && !onExpand && !onConfigure && !removalAction) {
+    if (!onOpenInSearch && !onExpand && !onConfigure && !removalAction) {
         return null;
     }
 
@@ -100,19 +123,6 @@ export const TileActionMenu: React.FC<TileActionMenuProps> = ({
                         }
                     >
                         Open in Search
-                    </Menu.Item>
-                )}
-                {onOpenDetailTable && (
-                    <Menu.Item
-                        description={detailTableTitle}
-                        onClick={onOpenDetailTable}
-                        startAdornment={
-                            <ActionIcon>
-                                <PanelRightOpen />
-                            </ActionIcon>
-                        }
-                    >
-                        Open details
                     </Menu.Item>
                 )}
                 {onExpand && (

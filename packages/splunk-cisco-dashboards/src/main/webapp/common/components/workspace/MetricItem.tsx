@@ -15,7 +15,7 @@ import {
 } from './Sparkline';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
 import { WorkspaceModalShell } from './WorkspaceModalShell';
-import { TileActionMenu } from './TileActionMenu';
+import { TileActionMenu, TileDrilldownButton } from './TileActionMenu';
 import { cn } from '@/common/lib/utils';
 import { C3_VISUALIZATION_COLORS } from '@/common/theme/c3VisualizationPalette';
 import type {
@@ -388,11 +388,14 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                                 iconAriaLabel={`What does ${label} measure?`}
                             />
                         )}
+                        <TileDrilldownButton
+                            label={label}
+                            onOpenDetailTable={onOpenDetailTable}
+                            detailTableTitle={detailTableTitle}
+                        />
                         <TileActionMenu
                             label={label}
                             onOpenInSearch={onOpenInSearch}
-                            onOpenDetailTable={onOpenDetailTable}
-                            detailTableTitle={detailTableTitle}
                             onExpand={hasExpandableChart ? () => setIsFocusOpen(true) : undefined}
                             onConfigure={onConfigure}
                             isCustomized={isCustomized}

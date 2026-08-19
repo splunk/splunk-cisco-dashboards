@@ -32,7 +32,7 @@
 import React, { useMemo, useState } from 'react';
 import { ChartFocusDialog } from './ChartFocusDialog';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
-import { TileActionMenu } from './TileActionMenu';
+import { TileActionMenu, TileDrilldownButton } from './TileActionMenu';
 import { cn } from '@/common/lib/utils';
 import type { DataSource, NoDataReason } from '@/common/hooks/useMetric';
 
@@ -285,11 +285,14 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                                 iconAriaLabel={`What does ${label} measure?`}
                             />
                         )}
+                        <TileDrilldownButton
+                            label={label}
+                            onOpenDetailTable={onOpenDetailTable}
+                            detailTableTitle={detailTableTitle}
+                        />
                         <TileActionMenu
                             label={label}
                             onOpenInSearch={onOpenInSearch}
-                            onOpenDetailTable={onOpenDetailTable}
-                            detailTableTitle={detailTableTitle}
                             onExpand={hasData ? () => setIsFocusOpen(true) : undefined}
                             onConfigure={onConfigure}
                             isCustomized={isCustomized}

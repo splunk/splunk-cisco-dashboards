@@ -1426,9 +1426,12 @@ iseval = 0`}</CodeBlock>
                   the visible tile count for the audience.
                 </InfoCard>
                 <InfoCard title="Use the right catalogue">
-                  The workspace source determines the safe tile catalogue. App
-                  labels are shown in the picker for readability; hover a label
-                  to see the Splunk app directory name when you need it.
+                  Suggested searches match the active workspace section and
+                  hide searches that are already configured. Use Show added
+                  searches when you need to review the current roster. This app
+                  catalogue expands the list to every addable search owned by
+                  this app; execution-app filtering appears only when more than
+                  one execution context is available.
                 </InfoCard>
                 <InfoCard title="Present the same data differently">
                   Use executive workspaces for a concise briefing and a deeper
@@ -1813,15 +1816,21 @@ iseval = 0`}</CodeBlock>
                   restrained operational palette and layered dark atmosphere
                   observed in Cisco Cloud Control, while Splunk&apos;s 1CD theme
                   customizer remains the component foundation. Signal Rail
-                  styles now use readable semantic 1CD status pills, keep
-                  configuration controls hidden until hover or focus, and omit
+                  One Cisco Glass styling now matches the original rectangular
+                  cards, full-size semantic values, filled status pills, and
+                  dark canvas without top accent strips. Configuration controls
+                  stay hidden until hover or focus, and omit
                   the retired Cisco Blue Gradient option. Map-on-right layouts
                   default to the compact height while retaining a Match
                   workspace choice. Tile paging removes redundant navigation at
                   eight or all visible tiles; Configure Tile offers only the
                   supported visualization choices in a dropdown; and Searchbase
                   pickers use native disclosure chevrons with a direct View in
-                  Searchbase link on every result.
+                  Searchbase link on every result. Tile drilldowns now use a
+                  dedicated header icon beside the info control instead of an
+                  overflow-menu entry. Meraki Rogue AP Count now demonstrates
+                  multi-target drill-down navigation with containment and
+                  threat-intelligence views.
                   Signal Rail
                   defaults are centrally managed, with
                   private account-and-workspace overrides for each signed-in
@@ -1866,7 +1875,7 @@ iseval = 0`}</CodeBlock>
                   Searchbase searches inside Dashboard Manager with the active
                   dashboard time range. Their triggers use the same
                   open-details-panel icon as the home dashboard, and
-                  multi-target links use Back/Forward navigation while
+                  multi-target links use Previous/Next navigation while
                   dispatching only the visible search. Each detail includes
                   the active search&apos;s category, sub-category, description,
                   explanation, solution, related information, and available
@@ -1882,7 +1891,11 @@ iseval = 0`}</CodeBlock>
                   Workspace, with consistent app, visibility, category,
                   visualization, tag, active-count, and clear controls.
                   Catalogue and tile pickers display friendly app labels with
-                  the on-disk name available as hover detail.
+                  the on-disk name available as hover detail. Insights
+                  Workspace now hides configured searches by default, reports
+                  visible and configured tile counts separately, and labels its
+                  section-matched suggestions distinctly from the current app&apos;s
+                  full catalogue.
                 </InfoCard>
                 <InfoCard title="Contextual empty results">
                   Searchbase-backed Secure Networking panels now explain when no
