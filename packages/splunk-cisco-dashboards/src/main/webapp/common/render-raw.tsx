@@ -1,6 +1,5 @@
 import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import CopyrightMark from '@/common/components/CopyrightMark';
 import AppThemeProvider from '@/common/theme/AppThemeProvider';
 
 /**
@@ -11,7 +10,6 @@ import AppThemeProvider from '@/common/theme/AppThemeProvider';
 const MAX_RETRIES = 100;
 
 interface MountPageRawOptions {
-    showCopyrightMark?: boolean;
     allowColorSchemeChoice?: boolean;
     colorSchemeStorageKey?: string;
 }
@@ -42,10 +40,7 @@ export default function mountPageRaw(
                     allowColorSchemeChoice={options.allowColorSchemeChoice}
                     colorSchemeStorageKey={options.colorSchemeStorageKey}
                 >
-                    <>
-                        <PageComponent />
-                        {options.showCopyrightMark !== false && <CopyrightMark />}
-                    </>
+                    <PageComponent />
                 </AppThemeProvider>
             </React.StrictMode>
         );

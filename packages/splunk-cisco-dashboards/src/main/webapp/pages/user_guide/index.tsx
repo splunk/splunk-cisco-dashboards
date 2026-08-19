@@ -1881,6 +1881,8 @@ iseval = 0`}</CodeBlock>
                   reading space, and simpler reference tables.
                 </InfoCard>
                 <InfoCard title="Dashboard Studio editing">
+                  Dashboard pages no longer show the fixed Splunk Inc.
+                  copyright badge in the lower-right corner.
                   Dashboard Manager confirmation dialogs now use the edited
                   app&apos;s fixed dark SUI theme, including portal-rendered dialogs.
                   Dashboard creation, cloning, and generation now save into the
