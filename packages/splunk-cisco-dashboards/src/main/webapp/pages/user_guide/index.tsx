@@ -1890,7 +1890,10 @@ iseval = 0`}</CodeBlock>
                   when the monitored condition may simply not have occurred. The
                   searches used by every Secure Networking Studio dashboard also
                   emit visualization-compatible fallback rows, so the guidance is
-                  preserved outside Dashboard Manager.
+                  preserved outside Dashboard Manager. RadSec activity cards now
+                  chart total authenticated activity instead of only failures,
+                  and Security Exposure normalizes Nexus Dashboard advisory fields
+                  while displaying the selected-window critical-advisory count.
                 </InfoCard>
                 <InfoCard title="Site connectivity">
                   The topology workflow can discover ThousandEyes agent-to-agent

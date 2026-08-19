@@ -290,7 +290,7 @@
                 "trendDisplay": "percent",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"critical_count_trend\")",
+                "sparklineValues": "> primary | seriesByName(\"critical_count\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "trendValue": "> sparklineValues | delta(-2)"

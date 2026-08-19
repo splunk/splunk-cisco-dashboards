@@ -586,7 +586,7 @@
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineDisplay": "off",
-                "sparklineValues": "> primary | seriesByName(\"Failure\")",
+                "sparklineValues": "> primary | seriesByName(\"Activity\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendDisplay": "percent",
                 "trendFontSize": 28,
@@ -651,7 +651,7 @@
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"Failure\")"
+                "y": "> primary | seriesByName(\"Activity\")"
             }
         },
         "viz_card_04_drilldown_trigger": {
