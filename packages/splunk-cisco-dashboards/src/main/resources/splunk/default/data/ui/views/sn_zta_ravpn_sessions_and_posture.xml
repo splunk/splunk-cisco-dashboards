@@ -133,16 +133,16 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowPeakClients\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
-                "shouldAbbreviateTrendValue": true,
+                "trendDisplay": "absolute",
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"Clients\")",
+                "trendValue": "> sparklineValues | delta(-2)",
+                "shouldAbbreviateTrendValue": true,
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendFontSize": 28
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -279,16 +279,16 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
-                "shouldAbbreviateTrendValue": true,
+                "trendDisplay": "absolute",
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
+                "trendValue": "> sparklineValues | delta(-2)",
+                "shouldAbbreviateTrendValue": true,
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendFontSize": 28
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -384,7 +384,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Profile Activity**"
+                "markdown": "**Active VPN Profiles**"
             }
         },
         "viz_card_03_metadata": {
@@ -410,7 +410,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Shows remote\\-access VPN activity by profile over time so demand shifts and profile\\-specific disruptions stand out\\."
+                "markdown": "Counts distinct active remote\\-access VPN profiles over time so profile breadth changes stand out\\."
             }
         },
         "viz_card_03_singlevalue": {
@@ -425,16 +425,16 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowActiveProfiles\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
-                "shouldAbbreviateTrendValue": true,
+                "trendDisplay": "absolute",
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
+                "sparklineValues": "> primary | seriesByName(\"ActiveProfiles\")",
+                "trendValue": "> sparklineValues | delta(-2)",
+                "shouldAbbreviateTrendValue": true,
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendFontSize": 28
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -490,7 +490,7 @@
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")"
+                "y": "> primary | seriesByName(\"ActiveProfiles\")"
             }
         },
         "viz_card_03_drilldown_trigger": {
@@ -499,7 +499,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Profile%20Activity&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Sessions%20by%20Profile"
+                        "url": "/drilldown?origin=Active%20VPN%20Profiles&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Sessions%20by%20Profile"
                     }
                 }
             ],
@@ -530,7 +530,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Regional Activity**"
+                "markdown": "**Active VPN Regions**"
             }
         },
         "viz_card_04_metadata": {
@@ -556,7 +556,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Compares remote\\-access VPN activity across regions to reveal localized demand shifts and disruptions\\."
+                "markdown": "Counts distinct active remote\\-access VPN regions over time so regional breadth changes stand out\\."
             }
         },
         "viz_card_04_singlevalue": {
@@ -571,16 +571,16 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowActiveRegions\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
-                "shouldAbbreviateTrendValue": true,
+                "trendDisplay": "absolute",
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
+                "sparklineValues": "> primary | seriesByName(\"ActiveRegions\")",
+                "trendValue": "> sparklineValues | delta(-2)",
+                "shouldAbbreviateTrendValue": true,
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendFontSize": 28
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -636,7 +636,7 @@
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")"
+                "y": "> primary | seriesByName(\"ActiveRegions\")"
             }
         },
         "viz_card_04_drilldown_trigger": {
@@ -645,7 +645,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Regional%20Activity&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Sessions%20by%20Profile"
+                        "url": "/drilldown?origin=Active%20VPN%20Regions&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Sessions%20by%20Profile"
                     }
                 }
             ],
@@ -717,16 +717,16 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowFailureEvents\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
-                "shouldAbbreviateTrendValue": true,
+                "trendDisplay": "absolute",
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
+                "sparklineValues": "> primary | seriesByName(\"FailureEvents\")",
+                "trendValue": "> sparklineValues | delta(-2)",
+                "shouldAbbreviateTrendValue": true,
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendFontSize": 28
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -782,7 +782,7 @@
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")"
+                "y": "> primary | seriesByName(\"FailureEvents\")"
             }
         },
         "viz_card_05_drilldown_trigger": {
@@ -848,7 +848,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks remote\\-access VPN posture failures, warnings, and alerts to reveal changing device\\-compliance pressure\\."
+                "markdown": "Tracks only remote\\-access VPN events with explicit adverse posture evidence\\."
             }
         },
         "viz_card_06_singlevalue": {
@@ -863,16 +863,16 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowPostureIssues\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
-                "shouldAbbreviateTrendValue": true,
+                "trendDisplay": "absolute",
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
+                "sparklineValues": "> primary | seriesByName(\"PostureIssues\")",
+                "trendValue": "> sparklineValues | delta(-2)",
+                "shouldAbbreviateTrendValue": true,
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendFontSize": 28
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -928,7 +928,7 @@
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")"
+                "y": "> primary | seriesByName(\"PostureIssues\")"
             }
         },
         "viz_card_06_drilldown_trigger": {
@@ -975,7 +975,7 @@
             "type": "ds.searchbase"
         },
         "ds_story_03": {
-            "name": "Secure Networking - ZTA RaVPN Profile Activity Trend",
+            "name": "Secure Networking - ZTA RaVPN Active Profiles Trend",
             "options": {
                 "ref": "secure_networking_zta_ravpn_profile_activity_trend",
                 "queryParameters": {
@@ -986,7 +986,7 @@
             "type": "ds.searchbase"
         },
         "ds_story_04": {
-            "name": "Secure Networking - ZTA RaVPN Region Activity Trend",
+            "name": "Secure Networking - ZTA RaVPN Active Regions Trend",
             "options": {
                 "ref": "secure_networking_zta_ravpn_region_activity_trend",
                 "queryParameters": {

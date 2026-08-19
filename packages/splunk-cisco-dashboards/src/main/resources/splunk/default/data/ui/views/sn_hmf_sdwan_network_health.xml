@@ -136,25 +136,9 @@
                 "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"Sites\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
-            },
-            "context": {
-                "trendColorEditorConfig": [
-                    {
-                        "value": "#049fd9",
-                        "to": 0
-                    },
-                    {
-                        "value": "#049fd9",
-                        "from": 0
-                    }
-                ]
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "sparklineValues": "> primary | seriesByName(\"Sites\")"
             }
         },
         "viz_card_01_trend": {
@@ -275,25 +259,9 @@
                 "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"Circuits\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
-            },
-            "context": {
-                "trendColorEditorConfig": [
-                    {
-                        "value": "#049fd9",
-                        "to": 0
-                    },
-                    {
-                        "value": "#049fd9",
-                        "from": 0
-                    }
-                ]
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "sparklineValues": "> primary | seriesByName(\"Circuits\")"
             }
         },
         "viz_card_02_trend": {
@@ -411,10 +379,10 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowPoorTunnels\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"poor_tunnels\")",
@@ -557,10 +525,10 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"degraded_sites\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"degraded_sites_trend\")",
@@ -705,10 +673,10 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowAvgLossPct\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"avg_loss_pct\")",
@@ -856,10 +824,10 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowPathChanges\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"BucketPathChanges\")",

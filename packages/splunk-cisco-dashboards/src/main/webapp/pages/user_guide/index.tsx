@@ -1808,11 +1808,21 @@ iseval = 0`}</CodeBlock>
                   details now distinguish event records from distinct sessions
                   and identities, and ThousandEyes test-health details preserve
                   the visible test name through aggregation.
-                  Categorical Hybrid Mesh Firewalling cards now report their
-                  full-window totals and no longer calculate percentage trends
-                  across category rows. Command-map controls no longer overlap
-                  its topology summary, and map-footer KPI cards now expose
-                  Search and configuration actions.
+                  Across all five Secure Networking pillars, single-value cards
+                  now use valid Searchbase-backed headline series and absolute
+                  bucket-to-bucket changes when their source is chronological.
+                  Categorical summary cards intentionally omit trends rather
+                  than comparing unrelated rows. Numeric KPI and chart results
+                  across all five pillars cap fractional values at two decimal
+                  places while preserving whole-number counts. RaVPN cards now
+                  distinguish active profiles, active regions, explicit failure
+                  events, and posture-specific issues; generic connection failures
+                  no longer masquerade as posture outcomes. Segmentation Readiness
+                  now distinguishes endpoint-to-SGT assignments from the number of
+                  distinct security groups in use and replaces the low-signal wired-port
+                  exception metric with tagged SGT site activity. Command-map controls no longer
+                  overlap its topology summary, and map-footer
+                  KPI cards now expose Search and configuration actions.
                 </InfoCard>
                 <InfoCard title="Guided setup and performance readiness">
                   Setup now brings package checks, index macro discovery, data

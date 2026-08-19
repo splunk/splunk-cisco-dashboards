@@ -6,6 +6,21 @@ health monitoring, topology, searchbase authoring, operations, guidance,
 and dashboard management; the packaged Studio views cover the secure
 networking pillars and workplace scenarios.
 
+## Release notes
+
+### Unreleased
+
+- Capped fractional values shown by all five-pillar Dashboard Studio KPI
+  charts at two decimal places while preserving integer counts and category
+  labels.
+- Corrected the RaVPN Sessions and Posture dashboard so active profiles,
+  active regions, failure events, and posture-specific issues use distinct
+  metrics; generic connection failures no longer appear as posture outcomes.
+- Corrected Segmentation Readiness so active assignments count distinct
+  endpoint-to-SGT pairs while Security Groups in Use counts distinct tags.
+- Replaced the zero-value Wired-Port Segmentation Exceptions card with SGT
+  Site Activity, backed by tagged ISE authentication activity and site detail.
+
 ## Runtime prerequisites
 
 - Cisco Catalyst Add-on for Splunk 3.2.44 or later. This version is required

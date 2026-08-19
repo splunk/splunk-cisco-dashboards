@@ -133,10 +133,10 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowElevatedFindings\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"ElevatedFindings\")",
@@ -289,7 +289,7 @@
                 "sparklineDisplay": "off",
                 "trendDisplay": "off",
                 "showTrendIndicator": false,
-                "sparklineValues": "> primary | seriesByName(\"WindowTotal\")"
+                "sparklineValues": "> primary | seriesByName(\"Alerts\")"
             }
         },
         "viz_card_02_trend": {
@@ -414,7 +414,7 @@
                 "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"deny_pct\")",
@@ -562,7 +562,7 @@
                 "sparklineDisplay": "off",
                 "trendDisplay": "off",
                 "showTrendIndicator": false,
-                "sparklineValues": "> primary | seriesByName(\"WindowTotal\")"
+                "sparklineValues": "> primary | seriesByName(\"Alerts\")"
             }
         },
         "viz_card_04_trend": {
@@ -689,7 +689,7 @@
                 "sparklineDisplay": "off",
                 "trendDisplay": "off",
                 "showTrendIndicator": false,
-                "sparklineValues": "> primary | seriesByName(\"WindowTotal\")"
+                "sparklineValues": "> primary | seriesByName(\"Connections\")"
             }
         },
         "viz_card_05_trend": {
@@ -816,7 +816,7 @@
                 "sparklineDisplay": "off",
                 "trendDisplay": "off",
                 "showTrendIndicator": false,
-                "sparklineValues": "> primary | seriesByName(\"WindowTotal\")"
+                "sparklineValues": "> primary | seriesByName(\"Events\")"
             }
         },
         "viz_card_06_trend": {

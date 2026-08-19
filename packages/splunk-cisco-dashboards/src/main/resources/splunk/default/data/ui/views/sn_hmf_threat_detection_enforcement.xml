@@ -136,25 +136,9 @@
                 "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"Connections\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
-            },
-            "context": {
-                "trendColorEditorConfig": [
-                    {
-                        "value": "#049fd9",
-                        "to": 0
-                    },
-                    {
-                        "value": "#049fd9",
-                        "from": 0
-                    }
-                ]
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "sparklineValues": "> primary | seriesByName(\"Connections\")"
             }
         },
         "viz_card_01_trend": {
@@ -279,7 +263,7 @@
                 "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"count\")",
@@ -425,7 +409,7 @@
                 "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"deny_pct\")",
@@ -571,25 +555,9 @@
                 "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"Alerts\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
-            },
-            "context": {
-                "trendColorEditorConfig": [
-                    {
-                        "value": "#049fd9",
-                        "to": 0
-                    },
-                    {
-                        "value": "#049fd9",
-                        "from": 0
-                    }
-                ]
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "sparklineValues": "> primary | seriesByName(\"Alerts\")"
             }
         },
         "viz_card_04_trend": {
@@ -714,7 +682,7 @@
                 "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"High Risk\")",
@@ -857,10 +825,10 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowBlocks\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"BucketBlocks\")",

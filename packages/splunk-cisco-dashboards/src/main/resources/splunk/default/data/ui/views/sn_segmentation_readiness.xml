@@ -133,10 +133,10 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"PeakObservedDevices\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
@@ -243,7 +243,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Active SGT Assignments**"
+                "markdown": "**Active Endpoint-SGT Assignments**"
             }
         },
         "viz_card_02_metadata": {
@@ -269,7 +269,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Count of active SGT assignments observed in the selected time window from Cisco ISE authentication syslog, reflecting the number of distinct user/device classifications where a non\\-default Security Group Tag was assigned\\."
+                "markdown": "Counts distinct endpoint\\-to\\-SGT assignments observed in Cisco ISE authentication events during the selected time window\\."
             }
         },
         "viz_card_02_singlevalue": {
@@ -284,10 +284,10 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"total_assignments\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"assignments_trend\")",
@@ -363,7 +363,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Active%20SGT%20Assignments&target=Secure%20Networking%20-%20SGT%20Distribution%20by%20Site%20and%20Device,Secure%20Networking%20-%20Excessive%20Unique%20MAC%20per%20Wired%20Port,Secure%20Networking%20-%20OT%2FIoT%20Device%20Visibility"
+                        "url": "/drilldown?origin=Active%20Endpoint-SGT%20Assignments&target=Secure%20Networking%20-%20SGT%20Distribution%20by%20Site%20and%20Device,Secure%20Networking%20-%20Excessive%20Unique%20MAC%20per%20Wired%20Port,Secure%20Networking%20-%20OT%2FIoT%20Device%20Visibility"
                     }
                 }
             ],
@@ -435,10 +435,10 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"unique_sgts\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"unique_sgts_trend\")",
@@ -589,7 +589,7 @@
                 "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"AdoptionRate\")",
@@ -740,7 +740,7 @@
                 "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"ZeroCoverageSites\")",
@@ -847,7 +847,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Wired\\-Port Segmentation Exceptions**"
+                "markdown": "**SGT Site Activity**"
             }
         },
         "viz_card_06_metadata": {
@@ -873,7 +873,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Trends wired access ports observing more than two distinct MAC addresses, a practical exception signal before broad segmentation enforcement\\."
+                "markdown": "Tracks TrustSec\\-tagged ISE authentication activity across the best available site, network device, or ISE node context\\."
             }
         },
         "viz_card_06_singlevalue": {
@@ -888,13 +888,13 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"ExceptionPorts\")",
+                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "trendValue": "> sparklineValues | delta(-2)"
@@ -902,7 +902,7 @@
             "context": {
                 "trendColorEditorConfig": [
                     {
-                        "value": "#4cbf7f",
+                        "value": "#f7782f",
                         "to": -0.000001
                     },
                     {
@@ -911,7 +911,7 @@
                         "to": 0.000001
                     },
                     {
-                        "value": "#f7782f",
+                        "value": "#4cbf7f",
                         "from": 0.000001
                     }
                 ]
@@ -958,7 +958,7 @@
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"ExceptionPorts\")"
+                "y": "> primary | seriesByName(\"BucketTotal\")"
             }
         },
         "viz_card_06_drilldown_trigger": {
@@ -967,7 +967,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Wired-Port%20Segmentation%20Exceptions&target=Secure%20Networking%20-%20Excessive%20Unique%20MAC%20per%20Wired%20Port"
+                        "url": "/drilldown?origin=SGT%20Site%20Activity&target=Secure%20Networking%20-%20SGT%20by%20Site"
                     }
                 }
             ],
@@ -1038,9 +1038,9 @@
             "type": "ds.searchbase"
         },
         "ds_story_06": {
-            "name": "Secure Networking - Wired-Port Segmentation Exceptions Trend",
+            "name": "Secure Networking - SGT Site Activity Trend",
             "options": {
-                "ref": "secure_networking_wired_port_segmentation_exceptions_trend",
+                "ref": "secure_networking_sgt_site_activity_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$"

@@ -133,10 +133,10 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
@@ -284,10 +284,10 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowConnections\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"BucketConnections\")",
@@ -430,10 +430,10 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
@@ -581,10 +581,10 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowRiskyOutcomes\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"RiskyOutcomes\")",
@@ -735,25 +735,9 @@
                 "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"Bytes Out\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
-            },
-            "context": {
-                "trendColorEditorConfig": [
-                    {
-                        "value": "#049fd9",
-                        "to": 0
-                    },
-                    {
-                        "value": "#049fd9",
-                        "from": 0
-                    }
-                ]
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "sparklineValues": "> primary | seriesByName(\"Bytes Out\")"
             }
         },
         "viz_card_05_trend": {
@@ -878,25 +862,9 @@
                 "majorValue": "> sparklineValues | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"Bytes Out\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
-            },
-            "context": {
-                "trendColorEditorConfig": [
-                    {
-                        "value": "#049fd9",
-                        "to": 0
-                    },
-                    {
-                        "value": "#049fd9",
-                        "from": 0
-                    }
-                ]
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "sparklineValues": "> primary | seriesByName(\"Bytes Out\")"
             }
         },
         "viz_card_06_trend": {
