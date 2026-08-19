@@ -1405,12 +1405,13 @@ iseval = 0`}</CodeBlock>
                 <InfoCard title="Workspace-owned configuration">
                   A workspace stores its shared sections, tile membership and
                   order, map configuration, and Signal Rail defaults. When
-                  adding a search, choose <strong> This browser</strong> for a
-                  private tile or <strong> Workspace default</strong> to show it
-                  to every viewer; the shared choice is available only to
-                  workspace managers. Browser preferences are isolated by
-                  signed-in account, workspace, and browser. Private Signal
-                  Rail preferences also follow the account across browsers.
+                  adding a search, choose <strong> Add for me</strong> for a
+                  private tile or <strong> Add for everyone</strong> to add it
+                  to the shared workspace for every viewer; the shared choice
+                  is available only to workspace managers. Browser preferences
+                  are isolated by signed-in account, workspace, and browser.
+                  Private Signal Rail preferences also follow the account across
+                  browsers.
                 </InfoCard>
                 <InfoCard title="Role-based change control">
                   Workspace access has three levels: personal changes, shared
@@ -1428,10 +1429,11 @@ iseval = 0`}</CodeBlock>
                 <InfoCard title="Use the right catalogue">
                   Suggested searches match the active workspace section and
                   hide searches that are already configured. Use Show added
-                  searches when you need to review the current roster. This app
-                  catalogue expands the list to every addable search owned by
-                  this app; execution-app filtering appears only when more than
-                  one execution context is available.
+                  searches when you need to review the current roster. Entire
+                  catalogue expands the list to every addable search exposed by
+                  installed Searchbase providers, where the App filter narrows
+                  results by execution context. Cross-app additions retain their
+                  owning app so identically named stanzas remain distinct.
                 </InfoCard>
                 <InfoCard title="Present the same data differently">
                   Use executive workspaces for a concise briefing and a deeper
@@ -1857,7 +1859,9 @@ iseval = 0`}</CodeBlock>
                   dialog height to Searchbase guidance. Search and Searchbase
                   links sit together in detail headers, while Configure Tile
                   keeps View in Searchbase and Test in Search attached to the
-                  currently bound search. The User Guide now includes an
+                  currently bound search. Add Search results also expose a
+                  direct View in Searchbase action without closing the drawer.
+                  The User Guide now includes an
                   effective-access matrix for the <InlineCode>user</InlineCode>,{" "}
                   <InlineCode>power</InlineCode>, <InlineCode>admin</InlineCode>,
                   and <InlineCode>sc_admin</InlineCode> roles and the{" "}
@@ -1900,8 +1904,10 @@ iseval = 0`}</CodeBlock>
                   the on-disk name available as hover detail. Insights
                   Workspace now hides configured searches by default, reports
                   visible and configured tile counts separately, and labels its
-                  section-matched suggestions distinctly from the current app&apos;s
-                  full catalogue.
+                  current-app, section-matched suggestions distinctly from the
+                  all-app catalogue. The restored App filter spans installed
+                  Searchbase providers, and the picker uses Add for me and Add
+                  for everyone to distinguish private and shared tiles.
                 </InfoCard>
                 <InfoCard title="Contextual empty results">
                   Searchbase-backed Secure Networking panels now explain when no
