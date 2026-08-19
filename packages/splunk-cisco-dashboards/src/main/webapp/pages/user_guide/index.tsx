@@ -1802,6 +1802,12 @@ iseval = 0`}</CodeBlock>
                   initial canvas to six searches while details dispatch only
                   when opened. Dashboard Manager view mode still provides
                   Studio-style Display, zoom, JSON export, and clone controls.
+                  Secure Infrastructure Status now spans Meraki access points,
+                  Catalyst Center issues, SD-WAN sites, Nexus health, Secure
+                  Endpoint incidents, and FMC firewall activity. ZTNA access
+                  details now distinguish event records from distinct sessions
+                  and identities, and ThousandEyes test-health details preserve
+                  the visible test name through aggregation.
                   Categorical Hybrid Mesh Firewalling cards now report their
                   full-window totals and no longer calculate percentage trends
                   across category rows. Command-map controls no longer overlap

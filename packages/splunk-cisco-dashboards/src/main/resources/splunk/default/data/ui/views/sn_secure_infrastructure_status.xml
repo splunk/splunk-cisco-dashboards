@@ -1,10 +1,10 @@
 <dashboard version="2" theme="dark" stylesheet="application.css">
     <label>Secure Infrastructure - Secure Infrastructure Status</label>
-    <description>Track current infrastructure state, exceptions, and emerging operational risk.</description>
+    <description>Track cross-source infrastructure state across wireless, Catalyst Center, SD-WAN, data center, endpoint, and firewall telemetry.</description>
     <definition><![CDATA[
 {
     "title": "Secure Infrastructure Status",
-    "description": "Track current infrastructure state, exceptions, and emerging operational risk.",
+    "description": "Track cross-source infrastructure state across wireless, Catalyst Center, SD-WAN, data center, endpoint, and firewall telemetry.",
     "inputs": {
         "input_time_range": {
             "options": {
@@ -71,7 +71,7 @@
             "options": {
                 "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
-                "markdown": "# Secure Infrastructure Status\nTrack current infrastructure state, exceptions, and emerging operational risk\\."
+                "markdown": "# Secure Infrastructure Status\nTrack wireless, Catalyst Center, SD\\-WAN, data center, endpoint, and firewall health in one cross\\-source view\\."
             }
         },
         "viz_card_01_background": {
@@ -243,7 +243,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Wireless Demand**"
+                "markdown": "**Catalyst Active Issues**"
             }
         },
         "viz_card_02_metadata": {
@@ -256,7 +256,7 @@
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
                 "customFontSize": 14,
-                "markdown": "Asset  •  Secure Infrastructure"
+                "markdown": "Assurance  •  Catalyst Center"
             }
         },
         "viz_card_02_description": {
@@ -269,7 +269,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Total count of unique wireless clients seen authenticating to Cisco Meraki access points, providing a real\\-time wireless endpoint population KPI\\."
+                "markdown": "Distinct active Catalyst Center assurance issues across the selected window, with the trend showing issue activity over time\\."
             }
         },
         "viz_card_02_singlevalue": {
@@ -284,13 +284,13 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowIssues\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
                 "trendDisplay": "percent",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"wireless_client_count\")",
+                "sparklineValues": "> primary | seriesByName(\"BucketIssues\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "trendValue": "> sparklineValues | delta(-2)"
@@ -298,7 +298,7 @@
             "context": {
                 "trendColorEditorConfig": [
                     {
-                        "value": "#f7782f",
+                        "value": "#4cbf7f",
                         "to": -0.000001
                     },
                     {
@@ -307,7 +307,7 @@
                         "to": 0.000001
                     },
                     {
-                        "value": "#4cbf7f",
+                        "value": "#f7782f",
                         "from": 0.000001
                     }
                 ]
@@ -354,7 +354,7 @@
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"wireless_client_count\")"
+                "y": "> primary | seriesByName(\"BucketIssues\")"
             }
         },
         "viz_card_02_drilldown_trigger": {
@@ -363,7 +363,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Wireless%20Demand&target=Secure%20Networking%20-%20Meraki%20Top%20Clients%20by%20Bandwidth%20Usage"
+                        "url": "/drilldown?origin=Catalyst%20Active%20Issues&target=Catalyst%20Center%20-%20Issue%20Detail"
                     }
                 }
             ],
@@ -394,7 +394,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Rogue AP Containment**"
+                "markdown": "**SD-WAN Site Coverage**"
             }
         },
         "viz_card_03_metadata": {
@@ -407,7 +407,7 @@
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
                 "customFontSize": 14,
-                "markdown": "Network  •  Secure Infrastructure"
+                "markdown": "Network  •  Catalyst SD-WAN"
             }
         },
         "viz_card_03_description": {
@@ -420,7 +420,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Trends contained and uncontained Meraki rogue access points over time, with the SSID\\-level status table available on drill\\-down\\."
+                "markdown": "Distinct Catalyst SD\\-WAN sites reporting health telemetry, with trend context for collection and site\\-connectivity gaps\\."
             }
         },
         "viz_card_03_singlevalue": {
@@ -435,13 +435,13 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"total_sites\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
                 "trendDisplay": "percent",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"Uncontained\")",
+                "sparklineValues": "> primary | seriesByName(\"reporting_sites\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "trendValue": "> sparklineValues | delta(-2)"
@@ -449,7 +449,7 @@
             "context": {
                 "trendColorEditorConfig": [
                     {
-                        "value": "#4cbf7f",
+                        "value": "#f7782f",
                         "to": -0.000001
                     },
                     {
@@ -458,7 +458,7 @@
                         "to": 0.000001
                     },
                     {
-                        "value": "#f7782f",
+                        "value": "#4cbf7f",
                         "from": 0.000001
                     }
                 ]
@@ -505,7 +505,7 @@
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"Uncontained\")"
+                "y": "> primary | seriesByName(\"reporting_sites\")"
             }
         },
         "viz_card_03_drilldown_trigger": {
@@ -514,7 +514,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Rogue%20AP%20Containment&target=Secure%20Networking%20-%20Meraki%20Rogue%20AP%20Containment%20Status"
+                        "url": "/drilldown?origin=SD-WAN%20Site%20Coverage&target=Secure%20Networking%20-%20SD-WAN%20Site%20View"
                     }
                 }
             ],
@@ -545,7 +545,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**SSID Encryption Posture**"
+                "markdown": "**Data Center Health**"
             }
         },
         "viz_card_04_metadata": {
@@ -558,7 +558,7 @@
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
                 "customFontSize": 14,
-                "markdown": "Network  •  Secure Infrastructure"
+                "markdown": "Network  •  Nexus Dashboard"
             }
         },
         "viz_card_04_description": {
@@ -571,7 +571,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks the Meraki wireless encryption mix over time and moves the SSID/AP breakdown into the drill\\-down modal\\."
+                "markdown": "Distinct Nexus Dashboard fabric anomalies across the selected window, trended alongside data center health signals\\."
             }
         },
         "viz_card_04_singlevalue": {
@@ -586,13 +586,13 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowAnomalies\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
                 "trendDisplay": "percent",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
+                "sparklineValues": "> primary | seriesByName(\"Anomaly\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "trendValue": "> sparklineValues | delta(-2)"
@@ -600,7 +600,7 @@
             "context": {
                 "trendColorEditorConfig": [
                     {
-                        "value": "#f7782f",
+                        "value": "#4cbf7f",
                         "to": -0.000001
                     },
                     {
@@ -609,7 +609,7 @@
                         "to": 0.000001
                     },
                     {
-                        "value": "#4cbf7f",
+                        "value": "#f7782f",
                         "from": 0.000001
                     }
                 ]
@@ -656,7 +656,7 @@
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")"
+                "y": "> primary | seriesByName(\"Anomaly\")"
             }
         },
         "viz_card_04_drilldown_trigger": {
@@ -665,7 +665,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=SSID%20Encryption%20Posture&target=Secure%20Networking%20-%20Meraki%20SSID%20Encryption%20Breakdown"
+                        "url": "/drilldown?origin=Data%20Center%20Health&target=Secure%20Networking%20-%20DC%20Fabric%20Anomalies%20by%20Severity"
                     }
                 }
             ],
@@ -696,7 +696,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Active Network Alerts**"
+                "markdown": "**Endpoint Incidents**"
             }
         },
         "viz_card_05_metadata": {
@@ -709,7 +709,7 @@
                 "fontColor": "#649ef5",
                 "fontSize": "custom",
                 "customFontSize": 14,
-                "markdown": "Security  •  Secure Infrastructure"
+                "markdown": "Security  •  Secure Endpoint"
             }
         },
         "viz_card_05_description": {
@@ -722,7 +722,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Total, critical, and warning Cisco Meraki assurance\\-alert volume trended in 5\\-minute buckets, giving a fleet\\-wide health pulse\\."
+                "markdown": "Secure Endpoint incident, malware, endpoint, and user activity across the selected window, exposing threat pressure and spread\\."
             }
         },
         "viz_card_05_singlevalue": {
@@ -737,13 +737,13 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
                 "trendDisplay": "percent",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"alerts_total\")",
+                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "trendValue": "> sparklineValues | delta(-2)"
@@ -751,12 +751,17 @@
             "context": {
                 "trendColorEditorConfig": [
                     {
-                        "value": "#049fd9",
-                        "to": 0
+                        "value": "#4cbf7f",
+                        "to": -0.000001
                     },
                     {
-                        "value": "#049fd9",
-                        "from": 0
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#f7782f",
+                        "from": 0.000001
                     }
                 ]
             }
@@ -802,7 +807,7 @@
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"alerts_total\")"
+                "y": "> primary | seriesByName(\"BucketTotal\")"
             }
         },
         "viz_card_05_drilldown_trigger": {
@@ -811,7 +816,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Active%20Network%20Alerts&target=Secure%20Networking%20-%20Meraki%20Active%20Alerts%20%28Worklist%29,Security%20-%20Meraki%20Active%20Alerts%20%28Triage%29"
+                        "url": "/drilldown?origin=Endpoint%20Incidents&target=Secure%20Networking%20-%20Secure%20Endpoint%20Incident%20and%20Malware%20Activity"
                     }
                 }
             ],
@@ -883,7 +888,7 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowBlocks\") | lastPoint()",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
                 "trendDisplay": "percent",
@@ -989,9 +994,9 @@
             "type": "ds.searchbase"
         },
         "ds_story_02": {
-            "name": "Secure Networking - Meraki Wireless Client Count",
+            "name": "Secure Networking - Catalyst Center Active Issues Trend",
             "options": {
-                "ref": "secure_networking_meraki_wireless_client_count",
+                "ref": "secure_networking_catalyst_active_issues_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$"
@@ -1000,9 +1005,9 @@
             "type": "ds.searchbase"
         },
         "ds_story_03": {
-            "name": "Secure Networking - Meraki Rogue AP Containment Trend",
+            "name": "Secure Networking - SD-WAN Reporting Sites Trend",
             "options": {
-                "ref": "secure_networking_meraki_rogue_ap_containment_trend",
+                "ref": "secure_networking_sdwan_reporting_sites_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$"
@@ -1011,9 +1016,9 @@
             "type": "ds.searchbase"
         },
         "ds_story_04": {
-            "name": "Secure Networking - Meraki SSID Encryption Trend",
+            "name": "Secure Networking - DC Health Signals Trend",
             "options": {
-                "ref": "secure_networking_meraki_ssid_encryption_trend",
+                "ref": "secure_networking_dc_health_signals_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$"
@@ -1022,9 +1027,9 @@
             "type": "ds.searchbase"
         },
         "ds_story_05": {
-            "name": "Secure Networking - Meraki Alerts Trend",
+            "name": "Secure Networking - Secure Endpoint Incident Trend",
             "options": {
-                "ref": "secure_networking_meraki_alerts_trend",
+                "ref": "secure_networking_infra_secure_endpoint_incident_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$"
