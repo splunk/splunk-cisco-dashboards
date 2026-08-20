@@ -40,6 +40,10 @@ networking pillars and workplace scenarios.
 - Defaulted CIM discovery to the last 15 minutes, added clear running and
   completion feedback, and displayed each generated definition in the review
   table so discovered changes are immediately visible.
+- Corrected 26 row-oriented Searchbase defaults so multi-dimension and
+  multi-series results, including Meraki threat categories, Catalyst device
+  health, and ZTNA device outcomes, render as complete tables instead of
+  zero-value or incomplete charts.
 - Prevented trailing empty time buckets from rendering five-pillar KPI values
   as N/A or producing false trend drops.
 - Standardized compact K/M/B/T formatting at exact abbreviation boundaries
