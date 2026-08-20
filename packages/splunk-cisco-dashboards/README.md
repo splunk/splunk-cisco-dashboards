@@ -10,6 +10,10 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Corrected three Multi-Site Orchestrator syslog searches so RFC-style events
+  render Event Time, Device IP/Name, Severity, and Message instead of a
+  multivalue Severity-only table, while retaining compatibility with the
+  partner app's legacy colon-delimited field extractions.
 - Redesigned first-run setup as a clear six-step guided flow with explicit
   START and FINISH lines, responsive progress navigation, persistent dark and
   Light modes, a dedicated CIM readiness step before final review, and the full
