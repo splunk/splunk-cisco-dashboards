@@ -652,7 +652,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Remote%20Access%20Health&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Sessions%20by%20Profile,Secure%20Networking%20-%20ZTA%20RaVPN%20Failure%20Reasons,Secure%20Networking%20-%20ZTA%20RaVPN%20Posture%20Alerts%20and%20Logs"
+                        "url": "/drilldown?origin=Remote%20Access%20Health&target=secure_networking_zta_ravpn_sessions_by_profile,secure_networking_zta_ravpn_failure_reasons,secure_networking_zta_ravpn_posture_alerts"
                     }
                 }
             ],
@@ -954,7 +954,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Cross-Control%20User%20Activity&target=Secure%20Networking%20-%20ZTA%20User%20Activity%20Cross-Source%20Correlation"
+                        "url": "/drilldown?origin=Cross-Control%20User%20Activity&target=secure_networking_zta_user_activity_cross_source"
                     }
                 }
             ],

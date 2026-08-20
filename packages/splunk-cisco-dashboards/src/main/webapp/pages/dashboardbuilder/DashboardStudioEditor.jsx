@@ -990,15 +990,6 @@ const DashboardStudioEditor = ({
     return () => document.body.classList.remove(activePortalThemeClass);
   }, [dashboardColorScheme, hasThemedPortalModal]);
 
-  useEffect(() => {
-    document.body.classList.toggle(
-      "dashboard-builder-drilldown-open",
-      Boolean(dashboardDrilldown),
-    );
-    return () =>
-      document.body.classList.remove("dashboard-builder-drilldown-open");
-  }, [dashboardDrilldown]);
-
   const editorTheme = useSplunkTheme();
   const dashboardBuilderThemeStyle = {
     "--dashboard-builder-background-page": editorTheme.backgroundColorPage,

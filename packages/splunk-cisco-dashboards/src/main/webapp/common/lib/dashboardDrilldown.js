@@ -235,6 +235,72 @@ const parseVisualizationOptions = (value) => {
     }
 };
 
+export const buildWorkspaceDrilldownDefinition = (
+    target,
+    timeRange = DEFAULT_DASHBOARD_DRILLDOWN_TIME_RANGE,
+) => {
+    const searchName = normalizeText(target?.searchName) || 'Search details';
+    const visualizationType = safeVisualizationType(target?.defaultViz);
+    const visualizationOptions = parseVisualizationOptions(target?.vizOptions);
+    const dispatchContext = normalizeText(target?.dispatchContext);
+
+    return {
+        title: searchName,
+        description: '',
+        visualizations: {
+            viz_drilldown_result: {
+                type: visualizationType,
+                title: searchName,
+                options:
+                    visualizationType === 'splunk.table'
+                        ? {
+                              count: 50,
+                              showInternalFields: false,
+                              ...visualizationOptions,
+                          }
+                        : visualizationOptions,
+                dataSources: {
+                    primary: 'ds_drilldown_target',
+                },
+            },
+        },
+        dataSources: {
+            ds_drilldown_target: {
+                type: 'ds.search',
+                name: searchName,
+                options: {
+                    query: normalizeText(target?.search),
+                    queryParameters: parseDashboardDrilldownTimeRange(timeRange),
+                    ...(dispatchContext ? { app: dispatchContext } : {}),
+                },
+            },
+        },
+        defaults: {},
+        inputs: {},
+        layout: {
+            type: 'absolute',
+            options: {
+                width: 1120,
+                height: 420,
+                display: 'fit-to-width',
+                showTitleAndDescription: false,
+            },
+            structure: [
+                {
+                    item: 'viz_drilldown_result',
+                    type: 'block',
+                    position: {
+                        x: 0,
+                        y: 0,
+                        w: 1120,
+                        h: 420,
+                    },
+                },
+            ],
+        },
+    };
+};
+
 export const buildDashboardDrilldownDefinition = (
     entry,
     timeRange = DEFAULT_DASHBOARD_DRILLDOWN_TIME_RANGE,

@@ -15,6 +15,14 @@ networking pillars and workplace scenarios.
   route with custom time and Searchbase wiring intact.
 - Updated dashboard drill-down controls to use a magnifier-plus icon button with
   a `View details` tooltip and accessible label on hover and keyboard focus.
+- Repaired Searchbase and Dashboard Studio drill-down routing, replaced weak
+  aggregate-to-aggregate pivots with event-level firewall, wireless, and SD-WAN
+  detail searches, clarified tile-level action labels, and preserved each
+  destination's configured visualization in Insights Workspace.
+- Live-validated all five Secure Networking pillars and replaced empty
+  site-connectivity, SGACL-denial, and RaVPN-posture pivots with populated,
+  multi-source investigation paths spanning site health, link and tunnel state,
+  policy and SGT evidence, and posture-aware session detail.
 - Corrected three Multi-Site Orchestrator syslog searches so RFC-style events
   render Event Time, Device IP/Name, Severity, and Message instead of a
   multivalue Severity-only table, while retaining compatibility with the

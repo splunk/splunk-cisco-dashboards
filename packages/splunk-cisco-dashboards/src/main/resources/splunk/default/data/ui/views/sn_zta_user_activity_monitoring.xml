@@ -212,7 +212,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Cross-Source%20Identity%20Activity&target=Secure%20Networking%20-%20ZTA%20User%20Activity%20Cross-Source%20Correlation,Secure%20Networking%20-%20Duo%20Application%20Access%20Detail"
+                        "url": "/drilldown?origin=Cross-Source%20Identity%20Activity&target=secure_networking_zta_user_activity_cross_source,secure_networking_infra_duo_application_access"
                     }
                 }
             ],

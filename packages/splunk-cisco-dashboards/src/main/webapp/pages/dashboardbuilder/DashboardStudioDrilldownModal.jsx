@@ -1,6 +1,12 @@
 /* eslint-disable react/prop-types */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Button from '@splunk/react-ui/Button';
+import React, {
+    useCallback,
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import Message from '@splunk/react-ui/Message';
 import Paginator from '@splunk/react-ui/Paginator';
 import ScreenReaderContent from '@splunk/react-ui/ScreenReaderContent';
@@ -13,8 +19,6 @@ import styled from 'styled-components';
 import SearchbaseDrilldownGuidance from '../../common/components/workspace/SearchbaseDrilldownGuidance';
 import { WorkspaceModalShell } from '../../common/components/workspace/WorkspaceModalShell';
 import {
-    ChevronLeft,
-    ChevronRight,
     ExternalLink,
     Search,
 } from '../../common/icons/SuiIcon';
@@ -46,22 +50,6 @@ const DrilldownWorkflow = styled.div`
     padding: ${variables.spacingSmall} ${variables.spacingMedium};
     border-bottom: 1px solid ${variables.borderColorWeak};
     background: ${variables.backgroundColorPage};
-`;
-
-const DrilldownArrow = styled(Button)`
-    position: absolute;
-    top: 50%;
-    z-index: 2;
-    margin: 0;
-    transform: translateY(-50%);
-`;
-
-const DrilldownArrowBack = styled(DrilldownArrow)`
-    left: ${variables.spacingSmall};
-`;
-
-const DrilldownArrowForward = styled(DrilldownArrow)`
-    right: ${variables.spacingSmall};
 `;
 
 const splunkSearchbaseEditUrl = (stanzaId) => {
@@ -96,7 +84,9 @@ const DashboardStudioDrilldownModal = ({
     const [loadError, setLoadError] = useState('');
     const [activeIndex, setActiveIndex] = useState(0);
     const [generationState, setGenerationState] = useState({ type: '', message: '' });
+    const [resultWidth, setResultWidth] = useState(0);
     const catalogueRequestRef = useRef(null);
+    const resultContainerRef = useRef(null);
     const targetKey = targetIds.join('\u0000');
 
     useEffect(() => {
@@ -165,6 +155,31 @@ const DashboardStudioDrilldownModal = ({
         () => getDashboardDrilldownMetadata(activeSearch),
         [activeSearch],
     );
+
+    useLayoutEffect(() => {
+        const container = resultContainerRef.current;
+        if (!open || !activeDefinition || !container) {
+            setResultWidth(0);
+            return undefined;
+        }
+
+        const updateResultWidth = () => {
+            const nextWidth = Math.floor(container.getBoundingClientRect().width);
+            if (nextWidth > 0) {
+                setResultWidth(nextWidth);
+            }
+        };
+
+        updateResultWidth();
+        if (typeof ResizeObserver === 'undefined') {
+            return undefined;
+        }
+
+        const observer = new ResizeObserver(updateResultWidth);
+        observer.observe(container);
+        return () => observer.disconnect();
+    }, [activeDefinition, open]);
+
     const activeClassification = [activeMetadata.category, activeMetadata.subCategory].filter(
         Boolean,
     );
@@ -178,19 +193,6 @@ const DashboardStudioDrilldownModal = ({
               getSearchApp(activeSearch, ownerApp),
           )
         : '';
-    const canGoBack = activeIndex > 0;
-    const canGoForward = activeIndex < resolvedSearches.length - 1;
-
-    const showPrevious = useCallback(() => {
-        setGenerationState({ type: '', message: '' });
-        setActiveIndex((index) => Math.max(0, index - 1));
-    }, []);
-
-    const showNext = useCallback(() => {
-        setGenerationState({ type: '', message: '' });
-        setActiveIndex((index) => Math.min(resolvedSearches.length - 1, index + 1));
-    }, [resolvedSearches.length]);
-
     const generateDashboard = useCallback(async () => {
         if (!activeSearch || !activeDefinition || generationState.type === 'loading') {
             return;
@@ -341,39 +343,38 @@ const DashboardStudioDrilldownModal = ({
                         </div>
 
                         <div className="dashboard-builder-drilldown-result-shell">
-                            {resolvedSearches.length > 1 && (
-                                <DrilldownArrowBack
-                                    appearance="secondary"
-                                    disabled={!canGoBack}
-                                    hideLabel
-                                    icon={<ChevronLeft size={20} aria-hidden="true" />}
-                                    label="Previous search"
-                                    onClick={showPrevious}
-                                />
-                            )}
-                            <div className="dashboard-builder-drilldown-dashboard">
-                                <DashboardContextProvider
-                                    key={dashboardKey}
-                                    preset={preset}
-                                    featureFlags={featureFlags}
-                                    iconRegistry={iconRegistry}
-                                    timezone={timezone}
-                                    initialDefinition={activeDefinition}
-                                    initialMode="view"
-                                >
-                                    <DashboardCore width="100%" height={DRILLDOWN_RESULT_HEIGHT} />
-                                </DashboardContextProvider>
+                            <div
+                                ref={resultContainerRef}
+                                className="dashboard-builder-drilldown-dashboard"
+                                aria-busy={resultWidth <= 0}
+                            >
+                                {resultWidth > 0 ? (
+                                    <DashboardContextProvider
+                                        key={dashboardKey}
+                                        preset={preset}
+                                        featureFlags={featureFlags}
+                                        iconRegistry={iconRegistry}
+                                        timezone={timezone}
+                                        initialDefinition={activeDefinition}
+                                        initialMode="view"
+                                    >
+                                        <DashboardCore
+                                            width={resultWidth}
+                                            height={DRILLDOWN_RESULT_HEIGHT}
+                                        />
+                                    </DashboardContextProvider>
+                                ) : (
+                                    <div
+                                        role="status"
+                                        className="dashboard-builder-drilldown-loading"
+                                    >
+                                        <WaitSpinner size="large" />
+                                        <ScreenReaderContent>
+                                            Preparing drill-down visualization…
+                                        </ScreenReaderContent>
+                                    </div>
+                                )}
                             </div>
-                            {resolvedSearches.length > 1 && (
-                                <DrilldownArrowForward
-                                    appearance="secondary"
-                                    disabled={!canGoForward}
-                                    hideLabel
-                                    icon={<ChevronRight size={20} aria-hidden="true" />}
-                                    label="Next search"
-                                    onClick={showNext}
-                                />
-                            )}
                         </div>
 
                         <div className="dashboard-builder-drilldown-actions">

@@ -7,6 +7,9 @@ import React, {
   useState,
 } from "react";
 import styled from "styled-components";
+import { DashboardContextProvider } from "@splunk/dashboard-context";
+import { DashboardCore } from "@splunk/dashboard-core";
+import EnterpriseViewOnlyPreset from "@splunk/dashboard-presets/EnterpriseViewOnlyPreset";
 import DotsThreeVertical from "@splunk/react-icons/DotsThreeVertical";
 import { createURL } from "@splunk/splunk-utils/url";
 import Badge from "@splunk/react-ui/Badge";
@@ -25,6 +28,7 @@ import Menu from "@splunk/react-ui/Menu";
 import Message from "@splunk/react-ui/Message";
 import Modal from "@splunk/react-ui/Modal";
 import Multiselect from "@splunk/react-ui/Multiselect";
+import Paginator from "@splunk/react-ui/Paginator";
 import RadioBar from "@splunk/react-ui/RadioBar";
 import SearchInput from "@splunk/react-ui/Search";
 import ScreenReaderContent from "@splunk/react-ui/ScreenReaderContent";
@@ -47,8 +51,6 @@ import {
   Check,
   CheckCircle2,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   AlertCircle,
   ClipboardCheck,
   ArrowRight,
@@ -79,6 +81,7 @@ import {
   type SuiIcon,
 } from "@/common/icons/SuiIcon";
 import { useAppThemeControls } from "@/common/theme/AppThemeProvider";
+import { buildWorkspaceDrilldownDefinition } from "@/common/lib/dashboardDrilldown";
 import { DashboardSection } from "@/common/components/workspace/DashboardSection";
 import { OneCdRadioBar } from "@/common/components/workspace/OneCdPrimitives";
 import { MetricItem } from "@/common/components/workspace/MetricItem";
@@ -1177,6 +1180,8 @@ interface MetricDetailTableColumn {
 
 interface MetricDetailTableTargetConfig {
   searchbaseId: string;
+  defaultViz?: string;
+  vizOptions?: Record<string, unknown>;
   metadata: SearchbaseDrilldownMetadata;
   subtitle: (range: TimeRange) => string;
   spl: string;
@@ -1381,6 +1386,8 @@ const buildMetricDetailTableConfig = (
       );
       return {
         searchbaseId: detail.id,
+        defaultViz: detail.defaultViz,
+        vizOptions: detail.vizOptions,
         metadata: {
           title: detail.searchName,
           category: detail.category,
@@ -7358,6 +7365,23 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
   const [sortState, setSortState] = useState<MetricDetailSortState | null>(
     null,
   );
+  const activeIsTable = isTableViz(activeConfig.defaultViz);
+  const activeDefinition = useMemo(
+    () =>
+      activeIsTable
+        ? null
+        : buildWorkspaceDrilldownDefinition(
+            {
+              searchName: activeConfig.metadata.title,
+              search: activeConfig.spl,
+              defaultViz: activeConfig.defaultViz,
+              vizOptions: activeConfig.vizOptions,
+              dispatchContext: activeConfig.dispatchContext,
+            },
+            range,
+          ),
+    [activeConfig, activeIsTable, range],
+  );
 
   useEffect(() => {
     setActiveIndex(0);
@@ -7368,6 +7392,15 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
   }, [activeIndex, config.targets.length]);
 
   useEffect(() => {
+    if (!activeIsTable) {
+      setLoading(false);
+      setRows([]);
+      setTableColumns(activeConfig.columns);
+      setErrorMessage("");
+      setSortState(null);
+      return undefined;
+    }
+
     let cancelled = false;
     const controller = new AbortController();
     setLoading(true);
@@ -7427,7 +7460,13 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
       cancelled = true;
       controller.abort();
     };
-  }, [activeConfig, range.earliest, range.latest, refreshToken]);
+  }, [
+    activeConfig,
+    activeIsTable,
+    range.earliest,
+    range.latest,
+    refreshToken,
+  ]);
 
   const availableStatus = activeConfig.availableStatus ?? "Available";
   const unavailableStatus = activeConfig.unavailableStatus ?? "Unavailable";
@@ -7479,8 +7518,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
     activeConfig.metadata.category,
     activeConfig.metadata.subCategory,
   ].filter(Boolean);
-  const canGoPrevious = activeIndex > 0;
-  const canGoNext = activeIndex < config.targets.length - 1;
+  const resultTitleId = `${activeConfig.tag}-results-title`;
   const showTarget = (nextIndex: number) => {
     const boundedIndex = Math.max(
       0,
@@ -7497,8 +7535,6 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
     setLoading(true);
     setActiveIndex(boundedIndex);
   };
-  const showPrevious = () => showTarget(activeIndex - 1);
-  const showNext = () => showTarget(activeIndex + 1);
 
   return (
     <WorkspaceModalShell
@@ -7509,10 +7545,10 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
       onClose={onClose}
       openInSearchHref={searchUrl}
       openInSearchbaseHref={searchbaseUrl}
-      wide={displayColumns.length > 5}
+      wide={!activeIsTable || displayColumns.length > 5}
       contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden sui-bg-page"
       headerMeta={
-        statusField ? (
+        activeIsTable && statusField ? (
           <>
             <span className="inline-flex items-center gap-1 rounded-full sui-bg-positive px-2 py-1 text-xs font-semibold sui-color-positive">
               <CheckCircle2 className="h-3 w-3" />
@@ -7531,7 +7567,10 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
         data-detail-search-summary="true"
       >
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-bold sui-color-default">
+          <div
+            id={resultTitleId}
+            className="truncate text-sm font-bold sui-color-default"
+          >
             {activeConfig.metadata.title}
           </div>
           {activeClassification.length > 0 && (
@@ -7541,46 +7580,34 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
           )}
         </div>
         {config.targets.length > 1 && (
-          <nav
-            className="ml-4 inline-flex flex-shrink-0 items-center gap-2"
-            aria-label="Drilldown search navigation"
-          >
-            <button
-              type="button"
-              disabled={!canGoPrevious}
-              onClick={showPrevious}
-              aria-label="Previous drill-down"
-              title="Previous drill-down"
-              className="inline-flex items-center gap-1 rounded border sui-border-weak sui-bg-section px-2 py-1 text-xs font-bold sui-color-active transition-colors sui-hover-border-info sui-hover-color-info focus:outline-none focus:ring-2 sui-focus-ring disabled:cursor-not-allowed disabled:opacity-35"
-            >
-              <ChevronLeft className="h-3 w-3" aria-hidden="true" />
-              Previous
-            </button>
-            <span
-              className="min-w-[4.5rem] text-center text-xs font-bold tabular-nums sui-color-default"
-              aria-live="polite"
-            >
-              {activeIndex + 1} / {config.targets.length}
-            </span>
-            <button
-              type="button"
-              disabled={!canGoNext}
-              onClick={showNext}
-              aria-label="Next drill-down"
-              title="Next drill-down"
-              className="inline-flex items-center gap-1 rounded border sui-border-weak sui-bg-section px-2 py-1 text-xs font-bold sui-color-active transition-colors sui-hover-border-info sui-hover-color-info focus:outline-none focus:ring-2 sui-focus-ring disabled:cursor-not-allowed disabled:opacity-35"
-            >
-              Next
-              <ChevronRight className="h-3 w-3" aria-hidden="true" />
-            </button>
-          </nav>
+          <div className="ml-4 flex-shrink-0">
+            <Paginator.Compact
+              aria-label="Drill-down search navigation"
+              current={activeIndex + 1}
+              onChange={(_event, { page }) => {
+                if (page !== undefined) showTarget(page - 1);
+              }}
+              renderLabel={({ current, totalPages }) =>
+                `${current ?? 1} / ${totalPages ?? config.targets.length}`
+              }
+              totalPages={config.targets.length}
+            />
+            <ScreenReaderContent aria-live="polite">
+              Showing {activeConfig.metadata.title}, search {activeIndex + 1} of{" "}
+              {config.targets.length}
+            </ScreenReaderContent>
+          </div>
         )}
       </div>
       <div
         className="min-h-[154px] max-h-[min(46vh,520px)] shrink overflow-auto overscroll-contain"
         data-detail-results-region="content-aware"
       >
-        <table className="w-full min-w-[860px] sui-bg-transparent text-sm">
+        {activeIsTable ? (
+          <table
+            aria-labelledby={resultTitleId}
+            className="w-full min-w-[860px] sui-bg-transparent text-sm"
+          >
           <thead className="sticky top-0 z-10 border-b sui-border-weak sui-bg-page backdrop-blur-xl">
             <tr className="text-left text-xs font-bold sui-color-default">
               {displayColumns.map((column, index) => {
@@ -7668,7 +7695,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
                 return (
                   <tr
                     key={`${rowKey}-${rowIndex}`}
-                    className="sui-bg-section transition-colors sui-hover-bg-overlay"
+                    className="sui-bg-section"
                   >
                     {displayColumns.map((column, index) => {
                       const value = row[column.field];
@@ -7722,7 +7749,32 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
               })
             )}
           </tbody>
-        </table>
+          </table>
+        ) : (
+          activeDefinition && (
+            <div
+              className="min-h-[420px] w-full sui-bg-page"
+              aria-labelledby={resultTitleId}
+              role="region"
+              data-detail-visualization={
+                activeConfig.defaultViz ?? "splunk.table"
+              }
+            >
+              <DashboardContextProvider
+                key={`${activeConfig.searchbaseId}:${range.earliest}:${range.latest}:${refreshToken}`}
+                preset={EnterpriseViewOnlyPreset}
+                initialDefinition={
+                  activeDefinition as unknown as React.ComponentProps<
+                    typeof DashboardContextProvider
+                  >["initialDefinition"]
+                }
+                initialMode="view"
+              >
+                <DashboardCore width="100%" height="420px" />
+              </DashboardContextProvider>
+            </div>
+          )
+        )}
       </div>
       <SearchbaseDrilldownGuidance
         metadata={activeConfig.metadata}

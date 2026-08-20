@@ -811,7 +811,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Third-Party%20Policy%20Effectiveness&target=Secure%20Networking%20-%20Palo%20Alto%20SGT%20Policy%20Effectiveness,Secure%20Networking%20-%20Palo%20Alto%20Traffic%20Correlated%20by%20SGT"
+                        "url": "/drilldown?origin=Third-Party%20Policy%20Effectiveness&target=secure_networking_sgt_palo_alto_policy_effectiveness,secure_networking_sgt_palo_alto_traffic_detail"
                     }
                 }
             ],

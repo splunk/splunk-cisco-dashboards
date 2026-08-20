@@ -937,7 +937,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Posture%20Outcomes&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Posture%20Alerts%20and%20Logs"
+                        "url": "/drilldown?origin=Posture%20Outcomes&target=secure_networking_zta_ravpn_posture_alerts,secure_networking_zta_ravpn_sessions_by_profile,secure_networking_zta_ravpn_failure_reasons"
                     }
                 }
             ],

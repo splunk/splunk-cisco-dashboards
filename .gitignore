@@ -31,6 +31,8 @@
 !/scripts/lint_spl_antipatterns.py
 !/scripts/normalize_pillar_dashboard_precision.mjs
 !/scripts/normalize_pillar_dashboard_trends.mjs
+!/scripts/validate_drilldown_contracts.py
+!/scripts/validate_drilldown_live.py
 
 # Splunk runtime and maintenance output.
 local/

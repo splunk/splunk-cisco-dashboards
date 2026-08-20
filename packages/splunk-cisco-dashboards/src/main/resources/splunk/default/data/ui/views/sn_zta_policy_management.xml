@@ -967,7 +967,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=SGACL%20Enforcement&target=Secure%20Networking%20-%20SGT%20Policy%20Activity%20and%20SGACL%20Matrix%20Hits,Secure%20Networking%20-%20SGACL%20Deny%20Pairs%20by%20SGT"
+                        "url": "/drilldown?origin=SGACL%20Enforcement&target=secure_networking_sgacl_policy_matrix,secure_networking_fmc_sgt_correlated_events,secure_networking_sgt_distribution_by_site_device"
                     }
                 }
             ],

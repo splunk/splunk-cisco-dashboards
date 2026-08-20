@@ -353,7 +353,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Site%20Connectivity&target=Overview%20-%20Link%20Site%201%20to%20Site%202%20Health,Overview%20-%20Link%20State%20Drilldown"
+                        "url": "/drilldown?origin=Site%20Connectivity&target=it_critical_systems_ds_site_health,overview_link_state_drilldown,secure_networking_sdwan_tunnel_health_log"
                     }
                 }
             ],
