@@ -54,7 +54,7 @@ function DashboardStudioEditorPage() {
     return (
         <DashboardStudioEditor
             definition={initialDefinition}
-            pageName="SASN | Dashboard Manager"
+            pageName="SSNE | Dashboard Manager"
             actionMenus={actionMenus}
             preset={customPresets}
         />
@@ -62,5 +62,5 @@ function DashboardStudioEditorPage() {
 }
 
 renderAsPage(<CustomDSEditorPage />, {
-    pageTitle: 'SASN | Dashboard Manager',
+    pageTitle: 'SSNE | Dashboard Manager',
 });

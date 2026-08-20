@@ -4,9 +4,9 @@
  * suffix and apply the Secure Networking product acronym exactly once.
  */
 (function setSasnDashboardTitle() {
-  const prefix = "SASN | ";
+  const prefix = "SSNE | ";
   const splunkVersionSuffix = /\s*\|\s*Splunk(?:\s+Enterprise)?\s+[\w.-]+\s*$/i;
-  const sasnPrefix = /^(?:SASN\s*\|\s*)+/i;
+  const sasnPrefix = /^(?:SSNE\s*\|\s*)+/i;
 
   const normalizeTitle = (title) => {
     const dashboardName = String(title || "")

@@ -245,8 +245,7 @@ export default function DBHomePage() {
     "--dashboard-builder-modal-background": splunkTheme.backgroundColorPopup,
     "--dashboard-builder-modal-background-section":
       splunkTheme.backgroundColorSection,
-    "--dashboard-builder-modal-content-active":
-      splunkTheme.contentColorActive,
+    "--dashboard-builder-modal-content-active": splunkTheme.contentColorActive,
     "--dashboard-builder-modal-content-default":
       splunkTheme.contentColorDefault,
     "--dashboard-builder-modal-content-muted": splunkTheme.contentColorMuted,
@@ -295,7 +294,7 @@ export default function DBHomePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    document.title = "SASN | Dashboard Manager";
+    document.title = "SSNE | Dashboard Manager";
   }, []);
 
   useEffect(() => {
