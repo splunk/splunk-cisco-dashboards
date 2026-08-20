@@ -1046,7 +1046,7 @@ body {
 .scd-setup {
     color: #e1e6eb;
     background-color: #0b1118;
-    background-image: url('/static/app/splunk-cisco-dashboards/c3-atmosphere.svg');
+    background-image: url('c3-atmosphere.svg');
     background-position: center top;
     background-repeat: no-repeat;
     background-size: cover;

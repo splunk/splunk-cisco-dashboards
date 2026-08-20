@@ -34,6 +34,7 @@ const REPO_ROOT = path.resolve(__dirname, "..");
 const STAGE_DIR = path.join(REPO_ROOT, "stage");
 const APP_DIR_NAME = "splunk-cisco-dashboards";
 const TARBALL = path.join(REPO_ROOT, `${APP_DIR_NAME}.tar.gz`);
+const SPL_PACKAGE = path.join(REPO_ROOT, `${APP_DIR_NAME}.spl`);
 
 const ALLOWED_COMMANDS = new Set([
   "build",
@@ -67,6 +68,7 @@ function clean() {
   console.log("› Cleaning stage/");
   rimraf(STAGE_DIR);
   rimraf(TARBALL);
+  rimraf(SPL_PACKAGE);
 }
 
 function build({ minify = false } = {}) {
@@ -123,7 +125,9 @@ function pack({ minify = false } = {}) {
   build({ minify });
   console.log("› Packaging Splunk app tarball");
   run("tar", ["-czf", TARBALL, "--exclude=.DS_Store", "-C", STAGE_DIR, "."]);
+  fs.copyFileSync(TARBALL, SPL_PACKAGE);
   console.log(`✓ Wrote ${path.relative(REPO_ROOT, TARBALL)}`);
+  console.log(`✓ Wrote ${path.relative(REPO_ROOT, SPL_PACKAGE)}`);
 }
 
 function resolveSplunkHome() {

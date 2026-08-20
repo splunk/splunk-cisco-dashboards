@@ -8,34 +8,11 @@
     "inputs": {
         "input_time_range": {
             "options": {
-                "defaultValue": "-24h,now,1h",
-                "showAdvanced": true,
-                "selections": [
-                    {
-                        "value": "-4h,now,30m",
-                        "label": "4h"
-                    },
-                    {
-                        "value": "-24h,now,1h",
-                        "label": "24h"
-                    },
-                    {
-                        "value": "-48h,now,2h",
-                        "label": "48h"
-                    },
-                    {
-                        "value": "-7d@d,now,1d",
-                        "label": "7d"
-                    },
-                    {
-                        "value": "-30d@d,now,1d",
-                        "label": "30d"
-                    }
-                ],
+                "defaultValue": "-24h,now",
                 "token": "time_tok"
             },
             "title": "Time range",
-            "type": "input.simpleTimePicker"
+            "type": "input.timerange"
         }
     },
     "defaults": {
@@ -60,7 +37,7 @@
             "title": "Segmentation Readiness",
             "options": {
                 "preserveAspectRatio": true,
-                "src": "/static/app/splunk-cisco-dashboards/images/nav-icons/Globe.svg"
+                "src": "../../static/app/splunk-cisco-dashboards/images/nav-icons/Globe.svg"
             }
         },
         "viz_header": {

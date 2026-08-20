@@ -117,7 +117,7 @@ yarn start                   # webpack --watch
 The webpack build emits to `stage/`, mirroring the deployed Splunk app
 structure (`appserver/`, `default/`, `metadata/`). A production build
 gives you a directory you can symlink into `$SPLUNK_HOME/etc/apps/` or
-package as a tarball. The development stage contains both released and
+package as a `.spl`/tarball. The development stage contains both released and
 developing app resources; release filtering happens only in temporary package
 staging.
 

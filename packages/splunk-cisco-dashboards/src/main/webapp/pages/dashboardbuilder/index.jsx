@@ -1,3 +1,5 @@
+import '../../common/shims/requirejs-emotion-shim';
+
 import React from 'react';
 import 'monaco-editor/esm/vs/editor/contrib/find/browser/findController.js';
 
@@ -9,10 +11,9 @@ import {
     createRoutesFromElements,
 } from 'react-router-dom';
 
-import '../../common/shims/requirejs-emotion-shim';
 import VizKpi from '../../common/components/templatewizard/viz-kpi/VizKpi';
 import VizOther from '../../common/components/templatewizard/viz-other/VizOther';
-import { renderAsPage } from '../../common/render';
+import mountPageRaw from '../../common/render-raw';
 import { actionMenus } from '../../common/udf/presets';
 import DBHomePage from './DBHomePage';
 import DashboardStudioEditor, { initialDefinition } from './DashboardStudioEditor';
@@ -61,6 +62,6 @@ function DashboardStudioEditorPage() {
     );
 }
 
-renderAsPage(<CustomDSEditorPage />, {
-    pageTitle: 'SASN | Dashboard Manager',
+mountPageRaw(CustomDSEditorPage, {
+    showCopyrightMark: false,
 });

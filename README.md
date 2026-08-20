@@ -41,11 +41,20 @@ To build the Splunk app package locally:
 yarn package:app
 ```
 
-The packaged Splunk app tarball is written to `dist/`. Normal packaging uses
-the Splunkbase app profile. For a local developer artifact, use:
+The packaged Splunk app is written to `dist/` in both `.spl` (for direct
+Splunk installation) and `.tar.gz` (for compatibility with the helper scripts)
+formats. Normal packaging uses the Splunkbase app profile. For a local
+developer artifact, use:
 
 ```bash
 ./build.sh --developer
+```
+
+Install the generated `.spl` from Splunk Web, or with the Splunk CLI:
+
+```bash
+VERSION=$(tr -d '[:space:]' < VERSION)
+splunk install app "dist/splunk-cisco-dashboards-${VERSION}.spl" -update 1
 ```
 
 For a smaller, minified release package (slower to build):
