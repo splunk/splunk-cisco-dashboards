@@ -642,7 +642,7 @@ interface DataModelGroup {
 const CORE_DATA_MODEL_REQUIREMENTS: readonly DataModelRequirement[] = [
   {
     key: "catalyst",
-    label: "Cisco Catalyst",
+    label: "Cisco Enterprise Networking",
     app: CATALYST_APP_NAME,
     model: "Cisco_Catalyst_App",
     priority: "required",
@@ -734,7 +734,7 @@ const CORE_DATA_MODEL_REQUIREMENTS: readonly DataModelRequirement[] = [
 ] as const;
 
 const DATA_MODEL_APP_LABELS: Readonly<Record<string, string>> = {
-  [CATALYST_APP_NAME]: "Cisco Catalyst",
+  [CATALYST_APP_NAME]: "Cisco Enterprise Networking",
   [CISCO_SECURITY_APP_NAME]: "Cisco Security Cloud",
   [THOUSAND_EYES_APP_NAME]: "Cisco ThousandEyes",
   [DATA_CENTER_NETWORKING_APP_NAME]: "Cisco Data Center Networking",
@@ -760,7 +760,7 @@ const DEFAULT_FAST_TIME_RANGE: SearchTimeRange = {
   latest: "now",
 };
 const DEFAULT_CIM_TIME_RANGE: SearchTimeRange = {
-  earliest: "-4h@h",
+  earliest: "-15m",
   latest: "now",
 };
 const TIME_PRESETS = [
@@ -3895,8 +3895,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
               <div className="break-words text-sm font-semibold sui-color-active">
                 {selectionSummary}
               </div>
-              <div className="mt-1 text-xs leading-5 sui-color-muted">
-                Builds <code className="font-mono">index IN (...)</code>
+              <div className="mt-1 flex min-w-0 items-baseline gap-1 text-xs leading-5 sui-color-muted">
+                <span className="shrink-0">Generated:</span>
+                <code
+                  className="min-w-0 truncate font-mono sui-color-default"
+                  title={row.draftDefinition || "Not set"}
+                >
+                  {row.draftDefinition || "Not set"}
+                </code>
               </div>
             </div>
           </div>
@@ -4596,6 +4602,27 @@ export default function MacroIndexTuningPage(): JSX.Element {
         setupCimRowsToSave.length === 1 ? "" : "s"
       } will be carried into review.`;
     }
+    let cimDiscoveryMessageType: "info" | "warning" | "success" =
+      setupCimAvailable ? "info" : "warning";
+    let cimDiscoveryMessage = setupCimAvailable
+      ? "CIM package detected"
+      : "CIM package needs attention";
+    let cimDiscoveryDescription = setupCimAvailable
+      ? "Run discovery to propose only the indexes that contain tagged CIM data. Review individual models only when a proposal needs adjustment."
+      : "Install and enable Splunk_SA_CIM, then return to this step to discover model allowlists.";
+    if (isCimLoading) {
+      cimDiscoveryMessage = "Discovering CIM indexes…";
+      cimDiscoveryDescription =
+        "This can take several minutes. Proposed allowlists below will update when the search finishes.";
+    } else if (cimScanState === "ready") {
+      cimDiscoveryMessageType = "success";
+      cimDiscoveryMessage = `Discovery complete — ${setupCimRowsToSave.length} model${
+        setupCimRowsToSave.length === 1 ? "" : "s"
+      } matched`;
+      cimDiscoveryDescription = `${setupCimChangesToSave.length} proposed allowlist change${
+        setupCimChangesToSave.length === 1 ? " is" : "s are"
+      } ready for review. Each row now shows the generated index IN definition.`;
+    }
 
     const continueToReview = () => {
       if (isCimLoading || isSavingCim) {
@@ -4639,18 +4666,17 @@ export default function MacroIndexTuningPage(): JSX.Element {
           </Message>
         ) : null}
 
-        <section className="rounded-md border sui-border-weak sui-bg-section px-4 py-4">
+        <section
+          aria-live="polite"
+          className="rounded-md border sui-border-weak sui-bg-section px-4 py-4"
+        >
           <div className="scd-setup__cim-discovery grid gap-4">
             <div>
-              <Message type={setupCimAvailable ? "info" : "warning"}>
-                {setupCimAvailable
-                  ? "CIM package detected"
-                  : "CIM package needs attention"}
+              <Message type={cimDiscoveryMessageType}>
+                {cimDiscoveryMessage}
               </Message>
               <p className="mt-1 max-w-3xl text-xs leading-5 sui-color-default">
-                {setupCimAvailable
-                  ? "Run discovery to propose only the indexes that contain tagged CIM data. Review individual models only when a proposal needs adjustment."
-                  : "Install and enable Splunk_SA_CIM, then return to this step to discover model allowlists."}
+                {cimDiscoveryDescription}
               </p>
             </div>
             {setupCimAvailable ? (

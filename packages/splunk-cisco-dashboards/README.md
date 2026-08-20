@@ -19,7 +19,10 @@ networking pillars and workplace scenarios.
   Network Traffic, with an on-screen model inventory behind the compact summary.
 - Added index multiselects that build routing macro definitions automatically,
   aligned the setup progress rail, and updated the Enterprise Networking app
-  and add-on names throughout the setup experience.
+  add-on, and required data-model names throughout the setup experience.
+- Routed missing-package actions to Splunk's Browse More Apps screen with a
+  package-specific search so administrators can find and install dependencies
+  without leaving the setup workflow behind.
 - Kept a full `Select indexes` action pinned beside every routing row so users
   can open the index multiselect without horizontally scrolling to a hidden icon.
 - Kept setup routing, CIM, and performance edits as drafts until final review,
@@ -34,6 +37,9 @@ networking pillars and workplace scenarios.
   their table cell so routing reviews remain readable at narrow widths.
 - Restored a visible CIM index browser for every model and standardized edited
   and discovered allowlists on the compact `index IN (index1, index2, ...)` form.
+- Defaulted CIM discovery to the last 15 minutes, added clear running and
+  completion feedback, and displayed each generated definition in the review
+  table so discovered changes are immediately visible.
 - Prevented trailing empty time buckets from rendering five-pillar KPI values
   as N/A or producing false trend drops.
 - Standardized compact K/M/B/T formatting at exact abbreviation boundaries

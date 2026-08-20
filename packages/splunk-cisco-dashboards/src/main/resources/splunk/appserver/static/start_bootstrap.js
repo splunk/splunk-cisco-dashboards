@@ -116,6 +116,8 @@ const SCD_SETUP_DEPENDENCIES = [
     id: "spaces-ta",
     name: "Cisco Spaces Add-on for Splunk",
     appIds: ["ta_cisco_spaces", "TA_cisco_spaces", "Cisco_Spaces"],
+    browseQuery: "Spaces",
+    browseType: "addon",
     pattern: /^cisco:spaces(?::|$)/i,
     importance: "required",
     splunkbase:
@@ -251,6 +253,20 @@ function scdSetupManageAppsUrl(pathname, appId) {
   return appId
     ? `${baseUrl}?search=${encodeURIComponent(appId)}`
     : baseUrl;
+}
+
+function scdSetupBrowseAppsUrl(pathname, query, type) {
+  const params = new URLSearchParams({
+    order: "relevance",
+    query: String(query || ""),
+    offset: "0",
+  });
+  if (type) {
+    params.set("type", type);
+  }
+  return `${scdSetupLocalePrefix(
+    pathname,
+  )}/manager/launcher/appsremote?${params.toString()}`;
 }
 
 function scdSetupAppInstallUrl(pathname, appId) {
@@ -1248,12 +1264,21 @@ function scdSetupRenderPrerequisites(parent, prerequisites, appsError) {
       );
       statusCell.appendChild(link);
     } else if (prerequisite.splunkbase) {
+      const browseQuery = prerequisite.browseQuery || prerequisite.name;
       const link = scdSetupLink(
         "scd-setup__external",
-        "View package",
-        prerequisite.splunkbase,
+        "Find and install",
+        scdSetupBrowseAppsUrl(
+          window.location.pathname,
+          browseQuery,
+          prerequisite.browseType,
+        ),
       );
-      link.setAttribute("aria-label", `View ${prerequisite.name} on Splunkbase`);
+      link.setAttribute(
+        "aria-label",
+        `Find and install ${prerequisite.name} in Browse More Apps`,
+      );
+      link.title = `Browse More Apps for ${prerequisite.name}`;
       link.target = "_blank";
       link.rel = "noopener noreferrer";
       statusCell.appendChild(link);
@@ -2082,11 +2107,17 @@ function scdSetupRenderPackageReviewStep(root) {
         scdSetupOpenManageApps(event, prerequisite.installedId),
       );
     } else if (prerequisite.splunkbase) {
+      const browseQuery = prerequisite.browseQuery || prerequisite.name;
       action = scdSetupLink(
         "scd-setup__package-action",
-        "View package",
-        prerequisite.splunkbase,
+        "Find and install",
+        scdSetupBrowseAppsUrl(
+          window.location.pathname,
+          browseQuery,
+          prerequisite.browseType,
+        ),
       );
+      action.title = `Browse More Apps for ${prerequisite.name}`;
       action.target = "_blank";
       action.rel = "noopener noreferrer";
     }
@@ -2403,6 +2434,7 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     appInstallUrl: scdSetupAppInstallUrl,
     appsEndpoint: scdSetupAppsEndpoint,
+    browseAppsUrl: scdSetupBrowseAppsUrl,
     compareVersions: scdSetupCompareVersions,
     csrfToken: scdSetupCsrfToken,
     discoveryEndpoint: scdSetupDiscoveryEndpoint,
