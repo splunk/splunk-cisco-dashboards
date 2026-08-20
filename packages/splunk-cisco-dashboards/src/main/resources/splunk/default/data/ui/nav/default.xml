@@ -25,6 +25,7 @@
         <a href="dashboard_manager#/sn_secure_infrastructure_posture">Infrastructure Posture</a>
         <divider />
         <a href="dashboard_manager#/sn_secure_infrastructure_status">Secure Infrastructure Status</a>
+        <a href="dashboard_manager#/sn_hmf_sdwan_network_health">SD-WAN and Network Health Monitoring</a>
     </collection>
 
     <collection label="Scalable Network Segmentation" icon="Globe">
@@ -36,7 +37,6 @@
     <collection label="Hybrid Mesh Firewalling" icon="ArrowsDoubleLeftRight">
         <a href="dashboard_manager#/sn_hmf_enforcement">Hybrid Mesh Enforcement</a>
         <divider />
-        <a href="dashboard_manager#/sn_hmf_sdwan_network_health">SD-WAN and Network Health Monitoring</a>
         <a href="dashboard_manager#/sn_hmf_threat_detection_enforcement">Threat Detection and Enforcement</a>
         <a href="dashboard_manager#/sn_hmf_dlp_cloud_native_security">DLP and Cloud Native Security</a>
     </collection>
