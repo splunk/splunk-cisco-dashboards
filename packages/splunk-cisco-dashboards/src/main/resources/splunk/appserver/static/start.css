@@ -2284,8 +2284,8 @@ body {
     align-items: center;
 }
 
-#scd-setup-root .scd-setup__cim-discovery,
-#scan-root .scd-setup__cim-discovery {
+#scd-setup-root .scd-setup__scan-controls,
+#scan-root .scd-setup__scan-controls {
     grid-template-columns: minmax(0, 1fr) max-content;
     align-items: center;
 }
@@ -2334,8 +2334,8 @@ body {
         grid-column: 1 / -1;
     }
 
-    #scd-setup-root .scd-setup__cim-discovery,
-    #scan-root .scd-setup__cim-discovery {
+    #scd-setup-root .scd-setup__scan-controls,
+    #scan-root .scd-setup__scan-controls {
         grid-template-columns: minmax(0, 1fr);
     }
 }

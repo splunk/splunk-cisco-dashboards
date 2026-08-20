@@ -23,8 +23,10 @@ networking pillars and workplace scenarios.
 - Routed missing-package actions to Splunk's Browse More Apps screen with a
   package-specific search so administrators can find and install dependencies
   without leaving the setup workflow behind.
-- Kept a full `Select indexes` action pinned beside every routing row so users
-  can open the index multiselect without horizontally scrolling to a hidden icon.
+- Kept a full blue `Select indexes` action visible beside every routing row and
+  fit the Step 4 review table inside its panel without horizontal scrolling.
+- Moved the Step 4 routing scan controls to the top of the workflow and added
+  the same indeterminate progress feedback used by CIM discovery.
 - Kept setup routing, CIM, and performance edits as drafts until final review,
   added confirmed abandon and save actions, and added an app-by-app before/after
   change summary in the finish step.
@@ -37,9 +39,13 @@ networking pillars and workplace scenarios.
   their table cell so routing reviews remain readable at narrow widths.
 - Restored a visible CIM index browser for every model and standardized edited
   and discovered allowlists on the compact `index IN (index1, index2, ...)` form.
-- Defaulted CIM discovery to the last 15 minutes, added clear running and
-  completion feedback, and displayed each generated definition in the review
-  table so discovered changes are immediately visible.
+- Defaulted CIM discovery to the last 15 minutes, added an indeterminate
+  progress bar plus clear completion feedback, and displayed each generated
+  definition in a compact review table that fits without horizontal scrolling.
+- Styled each CIM `Browse indexes` action as a blue standalone control so its
+  edit behavior is clear without repeating a primary button in every row.
+- Restricted the Step 5 CIM inventory to the 23 approved models and clarified
+  the visible `App`, `Inventory`, and `Network Resolution (DNS)` labels.
 - Corrected 26 row-oriented Searchbase defaults so multi-dimension and
   multi-series results, including Meraki threat categories, Catalyst device
   health, and ZTNA device outcomes, render as complete tables instead of

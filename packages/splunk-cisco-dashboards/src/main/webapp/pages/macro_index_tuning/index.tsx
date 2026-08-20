@@ -15,6 +15,7 @@ import ControlGroup from '@splunk/react-ui/ControlGroup';
 import Message from '@splunk/react-ui/Message';
 import Modal from '@splunk/react-ui/Modal';
 import Multiselect from '@splunk/react-ui/Multiselect';
+import Progress from '@splunk/react-ui/Progress';
 import RadioList from '@splunk/react-ui/RadioList';
 import ScreenReaderContent from '@splunk/react-ui/ScreenReaderContent';
 import Select from '@splunk/react-ui/Select';
@@ -134,7 +135,7 @@ const CIM_DATA_MODEL_DISCOVERY_CONFIGS = [
   },
   {
     macro: "cim_Application_State_indexes",
-    model: "Application State",
+    model: "App",
     predicate: cimAny(
       cimAll(cimHasTag("listening"), cimHasTag("port")),
       cimAll(cimHasTag("process"), cimHasTag("report")),
@@ -155,30 +156,14 @@ const CIM_DATA_MODEL_DISCOVERY_CONFIGS = [
     predicate: cimHasTag("certificate"),
   },
   {
-    macro: "cim_Change_Analysis_indexes",
-    model: "Change Analysis",
-    predicate: cimHasTag("change"),
-  },
-  {
     macro: "cim_Change_indexes",
     model: "Change",
     predicate: cimHasTag("change"),
   },
   {
-    macro: "cim_Compute_Inventory_indexes",
-    model: "Compute Inventory",
-    predicate: cimAll(
-      cimHasTag("inventory"),
-      cimAny(
-        cimHasTag("cpu"),
-        cimHasTag("memory"),
-        cimHasTag("network"),
-        cimHasTag("storage"),
-        cimAll(cimHasTag("system"), cimHasTag("version")),
-        cimHasTag("user"),
-        cimHasTag("virtual"),
-      ),
-    ),
+    macro: "cim_Data_Access_indexes",
+    model: "Data Access",
+    predicate: cimAll(cimHasTag("data"), cimHasTag("access")),
   },
   {
     macro: "cim_DLP_indexes",
@@ -189,11 +174,6 @@ const CIM_DATA_MODEL_DISCOVERY_CONFIGS = [
     macro: "cim_Databases_indexes",
     model: "Databases",
     predicate: cimHasTag("database"),
-  },
-  {
-    macro: "cim_Data_Access_indexes",
-    model: "Data Access",
-    predicate: cimAll(cimHasTag("data"), cimHasTag("access")),
   },
   {
     macro: "cim_Email_indexes",
@@ -212,14 +192,6 @@ const CIM_DATA_MODEL_DISCOVERY_CONFIGS = [
     ),
   },
   {
-    macro: "cim_Event_Signatures_indexes",
-    model: "Event Signatures",
-    predicate: cimAll(
-      cimHasTag("track_event_signatures"),
-      "cim_has_event_signature==1",
-    ),
-  },
-  {
     macro: "cim_Interprocess_Messaging_indexes",
     model: "Interprocess Messaging",
     predicate: cimHasTag("messaging"),
@@ -228,6 +200,22 @@ const CIM_DATA_MODEL_DISCOVERY_CONFIGS = [
     macro: "cim_Intrusion_Detection_indexes",
     model: "Intrusion Detection",
     predicate: cimAll(cimHasTag("ids"), cimHasTag("attack")),
+  },
+  {
+    macro: "cim_Compute_Inventory_indexes",
+    model: "Inventory",
+    predicate: cimAll(
+      cimHasTag("inventory"),
+      cimAny(
+        cimHasTag("cpu"),
+        cimHasTag("memory"),
+        cimHasTag("network"),
+        cimHasTag("storage"),
+        cimAll(cimHasTag("system"), cimHasTag("version")),
+        cimHasTag("user"),
+        cimHasTag("virtual"),
+      ),
+    ),
   },
   {
     macro: "cim_JVM_indexes",
@@ -241,7 +229,7 @@ const CIM_DATA_MODEL_DISCOVERY_CONFIGS = [
   },
   {
     macro: "cim_Network_Resolution_indexes",
-    model: "Network Resolution",
+    model: "Network Resolution (DNS)",
     predicate: cimAll(
       cimHasTag("network"),
       cimHasTag("resolution"),
@@ -797,7 +785,6 @@ const CIM_DISCOVERY_BASE_TAGS = [
   "data",
   "email",
   "endpoint",
-  "track_event_signatures",
   "messaging",
   "ids",
   "jvm",
@@ -811,9 +798,9 @@ const CIM_DISCOVERY_BASE_TAGS = [
 ] as const;
 const CIM_DISCOVERY_SEARCH = [
   `search (${SCD_INDEX_MACRO_OR_PLACEHOLDER}) (${CIM_DISCOVERY_BASE_TAGS.map((tag) => `tag=${tag}`).join(" OR ")})`,
-  "| fields index sourcetype eventtype action user signature signature_id",
-  '| eval sourcetype=coalesce(sourcetype, "(unknown sourcetype)"), cim_exclude_authentication=if(action=="success" AND match(user,"\\$$"),1,0), cim_has_event_signature=if(isnotnull(signature) OR isnotnull(signature_id),1,0), cim_eventtype_key=mvjoin(mvsort(eventtype),"|")',
-  "| stats count as cim_event_count by index sourcetype cim_eventtype_key cim_exclude_authentication cim_has_event_signature",
+  "| fields index sourcetype eventtype action user",
+  '| eval sourcetype=coalesce(sourcetype, "(unknown sourcetype)"), cim_exclude_authentication=if(action=="success" AND match(user,"\\$$"),1,0), cim_eventtype_key=mvjoin(mvsort(eventtype),"|")',
+  "| stats count as cim_event_count by index sourcetype cim_eventtype_key cim_exclude_authentication",
   '| eval eventtype=split(cim_eventtype_key,"|")',
   "| tags outputfield=cim_tags eventtype",
   `| eval macro=mvappend(${CIM_DATA_MODEL_DISCOVERY_CONFIGS.map(
@@ -3850,27 +3837,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
     };
 
     return (
-      <Table.Row
-        key={rowKey}
-        actionPrimary={(
-          <Button
-            appearance="secondary"
-            aria-label={`Browse indexes for ${getCimModelLabel(row.macro)}`}
-            elementRef={(element) => {
-              if (element) {
-                setupEditButtonRefs.current.set(
-                  rowKey,
-                  element as HTMLButtonElement,
-                );
-              } else {
-                setupEditButtonRefs.current.delete(rowKey);
-              }
-            }}
-            label="Browse indexes"
-            onClick={openEditor}
-          />
-        )}
-      >
+      <Table.Row key={rowKey}>
         <Table.Cell>
           <div className="min-w-0">
             <div className="break-words text-sm font-bold sui-color-active">
@@ -3919,6 +3886,24 @@ export default function MacroIndexTuningPage(): JSX.Element {
             {changed ? "Pending review" : "No change"}
           </span>
         </Table.Cell>
+        <Table.Cell align="right">
+          <Button
+            appearance="standalone"
+            aria-label={`Browse indexes for ${getCimModelLabel(row.macro)}`}
+            elementRef={(element) => {
+              if (element) {
+                setupEditButtonRefs.current.set(
+                  rowKey,
+                  element as HTMLButtonElement,
+                );
+              } else {
+                setupEditButtonRefs.current.delete(rowKey);
+              }
+            }}
+            label="Browse indexes"
+            onClick={openEditor}
+          />
+        </Table.Cell>
       </Table.Row>
     );
   };
@@ -3950,27 +3935,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
     };
 
     return (
-      <Table.Row
-        key={rowKey}
-        actionPrimary={(
-          <Button
-            appearance="secondary"
-            elementRef={(element) => {
-              if (element) {
-                setupEditButtonRefs.current.set(
-                  rowKey,
-                  element as HTMLButtonElement,
-                );
-              } else {
-                setupEditButtonRefs.current.delete(rowKey);
-              }
-            }}
-            aria-label={editActionAriaLabel}
-            label={editActionLabel}
-            onClick={openEditor}
-          />
-        )}
-      >
+      <Table.Row key={rowKey}>
         <Table.Cell>
           <div className="min-w-0">
             <div className="break-words whitespace-normal font-mono text-sm font-bold sui-color-info">
@@ -4004,6 +3969,24 @@ export default function MacroIndexTuningPage(): JSX.Element {
           >
             {changed ? "Pending review" : "No change"}
           </span>
+        </Table.Cell>
+        <Table.Cell align="right">
+          <Button
+            appearance="standalone"
+            elementRef={(element) => {
+              if (element) {
+                setupEditButtonRefs.current.set(
+                  rowKey,
+                  element as HTMLButtonElement,
+                );
+              } else {
+                setupEditButtonRefs.current.delete(rowKey);
+              }
+            }}
+            aria-label={editActionAriaLabel}
+            label={editActionLabel}
+            onClick={openEditor}
+          />
         </Table.Cell>
       </Table.Row>
     );
@@ -4379,6 +4362,64 @@ export default function MacroIndexTuningPage(): JSX.Element {
 
         <section
           aria-live="polite"
+          className="rounded-md border sui-border-weak sui-bg-section px-4 py-4"
+        >
+          <div className="scd-setup__scan-controls grid gap-4">
+            <div>
+              <Message type={setupScanInProgress ? "info" : "success"}>
+                {setupScanInProgress
+                  ? "Scanning routing data…"
+                  : "Routing scan complete"}
+              </Message>
+              <p className="mt-1 max-w-3xl text-xs leading-5 sui-color-default">
+                {setupScanInProgress
+                  ? "This can take several minutes. Routing proposals below will update when the scan finishes."
+                  : "Rerun the scan whenever you need fresh routing proposals."}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <TimeRangeDropdown
+                earliest={timeRange.earliest}
+                latest={timeRange.latest}
+                onChange={handleFastTimeRangeChange}
+                realTimeDisabled
+                presets={TIME_PRESETS}
+                onRequestParseEarliest={fastTimeParser.handleRequestParseEarliest}
+                onRequestParseLatest={fastTimeParser.handleRequestParseLatest}
+                parseEarliest={fastTimeParser.parseEarliest}
+                parseLatest={fastTimeParser.parseLatest}
+                labelMaxChars={24}
+              />
+              <Button
+                onClick={runScan}
+                appearance="primary"
+                disabled={setupScanInProgress ? "dimmed" : false}
+                icon={setupScanInProgress ? (
+                  <Loader2 aria-hidden="true" size={15} className="animate-spin" />
+                ) : (
+                  <RefreshCw aria-hidden="true" size={15} />
+                )}
+                label={setupScanInProgress ? "Scanning" : "Run scan"}
+              />
+            </div>
+            {setupScanInProgress ? (
+              <div className="col-span-full grid gap-2">
+                <Progress
+                  appearance="accent"
+                  aria-label="Scanning routing data"
+                  indeterminate
+                  tooltip="Scanning routing data"
+                />
+                <p className="text-xs sui-color-muted">
+                  Searching Cisco events and rebuilding routing proposals…
+                </p>
+              </div>
+            ) : null}
+          </div>
+        </section>
+
+        <section
+          aria-live="polite"
           className="scd-setup__routing-summary grid gap-3 rounded-md border sui-border-weak sui-bg-section px-4 py-4"
         >
           <div>
@@ -4506,21 +4547,22 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   sourcetypes, event counts, review status, and edit actions.
                 </ScreenReaderContent>
                 <Table
-                  actionsColumnWidth={160}
                   headType="fixed"
-                  horizontalOverflow="scroll"
+                  horizontalOverflow="auto"
                   innerStyle={{ maxHeight: 420 }}
-                  pinnedColumns={{ actions: true }}
                   primaryColumnIndex={0}
-                  tableStyle={{ minWidth: 1160 }}
+                  tableStyle={{ tableLayout: "fixed", width: "100%" }}
                 >
                   <Table.Head>
-                    <Table.HeadCell width={190}>Macro</Table.HeadCell>
-                    <Table.HeadCell width={330}>Proposed definition</Table.HeadCell>
-                    <Table.HeadCell width={220}>Indexes</Table.HeadCell>
-                    <Table.HeadCell width={260}>Sourcetypes</Table.HeadCell>
-                    <Table.HeadCell align="right" width={100}>Events</Table.HeadCell>
-                    <Table.HeadCell align="right" width={120}>Status</Table.HeadCell>
+                    <Table.HeadCell width={180}>Macro</Table.HeadCell>
+                    <Table.HeadCell width={250}>Proposed definition</Table.HeadCell>
+                    <Table.HeadCell width={150}>Indexes</Table.HeadCell>
+                    <Table.HeadCell width="auto">Sourcetypes</Table.HeadCell>
+                    <Table.HeadCell align="right" width={72}>Events</Table.HeadCell>
+                    <Table.HeadCell align="right" width={90}>Status</Table.HeadCell>
+                    <Table.HeadCell align="right" width={144}>
+                      <ScreenReaderContent>Actions</ScreenReaderContent>
+                    </Table.HeadCell>
                   </Table.Head>
                   <Table.Body>
                     {setupRowsToSave.map(renderSetupRoutingRow)}
@@ -4537,39 +4579,6 @@ export default function MacroIndexTuningPage(): JSX.Element {
           </div>
         </CollapsiblePanel>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border sui-border-weak sui-bg-section px-4 py-3">
-          <div>
-            <div className="text-sm font-bold sui-color-active">Need fresh results?</div>
-            <div className="mt-0.5 text-xs sui-color-muted">
-              Rerun the fast scan with the selected time range.
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <TimeRangeDropdown
-              earliest={timeRange.earliest}
-              latest={timeRange.latest}
-              onChange={handleFastTimeRangeChange}
-              realTimeDisabled
-              presets={TIME_PRESETS}
-              onRequestParseEarliest={fastTimeParser.handleRequestParseEarliest}
-              onRequestParseLatest={fastTimeParser.handleRequestParseLatest}
-              parseEarliest={fastTimeParser.parseEarliest}
-              parseLatest={fastTimeParser.parseLatest}
-              labelMaxChars={24}
-            />
-            <Button
-              onClick={runScan}
-              appearance="secondary"
-              disabled={setupScanInProgress ? "dimmed" : false}
-              icon={setupScanInProgress ? (
-                <Loader2 aria-hidden="true" size={15} className="animate-spin" />
-              ) : (
-                <RefreshCw aria-hidden="true" size={15} />
-              )}
-              label={setupScanInProgress ? "Scanning" : "Run scan"}
-            />
-          </div>
-        </div>
         {renderSetupEditorModal()}
       </SetupFlowShell>
     );
@@ -4670,7 +4679,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           aria-live="polite"
           className="rounded-md border sui-border-weak sui-bg-section px-4 py-4"
         >
-          <div className="scd-setup__cim-discovery grid gap-4">
+          <div className="scd-setup__scan-controls grid gap-4">
             <div>
               <Message type={cimDiscoveryMessageType}>
                 {cimDiscoveryMessage}
@@ -4707,6 +4716,19 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 />
               </div>
             ) : null}
+            {isCimLoading ? (
+              <div className="col-span-full grid gap-2">
+                <Progress
+                  appearance="accent"
+                  aria-label="Discovering CIM indexes"
+                  indeterminate
+                  tooltip="Discovering CIM indexes"
+                />
+                <p className="text-xs sui-color-muted">
+                  Searching tagged events and building model allowlists…
+                </p>
+              </div>
+            ) : null}
           </div>
         </section>
 
@@ -4740,20 +4762,21 @@ export default function MacroIndexTuningPage(): JSX.Element {
                     event counts, review status, and edit actions.
                   </ScreenReaderContent>
                   <Table
-                    actionsColumnWidth={144}
                     headType="fixed"
-                    horizontalOverflow="scroll"
+                    horizontalOverflow="auto"
                     innerStyle={{ maxHeight: 440 }}
-                    pinnedColumns={{ actions: true }}
                     primaryColumnIndex={0}
-                    tableStyle={{ minWidth: 900 }}
+                    tableStyle={{ tableLayout: "fixed", width: "100%" }}
                   >
                     <Table.Head>
-                      <Table.HeadCell width={220}>Data model</Table.HeadCell>
-                      <Table.HeadCell width={150}>Current</Table.HeadCell>
-                      <Table.HeadCell width={360}>Proposed allowlist</Table.HeadCell>
-                      <Table.HeadCell align="right" width={90}>Events</Table.HeadCell>
-                      <Table.HeadCell align="right" width={120}>Status</Table.HeadCell>
+                      <Table.HeadCell width={200}>Data model</Table.HeadCell>
+                      <Table.HeadCell width={125}>Current</Table.HeadCell>
+                      <Table.HeadCell width="auto">Proposed allowlist</Table.HeadCell>
+                      <Table.HeadCell align="right" width={76}>Events</Table.HeadCell>
+                      <Table.HeadCell align="right" width={92}>Status</Table.HeadCell>
+                      <Table.HeadCell align="right" width={152}>
+                        <ScreenReaderContent>Actions</ScreenReaderContent>
+                      </Table.HeadCell>
                     </Table.Head>
                     <Table.Body>
                       {setupCimReviewRows.map(renderSetupCimRow)}
