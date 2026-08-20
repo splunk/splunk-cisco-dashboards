@@ -10,6 +10,12 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Prevented trailing empty time buckets from rendering five-pillar KPI values
+  as N/A or producing false trend drops.
+- Standardized compact K/M/B/T formatting at exact abbreviation boundaries
+  across five-pillar KPI cards.
+- Added package-time dashboard contract checks and ensured Secure Networking
+  Assurance ships with the other five-pillar menu dashboards.
 - Capped fractional values shown by all five-pillar Dashboard Studio KPI
   charts at two decimal places while preserving integer counts and category
   labels.

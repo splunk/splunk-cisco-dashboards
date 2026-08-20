@@ -29,6 +29,8 @@
 /scripts/*
 !/scripts/format_searchbase_conf.py
 !/scripts/lint_spl_antipatterns.py
+!/scripts/normalize_pillar_dashboard_precision.mjs
+!/scripts/normalize_pillar_dashboard_trends.mjs
 
 # Splunk runtime and maintenance output.
 local/

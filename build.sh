@@ -740,6 +740,10 @@ if [[ "$no_build" -eq 0 ]]; then
         exit 1
     fi
 
+    hdr "Validating five-pillar dashboard contracts..."
+    run_quietly node "${ROOT_DIR}/scripts/normalize_pillar_dashboard_trends.mjs" --check
+    run_quietly node "${ROOT_DIR}/scripts/normalize_pillar_dashboard_precision.mjs" --check
+
     # This policy linter is intentionally opt-in. Its broad rules are useful
     # during a focused catalogue audit, but are not accurate enough to block
     # every package build: valid SPL can depend on explicit row ordering or

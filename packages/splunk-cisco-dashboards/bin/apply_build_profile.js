@@ -24,6 +24,18 @@ const SOURCE_VIEWS_DIR = path.join(
   "ui",
   "views",
 );
+const SOURCE_NAV_PATH = path.join(
+  PACKAGE_ROOT,
+  "src",
+  "main",
+  "resources",
+  "splunk",
+  "default",
+  "data",
+  "ui",
+  "nav",
+  "default.xml",
+);
 const SOURCE_SEARCHBASE_PATH = path.join(
   PACKAGE_ROOT,
   "src",
@@ -140,6 +152,19 @@ function validateDevelopingResourceIds(developingIds, sourceIds, label) {
   }
 }
 
+function listFivePillarViewIds(sourceNavPath = SOURCE_NAV_PATH) {
+  const navXml = fs.readFileSync(sourceNavPath, "utf8");
+  const collections = [
+    ...navXml.matchAll(/<collection label="([^"]+)"[^>]*>([\s\S]*?)<\/collection>/g),
+  ].slice(0, 5);
+
+  return collections.flatMap((collection) =>
+    [...collection[2].matchAll(/dashboard_manager#\/([^"?]+)/g)].map(
+      (match) => match[1],
+    ),
+  );
+}
+
 function validateManifest(
   manifest = readManifest(),
   sourceViewsDir = SOURCE_VIEWS_DIR,
@@ -161,6 +186,16 @@ function validateManifest(
     listSourceSavedSearchIds(sourceSavedSearchesPath),
     "saved search",
   );
+
+  const fivePillarViewIds = new Set(listFivePillarViewIds());
+  const excludedPillarViews = manifest.developing.views.filter((viewId) =>
+    fivePillarViewIds.has(viewId),
+  );
+  if (excludedPillarViews.length > 0) {
+    throw new Error(
+      `Five-pillar menu views cannot be developing-only: ${excludedPillarViews.join(", ")}`,
+    );
+  }
 
   return manifest;
 }
