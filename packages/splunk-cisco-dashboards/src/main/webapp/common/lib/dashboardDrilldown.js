@@ -2,9 +2,11 @@ const DRILLDOWN_PATH = '/drilldown';
 const DASHBOARD_DRILLDOWN_URL_LIMIT = 4096;
 const DASHBOARD_DRILLDOWN_TARGET_LIMIT = 24;
 const DASHBOARD_DRILLDOWN_TARGET_LENGTH_LIMIT = 256;
+export const DASHBOARD_DRILLDOWN_ACTION_TYPE = 'splunk.cisco_drilldown_action';
 const DASHBOARD_DRILLDOWN_VISUALIZATION_TYPES = new Set([
     'splunk.rectangle',
     'splunk.choropleth.svg',
+    'splunk.image',
 ]);
 const TIME_INPUT_TYPES = new Set(['input.timerange', 'input.simpleTimePicker']);
 
@@ -13,16 +15,7 @@ export const DEFAULT_DASHBOARD_DRILLDOWN_TIME_RANGE = {
     latest: 'now',
 };
 
-export const DASHBOARD_DRILLDOWN_ACCESSIBLE_TITLE = 'Open drill-down details';
-
-// Exact paths from @splunk/react-icons/MagnifierWithPlus. The Dashboard Studio
-// image visualization cannot render the React component directly, so it uses
-// this self-contained SVG with an accessible label for the modal action.
-export const DASHBOARD_DRILLDOWN_PANEL_ICON_SVG =
-    '<svg aria-label="Open drill-down details" role="img" data-icon="MagnifierWithPlus" height="32px" viewBox="0 0 24 24" width="32px" xmlns="http://www.w3.org/2000/svg" fill="#64748b"><title>Open drill-down details</title><path d="M19 3C19 2.44772 18.5523 2 18 2C17.4477 2 17 2.44772 17 3V5H15C14.4477 5 14 5.44772 14 6C14 6.55228 14.4477 7 15 7H17V9C17 9.55228 17.4477 10 18 10C18.5523 10 19 9.55228 19 9V7H21C21.5523 7 22 6.55228 22 6C22 5.44772 21.5523 5 21 5H19V3Z"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M11.0228 17.4363C10.0919 18.0887 8.95818 18.4716 7.73507 18.4716C4.56768 18.4716 2 15.9039 2 12.7365C2 9.56914 4.56768 7.00146 7.73507 7.00146C10.9025 7.00146 13.4701 9.56914 13.4701 12.7365C13.4701 13.9585 13.088 15.0912 12.4366 16.0217L15.707 19.292C16.0975 19.6826 16.0975 20.3157 15.707 20.7063C15.3164 21.0968 14.6833 21.0968 14.2928 20.7063L11.0228 17.4363ZM11.4701 12.7365C11.4701 14.7994 9.79789 16.4716 7.73507 16.4716C5.67225 16.4716 4 14.7994 4 12.7365C4 10.6737 5.67225 9.00146 7.73507 9.00146C9.79789 9.00146 11.4701 10.6737 11.4701 12.7365Z"></path></svg>';
-export const DASHBOARD_DRILLDOWN_PANEL_ICON_DATA_URL = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
-    DASHBOARD_DRILLDOWN_PANEL_ICON_SVG,
-)}`;
+export const DASHBOARD_DRILLDOWN_ACCESSIBLE_TITLE = 'View details';
 
 const normalizeText = (value) => (typeof value === 'string' ? value.trim() : '');
 
@@ -90,11 +83,9 @@ export const buildDashboardDrilldownUrl = ({ origin, targetIds = [] }) => {
 };
 
 export const createDashboardDrilldownIconVisualization = ({ origin, targetIds }) => ({
-    type: 'splunk.image',
+    type: DASHBOARD_DRILLDOWN_ACTION_TYPE,
     options: {
-        preserveAspectRatio: true,
-        src: DASHBOARD_DRILLDOWN_PANEL_ICON_DATA_URL,
-        title: DASHBOARD_DRILLDOWN_ACCESSIBLE_TITLE,
+        label: DASHBOARD_DRILLDOWN_ACCESSIBLE_TITLE,
     },
     eventHandlers: [
         {
@@ -133,12 +124,9 @@ export const normalizeDashboardDrilldownIcons = (definition) => {
                 visualizationId,
                 {
                     ...visualization,
-                    type: 'splunk.image',
+                    type: DASHBOARD_DRILLDOWN_ACTION_TYPE,
                     options: {
-                        ...visualization.options,
-                        preserveAspectRatio: true,
-                        src: DASHBOARD_DRILLDOWN_PANEL_ICON_DATA_URL,
-                        title: DASHBOARD_DRILLDOWN_ACCESSIBLE_TITLE,
+                        label: DASHBOARD_DRILLDOWN_ACCESSIBLE_TITLE,
                     },
                 },
             ];

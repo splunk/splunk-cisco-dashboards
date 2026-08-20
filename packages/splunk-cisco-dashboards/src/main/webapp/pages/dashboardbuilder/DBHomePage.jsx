@@ -56,6 +56,7 @@ import Plus from "@splunk/react-icons/Plus";
 import ArrowSquareTopRight from "@splunk/react-icons/ArrowSquareTopRight";
 import Magnifier from "@splunk/react-icons/Magnifier";
 import { initialDefinition } from "./DashboardStudioEditor";
+import DrilldownActionViz from "./DrilldownActionViz";
 import { INSIGHTS_APP_ID } from "../../common/lib/constants";
 
 const featureFlags = {
@@ -81,6 +82,7 @@ export const customPresets = {
     "splunk.template_kpi": VizKpi,
     "splunk.template_other": VizOther,
     "splunk.cisco_spaces_space_manager": SpaceManagerViz,
+    "splunk.cisco_drilldown_action": DrilldownActionViz,
   },
 };
 

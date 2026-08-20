@@ -16,6 +16,7 @@ import { renderAsPage } from '../../common/render';
 import { actionMenus } from '../../common/udf/presets';
 import DBHomePage from './DBHomePage';
 import DashboardStudioEditor, { initialDefinition } from './DashboardStudioEditor';
+import DrilldownActionViz from './DrilldownActionViz';
 import SearchBaseDataSource from './SearchBaseDataSource';
 import SpaceManagerViz from './SpaceManager/SpaceManagerViz';
 import SimpleTimePicker from './custominput/SimpleTimePicker';
@@ -47,6 +48,7 @@ const customPresets = {
         'splunk.template_kpi': VizKpi,
         'splunk.template_other': VizOther,
         'splunk.cisco_spaces_space_manager': SpaceManagerViz,
+        'splunk.cisco_drilldown_action': DrilldownActionViz,
     },
 };
 
