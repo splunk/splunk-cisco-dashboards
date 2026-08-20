@@ -71,7 +71,7 @@ const SCD_SETUP_DEPENDENCIES = [
   },
   {
     id: "catalyst-app",
-    name: "Cisco Enterprise Networking for Splunk Platform",
+    name: "Cisco Enterprise Networking App for Splunk",
     appIds: ["cisco-catalyst-app"],
     pattern: /^cisco:(?:dnac|catalyst|sdwan)(?::|$)/i,
     importance: "required",
@@ -81,7 +81,7 @@ const SCD_SETUP_DEPENDENCIES = [
   },
   {
     id: "catalyst-ta",
-    name: "Cisco Catalyst Add-on for Splunk",
+    name: "Cisco Enterprise Networking Add-on for Splunk",
     appIds: ["TA_cisco_catalyst"],
     pattern: /^cisco:(?:dnac|catalyst|sdwan)(?::|$)/i,
     importance: "required",
@@ -243,7 +243,7 @@ function scdSetupTuningUrl(pathname) {
 
 function scdSetupIsTuningHash(hash) {
   const setupRoute = String(hash || "").replace(/^#/, "");
-  return setupRoute === "tune-indexes" || setupRoute === "tune-cim";
+  return ["tune-indexes", "tune-cim", "review"].includes(setupRoute);
 }
 
 function scdSetupManageAppsUrl(pathname, appId) {
@@ -613,6 +613,57 @@ function scdSetupElement(tagName, className, text) {
   return element;
 }
 
+function scdSetupConfirmAbandon(root, returnFocus) {
+  const dialog = scdSetupElement("dialog", "scd-setup__confirm-dialog");
+  const titleId = "scd-setup-abandon-title";
+  dialog.setAttribute("aria-labelledby", titleId);
+
+  const heading = scdSetupElement("h2", "", "Abandon setup?");
+  heading.id = titleId;
+  dialog.appendChild(heading);
+  dialog.appendChild(
+    scdSetupElement(
+      "p",
+      "",
+      "Your unsaved setup choices will be discarded. No settings will be changed, and you can restart setup later.",
+    ),
+  );
+
+  const actions = scdSetupElement("div", "scd-setup__confirm-actions");
+  const keepButton = scdSetupElement(
+    "button",
+    "scd-setup__button is-secondary",
+    "Keep setting up",
+  );
+  keepButton.type = "button";
+  keepButton.autofocus = true;
+  keepButton.addEventListener("click", () => dialog.close());
+  const abandonButton = scdSetupElement(
+    "button",
+    "scd-setup__button is-destructive",
+    "Abandon setup",
+  );
+  abandonButton.type = "button";
+  abandonButton.addEventListener("click", () => {
+    window.location.assign(scdSetupHomeUrl(window.location.pathname));
+  });
+  actions.appendChild(keepButton);
+  actions.appendChild(abandonButton);
+  dialog.appendChild(actions);
+  dialog.addEventListener(
+    "close",
+    () => {
+      dialog.remove();
+      if (returnFocus?.isConnected) {
+        returnFocus.focus();
+      }
+    },
+    { once: true },
+  );
+  root.appendChild(dialog);
+  dialog.showModal();
+}
+
 function scdSetupLink(className, text, href) {
   const link = scdSetupElement("a", className, text);
   link.href = href;
@@ -693,6 +744,66 @@ function scdSetupFormatNumber(value) {
   return new Intl.NumberFormat().format(Number(value) || 0);
 }
 
+function scdSetupRelativeTime(epochSeconds) {
+  if (!epochSeconds) {
+    return "No recent events found";
+  }
+  const seconds = Math.max(0, Math.round(Date.now() / 1000 - epochSeconds));
+  if (seconds < 60) {
+    return "Updated just now";
+  }
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) {
+    return `Updated ${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  }
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) {
+    return `Updated ${hours} hour${hours === 1 ? "" : "s"} ago`;
+  }
+  const days = Math.round(hours / 24);
+  return `Updated ${days} day${days === 1 ? "" : "s"} ago`;
+}
+
+function scdSetupStatusTone(status) {
+  if (["missing", "disabled"].includes(status)) {
+    return "negative";
+  }
+  if (["update", "verify"].includes(status)) {
+    return "warning";
+  }
+  return "positive";
+}
+
+function scdSetupRenderReviewRow({
+  label,
+  value,
+  tone = "positive",
+  description,
+  content,
+}) {
+  const row = scdSetupElement(
+    content ? "details" : "div",
+    `scd-setup__review-row is-${tone}`,
+  );
+  const heading = scdSetupElement(content ? "summary" : "div", "");
+  const copy = scdSetupElement("span", "scd-setup__review-copy");
+  copy.appendChild(scdSetupElement("strong", "", label));
+  if (description) {
+    copy.appendChild(scdSetupElement("small", "", description));
+  }
+  heading.appendChild(copy);
+  heading.appendChild(
+    scdSetupElement("span", "scd-setup__review-value", value),
+  );
+  row.appendChild(heading);
+  if (content) {
+    const body = scdSetupElement("div", "scd-setup__review-body");
+    body.appendChild(content);
+    row.appendChild(body);
+  }
+  return row;
+}
+
 function scdSetupStatusLabel(prerequisite) {
   if (prerequisite.status === "installed") {
     return "Installed";
@@ -711,47 +822,217 @@ function scdSetupStatusLabel(prerequisite) {
     : "Not installed";
 }
 
+const SCD_SETUP_STEPS = [
+  "Welcome",
+  "Verify readiness",
+  "Review packages",
+  "Configure data",
+  "CIM readiness",
+  "Review & finish",
+];
+
+const SCD_SETUP_COLOR_SCHEME_STORAGE_KEY =
+  "splunk-cisco-dashboards:setup-color-scheme";
+const SCD_SETUP_COLOR_SCHEME_EVENT =
+  "splunk-cisco-dashboards:setup-color-scheme-change";
+
+function scdSetupColorSchemeStorageKey() {
+  const username = window.$C?.USERNAME;
+  const scope =
+    typeof username === "string" && username.trim()
+      ? encodeURIComponent(username.trim())
+      : "anonymous";
+  return `${SCD_SETUP_COLOR_SCHEME_STORAGE_KEY}.user.${scope}`;
+}
+
+function scdSetupReadColorScheme() {
+  try {
+    return window.localStorage.getItem(scdSetupColorSchemeStorageKey()) ===
+      "light"
+      ? "light"
+      : "dark";
+  } catch (_error) {
+    return "dark";
+  }
+}
+
+function scdSetupApplyColorScheme(root, colorScheme) {
+  const surface = root;
+  const lightMode = colorScheme === "light";
+  surface.dataset.colorScheme = lightMode ? "light" : "dark";
+  surface.classList.toggle("scd-setup-theme-light", lightMode);
+  document.documentElement.classList.toggle("scd-setup-light-page", lightMode);
+  const toggle = surface.querySelector(".scd-setup__theme-toggle");
+  if (toggle instanceof HTMLInputElement) {
+    toggle.checked = lightMode;
+  }
+}
+
+function scdSetupSetColorScheme(root, colorScheme) {
+  scdSetupApplyColorScheme(root, colorScheme);
+  const storageKey = scdSetupColorSchemeStorageKey();
+  try {
+    window.localStorage.setItem(storageKey, colorScheme);
+  } catch (_error) {
+    // Theme persistence is best effort in restricted browser contexts.
+  }
+  window.dispatchEvent(
+    new window.CustomEvent(SCD_SETUP_COLOR_SCHEME_EVENT, {
+      detail: { colorScheme, storageKey },
+    }),
+  );
+}
+
+function scdSetupCreateThemeControl(root) {
+  const control = scdSetupElement("label", "scd-setup__theme-control");
+  const toggle = scdSetupElement("input", "scd-setup__theme-toggle");
+  toggle.type = "checkbox";
+  toggle.checked = scdSetupReadColorScheme() === "light";
+  toggle.addEventListener("change", () => {
+    scdSetupSetColorScheme(root, toggle.checked ? "light" : "dark");
+  });
+  control.appendChild(toggle);
+  control.appendChild(scdSetupElement("span", "", "Light mode"));
+  return control;
+}
+
+function scdSetupCreateEndpoint({ kind, complete = false }) {
+  const isStart = kind === "start";
+  const item = scdSetupElement(
+    "li",
+    `scd-setup__endpoint is-${kind}${complete ? " is-complete" : ""}`,
+  );
+  const marker = scdSetupElement(
+    "span",
+    "scd-setup__endpoint-marker",
+    isStart ? "S" : "F",
+  );
+  marker.setAttribute("aria-hidden", "true");
+  item.appendChild(marker);
+  const copy = scdSetupElement("span", "scd-setup__endpoint-copy");
+  copy.appendChild(
+    scdSetupElement("strong", "", isStart ? "START" : "FINISH"),
+  );
+  let endpointStatus = "Activates after successful save";
+  if (isStart) {
+    endpointStatus = "Entry point before Step 1";
+  } else if (complete) {
+    endpointStatus = "Setup complete";
+  }
+  copy.appendChild(
+    scdSetupElement("small", "", endpointStatus),
+  );
+  item.appendChild(copy);
+  return item;
+}
+
+function scdSetupStepItem({ number, label, state, onSelect }) {
+  const item = scdSetupElement(
+    "li",
+    `scd-setup__step-item is-${state}`,
+  );
+  if (state === "current") {
+    item.setAttribute("aria-current", "step");
+  }
+
+  const content = scdSetupElement(
+    onSelect ? "button" : "div",
+    "scd-setup__step-control",
+  );
+  if (onSelect) {
+    content.type = "button";
+    content.addEventListener("click", onSelect);
+  }
+  content.appendChild(
+    scdSetupElement(
+      "span",
+      "scd-setup__step-marker",
+      String(number),
+    ),
+  );
+  const copy = scdSetupElement("span", "scd-setup__step-copy");
+  copy.appendChild(scdSetupElement("strong", "", label));
+  let stateLabel = "Locked";
+  if (state === "complete") {
+    stateLabel = "Complete — reviewable";
+  } else if (state === "current") {
+    stateLabel = "Current step";
+  }
+  copy.appendChild(
+    scdSetupElement("small", "", stateLabel),
+  );
+  content.appendChild(copy);
+  item.appendChild(content);
+  return item;
+}
+
+function scdSetupNavigateToStep(root, step) {
+  if (!root) {
+    return;
+  }
+  if (step === 1) {
+    // eslint-disable-next-line no-use-before-define
+    scdSetupTransition(root, scdSetupRenderWelcomeStep);
+  } else if (step === 2) {
+    // eslint-disable-next-line no-use-before-define
+    scdSetupTransition(root, scdSetupRenderDiscoveryStep);
+  } else if (step === 3) {
+    // eslint-disable-next-line no-use-before-define
+    scdSetupTransition(root, scdSetupRenderPackageReviewStep);
+  }
+}
+
 function scdSetupRenderStepper(parent, activeStep) {
   const steps = scdSetupElement("ol", "scd-setup__steps");
   steps.setAttribute(
     "aria-label",
-    activeStep > 3 ? "Setup progress: complete" : "Setup progress",
+    activeStep > 6 ? "Setup progress: complete" : "Setup progress",
   );
-  [
-    ["1", "Check data"],
-    ["2", "Review packages"],
-    ["3", "Tune indexes"],
-  ].forEach(([number, label], index) => {
-    let stateClass = "";
-    if (index + 1 < activeStep) {
-      stateClass = "is-complete";
-    } else if (index + 1 === activeStep) {
-      stateClass = "is-active";
+  steps.appendChild(
+    scdSetupCreateEndpoint({ kind: "start", complete: activeStep > 1 }),
+  );
+  SCD_SETUP_STEPS.forEach((label, index) => {
+    const number = index + 1;
+    let state = "future";
+    if (number < activeStep) {
+      state = "complete";
+    } else if (number === activeStep) {
+      state = "current";
     }
-    const item = scdSetupElement(
-      "li",
-      stateClass,
+    steps.appendChild(
+      scdSetupStepItem({
+        number,
+        label,
+        state,
+        onSelect:
+          state === "complete" && number <= 3
+            ? () => scdSetupNavigateToStep(parent.closest(".scd-setup"), number)
+            : null,
+      }),
     );
-    if (stateClass === "is-active") {
-      item.setAttribute("aria-current", "step");
-    }
-    item.appendChild(scdSetupElement("span", "", number));
-    item.appendChild(document.createTextNode(label));
-    steps.appendChild(item);
   });
+  steps.appendChild(
+    scdSetupCreateEndpoint({ kind: "finish", complete: activeStep > 6 }),
+  );
   parent.appendChild(steps);
 }
 
 function scdSetupSetActiveStep(root, activeStep) {
-  const header = root.querySelector(".scd-setup__header");
-  const current = header && header.querySelector(".scd-setup__steps");
-  if (!header) {
+  const sidebar = root.querySelector(".scd-setup__sidebar");
+  const current = sidebar && sidebar.querySelector(".scd-setup__steps");
+  if (!sidebar) {
     return;
   }
   if (current) {
     current.remove();
   }
-  scdSetupRenderStepper(header, activeStep);
+  scdSetupRenderStepper(sidebar, activeStep);
+  root.querySelectorAll(".scd-setup__step-kicker").forEach((element) => {
+    const stepLabel = element;
+    stepLabel.textContent = activeStep > 6
+      ? "Setup complete"
+      : `Step ${activeStep} of ${SCD_SETUP_STEPS.length}`;
+  });
 }
 
 function scdSetupRenderSourceTable(parent, rows) {
@@ -1111,90 +1392,181 @@ function scdSetupRenderCapabilities(parent, capabilities) {
 function scdSetupRenderActions(root, buttons, message) {
   const actions = root.querySelector(".scd-setup__actions");
   actions.textContent = "";
-  buttons.forEach((buttonConfig) => {
+  const statusGroup = scdSetupElement("div", "scd-setup__action-status");
+  statusGroup.appendChild(
+    scdSetupElement("div", "scd-setup__step-kicker", ""),
+  );
+  const statusMessage = scdSetupElement(
+    "p",
+    "scd-setup__action-note",
+    message,
+  );
+  statusMessage.setAttribute("role", "status");
+  statusMessage.setAttribute("aria-live", "polite");
+  statusMessage.setAttribute("aria-atomic", "true");
+  statusGroup.appendChild(statusMessage);
+  actions.appendChild(statusGroup);
+  const buttonGroup = scdSetupElement("div", "scd-setup__action-buttons");
+  [
+    {
+      label: "Cancel setup",
+      secondary: true,
+      onClick: (event) => scdSetupConfirmAbandon(root, event.currentTarget),
+    },
+    ...buttons,
+  ].forEach((buttonConfig) => {
     const button = scdSetupElement(
       "button",
       `scd-setup__button${buttonConfig.secondary ? " is-secondary" : ""}`,
       buttonConfig.label,
     );
     button.type = "button";
-    button.disabled = Boolean(buttonConfig.disabled);
-    if (!button.disabled) {
+    if (buttonConfig.disabled) {
+      button.setAttribute("aria-disabled", "true");
+      button.addEventListener("click", () => {
+        statusMessage.tabIndex = -1;
+        statusMessage.focus();
+      });
+    } else {
       button.addEventListener("click", buttonConfig.onClick);
     }
-    actions.appendChild(button);
+    buttonGroup.appendChild(button);
   });
-  actions.appendChild(
-    scdSetupElement("p", "scd-setup__action-note", message),
+  actions.appendChild(buttonGroup);
+  const activeStep = root.querySelector("[aria-current='step']");
+  const stepNumber = Number(
+    activeStep?.querySelector(".scd-setup__step-marker")?.textContent,
+  );
+  root.querySelectorAll(".scd-setup__step-kicker").forEach((element) => {
+    const stepLabel = element;
+    stepLabel.textContent = Number.isFinite(stepNumber)
+      ? `Step ${stepNumber} of ${SCD_SETUP_STEPS.length}`
+      : "Setup complete";
+  });
+}
+
+function scdSetupTransition(root, renderStep) {
+  renderStep(root);
+  root.querySelector("h1")?.focus?.();
+}
+
+function scdSetupRenderWelcomeStep(root) {
+  scdSetupSetActiveStep(root, 1);
+  scdSetupSetHeaderCopy(
+    root,
+    "Welcome to Splunk Secure Networking Essentials",
+    "Follow one guided path to verify your environment and prepare the dashboards.",
+  );
+  const content = root.querySelector(".scd-setup__content");
+  content.textContent = "";
+
+  const main = scdSetupElement("main", "scd-setup__main scd-setup__main--compact");
+  const intro = scdSetupElement("section", "scd-setup__welcome");
+  intro.appendChild(
+    scdSetupElement("p", "scd-setup__eyebrow", "ABOUT 5 MINUTES"),
+  );
+  intro.appendChild(
+    scdSetupElement("h2", "", "Set up the dashboards with confidence"),
+  );
+  intro.appendChild(
+    scdSetupElement(
+      "p",
+      "scd-setup__welcome-copy",
+      "We will check the Cisco data and packages already available, help you configure routing, give CIM its own review step, and show every change before setup finishes.",
+    ),
+  );
+
+  const outcomes = scdSetupElement("ol", "scd-setup__welcome-list");
+  [
+    ["Verify readiness", "Confirm data coverage, freshness, packages, and index routing."],
+    ["Configure data", "Review only the routing macros detected for this environment."],
+    ["Check CIM", "Review model allowlists separately without blocking the main setup path."],
+    ["Review and finish", "See the exact changes before anything is saved."],
+  ].forEach(([label, description]) => {
+    const item = scdSetupElement("li", "");
+    item.appendChild(scdSetupElement("strong", "", label));
+    item.appendChild(scdSetupElement("span", "", description));
+    outcomes.appendChild(item);
+  });
+  intro.appendChild(outcomes);
+  main.appendChild(intro);
+  content.appendChild(main);
+
+  scdSetupRenderActions(
+    root,
+    [
+      {
+        label: "Start setup",
+        // eslint-disable-next-line no-use-before-define
+        onClick: () => scdSetupTransition(root, scdSetupRenderDiscoveryStep),
+      },
+    ],
+    "Nothing is changed until the final review.",
   );
 }
 
 function scdSetupRenderDiscoveryStep(root) {
   const state = root.scdSetupState;
   const { dataRows, errors } = state;
-  scdSetupSetActiveStep(root, 1);
+  scdSetupSetActiveStep(root, 2);
   scdSetupSetHeaderCopy(
     root,
-    "Discover your Cisco environment",
-    "Start with the data this Splunk deployment actually has, then build a setup plan around it.",
+    "Environment readiness",
+    "We checked the data and packages required for your Cisco dashboards.",
   );
   const content = root.querySelector(".scd-setup__content");
   content.textContent = "";
   const uniqueSourcetypes = new Set(dataRows.map((row) => row.sourcetype));
   const uniqueIndexes = new Set(dataRows.map((row) => row.index));
   const totalEvents = dataRows.reduce((sum, row) => sum + row.count, 0);
+  const latestEvent = dataRows.reduce(
+    (latest, row) => Math.max(latest, Number(row.latest) || 0),
+    0,
+  );
   const capabilities = scdSetupResolveCapabilities(dataRows);
   const detectedCapabilities = capabilities.filter(
     (capability) => capability.detected,
   ).length;
+  const prerequisites = scdSetupResolvePrerequisites(
+    dataRows,
+    state.appEntries,
+  );
+  const packagesNeedingAttention = prerequisites.filter((item) =>
+    ["missing", "disabled", "update", "verify"].includes(item.status),
+  ).length;
+  const dataReady = !errors.data && dataRows.length > 0;
+  const overallReady = dataReady && detectedCapabilities > 0;
 
-  const workspace = scdSetupElement("div", "scd-setup__workspace");
-  const main = scdSetupElement("main", "scd-setup__main");
-  const aside = scdSetupElement("aside", "scd-setup__aside");
+  const main = scdSetupElement(
+    "main",
+    "scd-setup__main scd-setup__main--compact",
+  );
   const summary = scdSetupElement(
     "section",
-    "scd-setup__section scd-setup__readiness",
+    `scd-setup__readiness-banner is-${overallReady ? "positive" : "warning"}`,
   );
   const summaryCopy = scdSetupElement("div");
   summaryCopy.appendChild(
-    scdSetupElement("p", "scd-setup__eyebrow", "STEP 1 · DATA DISCOVERY"),
+    scdSetupElement(
+      "strong",
+      "",
+      overallReady ? "Ready to continue" : "Readiness needs attention",
+    ),
   );
   summaryCopy.appendChild(
     scdSetupElement(
-      "h2",
+      "span",
       "",
       errors.data
-        ? "The data scan needs attention"
+        ? "The data scan could not complete. Review the details before continuing."
         : `${detectedCapabilities} of ${capabilities.length} solution areas detected`,
     ),
   );
-  summaryCopy.appendChild(
-    scdSetupElement(
-      "p",
-      "scd-setup__section-intro",
-      "The 30-day metadata scan reads counts and timestamps, not event payloads.",
-    ),
-  );
   summary.appendChild(summaryCopy);
-  scdSetupRenderMetrics(summary, [
-    [scdSetupFormatNumber(uniqueSourcetypes.size), "Sourcetypes"],
-    [scdSetupFormatNumber(uniqueIndexes.size), "Indexes"],
-    [scdSetupFormatNumber(totalEvents), "Events"],
-  ]);
   main.appendChild(summary);
 
-  const coverage = scdSetupElement("section", "scd-setup__section");
-  coverage.appendChild(
-    scdSetupElement("p", "scd-setup__eyebrow", "DASHBOARD COVERAGE"),
-  );
-  coverage.appendChild(scdSetupElement("h2", "", "What will work today"));
-  coverage.appendChild(
-    scdSetupElement(
-      "p",
-      "scd-setup__section-intro",
-      "Detected data enables the matching experiences. Missing products stay optional and their affected panels are called out clearly.",
-    ),
-  );
+  const reviewList = scdSetupElement("section", "scd-setup__review-list");
+  const coverageBody = scdSetupElement("div", "");
   if (errors.data) {
     const warning = scdSetupElement(
       "div",
@@ -1202,57 +1574,108 @@ function scdSetupRenderDiscoveryStep(root) {
       "Discovery could not run. Verify this user can search the target indexes, then rescan before relying on package recommendations.",
     );
     warning.setAttribute("role", "status");
-    coverage.appendChild(warning);
+    coverageBody.appendChild(warning);
   } else {
-    scdSetupRenderCapabilities(coverage, capabilities);
+    coverageBody.appendChild(
+      scdSetupElement(
+        "p",
+        "scd-setup__review-help",
+        "Detected data enables the matching dashboard experiences. Missing products remain optional.",
+      ),
+    );
+    scdSetupRenderCapabilities(coverageBody, capabilities);
   }
-  main.appendChild(coverage);
-
-  const evidence = scdSetupElement("details", "scd-setup__disclosure");
-  const evidenceSummary = scdSetupElement("summary", "");
-  const evidenceCopy = scdSetupElement("span");
-  evidenceCopy.appendChild(scdSetupElement("strong", "", "Discovery evidence"));
-  evidenceCopy.appendChild(
-    scdSetupElement(
-      "small",
-      "",
-      errors.data
+  reviewList.appendChild(
+    scdSetupRenderReviewRow({
+      label: "Data coverage",
+      value: errors.data
         ? "Scan unavailable"
-        : `${uniqueSourcetypes.size} sourcetypes across ${uniqueIndexes.size} indexes`,
-    ),
+        : `${detectedCapabilities} of ${capabilities.length} areas detected`,
+      tone: errors.data || !detectedCapabilities ? "warning" : "positive",
+      description: "Expand to see which dashboard experiences have matching data.",
+      content: coverageBody,
+    }),
   );
-  evidenceSummary.appendChild(evidenceCopy);
-  evidence.appendChild(evidenceSummary);
+
+  const freshnessBody = scdSetupElement("p", "scd-setup__review-help");
+  freshnessBody.textContent = dataRows.length
+    ? "Freshness uses the latest timestamp returned by the 30-day metadata scan."
+    : "No matching Cisco timestamps were returned by the metadata scan.";
+  reviewList.appendChild(
+    scdSetupRenderReviewRow({
+      label: "Data freshness",
+      value: errors.data ? "Unknown" : scdSetupRelativeTime(latestEvent),
+      tone: errors.data || !latestEvent ? "warning" : "positive",
+      description: "Confirm that the detected data is recent enough for setup.",
+      content: freshnessBody,
+    }),
+  );
+
+  let packageHealthValue = "Ready";
+  if (errors.apps) {
+    packageHealthValue = "Inventory unavailable";
+  } else if (packagesNeedingAttention) {
+    packageHealthValue = `${packagesNeedingAttention} update${
+      packagesNeedingAttention === 1 ? "" : "s"
+    } recommended`;
+  }
+  reviewList.appendChild(
+    scdSetupRenderReviewRow({
+      label: "Package health",
+      value: packageHealthValue,
+      tone: errors.apps || packagesNeedingAttention ? "warning" : "positive",
+      description: "The next step shows only packages that need action.",
+    }),
+  );
+
+  reviewList.appendChild(
+    scdSetupRenderReviewRow({
+      label: "Index routing",
+      value: uniqueIndexes.size
+        ? `${scdSetupFormatNumber(uniqueIndexes.size)} indexes found`
+        : "No indexes detected",
+      tone: uniqueIndexes.size ? "positive" : "warning",
+      description: "Routing macros will be proposed from the indexes found here.",
+    }),
+  );
+
   const evidenceBody = scdSetupElement("div", "scd-setup__discovery-body");
   scdSetupRenderSourceTable(evidenceBody, dataRows);
-  evidence.appendChild(evidenceBody);
-  aside.appendChild(evidence);
-  scdSetupRenderNavigator(aside, state.appEntries);
-  workspace.appendChild(main);
-  workspace.appendChild(aside);
-  content.appendChild(workspace);
+  reviewList.appendChild(
+    scdSetupRenderReviewRow({
+      label: "Discovery evidence",
+      value: `${scdSetupFormatNumber(uniqueSourcetypes.size)} sourcetypes · ${scdSetupFormatNumber(uniqueIndexes.size)} indexes · ${scdSetupFormatNumber(totalEvents)} events`,
+      tone: errors.data ? "warning" : "info",
+      description: "Expand only when you need the raw scan results.",
+      content: evidenceBody,
+    }),
+  );
+  main.appendChild(reviewList);
+  content.appendChild(main);
 
   scdSetupRenderActions(
     root,
     [
       {
-        label: "Rescan data",
+        label: "Back to Welcome",
         secondary: true,
-        // eslint-disable-next-line no-use-before-define
-        onClick: () => scdSetupLoad(root, state.configured),
+        onClick: () => scdSetupTransition(root, scdSetupRenderWelcomeStep),
       },
       {
-        label: "Next: review recommendations",
-        // eslint-disable-next-line no-use-before-define
-        onClick: () => scdSetupRenderPackageStep(root),
+        label: "Review packages",
+        onClick: () =>
+          // eslint-disable-next-line no-use-before-define
+          scdSetupTransition(root, scdSetupRenderPackageReviewStep),
       },
     ],
     errors.data
-      ? "Recommendations will include only foundational packages until discovery succeeds."
-      : "Next, review only the packages relevant to the data found here.",
+      ? "You can continue, but package recommendations will include only foundational requirements."
+      : "No changes have been made. Next, review package actions.",
   );
 }
 
+// Kept temporarily for compatibility with cached setup scripts from prior builds.
+// eslint-disable-next-line no-unused-vars
 function scdSetupRenderPackageStep(root) {
   const state = root.scdSetupState;
   const { appEntries, dataRows, errors } = state;
@@ -1339,7 +1762,7 @@ function scdSetupRenderPackageStep(root) {
     "Refresh status",
   );
   refreshApps.type = "button";
-  refreshApps.setAttribute("aria-label", "Refresh installed package status");
+  refreshApps.dataset.scdSetupAction = "refresh-app-status";
   refreshApps.title = "Check installed apps again";
   refreshApps.addEventListener("click", () => {
     refreshApps.disabled = true;
@@ -1363,7 +1786,7 @@ function scdSetupRenderPackageStep(root) {
       .then(() => {
         scdSetupRenderPackageStep(root);
         root
-          .querySelector('[aria-label="Refresh installed package status"]')
+          .querySelector('[data-scd-setup-action="refresh-app-status"]')
           ?.focus?.();
       });
   });
@@ -1450,6 +1873,316 @@ function scdSetupRenderPackageStep(root) {
   );
 }
 
+function scdSetupRenderPackageReviewStep(root) {
+  const state = root.scdSetupState;
+  const { appEntries, dataRows, errors } = state;
+  scdSetupSetActiveStep(root, 3);
+  scdSetupSetHeaderCopy(
+    root,
+    "Review packages",
+    "Only packages that need your attention are shown first.",
+  );
+  const content = root.querySelector(".scd-setup__content");
+  content.textContent = "";
+  const prerequisites = scdSetupResolvePrerequisites(dataRows, appEntries);
+  const skippedPackages = scdSetupResolveSkippedPackages(dataRows);
+  const attentionPrerequisites = prerequisites.filter((item) =>
+    ["missing", "disabled", "update", "verify"].includes(item.status),
+  );
+  const readyPrerequisites = prerequisites.filter(
+    (item) => item.status === "installed",
+  );
+  const blockingPrerequisites = errors.apps
+    ? []
+    : prerequisites.filter(
+        (item) =>
+          item.always &&
+          ["mandatory", "required"].includes(item.importance) &&
+          ["missing", "disabled"].includes(item.status),
+      );
+  const readyCount = prerequisites.length - attentionPrerequisites.length;
+  let readinessTone = "positive";
+  if (blockingPrerequisites.length) {
+    readinessTone = "negative";
+  } else if (attentionPrerequisites.length) {
+    readinessTone = "warning";
+  }
+
+  const main = scdSetupElement(
+    "main",
+    "scd-setup__main scd-setup__main--compact",
+  );
+  const readiness = scdSetupElement(
+    "section",
+    `scd-setup__readiness-banner is-${readinessTone}`,
+  );
+  const readinessCopy = scdSetupElement("div");
+  readinessCopy.appendChild(
+    scdSetupElement(
+      "strong",
+      "",
+      blockingPrerequisites.length
+        ? `${blockingPrerequisites.length} required package${blockingPrerequisites.length === 1 ? "" : "s"} must be resolved`
+        : `${readyCount} of ${prerequisites.length} packages ready`,
+    ),
+  );
+  readinessCopy.appendChild(
+    scdSetupElement(
+      "span",
+      "",
+      attentionPrerequisites.length
+        ? `${attentionPrerequisites.length} package${attentionPrerequisites.length === 1 ? "" : "s"} need attention.`
+        : "No package action is required.",
+    ),
+  );
+  readiness.appendChild(readinessCopy);
+  main.appendChild(readiness);
+
+  const packagesHeader = scdSetupElement(
+    "div",
+    "scd-setup__package-review-heading",
+  );
+  const packagesCopy = scdSetupElement("div");
+  packagesCopy.appendChild(scdSetupElement("h2", "", "Action needed"));
+  packagesCopy.appendChild(
+    scdSetupElement(
+      "p",
+      "scd-setup__section-intro",
+      "Resolve required packages first. Recommended updates improve coverage but do not block setup.",
+    ),
+  );
+  packagesHeader.appendChild(packagesCopy);
+  const packageActions = scdSetupElement(
+    "div",
+    "scd-setup__section-actions",
+  );
+  const refreshApps = scdSetupElement(
+    "button",
+    "scd-setup__package-action",
+    "Refresh status",
+  );
+  refreshApps.type = "button";
+  refreshApps.dataset.scdSetupAction = "refresh-app-status";
+  refreshApps.addEventListener("click", () => {
+    refreshApps.disabled = true;
+    refreshApps.textContent = "Checking…";
+    refreshApps.setAttribute("aria-busy", "true");
+    scdSetupLoadApps()
+      .then((entries) => {
+        state.appEntries = entries;
+        state.errors = { ...state.errors, apps: null };
+        state.packageRefreshMessage = `Package status refreshed at ${new Date().toLocaleTimeString(
+          [],
+          { hour: "numeric", minute: "2-digit" },
+        )}.`;
+      })
+      .catch((error) => {
+        state.appEntries = [];
+        state.errors = { ...state.errors, apps: error };
+        state.packageRefreshMessage =
+          "Package status could not be refreshed. Try again or contact a Splunk administrator.";
+      })
+      .then(() => {
+        scdSetupRenderPackageReviewStep(root);
+        root
+          .querySelector('[data-scd-setup-action="refresh-app-status"]')
+          ?.focus?.();
+      });
+  });
+  packageActions.appendChild(refreshApps);
+  const manageApps = scdSetupLink(
+    "scd-setup__package-action",
+    "Manage Apps",
+    scdSetupManageAppsUrl(window.location.pathname),
+  );
+  manageApps.target = "_blank";
+  manageApps.rel = "noopener noreferrer";
+  packageActions.appendChild(manageApps);
+  packagesHeader.appendChild(packageActions);
+  main.appendChild(packagesHeader);
+
+  if (state.packageRefreshMessage) {
+    const refreshMessage = scdSetupElement(
+      "p",
+      `scd-setup__package-refresh-status${errors.apps ? " is-error" : ""}`,
+      state.packageRefreshMessage,
+    );
+    refreshMessage.setAttribute("role", "status");
+    refreshMessage.setAttribute("aria-live", "polite");
+    main.appendChild(refreshMessage);
+  }
+  if (errors.apps) {
+    const warning = scdSetupElement(
+      "div",
+      "scd-setup__warning",
+      "The package inventory could not be read. Continue only after an administrator verifies the required apps.",
+    );
+    warning.setAttribute("role", "status");
+    main.appendChild(warning);
+  }
+
+  const actionList = scdSetupElement(
+    "section",
+    "scd-setup__package-review-list",
+  );
+  if (!attentionPrerequisites.length) {
+    const empty = scdSetupElement("div", "scd-setup__empty");
+    empty.appendChild(
+      scdSetupElement("strong", "", "All recommended packages are ready."),
+    );
+    empty.appendChild(
+      scdSetupElement(
+        "p",
+        "",
+        "Continue to configure the detected data routing.",
+      ),
+    );
+    actionList.appendChild(empty);
+  }
+
+  attentionPrerequisites.forEach((prerequisite) => {
+    const row = scdSetupElement(
+      "article",
+      `scd-setup__package-review-item is-${scdSetupStatusTone(prerequisite.status)}`,
+    );
+    const copy = scdSetupElement("div", "scd-setup__package-review-copy");
+    copy.appendChild(scdSetupElement("strong", "", prerequisite.name));
+    copy.appendChild(scdSetupElement("span", "", prerequisite.purpose));
+    const installedVersion = prerequisite.installedVersion
+      ? `Installed v${prerequisite.installedVersion}`
+      : "Not installed";
+    const latestVersion = prerequisite.latestKnownVersion
+      ? ` · Recommended v${prerequisite.latestKnownVersion}`
+      : "";
+    copy.appendChild(
+      scdSetupElement("small", "", `${installedVersion}${latestVersion}`),
+    );
+    row.appendChild(copy);
+    row.appendChild(
+      scdSetupElement(
+        "span",
+        "scd-setup__package-review-status",
+        scdSetupStatusLabel(prerequisite),
+      ),
+    );
+
+    let action = null;
+    if (
+      ["update", "disabled"].includes(prerequisite.status) &&
+      prerequisite.installedId
+    ) {
+      action = scdSetupLink(
+        "scd-setup__package-action",
+        prerequisite.status === "update" ? "Update" : "Enable",
+        scdSetupManageAppsUrl(window.location.pathname, prerequisite.installedId),
+      );
+      action.target = "_blank";
+      action.rel = "noreferrer";
+      action.addEventListener("click", (event) =>
+        scdSetupOpenManageApps(event, prerequisite.installedId),
+      );
+    } else if (prerequisite.splunkbase) {
+      action = scdSetupLink(
+        "scd-setup__package-action",
+        "View package",
+        prerequisite.splunkbase,
+      );
+      action.target = "_blank";
+      action.rel = "noopener noreferrer";
+    }
+    if (action) {
+      action.setAttribute(
+        "aria-label",
+        `${action.textContent} for ${prerequisite.name}`,
+      );
+      row.appendChild(action);
+    }
+    actionList.appendChild(row);
+  });
+  main.appendChild(actionList);
+
+  const installedDetails = scdSetupElement(
+    "details",
+    "scd-setup__compact-disclosure",
+  );
+  installedDetails.appendChild(
+    scdSetupElement(
+      "summary",
+      "",
+      `${readyPrerequisites.length} installed package${readyPrerequisites.length === 1 ? "" : "s"} — no action needed`,
+    ),
+  );
+  const installedList = scdSetupElement("ul", "scd-setup__installed-list");
+  readyPrerequisites.forEach((prerequisite) => {
+    const item = scdSetupElement("li", "");
+    item.appendChild(scdSetupElement("span", "", prerequisite.name));
+    item.appendChild(
+      scdSetupElement(
+        "strong",
+        "",
+        prerequisite.installedVersion
+          ? `v${prerequisite.installedVersion}`
+          : "Installed",
+      ),
+    );
+    installedList.appendChild(item);
+  });
+  installedDetails.appendChild(installedList);
+  main.appendChild(installedDetails);
+
+  if (skippedPackages.length) {
+    const skippedDetails = scdSetupElement(
+      "details",
+      "scd-setup__compact-disclosure",
+    );
+    skippedDetails.appendChild(
+      scdSetupElement(
+        "summary",
+        "",
+        `${skippedPackages.length} package${skippedPackages.length === 1 ? "" : "s"} not recommended because matching data is absent`,
+      ),
+    );
+    const skippedList = scdSetupElement("ul", "scd-setup__installed-list");
+    skippedPackages.forEach((item) => {
+      const row = scdSetupElement("li", "");
+      row.appendChild(scdSetupElement("span", "", item.name));
+      row.appendChild(scdSetupElement("small", "", item.impact));
+      skippedList.appendChild(row);
+    });
+    skippedDetails.appendChild(skippedList);
+    main.appendChild(skippedDetails);
+  }
+  content.appendChild(main);
+
+  let packageActionMessage =
+    "The recommended package set is ready. Continue to data routing.";
+  if (blockingPrerequisites.length) {
+    packageActionMessage = `${blockingPrerequisites
+      .map((item) => item.name)
+      .join(" and ")} must be installed and enabled before data configuration.`;
+  } else if (attentionPrerequisites.length) {
+    packageActionMessage = `${attentionPrerequisites.length} recommended package${attentionPrerequisites.length === 1 ? "" : "s"} need attention. You can continue and return later.`;
+  }
+
+  scdSetupRenderActions(
+    root,
+    [
+      {
+        label: "Back to Verify readiness",
+        secondary: true,
+        onClick: () => scdSetupTransition(root, scdSetupRenderDiscoveryStep),
+      },
+      {
+        label: "Configure data",
+        disabled: blockingPrerequisites.length > 0,
+        // eslint-disable-next-line no-use-before-define
+        onClick: () => scdSetupShowTuningStep(root),
+      },
+    ],
+    packageActionMessage,
+  );
+}
+
 function scdSetupShowTuningStep(root) {
   const setupRoot = root;
   const tunerRoot = document.getElementById("scan-root");
@@ -1498,9 +2231,11 @@ function scdSetupRestoreStep(root, step) {
   setupRoot.hidden = false;
   window.history.replaceState(null, "", `${window.location.pathname}?setup=1`);
   if (step === 1) {
+    scdSetupRenderWelcomeStep(setupRoot);
+  } else if (step === 2) {
     scdSetupRenderDiscoveryStep(setupRoot);
   } else {
-    scdSetupRenderPackageStep(setupRoot);
+    scdSetupRenderPackageReviewStep(setupRoot);
   }
   setupRoot.querySelector("h1")?.focus?.();
 }
@@ -1517,7 +2252,16 @@ function scdSetupRenderResults(root, dataRows, appEntries, errors, configured) {
     scdSetupShowTuningStep(setupRoot);
     return;
   }
-  scdSetupRenderDiscoveryStep(setupRoot);
+  const requestedStep = Number(
+    new URLSearchParams(window.location.search).get("step"),
+  );
+  if (requestedStep === 2) {
+    scdSetupRenderDiscoveryStep(setupRoot);
+  } else if (requestedStep === 3) {
+    scdSetupRenderPackageReviewStep(setupRoot);
+  } else {
+    scdSetupRenderWelcomeStep(setupRoot);
+  }
 }
 
 function scdSetupLoad(root, configured) {
@@ -1527,7 +2271,11 @@ function scdSetupLoad(root, configured) {
   content.textContent = "";
   actions.textContent = "";
   const loading = scdSetupElement("div", "scd-setup__loading");
-  loading.appendChild(scdSetupElement("span", "scd-setup__spinner"));
+  loading.setAttribute("role", "status");
+  loading.setAttribute("aria-live", "polite");
+  const spinner = scdSetupElement("span", "scd-setup__spinner");
+  spinner.setAttribute("aria-hidden", "true");
+  loading.appendChild(spinner);
   loading.appendChild(
     scdSetupElement(
       "div",
@@ -1561,15 +2309,32 @@ function scdSetupLoad(root, configured) {
 function scdSetupRender(root, configured) {
   const mountRoot = root;
   mountRoot.textContent = "";
+  scdSetupApplyColorScheme(mountRoot, scdSetupReadColorScheme());
   const shell = scdSetupElement("section", "scd-setup__shell");
+  const sidebar = scdSetupElement("nav", "scd-setup__sidebar");
+  sidebar.setAttribute(
+    "aria-label",
+    "Splunk Secure Networking Essentials setup progress",
+  );
+  sidebar.appendChild(
+    scdSetupElement(
+      "div",
+      "scd-setup__sidebar-brand",
+      "Splunk Secure Networking Essentials",
+    ),
+  );
+  scdSetupRenderStepper(sidebar, 1);
+  shell.appendChild(sidebar);
+
+  const stage = scdSetupElement("div", "scd-setup__stage");
   const header = scdSetupElement("header", "scd-setup__header");
   const brand = scdSetupElement("div", "scd-setup__brand");
   const brandCopy = scdSetupElement("div");
   brandCopy.appendChild(
     scdSetupElement(
       "p",
-      "scd-setup__eyebrow",
-      "SPLUNK SECURE NETWORKING ESSENTIALS · SETUP",
+      "scd-setup__eyebrow scd-setup__step-kicker",
+      "Step 1 of 6",
     ),
   );
   const heading = scdSetupElement(
@@ -1587,11 +2352,12 @@ function scdSetupRender(root, configured) {
     ),
   );
   brand.appendChild(brandCopy);
+  brand.appendChild(scdSetupCreateThemeControl(mountRoot));
   header.appendChild(brand);
-  scdSetupRenderStepper(header, 1);
-  shell.appendChild(header);
-  shell.appendChild(scdSetupElement("div", "scd-setup__content"));
-  shell.appendChild(scdSetupElement("footer", "scd-setup__actions"));
+  stage.appendChild(header);
+  stage.appendChild(scdSetupElement("div", "scd-setup__content"));
+  stage.appendChild(scdSetupElement("footer", "scd-setup__actions"));
+  shell.appendChild(stage);
   mountRoot.appendChild(shell);
   scdSetupLoad(mountRoot, configured);
 }
@@ -1611,7 +2377,13 @@ function scdSetupStart() {
       scdSetupRender(root, scdSetupIsConfigured(payload));
       window.addEventListener("scd:setup-step", (event) => {
         const requestedStep = Number(event && event.detail && event.detail.step);
-        scdSetupRestoreStep(root, requestedStep === 1 ? 1 : 2);
+        let restoredStep = 3;
+        if (requestedStep === 1) {
+          restoredStep = 1;
+        } else if (requestedStep === 2) {
+          restoredStep = 2;
+        }
+        scdSetupRestoreStep(root, restoredStep);
       });
     })
     .catch(() => {

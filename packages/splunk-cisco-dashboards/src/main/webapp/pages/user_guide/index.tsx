@@ -535,7 +535,7 @@ const dependencyApps = [
       "Required for ThousandEyes data model macros and tstats-backed ThousandEyes panels.",
   },
   {
-    name: "Cisco Enterprise Networking for Splunk Platform",
+    name: "Cisco Enterprise Networking App for Splunk",
     folder: "cisco-catalyst-app",
     splunkbase: "https://splunkbase.splunk.com/app/7539",
     models: "Cisco_Catalyst_App",
@@ -1830,7 +1830,12 @@ iseval = 0`}</CodeBlock>
                   the readiness query&apos;s Open in Search path into one flow.
                   It writes companion-app macros only when that app is enabled
                   and installed. Balanced mode remains available while
-                  recommended acceleration is completed.
+                  recommended acceleration is completed. Routing, CIM, and
+                  performance changes remain drafts until the final review,
+                  where administrators can compare current and proposed values
+                  by target app. Cancel and Save and finish both require
+                  confirmation, and long routing or CIM lists stay inside
+                  bounded review tables with focused multiselect editors.
                 </InfoCard>
                 <InfoCard title="Insights Workspaces">
                   Workspaces now own their layout and presentation choices,

@@ -10,6 +10,30 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Redesigned first-run setup as a clear six-step guided flow with explicit
+  START and FINISH lines, responsive progress navigation, persistent dark and
+  Light modes, a dedicated CIM readiness step before final review, and the full
+  Splunk Secure Networking Essentials product name throughout the journey.
+- Expanded setup performance readiness to check all 13 required Cisco data
+  models, including the eight DC Networking models plus CIM Authentication and
+  Network Traffic, with an on-screen model inventory behind the compact summary.
+- Added index multiselects that build routing macro definitions automatically,
+  aligned the setup progress rail, and updated the Enterprise Networking app
+  and add-on names throughout the setup experience.
+- Kept a full `Select indexes` action pinned beside every routing row so users
+  can open the index multiselect without horizontally scrolling to a hidden icon.
+- Kept setup routing, CIM, and performance edits as drafts until final review,
+  added confirmed abandon and save actions, and added an app-by-app before/after
+  change summary in the finish step.
+- Corrected Step 4 search-performance radio sizing so selectors remain circular
+  in both Light and dark setup modes, and kept expanded setup inventories inside
+  the scrollable content area so the header and action footer remain available.
+- Kept CIM model names, macro identifiers, and configuration paths stacked
+  inside their table cell so allowlist reviews remain readable at narrow widths.
+- Kept routing macro names, target apps, and configuration paths stacked inside
+  their table cell so routing reviews remain readable at narrow widths.
+- Restored a visible CIM index browser for every model and standardized edited
+  and discovered allowlists on the compact `index IN (index1, index2, ...)` form.
 - Prevented trailing empty time buckets from rendering five-pillar KPI values
   as N/A or producing false trend drops.
 - Standardized compact K/M/B/T formatting at exact abbreviation boundaries
@@ -29,9 +53,9 @@ networking pillars and workplace scenarios.
 
 ## Runtime prerequisites
 
-- Cisco Catalyst Add-on for Splunk 3.2.44 or later. This version is required
-  for the current and retained sourcetype coverage used by the packaged
-  searches and accelerated data-model constraints.
+- Cisco Enterprise Networking Add-on for Splunk 3.2.44 or later. This version
+  is required for the current and retained sourcetype coverage used by the
+  packaged searches and accelerated data-model constraints.
 
 The Insights Workspace uses the shared components in
 `common/components/workspace/`, including KPI tiles, workspace dialogs,
