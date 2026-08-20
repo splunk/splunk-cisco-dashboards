@@ -13,10 +13,13 @@ export const DEFAULT_DASHBOARD_DRILLDOWN_TIME_RANGE = {
     latest: 'now',
 };
 
-// Exact outlined paths from @splunk/react-icons/LayoutPanels, which is exposed
-// as PanelRightOpen by common/icons/SuiIcon and used by the home dashboard.
+export const DASHBOARD_DRILLDOWN_ACCESSIBLE_TITLE = 'Open drill-down details';
+
+// Exact paths from @splunk/react-icons/MagnifierWithPlus. The Dashboard Studio
+// image visualization cannot render the React component directly, so it uses
+// this self-contained SVG with an accessible label for the modal action.
 export const DASHBOARD_DRILLDOWN_PANEL_ICON_SVG =
-    '<svg aria-label="Open details panel" role="img" data-icon="PanelRightOpen" height="32px" viewBox="0 0 24 24" width="32px" xmlns="http://www.w3.org/2000/svg" fill="#64748b"><path fill-rule="evenodd" clip-rule="evenodd" d="M19.5 4C20.3284 4 21 4.67157 21 5.5V9L3 9L3 5.5C3 4.67157 3.67157 4 4.5 4L19.5 4ZM19 6L5 6L5 7L19 7V6Z"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M3 11H14V20H4.5C3.67157 20 3 19.3284 3 18.5V11ZM5 13V18H12V13H5Z"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M16 11H21V18.5C21 19.3284 20.3284 20 19.5 20H16V11ZM18 13V18H19V13H18Z"></path></svg>';
+    '<svg aria-label="Open drill-down details" role="img" data-icon="MagnifierWithPlus" height="32px" viewBox="0 0 24 24" width="32px" xmlns="http://www.w3.org/2000/svg" fill="#64748b"><title>Open drill-down details</title><path d="M19 3C19 2.44772 18.5523 2 18 2C17.4477 2 17 2.44772 17 3V5H15C14.4477 5 14 5.44772 14 6C14 6.55228 14.4477 7 15 7H17V9C17 9.55228 17.4477 10 18 10C18.5523 10 19 9.55228 19 9V7H21C21.5523 7 22 6.55228 22 6C22 5.44772 21.5523 5 21 5H19V3Z"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M11.0228 17.4363C10.0919 18.0887 8.95818 18.4716 7.73507 18.4716C4.56768 18.4716 2 15.9039 2 12.7365C2 9.56914 4.56768 7.00146 7.73507 7.00146C10.9025 7.00146 13.4701 9.56914 13.4701 12.7365C13.4701 13.9585 13.088 15.0912 12.4366 16.0217L15.707 19.292C16.0975 19.6826 16.0975 20.3157 15.707 20.7063C15.3164 21.0968 14.6833 21.0968 14.2928 20.7063L11.0228 17.4363ZM11.4701 12.7365C11.4701 14.7994 9.79789 16.4716 7.73507 16.4716C5.67225 16.4716 4 14.7994 4 12.7365C4 10.6737 5.67225 9.00146 7.73507 9.00146C9.79789 9.00146 11.4701 10.6737 11.4701 12.7365Z"></path></svg>';
 export const DASHBOARD_DRILLDOWN_PANEL_ICON_DATA_URL = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
     DASHBOARD_DRILLDOWN_PANEL_ICON_SVG,
 )}`;
@@ -91,6 +94,7 @@ export const createDashboardDrilldownIconVisualization = ({ origin, targetIds })
     options: {
         preserveAspectRatio: true,
         src: DASHBOARD_DRILLDOWN_PANEL_ICON_DATA_URL,
+        title: DASHBOARD_DRILLDOWN_ACCESSIBLE_TITLE,
     },
     eventHandlers: [
         {
@@ -131,8 +135,10 @@ export const normalizeDashboardDrilldownIcons = (definition) => {
                     ...visualization,
                     type: 'splunk.image',
                     options: {
+                        ...visualization.options,
                         preserveAspectRatio: true,
                         src: DASHBOARD_DRILLDOWN_PANEL_ICON_DATA_URL,
+                        title: DASHBOARD_DRILLDOWN_ACCESSIBLE_TITLE,
                     },
                 },
             ];
