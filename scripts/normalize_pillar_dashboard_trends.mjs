@@ -52,6 +52,14 @@ const DEFAULT_TREND_CONTEXT = [
     { value: '#049fd9', from: 0 },
 ];
 
+const MANAGER_ONLY_TYPE_MARKERS = [
+    '"type": "ds.searchbase"',
+    '"type": "input.simpleTimePicker"',
+    '"type": "splunk.template_kpi"',
+    '"type": "splunk.template_other"',
+    '"type": "splunk.cisco_spaces_space_manager"',
+];
+
 // Single Value uses a strict `>` comparison at K/M/B/T boundaries. Dividing the
 // display-only major value by a number infinitesimally below 1 crosses an exact
 // boundary without changing the rendered precision or the numeric trend series.
@@ -75,6 +83,40 @@ function dashboardIdsFromNavigation(navXml) {
             id: match[1],
         })),
     );
+}
+
+function validateManagerOnlyDashboardVisibility(navXml) {
+    const managerOnlyDashboardIds = fs
+        .readdirSync(VIEWS_ROOT)
+        .filter((fileName) => fileName.endsWith('.xml'))
+        .flatMap((fileName) => {
+            const filePath = path.join(VIEWS_ROOT, fileName);
+            const xml = fs.readFileSync(filePath, 'utf8');
+            if (!MANAGER_ONLY_TYPE_MARKERS.some((marker) => xml.includes(marker))) {
+                return [];
+            }
+
+            const dashboardId = path.basename(fileName, '.xml');
+            const root = xml.match(/^<dashboard\b[^>]*>/)?.[0] ?? '';
+            if (!/\bisVisible="false"/.test(root)) {
+                throw new Error(
+                    `${dashboardId}: manager-only dashboard must be hidden from the native catalogue`,
+                );
+            }
+            if (!navXml.includes(`href="dashboard_manager#/${dashboardId}"`)) {
+                throw new Error(
+                    `${dashboardId}: manager-only dashboard must remain routed through Dashboard Manager`,
+                );
+            }
+            return [dashboardId];
+        });
+
+    if (managerOnlyDashboardIds.length !== EXPECTED_DASHBOARD_COUNT) {
+        throw new Error(
+            `Expected ${EXPECTED_DASHBOARD_COUNT} manager-only dashboards, found ${managerOnlyDashboardIds.length}`,
+        );
+    }
+    return managerOnlyDashboardIds.length;
 }
 
 function parseDashboard(xml, filePath) {
@@ -327,7 +369,9 @@ function main() {
     }
 
     const searchbase = fs.readFileSync(SEARCHBASE_PATH, 'utf8');
-    const dashboards = dashboardIdsFromNavigation(fs.readFileSync(NAV_PATH, 'utf8'));
+    const navXml = fs.readFileSync(NAV_PATH, 'utf8');
+    const dashboards = dashboardIdsFromNavigation(navXml);
+    const managerOnlyDashboardCount = validateManagerOnlyDashboardVisibility(navXml);
     if (dashboards.length !== EXPECTED_DASHBOARD_COUNT) {
         throw new Error(
             `Expected ${EXPECTED_DASHBOARD_COUNT} menu dashboards, found ${dashboards.length}`,
@@ -454,7 +498,8 @@ function main() {
     console.log(
         `${action} ${dashboards.length} dashboards and ${cardCount} cards ` +
             `(${trendCardCount} chronological, ${staticCardCount} categorical, ` +
-            `${abbreviatedCardCount} abbreviated).`,
+            `${abbreviatedCardCount} abbreviated); ${managerOnlyDashboardCount} ` +
+            'manager-only dashboards are hidden from the native catalogue.',
     );
     if (changedFiles.length > 0) {
         console.log(`${mode === '--write' ? 'Changed' : 'Would change'} ${changedFiles.length} files:`);

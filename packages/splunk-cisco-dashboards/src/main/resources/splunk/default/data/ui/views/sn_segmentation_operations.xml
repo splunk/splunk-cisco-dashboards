@@ -1,4 +1,4 @@
-<dashboard version="2" theme="dark" stylesheet="application.css">
+<dashboard version="2" theme="dark" stylesheet="application.css" isVisible="false">
     <label>Scalable Network Segmentation - Segmentation Operations</label>
     <description>Summarize segment health, policy alignment, and areas needing investigation.</description>
     <definition><![CDATA[

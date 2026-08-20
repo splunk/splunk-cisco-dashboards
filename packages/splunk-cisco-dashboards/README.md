@@ -10,6 +10,9 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Hid Dashboard Manager-only Secure Networking views from Splunk's native
+  Dashboards catalogue so customers enter them through the supported manager
+  route with custom time and Searchbase wiring intact.
 - Corrected three Multi-Site Orchestrator syslog searches so RFC-style events
   render Event Time, Device IP/Name, Severity, and Message instead of a
   multivalue Severity-only table, while retaining compatibility with the
