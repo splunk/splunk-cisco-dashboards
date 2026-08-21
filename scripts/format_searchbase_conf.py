@@ -74,6 +74,7 @@ UNBOUNDED_SORT_CONTRACT_STANZAS = frozenset(
     {
         "building_resilience_webex_devices",
         "client_summary_client_health_by_location",
+        "dashboard_spaces_intelligence_v1_dwell_distribution",
         "dashboard_workplace_spog_v1_issues",
         "dashboard_workplace_spog_v1_persite",
         "it_critical_systems_compliance_report",
