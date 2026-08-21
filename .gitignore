@@ -1,4 +1,7 @@
-# Track only the essential repository entry files at the root.
+# Repository root allowlist.
+#
+# Root-level files are local unless explicitly listed here. Directories remain
+# visible so their own tracked source files and the rules below still apply.
 /*
 !/*/
 !/.gitignore
@@ -11,28 +14,22 @@
 !/package.json
 !/yarn.lock
 
-# Local editor, automation, documentation, and generated content.
-.DS_Store
-/.vscode/
+# Local workspace and repository-only reference material.
+/.claude/
 /.cursor/
 /.github/
-/docs/
-/packages/splunk-cisco-dashboards/docs/
-/tests/
-/packages/splunk-cisco-dashboards/test/
+/.vscode/
 /artifacts/
+/docs/
 /icons/
+/packages/splunk-cisco-dashboards/docs/
+/packages/splunk-cisco-dashboards/test/
+/tests/
+
+# Operating-system, editor, and document artifacts.
+.DS_Store
 *.xlsx
 *.pptx
-
-# Keep non-build repository scripts local. build.sh requires these two.
-/scripts/*
-!/scripts/format_searchbase_conf.py
-!/scripts/lint_spl_antipatterns.py
-!/scripts/normalize_pillar_dashboard_precision.mjs
-!/scripts/normalize_pillar_dashboard_trends.mjs
-!/scripts/validate_drilldown_contracts.py
-!/scripts/validate_drilldown_live.py
 
 # Splunk runtime and maintenance output.
 local/
@@ -79,6 +76,7 @@ cover/
 
 # Local secrets, logs, installer state, and scratch output.
 .env
+.env.*
 *.log
 .pypirc
 pip-log.txt
