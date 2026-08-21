@@ -10,11 +10,31 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Curated Dashboard Manager to show only the packaged dashboards that depend on
+  its Dashboard Studio extensions and the current user's dashboards created
+  through the managed workflow. Ordinary Studio dashboards remain excluded even
+  when they use the Manager route for presentation compatibility. The library
+  and editor introduce the `Dashboards in 60 Seconds` promise, explain how
+  Searchbase and Dashboard Studio support dashboard building without writing
+  SPL or code, and call out guided drilldown wiring as a key extension. The help
+  also identifies the custom preset and editor integration for technical
+  readers. The workflow uses dashboard ACL ownership for `Yours` and provides a
+  clear empty state. Dashboard Manager help is concise, keyboard-accessible,
+  and uses semantic colors in both light and dark mode.
+- Added one combined Zero Trust Posture pilot that keeps the chart-heavy card
+  structure and Magnify+ actions, gives all six trends distinct palette colors,
+  hides Y-axis labels and gridlines, and uses a shorter full-width canvas that
+  stays centered and refits when the browser or display size changes. Editing
+  and other managed dashboards retain their existing behavior. Each pilot card
+  now also has a separate information action for its primary metric and direct
+  Searchbase source, while the investigation modal uses layered charcoal/navy
+  surfaces and explicit high-contrast Searchbase guidance text.
 - Hid Dashboard Manager-only Secure Networking views from Splunk's native
   Dashboards catalogue so customers enter them through the supported manager
   route with custom time and Searchbase wiring intact.
 - Updated dashboard drill-down controls to use a magnifier-plus icon button with
-  a `View details` tooltip and accessible label on hover and keyboard focus.
+  an `Investigate drivers` tooltip and accessible label on hover and keyboard
+  focus.
 - Repaired Searchbase and Dashboard Studio drill-down routing, replaced weak
   aggregate-to-aggregate pivots with event-level firewall, wireless, and SD-WAN
   detail searches, clarified tile-level action labels, and preserved each

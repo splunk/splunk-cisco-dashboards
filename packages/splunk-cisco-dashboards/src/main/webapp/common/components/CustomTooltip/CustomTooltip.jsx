@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
 import Card from '@splunk/react-ui/Card';
 import Pin from '@splunk/react-icons/Pin';
 import PinStuck from '@splunk/react-icons/PinStuck';
+import useSplunkTheme from '@splunk/themes/useSplunkTheme';
 
 const CustomTooltip = ({
     style,
@@ -22,6 +23,7 @@ const CustomTooltip = ({
     width = 500,
     height = 300,
 }) => {
+    const splunkTheme = useSplunkTheme();
     const [visible, setVisible] = useState(false);
     const [coords, setCoords] = useState({ top: 0, left: 0 });
     const [isPinned, setIsPinned] = useState(false);
@@ -32,10 +34,24 @@ const CustomTooltip = ({
     const tooltipRef = useRef(null);
     const timeoutRef = useRef(null);
     const isHoveringTooltip = useRef(false);
+    const isFocusWithin = useRef(false);
+    const tooltipThemeStyle = {
+        '--custom-tooltip-background-section': splunkTheme.backgroundColorSection,
+        '--custom-tooltip-background-popup': splunkTheme.backgroundColorPopup,
+        '--custom-tooltip-content-active': splunkTheme.contentColorActive,
+        '--custom-tooltip-content-default': splunkTheme.contentColorDefault,
+        '--custom-tooltip-content-muted': splunkTheme.contentColorMuted,
+        '--custom-tooltip-border': splunkTheme.borderColor,
+        '--custom-tooltip-border-weak': splunkTheme.borderColorWeak,
+        '--custom-tooltip-accent': splunkTheme.interactiveColorAccent,
+        '--custom-tooltip-overlay-hover': splunkTheme.interactiveColorOverlayHover,
+    };
 
     useEffect(() => {
         const handleMouseMove = (e) => {
-            if (!isDragging) return;
+            if (!isDragging) {
+                return;
+            }
 
             const newLeft = e.clientX - dragStartOffset.x;
             const newTop = e.clientY - dragStartOffset.y;
@@ -57,46 +73,27 @@ const CustomTooltip = ({
         };
     }, [isDragging, dragStartOffset]);
 
-    // Original Show Hide
-    // const showTooltip = () => {
-    //     if (isPinned) return;
+    useEffect(() => {
+        if (!visible) {
+            return undefined;
+        }
 
-    //     clearTimeout(timeoutRef.current);
-    //     timeoutRef.current = setTimeout(() => {
-    //         if (wrapperRef.current) {
-    //             const rect = wrapperRef.current.getBoundingClientRect();
-    //             const tooltipWidth = width;
-    //             const tooltipHeight = height;
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                clearTimeout(timeoutRef.current);
+                setIsPinned(false);
+                setVisible(false);
+            }
+        };
 
-    //             const positions = {
-    //                 top: {
-    //                     top: rect.top - tooltipHeight - 8 + window.scrollY,
-    //                     left: rect.left + rect.width / 2 - tooltipWidth / 2 + window.scrollX,
-    //                 },
-    //                 bottom: {
-    //                     top: rect.bottom + 8 + window.scrollY,
-    //                     left: rect.left + rect.width / 2 - tooltipWidth / 2 + window.scrollX,
-    //                 },
-    //                 left: {
-    //                     top: rect.top + rect.height / 2 - tooltipHeight / 2 + window.scrollY,
-    //                     left: rect.left - tooltipWidth - 8 + window.scrollX,
-    //                 },
-    //                 right: {
-    //                     top: rect.top + rect.height / 2 - tooltipHeight / 2 + window.scrollY,
-    //                     left: rect.right + 8 + window.scrollX,
-    //                 },
-    //             };
-
-    //             setCoords(positions[placement] || positions.top);
-    //             setVisible(true);
-    //         }
-    //     }, delay);
-    // };
-
-    // Reworked Show Hide for Edge Detection
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [visible]);
 
     const showTooltip = () => {
-        if (isPinned) return;
+        if (isPinned) {
+            return;
+        }
 
         clearTimeout(timeoutRef.current);
         timeoutRef.current = setTimeout(() => {
@@ -108,20 +105,6 @@ const CustomTooltip = ({
 
                 const viewportWidth = window.innerWidth;
                 const viewportHeight = window.innerHeight;
-
-                const getAutoPosition = () => {
-                    const fits = {
-                        top: rect.top >= tooltipHeight + spacing,
-                        bottom: viewportHeight - rect.bottom >= tooltipHeight + spacing,
-                        left: rect.left >= tooltipWidth + spacing,
-                        right: viewportWidth - rect.right >= tooltipWidth + spacing,
-                    };
-
-                    const priority = ['top', 'bottom', 'right', 'left'];
-                    const bestFit = priority.find((pos) => fits[pos]) || 'bottom';
-
-                    return positions[bestFit]();
-                };
 
                 const positions = {
                     top: () => ({
@@ -140,23 +123,37 @@ const CustomTooltip = ({
                         top: rect.top + rect.height / 2 - tooltipHeight / 2 + window.scrollY,
                         left: rect.right + spacing + window.scrollX,
                     }),
-                    auto: getAutoPosition,
                 };
+                const fits = {
+                    top: rect.top >= tooltipHeight + spacing,
+                    bottom: viewportHeight - rect.bottom >= tooltipHeight + spacing,
+                    left: rect.left >= tooltipWidth + spacing,
+                    right: viewportWidth - rect.right >= tooltipWidth + spacing,
+                };
+                const priority = ['top', 'bottom', 'right', 'left'];
+                const resolvedPlacement =
+                    placement === 'auto'
+                        ? priority.find((candidate) => fits[candidate]) || 'bottom'
+                        : placement;
+                const initialPosition = (positions[resolvedPlacement] || positions.top)();
 
-                let pos =
-                    typeof positions[placement] === 'function'
-                        ? positions[placement]()
-                        : positions.top();
-
-                //Clamp position to viewport to avoid clipping
-                pos.left = Math.max(
-                    0 + spacing + window.scrollX,
-                    Math.min(pos.left, viewportWidth - tooltipWidth - spacing + window.scrollX),
-                );
-                pos.top = Math.max(
-                    0 + spacing + window.scrollY,
-                    Math.min(pos.top, viewportHeight - tooltipHeight - spacing + window.scrollY),
-                );
+                // Clamp position to viewport to avoid clipping.
+                const pos = {
+                    left: Math.max(
+                        spacing + window.scrollX,
+                        Math.min(
+                            initialPosition.left,
+                            viewportWidth - tooltipWidth - spacing + window.scrollX,
+                        ),
+                    ),
+                    top: Math.max(
+                        spacing + window.scrollY,
+                        Math.min(
+                            initialPosition.top,
+                            viewportHeight - tooltipHeight - spacing + window.scrollY,
+                        ),
+                    ),
+                };
 
                 setCoords(pos);
                 setVisible(true);
@@ -165,30 +162,28 @@ const CustomTooltip = ({
     };
 
     const hideTooltip = () => {
-        if (isPinned) return;
+        if (isPinned) {
+            return;
+        }
 
         clearTimeout(timeoutRef.current);
         timeoutRef.current = setTimeout(() => {
-            if (!isHoveringTooltip.current) {
+            if (!isHoveringTooltip.current && !isFocusWithin.current) {
                 setVisible(false);
             }
         }, 500);
     };
 
     const handleMouseDown = (e) => {
-        if (!isPinned || !tooltipRef.current) return;
+        if (!isPinned || !tooltipRef.current) {
+            return;
+        }
 
         const rect = tooltipRef.current.getBoundingClientRect();
         const offsetX = e.clientX - rect.left - window.scrollX;
         const offsetY = e.clientY - rect.top - window.scrollY;
 
         setDragStartOffset({ x: offsetX, y: offsetY });
-
-        // Ensure we’re using the visible position
-        /*setCoords({
-            top: rect.top + window.scrollY,
-            left: rect.left + window.scrollX,
-        });*/
 
         setIsDragging(true);
         e.stopPropagation();
@@ -197,6 +192,26 @@ const CustomTooltip = ({
 
     const togglePin = () => {
         setIsPinned((prev) => !prev);
+    };
+
+    const handleMoveKeyDown = (event) => {
+        const offsets = {
+            ArrowUp: { top: -10, left: 0 },
+            ArrowDown: { top: 10, left: 0 },
+            ArrowLeft: { top: 0, left: -10 },
+            ArrowRight: { top: 0, left: 10 },
+        };
+        const offset = offsets[event.key];
+
+        if (!offset) {
+            return;
+        }
+
+        event.preventDefault();
+        setCoords((current) => ({
+            top: current.top + offset.top,
+            left: current.left + offset.left,
+        }));
     };
 
     const renderTooltipContent = () => {
@@ -209,8 +224,8 @@ const CustomTooltip = ({
                         style={{
                             maxWidth: '200px',
                             wordWrap: 'break-word',
-                            background: 'white',
-                            color: 'black',
+                            background: 'var(--custom-tooltip-background-popup, #ffffff)',
+                            color: 'var(--custom-tooltip-content-default, #4d4d4d)',
                             borderRadius: '6px',
                             fontSize: '14px',
                             whiteSpace: 'normal',
@@ -226,8 +241,8 @@ const CustomTooltip = ({
                 break;
             case 'card':
                 content = (
-                    <Card id="custom_tool_tip" style={{ width: width, height: 'auto' }}>
-                        {title && title != '' && (
+                    <Card id="custom_tool_tip" style={{ width, height: 'auto' }}>
+                        {title && title !== '' && (
                             <Card.Header className="header" title={title} subtitle={subtitle} />
                         )}
                         <Card.Body className="body">
@@ -240,8 +255,8 @@ const CustomTooltip = ({
                                     className="action"
                                     style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}
                                 >
-                                    {actions.map((action, i) => (
-                                        <span key={i}>{action}</span>
+                                    {React.Children.toArray(actions).map((action) => (
+                                        <span key={action.key}>{action}</span>
                                     ))}
                                 </div>
                             </Card.Footer>
@@ -250,7 +265,7 @@ const CustomTooltip = ({
                 );
                 break;
             case 'custom':
-                content = <>{component}</>;
+                content = component;
                 break;
             default:
                 content = <div>Invalid tooltip type</div>;
@@ -270,7 +285,8 @@ const CustomTooltip = ({
                             zIndex: 1001,
                         }}
                     >
-                        <span
+                        <button
+                            type="button"
                             className="toggle-pin"
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -280,26 +296,33 @@ const CustomTooltip = ({
                             style={{
                                 cursor: 'pointer',
                                 fontSize: 25,
-                                color: '#a7a7a7',
+                                color: 'var(--custom-tooltip-content-muted, #6b6b6b)',
                                 marginRight: isPinned ? 0 : 15,
                             }}
+                            aria-label={isPinned ? 'Unpin help' : 'Pin help'}
+                            aria-pressed={isPinned}
                             title={isPinned ? 'Unpin' : 'Pin'}
                         >
-                            {isPinned ? <Pin /> : <Pin />}
-                        </span>
+                            {isPinned ? <PinStuck /> : <Pin />}
+                        </button>
                         {isPinned && (
-                            <span
+                            <button
+                                type="button"
                                 className="move"
                                 onMouseDown={handleMouseDown}
+                                onKeyDown={handleMoveKeyDown}
                                 style={{
                                     cursor: isDragging ? 'grabbing' : 'grab',
                                     fontSize: 25,
-                                    color: '#a7a7a7',
+                                    color: 'var(--custom-tooltip-content-muted, #6b6b6b)',
+                                    border: 0,
+                                    background: 'transparent',
                                 }}
-                                title="Drag tooltip"
+                                aria-label="Move help; use arrow keys"
+                                title="Move help"
                             >
-                                ⠿
-                            </span>
+                                <span aria-hidden="true">⠿</span>
+                            </button>
                         )}
                     </div>
                 )}
@@ -326,7 +349,11 @@ const CustomTooltip = ({
                 pointerEvents: 'auto',
                 opacity: visible ? 1 : 0,
                 transition: 'opacity 0.9s ease',
+                ...tooltipThemeStyle,
             }}
+            className={`custom-tooltip-portal custom-tooltip-portal-${splunkTheme.colorScheme}`}
+            role={persistent ? 'dialog' : 'tooltip'}
+            aria-label={persistent ? title || 'Help' : undefined}
         >
             {renderTooltipContent()}
         </div>
@@ -338,6 +365,14 @@ const CustomTooltip = ({
                 ref={wrapperRef}
                 onMouseEnter={showTooltip}
                 onMouseLeave={hideTooltip}
+                onFocusCapture={() => {
+                    isFocusWithin.current = true;
+                    showTooltip();
+                }}
+                onBlurCapture={() => {
+                    isFocusWithin.current = false;
+                    hideTooltip();
+                }}
                 style={{ display: 'inline-block', ...style }}
             >
                 {children}
@@ -352,7 +387,7 @@ CustomTooltip.propTypes = {
     text: PropTypes.string,
     title: PropTypes.string,
     subtitle: PropTypes.string,
-    description: PropTypes.string,
+    description: PropTypes.node,
     image: PropTypes.node,
     actions: PropTypes.arrayOf(PropTypes.node),
     component: PropTypes.node,

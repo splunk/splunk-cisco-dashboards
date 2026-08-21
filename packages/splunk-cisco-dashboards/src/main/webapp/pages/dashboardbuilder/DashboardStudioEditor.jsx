@@ -69,11 +69,17 @@ import Cog from "@splunk/react-icons/Cog";
 import Card from "@splunk/react-ui/Card";
 import {
   getDashboards,
+  getCurrentSplunkUsername,
   normalizeDashboardTheme,
   syncDashboardManagerNavigation,
 } from "../../common/lib/splunk";
 import { defaultFetchInit } from "@splunk/splunk-utils/fetch";
 import { INSIGHTS_APP_ID } from "../../common/lib/constants";
+import {
+  DASHBOARD_MANAGER_TAG,
+  getDashboardNamespaceApp,
+  isDashboardManagerDashboard,
+} from "../../common/config/managedStudioViews";
 import { getDashboard } from "../../common/lib/splunk";
 import "../../common/styles/commonstyles.css";
 import Toaster, {
@@ -113,10 +119,45 @@ import {
   normalizeDashboardDrilldownIcons,
   parseDashboardDrilldownTimeRange,
   parseDashboardDrilldownUrl,
+  parseDashboardMetricInfoUrl,
 } from "../../common/lib/dashboardDrilldown";
 
 const ENABLE_EXPERIMENTAL_SPACE_MANAGER = false;
 const DASHBOARD_STUDIO_HEIGHT = 1200;
+const VIEWPORT_FIT_DASHBOARD_IDS = new Set(["sn_zta_posture"]);
+const VIEWPORT_FIT_PADDING = 16;
+
+const getViewportFitLayout = (definition, requestedLayoutId) => {
+  const layoutDefinitions = definition?.layout?.layoutDefinitions;
+
+  if (layoutDefinitions && typeof layoutDefinitions === "object") {
+    const layoutId =
+      (requestedLayoutId && layoutDefinitions[requestedLayoutId]
+        ? requestedLayoutId
+        : Object.keys(layoutDefinitions)[0]) || undefined;
+
+    return {
+      layoutId,
+      options: layoutId ? layoutDefinitions[layoutId]?.options : undefined,
+    };
+  }
+
+  return { layoutId: undefined, options: definition?.layout?.options };
+};
+
+const calculateViewportFitScale = ({
+  canvasWidth,
+  canvasHeight,
+  viewportWidth,
+  viewportHeight,
+}) =>
+  Math.max(
+    0.25,
+    Math.min(
+      viewportWidth / canvasWidth,
+      (viewportHeight - VIEWPORT_FIT_PADDING) / canvasHeight,
+    ),
+  );
 
 const StyledCardContent = styled.div`
   height: 160px;
@@ -921,6 +962,8 @@ const DashboardStudioEditor = ({
   const [isCodeEditable, setIsCodeEditable] = useState(false);
 
   const dashboardApiElem = useRef(null);
+  const dashboardViewportRef = useRef(null);
+  const viewportFitKeyRef = useRef("");
   const [apiRef, setApiRef] = useState();
   const repairedTimeDefinitionRef = useRef();
 
@@ -936,7 +979,7 @@ const DashboardStudioEditor = ({
   const [unsavedDefinition, setUnsavedDefinition] = useState(false);
 
   const [dashboardHeightDifference, setDashboardHeightDifference] =
-    useState("79");
+    useState(null);
 
   const [openDashboardModal, setOpenDashboardModal] = useState(false);
   const [openConvertModal, setOpenConvertModal] = useState(false);
@@ -1093,54 +1136,60 @@ const DashboardStudioEditor = ({
 
   useEffect(() => {
     if (!skipDashboardListLoad) {
-      getDashboards().then((response) => {
-        if (response.status >= 200 && response.status <= 299) {
-          const insightDash = response.entry
-            .filter((c) => c.content.isDashboard && c.content.version == "2")
-            .map((r) => {
-              const { XMLParser } = require("fast-xml-parser");
-              const parser = new XMLParser({
-                ignoreAttributes: false,
-                attributeNamePrefix: "",
-              });
-              try {
-                let jObj = parser.parse(r.content["eai:data"]);
-                const normalizedDefinition = jObj.dashboard.definition.replace(
-                  /\n/g,
-                  "",
-                );
-                const data = JSON.parse(
-                  normalizedDefinition.startsWith("{{")
-                    ? normalizedDefinition.replace(/^\{/, "")
-                    : normalizedDefinition,
-                );
+      Promise.all([getDashboards(), getCurrentSplunkUsername()]).then(
+        ([response, currentUsername]) => {
+          if (response.status >= 200 && response.status <= 299) {
+            const insightDash = response.entry
+              .filter((c) => c.content.isDashboard && c.content.version == "2")
+              .map((r) => {
+                const { XMLParser } = require("fast-xml-parser");
+                const parser = new XMLParser({
+                  ignoreAttributes: false,
+                  attributeNamePrefix: "",
+                });
+                try {
+                  let jObj = parser.parse(r.content["eai:data"]);
+                  const normalizedDefinition =
+                    jObj.dashboard.definition.replace(/\n/g, "");
+                  const data = JSON.parse(
+                    normalizedDefinition.startsWith("{{")
+                      ? normalizedDefinition.replace(/^\{/, "")
+                      : normalizedDefinition,
+                  );
 
-                return {
-                  data: r.content["eai:data"],
-                  definition: data,
-                  author: r.content["eai:userName"],
-                  app: r.content["eai:appName"],
-                  owner: r.acl?.owner || r.content["eai:userName"],
-                  sharing: r.acl?.sharing || "app",
-                  title: r.name,
-                  label: r.content["label"],
-                  tag: jObj.dashboard.tag || r.content["tag"] || "",
-                  theme: normalizeDashboardTheme(jObj.dashboard.theme),
-                  template: data.template ? data.template : false,
-                };
-              } catch (error) {
-                return undefined;
-              }
-            })
-            .filter((c) => c != undefined);
+                  return {
+                    data: r.content["eai:data"],
+                    definition: data,
+                    author: r.content["eai:userName"],
+                    app: getDashboardNamespaceApp(r),
+                    contentApp: r.content["eai:appName"],
+                    owner: r.acl?.owner || r.content["eai:userName"],
+                    sharing: r.acl?.sharing || "app",
+                    title: r.name,
+                    label: r.content["label"],
+                    tag: jObj.dashboard.tag || r.content.tag || "",
+                    theme: normalizeDashboardTheme(jObj.dashboard.theme),
+                    template: data.template ? data.template : false,
+                  };
+                } catch (error) {
+                  return undefined;
+                }
+              })
+              .filter((c) => c != undefined)
+              .filter((dashboard) =>
+                isDashboardManagerDashboard(dashboard, currentUsername),
+              );
 
-          setDashboards(insightDash);
-          syncDashboardManagerNavigation(insightDash).catch((error) => {
-            console.warn("Unable to sync Dashboard Manager navigation.", error);
-          });
-        } else {
-        }
-      });
+            setDashboards(insightDash);
+            syncDashboardManagerNavigation(insightDash).catch((error) => {
+              console.warn(
+                "Unable to sync Dashboard Manager navigation.",
+                error,
+              );
+            });
+          }
+        },
+      );
     }
 
     if (!skipServerInfoLoad && !serverInfo) {
@@ -1482,10 +1531,144 @@ const DashboardStudioEditor = ({
   }, [apiRef]);
 
   useEffect(() => {
-    if ((dashMode ?? "view") === "view" && isDashboardMounted) {
+    const isViewMode = (dashMode ?? "view") === "view";
+    if (isViewMode && isDashboardMounted) {
       apiRef?.collapseToolbar?.();
     }
-  }, [apiRef, dashID, dashMode, isDashboardMounted]);
+
+    if (!isViewMode || !VIEWPORT_FIT_DASHBOARD_IDS.has(dashID)) {
+      viewportFitKeyRef.current = "";
+    }
+
+    if (
+      !isViewMode ||
+      !isDashboardMounted ||
+      !VIEWPORT_FIT_DASHBOARD_IDS.has(dashID) ||
+      dashboardHeightDifference == null
+    ) {
+      return undefined;
+    }
+
+    const dashboardApi = dashboardApiElem.current ?? apiRef;
+    const definition = dashboardApi?.getDefinition?.();
+    const requestedLayoutId = new URLSearchParams(window.location.search).get(
+      "tab",
+    );
+    const { layoutId, options } = getViewportFitLayout(
+      definition,
+      requestedLayoutId,
+    );
+    const canvasWidth = Number(options?.width);
+    const canvasHeight = Number(options?.height);
+    const viewportElement = dashboardViewportRef.current;
+
+    if (
+      !dashboardApi?.setScale ||
+      !Number.isFinite(canvasWidth) ||
+      !Number.isFinite(canvasHeight) ||
+      canvasWidth <= 0 ||
+      canvasHeight <= 0 ||
+      !viewportElement
+    ) {
+      return undefined;
+    }
+
+    let timeoutId;
+    let resizeObserver;
+    let observedLayoutContainer;
+    let observedCanvasElement;
+    const applyViewportFit = () => {
+      const layoutContainer = viewportElement.querySelector(
+        '[data-test="LayoutContainer"]',
+      );
+      const canvasElement = layoutContainer?.querySelector(
+        '[data-test="absolute-layout"]',
+      );
+
+      if (!layoutContainer || !canvasElement) {
+        scheduleViewportFit();
+        return;
+      }
+
+      if (
+        resizeObserver &&
+        (observedLayoutContainer !== layoutContainer ||
+          observedCanvasElement !== canvasElement)
+      ) {
+        resizeObserver.disconnect();
+        resizeObserver.observe(layoutContainer);
+        resizeObserver.observe(canvasElement);
+        observedLayoutContainer = layoutContainer;
+        observedCanvasElement = canvasElement;
+      }
+
+      const viewportWidth = layoutContainer.clientWidth;
+      const viewportHeight = layoutContainer.clientHeight;
+
+      if (
+        !Number.isFinite(viewportWidth) ||
+        !Number.isFinite(viewportHeight) ||
+        viewportWidth <= 0 ||
+        viewportHeight <= VIEWPORT_FIT_PADDING
+      ) {
+        return;
+      }
+
+      const fitKey = [
+        dashID,
+        layoutId ?? "default",
+        canvasWidth,
+        canvasHeight,
+        viewportWidth,
+        viewportHeight,
+      ].join(":");
+      const scale = calculateViewportFitScale({
+        canvasWidth,
+        canvasHeight,
+        viewportWidth,
+        viewportHeight,
+      });
+      const renderedScale =
+        canvasElement.getBoundingClientRect().width / canvasWidth;
+      if (
+        viewportFitKeyRef.current === fitKey &&
+        Math.abs(renderedScale - scale) < 0.001
+      ) {
+        return;
+      }
+
+      dashboardApi.setScale({
+        scale,
+        ...(layoutId ? { layoutId } : {}),
+      });
+      viewportFitKeyRef.current = fitKey;
+    };
+
+    const scheduleViewportFit = () => {
+      window.clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(applyViewportFit, 100);
+    };
+
+    resizeObserver =
+      typeof ResizeObserver === "function"
+        ? new ResizeObserver(scheduleViewportFit)
+        : null;
+    resizeObserver?.observe(viewportElement);
+    window.addEventListener("resize", scheduleViewportFit);
+    scheduleViewportFit();
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", scheduleViewportFit);
+    };
+  }, [
+    apiRef,
+    dashID,
+    dashMode,
+    dashboardHeightDifference,
+    isDashboardMounted,
+  ]);
 
   useEffect(() => {
     const dashboardApi = dashboardApiElem.current ?? apiRef;
@@ -1542,7 +1725,7 @@ const DashboardStudioEditor = ({
         JSON.stringify(dashboardDefinition),
         cloneTitle,
         dashboardDefinition.description || currentDashboard?.description || "",
-        dashboardDefinition.tag || currentDashboard?.tag || "",
+        DASHBOARD_MANAGER_TAG,
         currentDashboard?.theme || dashboardColorScheme,
       );
       if (response.status < 200 || response.status > 299) {
@@ -1721,14 +1904,16 @@ const DashboardStudioEditor = ({
 
   const handleDashboardLinkToUrl = useCallback(
     (event) => {
-      const parsedDrilldown = parseDashboardDrilldownUrl(event?.url);
-      if (!parsedDrilldown) {
+      const parsedMetricInfo = parseDashboardMetricInfoUrl(event?.url);
+      const parsedAction = parsedMetricInfo || parseDashboardDrilldownUrl(event?.url);
+      if (!parsedAction) {
         return;
       }
 
       event.preventDefault?.();
       setDashboardDrilldown({
-        ...parsedDrilldown,
+        ...parsedAction,
+        mode: parsedMetricInfo ? "metric-info" : "drilldown",
         timeRange: dashboardDrilldownTimeRange,
       });
     },
@@ -1885,9 +2070,22 @@ const DashboardStudioEditor = ({
   // Dashboard Framework 29.8 only adds a px unit for numeric dimensions.
   // A unitless string is left as an invalid CSS height and collapses the
   // managed dashboard canvas to the framework's 600px fallback.
+  const parsedDashboardTopOffset = Number.parseInt(
+    dashboardHeightDifference,
+    10,
+  );
+  const dashboardTopOffset = Number.isFinite(parsedDashboardTopOffset)
+    ? Math.max(0, parsedDashboardTopOffset)
+    : 79;
+  const useViewportFitView =
+    !embededMode &&
+    (dashMode ?? "view") === "view" &&
+    VIEWPORT_FIT_DASHBOARD_IDS.has(dashID);
   const embeddedDashboardHeight = embededMode
     ? "100%"
-    : DASHBOARD_STUDIO_HEIGHT;
+    : useViewportFitView
+      ? `calc(100vh - ${dashboardTopOffset}px)`
+      : DASHBOARD_STUDIO_HEIGHT;
 
   const sourceEditorPanel = useMemo(() => {
     return isCodeEditable ? (
@@ -1944,7 +2142,12 @@ const DashboardStudioEditor = ({
 
   const uiEditorPanel = useMemo(() => {
     return isCodeEditable ? null : (
-      <div>
+      <div
+        ref={dashboardViewportRef}
+        className={
+          useViewportFitView ? "dashboard-manager-viewport-fit" : undefined
+        }
+      >
         {dashMode === "edit" &&
           dashboardUsesSearchbase &&
           showEditContextNotice && (
@@ -2012,6 +2215,8 @@ const DashboardStudioEditor = ({
   }, [
     isCodeEditable,
     dashMode,
+    embeddedDashboardHeight,
+    useViewportFitView,
     dashboardUsesSearchbase,
     showEditContextNotice,
     handleModeChange,
@@ -2043,7 +2248,7 @@ const DashboardStudioEditor = ({
         JSON.stringify(jsonDefinition),
         dashboardTitle,
         "",
-        "",
+        DASHBOARD_MANAGER_TAG,
         "dark",
       ).then((response) => {
         if (response.status >= 200 && response.status <= 299) {
@@ -2447,7 +2652,7 @@ const DashboardStudioEditor = ({
         iconRegistry={iconRegistry}
         timezone={timezone}
         colorScheme={dashboardColorScheme}
-        modalThemeStyle={dashboardBuilderModalThemeStyle}
+        mode={dashboardDrilldown?.mode || "drilldown"}
         onRequestClose={() => setDashboardDrilldown(null)}
       />
       {currentDashboard == undefined ? (

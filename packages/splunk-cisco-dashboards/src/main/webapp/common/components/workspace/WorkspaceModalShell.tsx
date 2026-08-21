@@ -26,6 +26,7 @@ interface WorkspaceModalShellProps {
     wide?: boolean;
     renderInDocumentBody?: boolean;
     contentClassName?: string;
+    dialogClassName?: string;
     closeOnBackdrop?: boolean;
     children: React.ReactNode;
 }
@@ -144,6 +145,7 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
     wide = false,
     renderInDocumentBody = false,
     contentClassName,
+    dialogClassName,
     closeOnBackdrop = true,
     children,
 }) => {
@@ -447,6 +449,7 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                     'relative z-10 flex w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[4px] border sui-border-weak sui-bg-section sui-color-active sui-shadow-overlay backdrop-blur-[75px] outline-none',
                     VARIANT_CLASS[variant],
                     variant === 'detail' && wide && 'max-w-[1320px]',
+                    dialogClassName,
                     'max-[719px]:h-[calc(100vh-1rem)] max-[719px]:max-h-[calc(100vh-1rem)] max-[719px]:w-full max-[719px]:max-w-none max-[719px]:rounded-b-none max-[719px]:rounded-t-2xl'
                 )}
             >

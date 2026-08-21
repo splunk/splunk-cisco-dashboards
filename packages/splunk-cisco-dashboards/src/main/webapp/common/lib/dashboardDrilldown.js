@@ -1,4 +1,5 @@
 const DRILLDOWN_PATH = '/drilldown';
+const METRIC_INFO_PATH = '/metric-info';
 const DASHBOARD_DRILLDOWN_URL_LIMIT = 4096;
 const DASHBOARD_DRILLDOWN_TARGET_LIMIT = 24;
 const DASHBOARD_DRILLDOWN_TARGET_LENGTH_LIMIT = 256;
@@ -15,7 +16,10 @@ export const DEFAULT_DASHBOARD_DRILLDOWN_TIME_RANGE = {
     latest: 'now',
 };
 
-export const DASHBOARD_DRILLDOWN_ACCESSIBLE_TITLE = 'View details';
+export const DASHBOARD_DRILLDOWN_ACCESSIBLE_TITLE = 'Investigate drivers';
+export const DASHBOARD_METRIC_INFO_ACCESSIBLE_TITLE = 'About this metric';
+export const DASHBOARD_ACTION_KIND_DRILLDOWN = 'drilldown';
+export const DASHBOARD_ACTION_KIND_METRIC_INFO = 'metric-info';
 
 const normalizeText = (value) => (typeof value === 'string' ? value.trim() : '');
 
@@ -43,12 +47,12 @@ const uniqueBoundedTargetIds = (target) => {
     return targetIds;
 };
 
-export const parseDashboardDrilldownUrl = (url) => {
+const parseDashboardActionUrl = (url, path) => {
     const normalizedUrl = normalizeText(url);
     if (
         !normalizedUrl ||
         normalizedUrl.length > DASHBOARD_DRILLDOWN_URL_LIMIT ||
-        !(normalizedUrl === DRILLDOWN_PATH || normalizedUrl.startsWith(`${DRILLDOWN_PATH}?`))
+        !(normalizedUrl === path || normalizedUrl.startsWith(`${path}?`))
     ) {
         return null;
     }
@@ -67,6 +71,12 @@ export const parseDashboardDrilldownUrl = (url) => {
     };
 };
 
+export const parseDashboardDrilldownUrl = (url) =>
+    parseDashboardActionUrl(url, DRILLDOWN_PATH);
+
+export const parseDashboardMetricInfoUrl = (url) =>
+    parseDashboardActionUrl(url, METRIC_INFO_PATH);
+
 export const buildDashboardDrilldownUrl = ({ origin, targetIds = [] }) => {
     const params = new URLSearchParams();
     const normalizedOrigin = normalizeText(origin);
@@ -80,6 +90,21 @@ export const buildDashboardDrilldownUrl = ({ origin, targetIds = [] }) => {
     }
 
     return `${DRILLDOWN_PATH}?${params.toString()}`;
+};
+
+export const buildDashboardMetricInfoUrl = ({ origin, targetId }) => {
+    const params = new URLSearchParams();
+    const normalizedOrigin = normalizeText(origin);
+    const [normalizedTargetId] = uniqueBoundedTargetIds(targetId);
+
+    if (normalizedOrigin) {
+        params.set('origin', normalizedOrigin);
+    }
+    if (normalizedTargetId) {
+        params.set('target', normalizedTargetId);
+    }
+
+    return `${METRIC_INFO_PATH}?${params.toString()}`;
 };
 
 export const createDashboardDrilldownIconVisualization = ({ origin, targetIds }) => ({
@@ -97,11 +122,33 @@ export const createDashboardDrilldownIconVisualization = ({ origin, targetIds })
     ],
 });
 
-const getInternalDrilldown = (visualization) =>
-    (visualization?.eventHandlers || [])
+export const createDashboardMetricInfoIconVisualization = ({ origin, targetId }) => ({
+    type: DASHBOARD_DRILLDOWN_ACTION_TYPE,
+    options: {
+        action: DASHBOARD_ACTION_KIND_METRIC_INFO,
+        label: DASHBOARD_METRIC_INFO_ACCESSIBLE_TITLE,
+    },
+    eventHandlers: [
+        {
+            type: 'drilldown.customUrl',
+            options: {
+                url: buildDashboardMetricInfoUrl({ origin, targetId }),
+            },
+        },
+    ],
+});
+
+const getInternalDashboardAction = (visualization) => {
+    const urls = (visualization?.eventHandlers || [])
         .filter((handler) => handler?.type === 'drilldown.customUrl')
-        .map((handler) => parseDashboardDrilldownUrl(handler?.options?.url))
-        .find(Boolean);
+        .map((handler) => handler?.options?.url);
+    const metricInfo = urls.map(parseDashboardMetricInfoUrl).find(Boolean);
+    if (metricInfo) {
+        return { ...metricInfo, action: DASHBOARD_ACTION_KIND_METRIC_INFO };
+    }
+    const drilldown = urls.map(parseDashboardDrilldownUrl).find(Boolean);
+    return drilldown ? { ...drilldown, action: DASHBOARD_ACTION_KIND_DRILLDOWN } : null;
+};
 
 export const normalizeDashboardDrilldownIcons = (definition) => {
     if (!definition || typeof definition !== 'object') {
@@ -111,9 +158,10 @@ export const normalizeDashboardDrilldownIcons = (definition) => {
     let changed = false;
     const visualizations = Object.fromEntries(
         Object.entries(definition.visualizations || {}).map(([visualizationId, visualization]) => {
+            const dashboardAction = getInternalDashboardAction(visualization);
             if (
                 !DASHBOARD_DRILLDOWN_VISUALIZATION_TYPES.has(visualization?.type) ||
-                !getInternalDrilldown(visualization)
+                !dashboardAction
             ) {
                 return [visualizationId, visualization];
             }
@@ -126,7 +174,11 @@ export const normalizeDashboardDrilldownIcons = (definition) => {
                     ...visualization,
                     type: DASHBOARD_DRILLDOWN_ACTION_TYPE,
                     options: {
-                        label: DASHBOARD_DRILLDOWN_ACCESSIBLE_TITLE,
+                        action: dashboardAction.action,
+                        label:
+                            dashboardAction.action === DASHBOARD_ACTION_KIND_METRIC_INFO
+                                ? DASHBOARD_METRIC_INFO_ACCESSIBLE_TITLE
+                                : DASHBOARD_DRILLDOWN_ACCESSIBLE_TITLE,
                     },
                 },
             ];
@@ -235,9 +287,37 @@ const parseVisualizationOptions = (value) => {
     }
 };
 
+const buildDrilldownLayout = ({ width = 1120, height }) => {
+    const canvasWidth = Number.isFinite(width) && width > 0 ? Math.floor(width) : 1120;
+    const canvasHeight = Number.isFinite(height) && height > 0 ? Math.floor(height) : 420;
+
+    return {
+        type: 'absolute',
+        options: {
+            width: canvasWidth,
+            height: canvasHeight,
+            display: 'actual-size',
+            showTitleAndDescription: false,
+        },
+        structure: [
+            {
+                item: 'viz_drilldown_result',
+                type: 'block',
+                position: {
+                    x: 0,
+                    y: 0,
+                    w: canvasWidth,
+                    h: canvasHeight,
+                },
+            },
+        ],
+    };
+};
+
 export const buildWorkspaceDrilldownDefinition = (
     target,
     timeRange = DEFAULT_DASHBOARD_DRILLDOWN_TIME_RANGE,
+    layoutDimensions = {},
 ) => {
     const searchName = normalizeText(target?.searchName) || 'Search details';
     const visualizationType = safeVisualizationType(target?.defaultViz);
@@ -277,33 +357,14 @@ export const buildWorkspaceDrilldownDefinition = (
         },
         defaults: {},
         inputs: {},
-        layout: {
-            type: 'absolute',
-            options: {
-                width: 1120,
-                height: 420,
-                display: 'fit-to-width',
-                showTitleAndDescription: false,
-            },
-            structure: [
-                {
-                    item: 'viz_drilldown_result',
-                    type: 'block',
-                    position: {
-                        x: 0,
-                        y: 0,
-                        w: 1120,
-                        h: 420,
-                    },
-                },
-            ],
-        },
+        layout: buildDrilldownLayout({ height: 420, ...layoutDimensions }),
     };
 };
 
 export const buildDashboardDrilldownDefinition = (
     entry,
     timeRange = DEFAULT_DASHBOARD_DRILLDOWN_TIME_RANGE,
+    layoutDimensions = {},
 ) => {
     const stanzaId = normalizeText(entry?.name);
     const searchName = normalizeText(entry?.content?.search_name) || stanzaId || 'Search details';
@@ -343,26 +404,6 @@ export const buildDashboardDrilldownDefinition = (
         },
         defaults: {},
         inputs: {},
-        layout: {
-            type: 'absolute',
-            options: {
-                width: 1120,
-                height: 520,
-                display: 'fit-to-width',
-                showTitleAndDescription: false,
-            },
-            structure: [
-                {
-                    item: 'viz_drilldown_result',
-                    type: 'block',
-                    position: {
-                        x: 0,
-                        y: 0,
-                        w: 1120,
-                        h: 520,
-                    },
-                },
-            ],
-        },
+        layout: buildDrilldownLayout({ height: 520, ...layoutDimensions }),
     };
 };

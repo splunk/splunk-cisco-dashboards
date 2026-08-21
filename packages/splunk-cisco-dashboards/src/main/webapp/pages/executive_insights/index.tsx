@@ -114,6 +114,7 @@ import {
   usePersistedTopology,
 } from "@/common/components/workspace/CustomerTopologyMap";
 import { getWorkspaceTopology } from "@/common/config/workspaceTopologies";
+import { MANAGER_ROUTED_STUDIO_VIEW_NAMES } from "@/common/config/managedStudioViews";
 import {
   DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES,
   type CustomerTopologySectionTitles,
@@ -1093,21 +1094,6 @@ const clearPriorityDrilldownView = (): void => {
 // Splunk Search drilldown URL builder
 // =============================================================================
 
-// Native Dashboard Studio does not load this app's CSS. Keep those dashboards
-// inside Dashboard Manager so the approved navigation icons and managed Studio
-// presentation remain available. Other sibling views continue to use their
-// normal app route.
-const MANAGED_STUDIO_VIEW_NAMES = new Set([
-  "admin_asset_inventory",
-  "netops_catalyst_health",
-  "netops_critical_systems_health",
-  "netops_readiness",
-  "secops_resilience",
-  "workplace_building_intelligence",
-  "workplace_operations_overview",
-  "workplace_spaces_intelligence",
-]);
-
 // Locale-aware URL builder for a sibling Splunk view inside this app. Mirrors
 // splunkSearchAppUrl's locale detection so the URL stays valid in non-en-US
 // Splunk installs.
@@ -1120,7 +1106,7 @@ const splunkViewAppUrl = (
     typeof window !== "undefined" ? window.location.pathname : "/en-US";
   const localeMatch = path.match(/^\/([a-z]{2}-[A-Z]{2})\//);
   const locale = localeMatch ? localeMatch[1] : "en-US";
-  const isManagedStudioView = MANAGED_STUDIO_VIEW_NAMES.has(viewName);
+  const isManagedStudioView = MANAGER_ROUTED_STUDIO_VIEW_NAMES.has(viewName);
   const baseUrl = `/${locale}/app/${APP_NAME}/${
     isManagedStudioView ? "dashboard_manager" : viewName
   }`;
