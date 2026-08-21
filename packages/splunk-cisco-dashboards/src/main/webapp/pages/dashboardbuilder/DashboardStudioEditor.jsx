@@ -79,6 +79,7 @@ import {
   DASHBOARD_MANAGER_TAG,
   getDashboardNamespaceApp,
   isDashboardManagerDashboard,
+  requiresDashboardManagerRuntime,
 } from "../../common/config/managedStudioViews";
 import { getDashboard } from "../../common/lib/splunk";
 import "../../common/styles/commonstyles.css";
@@ -364,7 +365,10 @@ async function updateDash(
   theme = "light",
 ) {
   const dashboardTheme = normalizeDashboardTheme(theme, "light");
-  let definition = `<dashboard version="2" theme="${dashboardTheme}">
+  const visibilityAttribute = requiresDashboardManagerRuntime(jsonDefinition)
+    ? ' isVisible="false"'
+    : "";
+  const definition = `<dashboard version="2" theme="${dashboardTheme}"${visibilityAttribute}>
     <label>${escapeXml(label)}</label>
     <description>${escapeXml(description)}</description>
     <tag>${escapeXml(tag)}</tag>
@@ -379,7 +383,7 @@ async function updateDash(
    ]]></meta>
 </dashboard>`;
 
-  let body = `eai:data=${encodeURIComponent(definition)}`;
+  const body = `eai:data=${encodeURIComponent(definition)}`;
 
   const fetchInit = defaultFetchInit; // from splunk-utils API
   fetchInit.method = "POST";

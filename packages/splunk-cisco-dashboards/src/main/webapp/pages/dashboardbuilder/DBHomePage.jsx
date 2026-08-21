@@ -1063,7 +1063,10 @@ export default function DBHomePage() {
                               <strong>How it works:</strong> Dashboards remain
                               Studio definitions, but opening them here loads the
                               extensions and keeps shared SPL synchronized.
-                              Ordinary Studio dashboards stay separate.
+                              Definitions that need those extensions are hidden
+                              from Splunk&apos;s standard Dashboards listing;
+                              native-only definitions remain available in
+                              regular Dashboard Studio.
                             </p>
                           </div>
                         }
@@ -1146,7 +1149,10 @@ export default function DBHomePage() {
                               Reopen managed dashboards from this library so
                               their Searchbase and Cisco components load
                               correctly. Ordinary Studio dashboards are
-                              intentionally not listed.
+                              intentionally not listed here. Manager-dependent
+                              definitions are kept out of Splunk&apos;s standard
+                              Dashboards listing to prevent unsupported opens;
+                              native-only dashboards remain available there.
                             </li>
                           </ul>
                         </span>

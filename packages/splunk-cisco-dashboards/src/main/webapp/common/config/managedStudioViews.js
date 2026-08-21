@@ -38,14 +38,14 @@ export const MANAGER_ROUTED_STUDIO_VIEW_NAMES = new Set([
   "workplace_spaces_intelligence",
 ]);
 
-const DASHBOARD_MANAGER_EXTENSION_TYPES = [
+export const DASHBOARD_MANAGER_EXTENSION_TYPES = new Set([
   "ds.searchbase",
   "input.simpleTimePicker",
   "splunk.template_kpi",
   "splunk.template_other",
   "splunk.cisco_spaces_space_manager",
   "splunk.cisco_drilldown_action",
-];
+]);
 
 const normalizeValue = (value) =>
   String(value || "")
@@ -76,14 +76,35 @@ export const getDashboardNamespaceApp = (entry) =>
   entry?.contentApp ||
   "";
 
-const hasDashboardManagerExtension = (definition) => {
-  if (!definition || typeof definition !== "object") {
+const parseDashboardDefinition = (definition) => {
+  if (definition && typeof definition === "object") {
+    return definition;
+  }
+
+  if (typeof definition !== "string") {
+    return undefined;
+  }
+
+  try {
+    const parsedDefinition = JSON.parse(definition);
+    return parsedDefinition && typeof parsedDefinition === "object"
+      ? parsedDefinition
+      : undefined;
+  } catch (error) {
+    return undefined;
+  }
+};
+
+export const requiresDashboardManagerRuntime = (definition) => {
+  const parsedDefinition = parseDashboardDefinition(definition);
+  if (!parsedDefinition) {
     return false;
   }
 
-  const serializedDefinition = JSON.stringify(definition);
-  return DASHBOARD_MANAGER_EXTENSION_TYPES.some((type) =>
-    serializedDefinition.includes(`"${type}"`),
+  return ["dataSources", "visualizations", "inputs"].some((collectionName) =>
+    Object.values(parsedDefinition[collectionName] || {}).some((component) =>
+      DASHBOARD_MANAGER_EXTENSION_TYPES.has(component?.type),
+    ),
   );
 };
 
@@ -95,7 +116,7 @@ const hasLegacyDashboardManagerIdentity = (dashboard) => {
     dashboardTag === DASHBOARD_MANAGER_TAG ||
     dashboardId.startsWith("scd_") ||
     DASHBOARD_MANAGER_FRAMEWORK_VIEW_NAMES.has(dashboardId) ||
-    hasDashboardManagerExtension(dashboard?.definition)
+    requiresDashboardManagerRuntime(dashboard?.definition)
   ) {
     return true;
   }

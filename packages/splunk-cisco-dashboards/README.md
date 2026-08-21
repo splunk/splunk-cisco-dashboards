@@ -21,6 +21,11 @@ networking pillars and workplace scenarios.
   readers. The workflow uses dashboard ACL ownership for `Yours` and provides a
   clear empty state. Dashboard Manager help is concise, keyboard-accessible,
   and uses semantic colors in both light and dark mode.
+- Dashboard Manager now marks a saved dashboard `isVisible="false"` whenever
+  its definition uses a Manager-only data source, visualization, or input. This
+  keeps dashboards that require the extended runtime out of Splunk's standard
+  Dashboards listing, while definitions made entirely from native Dashboard
+  Studio components remain visible and can open in regular Dashboard Studio.
 - Added one combined Zero Trust Posture pilot that keeps the chart-heavy card
   structure and Magnify+ actions, gives all six trends distinct palette colors,
   hides Y-axis labels and gridlines, and uses a shorter full-width canvas that
