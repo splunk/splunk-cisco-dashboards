@@ -142,7 +142,9 @@
                 "sparklineValues": "> primary | seriesByName(\"BucketAuthentications\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " authentications",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -158,7 +160,7 @@
             }
         },
         "viz_card_01_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_01"
@@ -167,7 +169,12 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "Failure": "#e44273",
+                    "Other": "#a9afda",
+                    "Success": "#159352"
+                },
                 "seriesColors": [
                     "#e44273",
                     "#3abdfa",
@@ -190,13 +197,10 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "areaOpacity": 0.45,
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
                 "showYMajorGridLines": false,
                 "showYMinorGridLines": false,
+                "stackMode": "stacked",
                 "xAxisTitleVisibility": "hide",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -204,7 +208,7 @@
                 "yAxisMinorTickVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketAuthentications\")"
+                "y": "> primary | frameWithoutSeriesNames(\"BucketAuthentications\", \"WindowAuthentications\")"
             }
         },
         "viz_card_01_drilldown_trigger": {
@@ -289,7 +293,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks the Cisco ISE authentication failure rate over time, with the existing per\\-network\\-device table available as the operational drill\\-down\\."
+                "markdown": "Shows the selected\\-window ISE failure rate and its per\\-bucket trend\\. Isolated 100% points can be low volume; About this metric exposes each bucket's authentication and failure counts\\."
             }
         },
         "viz_card_02_singlevalue": {
@@ -336,7 +340,7 @@
             }
         },
         "viz_card_02_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_02"
@@ -368,7 +372,6 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "areaOpacity": 0.45,
                 "dataValuesDisplay": "minmax",
                 "lineWidth": 2,
                 "markerDisplay": "outlined",
@@ -491,7 +494,9 @@
                 "sparklineValues": "> primary | seriesByName(\"BucketConnections\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " connections",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -507,7 +512,7 @@
             }
         },
         "viz_card_03_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_03"
@@ -516,7 +521,27 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "ALLOW": "#159352",
+                    "Allow": "#159352",
+                    "Allowed": "#159352",
+                    "BLOCKED": "#e44273",
+                    "Block": "#e44273",
+                    "Blocked": "#e44273",
+                    "CONNECTED": "#159352",
+                    "Connected": "#159352",
+                    "DENIED": "#e44273",
+                    "Denied": "#e44273",
+                    "Deny": "#e44273",
+                    "FAILED": "#e44273",
+                    "Failed": "#e44273",
+                    "Failure": "#e44273",
+                    "UNKNOWN": "#a9afda",
+                    "Other": "#a9afda",
+                    "Success": "#159352",
+                    "Unknown": "#a9afda"
+                },
                 "seriesColors": [
                     "#e2a811",
                     "#3abdfa",
@@ -539,13 +564,10 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "areaOpacity": 0.45,
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
                 "showYMajorGridLines": false,
                 "showYMinorGridLines": false,
+                "stackMode": "stacked",
                 "xAxisTitleVisibility": "hide",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -553,7 +575,7 @@
                 "yAxisMinorTickVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketConnections\")"
+                "y": "> primary | frameWithoutSeriesNames(\"BucketConnections\", \"WindowConnections\")"
             }
         },
         "viz_card_03_drilldown_trigger": {
@@ -638,7 +660,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks remote\\-access VPN clients, sessions, successful connections, and failed connections over time\\."
+                "markdown": "Reports the failed share of remote\\-access VPN connection attempts\\. Stacked columns show successful versus failed volume; client and session context remains in Magnify+\\."
             }
         },
         "viz_card_04_singlevalue": {
@@ -653,32 +675,40 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint() | divideBy(0.999999999999)",
-                "shouldAbbreviateMajorValue": true,
+                "majorValue": "> primary | seriesByName(\"WindowFailureRatePct\") | lastPoint()",
+                "numberPrecision": 1,
+                "shouldAbbreviateMajorValue": false,
                 "sparklineDisplay": "off",
                 "trendDisplay": "absolute",
-                "shouldAbbreviateTrendValue": true,
+                "shouldAbbreviateTrendValue": false,
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
+                "sparklineValues": "> primary | seriesByName(\"Failure Rate %\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": "%",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
                     {
-                        "value": "#049fd9",
-                        "to": 0
+                        "value": "#159352",
+                        "to": -0.000001
                     },
                     {
-                        "value": "#049fd9",
-                        "from": 0
+                        "value": "#a6adb6",
+                        "from": -0.000001,
+                        "to": 0.000001
+                    },
+                    {
+                        "value": "#e44273",
+                        "from": 0.000001
                     }
                 ]
             }
         },
         "viz_card_04_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_04"
@@ -687,7 +717,11 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "Connect Failures": "#e44273",
+                    "Connects": "#159352"
+                },
                 "seriesColors": [
                     "#3abdfa",
                     "#9b5ff4",
@@ -710,13 +744,10 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "areaOpacity": 0.45,
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
                 "showYMajorGridLines": false,
                 "showYMinorGridLines": false,
+                "stackMode": "stacked",
                 "xAxisTitleVisibility": "hide",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -724,7 +755,7 @@
                 "yAxisMinorTickVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")"
+                "y": "> primary | frameBySeriesNames(\"Connects\", \"Connect Failures\")"
             }
         },
         "viz_card_04_drilldown_trigger": {
@@ -752,7 +783,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Remote%20Access%20Health&target=secure_networking_zta_ravpn_connection_rate"
+                        "url": "/metric-info?origin=Remote%20Access%20Health&target=secure_networking_zta_ravpn_connection_attempts_trend"
                     }
                 }
             ],
@@ -783,7 +814,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**MFA Outcomes**"
+                "markdown": "**Risky MFA Outcomes**"
             }
         },
         "viz_card_05_metadata": {
@@ -809,7 +840,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks Duo MFA authentication outcomes over time and keeps the application/factor breakdown as a drill\\-down table\\."
+                "markdown": "Counts denied or fraud Duo MFA events in the selected time range\\. The table ranks the most affected application and factor pairs\\."
             }
         },
         "viz_card_05_singlevalue": {
@@ -824,83 +855,45 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"WindowRiskyOutcomes\") | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"_WindowRiskyOutcomes\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "absolute",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"RiskyOutcomes\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "showTrendIndicator": false,
+                "unit": " events",
+                "unitPosition": "after"
             },
-            "context": {
-                "trendColorEditorConfig": [
-                    {
-                        "value": "#4cbf7f",
-                        "to": -0.000001
-                    },
-                    {
-                        "value": "#a6adb6",
-                        "from": -0.000001,
-                        "to": 0.000001
-                    },
-                    {
-                        "value": "#f7782f",
-                        "from": 0.000001
-                    }
-                ]
-            }
+            "context": {}
         },
         "viz_card_05_trend": {
-            "type": "splunk.area",
-            "title": "",
+            "type": "splunk.table",
+            "title": "Most affected application / factor",
             "dataSources": {
                 "primary": "ds_story_05"
             },
             "showLastUpdated": false,
             "showProgressBar": false,
             "options": {
-                "backgroundColor": "transparent",
-                "legendDisplay": "off",
-                "seriesColors": [
-                    "#159352",
-                    "#3abdfa",
-                    "#0d8e97",
-                    "#e2a811",
-                    "#e44273",
-                    "#a9afda",
-                    "#d8580f",
-                    "#f88ddc",
-                    "#9b5ff4",
-                    "#9abe2d",
-                    "#6574f3",
-                    "#ff9297",
-                    "#d14baf",
-                    "#24c4c9",
-                    "#bb6e04",
-                    "#6ec641",
-                    "#777daf",
-                    "#ff9755",
-                    "#698c07",
-                    "#c69fff"
-                ],
-                "areaOpacity": 0.45,
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
-                "showYMajorGridLines": false,
-                "showYMinorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisLabelVisibility": "hide",
-                "yAxisLineVisibility": "hide",
-                "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"RiskyOutcomes\")"
+                "backgroundColor": "#131a23",
+                "columnFormat": {
+                    "Application / Factor": {
+                        "width": 320
+                    },
+                    "Risky Outcomes": {
+                        "width": 120
+                    },
+                    "Failure Rate %": {
+                        "width": 125
+                    }
+                },
+                "count": 5,
+                "fontSize": "small",
+                "headerVisibility": "fixed",
+                "showInternalFields": false,
+                "showRowNumbers": false,
+                "tableFormat": {
+                    "headerBackgroundColor": "#1c2738",
+                    "headerColor": "#ecf0f5"
+                }
             }
         },
         "viz_card_05_drilldown_trigger": {
@@ -909,7 +902,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=MFA%20Outcomes&target=Secure%20Networking%20-%20ZTA%20Duo%20Authentication%20Outcomes%20by%20Application,Secure%20Networking%20-%20Duo%20Blocked%20Posture%20and%20Identity%20Events"
+                        "url": "/drilldown?origin=Risky%20MFA%20Outcomes&target=Secure%20Networking%20-%20ZTA%20Risky%20MFA%20Outcomes%20by%20Application%20and%20Factor,Secure%20Networking%20-%20Duo%20Blocked%20Posture%20and%20Identity%20Events"
                     }
                 }
             ],
@@ -928,7 +921,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=MFA%20Outcomes&target=secure_networking_zta_duo_auth_outcomes_trend"
+                        "url": "/metric-info?origin=Risky%20MFA%20Outcomes&target=secure_networking_zta_risky_mfa_outcomes_by_application_factor"
                     }
                 }
             ],
@@ -959,7 +952,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Cross\\-Control User Activity**"
+                "markdown": "**Control Telemetry Volume**"
             }
         },
         "viz_card_06_metadata": {
@@ -985,7 +978,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Compares user activity volume across ISE, ZTNA, and FMC over time, with cross\\-source identity correlation available in the drill\\-down modal\\."
+                "markdown": "Ranks selected\\-window telemetry events from ISE, ZTNA, and FMC\\. Product logging rates differ, so these bars show source volume rather than correlated users or relative control health\\."
             }
         },
         "viz_card_06_singlevalue": {
@@ -1000,37 +993,18 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"_WindowEvents\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "absolute",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "unit": " events",
+                "unitPosition": "after"
             },
-            "context": {
-                "trendColorEditorConfig": [
-                    {
-                        "value": "#f7782f",
-                        "to": -0.000001
-                    },
-                    {
-                        "value": "#a6adb6",
-                        "from": -0.000001,
-                        "to": 0.000001
-                    },
-                    {
-                        "value": "#4cbf7f",
-                        "from": 0.000001
-                    }
-                ]
-            }
+            "context": {}
         },
         "viz_card_06_trend": {
-            "type": "splunk.area",
+            "type": "splunk.bar",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_06"
@@ -1062,21 +1036,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "areaOpacity": 0.45,
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "all",
                 "showYMajorGridLines": false,
                 "showYMinorGridLines": false,
+                "stackMode": "unstacked",
                 "xAxisTitleVisibility": "hide",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
                 "yAxisMinorTickVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")"
+                "x": "> primary | seriesByName(\"Control Source\")",
+                "y": "> primary | seriesByName(\"Events\")"
             }
         },
         "viz_card_06_drilldown_trigger": {
@@ -1085,7 +1056,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Cross-Control%20User%20Activity&target=secure_networking_zta_user_activity_cross_source"
+                        "url": "/drilldown?origin=Control%20Telemetry%20Volume&target=secure_networking_zta_user_activity_cross_source"
                     }
                 }
             ],
@@ -1104,7 +1075,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Cross-Control%20User%20Activity&target=secure_networking_zta_user_activity_source_trend"
+                        "url": "/metric-info?origin=Control%20Telemetry%20Volume&target=secure_networking_zta_user_activity_by_source_summary"
                     }
                 }
             ],
@@ -1156,9 +1127,9 @@
             "type": "ds.searchbase"
         },
         "ds_story_04": {
-            "name": "Secure Networking - ZTA RaVPN Connection Rate and Clients",
+            "name": "Secure Networking - ZTA RaVPN Connection Attempts Trend",
             "options": {
-                "ref": "secure_networking_zta_ravpn_connection_rate",
+                "ref": "secure_networking_zta_ravpn_connection_attempts_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$",
@@ -1168,9 +1139,9 @@
             "type": "ds.searchbase"
         },
         "ds_story_05": {
-            "name": "Secure Networking - ZTA Duo Authentication Outcomes Trend",
+            "name": "Secure Networking - ZTA Risky MFA Outcomes by Application and Factor",
             "options": {
-                "ref": "secure_networking_zta_duo_auth_outcomes_trend",
+                "ref": "secure_networking_zta_risky_mfa_outcomes_by_application_factor",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$",
@@ -1180,9 +1151,9 @@
             "type": "ds.searchbase"
         },
         "ds_story_06": {
-            "name": "Secure Networking - ZTA User Activity Cross-Source Trend",
+            "name": "Secure Networking - ZTA Control Telemetry Volume by Source",
             "options": {
-                "ref": "secure_networking_zta_user_activity_source_trend",
+                "ref": "secure_networking_zta_user_activity_by_source_summary",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$",

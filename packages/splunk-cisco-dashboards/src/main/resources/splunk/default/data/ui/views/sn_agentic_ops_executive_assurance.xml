@@ -118,7 +118,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Shows the Catalyst Center fleet\\-average device health trend across automatic time buckets in the selected dashboard range\\."
+                "markdown": "Shows the observed Catalyst Center fleet distribution across healthy, reachable unmanaged, and unreachable device states\\."
             }
         },
         "viz_card_01_singlevalue": {
@@ -133,16 +133,13 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint() | divideBy(0.999999999999)",
-                "shouldAbbreviateMajorValue": true,
+                "majorValue": "> primary | seriesByName(\"HealthyPct\") | lastPoint()",
+                "numberPrecision": 1,
+                "shouldAbbreviateMajorValue": false,
                 "sparklineDisplay": "off",
-                "trendDisplay": "absolute",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"current\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "unit": "%"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -158,7 +155,7 @@
             }
         },
         "viz_card_01_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_01"
@@ -190,16 +187,13 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "all",
+                "stackMode": "unstacked",
                 "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"current\")",
-                "areaOpacity": 0.45,
+                "x": "> primary | seriesByName(\"Health State\")",
+                "y": "> primary | seriesByName(\"Devices\")",
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -232,7 +226,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Fleet%20Device%20Health&target=executive_dashboard_ds_device_health_trend_compare"
+                        "url": "/metric-info?origin=Fleet%20Device%20Health&target=secure_networking_fleet_device_health_summary"
                     }
                 }
             ],
@@ -263,7 +257,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Site Connectivity**"
+                "markdown": "**Lowest Site Connectivity**"
             }
         },
         "viz_card_02_metadata": {
@@ -289,7 +283,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Trends the worst site’s inter\\-device link availability as a percentage, read from Catalyst Center’s InterDeviceLinkAvailHealth field on raw cisco:dnac:devicehealth events\\."
+                "markdown": "Ranks the observed sites with the lowest inter\\-device link availability and retains affected link counts for operational context\\."
             }
         },
         "viz_card_02_singlevalue": {
@@ -304,16 +298,13 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint() | divideBy(0.999999999999)",
-                "shouldAbbreviateMajorValue": true,
+                "majorValue": "> primary | seriesByName(\"WindowMinAvailabilityPct\") | lastPoint()",
+                "numberPrecision": 1,
+                "shouldAbbreviateMajorValue": false,
                 "sparklineDisplay": "off",
-                "trendDisplay": "absolute",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"availability_pct\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "unit": "%"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -329,53 +320,36 @@
             }
         },
         "viz_card_02_trend": {
-            "type": "splunk.area",
-            "title": "",
+            "type": "splunk.table",
+            "title": "Lowest observed sites",
             "dataSources": {
                 "primary": "ds_story_02"
             },
             "showLastUpdated": false,
             "showProgressBar": false,
             "options": {
-                "backgroundColor": "transparent",
-                "legendDisplay": "off",
-                "seriesColors": [
-                    "#9b5ff4",
-                    "#3abdfa",
-                    "#0d8e97",
-                    "#e2a811",
-                    "#e44273",
-                    "#a9afda",
-                    "#d8580f",
-                    "#f88ddc",
-                    "#159352",
-                    "#9abe2d",
-                    "#6574f3",
-                    "#ff9297",
-                    "#d14baf",
-                    "#24c4c9",
-                    "#bb6e04",
-                    "#6ec641",
-                    "#777daf",
-                    "#ff9755",
-                    "#698c07",
-                    "#c69fff"
-                ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
-                "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"availability_pct\")",
-                "areaOpacity": 0.45,
-                "showYMinorGridLines": false,
-                "yAxisLabelVisibility": "hide",
-                "yAxisLineVisibility": "hide",
-                "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "backgroundColor": "#131a23",
+                "columnFormat": {
+                    "Affected Links": {
+                        "width": 105
+                    },
+                    "Availability %": {
+                        "width": 115
+                    },
+                    "Site": {
+                        "width": 280
+                    }
+                },
+                "count": 5,
+                "fontSize": "small",
+                "headerVisibility": "fixed",
+                "showInternalFields": false,
+                "showRowNumbers": false,
+                "table": "> primary | frameBySeriesNames(\"Site\", \"Availability %\", \"Affected Links\")",
+                "tableFormat": {
+                    "headerBackgroundColor": "#1c2738",
+                    "headerColor": "#ecf0f5"
+                }
             }
         },
         "viz_card_02_drilldown_trigger": {
@@ -384,7 +358,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Site%20Connectivity&target=it_critical_systems_ds_site_health,overview_link_state_drilldown,secure_networking_sdwan_tunnel_health_log"
+                        "url": "/drilldown?origin=Lowest%20Site%20Connectivity&target=it_critical_systems_ds_site_health,overview_link_state_drilldown,secure_networking_sdwan_tunnel_health_log"
                     }
                 }
             ],
@@ -403,7 +377,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Site%20Connectivity&target=it_critical_systems_site_link_availability_pct_trend"
+                        "url": "/metric-info?origin=Lowest%20Site%20Connectivity&target=secure_networking_site_connectivity_summary"
                     }
                 }
             ],
@@ -484,7 +458,8 @@
                 "sparklineValues": "> primary | seriesByName(\"pct\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": "%"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -505,7 +480,7 @@
             }
         },
         "viz_card_03_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_03"
@@ -514,7 +489,11 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "down": "#e44273",
+                    "up": "#159352"
+                },
                 "seriesColors": [
                     "#e2a811",
                     "#3abdfa",
@@ -537,16 +516,13 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
+                "stackMode": "stacked",
                 "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"pct\")",
-                "areaOpacity": 0.45,
+                "y": "> primary | frameBySeriesNames(\"up\", \"down\")",
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -652,7 +628,8 @@
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
                 "majorValue": "> primary | seriesByName(\"WindowFailureRatePct\") | lastPoint() | divideBy(0.999999999999)",
-                "shouldAbbreviateMajorValue": true,
+                "numberPrecision": 1,
+                "shouldAbbreviateMajorValue": false,
                 "sparklineDisplay": "off",
                 "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
@@ -660,7 +637,8 @@
                 "sparklineValues": "> primary | seriesByName(\"Failure Rate %\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": "%"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -681,7 +659,7 @@
             }
         },
         "viz_card_04_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_04"
@@ -722,7 +700,6 @@
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
                 "y": "> primary | seriesByName(\"Failure Rate %\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -786,7 +763,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Enforcement Pressure**"
+                "markdown": "**Reported Enforcement Blocks**"
             }
         },
         "viz_card_05_metadata": {
@@ -812,7 +789,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Creates a unified block trend across Meraki security events, SD\\-WAN UTD, Secure Access firewall events, and Secure Firewall/ASA\\-style feeds\\."
+                "markdown": "Compares observed block, deny, and drop decisions across Meraki, SD\\-WAN UTD, Secure Access, and Secure Firewall/ASA reporting sources\\."
             }
         },
         "viz_card_05_singlevalue": {
@@ -836,7 +813,9 @@
                 "sparklineValues": "> primary | seriesByName(\"BucketBlocks\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " blocks",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -857,7 +836,7 @@
             }
         },
         "viz_card_05_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_05"
@@ -866,7 +845,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
                 "seriesColors": [
                     "#159352",
                     "#3abdfa",
@@ -889,16 +868,13 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
+                "stackMode": "stacked",
                 "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketBlocks\")",
-                "areaOpacity": 0.45,
+                "y": "> primary | frameBySeriesNames(\"Meraki MX\", \"SD-WAN UTD\", \"Secure Access\", \"Secure Firewall / ASA\")",
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -912,7 +888,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Enforcement%20Pressure&target=Secure%20Networking%20-%20FMC%20Blocked%20Connection%20Detail,Secure%20Networking%20-%20SSE%20Security%20Event%20Detail"
+                        "url": "/drilldown?origin=Reported%20Enforcement%20Blocks&target=Secure%20Networking%20-%20FMC%20Blocked%20Connection%20Detail,Secure%20Networking%20-%20SSE%20Security%20Event%20Detail"
                     }
                 }
             ],
@@ -931,7 +907,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Enforcement%20Pressure&target=secure_networking_hmf_unified_blocks_trend"
+                        "url": "/metric-info?origin=Reported%20Enforcement%20Blocks&target=secure_networking_hmf_unified_blocks_trend"
                     }
                 }
             ],
@@ -962,7 +938,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Application Reachability**"
+                "markdown": "**Lowest Application Availability**"
             }
         },
         "viz_card_06_metadata": {
@@ -988,7 +964,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks ThousandEyes HTTP availability by monitored test over time and retains the per\\-test SLA table as drill\\-down detail\\."
+                "markdown": "Lists the monitored ThousandEyes tests with the lowest observed HTTP availability, including minimum, average, and latest percentages\\."
             }
         },
         "viz_card_06_singlevalue": {
@@ -1003,16 +979,13 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"WindowMinAvailabilityPct\") | lastPoint() | divideBy(0.999999999999)",
-                "shouldAbbreviateMajorValue": true,
+                "majorValue": "> primary | seriesByName(\"WindowMinAvailabilityPct\") | lastPoint()",
+                "numberPrecision": 1,
+                "shouldAbbreviateMajorValue": false,
                 "sparklineDisplay": "off",
-                "trendDisplay": "absolute",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"RowMinAvailabilityPct\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "unit": "%"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -1033,53 +1006,39 @@
             }
         },
         "viz_card_06_trend": {
-            "type": "splunk.area",
-            "title": "",
+            "type": "splunk.table",
+            "title": "Lowest observed tests",
             "dataSources": {
                 "primary": "ds_story_06"
             },
             "showLastUpdated": false,
             "showProgressBar": false,
             "options": {
-                "backgroundColor": "transparent",
-                "legendDisplay": "off",
-                "seriesColors": [
-                    "#0d8e97",
-                    "#9b5ff4",
-                    "#3abdfa",
-                    "#e2a811",
-                    "#e44273",
-                    "#a9afda",
-                    "#d8580f",
-                    "#f88ddc",
-                    "#159352",
-                    "#9abe2d",
-                    "#6574f3",
-                    "#ff9297",
-                    "#d14baf",
-                    "#24c4c9",
-                    "#bb6e04",
-                    "#6ec641",
-                    "#777daf",
-                    "#ff9755",
-                    "#698c07",
-                    "#c69fff"
-                ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
-                "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"RowMinAvailabilityPct\")",
-                "areaOpacity": 0.45,
-                "showYMinorGridLines": false,
-                "yAxisLabelVisibility": "hide",
-                "yAxisLineVisibility": "hide",
-                "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "backgroundColor": "#131a23",
+                "columnFormat": {
+                    "Average Availability %": {
+                        "width": 125
+                    },
+                    "Latest Availability %": {
+                        "width": 120
+                    },
+                    "Minimum Availability %": {
+                        "width": 130
+                    },
+                    "Test": {
+                        "width": 230
+                    }
+                },
+                "count": 5,
+                "fontSize": "small",
+                "headerVisibility": "fixed",
+                "showInternalFields": false,
+                "showRowNumbers": false,
+                "table": "> primary | frameBySeriesNames(\"Test\", \"Minimum Availability %\", \"Average Availability %\", \"Latest Availability %\")",
+                "tableFormat": {
+                    "headerBackgroundColor": "#1c2738",
+                    "headerColor": "#ecf0f5"
+                }
             }
         },
         "viz_card_06_drilldown_trigger": {
@@ -1088,7 +1047,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Application%20Reachability&target=Secure%20Networking%20-%20ThousandEyes%20HTTP%20Availability%20by%20Test"
+                        "url": "/drilldown?origin=Lowest%20Application%20Availability&target=Secure%20Networking%20-%20ThousandEyes%20HTTP%20Availability%20by%20Test"
                     }
                 }
             ],
@@ -1107,7 +1066,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Application%20Reachability&target=secure_networking_thousandeyes_http_availability_by_test_trend"
+                        "url": "/metric-info?origin=Lowest%20Application%20Availability&target=secure_networking_thousandeyes_http_availability_summary"
                     }
                 }
             ],
@@ -1125,7 +1084,7 @@
         "ds_story_01": {
             "name": "Executive - Device Health Trend Comparison",
             "options": {
-                "ref": "executive_dashboard_ds_device_health_trend_compare",
+                "ref": "secure_networking_fleet_device_health_summary",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$",
@@ -1137,7 +1096,7 @@
         "ds_story_02": {
             "name": "IT Critical Systems - Site Link Availability % (Worst Site)",
             "options": {
-                "ref": "it_critical_systems_site_link_availability_pct_trend",
+                "ref": "secure_networking_site_connectivity_summary",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$",
@@ -1185,7 +1144,7 @@
         "ds_story_06": {
             "name": "Secure Networking - ThousandEyes HTTP Availability by Test Trend",
             "options": {
-                "ref": "secure_networking_thousandeyes_http_availability_by_test_trend",
+                "ref": "secure_networking_thousandeyes_http_availability_summary",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$",

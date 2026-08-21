@@ -118,7 +118,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks the Cisco ISE authentication failure rate over time, with the existing per\\-network\\-device table available as the operational drill\\-down\\."
+                "markdown": "Shows the selected-window Cisco ISE authentication failure rate and its per-bucket trend. Isolated 100% points can be low volume; About this metric exposes the bucket authentication and failure counts."
             }
         },
         "viz_card_01_singlevalue": {
@@ -133,16 +133,19 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"WindowFailureRatePct\") | lastPoint() | divideBy(0.999999999999)",
-                "shouldAbbreviateMajorValue": true,
-                "shouldAbbreviateTrendValue": true,
+                "majorValue": "> primary | seriesByName(\"WindowFailureRatePct\") | lastPoint()",
+                "shouldAbbreviateMajorValue": false,
+                "shouldAbbreviateTrendValue": false,
                 "showTrendIndicator": true,
                 "sparklineDisplay": "off",
                 "sparklineValues": "> primary | seriesByName(\"Failure Rate %\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendDisplay": "absolute",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "numberPrecision": 1,
+                "unit": "%",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -163,7 +166,7 @@
             }
         },
         "viz_card_01_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_01"
@@ -200,16 +203,15 @@
                 "markerDisplay": "outlined",
                 "nullValueDisplay": "connect",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"Failure Rate %\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "xAxisTitleVisibility": "hide",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"Failure Rate %\")"
             }
         },
         "viz_card_01_drilldown_trigger": {
@@ -294,7 +296,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Trends ISE RADIUS and TACACS\\+ policy\\-set hit activity over time while retaining the policy\\-family inventory as a drill\\-down table\\."
+                "markdown": "Compares selected-window ISE RADIUS and TACACS+ policy-set hit activity. Stacked columns show how each policy family contributes over time."
             }
         },
         "viz_card_02_singlevalue": {
@@ -314,11 +316,13 @@
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineDisplay": "off",
-                "sparklineValues": "> primary | seriesByName(\"RADIUS (Network Access)\")",
+                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendDisplay": "absolute",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " policy hits",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -334,7 +338,7 @@
             }
         },
         "viz_card_02_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_02"
@@ -343,7 +347,11 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "RADIUS (Network Access)": "#9b5ff4",
+                    "TACACS+ (Device Admin)": "#3abdfa"
+                },
                 "seriesColors": [
                     "#9b5ff4",
                     "#3abdfa",
@@ -366,21 +374,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"RADIUS (Network Access)\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "xAxisTitleVisibility": "hide",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "stackMode": "stacked",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | frameWithoutSeriesNames(\"BucketTotal\", \"WindowTotal\")"
             }
         },
         "viz_card_02_drilldown_trigger": {
@@ -465,7 +470,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks RADIUS authentication outcomes over time and moves the ISE host/site/network\\-device health table into the drill\\-down modal\\."
+                "markdown": "Counts selected-window RADIUS authentications and separates successful, failed, and other outcomes so disruption volume is immediately visible."
             }
         },
         "viz_card_03_singlevalue": {
@@ -489,7 +494,9 @@
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendDisplay": "absolute",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " authentications",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -510,7 +517,7 @@
             }
         },
         "viz_card_03_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_03"
@@ -519,7 +526,12 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "Failure": "#e44273",
+                    "Other": "#a9afda",
+                    "Success": "#159352"
+                },
                 "seriesColors": [
                     "#e2a811",
                     "#3abdfa",
@@ -542,21 +554,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"Failure\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "xAxisTitleVisibility": "hide",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "stackMode": "stacked",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | frameWithoutSeriesNames(\"BucketTotal\", \"WindowFailures\", \"WindowAuths\")"
             }
         },
         "viz_card_03_drilldown_trigger": {
@@ -641,7 +650,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Trends observed RadSec/RADIUS\\-over\\-TLS authentication activity while retaining node\\-level transport evidence in the drill\\-down modal\\."
+                "markdown": "Counts selected-window RadSec authentications and separates successful, failed, and other transport outcomes over time."
             }
         },
         "viz_card_04_singlevalue": {
@@ -665,7 +674,9 @@
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendDisplay": "absolute",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " authentications",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -686,7 +697,7 @@
             }
         },
         "viz_card_04_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_04"
@@ -695,7 +706,12 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "Failure": "#e44273",
+                    "Other": "#a9afda",
+                    "Success": "#159352"
+                },
                 "seriesColors": [
                     "#3abdfa",
                     "#9b5ff4",
@@ -718,21 +734,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"Activity\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "xAxisTitleVisibility": "hide",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "stackMode": "stacked",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | frameWithoutSeriesNames(\"Activity\", \"WindowActivity\", \"WindowFailures\")"
             }
         },
         "viz_card_04_drilldown_trigger": {
@@ -817,7 +830,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks Duo MFA authentication outcomes over time and keeps the application/factor breakdown as a drill\\-down table\\."
+                "markdown": "Counts denied or fraud Duo MFA events in the selected time range. Stacked columns preserve successful, denied, fraud, and unknown outcome context."
             }
         },
         "viz_card_05_singlevalue": {
@@ -841,7 +854,9 @@
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendDisplay": "absolute",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " events",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -862,7 +877,7 @@
             }
         },
         "viz_card_05_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_05"
@@ -871,7 +886,14 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "Denied": "#e44273",
+                    "Fraud": "#e2a811",
+                    "Other": "#a9afda",
+                    "Success": "#159352",
+                    "Unknown": "#a9afda"
+                },
                 "seriesColors": [
                     "#159352",
                     "#3abdfa",
@@ -894,21 +916,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"RiskyOutcomes\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "xAxisTitleVisibility": "hide",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "stackMode": "stacked",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | frameWithoutSeriesNames(\"RiskyOutcomes\", \"WindowRiskyOutcomes\")"
             }
         },
         "viz_card_05_drilldown_trigger": {
@@ -993,7 +1012,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Total count of unique network access devices \\(NADs\\) enforcing ISE policy, based on distinct device names seen in ISE syslog, providing the Zero Trust enforcement infrastructure footprint KPI\\."
+                "markdown": "Shows the distinct ISE network access devices observed across the selected window while the line tracks active device breadth in each time bucket."
             }
         },
         "viz_card_06_singlevalue": {
@@ -1008,7 +1027,7 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"WindowISEDevices\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
@@ -1017,7 +1036,9 @@
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendDisplay": "absolute",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " devices",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -1038,7 +1059,7 @@
             }
         },
         "viz_card_06_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_06"
@@ -1075,16 +1096,15 @@
                 "markerDisplay": "outlined",
                 "nullValueDisplay": "connect",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"ise_device_count\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "xAxisTitleVisibility": "hide",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"ise_device_count\")"
             }
         },
         "viz_card_06_drilldown_trigger": {

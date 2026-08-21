@@ -92,7 +92,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Access Point Estate**"
+                "markdown": "**Reporting Access Points**"
             }
         },
         "viz_card_01_metadata": {
@@ -118,7 +118,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Total count of unique Cisco Meraki access points in the managed wireless infrastructure, providing the wireless footprint KPI\\."
+                "markdown": "Distinct Cisco Meraki access points observed reporting in the selected window; this is telemetry coverage, not configured wireless inventory\\."
             }
         },
         "viz_card_01_singlevalue": {
@@ -133,7 +133,7 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"WindowReportingAPs\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
                 "trendDisplay": "absolute",
@@ -142,7 +142,9 @@
                 "sparklineValues": "> primary | seriesByName(\"ap_count\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " access points",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -163,7 +165,7 @@
             }
         },
         "viz_card_01_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_01"
@@ -204,7 +206,6 @@
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
                 "y": "> primary | seriesByName(\"ap_count\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -218,7 +219,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Access%20Point%20Estate&target=Secure%20Networking%20-%20Meraki%20Access%20Point%20Inventory%20Detail"
+                        "url": "/drilldown?origin=Reporting%20Access%20Points&target=Secure%20Networking%20-%20Meraki%20Access%20Point%20Inventory%20Detail"
                     }
                 }
             ],
@@ -237,7 +238,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Access%20Point%20Estate&target=secure_networking_meraki_ap_count"
+                        "url": "/metric-info?origin=Reporting%20Access%20Points&target=secure_networking_meraki_ap_count"
                     }
                 }
             ],
@@ -294,7 +295,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Distinct active Catalyst Center assurance issues across the selected window, with the trend showing issue activity over time\\."
+                "markdown": "Catalyst Center assurance issues whose latest status in the selected window is active, with event-time issue observations retained as trend context\\."
             }
         },
         "viz_card_02_singlevalue": {
@@ -309,7 +310,7 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"WindowIssues\") | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"CurrentActiveIssues\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
                 "trendDisplay": "absolute",
@@ -318,7 +319,9 @@
                 "sparklineValues": "> primary | seriesByName(\"BucketIssues\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " active issues",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -339,7 +342,7 @@
             }
         },
         "viz_card_02_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_02"
@@ -380,7 +383,6 @@
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
                 "y": "> primary | seriesByName(\"BucketIssues\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -444,7 +446,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**SD-WAN Site Coverage**"
+                "markdown": "**Reporting SD-WAN Sites**"
             }
         },
         "viz_card_03_metadata": {
@@ -470,7 +472,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Distinct Catalyst SD\\-WAN sites reporting health telemetry, with trend context for collection and site\\-connectivity gaps\\."
+                "markdown": "Distinct Catalyst SD\\-WAN sites observed reporting health telemetry, with per\\-interval context for collection gaps\\."
             }
         },
         "viz_card_03_singlevalue": {
@@ -494,7 +496,9 @@
                 "sparklineValues": "> primary | seriesByName(\"reporting_sites\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " sites",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -515,7 +519,7 @@
             }
         },
         "viz_card_03_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_03"
@@ -556,7 +560,6 @@
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
                 "y": "> primary | seriesByName(\"reporting_sites\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -570,7 +573,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=SD-WAN%20Site%20Coverage&target=Secure%20Networking%20-%20SD-WAN%20Site%20View"
+                        "url": "/drilldown?origin=Reporting%20SD-WAN%20Sites&target=Secure%20Networking%20-%20SD-WAN%20Site%20View"
                     }
                 }
             ],
@@ -589,7 +592,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=SD-WAN%20Site%20Coverage&target=secure_networking_sdwan_reporting_sites_trend"
+                        "url": "/metric-info?origin=Reporting%20SD-WAN%20Sites&target=secure_networking_sdwan_reporting_sites_trend"
                     }
                 }
             ],
@@ -620,7 +623,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Data Center Health**"
+                "markdown": "**Data Center Signals**"
             }
         },
         "viz_card_04_metadata": {
@@ -646,7 +649,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Distinct Nexus Dashboard fabric anomalies across the selected window, trended alongside data center health signals\\."
+                "markdown": "Compares distinct Nexus Dashboard anomaly and advisory observations over time; the headline counts unique anomalies in the selected window\\."
             }
         },
         "viz_card_04_singlevalue": {
@@ -661,7 +664,7 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"WindowAnomalies\") | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"WindowUniqueAnomalies\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
                 "trendDisplay": "absolute",
@@ -670,7 +673,9 @@
                 "sparklineValues": "> primary | seriesByName(\"Anomaly\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " unique anomalies",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -691,7 +696,7 @@
             }
         },
         "viz_card_04_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_04"
@@ -700,7 +705,12 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "Anomaly": "#e44273",
+                    "Advisory": "#e2a811",
+                    "Unknown": "#a9afda"
+                },
                 "seriesColors": [
                     "#3abdfa",
                     "#9b5ff4",
@@ -723,21 +733,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"Anomaly\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "stackMode": "stacked",
+                "xAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | frameBySeriesNames(\"Anomaly\", \"Advisory\", \"Unknown\")",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide"
             }
         },
         "viz_card_04_drilldown_trigger": {
@@ -746,7 +753,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Data%20Center%20Health&target=Secure%20Networking%20-%20DC%20Fabric%20Anomalies%20by%20Severity"
+                        "url": "/drilldown?origin=Data%20Center%20Signals&target=Secure%20Networking%20-%20DC%20Fabric%20Anomalies%20by%20Severity"
                     }
                 }
             ],
@@ -765,7 +772,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Data%20Center%20Health&target=secure_networking_dc_health_signals_trend"
+                        "url": "/metric-info?origin=Data%20Center%20Signals&target=secure_networking_dc_health_signals_trend"
                     }
                 }
             ],
@@ -822,7 +829,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Secure Endpoint incident, malware, endpoint, and user activity across the selected window, exposing threat pressure and spread\\."
+                "markdown": "Distinct Secure Endpoint incidents across the selected window; endpoint, user, and event counts remain supporting investigation context rather than being added together\\."
             }
         },
         "viz_card_05_singlevalue": {
@@ -837,16 +844,18 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"WindowIncidents\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
                 "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
+                "sparklineValues": "> primary | seriesByName(\"Incidents\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " incidents",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -867,7 +876,7 @@
             }
         },
         "viz_card_05_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_05"
@@ -907,8 +916,7 @@
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")",
-                "areaOpacity": 0.45,
+                "y": "> primary | seriesByName(\"Incidents\")",
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -1022,7 +1030,9 @@
                 "sparklineValues": "> primary | seriesByName(\"Block\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " blocked events",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -1043,7 +1053,7 @@
             }
         },
         "viz_card_06_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_06"
@@ -1052,7 +1062,14 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "Block": "#e44273",
+                    "Allow": "#159352",
+                    "Trust": "#3abdfa",
+                    "Observed": "#9b5ff4",
+                    "Other": "#a9afda"
+                },
                 "seriesColors": [
                     "#0d8e97",
                     "#9b5ff4",
@@ -1075,21 +1092,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"Block\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "stackMode": "stacked",
+                "xAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | frameWithoutSeriesNames(\"WindowBlocks\")",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide"
             }
         },
         "viz_card_06_drilldown_trigger": {

@@ -118,7 +118,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Combines protected\\-application attainability, retainability, and path quality, then applies live Cisco XDR incident pressure as a bounded contextual\\-risk multiplier\\."
+                "markdown": "Trends protected\\-application attainability, retainability, and path quality under time\\-aligned Cisco XDR incident pressure\\."
             }
         },
         "viz_card_01_singlevalue": {
@@ -143,7 +143,9 @@
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "trendValue": "> sparklineValues | delta(-2)",
-                "numberPrecision": 1
+                "numberPrecision": 1,
+                "unit": " / 100",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -159,7 +161,7 @@
             }
         },
         "viz_card_01_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_01"
@@ -200,7 +202,6 @@
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
                 "y": "> primary | seriesByName(\"SNAS\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -290,7 +291,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Measures whether protected applications are attainable by averaging Cisco ThousandEyes HTTP availability into hourly 0\\-100 observations\\."
+                "markdown": "Measures whether protected applications are attainable by averaging Cisco ThousandEyes HTTP availability into automatic dashboard time buckets\\."
             }
         },
         "viz_card_02_singlevalue": {
@@ -315,7 +316,8 @@
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "trendValue": "> sparklineValues | delta(-2)",
-                "numberPrecision": 1
+                "numberPrecision": 1,
+                "unit": "%"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -331,7 +333,7 @@
             }
         },
         "viz_card_02_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_02"
@@ -372,7 +374,6 @@
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
                 "y": "> primary | seriesByName(\"Attainability\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -487,7 +488,8 @@
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "trendValue": "> sparklineValues | delta(-2)",
-                "numberPrecision": 1
+                "numberPrecision": 1,
+                "unit": "%"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -503,7 +505,7 @@
             }
         },
         "viz_card_03_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_03"
@@ -512,7 +514,12 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "Retainability": "#4cbf7f",
+                    "ise_success": "#3abdfa",
+                    "ztna_success": "#9b5ff4"
+                },
                 "seriesColors": [
                     "#e2a811",
                     "#3abdfa",
@@ -543,8 +550,7 @@
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"Retainability\")",
-                "areaOpacity": 0.45,
+                "y": "> primary | frameBySeriesNames(\"Retainability\", \"ise_success\", \"ztna_success\")",
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -634,7 +640,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Converts Cisco ThousandEyes p95 latency and average packet loss into one 0\\-100 protected\\-application path quality score\\."
+                "markdown": "Breaks the protected\\-application path quality score into its observed p95 latency and packet\\-loss components\\."
             }
         },
         "viz_card_04_singlevalue": {
@@ -652,14 +658,11 @@
                 "majorValue": "> primary | seriesByName(\"WindowQuality\") | lastPoint()",
                 "shouldAbbreviateMajorValue": false,
                 "sparklineDisplay": "off",
-                "trendDisplay": "absolute",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"Quality\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)",
-                "numberPrecision": 1
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "numberPrecision": 1,
+                "unit": " / 100",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -675,53 +678,36 @@
             }
         },
         "viz_card_04_trend": {
-            "type": "splunk.area",
-            "title": "",
+            "type": "splunk.table",
+            "title": "Quality components",
             "dataSources": {
                 "primary": "ds_story_04"
             },
             "showLastUpdated": false,
             "showProgressBar": false,
             "options": {
-                "backgroundColor": "transparent",
-                "legendDisplay": "off",
-                "seriesColors": [
-                    "#3abdfa",
-                    "#9b5ff4",
-                    "#0d8e97",
-                    "#e2a811",
-                    "#e44273",
-                    "#a9afda",
-                    "#d8580f",
-                    "#f88ddc",
-                    "#159352",
-                    "#9abe2d",
-                    "#6574f3",
-                    "#ff9297",
-                    "#d14baf",
-                    "#24c4c9",
-                    "#bb6e04",
-                    "#6ec641",
-                    "#777daf",
-                    "#ff9755",
-                    "#698c07",
-                    "#c69fff"
-                ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
-                "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"Quality\")",
-                "areaOpacity": 0.45,
-                "showYMinorGridLines": false,
-                "yAxisLabelVisibility": "hide",
-                "yAxisLineVisibility": "hide",
-                "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "backgroundColor": "#131a23",
+                "columnFormat": {
+                    "Component": {
+                        "width": 180
+                    },
+                    "Measurement": {
+                        "width": 210
+                    },
+                    "Score": {
+                        "width": 100
+                    }
+                },
+                "count": 5,
+                "fontSize": "small",
+                "headerVisibility": "fixed",
+                "showInternalFields": false,
+                "showRowNumbers": false,
+                "table": "> primary | frameBySeriesNames(\"Component\", \"Measurement\", \"Score\")",
+                "tableFormat": {
+                    "headerBackgroundColor": "#1c2738",
+                    "headerColor": "#ecf0f5"
+                }
             }
         },
         "viz_card_04_drilldown_trigger": {
@@ -749,7 +735,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Q%20-%20Quality&target=secure_networking_assurance_quality_trend"
+                        "url": "/metric-info?origin=Q%20-%20Quality&target=secure_networking_assurance_quality_summary"
                     }
                 }
             ],
@@ -806,7 +792,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Turns active Cisco XDR incident global scores into a bounded 0\\.50\\-1\\.00 multiplier that contextualizes the otherwise healthy ARQ base\\."
+                "markdown": "Ranks active Cisco XDR incidents by global score and shows the bounded 0\\.50\\-1\\.00 multiplier they apply to the ARQ base\\."
             }
         },
         "viz_card_05_singlevalue": {
@@ -824,13 +810,8 @@
                 "majorValue": "> primary | seriesByName(\"WindowRiskMultiplier\") | lastPoint()",
                 "shouldAbbreviateMajorValue": false,
                 "sparklineDisplay": "off",
-                "trendDisplay": "absolute",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"D_risk\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)",
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
                 "numberPrecision": 3,
                 "unit": "×",
                 "unitPosition": "after"
@@ -849,53 +830,36 @@
             }
         },
         "viz_card_05_trend": {
-            "type": "splunk.area",
-            "title": "",
+            "type": "splunk.table",
+            "title": "Active incident pressure",
             "dataSources": {
                 "primary": "ds_story_05"
             },
             "showLastUpdated": false,
             "showProgressBar": false,
             "options": {
-                "backgroundColor": "transparent",
-                "legendDisplay": "off",
-                "seriesColors": [
-                    "#159352",
-                    "#3abdfa",
-                    "#0d8e97",
-                    "#e2a811",
-                    "#e44273",
-                    "#a9afda",
-                    "#d8580f",
-                    "#f88ddc",
-                    "#9b5ff4",
-                    "#9abe2d",
-                    "#6574f3",
-                    "#ff9297",
-                    "#d14baf",
-                    "#24c4c9",
-                    "#bb6e04",
-                    "#6ec641",
-                    "#777daf",
-                    "#ff9755",
-                    "#698c07",
-                    "#c69fff"
-                ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
-                "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"D_risk\")",
-                "areaOpacity": 0.45,
-                "showYMinorGridLines": false,
-                "yAxisLabelVisibility": "hide",
-                "yAxisLineVisibility": "hide",
-                "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "backgroundColor": "#131a23",
+                "columnFormat": {
+                    "Global Score": {
+                        "width": 110
+                    },
+                    "Incident": {
+                        "width": 280
+                    },
+                    "Status": {
+                        "width": 110
+                    }
+                },
+                "count": 5,
+                "fontSize": "small",
+                "headerVisibility": "fixed",
+                "showInternalFields": false,
+                "showRowNumbers": false,
+                "table": "> primary | frameBySeriesNames(\"Incident\", \"Status\", \"Global Score\")",
+                "tableFormat": {
+                    "headerBackgroundColor": "#1c2738",
+                    "headerColor": "#ecf0f5"
+                }
             }
         },
         "viz_card_05_drilldown_trigger": {
@@ -923,7 +887,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Contextual%20risk%20multiplier&target=secure_networking_assurance_contextual_risk_trend"
+                        "url": "/metric-info?origin=Contextual%20risk%20multiplier&target=secure_networking_assurance_contextual_risk_summary"
                     }
                 }
             ],
@@ -954,7 +918,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Distributed enforcement evidence**"
+                "markdown": "**Reported Distributed Enforcement Blocks**"
             }
         },
         "viz_card_06_metadata": {
@@ -980,7 +944,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Creates a unified block trend across Meraki security events, SD\\-WAN UTD, Secure Access firewall events, and Secure Firewall/ASA\\-style feeds\\."
+                "markdown": "Compares observed block, deny, and drop decisions across Meraki, SD\\-WAN UTD, Secure Access, and Secure Firewall/ASA reporting sources\\."
             }
         },
         "viz_card_06_singlevalue": {
@@ -1004,7 +968,9 @@
                 "sparklineValues": "> primary | seriesByName(\"BucketBlocks\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " blocks",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -1020,7 +986,7 @@
             }
         },
         "viz_card_06_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_06"
@@ -1029,7 +995,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
                 "seriesColors": [
                     "#0d8e97",
                     "#9b5ff4",
@@ -1052,16 +1018,13 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
+                "stackMode": "stacked",
                 "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketBlocks\")",
-                "areaOpacity": 0.45,
+                "y": "> primary | frameBySeriesNames(\"Meraki MX\", \"SD-WAN UTD\", \"Secure Access\", \"Secure Firewall / ASA\")",
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -1075,7 +1038,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Distributed%20enforcement%20evidence&target=Secure%20Networking%20-%20FMC%20Blocked%20Connection%20Detail,Secure%20Networking%20-%20SSE%20Security%20Event%20Detail"
+                        "url": "/drilldown?origin=Reported%20Distributed%20Enforcement%20Blocks&target=Secure%20Networking%20-%20FMC%20Blocked%20Connection%20Detail,Secure%20Networking%20-%20SSE%20Security%20Event%20Detail"
                     }
                 }
             ],
@@ -1094,7 +1057,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Distributed%20enforcement%20evidence&target=secure_networking_hmf_unified_blocks_trend"
+                        "url": "/metric-info?origin=Reported%20Distributed%20Enforcement%20Blocks&target=secure_networking_hmf_unified_blocks_trend"
                     }
                 }
             ],
@@ -1148,7 +1111,7 @@
         "ds_story_04": {
             "name": "Secure Networking - Protected Application Path Quality Trend",
             "options": {
-                "ref": "secure_networking_assurance_quality_trend",
+                "ref": "secure_networking_assurance_quality_summary",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$",
@@ -1160,7 +1123,7 @@
         "ds_story_05": {
             "name": "Secure Networking - XDR Contextual Risk Multiplier Trend",
             "options": {
-                "ref": "secure_networking_assurance_contextual_risk_trend",
+                "ref": "secure_networking_assurance_contextual_risk_summary",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$",

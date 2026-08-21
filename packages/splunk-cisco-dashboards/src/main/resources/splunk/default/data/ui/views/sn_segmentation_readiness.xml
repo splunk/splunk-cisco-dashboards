@@ -92,7 +92,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Hardware Readiness**"
+                "markdown": "**TrustSec Hardware Inventory**"
             }
         },
         "viz_card_01_metadata": {
@@ -118,7 +118,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Trends the Catalyst Center device inventory by family over time, with the model\\-level TrustSec readiness baseline retained as drill\\-down detail\\."
+                "markdown": "Ranks the observed Catalyst Center hardware inventory by device family as a deployment baseline; an authoritative TrustSec capability lookup is not currently available\\."
             }
         },
         "viz_card_01_singlevalue": {
@@ -133,16 +133,13 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"PeakObservedDevices\") | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"WindowDevices\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "absolute",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "unit": " devices",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -163,7 +160,7 @@
             }
         },
         "viz_card_01_trend": {
-            "type": "splunk.area",
+            "type": "splunk.bar",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_01"
@@ -195,16 +192,13 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "all",
+                "stackMode": "unstacked",
                 "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")",
-                "areaOpacity": 0.45,
+                "x": "> primary | seriesByName(\"Device Family\")",
+                "y": "> primary | seriesByName(\"Devices\")",
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -218,7 +212,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Hardware%20Readiness&target=Secure%20Networking%20-%20TrustSec%20Hardware%20Readiness"
+                        "url": "/drilldown?origin=TrustSec%20Hardware%20Inventory&target=Secure%20Networking%20-%20TrustSec%20Hardware%20Readiness"
                     }
                 }
             ],
@@ -237,7 +231,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Hardware%20Readiness&target=secure_networking_trustsec_hardware_inventory_trend"
+                        "url": "/metric-info?origin=TrustSec%20Hardware%20Inventory&target=secure_networking_trustsec_hardware_readiness_summary"
                     }
                 }
             ],
@@ -268,7 +262,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Active Endpoint-SGT Assignments**"
+                "markdown": "**Observed Endpoint-SGT Assignments**"
             }
         },
         "viz_card_02_metadata": {
@@ -294,7 +288,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Counts distinct endpoint\\-to\\-SGT assignments observed in Cisco ISE authentication events during the selected time window\\."
+                "markdown": "Counts distinct endpoint\\-to\\-SGT assignments observed in Cisco ISE authentication events; this is reporting activity, not current assignment state\\."
             }
         },
         "viz_card_02_singlevalue": {
@@ -318,7 +312,9 @@
                 "sparklineValues": "> primary | seriesByName(\"assignments_trend\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " assignments",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -339,7 +335,7 @@
             }
         },
         "viz_card_02_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_02"
@@ -380,7 +376,6 @@
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
                 "y": "> primary | seriesByName(\"assignments_trend\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -394,7 +389,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Active%20Endpoint-SGT%20Assignments&target=Secure%20Networking%20-%20SGT%20Distribution%20by%20Site%20and%20Device,Secure%20Networking%20-%20Excessive%20Unique%20MAC%20per%20Wired%20Port,Secure%20Networking%20-%20OT%2FIoT%20Device%20Visibility"
+                        "url": "/drilldown?origin=Observed%20Endpoint-SGT%20Assignments&target=Secure%20Networking%20-%20SGT%20Distribution%20by%20Site%20and%20Device,Secure%20Networking%20-%20Excessive%20Unique%20MAC%20per%20Wired%20Port,Secure%20Networking%20-%20OT%2FIoT%20Device%20Visibility"
                     }
                 }
             ],
@@ -413,7 +408,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Active%20Endpoint-SGT%20Assignments&target=secure_networking_sgt_total_assignments_count"
+                        "url": "/metric-info?origin=Observed%20Endpoint-SGT%20Assignments&target=secure_networking_sgt_total_assignments_count"
                     }
                 }
             ],
@@ -444,7 +439,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Security Groups in Use**"
+                "markdown": "**Observed Security Groups in Use**"
             }
         },
         "viz_card_03_metadata": {
@@ -470,7 +465,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Count of unique Security Group Tags actively in use across ISE authentication events, reflecting the breadth of TrustSec segmentation classification deployed in the environment\\."
+                "markdown": "Ranks non\\-default Security Group Tags by observed ISE authentication activity and reports the selected\\-window classification breadth\\."
             }
         },
         "viz_card_03_singlevalue": {
@@ -485,16 +480,13 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"unique_sgts\") | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"WindowSecurityGroups\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "absolute",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"unique_sgts_trend\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "unit": " groups",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -515,7 +507,7 @@
             }
         },
         "viz_card_03_trend": {
-            "type": "splunk.area",
+            "type": "splunk.bar",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_03"
@@ -547,16 +539,13 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "all",
+                "stackMode": "unstacked",
                 "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"unique_sgts_trend\")",
-                "areaOpacity": 0.45,
+                "x": "> primary | seriesByName(\"Security Group\")",
+                "y": "> primary | seriesByName(\"Events\")",
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -570,7 +559,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Security%20Groups%20in%20Use&target=Secure%20Networking%20-%20SGT%20Distribution%20by%20Site%20and%20Device,Secure%20Networking%20-%20SGT%20by%20Site"
+                        "url": "/drilldown?origin=Observed%20Security%20Groups%20in%20Use&target=Secure%20Networking%20-%20SGT%20Distribution%20by%20Site%20and%20Device,Secure%20Networking%20-%20SGT%20by%20Site"
                     }
                 }
             ],
@@ -589,7 +578,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Security%20Groups%20in%20Use&target=secure_networking_sgt_unique_count"
+                        "url": "/metric-info?origin=Observed%20Security%20Groups%20in%20Use&target=secure_networking_sgt_activity_summary"
                     }
                 }
             ],
@@ -620,7 +609,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Segmentation Adoption Rate**"
+                "markdown": "**Observed Segmentation Adoption Rate**"
             }
         },
         "viz_card_04_metadata": {
@@ -646,7 +635,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Trends the percentage of Cisco ISE authentication activity carrying a non\\-default Security Group Tag across the selected time range\\."
+                "markdown": "Shows the weighted selected\\-window percentage of Cisco ISE authentication activity carrying a non\\-default Security Group Tag, with its bucket trend\\."
             }
         },
         "viz_card_04_singlevalue": {
@@ -661,8 +650,9 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint() | divideBy(0.999999999999)",
-                "shouldAbbreviateMajorValue": true,
+                "majorValue": "> primary | seriesByName(\"WindowAdoptionRate\") | lastPoint()",
+                "numberPrecision": 1,
+                "shouldAbbreviateMajorValue": false,
                 "sparklineDisplay": "off",
                 "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
@@ -670,7 +660,8 @@
                 "sparklineValues": "> primary | seriesByName(\"AdoptionRate\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": "%"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -691,7 +682,7 @@
             }
         },
         "viz_card_04_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_04"
@@ -732,7 +723,6 @@
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
                 "y": "> primary | seriesByName(\"AdoptionRate\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -746,7 +736,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Segmentation%20Adoption%20Rate&target=Secure%20Networking%20-%20Segmentation%20Status%20Rollup,Secure%20Networking%20-%20SGT%20Distribution%20by%20Site%20and%20Device"
+                        "url": "/drilldown?origin=Observed%20Segmentation%20Adoption%20Rate&target=Secure%20Networking%20-%20Segmentation%20Status%20Rollup,Secure%20Networking%20-%20SGT%20Distribution%20by%20Site%20and%20Device"
                     }
                 }
             ],
@@ -765,7 +755,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Segmentation%20Adoption%20Rate&target=secure_networking_segmentation_adoption_rate_trend"
+                        "url": "/metric-info?origin=Observed%20Segmentation%20Adoption%20Rate&target=secure_networking_segmentation_adoption_rate_trend"
                     }
                 }
             ],
@@ -796,7 +786,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Sites With Zero SGT Coverage**"
+                "markdown": "**Sites With No Observed SGT Coverage**"
             }
         },
         "viz_card_05_metadata": {
@@ -822,7 +812,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Counts ISE locations with authentication activity but no non\\-default SGT assignments in each time bucket\\."
+                "markdown": "Lists real ISE locations with authentication activity but no observed non\\-default SGT assignments; missing site enrichment is kept separate\\."
             }
         },
         "viz_card_05_singlevalue": {
@@ -837,16 +827,13 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"WindowZeroCoverageSites\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "absolute",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"ZeroCoverageSites\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "unit": " sites",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -867,53 +854,39 @@
             }
         },
         "viz_card_05_trend": {
-            "type": "splunk.area",
-            "title": "",
+            "type": "splunk.table",
+            "title": "Zero-coverage sites",
             "dataSources": {
                 "primary": "ds_story_05"
             },
             "showLastUpdated": false,
             "showProgressBar": false,
             "options": {
-                "backgroundColor": "transparent",
-                "legendDisplay": "off",
-                "seriesColors": [
-                    "#159352",
-                    "#3abdfa",
-                    "#0d8e97",
-                    "#e2a811",
-                    "#e44273",
-                    "#a9afda",
-                    "#d8580f",
-                    "#f88ddc",
-                    "#9b5ff4",
-                    "#9abe2d",
-                    "#6574f3",
-                    "#ff9297",
-                    "#d14baf",
-                    "#24c4c9",
-                    "#bb6e04",
-                    "#6ec641",
-                    "#777daf",
-                    "#ff9755",
-                    "#698c07",
-                    "#c69fff"
-                ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
-                "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"ZeroCoverageSites\")",
-                "areaOpacity": 0.45,
-                "showYMinorGridLines": false,
-                "yAxisLabelVisibility": "hide",
-                "yAxisLineVisibility": "hide",
-                "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "backgroundColor": "#131a23",
+                "columnFormat": {
+                    "Authentication Events": {
+                        "width": 130
+                    },
+                    "Coverage %": {
+                        "width": 100
+                    },
+                    "Site": {
+                        "width": 230
+                    },
+                    "Tagged Events": {
+                        "width": 110
+                    }
+                },
+                "count": 5,
+                "fontSize": "small",
+                "headerVisibility": "fixed",
+                "showInternalFields": false,
+                "showRowNumbers": false,
+                "table": "> primary | frameBySeriesNames(\"Site\", \"Authentication Events\", \"Tagged Events\", \"Coverage %\")",
+                "tableFormat": {
+                    "headerBackgroundColor": "#1c2738",
+                    "headerColor": "#ecf0f5"
+                }
             }
         },
         "viz_card_05_drilldown_trigger": {
@@ -922,7 +895,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Sites%20With%20Zero%20SGT%20Coverage&target=Secure%20Networking%20-%20Segmentation%20Status%20Rollup,Secure%20Networking%20-%20SGT%20by%20Site"
+                        "url": "/drilldown?origin=Sites%20With%20No%20Observed%20SGT%20Coverage&target=Secure%20Networking%20-%20Segmentation%20Status%20Rollup,Secure%20Networking%20-%20SGT%20by%20Site"
                     }
                 }
             ],
@@ -941,7 +914,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Sites%20With%20Zero%20SGT%20Coverage&target=secure_networking_segmentation_zero_coverage_sites_trend"
+                        "url": "/metric-info?origin=Sites%20With%20No%20Observed%20SGT%20Coverage&target=secure_networking_segmentation_zero_coverage_sites_summary"
                     }
                 }
             ],
@@ -972,7 +945,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**SGT Site Activity**"
+                "markdown": "**Tagged Authentication Events by Location**"
             }
         },
         "viz_card_06_metadata": {
@@ -998,7 +971,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks TrustSec\\-tagged ISE authentication activity across the best available site, network device, or ISE node context\\."
+                "markdown": "Ranks observed TrustSec\\-tagged ISE authentication events across the best available site, reporting device, or ISE node context\\."
             }
         },
         "viz_card_06_singlevalue": {
@@ -1013,16 +986,13 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"WindowEvents\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "absolute",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "unit": " events",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -1043,7 +1013,7 @@
             }
         },
         "viz_card_06_trend": {
-            "type": "splunk.area",
+            "type": "splunk.bar",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_06"
@@ -1075,16 +1045,13 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "all",
+                "stackMode": "unstacked",
                 "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")",
-                "areaOpacity": 0.45,
+                "x": "> primary | seriesByName(\"Location Context\")",
+                "y": "> primary | seriesByName(\"Events\")",
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -1098,7 +1065,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=SGT%20Site%20Activity&target=Secure%20Networking%20-%20SGT%20by%20Site"
+                        "url": "/drilldown?origin=Tagged%20Authentication%20Events%20by%20Location&target=Secure%20Networking%20-%20SGT%20by%20Site"
                     }
                 }
             ],
@@ -1117,7 +1084,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=SGT%20Site%20Activity&target=secure_networking_sgt_site_activity_trend"
+                        "url": "/metric-info?origin=Tagged%20Authentication%20Events%20by%20Location&target=secure_networking_sgt_site_activity_summary"
                     }
                 }
             ],
@@ -1135,7 +1102,7 @@
         "ds_story_01": {
             "name": "Secure Networking - TrustSec Hardware Inventory Trend",
             "options": {
-                "ref": "secure_networking_trustsec_hardware_inventory_trend",
+                "ref": "secure_networking_trustsec_hardware_readiness_summary",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$",
@@ -1159,7 +1126,7 @@
         "ds_story_03": {
             "name": "Secure Networking - SGT Unique Tags in Use Count",
             "options": {
-                "ref": "secure_networking_sgt_unique_count",
+                "ref": "secure_networking_sgt_activity_summary",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$",
@@ -1183,7 +1150,7 @@
         "ds_story_05": {
             "name": "Secure Networking - Sites With Zero SGT Coverage Trend",
             "options": {
-                "ref": "secure_networking_segmentation_zero_coverage_sites_trend",
+                "ref": "secure_networking_segmentation_zero_coverage_sites_summary",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$",
@@ -1195,7 +1162,7 @@
         "ds_story_06": {
             "name": "Secure Networking - SGT Site Activity Trend",
             "options": {
-                "ref": "secure_networking_sgt_site_activity_trend",
+                "ref": "secure_networking_sgt_site_activity_summary",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$",

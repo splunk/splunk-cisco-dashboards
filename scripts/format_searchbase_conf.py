@@ -21,6 +21,7 @@ import argparse
 import re
 import sys
 from pathlib import Path
+from typing import Iterator
 
 SOURCE = Path(__file__).resolve().parents[1] / (
     "packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf"
@@ -81,6 +82,9 @@ UNBOUNDED_SORT_CONTRACT_STANZAS = frozenset(
         "it_health_thousandeyes_alerts_summary",
         "secure_networking_sdwan_site_health_breakdown",
         "secure_networking_sdwan_tunnel_health_log",
+        "secure_networking_sgt_fmc_blocks_by_sgt_summary",
+        "secure_networking_sgt_palo_alto_policy_effectiveness_trend",
+        "secure_networking_zta_ise_policy_family_activity_trend",
         "spaces_room_utilization_league_table",
         "spaces_space_idle_cost_ranking",
     }
@@ -314,41 +318,24 @@ def _stage_command(stage: str) -> str:
 
 
 def _is_bounded_sort(stage: str) -> bool:
-    return bool(re.match(r"^\s*sort\s+(?:limit\s*=\s*)?[1-9]\d*\b", stage, re.I))
+    normalized = re.sub(r"\\[ \t]*\r?\n", " ", stage)
+    return bool(
+        re.match(
+            r"^\s*sort\s+(?:limit\s*=\s*)?[1-9]\d*\b",
+            normalized,
+            re.I,
+        )
+    )
 
 
-def _pipe_command_at(text: str, pipe_index: int) -> str:
-    match = re.match(r"\s*([A-Za-z][\w-]*)\b", text[pipe_index + 1 :])
-    return match.group(1).lower() if match else ""
+def iter_executable_pipe_stages(text: str) -> Iterator[tuple[int, int, str]]:
+    """Yield pipe-stage spans at every SPL nesting depth.
 
-
-def _contains_aggregate_command(text: str) -> bool:
-    if _stage_command(text) in {"stats", "tstats"}:
-        return True
-    quote: str | None = None
-    escaped = False
-    for idx, char in enumerate(text):
-        if escaped:
-            escaped = False
-        elif char == "\\":
-            escaped = True
-        elif quote:
-            if char == quote:
-                quote = None
-        elif char in {"'", '"', "`"}:
-            quote = char
-        elif char == "|" and _pipe_command_at(text, idx) in {"stats", "tstats"}:
-            return True
-    return False
-
-
-def remove_sorts_from_aggregate_search(text: str) -> str:
-    """Remove every executable sort when stats or tstats occurs anywhere."""
-    if not _contains_aggregate_command(text):
-        return text
-
-    out: list[str] = []
-    last = 0
+    Pipes inside quoted strings and macro expressions are data, not commands.
+    A stage ends at the next executable pipe at the same bracket/parenthesis
+    depth or at the closing bracket for its current subsearch. Continuation
+    backslashes remain in the yielded text; command classifiers normalize them.
+    """
     idx = 0
     quote: str | None = None
     escaped = False
@@ -381,8 +368,7 @@ def remove_sorts_from_aggregate_search(text: str) -> str:
             paren_depth += 1
         elif char == ")":
             paren_depth = max(0, paren_depth - 1)
-        elif char == "|" and _pipe_command_at(text, idx) == "sort":
-            out.append(text[last:idx])
+        elif char == "|":
             cursor = idx + 1
             local_quote: str | None = None
             local_escaped = False
@@ -408,6 +394,8 @@ def remove_sorts_from_aggregate_search(text: str) -> str:
                 elif current == "(":
                     local_paren_depth += 1
                 elif current == ")":
+                    if local_paren_depth == paren_depth:
+                        break
                     local_paren_depth = max(0, local_paren_depth - 1)
                 elif (
                     current == "|"
@@ -416,16 +404,63 @@ def remove_sorts_from_aggregate_search(text: str) -> str:
                 ):
                     break
                 cursor += 1
-            idx = cursor
-            last = cursor
-            continue
+            yield idx, cursor, text[idx + 1 : cursor].strip()
         idx += 1
+
+
+def _contains_aggregate_command(text: str) -> bool:
+    if _stage_command(text) in {"stats", "tstats"}:
+        return True
+    return any(
+        _stage_command(stage) in {"stats", "tstats"}
+        for _start, _end, stage in iter_executable_pipe_stages(text)
+    )
+
+
+def remove_sorts_from_aggregate_search(text: str) -> str:
+    """Remove unbounded executable sorts from aggregate searches.
+
+    A positive ``sort N`` is an intentional, bounded top-N operation and is
+    retained. Unbounded ordering needed by streamstats/delta must be explicitly
+    listed in ``UNBOUNDED_SORT_CONTRACT_STANZAS``.
+    """
+    if not _contains_aggregate_command(text):
+        return text
+
+    removable = [
+        (start, end)
+        for start, end, stage in iter_executable_pipe_stages(text)
+        if _stage_command(stage) == "sort" and not _is_bounded_sort(stage)
+    ]
+    if not removable:
+        return text
+
+    out: list[str] = []
+    last = 0
+    for start, end in removable:
+        if start < last:
+            continue
+        out.append(text[last:start])
+        last = end
     out.append(text[last:])
     return "".join(out)
 
 
 def sanitize_aggregate_sort_metadata(value: str) -> str:
-    """Remove stale sort-command language from aggregate-search prose."""
+    """Remove stale unbounded-sort language from aggregate-search prose."""
+    protected: dict[str, str] = {}
+
+    def protect_bounded_sort(match: re.Match[str]) -> str:
+        marker = f"@@__BOUNDED_ORDER_{len(protected)}__@@"
+        protected[marker] = match.group(0)
+        return marker
+
+    value = re.sub(
+        r"\bsort\s+(?:limit\s*=\s*)?[1-9]\d*\b",
+        protect_bounded_sort,
+        value,
+        flags=re.I,
+    )
     value = re.sub(
         r"<code>\s*sort\b[^<]*</code>",
         "<code>result ranking</code>",
@@ -446,6 +481,8 @@ def sanitize_aggregate_sort_metadata(value: str) -> str:
     )
     for pattern, replacement in replacements:
         value = re.sub(pattern, replacement, value, flags=re.I)
+    for marker, bounded_sort in protected.items():
+        value = value.replace(marker, bounded_sort)
     return value
 
 
@@ -513,7 +550,12 @@ def format_search(
     if not raw_lines:
         return original, False
 
-    glued = remove_sorts_from_aggregate_search("\n".join(raw_lines))
+    raw_search = "\n".join(raw_lines)
+    glued = (
+        raw_search
+        if preserve_unbounded_sort
+        else remove_sorts_from_aggregate_search(raw_search)
+    )
     spans = _scan_top_level_pipes(glued)
     if not spans:
         return original, False
@@ -694,7 +736,10 @@ def format_stanza(stanza_id: str, fields: dict[str, str]) -> tuple[str, bool, bo
             preserve_unbounded_sort=stanza_id in UNBOUNDED_SORT_CONTRACT_STANZAS,
         )
         fields = {**fields, "search": new_search}
-        if _contains_aggregate_command(new_search):
+        if (
+            _contains_aggregate_command(new_search)
+            and stanza_id not in UNBOUNDED_SORT_CONTRACT_STANZAS
+        ):
             updated_fields = dict(fields)
             for key in PROSE_FIELDS:
                 if key not in fields:

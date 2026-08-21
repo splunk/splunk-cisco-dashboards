@@ -92,7 +92,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Data Center Health**"
+                "markdown": "**Data Center Signals**"
             }
         },
         "viz_card_01_metadata": {
@@ -118,7 +118,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Hourly trend combining Cisco Nexus Dashboard anomalies and security advisories as a unified DC health signal, enabling operators to correlate infrastructure health degradation with specific time windows\\."
+                "markdown": "Compares distinct Cisco Nexus Dashboard anomaly and advisory observations over time; the headline counts unique anomalies in the selected window\\."
             }
         },
         "viz_card_01_singlevalue": {
@@ -133,7 +133,7 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"WindowAnomalies\") | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"WindowUniqueAnomalies\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
                 "trendDisplay": "absolute",
@@ -142,7 +142,9 @@
                 "sparklineValues": "> primary | seriesByName(\"Anomaly\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " unique anomalies",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -163,7 +165,7 @@
             }
         },
         "viz_card_01_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_01"
@@ -172,7 +174,12 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "Anomaly": "#e44273",
+                    "Advisory": "#e2a811",
+                    "Unknown": "#a9afda"
+                },
                 "seriesColors": [
                     "#e44273",
                     "#3abdfa",
@@ -195,21 +202,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"Anomaly\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "stackMode": "stacked",
+                "xAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | frameBySeriesNames(\"Anomaly\", \"Advisory\", \"Unknown\")",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide"
             }
         },
         "viz_card_01_drilldown_trigger": {
@@ -218,7 +222,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Data%20Center%20Health&target=Secure%20Networking%20-%20DC%20Fabric%20Anomalies%20by%20Severity,Secure%20Networking%20-%20Secure%20Infrastructure%20Status%20Rollup"
+                        "url": "/drilldown?origin=Data%20Center%20Signals&target=Secure%20Networking%20-%20DC%20Fabric%20Anomalies%20by%20Severity,Secure%20Networking%20-%20Secure%20Infrastructure%20Status%20Rollup"
                     }
                 }
             ],
@@ -237,7 +241,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Data%20Center%20Health&target=secure_networking_dc_health_signals_trend"
+                        "url": "/metric-info?origin=Data%20Center%20Signals&target=secure_networking_dc_health_signals_trend"
                     }
                 }
             ],
@@ -268,7 +272,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Security Exposure**"
+                "markdown": "**Critical Advisories**"
             }
         },
         "viz_card_02_metadata": {
@@ -294,7 +298,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Count of active security advisories from Cisco Nexus Dashboard, including unique advisory IDs and critical\\-severity advisory count, providing the DC vulnerability posture KPI\\."
+                "markdown": "Distinct critical Cisco Nexus Dashboard security advisories observed in the selected window; this does not claim that each advisory is currently active\\."
             }
         },
         "viz_card_02_singlevalue": {
@@ -318,7 +322,9 @@
                 "sparklineValues": "> primary | seriesByName(\"critical_count_trend\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " critical advisories",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -339,7 +345,7 @@
             }
         },
         "viz_card_02_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_02"
@@ -380,7 +386,6 @@
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
                 "y": "> primary | seriesByName(\"critical_count_trend\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -394,7 +399,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Security%20Exposure&target=Secure%20Networking%20-%20DC%20Security%20Advisory%20Detail,Secure%20Networking%20-%20PSIRT%20Exposure%20by%20Site%20and%20Family,Secure%20Networking%20-%20Intersight%20Advisory%20Exposure"
+                        "url": "/drilldown?origin=Critical%20Advisories&target=Secure%20Networking%20-%20DC%20Security%20Advisory%20Detail,Secure%20Networking%20-%20PSIRT%20Exposure%20by%20Site%20and%20Family,Secure%20Networking%20-%20Intersight%20Advisory%20Exposure"
                     }
                 }
             ],
@@ -413,7 +418,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Security%20Exposure&target=secure_networking_dc_advisory_count"
+                        "url": "/metric-info?origin=Critical%20Advisories&target=secure_networking_dc_advisory_count"
                     }
                 }
             ],
@@ -444,7 +449,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Managed Wireless Estate**"
+                "markdown": "**Reporting Access Points**"
             }
         },
         "viz_card_03_metadata": {
@@ -470,7 +475,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Total count of unique Cisco Meraki access points in the managed wireless infrastructure, providing the wireless footprint KPI\\."
+                "markdown": "Distinct Cisco Meraki access points observed reporting in the selected window; this is telemetry coverage, not configured wireless inventory\\."
             }
         },
         "viz_card_03_singlevalue": {
@@ -485,7 +490,7 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"WindowReportingAPs\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
                 "trendDisplay": "absolute",
@@ -494,7 +499,9 @@
                 "sparklineValues": "> primary | seriesByName(\"ap_count\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " access points",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -515,7 +522,7 @@
             }
         },
         "viz_card_03_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_03"
@@ -556,7 +563,6 @@
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
                 "y": "> primary | seriesByName(\"ap_count\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -570,7 +576,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Managed%20Wireless%20Estate&target=Secure%20Networking%20-%20Meraki%20Access%20Point%20Inventory%20Detail"
+                        "url": "/drilldown?origin=Reporting%20Access%20Points&target=Secure%20Networking%20-%20Meraki%20Access%20Point%20Inventory%20Detail"
                     }
                 }
             ],
@@ -589,7 +595,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Managed%20Wireless%20Estate&target=secure_networking_meraki_ap_count"
+                        "url": "/metric-info?origin=Reporting%20Access%20Points&target=secure_networking_meraki_ap_count"
                     }
                 }
             ],
@@ -661,7 +667,7 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"WindowUncontained\") | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"WindowUncontainedAPs\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
                 "trendDisplay": "absolute",
@@ -670,7 +676,9 @@
                 "sparklineValues": "> primary | seriesByName(\"Uncontained\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " uncontained APs",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -691,7 +699,7 @@
             }
         },
         "viz_card_04_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_04"
@@ -700,7 +708,11 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "Uncontained": "#e44273",
+                    "Contained": "#159352"
+                },
                 "seriesColors": [
                     "#3abdfa",
                     "#9b5ff4",
@@ -723,21 +735,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"Uncontained\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "stackMode": "stacked",
+                "xAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | frameBySeriesNames(\"Contained\", \"Uncontained\")",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide"
             }
         },
         "viz_card_04_drilldown_trigger": {
@@ -796,7 +805,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Wireless Client Demand**"
+                "markdown": "**Wireless Clients Observed**"
             }
         },
         "viz_card_05_metadata": {
@@ -822,7 +831,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Total count of unique wireless clients seen authenticating to Cisco Meraki access points, providing a real\\-time wireless endpoint population KPI\\."
+                "markdown": "Distinct wireless client MAC addresses observed authenticating to Cisco Meraki access points in the selected window\\."
             }
         },
         "viz_card_05_singlevalue": {
@@ -837,7 +846,7 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"WindowUniqueClients\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
                 "trendDisplay": "absolute",
@@ -846,7 +855,9 @@
                 "sparklineValues": "> primary | seriesByName(\"wireless_client_count\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " clients",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -862,7 +873,7 @@
             }
         },
         "viz_card_05_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_05"
@@ -903,7 +914,6 @@
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
                 "y": "> primary | seriesByName(\"wireless_client_count\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -917,7 +927,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Wireless%20Client%20Demand&target=Secure%20Networking%20-%20Meraki%20Top%20Clients%20by%20Bandwidth%20Usage"
+                        "url": "/drilldown?origin=Wireless%20Clients%20Observed&target=Secure%20Networking%20-%20Meraki%20Top%20Clients%20by%20Bandwidth%20Usage"
                     }
                 }
             ],
@@ -936,7 +946,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Wireless%20Client%20Demand&target=secure_networking_meraki_wireless_client_count"
+                        "url": "/metric-info?origin=Wireless%20Clients%20Observed&target=secure_networking_meraki_wireless_client_count"
                     }
                 }
             ],
@@ -967,7 +977,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**SD\\-WAN Site Coverage**"
+                "markdown": "**Reporting SD\\-WAN Sites**"
             }
         },
         "viz_card_06_metadata": {
@@ -993,7 +1003,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Trends Cisco Catalyst SD\\-WAN sites reporting health telemetry and keeps the distinct site population for the selected window as the headline value\\."
+                "markdown": "Distinct Cisco Catalyst SD\\-WAN sites observed reporting health telemetry, with per\\-interval collection context\\."
             }
         },
         "viz_card_06_singlevalue": {
@@ -1017,7 +1027,9 @@
                 "sparklineValues": "> primary | seriesByName(\"reporting_sites\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " sites",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -1033,7 +1045,7 @@
             }
         },
         "viz_card_06_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_06"
@@ -1074,7 +1086,6 @@
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
                 "y": "> primary | seriesByName(\"reporting_sites\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -1088,7 +1099,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=SD-WAN%20Site%20Coverage&target=Secure%20Networking%20-%20SD-WAN%20Site%20View,Secure%20Networking%20-%20SD-WAN%20Tunnel%20Health%20Status%20Log"
+                        "url": "/drilldown?origin=Reporting%20SD-WAN%20Sites&target=Secure%20Networking%20-%20SD-WAN%20Site%20View,Secure%20Networking%20-%20SD-WAN%20Tunnel%20Health%20Status%20Log"
                     }
                 }
             ],
@@ -1107,7 +1118,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=SD-WAN%20Site%20Coverage&target=secure_networking_sdwan_reporting_sites_trend"
+                        "url": "/metric-info?origin=Reporting%20SD-WAN%20Sites&target=secure_networking_sdwan_reporting_sites_trend"
                     }
                 }
             ],

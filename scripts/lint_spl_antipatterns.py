@@ -45,9 +45,9 @@ R010  cosmetic-unbounded-sort
     row-order dependency. Positive limits are retained because they enforce
     top-N or row-cap semantics.
 
-R011  sort-with-stats-or-tstats
-    A search containing executable ``stats`` or ``tstats`` must contain no
-    executable ``sort``, including bounded and nested subsearch sorts.
+R011  unbounded-sort-with-stats-or-tstats
+    Aggregate searches may use a positive bounded ``sort N`` for deterministic
+    top-N output. Other executable sorts require an explicit stanza contract.
 
 R012  sort-language-with-stats-or-tstats
     Metadata for a search containing ``stats`` or ``tstats`` must not describe
@@ -79,9 +79,23 @@ from pathlib import Path
 from typing import Callable, Iterable, Iterator
 
 try:
-    from scripts.format_searchbase_conf import UNBOUNDED_SORT_CONTRACT_STANZAS
+    from scripts.format_searchbase_conf import (
+        UNBOUNDED_SORT_CONTRACT_STANZAS,
+        _contains_aggregate_command,
+        _is_bounded_sort,
+        _scan_top_level_pipes,
+        _stage_command,
+        iter_executable_pipe_stages,
+    )
 except ModuleNotFoundError:
-    from format_searchbase_conf import UNBOUNDED_SORT_CONTRACT_STANZAS
+    from format_searchbase_conf import (  # type: ignore
+        UNBOUNDED_SORT_CONTRACT_STANZAS,
+        _contains_aggregate_command,
+        _is_bounded_sort,
+        _scan_top_level_pipes,
+        _stage_command,
+        iter_executable_pipe_stages,
+    )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_PATH = REPO_ROOT / (
@@ -132,6 +146,10 @@ def _has_prohibited_sort_language(value: str) -> bool:
     for match in re.finditer(r"\bsort(?:ed|ing)?\b", value, re.I):
         before = value[max(0, match.start() - 240) : match.start()].lower()
         after = value[match.end() : match.end() + 160].lower()
+        if match.group(0).lower() == "sort" and _is_bounded_sort(
+            value[match.start() :]
+        ):
+            continue
         if "there is no " in before[-40:] and " stage" in after[:40]:
             continue
         if (
@@ -249,10 +267,6 @@ def _rule_r007_pre_aggregation_limit(search: str) -> Iterator[tuple[str, str]]:
             yield commands[index], "remove the limit or move deterministic ranking after aggregation"
 
 
-def _is_bounded_sort(command: str) -> bool:
-    return bool(re.match(r"^sort\s+(?:limit\s*=\s*)?[1-9]\d*\b", command, re.I))
-
-
 def _rule_r008_pre_stats_projection(search: str) -> Iterator[tuple[str, str]]:
     commands = _split_spl_commands(search)
     names = [command.split(maxsplit=1)[0].lower() for command in commands]
@@ -281,10 +295,10 @@ def _rule_r009_terminal_post_stats_projection(
 
 
 def _rule_r010_cosmetic_unbounded_sort(search: str) -> Iterator[tuple[str, str]]:
-    if re.search(r"(?:^|\|)\s*(?:stats|tstats)\b", search, re.I):
+    if _contains_aggregate_command(search):
         return
-    commands = _split_spl_commands(search)
-    names = [command.split(maxsplit=1)[0].lower() for command in commands]
+    commands = [stage for _start, _end, stage in _scan_top_level_pipes(search)]
+    names = [_stage_command(command) for command in commands]
     order_sensitive = {"streamstats", "delta", "autoregress", "transaction", "head", "tail", "dedup"}
     for index, (command, name) in enumerate(zip(commands, names)):
         if name != "sort" or _is_bounded_sort(command):
@@ -295,10 +309,16 @@ def _rule_r010_cosmetic_unbounded_sort(search: str) -> Iterator[tuple[str, str]]
 
 
 def _rule_r011_sort_with_stats_or_tstats(search: str) -> Iterator[tuple[str, str]]:
-    if not re.search(r"(?:^|\|)\s*(?:stats|tstats)\b", search, re.I):
+    if not _contains_aggregate_command(search):
         return
-    for match in re.finditer(r"\|\s*sort\b[^|\]\n]*", search, re.I):
-        yield match.group(0), "remove sort because this search uses stats or tstats"
+    for _start, _end, stage in iter_executable_pipe_stages(search):
+        if _stage_command(stage) != "sort" or _is_bounded_sort(stage):
+            continue
+        snippet = re.sub(r"\\[ \t]*\r?\n", " ", stage).strip()
+        yield (
+            f"| {snippet}",
+            "remove unbounded sort or add a verified stanza ordering contract",
+        )
 
 
 _RULES: list[tuple[str, str, Callable[[str], Iterator[tuple[str, str]]]]] = [
@@ -339,7 +359,7 @@ _RULES: list[tuple[str, str, Callable[[str], Iterator[tuple[str, str]]]]] = [
     ),
     (
         "R011",
-        "sort-with-stats-or-tstats",
+        "unbounded-sort-with-stats-or-tstats",
         _rule_r011_sort_with_stats_or_tstats,
     ),
 ]
@@ -348,7 +368,7 @@ _RULES: list[tuple[str, str, Callable[[str], Iterator[tuple[str, str]]]]] = [
 def lint_search(search: str, stanza: str = "<search>") -> list[Violation]:
     out: list[Violation] = []
     for rule_id, rule_name, fn in _RULES:
-        if rule_id == "R010" and stanza in UNBOUNDED_SORT_CONTRACT_STANZAS:
+        if rule_id in {"R010", "R011"} and stanza in UNBOUNDED_SORT_CONTRACT_STANZAS:
             continue
         for snippet, detail in fn(search):
             out.append(
@@ -373,7 +393,8 @@ def lint_text(text: str) -> list[Violation]:
         for key, value in fields.items():
             if (
                 key in {"description", "explanation", "solution", "related_info"}
-                and re.search(r"(?:^|\|)\s*(?:stats|tstats)\b", search, re.I)
+                and sid not in UNBOUNDED_SORT_CONTRACT_STANZAS
+                and _contains_aggregate_command(search)
                 and _has_prohibited_sort_language(value)
             ):
                 out.append(

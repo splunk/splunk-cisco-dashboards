@@ -92,7 +92,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Active Clients and Sessions**"
+                "markdown": "**Observed VPN Clients and Sessions**"
             }
         },
         "viz_card_01_metadata": {
@@ -118,7 +118,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks distinct remote\\-access VPN clients and sessions to show changing access demand and reconnect behavior\\."
+                "markdown": "Shows the peak number of distinct remote-access VPN clients observed in a time bucket while separate client and session lines reveal demand and reconnect behavior. This is selected-window event activity, not a current active-session inventory."
             }
         },
         "viz_card_01_singlevalue": {
@@ -142,7 +142,9 @@
                 "trendValue": "> sparklineValues | delta(-2)",
                 "shouldAbbreviateTrendValue": true,
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28
+                "trendFontSize": 28,
+                "unit": " clients",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -158,7 +160,7 @@
             }
         },
         "viz_card_01_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_01"
@@ -167,7 +169,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
                 "seriesColors": [
                     "#e44273",
                     "#3abdfa",
@@ -195,16 +197,15 @@
                 "markerDisplay": "outlined",
                 "nullValueDisplay": "connect",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"Clients\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "xAxisTitleVisibility": "hide",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | frameWithoutSeriesNames(\"BucketTotal\", \"WindowPeakClients\")"
             }
         },
         "viz_card_01_drilldown_trigger": {
@@ -213,7 +214,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Active%20Clients%20and%20Sessions&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Sessions%20by%20Profile"
+                        "url": "/drilldown?origin=Observed%20VPN%20Clients%20and%20Sessions&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Sessions%20by%20Profile"
                     }
                 }
             ],
@@ -232,7 +233,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Active%20Clients%20and%20Sessions&target=secure_networking_zta_ravpn_active_clients_sessions_trend"
+                        "url": "/metric-info?origin=Observed%20VPN%20Clients%20and%20Sessions&target=secure_networking_zta_ravpn_active_clients_sessions_trend"
                     }
                 }
             ],
@@ -289,7 +290,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks remote\\-access VPN clients, sessions, successful connections, and failed connections over time\\."
+                "markdown": "Reports the failed share of selected-window remote-access VPN connection attempts. Stacked columns preserve successful and failed attempt volume over time."
             }
         },
         "viz_card_02_singlevalue": {
@@ -304,16 +305,19 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint() | divideBy(0.999999999999)",
-                "shouldAbbreviateMajorValue": true,
+                "majorValue": "> primary | seriesByName(\"WindowFailureRatePct\") | lastPoint()",
+                "shouldAbbreviateMajorValue": false,
                 "sparklineDisplay": "off",
                 "trendDisplay": "absolute",
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
+                "sparklineValues": "> primary | seriesByName(\"Failure Rate %\")",
                 "trendValue": "> sparklineValues | delta(-2)",
-                "shouldAbbreviateTrendValue": true,
+                "shouldAbbreviateTrendValue": false,
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28
+                "trendFontSize": 28,
+                "numberPrecision": 1,
+                "unit": "%",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -329,7 +333,7 @@
             }
         },
         "viz_card_02_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_02"
@@ -338,7 +342,11 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "Connect Failures": "#e44273",
+                    "Connects": "#159352"
+                },
                 "seriesColors": [
                     "#9b5ff4",
                     "#3abdfa",
@@ -361,21 +369,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "xAxisTitleVisibility": "hide",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "stackMode": "stacked",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | frameWithoutSeriesNames(\"Clients\", \"Sessions\", \"BucketAttempts\", \"WindowAttempts\", \"WindowFailures\", \"Failure Rate %\", \"WindowFailureRatePct\")"
             }
         },
         "viz_card_02_drilldown_trigger": {
@@ -403,7 +408,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Connection%20Outcomes&target=secure_networking_zta_ravpn_connection_rate"
+                        "url": "/metric-info?origin=Connection%20Outcomes&target=secure_networking_zta_ravpn_connection_attempts_trend"
                     }
                 }
             ],
@@ -434,7 +439,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Active VPN Profiles**"
+                "markdown": "**Observed VPN Profiles**"
             }
         },
         "viz_card_03_metadata": {
@@ -460,7 +465,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Counts distinct active remote\\-access VPN profiles over time so profile breadth changes stand out\\."
+                "markdown": "Shows the distinct remote-access VPN profiles observed in the selected window while the line tracks per-bucket profile breadth. It does not claim that every profile is currently active."
             }
         },
         "viz_card_03_singlevalue": {
@@ -484,7 +489,9 @@
                 "trendValue": "> sparklineValues | delta(-2)",
                 "shouldAbbreviateTrendValue": true,
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28
+                "trendFontSize": 28,
+                "unit": " profiles",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -500,7 +507,7 @@
             }
         },
         "viz_card_03_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_03"
@@ -537,16 +544,15 @@
                 "markerDisplay": "outlined",
                 "nullValueDisplay": "connect",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"ActiveProfiles\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "xAxisTitleVisibility": "hide",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"ActiveProfiles\")"
             }
         },
         "viz_card_03_drilldown_trigger": {
@@ -555,7 +561,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Active%20VPN%20Profiles&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Sessions%20by%20Profile"
+                        "url": "/drilldown?origin=Observed%20VPN%20Profiles&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Sessions%20by%20Profile"
                     }
                 }
             ],
@@ -574,7 +580,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Active%20VPN%20Profiles&target=secure_networking_zta_ravpn_profile_activity_trend"
+                        "url": "/metric-info?origin=Observed%20VPN%20Profiles&target=secure_networking_zta_ravpn_profile_activity_trend"
                     }
                 }
             ],
@@ -605,7 +611,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Active VPN Regions**"
+                "markdown": "**Observed VPN Regions**"
             }
         },
         "viz_card_04_metadata": {
@@ -631,7 +637,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Counts distinct active remote\\-access VPN regions over time so regional breadth changes stand out\\."
+                "markdown": "Shows the distinct remote-access VPN regions observed in the selected window while the line tracks per-bucket regional breadth. It does not claim that every region is currently active."
             }
         },
         "viz_card_04_singlevalue": {
@@ -655,7 +661,9 @@
                 "trendValue": "> sparklineValues | delta(-2)",
                 "shouldAbbreviateTrendValue": true,
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28
+                "trendFontSize": 28,
+                "unit": " regions",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -671,7 +679,7 @@
             }
         },
         "viz_card_04_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_04"
@@ -708,16 +716,15 @@
                 "markerDisplay": "outlined",
                 "nullValueDisplay": "connect",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"ActiveRegions\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "xAxisTitleVisibility": "hide",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"ActiveRegions\")"
             }
         },
         "viz_card_04_drilldown_trigger": {
@@ -726,7 +733,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Active%20VPN%20Regions&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Sessions%20by%20Profile"
+                        "url": "/drilldown?origin=Observed%20VPN%20Regions&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Sessions%20by%20Profile"
                     }
                 }
             ],
@@ -745,7 +752,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Active%20VPN%20Regions&target=secure_networking_zta_ravpn_region_activity_trend"
+                        "url": "/metric-info?origin=Observed%20VPN%20Regions&target=secure_networking_zta_ravpn_region_activity_trend"
                     }
                 }
             ],
@@ -802,7 +809,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Shows remote\\-access VPN failures and warnings by reason over time to reveal recurring access blockers\\."
+                "markdown": "Counts remote-access VPN failure and warning events in the selected window and ranks the reasons blocking or degrading access."
             }
         },
         "viz_card_05_singlevalue": {
@@ -820,29 +827,15 @@
                 "majorValue": "> primary | seriesByName(\"WindowFailureEvents\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "absolute",
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"FailureEvents\")",
-                "trendValue": "> sparklineValues | delta(-2)",
-                "shouldAbbreviateTrendValue": true,
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "unit": " events",
+                "unitPosition": "after"
             },
-            "context": {
-                "trendColorEditorConfig": [
-                    {
-                        "value": "#049fd9",
-                        "to": 0
-                    },
-                    {
-                        "value": "#049fd9",
-                        "from": 0
-                    }
-                ]
-            }
+            "context": {}
         },
         "viz_card_05_trend": {
-            "type": "splunk.area",
+            "type": "splunk.bar",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_05"
@@ -874,21 +867,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "all",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"FailureEvents\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "stackMode": "unstacked",
+                "xAxisTitleVisibility": "hide",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"Failure Reason\")",
+                "y": "> primary | seriesByName(\"Events\")"
             }
         },
         "viz_card_05_drilldown_trigger": {
@@ -916,7 +906,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Failure%20Reasons&target=secure_networking_zta_ravpn_failure_reason_trend"
+                        "url": "/metric-info?origin=Failure%20Reasons&target=secure_networking_zta_ravpn_failure_reason_summary"
                     }
                 }
             ],
@@ -973,7 +963,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks only remote\\-access VPN events with explicit adverse posture evidence\\."
+                "markdown": "Counts remote-access VPN events with explicit adverse posture evidence and separates non-compliant, failed, warning, alert, and other outcomes."
             }
         },
         "viz_card_06_singlevalue": {
@@ -997,7 +987,9 @@
                 "trendValue": "> sparklineValues | delta(-2)",
                 "shouldAbbreviateTrendValue": true,
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28
+                "trendFontSize": 28,
+                "unit": " events",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -1013,7 +1005,7 @@
             }
         },
         "viz_card_06_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_06"
@@ -1022,7 +1014,14 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "Alert": "#f88ddc",
+                    "Failed": "#e44273",
+                    "Non-Compliant": "#d8580f",
+                    "Other": "#a9afda",
+                    "Warning": "#e2a811"
+                },
                 "seriesColors": [
                     "#0d8e97",
                     "#9b5ff4",
@@ -1045,21 +1044,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"PostureIssues\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "xAxisTitleVisibility": "hide",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "stackMode": "stacked",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | frameWithoutSeriesNames(\"PostureIssues\", \"WindowPostureIssues\")"
             }
         },
         "viz_card_06_drilldown_trigger": {
@@ -1115,9 +1111,9 @@
             "type": "ds.searchbase"
         },
         "ds_story_02": {
-            "name": "Secure Networking - ZTA RaVPN Connection Rate and Clients",
+            "name": "Secure Networking - ZTA RaVPN Connection Attempts Trend",
             "options": {
-                "ref": "secure_networking_zta_ravpn_connection_rate",
+                "ref": "secure_networking_zta_ravpn_connection_attempts_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$",
@@ -1151,9 +1147,9 @@
             "type": "ds.searchbase"
         },
         "ds_story_05": {
-            "name": "Secure Networking - ZTA RaVPN Failure Reason Trend",
+            "name": "Secure Networking - ZTA RaVPN Failure Reason Summary",
             "options": {
-                "ref": "secure_networking_zta_ravpn_failure_reason_trend",
+                "ref": "secure_networking_zta_ravpn_failure_reason_summary",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$",

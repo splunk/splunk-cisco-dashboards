@@ -92,7 +92,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Cross\\-Source Identity Activity**"
+                "markdown": "**Control Telemetry Volume**"
             }
         },
         "viz_card_01_metadata": {
@@ -118,7 +118,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Compares user activity volume across ISE, ZTNA, and FMC over time, with cross\\-source identity correlation available in the drill\\-down modal\\."
+                "markdown": "Ranks selected-window telemetry events from ISE, ZTNA, and FMC. Product logging rates differ, so the bars show source volume rather than correlated users or relative control health."
             }
         },
         "viz_card_01_singlevalue": {
@@ -133,37 +133,18 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"_WindowEvents\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "absolute",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "unit": " events",
+                "unitPosition": "after"
             },
-            "context": {
-                "trendColorEditorConfig": [
-                    {
-                        "value": "#f7782f",
-                        "to": -0.000001
-                    },
-                    {
-                        "value": "#a6adb6",
-                        "from": -0.000001,
-                        "to": 0.000001
-                    },
-                    {
-                        "value": "#4cbf7f",
-                        "from": 0.000001
-                    }
-                ]
-            }
+            "context": {}
         },
         "viz_card_01_trend": {
-            "type": "splunk.area",
+            "type": "splunk.bar",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_01"
@@ -195,21 +176,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "all",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "stackMode": "unstacked",
+                "xAxisTitleVisibility": "hide",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"Control Source\")",
+                "y": "> primary | seriesByName(\"Events\")"
             }
         },
         "viz_card_01_drilldown_trigger": {
@@ -218,7 +196,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Cross-Source%20Identity%20Activity&target=secure_networking_zta_user_activity_cross_source,secure_networking_infra_duo_application_access"
+                        "url": "/drilldown?origin=Control%20Telemetry%20Volume&target=secure_networking_zta_user_activity_cross_source,secure_networking_infra_duo_application_access"
                     }
                 }
             ],
@@ -237,7 +215,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Cross-Source%20Identity%20Activity&target=secure_networking_zta_user_activity_source_trend"
+                        "url": "/metric-info?origin=Control%20Telemetry%20Volume&target=secure_networking_zta_user_activity_by_source_summary"
                     }
                 }
             ],
@@ -294,7 +272,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Hourly trend of Cisco SSE ZTNA connection statuses over time, enabling operators to track ZTNA adoption growth, detect access disruptions, and correlate denial spikes with policy or infrastructure changes\\."
+                "markdown": "Counts selected-window private-application connection events and separates connected, denied, and unknown statuses over time."
             }
         },
         "viz_card_02_singlevalue": {
@@ -318,7 +296,9 @@
                 "sparklineValues": "> primary | seriesByName(\"BucketConnections\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " connections",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -334,7 +314,7 @@
             }
         },
         "viz_card_02_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_02"
@@ -343,7 +323,12 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "Connected": "#159352",
+                    "Denied": "#e44273",
+                    "Unknown": "#a9afda"
+                },
                 "seriesColors": [
                     "#9b5ff4",
                     "#3abdfa",
@@ -366,21 +351,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketConnections\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "xAxisTitleVisibility": "hide",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "stackMode": "stacked",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | frameWithoutSeriesNames(\"BucketConnections\", \"WindowConnections\")"
             }
         },
         "viz_card_02_drilldown_trigger": {
@@ -465,7 +447,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks the leading ZTNA block and deny reasons over time while retaining the full policy/posture detail table as a drill\\-down\\."
+                "markdown": "Counts blocked ZTNA requests in the selected window and ranks the policy, posture, certificate, and connector causes producing the most denials."
             }
         },
         "viz_card_03_singlevalue": {
@@ -480,37 +462,18 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"WindowBlocked\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "absolute",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "unit": " blocks",
+                "unitPosition": "after"
             },
-            "context": {
-                "trendColorEditorConfig": [
-                    {
-                        "value": "#4cbf7f",
-                        "to": -0.000001
-                    },
-                    {
-                        "value": "#a6adb6",
-                        "from": -0.000001,
-                        "to": 0.000001
-                    },
-                    {
-                        "value": "#f7782f",
-                        "from": 0.000001
-                    }
-                ]
-            }
+            "context": {}
         },
         "viz_card_03_trend": {
-            "type": "splunk.area",
+            "type": "splunk.bar",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_03"
@@ -542,21 +505,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "all",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "stackMode": "unstacked",
+                "xAxisTitleVisibility": "hide",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"Denial Reason\")",
+                "y": "> primary | seriesByName(\"Events\")"
             }
         },
         "viz_card_03_drilldown_trigger": {
@@ -584,7 +544,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Access%20Denial%20Causes&target=secure_networking_zta_blocked_access_reason_trend"
+                        "url": "/metric-info?origin=Access%20Denial%20Causes&target=secure_networking_zta_blocked_access_reason_summary"
                     }
                 }
             ],
@@ -641,7 +601,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks Duo MFA authentication outcomes over time and keeps the application/factor breakdown as a drill\\-down table\\."
+                "markdown": "Counts denied or fraud Duo MFA events in the selected time range. The table ranks the application and authentication-factor pairs producing them."
             }
         },
         "viz_card_04_singlevalue": {
@@ -656,83 +616,46 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"WindowRiskyOutcomes\") | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"_WindowRiskyOutcomes\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "absolute",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"RiskyOutcomes\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "unit": " events",
+                "unitPosition": "after"
             },
-            "context": {
-                "trendColorEditorConfig": [
-                    {
-                        "value": "#4cbf7f",
-                        "to": -0.000001
-                    },
-                    {
-                        "value": "#a6adb6",
-                        "from": -0.000001,
-                        "to": 0.000001
-                    },
-                    {
-                        "value": "#f7782f",
-                        "from": 0.000001
-                    }
-                ]
-            }
+            "context": {}
         },
         "viz_card_04_trend": {
-            "type": "splunk.area",
-            "title": "",
+            "type": "splunk.table",
+            "title": "Most affected application / factor",
             "dataSources": {
                 "primary": "ds_story_04"
             },
             "showLastUpdated": false,
             "showProgressBar": false,
             "options": {
-                "backgroundColor": "transparent",
-                "legendDisplay": "off",
-                "seriesColors": [
-                    "#3abdfa",
-                    "#9b5ff4",
-                    "#0d8e97",
-                    "#e2a811",
-                    "#e44273",
-                    "#a9afda",
-                    "#d8580f",
-                    "#f88ddc",
-                    "#159352",
-                    "#9abe2d",
-                    "#6574f3",
-                    "#ff9297",
-                    "#d14baf",
-                    "#24c4c9",
-                    "#bb6e04",
-                    "#6ec641",
-                    "#777daf",
-                    "#ff9755",
-                    "#698c07",
-                    "#c69fff"
-                ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
-                "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"RiskyOutcomes\")",
-                "areaOpacity": 0.45,
-                "showYMinorGridLines": false,
-                "yAxisLabelVisibility": "hide",
-                "yAxisLineVisibility": "hide",
-                "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "backgroundColor": "#131a23",
+                "columnFormat": {
+                    "Application / Factor": {
+                        "width": 320
+                    },
+                    "Risky Outcomes": {
+                        "width": 120
+                    },
+                    "Failure Rate %": {
+                        "width": 125
+                    }
+                },
+                "count": 5,
+                "fontSize": "small",
+                "headerVisibility": "fixed",
+                "showInternalFields": false,
+                "showRowNumbers": false,
+                "tableFormat": {
+                    "headerBackgroundColor": "#1c2738",
+                    "headerColor": "#ecf0f5"
+                }
             }
         },
         "viz_card_04_drilldown_trigger": {
@@ -760,7 +683,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=MFA%20Activity&target=secure_networking_zta_duo_auth_outcomes_trend"
+                        "url": "/metric-info?origin=MFA%20Activity&target=secure_networking_zta_risky_mfa_outcomes_by_application_factor"
                     }
                 }
             ],
@@ -817,7 +740,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Per\\-logged\\-in\\-user egress leaderboard from Cisco NVM flowdata \\- bytes out, bytes in, flow count, distinct destination hosts, distinct processes\\. Identifies users with abnormally high data movement for IR triage\\."
+                "markdown": "Shows total selected-window user egress and ranks the ten users sending the most outbound bytes, with destination and process breadth retained for investigation."
             }
         },
         "viz_card_05_singlevalue": {
@@ -832,13 +755,15 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"WindowBytesOut\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
                 "trendDisplay": "off",
                 "showTrendIndicator": false,
-                "sparklineValues": "> primary | seriesByName(\"Bytes Out\")"
-            }
+                "unit": " bytes out",
+                "unitPosition": "after"
+            },
+            "context": {}
         },
         "viz_card_05_trend": {
             "type": "splunk.bar",
@@ -850,7 +775,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "right",
+                "legendDisplay": "off",
                 "seriesColors": [
                     "#159352",
                     "#3abdfa",
@@ -873,19 +798,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
+                "dataValuesDisplay": "all",
                 "showYMajorGridLines": false,
+                "showYMinorGridLines": false,
                 "stackMode": "unstacked",
                 "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"User\")",
-                "y": "> primary | seriesByName(\"Bytes Out\")",
-                "areaOpacity": 0.45,
-                "lineWidth": 2,
-                "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"User\")",
+                "y": "> primary | seriesByName(\"Bytes Out\")"
             }
         },
         "viz_card_05_drilldown_trigger": {
@@ -944,7 +868,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Process Flow Concentration**"
+                "markdown": "**Process Egress Concentration**"
             }
         },
         "viz_card_06_metadata": {
@@ -970,7 +894,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Per\\-process flow\\-volume leaderboard from Cisco Network Visibility Module \\(NVM\\) flowdata\\. Each NVM endpoint emits a record per egress flow with the originating process, inbound/outbound bytes \\(ibc/obc\\), and distinct\\-destination context\\."
+                "markdown": "Shows total selected-window process egress and ranks the ten processes sending the most outbound bytes, with flow and destination context retained for investigation."
             }
         },
         "viz_card_06_singlevalue": {
@@ -985,13 +909,15 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"WindowBytesOut\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
                 "trendDisplay": "off",
                 "showTrendIndicator": false,
-                "sparklineValues": "> primary | seriesByName(\"Bytes Out\")"
-            }
+                "unit": " bytes out",
+                "unitPosition": "after"
+            },
+            "context": {}
         },
         "viz_card_06_trend": {
             "type": "splunk.bar",
@@ -1003,7 +929,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "right",
+                "legendDisplay": "off",
                 "seriesColors": [
                     "#0d8e97",
                     "#9b5ff4",
@@ -1026,19 +952,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
+                "dataValuesDisplay": "all",
                 "showYMajorGridLines": false,
+                "showYMinorGridLines": false,
                 "stackMode": "unstacked",
                 "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"Process\")",
-                "y": "> primary | seriesByName(\"Bytes Out\")",
-                "areaOpacity": 0.45,
-                "lineWidth": 2,
-                "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"Process\")",
+                "y": "> primary | seriesByName(\"Bytes Out\")"
             }
         },
         "viz_card_06_drilldown_trigger": {
@@ -1047,7 +972,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Process%20Flow%20Concentration&target=Network%20-%20Endpoint%20Telemetry%20-%20Cisco%20NVM%20Top%20Destination%20Hosts,Network%20-%20Endpoint%20Telemetry%20-%20Cisco%20NVM%20Endpoint%20OS%20Inventory,Secure%20Networking%20-%20Secure%20Endpoint%20Incident%20and%20Malware%20Activity"
+                        "url": "/drilldown?origin=Process%20Egress%20Concentration&target=Network%20-%20Endpoint%20Telemetry%20-%20Cisco%20NVM%20Top%20Destination%20Hosts,Network%20-%20Endpoint%20Telemetry%20-%20Cisco%20NVM%20Endpoint%20OS%20Inventory,Secure%20Networking%20-%20Secure%20Endpoint%20Incident%20and%20Malware%20Activity"
                     }
                 }
             ],
@@ -1066,7 +991,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Process%20Flow%20Concentration&target=network_nvm_top_processes_by_flow_volume"
+                        "url": "/metric-info?origin=Process%20Egress%20Concentration&target=network_nvm_top_processes_by_flow_volume"
                     }
                 }
             ],
@@ -1082,9 +1007,9 @@
     },
     "dataSources": {
         "ds_story_01": {
-            "name": "Secure Networking - ZTA User Activity Cross-Source Trend",
+            "name": "Secure Networking - ZTA Control Telemetry Volume by Source",
             "options": {
-                "ref": "secure_networking_zta_user_activity_source_trend",
+                "ref": "secure_networking_zta_user_activity_by_source_summary",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$",
@@ -1106,9 +1031,9 @@
             "type": "ds.searchbase"
         },
         "ds_story_03": {
-            "name": "Secure Networking - ZTA ZTNA Blocked Access Reason Trend",
+            "name": "Secure Networking - ZTA Blocked Access Reason Summary",
             "options": {
-                "ref": "secure_networking_zta_blocked_access_reason_trend",
+                "ref": "secure_networking_zta_blocked_access_reason_summary",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$",
@@ -1118,9 +1043,9 @@
             "type": "ds.searchbase"
         },
         "ds_story_04": {
-            "name": "Secure Networking - ZTA Duo Authentication Outcomes Trend",
+            "name": "Secure Networking - ZTA Risky MFA Outcomes by Application and Factor",
             "options": {
-                "ref": "secure_networking_zta_duo_auth_outcomes_trend",
+                "ref": "secure_networking_zta_risky_mfa_outcomes_by_application_factor",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$",

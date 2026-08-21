@@ -92,7 +92,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Firewall Coverage**"
+                "markdown": "**Reporting Firewalls**"
             }
         },
         "viz_card_01_metadata": {
@@ -118,7 +118,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Total count of unique Cisco Firepower/FTD firewalls actively reporting to Cisco FMC, based on distinct Device UUIDs seen in FMC syslog, providing the on\\-premises firewall infrastructure footprint KPI\\."
+                "markdown": "Distinct Cisco Firepower/FTD devices reporting FMC telemetry in the latest populated interval; this is observed telemetry, not a configured inventory denominator\\."
             }
         },
         "viz_card_01_singlevalue": {
@@ -142,7 +142,9 @@
                 "sparklineValues": "> primary | seriesByName(\"firewall_count\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " firewalls",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -158,7 +160,7 @@
             }
         },
         "viz_card_01_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_01"
@@ -199,7 +201,6 @@
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
                 "y": "> primary | seriesByName(\"firewall_count\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -213,7 +214,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Firewall%20Coverage&target=Secure%20Networking%20-%20HMF%20Enforcement%20Coverage%20by%20Site"
+                        "url": "/drilldown?origin=Reporting%20Firewalls&target=Secure%20Networking%20-%20HMF%20Enforcement%20Coverage%20by%20Site"
                     }
                 }
             ],
@@ -232,7 +233,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Firewall%20Coverage&target=secure_networking_infra_fmc_firewall_count"
+                        "url": "/metric-info?origin=Reporting%20Firewalls&target=secure_networking_infra_fmc_firewall_count"
                     }
                 }
             ],
@@ -313,7 +314,9 @@
                 "sparklineValues": "> primary | seriesByName(\"BucketBlocks\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " blocks",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -334,7 +337,7 @@
             }
         },
         "viz_card_02_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_02"
@@ -343,7 +346,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
                 "seriesColors": [
                     "#9b5ff4",
                     "#3abdfa",
@@ -366,21 +369,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketBlocks\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "stackMode": "stacked",
+                "xAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | frameWithoutSeriesNames(\"BucketBlocks\", \"WindowBlocks\")",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide"
             }
         },
         "viz_card_02_drilldown_trigger": {
@@ -489,7 +489,9 @@
                 "sparklineValues": "> primary | seriesByName(\"Block\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " blocked events",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -510,7 +512,7 @@
             }
         },
         "viz_card_03_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_03"
@@ -519,7 +521,14 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "Block": "#e44273",
+                    "Allow": "#159352",
+                    "Trust": "#3abdfa",
+                    "Observed": "#9b5ff4",
+                    "Other": "#a9afda"
+                },
                 "seriesColors": [
                     "#e2a811",
                     "#3abdfa",
@@ -542,21 +551,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"Block\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "stackMode": "stacked",
+                "xAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | frameWithoutSeriesNames(\"WindowBlocks\")",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide"
             }
         },
         "viz_card_03_drilldown_trigger": {
@@ -665,7 +671,9 @@
                 "sparklineValues": "> primary | seriesByName(\"blocked\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " blocked requests",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -686,7 +694,7 @@
             }
         },
         "viz_card_04_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_04"
@@ -695,7 +703,12 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "blocked": "#e44273",
+                    "allowed": "#159352",
+                    "unknown": "#a9afda"
+                },
                 "seriesColors": [
                     "#3abdfa",
                     "#9b5ff4",
@@ -718,21 +731,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"blocked\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "stackMode": "stacked",
+                "xAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | frameWithoutSeriesNames(\"WindowBlocked\")",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide"
             }
         },
         "viz_card_04_drilldown_trigger": {
@@ -791,7 +801,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Third\\-Party Policy Effectiveness**"
+                "markdown": "**SGT-tagged Policy Decisions**"
             }
         },
         "viz_card_05_metadata": {
@@ -817,7 +827,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Trends Palo Alto allow, block, and other traffic decisions carrying correlated Cisco ISE SGT context, with the SGT and firewall\\-rule effectiveness rollup available as drill\\-down detail\\."
+                "markdown": "Trends Palo Alto allow, block, and other traffic decisions carrying time\\-aware Cisco ISE SGT context; the headline counts blocked tagged decisions\\."
             }
         },
         "viz_card_05_singlevalue": {
@@ -841,7 +851,9 @@
                 "sparklineValues": "> primary | seriesByName(\"Blocked\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " blocked decisions",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -862,7 +874,7 @@
             }
         },
         "viz_card_05_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_05"
@@ -871,7 +883,12 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "Blocked": "#e44273",
+                    "Allowed": "#159352",
+                    "Other": "#a9afda"
+                },
                 "seriesColors": [
                     "#159352",
                     "#3abdfa",
@@ -894,21 +911,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"Blocked\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "stackMode": "stacked",
+                "xAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | frameWithoutSeriesNames(\"WindowBlocked\")",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide"
             }
         },
         "viz_card_05_drilldown_trigger": {
@@ -917,7 +931,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Third-Party%20Policy%20Effectiveness&target=secure_networking_sgt_palo_alto_policy_effectiveness,secure_networking_sgt_palo_alto_traffic_detail"
+                        "url": "/drilldown?origin=SGT-tagged%20Policy%20Decisions&target=secure_networking_sgt_palo_alto_policy_effectiveness,secure_networking_sgt_palo_alto_traffic_detail"
                     }
                 }
             ],
@@ -936,7 +950,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Third-Party%20Policy%20Effectiveness&target=secure_networking_sgt_palo_alto_policy_effectiveness_trend"
+                        "url": "/metric-info?origin=SGT-tagged%20Policy%20Decisions&target=secure_networking_sgt_palo_alto_policy_effectiveness_trend"
                     }
                 }
             ],
@@ -1017,7 +1031,9 @@
                 "sparklineValues": "> primary | seriesByName(\"ElevatedFindings\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " findings",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -1038,7 +1054,7 @@
             }
         },
         "viz_card_06_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_06"
@@ -1047,7 +1063,14 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "CRITICAL": "#e44273",
+                    "HIGH": "#d8580f",
+                    "MEDIUM": "#e2a811",
+                    "LOW": "#3abdfa",
+                    "UNKNOWN": "#a9afda"
+                },
                 "seriesColors": [
                     "#0d8e97",
                     "#9b5ff4",
@@ -1070,21 +1093,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"ElevatedFindings\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "stackMode": "stacked",
+                "xAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | frameWithoutSeriesNames(\"ElevatedFindings\", \"WindowElevatedFindings\")",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide"
             }
         },
         "viz_card_06_drilldown_trigger": {

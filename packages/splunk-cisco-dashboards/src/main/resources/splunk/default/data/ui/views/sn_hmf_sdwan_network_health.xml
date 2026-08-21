@@ -133,16 +133,18 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"DownSites\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
                 "trendDisplay": "off",
                 "showTrendIndicator": false,
-                "sparklineValues": "> primary | seriesByName(\"Sites\")"
+                "sparklineValues": "> primary | seriesByName(\"Sites\")",
+                "unit": " down sites",
+                "unitPosition": "after"
             }
         },
         "viz_card_01_trend": {
-            "type": "splunk.pie",
+            "type": "splunk.bar",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_01"
@@ -151,7 +153,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "right",
+                "legendDisplay": "off",
                 "seriesColors": [
                     "#e44273",
                     "#3abdfa",
@@ -174,12 +176,13 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "label": "> primary | seriesByName(\"State\")",
-                "value": "> primary | seriesByName(\"Sites\")",
-                "areaOpacity": 0.45,
-                "lineWidth": 2,
+                "dataValuesDisplay": "all",
                 "showYMajorGridLines": false,
                 "showYMinorGridLines": false,
+                "stackMode": "unstacked",
+                "xAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"State\")",
+                "y": "> primary | seriesByName(\"Sites\")",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
@@ -284,16 +287,18 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"DownCircuits\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
                 "trendDisplay": "off",
                 "showTrendIndicator": false,
-                "sparklineValues": "> primary | seriesByName(\"Circuits\")"
+                "sparklineValues": "> primary | seriesByName(\"Circuits\")",
+                "unit": " down circuits",
+                "unitPosition": "after"
             }
         },
         "viz_card_02_trend": {
-            "type": "splunk.pie",
+            "type": "splunk.bar",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_02"
@@ -302,7 +307,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "right",
+                "legendDisplay": "off",
                 "seriesColors": [
                     "#9b5ff4",
                     "#3abdfa",
@@ -325,12 +330,13 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "label": "> primary | seriesByName(\"State\")",
-                "value": "> primary | seriesByName(\"Circuits\")",
-                "areaOpacity": 0.45,
-                "lineWidth": 2,
+                "dataValuesDisplay": "all",
                 "showYMajorGridLines": false,
                 "showYMinorGridLines": false,
+                "stackMode": "unstacked",
+                "xAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"State\")",
+                "y": "> primary | seriesByName(\"Circuits\")",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
@@ -444,7 +450,9 @@
                 "sparklineValues": "> primary | seriesByName(\"poor_tunnels\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " poor tunnels",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -460,7 +468,7 @@
             }
         },
         "viz_card_03_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_03"
@@ -501,7 +509,6 @@
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
                 "y": "> primary | seriesByName(\"poor_tunnels\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -615,7 +622,9 @@
                 "sparklineValues": "> primary | seriesByName(\"degraded_sites_trend\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " degraded sites",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -645,7 +654,11 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "right",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "degraded_sites_trend": "#e2a811",
+                    "healthy_sites_trend": "#159352"
+                },
                 "seriesColors": [
                     "#3abdfa",
                     "#9b5ff4",
@@ -668,14 +681,13 @@
                     "#698c07",
                     "#c69fff"
                 ],
+                "dataValuesDisplay": "off",
                 "showYMajorGridLines": false,
-                "stackMode": "unstacked",
+                "stackMode": "stacked",
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"degraded_sites_trend\")",
-                "areaOpacity": 0.45,
-                "lineWidth": 2,
+                "y": "> primary | frameBySeriesNames(\"degraded_sites_trend\", \"healthy_sites_trend\")",
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -789,7 +801,9 @@
                 "sparklineValues": "> primary | seriesByName(\"avg_loss_pct\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " %",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -810,7 +824,7 @@
             }
         },
         "viz_card_05_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_05"
@@ -819,7 +833,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
                 "seriesColors": [
                     "#159352",
                     "#3abdfa",
@@ -850,8 +864,7 @@
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"avg_loss_pct\")",
-                "areaOpacity": 0.45,
+                "y": "> primary | frameBySeriesNames(\"avg_loss_pct\", \"max_loss_pct\")",
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -965,7 +978,9 @@
                 "sparklineValues": "> primary | seriesByName(\"BucketPathChanges\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " path changes",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -986,7 +1001,7 @@
             }
         },
         "viz_card_06_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_06"
@@ -995,7 +1010,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
                 "seriesColors": [
                     "#0d8e97",
                     "#9b5ff4",
@@ -1018,21 +1033,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
                 "showYMajorGridLines": false,
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketPathChanges\")",
-                "areaOpacity": 0.45,
                 "showYMinorGridLines": false,
+                "stackMode": "stacked",
+                "xAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | frameWithoutSeriesNames(\"BucketPathChanges\", \"WindowPathChanges\")",
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
                 "yAxisMajorTickVisibility": "hide",
-                "yAxisMinorTickVisibility": "hide"
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide"
             }
         },
         "viz_card_06_drilldown_trigger": {

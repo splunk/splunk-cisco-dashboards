@@ -92,7 +92,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**SGT Activity by Site**"
+                "markdown": "**Tagged Authentication Events by Location**"
             }
         },
         "viz_card_01_metadata": {
@@ -118,7 +118,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks TrustSec\\-tagged ISE authentication activity by site over time and retains the SGT/site rollup as drill\\-down detail\\."
+                "markdown": "Ranks observed TrustSec\\-tagged ISE authentication events by the best available site, reporting device, or ISE node context\\."
             }
         },
         "viz_card_01_singlevalue": {
@@ -133,16 +133,13 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"WindowEvents\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "absolute",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "unit": " events",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -163,7 +160,7 @@
             }
         },
         "viz_card_01_trend": {
-            "type": "splunk.area",
+            "type": "splunk.bar",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_01"
@@ -195,16 +192,13 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "all",
+                "stackMode": "unstacked",
                 "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")",
-                "areaOpacity": 0.45,
+                "x": "> primary | seriesByName(\"Location Context\")",
+                "y": "> primary | seriesByName(\"Events\")",
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -218,7 +212,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=SGT%20Activity%20by%20Site&target=Secure%20Networking%20-%20SGT%20by%20Site"
+                        "url": "/drilldown?origin=Tagged%20Authentication%20Events%20by%20Location&target=Secure%20Networking%20-%20SGT%20by%20Site"
                     }
                 }
             ],
@@ -237,7 +231,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=SGT%20Activity%20by%20Site&target=secure_networking_sgt_site_activity_trend"
+                        "url": "/metric-info?origin=Tagged%20Authentication%20Events%20by%20Location&target=secure_networking_sgt_site_activity_summary"
                     }
                 }
             ],
@@ -268,7 +262,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**SGT Activity by Device**"
+                "markdown": "**Tagged Endpoints by Reporting Device**"
             }
         },
         "viz_card_02_metadata": {
@@ -294,7 +288,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Trends distinct TrustSec\\-tagged endpoints by network device, with the site/device/SGT distribution available in the drill\\-down modal\\."
+                "markdown": "Ranks distinct TrustSec\\-tagged endpoints by the Cisco ISE reporting network device observed in the selected window\\."
             }
         },
         "viz_card_02_singlevalue": {
@@ -309,16 +303,13 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"PeakTaggedEndpoints\") | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"WindowTaggedEndpoints\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "absolute",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "unit": " endpoints",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -339,7 +330,7 @@
             }
         },
         "viz_card_02_trend": {
-            "type": "splunk.area",
+            "type": "splunk.bar",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_02"
@@ -371,16 +362,13 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "all",
+                "stackMode": "unstacked",
                 "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")",
-                "areaOpacity": 0.45,
+                "x": "> primary | seriesByName(\"Network Device\")",
+                "y": "> primary | seriesByName(\"Tagged Endpoints\")",
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -394,7 +382,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=SGT%20Activity%20by%20Device&target=Secure%20Networking%20-%20SGT%20Distribution%20by%20Site%20and%20Device"
+                        "url": "/drilldown?origin=Tagged%20Endpoints%20by%20Reporting%20Device&target=Secure%20Networking%20-%20SGT%20Distribution%20by%20Site%20and%20Device"
                     }
                 }
             ],
@@ -413,7 +401,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=SGT%20Activity%20by%20Device&target=secure_networking_sgt_device_activity_trend"
+                        "url": "/metric-info?origin=Tagged%20Endpoints%20by%20Reporting%20Device&target=secure_networking_sgt_device_activity_summary"
                     }
                 }
             ],
@@ -444,7 +432,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**IP\\-SGT Binding Activity**"
+                "markdown": "**Observed IP\\-SGT Bindings**"
             }
         },
         "viz_card_03_metadata": {
@@ -470,7 +458,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks distinct IP prefixes bound to each SGT over time and retains the full binding inventory as drill\\-down detail\\."
+                "markdown": "Ranks distinct IP prefixes observed for each Security Group Tag and retains the full binding inventory as investigation detail\\."
             }
         },
         "viz_card_03_singlevalue": {
@@ -485,16 +473,13 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"PeakBoundPrefixes\") | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"WindowBoundPrefixes\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "absolute",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "unit": " prefixes",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -515,7 +500,7 @@
             }
         },
         "viz_card_03_trend": {
-            "type": "splunk.area",
+            "type": "splunk.bar",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_03"
@@ -547,16 +532,13 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "all",
+                "stackMode": "unstacked",
                 "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")",
-                "areaOpacity": 0.45,
+                "x": "> primary | seriesByName(\"Security Group\")",
+                "y": "> primary | seriesByName(\"Bound Prefixes\")",
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -570,7 +552,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=IP-SGT%20Binding%20Activity&target=Secure%20Networking%20-%20SGT%20Binding%20Inventory,Secure%20Networking%20-%20IP-SGT%20Bindings%20by%20Security%20Group"
+                        "url": "/drilldown?origin=Observed%20IP-SGT%20Bindings&target=Secure%20Networking%20-%20SGT%20Binding%20Inventory,Secure%20Networking%20-%20IP-SGT%20Bindings%20by%20Security%20Group"
                     }
                 }
             ],
@@ -589,7 +571,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=IP-SGT%20Binding%20Activity&target=secure_networking_sgt_binding_activity_trend"
+                        "url": "/metric-info?origin=Observed%20IP-SGT%20Bindings&target=secure_networking_sgt_binding_activity_summary"
                     }
                 }
             ],
@@ -620,7 +602,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**SGACL Enforcement**"
+                "markdown": "**Observed SGACL Decisions**"
             }
         },
         "viz_card_04_metadata": {
@@ -646,7 +628,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Hourly trend of TrustSec SGACL enforcement events from the Catalyst data model, split by permit/deny \\(and other\\) actions - the primary “is role\\-based policy doing work over time?” signal for scalable segmentation\\."
+                "markdown": "Shows observed TrustSec SGACL permit, deny, and other enforcement decisions over time from the Catalyst data model\\."
             }
         },
         "viz_card_04_singlevalue": {
@@ -670,7 +652,9 @@
                 "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " events",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -691,7 +675,7 @@
             }
         },
         "viz_card_04_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_04"
@@ -700,7 +684,13 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "Deny": "#e44273",
+                    "Other": "#a9afda",
+                    "Permit": "#159352",
+                    "Unknown": "#a9afda"
+                },
                 "seriesColors": [
                     "#3abdfa",
                     "#9b5ff4",
@@ -723,16 +713,13 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
+                "stackMode": "stacked",
                 "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")",
-                "areaOpacity": 0.45,
+                "y": "> primary | frameWithoutSeriesNames(\"BucketTotal\", \"WindowTotal\")",
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -746,7 +733,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=SGACL%20Enforcement&target=secure_networking_sgacl_policy_matrix,secure_networking_fmc_sgt_correlated_events,secure_networking_sgt_distribution_by_site_device"
+                        "url": "/drilldown?origin=Observed%20SGACL%20Decisions&target=secure_networking_sgacl_policy_matrix,secure_networking_fmc_sgt_correlated_events,secure_networking_sgt_distribution_by_site_device"
                     }
                 }
             ],
@@ -765,7 +752,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=SGACL%20Enforcement&target=secure_networking_sgacl_enforcement_activity_trend"
+                        "url": "/metric-info?origin=Observed%20SGACL%20Decisions&target=secure_networking_sgacl_enforcement_activity_trend"
                     }
                 }
             ],
@@ -796,7 +783,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Segmentation Feature Evidence**"
+                "markdown": "**Observed Segmentation Feature Events**"
             }
         },
         "viz_card_05_metadata": {
@@ -822,7 +809,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Trends observed Cisco IOS VRF, VLAN, VXLAN, VPN, and SGT/TrustSec events over time\\."
+                "markdown": "Breaks down observed Cisco IOS VRF, VLAN, VXLAN, VPN, and SGT/TrustSec event volume over time\\."
             }
         },
         "viz_card_05_singlevalue": {
@@ -846,7 +833,9 @@
                 "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " events",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -862,7 +851,7 @@
             }
         },
         "viz_card_05_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_05"
@@ -871,7 +860,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
                 "seriesColors": [
                     "#159352",
                     "#3abdfa",
@@ -894,16 +883,13 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 2,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
+                "dataValuesDisplay": "off",
+                "stackMode": "stacked",
                 "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")",
-                "areaOpacity": 0.45,
+                "y": "> primary | frameBySeriesNames(\"VXLAN / VNI\", \"VLAN / 802.1Q\", \"VRF\", \"SGT / TrustSec\", \"VPN\")",
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -917,7 +903,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Segmentation%20Feature%20Evidence&target=Secure%20Networking%20-%20Router%20Segmentation%20Feature%20Evidence"
+                        "url": "/drilldown?origin=Observed%20Segmentation%20Feature%20Events&target=Secure%20Networking%20-%20Router%20Segmentation%20Feature%20Evidence"
                     }
                 }
             ],
@@ -936,7 +922,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Segmentation%20Feature%20Evidence&target=secure_networking_router_segmentation_feature_trend"
+                        "url": "/metric-info?origin=Observed%20Segmentation%20Feature%20Events&target=secure_networking_router_segmentation_feature_trend"
                     }
                 }
             ],
@@ -967,7 +953,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**SGT\\-Enforced Blocks**"
+                "markdown": "**FMC Blocks by SGT Context**"
             }
         },
         "viz_card_06_metadata": {
@@ -993,7 +979,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Trend of FMC block decisions correlated with Security Group Tags, showing enforcement volume across the selected time window\\."
+                "markdown": "Ranks FMC block decisions by resolved Security Group Tag context, including an explicit unclassified telemetry category\\."
             }
         },
         "viz_card_06_singlevalue": {
@@ -1008,16 +994,13 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> primary | seriesByName(\"window_blocks\") | lastPoint() | divideBy(0.999999999999)",
+                "majorValue": "> primary | seriesByName(\"WindowBlocks\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "absolute",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"blocks_trend\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "unit": " blocks",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -1038,7 +1021,7 @@
             }
         },
         "viz_card_06_trend": {
-            "type": "splunk.column",
+            "type": "splunk.bar",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_06"
@@ -1047,7 +1030,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "right",
+                "legendDisplay": "off",
                 "seriesColors": [
                     "#0d8e97",
                     "#9b5ff4",
@@ -1070,14 +1053,13 @@
                     "#698c07",
                     "#c69fff"
                 ],
+                "dataValuesDisplay": "all",
                 "showYMajorGridLines": false,
                 "stackMode": "unstacked",
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"blocks_trend\")",
-                "areaOpacity": 0.45,
-                "lineWidth": 2,
+                "x": "> primary | seriesByName(\"SGT Context\")",
+                "y": "> primary | seriesByName(\"Blocks\")",
                 "showYMinorGridLines": false,
                 "yAxisLabelVisibility": "hide",
                 "yAxisLineVisibility": "hide",
@@ -1091,7 +1073,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=SGT-Enforced%20Blocks&target=Secure%20Networking%20-%20FMC%20Events%20Correlated%20by%20SGT"
+                        "url": "/drilldown?origin=FMC%20Blocks%20by%20SGT%20Context&target=Secure%20Networking%20-%20FMC%20Events%20Correlated%20by%20SGT"
                     }
                 }
             ],
@@ -1110,7 +1092,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=SGT-Enforced%20Blocks&target=secure_networking_sgt_fmc_blocks_by_sgt"
+                        "url": "/metric-info?origin=FMC%20Blocks%20by%20SGT%20Context&target=secure_networking_sgt_fmc_blocks_by_sgt_summary"
                     }
                 }
             ],
@@ -1128,7 +1110,7 @@
         "ds_story_01": {
             "name": "Secure Networking - SGT Site Activity Trend",
             "options": {
-                "ref": "secure_networking_sgt_site_activity_trend",
+                "ref": "secure_networking_sgt_site_activity_summary",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$",
@@ -1140,7 +1122,7 @@
         "ds_story_02": {
             "name": "Secure Networking - SGT Network Device Activity Trend",
             "options": {
-                "ref": "secure_networking_sgt_device_activity_trend",
+                "ref": "secure_networking_sgt_device_activity_summary",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$",
@@ -1152,7 +1134,7 @@
         "ds_story_03": {
             "name": "Secure Networking - SGT Binding Activity Trend",
             "options": {
-                "ref": "secure_networking_sgt_binding_activity_trend",
+                "ref": "secure_networking_sgt_binding_activity_summary",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$",
@@ -1188,7 +1170,7 @@
         "ds_story_06": {
             "name": "Secure Networking - SGT-Classified FMC Blocks by Tag",
             "options": {
-                "ref": "secure_networking_sgt_fmc_blocks_by_sgt",
+                "ref": "secure_networking_sgt_fmc_blocks_by_sgt_summary",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$",
