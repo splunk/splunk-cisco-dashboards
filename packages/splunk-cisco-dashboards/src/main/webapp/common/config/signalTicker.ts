@@ -305,6 +305,42 @@ export const DEFAULT_SIGNAL_TICKER_CONFIG: SignalTickerConfig = {
       thresholdCritical: 5,
       thresholdDirection: "lower_is_better",
     },
+    {
+      id: "soc_dns_requests",
+      searchName: "Agentic SOC - Umbrella DNS Request Trend",
+      label: "DNS requests",
+      valueField: "WindowRequests",
+    },
+    {
+      id: "soc_dns_blocks",
+      searchName: "Agentic SOC - Umbrella Blocked Request Trend",
+      label: "Blocked DNS requests",
+      valueField: "WindowBlocked",
+    },
+    {
+      id: "soc_intrusion_threats",
+      searchName: "Agentic SOC - Firewall Intrusion Threat Trend",
+      label: "Intrusion threats",
+      valueField: "WindowThreats",
+    },
+    {
+      id: "soc_security_intelligence",
+      searchName: "Agentic SOC - Firewall Security Intelligence Threat Trend",
+      label: "Security Intelligence hits",
+      valueField: "WindowThreats",
+    },
+    {
+      id: "soc_zeek_sessions",
+      searchName: "Agentic SOC - Zeek Traffic Volume Trend",
+      label: "Zeek sessions",
+      valueField: "WindowSessions",
+    },
+    {
+      id: "soc_zeek_bytes",
+      searchName: "Agentic SOC - Zeek Traffic Volume Trend",
+      label: "Zeek observed bytes",
+      valueField: "WindowBytes",
+    },
   ],
 };
 
@@ -340,6 +376,14 @@ const WORKSPACE_SIGNAL_ITEM_IDS: Record<string, readonly string[]> = {
     "zta_auth_failure_rate",
     "dc_critical_advisories",
     "palo_alto_sgt_blocks",
+  ],
+  agentic_security_operations_center: [
+    "soc_dns_requests",
+    "soc_dns_blocks",
+    "soc_intrusion_threats",
+    "soc_security_intelligence",
+    "soc_zeek_sessions",
+    "soc_zeek_bytes",
   ],
   executive: [
     "it_domain_score",

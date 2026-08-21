@@ -10,6 +10,13 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Added a built-in Agentic Security Operations Center workspace for live
+  conference telemetry. Its DNS Security, Firewall Threat Defense, and Network
+  Detection & Response sections provide Umbrella request, block, category, and
+  application views; Secure Firewall intrusion, Security Intelligence, and
+  destination-country views; and Endace/Zeek protocol, traffic, and top-
+  conversation views. The workspace uses live Searchbase searches with honest
+  no-data states and ships with a focused six-signal rail.
 - Curated Dashboard Manager to show only the packaged dashboards that depend on
   its Dashboard Studio extensions and the current user's dashboards created
   through the managed workflow. Ordinary Studio dashboards remain excluded even

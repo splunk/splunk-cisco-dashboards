@@ -2,10 +2,12 @@ export const DEFAULT_WORKSPACE_ID = "secure_networking";
 export const EXECUTIVE_WORKSPACE_SOURCE_ID = "executive" as const;
 export const SECURE_NETWORKING_WORKSPACE_SOURCE_ID =
   "secure_networking" as const;
+export const AGENTIC_SOC_WORKSPACE_SOURCE_ID = "agentic_soc" as const;
 
 export const WORKSPACE_SOURCE_IDS = [
   EXECUTIVE_WORKSPACE_SOURCE_ID,
   SECURE_NETWORKING_WORKSPACE_SOURCE_ID,
+  AGENTIC_SOC_WORKSPACE_SOURCE_ID,
 ] as const;
 
 export type WorkspaceSourceId = (typeof WORKSPACE_SOURCE_IDS)[number];
@@ -23,6 +25,9 @@ export const ALL_WORKSPACE_SECTION_IDS = [
   "scalable_network_segmentation",
   "hybrid_mesh_firewalling",
   "agentic_ops",
+  "dns_security",
+  "firewall_security",
+  "network_detection",
 ] as const;
 
 export type SectionId = (typeof ALL_WORKSPACE_SECTION_IDS)[number];
@@ -41,6 +46,7 @@ export type WorkspaceSectionIcon =
   | "server-cog"
   | "network"
   | "firewall"
+  | "globe"
   | "bot";
 
 export interface WorkspaceSectionMeta {
@@ -166,6 +172,30 @@ const SECURE_NETWORKING_SECTIONS: readonly WorkspaceSectionMeta[] = [
   },
 ] as const;
 
+const AGENTIC_SOC_SECTIONS: readonly WorkspaceSectionMeta[] = [
+  {
+    id: "dns_security",
+    title: "DNS Security",
+    linkText: "Open DNS security searches",
+    href: "searchbase_canvas?category=Security&sub_category=DNS%20Security",
+    icon: "globe",
+  },
+  {
+    id: "firewall_security",
+    title: "Firewall Threat Defense",
+    linkText: "Open firewall threat searches",
+    href: "searchbase_canvas?category=Security&sub_category=Firewall%20Threat%20Defense",
+    icon: "firewall",
+  },
+  {
+    id: "network_detection",
+    title: "Network Detection & Response",
+    linkText: "Open network detection searches",
+    href: "searchbase_canvas?category=Security&sub_category=Network%20Detection%20%26%20Response",
+    icon: "network",
+  },
+] as const;
+
 /**
  * Section IDs are stable data contracts. Their owning source tells the runtime
  * which Searchbase overview definitions supply the factory tile catalogue.
@@ -183,6 +213,9 @@ export const WORKSPACE_SECTION_SOURCE: Record<SectionId, WorkspaceSourceId> = {
   scalable_network_segmentation: SECURE_NETWORKING_WORKSPACE_SOURCE_ID,
   hybrid_mesh_firewalling: SECURE_NETWORKING_WORKSPACE_SOURCE_ID,
   agentic_ops: SECURE_NETWORKING_WORKSPACE_SOURCE_ID,
+  dns_security: AGENTIC_SOC_WORKSPACE_SOURCE_ID,
+  firewall_security: AGENTIC_SOC_WORKSPACE_SOURCE_ID,
+  network_detection: AGENTIC_SOC_WORKSPACE_SOURCE_ID,
 };
 
 export const getWorkspaceSectionSource = (
@@ -192,12 +225,16 @@ export const getWorkspaceSectionSource = (
 const ALL_WORKSPACE_SECTIONS: readonly WorkspaceSectionMeta[] = [
   ...SECURE_NETWORKING_SECTIONS,
   ...CROSS_DOMAIN_SECTIONS,
+  ...AGENTIC_SOC_SECTIONS,
 ] as const;
 
 const SECURE_NETWORKING_DEFAULT_SECTION_IDS = SECURE_NETWORKING_SECTIONS.map(
   (section) => section.id,
 );
 const EXECUTIVE_DEFAULT_SECTION_IDS = CROSS_DOMAIN_SECTIONS.map(
+  (section) => section.id,
+);
+const AGENTIC_SOC_DEFAULT_SECTION_IDS = AGENTIC_SOC_SECTIONS.map(
   (section) => section.id,
 );
 
@@ -237,6 +274,25 @@ export const WORKSPACE_SOURCES: Record<WorkspaceSourceId, WorkspaceSource> = {
         "Hybrid Mesh Firewalling": "hybrid_mesh_firewalling",
         "Agentic Ops": "agentic_ops",
         "Agentic Operations": "agentic_ops",
+      },
+    },
+  },
+  agentic_soc: {
+    id: AGENTIC_SOC_WORKSPACE_SOURCE_ID,
+    sections: AGENTIC_SOC_SECTIONS,
+    defaultSectionIds: AGENTIC_SOC_DEFAULT_SECTION_IDS,
+    defaultVisibleSections: AGENTIC_SOC_DEFAULT_SECTION_IDS,
+    maxVisibleSections: 3,
+    minTileCount: 1,
+    maxTileCount: 9,
+    fallbackTileCount: 3,
+    autoDiscovery: {
+      stanzaPrefix: "agentic_soc_",
+      requiredTag: "Agentic SOC",
+      subCategoryToSection: {
+        "DNS Security": "dns_security",
+        "Firewall Threat Defense": "firewall_security",
+        "Network Detection & Response": "network_detection",
       },
     },
   },
@@ -391,6 +447,19 @@ export const PACKAGED_WORKSPACE_FALLBACKS: readonly InsightsWorkspace[] = [
     sortOrder: 30,
   }),
   createInsightsWorkspace({
+    id: "agentic_security_operations_center",
+    label: "Agentic Security Operations Center",
+    sourceWorkspace: "agentic_soc",
+    headerTitle: "Agentic Security Operations Center",
+    headerSubtitle:
+      "Live conference DNS, firewall, and full-packet network telemetry",
+    hideDefaultLogo: true,
+    isBuiltIn: true,
+    sortOrder: 40,
+    mapVisible: false,
+    regionalView: "table",
+  }),
+  createInsightsWorkspace({
     id: "security_operations_demo",
     label: "Security Operations Demo",
     sourceWorkspace: "executive",
@@ -400,7 +469,7 @@ export const PACKAGED_WORKSPACE_FALLBACKS: readonly InsightsWorkspace[] = [
     headerSubtitle:
       "Operational risk, service health, and executive security signals",
     isBuiltIn: true,
-    sortOrder: 40,
+    sortOrder: 50,
   }),
   createInsightsWorkspace({
     id: "executive",
@@ -409,7 +478,7 @@ export const PACKAGED_WORKSPACE_FALLBACKS: readonly InsightsWorkspace[] = [
     headerTitle: "Global Operations Command",
     headerSubtitle: "Enterprise health, risk, and experience at decision speed",
     isBuiltIn: true,
-    sortOrder: 50,
+    sortOrder: 60,
   }),
 ];
 

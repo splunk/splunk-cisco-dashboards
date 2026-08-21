@@ -71,6 +71,7 @@ import {
   Sparkles,
   Sun,
   Moon,
+  Globe,
   Servers,
   NodeModel,
   WallBricks,
@@ -941,6 +942,7 @@ const SECTION_ICON_COMPONENTS: Record<WorkspaceSectionIcon, SuiIcon> = {
   "server-cog": Servers,
   network: NodeModel,
   firewall: WallBricks,
+  globe: Globe,
   bot: RobotFaceWrench,
 };
 

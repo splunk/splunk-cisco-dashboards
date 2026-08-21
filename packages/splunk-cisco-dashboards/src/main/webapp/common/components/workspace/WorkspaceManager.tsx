@@ -117,13 +117,21 @@ const copyDraft = (
     };
 };
 
-const sourceLabel = (sourceWorkspace: WorkspaceSourceId): string =>
-    sourceWorkspace === 'secure_networking' ? 'Secure Networking' : 'Executive Briefing';
+const sourceLabel = (sourceWorkspace: WorkspaceSourceId): string => {
+    if (sourceWorkspace === 'secure_networking') return 'Secure Networking';
+    if (sourceWorkspace === 'agentic_soc') return 'Agentic Security Operations Center';
+    return 'Executive Briefing';
+};
 
-const sourceDescription = (sourceWorkspace: WorkspaceSourceId): string =>
-    sourceWorkspace === 'secure_networking'
-        ? 'Starts with access, infrastructure, segmentation, firewalling, and agentic operations.'
-        : 'Starts with IT operations, security operations, digital experience, and executive signals.';
+const sourceDescription = (sourceWorkspace: WorkspaceSourceId): string => {
+    if (sourceWorkspace === 'secure_networking') {
+        return 'Starts with access, infrastructure, segmentation, firewalling, and agentic operations.';
+    }
+    if (sourceWorkspace === 'agentic_soc') {
+        return 'Starts with live Umbrella DNS, firewall threat, and Endace/Zeek network detection.';
+    }
+    return 'Starts with IT operations, security operations, digital experience, and executive signals.';
+};
 
 const ManagerLayout = styled.div`
     display: grid;

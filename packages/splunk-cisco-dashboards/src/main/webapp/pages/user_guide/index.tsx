@@ -1775,8 +1775,9 @@ iseval = 0`}</CodeBlock>
                         <InlineCode>{APP_VERSION_LABEL}</InlineCode>
                       </td>
                       <td className="px-3 py-3 sui-color-default">
-                        Six-card Secure Networking KPI stories, guided setup,
-                        workspace customization, Searchbase drilldowns, and
+                        Agentic SOC live-conference visibility, six-card Secure
+                        Networking KPI stories, guided setup, workspace
+                        customization, Searchbase drilldowns, and
                         site-connectivity improvements.
                       </td>
                       <td className="px-3 py-3 sui-color-default">
@@ -1789,6 +1790,18 @@ iseval = 0`}</CodeBlock>
               </div>
 
               <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <InfoCard title="Agentic Security Operations Center">
+                  A built-in conference workspace now organizes live Cisco
+                  Umbrella DNS, Secure Firewall, and Endace/Zeek telemetry into
+                  three focused sections. DNS Security covers unique domains,
+                  request and block trends, categories, and applications.
+                  Firewall Threat Defense covers intrusion detections, Security
+                  Intelligence matches, and destination countries. Network
+                  Detection &amp; Response covers protocols, traffic volume, and
+                  top conversations derived from packet visibility. Every tile
+                  uses the selected live time range and reports an honest
+                  no-data state when its source has not arrived.
+                </InfoCard>
                 <InfoCard title="Secure Networking dashboards">
                   All 16 Secure Networking Dashboard Studio views now use the
                   same clean dark three-by-two layout. Each dashboard tells a
