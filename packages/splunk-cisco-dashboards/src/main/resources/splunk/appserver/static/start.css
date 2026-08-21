@@ -1826,6 +1826,20 @@ body {
     gap: 20px;
 }
 
+/* The React wizard supplies all header controls inside its brand row. Avoid
+ * inheriting the legacy setup header's empty 360–430px second grid track. */
+#scan-root .scd-setup__stage .scd-setup__header {
+    display: block;
+}
+
+#scan-root .scd-setup__stage .scd-setup__brand {
+    display: flex;
+    min-width: 0;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--sui-spacing-large, 1rem);
+}
+
 #scd-setup-root .scd-setup__theme-control {
     display: inline-flex;
     min-height: 36px;
@@ -1836,6 +1850,13 @@ body {
     font-size: var(--sui-font-size-small, 12px);
     font-weight: 700;
     white-space: nowrap;
+}
+
+#scd-setup-root .scd-setup__theme-icon {
+    display: block;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
 }
 
 #scd-setup-root .scd-setup__theme-toggle {
@@ -2148,86 +2169,10 @@ body {
     margin: 0;
 }
 
-@media (max-width: 1200px) and (min-width: 1025px) {
-    .scd-setup__shell {
-        grid-template-columns: 280px minmax(0, 1fr);
-    }
-}
-
-@media (max-width: 1024px) {
-    .scd-setup__shell {
-        grid-template-columns: 1fr;
-    }
-
-    #scd-setup-root .scd-setup__sidebar {
-        display: grid;
-        grid-template-columns: minmax(120px, auto) minmax(0, 1fr);
-        align-items: center;
-        gap: 16px;
-        padding: 10px 16px;
-        border-right: 0;
-        border-bottom: 1px solid var(--scd-setup-border);
-    }
-
-    #scd-setup-root .scd-setup__sidebar-brand {
-        margin: 0;
-        font-size: 16px;
-    }
-
-    #scd-setup-root .scd-setup__sidebar .scd-setup__steps {
-        display: grid;
-        grid-template-columns: minmax(76px, auto) minmax(170px, 1fr) minmax(76px, auto);
-        align-items: center;
-        gap: 8px;
-    }
-
-    #scd-setup-root .scd-setup__sidebar .scd-setup__steps::before {
-        display: none;
-    }
-
-    #scd-setup-root .scd-setup__endpoint.is-start {
-        grid-column: 1;
-    }
-
-    #scd-setup-root .scd-setup__endpoint.is-finish {
-        grid-column: 3;
-    }
-
-    #scd-setup-root .scd-setup__step-item.is-current {
-        grid-column: 2;
-        grid-row: 1;
-    }
-
-    #scd-setup-root .scd-setup__sidebar .scd-setup__step-item {
-        display: none;
-    }
-
-    #scd-setup-root .scd-setup__sidebar .scd-setup__step-item.is-current {
-        display: block;
-    }
-
-    #scd-setup-root .scd-setup__endpoint-copy small,
-    #scd-setup-root .scd-setup__step-copy small {
-        display: none;
-    }
-
-    #scd-setup-root .scd-setup__step-control {
-        min-height: 44px;
-    }
-
-    #scd-setup-root .scd-setup__stage .scd-setup__content {
-        overflow: visible;
-    }
-}
-
 @media (max-width: 680px) {
     #scd-setup-root .scd-setup__sidebar {
         grid-template-columns: 1fr;
         gap: 8px;
-    }
-
-    #scd-setup-root .scd-setup__sidebar .scd-setup__steps {
-        grid-template-columns: 60px minmax(150px, 1fr) 60px;
     }
 
     #scd-setup-root .scd-setup__endpoint-copy {
@@ -2280,7 +2225,7 @@ body {
  */
 #scd-setup-root .scd-setup__routing-summary,
 #scan-root .scd-setup__routing-summary {
-    grid-template-columns: minmax(0, 1fr) repeat(3, max-content);
+    grid-template-columns: minmax(0, 1fr) repeat(4, max-content);
     align-items: center;
 }
 
@@ -2291,8 +2236,63 @@ body {
 }
 
 @container setup-root (max-width: 1280px) {
+    #scd-setup-root .scd-setup__shell,
     .scd-setup__shell--react {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* Steps 1–3 render before React mounts. Give their compatibility rail the
+     * same container-driven compact layout used by Steps 4–6 so switching
+     * runtimes never changes the navigation from vertical to horizontal. */
+    #scd-setup-root .scd-setup__sidebar:not(.scd-setup__sidebar--react) {
+        display: grid;
+        grid-template-columns: minmax(120px, auto) minmax(0, 1fr);
+        align-items: center;
+        gap: 16px;
+        padding: 10px 16px;
+        border-right: 0;
+        border-bottom: 1px solid var(--scd-setup-border);
+    }
+
+    #scd-setup-root .scd-setup__sidebar .scd-setup__steps {
+        display: grid;
+        grid-template-columns: minmax(76px, auto) minmax(170px, 1fr) minmax(76px, auto);
+        align-items: center;
+        gap: 8px;
+    }
+
+    #scd-setup-root .scd-setup__sidebar .scd-setup__steps::before {
+        display: none;
+    }
+
+    #scd-setup-root .scd-setup__endpoint.is-start {
+        grid-column: 1;
+    }
+
+    #scd-setup-root .scd-setup__endpoint.is-finish {
+        grid-column: 3;
+    }
+
+    #scd-setup-root .scd-setup__step-item.is-current {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    #scd-setup-root .scd-setup__sidebar .scd-setup__step-item {
+        display: none;
+    }
+
+    #scd-setup-root .scd-setup__sidebar .scd-setup__step-item.is-current {
+        display: block;
+    }
+
+    #scd-setup-root .scd-setup__endpoint-copy small,
+    #scd-setup-root .scd-setup__step-copy small {
+        display: none;
+    }
+
+    #scd-setup-root .scd-setup__step-control {
+        min-height: 44px;
     }
 
     #scd-setup-root .scd-setup__sidebar--react,
@@ -2326,7 +2326,7 @@ body {
 
     #scd-setup-root .scd-setup__routing-summary,
     #scan-root .scd-setup__routing-summary {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
     #scd-setup-root .scd-setup__routing-summary > :first-child,
@@ -2341,6 +2341,7 @@ body {
 }
 
 @container setup-root (max-width: 680px) {
+    #scd-setup-root .scd-setup__sidebar:not(.scd-setup__sidebar--react),
     #scd-setup-root .scd-setup__sidebar--react,
     #scan-root .scd-setup__sidebar--react,
     #scd-setup-root .scd-setup__stage .scd-setup__brand,
@@ -2349,9 +2350,32 @@ body {
         grid-template-columns: minmax(0, 1fr);
     }
 
+    #scd-setup-root .scd-setup__sidebar .scd-setup__steps {
+        grid-template-columns: 60px minmax(150px, 1fr) 60px;
+    }
+
     #scd-setup-root .scd-setup__progress-compact,
     #scan-root .scd-setup__progress-compact {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    #scd-setup-root .scd-setup__header-tools,
+    #scan-root .scd-setup__header-tools {
+        display: grid;
+        min-width: 0;
+        justify-content: stretch;
+        justify-items: start;
+    }
+
+    #scd-setup-root .scd-setup__draft-summary,
+    #scan-root .scd-setup__draft-summary {
+        justify-items: start;
+        text-align: start;
+    }
+
+    #scd-setup-root .scd-setup__routing-summary,
+    #scan-root .scd-setup__routing-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     #scd-setup-root .scd-setup__compact-label,

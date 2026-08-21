@@ -9,6 +9,7 @@ import React, {
 import { getDefaultFetchInit } from "@splunk/splunk-utils/fetch";
 import { versionLabel } from "@splunk/splunk-utils/config";
 import TimeRangeDropdown from "@splunk/react-time-range/Dropdown";
+import Badge from '@splunk/react-ui/Badge';
 import Button from '@splunk/react-ui/Button';
 import CollapsiblePanel from '@splunk/react-ui/CollapsiblePanel';
 import ControlGroup from '@splunk/react-ui/ControlGroup';
@@ -38,7 +39,6 @@ import {
     ExternalLink,
     Info,
     Loader2,
-    Moon,
     Play,
     RefreshCw,
     Save,
@@ -80,7 +80,9 @@ const ACCELERATED_SUMMARIESONLY_DEFINITION =
 const DEFAULT_SUMMARIESONLY_DESCRIPTION =
   "Controls whether data-model searches use only accelerated summaries or may fall back to raw events. Keep summariesonly=false until all required data models are fully accelerated.";
 const SUMMARIESONLY_ACCELERATION_ERROR =
-  "summariesonly=true requires acceleration for every required Cisco product data model, including Cisco DC Networking.";
+  "summariesonly=true requires acceleration for every data model applicable to the detected Cisco data.";
+const SETUP_ROUTE_GUARD_MESSAGE =
+  "Complete the routing scan before opening later setup steps.";
 const SPLUNK_DOCS_VERSION = versionLabel.match(/^(\d+\.\d+)/)?.[1] || "10.4";
 const DATA_MODEL_ACCELERATION_DOCS_URL = `https://help.splunk.com/en/splunk-enterprise/manage-knowledge-objects/knowledge-management-manual/${SPLUNK_DOCS_VERSION}/use-data-summaries-to-accelerate-searches/accelerate-data-models`;
 const DATA_MODEL_ACCELERATION_SEARCH = `
@@ -409,6 +411,7 @@ type ScanState = "idle" | "loading" | "ready" | "error";
 type SaveState = "idle" | "saving" | "saved" | "error";
 type CopyState = "idle" | "copied" | "selected" | "error";
 type InventoryLoadState = "idle" | "loading" | "ready" | "error";
+type SetupRerunScope = "routing" | "cim";
 type DefinitionFormat = "indexIn" | "indexOr" | "sourcetypeIn";
 type DataModelAccelerationState =
   | "checking"
@@ -603,12 +606,13 @@ interface MacroDetails {
   description: string;
 }
 
-interface DataModelRequirement {
+export interface DataModelRequirement {
   key: string;
   label: string;
   app: string;
   model: string;
   priority: "required" | "recommended";
+  applicableCapabilities?: readonly string[];
 }
 
 interface DataModelAcceleration extends DataModelRequirement {
@@ -634,6 +638,11 @@ const CORE_DATA_MODEL_REQUIREMENTS: readonly DataModelRequirement[] = [
     app: CATALYST_APP_NAME,
     model: "Cisco_Catalyst_App",
     priority: "required",
+    applicableCapabilities: [
+      "identity",
+      "enterprise-networking",
+      "meraki",
+    ],
   },
   {
     key: "security",
@@ -641,6 +650,7 @@ const CORE_DATA_MODEL_REQUIREMENTS: readonly DataModelRequirement[] = [
     app: CISCO_SECURITY_APP_NAME,
     model: "Cisco_Security",
     priority: "required",
+    applicableCapabilities: ["security"],
   },
   {
     key: "thousandeyes",
@@ -648,6 +658,7 @@ const CORE_DATA_MODEL_REQUIREMENTS: readonly DataModelRequirement[] = [
     app: THOUSAND_EYES_APP_NAME,
     model: "Cisco_ThousandEyes",
     priority: "required",
+    applicableCapabilities: ["thousandeyes"],
   },
   {
     key: "dcn-auth",
@@ -655,6 +666,7 @@ const CORE_DATA_MODEL_REQUIREMENTS: readonly DataModelRequirement[] = [
     app: DATA_CENTER_NETWORKING_APP_NAME,
     model: "Cisco_DCN_Auth",
     priority: "required",
+    applicableCapabilities: ["data-center"],
   },
   {
     key: "dcn-counters",
@@ -662,6 +674,7 @@ const CORE_DATA_MODEL_REQUIREMENTS: readonly DataModelRequirement[] = [
     app: DATA_CENTER_NETWORKING_APP_NAME,
     model: "Cisco_DCN_Counters",
     priority: "required",
+    applicableCapabilities: ["data-center"],
   },
   {
     key: "dcn-events",
@@ -669,6 +682,7 @@ const CORE_DATA_MODEL_REQUIREMENTS: readonly DataModelRequirement[] = [
     app: DATA_CENTER_NETWORKING_APP_NAME,
     model: "Cisco_DCN_Events",
     priority: "required",
+    applicableCapabilities: ["data-center"],
   },
   {
     key: "dcn-fault",
@@ -676,6 +690,7 @@ const CORE_DATA_MODEL_REQUIREMENTS: readonly DataModelRequirement[] = [
     app: DATA_CENTER_NETWORKING_APP_NAME,
     model: "Cisco_DCN_Fault",
     priority: "required",
+    applicableCapabilities: ["data-center"],
   },
   {
     key: "dcn-health",
@@ -683,6 +698,7 @@ const CORE_DATA_MODEL_REQUIREMENTS: readonly DataModelRequirement[] = [
     app: DATA_CENTER_NETWORKING_APP_NAME,
     model: "Cisco_DCN_Health",
     priority: "required",
+    applicableCapabilities: ["data-center"],
   },
   {
     key: "dcn-statistics",
@@ -690,6 +706,7 @@ const CORE_DATA_MODEL_REQUIREMENTS: readonly DataModelRequirement[] = [
     app: DATA_CENTER_NETWORKING_APP_NAME,
     model: "Cisco_DCN_Statistics",
     priority: "required",
+    applicableCapabilities: ["data-center"],
   },
   {
     key: "dcn-systems",
@@ -697,6 +714,7 @@ const CORE_DATA_MODEL_REQUIREMENTS: readonly DataModelRequirement[] = [
     app: DATA_CENTER_NETWORKING_APP_NAME,
     model: "Cisco_DCN_Systems",
     priority: "required",
+    applicableCapabilities: ["data-center"],
   },
   {
     key: "dcn-nexus-dashboard",
@@ -704,6 +722,7 @@ const CORE_DATA_MODEL_REQUIREMENTS: readonly DataModelRequirement[] = [
     app: DATA_CENTER_NETWORKING_APP_NAME,
     model: "Cisco_DCN_nexus_dashboard",
     priority: "required",
+    applicableCapabilities: ["data-center"],
   },
   {
     key: "authentication",
@@ -721,6 +740,20 @@ const CORE_DATA_MODEL_REQUIREMENTS: readonly DataModelRequirement[] = [
   },
 ] as const;
 
+export const selectApplicableDataModelRequirements = (
+  requirements: readonly DataModelRequirement[],
+  detectedCapabilityIds: ReadonlySet<string> | null,
+): readonly DataModelRequirement[] => {
+  if (detectedCapabilityIds === null) return requirements;
+  return requirements.filter(
+    (requirement) =>
+      !requirement.applicableCapabilities?.length ||
+      requirement.applicableCapabilities.some((capabilityId) =>
+        detectedCapabilityIds.has(capabilityId),
+      ),
+  );
+};
+
 const DATA_MODEL_APP_LABELS: Readonly<Record<string, string>> = {
   [CATALYST_APP_NAME]: "Cisco Enterprise Networking",
   [CISCO_SECURITY_APP_NAME]: "Cisco Security Cloud",
@@ -736,12 +769,6 @@ const DATA_MODEL_APP_ORDER = [
   DATA_CENTER_NETWORKING_APP_NAME,
   CIM_APP_NAME,
 ] as const;
-
-const REQUIRED_DATA_MODEL_KEYS = new Set(
-  CORE_DATA_MODEL_REQUIREMENTS.filter(
-    (requirement) => requirement.priority === "required",
-  ).map((requirement) => `${requirement.app}:${requirement.model}`),
-);
 
 const DEFAULT_FAST_TIME_RANGE: SearchTimeRange = {
   earliest: "-7d@d",
@@ -1009,6 +1036,18 @@ const isInitialSetupMode = (): boolean =>
 
 const isIntegratedSetupView = (): boolean =>
   typeof window !== "undefined" && /\/setup\/?$/.test(window.location.pathname);
+
+const readDetectedSetupCapabilityIds = (): ReadonlySet<string> | null => {
+  if (typeof document === "undefined") return null;
+  const setupRoot = document.getElementById("scd-setup-root");
+  if (setupRoot?.dataset.scdSetupDiscoveryState !== "ready") return null;
+  return new Set(
+    (setupRoot.dataset.scdSetupDetectedCapabilities || "")
+      .split(",")
+      .map((capabilityId) => capabilityId.trim())
+      .filter(Boolean),
+  );
+};
 
 const isTrueConfigValue = (value: unknown): boolean =>
   value === true ||
@@ -1400,7 +1439,11 @@ const loadScdIndexMacroNames = async (): Promise<string[]> => {
     ?.entry;
   const names = (entries ?? [])
     .map((entry) => normalizeText(entry?.name).trim())
-    .filter((name) => name.startsWith("index_"));
+    // The effective macros endpoint can include globally exported helpers such
+    // as index_thruput(1). Only zero-argument routing macros are valid in the
+    // generated tstats predicate; invoking a parameterized helper by its stanza
+    // name passes the argument count ("1") and fails macro validation.
+    .filter((name) => /^index_[A-Za-z0-9_]+$/.test(name));
 
   return names.length
     ? Array.from(new Set(names)).sort()
@@ -1475,26 +1518,22 @@ const CORE_DATA_MODEL_REQUIREMENTS_BY_ID = new Map(
   ]),
 );
 
-const dataModelLabel = (app: string, model: string): string =>
-  CORE_DATA_MODEL_REQUIREMENTS_BY_ID.get(`${app}:${model}`)?.label ||
-  model.replace(/_/g, " ").replace(/\bnexus\b/gi, "Nexus");
-
 const parseDataModelAcceleration = (
   row: Record<string, unknown>,
+  requirementsById: ReadonlyMap<string, DataModelRequirement> =
+    CORE_DATA_MODEL_REQUIREMENTS_BY_ID,
 ): DataModelAcceleration | null => {
   const app = normalizeText(row.app).trim();
   const model = normalizeText(row.title).trim();
   if (!app || !model) return null;
 
   const id = `${app}:${model}`;
+  const requirement = requirementsById.get(id);
+  if (!requirement) return null;
   const disabled = isTrueConfigValue(row.disabled);
   const enabled = isTrueConfigValue(row.acceleration) && !disabled;
   return {
-    key: id,
-    label: dataModelLabel(app, model),
-    app,
-    model,
-    priority: REQUIRED_DATA_MODEL_KEYS.has(id) ? "required" : "recommended",
+    ...requirement,
     state: enabled ? "enabled" : "disabled",
     earliestTime: normalizeText(row.earliest_time).trim(),
     allowOldSummaries: isTrueConfigValue(row.allow_old_summaries),
@@ -1508,14 +1547,22 @@ const parseDataModelAcceleration = (
 
 const buildDataModelAccelerationInventory = (
   rows: Record<string, unknown>[],
+  requirements: readonly DataModelRequirement[] =
+    CORE_DATA_MODEL_REQUIREMENTS,
 ): DataModelAcceleration[] => {
+  const requirementsById = new Map(
+    requirements.map((requirement) => [
+      dataModelRequirementId(requirement),
+      requirement,
+    ]),
+  );
   const inventoryById = new Map<string, DataModelAcceleration>();
   rows.forEach((row) => {
-    const item = parseDataModelAcceleration(row);
+    const item = parseDataModelAcceleration(row, requirementsById);
     if (item) inventoryById.set(dataModelRequirementId(item), item);
   });
 
-  CORE_DATA_MODEL_REQUIREMENTS.forEach((requirement) => {
+  requirements.forEach((requirement) => {
     const id = dataModelRequirementId(requirement);
     if (inventoryById.has(id)) return;
     inventoryById.set(id, {
@@ -1731,14 +1778,14 @@ function FieldPills({
 
   if (variant === "plain") {
     return (
-      <div>
+      <div className="min-w-0 max-w-full overflow-hidden">
         <ul
           id={valuesId}
-          className="m-0 flex list-none flex-wrap gap-x-3 gap-y-1 p-0"
+          className="m-0 flex min-w-0 max-w-full list-none flex-wrap gap-x-3 gap-y-1 overflow-hidden p-0"
         >
           {visible.map((value, index) => (
-            <li key={value} className="min-w-0">
-              <span className="break-words font-mono text-xs leading-5 sui-color-default">
+            <li key={value} className="min-w-0 max-w-full">
+              <span className="break-all font-mono text-xs leading-5 sui-color-default">
                 {value}{index < visible.length - 1 ? "," : ""}
               </span>
             </li>
@@ -1758,11 +1805,15 @@ function FieldPills({
   }
 
   return (
-    <div id={valuesId} className="flex flex-wrap gap-1.5">
+    <div
+      id={valuesId}
+      className="flex min-w-0 max-w-full flex-wrap gap-1.5 overflow-hidden"
+    >
       {visible.map((value) => (
         <span
           key={value}
-          className={`max-w-[220px] truncate rounded border px-2 py-0.5 font-mono text-xs ${classes}`}
+          className={`min-w-0 truncate rounded border px-2 py-0.5 font-mono text-xs ${classes}`}
+          style={{ maxWidth: "min(220px, 100%)" }}
           title={value}
         >
           {value}
@@ -2012,10 +2063,40 @@ const SetupCompactStepLabel = styled.span`
   letter-spacing: 0.06em;
 `;
 
-const SetupHorizontalStepBar = styled.div`
+const SetupCompactCurrentStep = styled.div`
+  display: grid;
   min-inline-size: 0;
-  overflow-x: auto;
-  padding-block: ${variables.spacingXSmall};
+  justify-items: center;
+  gap: ${variables.spacingXSmall};
+  padding: ${variables.spacingXSmall} ${variables.spacingSmall};
+  border: ${variables.inputBorderWidth} solid var(--scd-setup-border);
+  border-radius: ${variables.borderRadius};
+  background: var(--scd-setup-panel-secondary);
+  text-align: center;
+`;
+
+const SetupCompactStepBar = styled.div`
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow: hidden;
+`;
+
+const SetupCompactCurrentKicker = styled(SetupCompactStepLabel)`
+  color: var(--scd-setup-info);
+  line-height: ${variables.lineHeightSnug};
+  text-transform: uppercase;
+`;
+
+const SetupCompactCurrentLabel = styled.span`
+  display: block;
+  max-inline-size: 100%;
+  overflow: hidden;
+  color: var(--scd-setup-text);
+  font-size: ${variables.fontSizeLarge};
+  font-weight: ${variables.fontWeightBold};
+  line-height: ${variables.lineHeightSnug};
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `;
 
 const SetupProgressCompact = styled.div`
@@ -2073,6 +2154,12 @@ function SetupProgressRail({
       {label}
     </StepBar.Step>
   ));
+  const compactSteps = SETUP_FLOW_STEPS.map((label, index) => (
+    <StepBar.Step key={label} stepId={index}>
+      <span aria-hidden="true">{index + 1}</span>
+      <ScreenReaderContent>{label}</ScreenReaderContent>
+    </StepBar.Step>
+  ));
 
   return (
     <SetupProgressSidebar
@@ -2095,9 +2182,19 @@ function SetupProgressRail({
         <SetupCompactStepLabel aria-hidden="true" className="scd-setup__compact-label">
           START
         </SetupCompactStepLabel>
-        <SetupHorizontalStepBar className="scd-setup__stepbar-horizontal">
-          <StepBar activeStepId={activeStepId}>{steps}</StepBar>
-        </SetupHorizontalStepBar>
+        <SetupCompactCurrentStep
+          className="scd-setup__compact-current"
+        >
+          <SetupCompactStepBar className="scd-setup__stepbar-compact">
+            <StepBar activeStepId={activeStepId}>{compactSteps}</StepBar>
+          </SetupCompactStepBar>
+          <SetupCompactCurrentKicker>
+            Step {activeStepId + 1} of {SETUP_FLOW_STEPS.length}
+          </SetupCompactCurrentKicker>
+          <SetupCompactCurrentLabel>
+            {SETUP_FLOW_STEPS[activeStepId]}
+          </SetupCompactCurrentLabel>
+        </SetupCompactCurrentStep>
         <SetupCompactStepLabel aria-hidden="true" className="scd-setup__compact-label">
           FINISH
         </SetupCompactStepLabel>
@@ -2111,6 +2208,8 @@ type SetupFlowShellProps = {
   title: string;
   description: string;
   status: string;
+  pendingChangeCount?: number;
+  pendingChangeDetail?: string;
   surfaceRef: React.RefObject<HTMLElement>;
   headingRef: React.RefObject<HTMLHeadingElement>;
   children: React.ReactNode;
@@ -2134,11 +2233,49 @@ const SetupThemeControl = styled.div`
   white-space: nowrap;
 `;
 
+const SetupHeaderTools = styled.div`
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: ${variables.spacingLarge};
+`;
+
+const SetupDraftSummary = styled.div`
+  display: grid;
+  min-inline-size: 0;
+  justify-items: end;
+  gap: ${variables.spacingXSmall};
+  color: var(--scd-setup-default);
+  text-align: end;
+
+  > div {
+    display: flex;
+    align-items: center;
+    gap: ${variables.spacingSmall};
+    font-size: ${variables.fontSizeSmall};
+    font-weight: ${variables.fontWeightBold};
+  }
+
+  small {
+    max-inline-size: ${variables.lineLengthMinimum};
+    color: var(--scd-setup-muted);
+    font-size: ${variables.fontSizeSmall};
+    line-height: ${variables.lineHeightSnug};
+  }
+`;
+
+const SetupRerunModal = styled(Modal)`
+  width: min(540px, calc(100vw - ${variables.spacingXXLarge}));
+`;
+
 function SetupFlowShell({
   activeStep,
   title,
   description,
   status,
+  pendingChangeCount,
+  pendingChangeDetail,
   surfaceRef,
   headingRef,
   children,
@@ -2182,22 +2319,41 @@ function SetupFlowShell({
                   {description}
                 </p>
               </div>
-              {canChooseColorScheme ? (
-                <SetupThemeControl>
-                  {darkMode ? (
-                    <Sun aria-hidden="true" size={16} />
-                  ) : (
-                    <Moon aria-hidden="true" size={16} />
-                  )}
-                  <Switch
-                    appearance="toggle"
-                    selected={!darkMode}
-                    onClick={() => setColorScheme(darkMode ? "light" : "dark")}
+              <SetupHeaderTools className="scd-setup__header-tools">
+                {typeof pendingChangeCount === "number" ? (
+                  <SetupDraftSummary
+                    className="scd-setup__draft-summary"
                   >
-                    Light mode
-                  </Switch>
-                </SetupThemeControl>
-              ) : null}
+                    <div>
+                      <span>Draft plan</span>
+                      <Badge
+                        label={
+                          pendingChangeCount
+                            ? `${pendingChangeCount} pending`
+                            : "No changes"
+                        }
+                      />
+                    </div>
+                    <small>
+                      {pendingChangeCount
+                        ? pendingChangeDetail || "Nothing is saved until Step 6 confirmation."
+                        : "Nothing is queued to save."}
+                    </small>
+                  </SetupDraftSummary>
+                ) : null}
+                {canChooseColorScheme ? (
+                  <SetupThemeControl>
+                    <Sun aria-hidden="true" size={16} />
+                    <Switch
+                      appearance="toggle"
+                      selected={!darkMode}
+                      onClick={() => setColorScheme(darkMode ? "light" : "dark")}
+                    >
+                      Light mode
+                    </Switch>
+                  </SetupThemeControl>
+                ) : null}
+              </SetupHeaderTools>
             </div>
           </header>
           <div className="scd-setup__content min-h-0 min-w-0 overflow-auto px-5 py-5 sm:px-7 lg:px-10">
@@ -2271,6 +2427,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
       ? ""
       : window.location.hash.replace(/^#/, ""),
   );
+  const applicableDataModelRequirements = useMemo(
+    () =>
+      selectApplicableDataModelRequirements(
+        CORE_DATA_MODEL_REQUIREMENTS,
+        setupMode ? readDetectedSetupCapabilityIds() : null,
+      ),
+    [setupMode],
+  );
   const [rows, setRows] = useState<EditableMacroRow[]>([]);
   const [cimRows, setCimRows] = useState<EditableMacroRow[]>([]);
   const [scanState, setScanState] = useState<ScanState>("idle");
@@ -2329,7 +2493,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
   const [dataModelReadiness, setDataModelReadiness] = useState<
     DataModelAcceleration[]
   >(() =>
-    CORE_DATA_MODEL_REQUIREMENTS.map((requirement) => ({
+    applicableDataModelRequirements.map((requirement) => ({
       ...requirement,
       state: "checking",
       earliestTime: "",
@@ -2341,14 +2505,25 @@ export default function MacroIndexTuningPage(): JSX.Element {
   const [setupComplete, setSetupComplete] = useState(false);
   const [showFinishConfirmation, setShowFinishConfirmation] = useState(false);
   const [setupEditor, setSetupEditor] = useState<SetupEditorState | null>(null);
+  const [setupRerunScope, setSetupRerunScope] =
+    useState<SetupRerunScope | null>(null);
+  const [appInventoryState, setAppInventoryState] =
+    useState<InventoryLoadState>("loading");
   const abortRef = useRef<AbortController | null>(null);
   const cimAbortRef = useRef<AbortController | null>(null);
+  const cimRowLoadRequestRef = useRef(0);
+  const hasVerifiedAppInventoryRef = useRef(false);
+  const setupRoutingScanStartedRef = useRef(false);
   const searchSplRef = useRef<string>("");
   const macroPreviewRef = useRef<HTMLTextAreaElement>(null);
   const setupSurfaceRef = useRef<HTMLElement>(null);
   const setupHeadingRef = useRef<HTMLHeadingElement>(null);
   const finishSetupButtonRef = useRef<HTMLButtonElement | null>(null);
   const setupEditButtonRef = useRef<HTMLButtonElement | null>(null);
+  const routingScanButtonRef = useRef<HTMLButtonElement | null>(null);
+  const cimScanButtonRef = useRef<HTMLButtonElement | null>(null);
+  const setupRerunReturnFocusRef = useRef<HTMLButtonElement | null>(null);
+  const setupRerunScopeRef = useRef<SetupRerunScope>("routing");
   const setupEditButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const setupEditButtonKeyRef = useRef("");
   const returnSetupEditorFocus = useCallback(() => {
@@ -2369,7 +2544,16 @@ export default function MacroIndexTuningPage(): JSX.Element {
     if (!setupMode) {
       return undefined;
     }
-    const updateRoute = () => setSetupRoute(window.location.hash.replace(/^#/, ""));
+    const updateRoute = () => {
+      const nextRoute = window.location.hash.replace(/^#/, "");
+      if (
+        nextRoute === "tune-indexes" &&
+        !setupRoutingScanStartedRef.current
+      ) {
+        setAppInventoryState("loading");
+      }
+      setSetupRoute(nextRoute);
+    };
     window.addEventListener("hashchange", updateRoute);
     return () => window.removeEventListener("hashchange", updateRoute);
   }, [setupMode]);
@@ -2481,20 +2665,33 @@ export default function MacroIndexTuningPage(): JSX.Element {
     void loadInstalledAppIds()
       .then((appIds) => {
         if (disposed) return;
-        setInstalledAppIds(appIds);
+        hasVerifiedAppInventoryRef.current = true;
+        setInstalledAppIds((currentAppIds) => {
+          const inventoryUnchanged =
+            currentAppIds.size === appIds.size &&
+            [...currentAppIds].every((appId) => appIds.has(appId));
+          return inventoryUnchanged ? currentAppIds : appIds;
+        });
         setAppInventoryError("");
+        setAppInventoryState("ready");
       })
       .catch(() => {
         if (disposed) return;
-        setInstalledAppIds(new Set([APP_NAME]));
+        const hasVerifiedInventory = hasVerifiedAppInventoryRef.current;
+        if (!hasVerifiedInventory) {
+          setInstalledAppIds(new Set([APP_NAME]));
+        }
+        setAppInventoryState("error");
         setAppInventoryError(
-          "Companion apps could not be verified, so their macro definitions are hidden.",
+          hasVerifiedInventory
+            ? "Companion apps could not be refreshed. The last verified app inventory and existing draft definitions are preserved."
+            : "Companion apps could not be verified, so their macro definitions are hidden.",
         );
       });
     return () => {
       disposed = true;
     };
-  }, []);
+  }, [setupMode, setupRoute]);
 
   useEffect(() => {
     if (
@@ -2685,13 +2882,42 @@ export default function MacroIndexTuningPage(): JSX.Element {
     () => new Set(setupChanges.map((change) => change.targetApp)).size,
     [setupChanges],
   );
+  const setupPendingChangeDetail = useMemo(() => {
+    const parts = [
+      setupRoutingChangesToSave.length
+        ? `${setupRoutingChangesToSave.length} routing`
+        : "",
+      setupCimChangesToSave.length
+        ? `${setupCimChangesToSave.length} CIM`
+        : "",
+      shouldSaveAdhocDefinition ? "1 performance" : "",
+    ].filter(Boolean);
+    return parts.length
+      ? `${parts.join(" · ")} · Not saved until Step 6 confirmation.`
+      : "Nothing is queued to save.";
+  }, [
+    setupCimChangesToSave.length,
+    setupRoutingChangesToSave.length,
+    shouldSaveAdhocDefinition,
+  ]);
+  useEffect(() => {
+    if (!setupMode || setupComplete || setupChanges.length === 0) {
+      return undefined;
+    }
+    const preventDraftLoss = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", preventDraftLoss);
+    return () => window.removeEventListener("beforeunload", preventDraftLoss);
+  }, [setupChanges.length, setupComplete, setupMode]);
   const summariesOnlyEnabled = usesSummariesOnly(adhocDefinition);
   const requiredDataModels = dataModelReadiness.filter(
     (item) => item.priority === "required",
   );
   const allRequiredDataModelsAccelerated =
     requiredDataModels.length ===
-      CORE_DATA_MODEL_REQUIREMENTS.filter(
+      applicableDataModelRequirements.filter(
         (requirement) => requirement.priority === "required",
       ).length && requiredDataModels.every((item) => item.state === "enabled");
   const accelerationCheckInProgress = dataModelReadiness.some(
@@ -2943,10 +3169,20 @@ export default function MacroIndexTuningPage(): JSX.Element {
           ...row,
           draftDefinition: row.definition,
         }));
+      if (abortRef.current !== controller) return;
       setRows([...expectedRows, ...extraRows]);
       setScanState("ready");
+      abortRef.current = null;
     } catch (err) {
-      if (isAbortError(err)) return;
+      if (isAbortError(err)) {
+        if (abortRef.current === controller) {
+          abortRef.current = null;
+          setScanState("idle");
+        }
+        return;
+      }
+      if (abortRef.current !== controller) return;
+      abortRef.current = null;
       setScanState("error");
       setRows([]);
       setError(err instanceof Error ? err.message : String(err));
@@ -2959,28 +3195,79 @@ export default function MacroIndexTuningPage(): JSX.Element {
   ]);
 
   useEffect(() => {
-    if (!setupMode || setupRoute === "tune-indexes") void runScan();
-    return () => {
+    if (!setupMode) {
+      void runScan();
+    } else if (
+      setupRoute === "tune-indexes" &&
+      appInventoryState !== "loading" &&
+      !setupRoutingScanStartedRef.current
+    ) {
+      setupRoutingScanStartedRef.current = true;
+      void runScan();
+    }
+  }, [appInventoryState, runScan, setupMode, setupRoute]);
+
+  useEffect(() => {
+    if (!setupMode || setupRoute === "tune-indexes") return;
+    const controller = abortRef.current;
+    abortRef.current = null;
+    controller?.abort();
+    setScanState((currentState) =>
+      currentState === "loading" ? "idle" : currentState,
+    );
+  }, [setupMode, setupRoute]);
+
+  useEffect(
+    () => () => {
       abortRef.current?.abort();
-    };
-  }, [runScan, setupMode, setupRoute]);
+    },
+    [],
+  );
 
   const loadCimMacroRows = useCallback(async () => {
+    const requestId = ++cimRowLoadRequestRef.current;
     if (!isTargetAppInstalled(CIM_APP_NAME)) {
-      setCimRows([]);
+      setCimRows((currentRows) =>
+        currentRows.some((row) =>
+          definitionChanged(row.definition, row.draftDefinition),
+        )
+          ? currentRows
+          : [],
+      );
       setCimScanState("idle");
       setCimBulkSaveStatus({ state: "idle" });
       return;
     }
-    const currentDetails = await loadMacroDetailsByConfig(CIM_MACRO_CONFIGS);
-    setCimRows(
-      buildExpectedEditableRows(CIM_MACRO_CONFIGS, [], currentDetails),
-    );
-    setCimBulkSaveStatus({ state: "idle" });
+    try {
+      const currentDetails = await loadMacroDetailsByConfig(CIM_MACRO_CONFIGS);
+      if (cimRowLoadRequestRef.current !== requestId) return;
+      const loadedRows = buildExpectedEditableRows(
+        CIM_MACRO_CONFIGS,
+        [],
+        currentDetails,
+      );
+      setCimRows((currentRows) =>
+        currentRows.some((row) =>
+          definitionChanged(row.definition, row.draftDefinition),
+        )
+          ? currentRows
+          : loadedRows,
+      );
+      setCimError("");
+      setCimBulkSaveStatus({ state: "idle" });
+    } catch (err) {
+      if (cimRowLoadRequestRef.current !== requestId) return;
+      setCimError(
+        err instanceof Error
+          ? err.message
+          : "Current CIM allowlists could not be loaded.",
+      );
+    }
   }, [isTargetAppInstalled]);
 
   const runCimDiscovery = useCallback(async () => {
     if (isCimBulkSaving || !isTargetAppInstalled(CIM_APP_NAME)) return;
+    cimRowLoadRequestRef.current += 1;
     cimAbortRef.current?.abort();
     const controller = new AbortController();
     cimAbortRef.current = controller;
@@ -3008,12 +3295,22 @@ export default function MacroIndexTuningPage(): JSX.Element {
       const parsed = ((result.results || []) as Record<string, unknown>[])
         .map((row) => parseSearchResult(row, macroConfigByName))
         .filter((row): row is MacroRow => Boolean(row));
+      if (cimAbortRef.current !== controller) return;
       setCimRows(
         buildExpectedEditableRows(CIM_MACRO_CONFIGS, parsed, currentDetails),
       );
       setCimScanState("ready");
+      cimAbortRef.current = null;
     } catch (err) {
-      if (isAbortError(err)) return;
+      if (isAbortError(err)) {
+        if (cimAbortRef.current === controller) {
+          cimAbortRef.current = null;
+          setCimScanState("idle");
+        }
+        return;
+      }
+      if (cimAbortRef.current !== controller) return;
+      cimAbortRef.current = null;
       setCimScanState("error");
       setCimError(err instanceof Error ? err.message : String(err));
     }
@@ -3025,12 +3322,69 @@ export default function MacroIndexTuningPage(): JSX.Element {
     macroConfigByName,
   ]);
 
+  const requestRoutingScan = useCallback(() => {
+    if (setupMode && setupRoutingChangesToSave.length > 0) {
+      setupRerunReturnFocusRef.current = routingScanButtonRef.current;
+      setupRerunScopeRef.current = "routing";
+      setSetupRerunScope("routing");
+      return;
+    }
+    void runScan();
+  }, [runScan, setupMode, setupRoutingChangesToSave.length]);
+
+  const requestCimDiscovery = useCallback(() => {
+    if (setupMode && setupCimChangesToSave.length > 0) {
+      setupRerunReturnFocusRef.current = cimScanButtonRef.current;
+      setupRerunScopeRef.current = "cim";
+      setSetupRerunScope("cim");
+      return;
+    }
+    void runCimDiscovery();
+  }, [runCimDiscovery, setupCimChangesToSave.length, setupMode]);
+
+  const confirmSetupRerun = useCallback(() => {
+    const confirmedScope = setupRerunScope ?? setupRerunScopeRef.current;
+    setSetupRerunScope(null);
+    if (confirmedScope === "routing") {
+      setRows((currentRows) =>
+        currentRows.map((row) => ({
+          ...row,
+          draftDefinition: row.definition,
+        })),
+      );
+      void runScan();
+    } else if (confirmedScope === "cim") {
+      setCimRows((currentRows) =>
+        currentRows.map((row) => ({
+          ...row,
+          draftDefinition: row.definition,
+        })),
+      );
+      void runCimDiscovery();
+    }
+  }, [runCimDiscovery, runScan, setupRerunScope]);
+
   useEffect(() => {
     void loadCimMacroRows();
-    return () => {
-      cimAbortRef.current?.abort();
-    };
   }, [loadCimMacroRows]);
+
+  useEffect(() => {
+    if (!setupMode || setupRoute === "tune-cim") return;
+    const controller = cimAbortRef.current;
+    cimAbortRef.current = null;
+    controller?.abort();
+    setCimScanState((currentState) =>
+      currentState === "loading" ? "idle" : currentState,
+    );
+  }, [setupMode, setupRoute]);
+
+  useEffect(
+    () => () => {
+      cimRowLoadRequestRef.current += 1;
+      cimAbortRef.current?.abort();
+    },
+    [],
+  );
 
   const loadAdhocMacro = useCallback(async () => {
     setAdhocStatus({ state: "saving", message: "Loading current macro" });
@@ -3061,7 +3415,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
 
   const checkDataModelAcceleration = useCallback(async () => {
     setDataModelReadiness(
-      CORE_DATA_MODEL_REQUIREMENTS.map((requirement) => ({
+      applicableDataModelRequirements.map((requirement) => ({
         ...requirement,
         state: "checking",
         earliestTime: "",
@@ -3081,12 +3435,13 @@ export default function MacroIndexTuningPage(): JSX.Element {
       setDataModelReadiness(
         buildDataModelAccelerationInventory(
           (result.results || []) as Record<string, unknown>[],
+          applicableDataModelRequirements,
         ),
       );
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setDataModelReadiness(
-        CORE_DATA_MODEL_REQUIREMENTS.map((requirement) => ({
+        applicableDataModelRequirements.map((requirement) => ({
           ...requirement,
           state: "error" as const,
           earliestTime: "",
@@ -3095,7 +3450,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
         })),
       );
     }
-  }, []);
+  }, [applicableDataModelRequirements]);
 
   useEffect(() => {
     void checkDataModelAcceleration();
@@ -3193,6 +3548,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
   }, [cimRowsToSave, isCimBulkSaving, saveOne]);
 
   const finishInitialSetup = useCallback(async () => {
+    if (integratedSetupView && scanState !== "ready") {
+      setSetupStatus({
+        state: "error",
+        message:
+          "Return to Configure data and complete the routing scan before finishing setup.",
+      });
+      return;
+    }
     if (summariesOnlyBlocked) {
       setSetupStatus({
         state: "error",
@@ -3313,10 +3676,15 @@ export default function MacroIndexTuningPage(): JSX.Element {
       }
 
       if (failedMacros.length) {
+        const savedMacroCount = setupChanges.length - failedMacros.length;
         throw new Error(
-          `Setup could not save ${failedMacros.length} macro${
-            failedMacros.length === 1 ? "" : "s"
-          }. Setup was not marked complete; review the highlighted rows and retry.`,
+          savedMacroCount > 0
+            ? `Setup partially saved: ${savedMacroCount} macro${
+                savedMacroCount === 1 ? " was" : "s were"
+              } saved and ${failedMacros.length} failed. Setup was not marked complete; review the highlighted rows and retry the remaining changes.`
+            : `Setup could not save ${failedMacros.length} macro${
+                failedMacros.length === 1 ? "" : "s"
+              }. Setup was not marked complete; review the highlighted rows and retry.`,
         );
       }
 
@@ -3341,8 +3709,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
     adhocDefinition,
     adhocDescription,
     cimScanState,
+    integratedSetupView,
     scanState,
     setupCimChangesToSave,
+    setupChanges.length,
     setupRoutingChangesToSave,
     shouldSaveAdhocDefinition,
     summariesOnlyBlocked,
@@ -3362,6 +3732,33 @@ export default function MacroIndexTuningPage(): JSX.Element {
     window.location.hash = route;
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
+
+  useEffect(() => {
+    if (
+      !setupMode ||
+      scanState === "ready" ||
+      !["tune-cim", "review"].includes(setupRoute)
+    ) {
+      return;
+    }
+    setSetupStatus({
+      state: "error",
+      message: SETUP_ROUTE_GUARD_MESSAGE,
+    });
+    window.history.replaceState(null, "", "#tune-indexes");
+    setSetupRoute("tune-indexes");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [scanState, setupMode, setupRoute]);
+
+  useEffect(() => {
+    if (scanState !== "ready") return;
+    setSetupStatus((current) =>
+      current.state === "error" &&
+      current.message === SETUP_ROUTE_GUARD_MESSAGE
+        ? { state: "idle" }
+        : current,
+    );
+  }, [scanState]);
 
   const saveAdhocMacro = useCallback(async () => {
     const definition = adhocDefinition.trim();
@@ -3604,8 +4001,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
               }`}
             >
               {definitionChanged(row.definition, row.draftDefinition)
-                ? "Pending review"
-                : "No change"}
+                ? "Will change"
+                : "Unchanged"}
             </span>
           ) : (
             <Button
@@ -3852,20 +4249,23 @@ export default function MacroIndexTuningPage(): JSX.Element {
           </div>
         </Table.Cell>
         <Table.Cell>
-          <span title={row.definition || "Not set"}>
+          <span
+            className="block min-w-0 max-w-full truncate"
+            title={row.definition || "Not set"}
+          >
             {formatCimAllowlistSummary(row.definition)}
           </span>
         </Table.Cell>
         <Table.Cell>
-          <div className="grid min-w-0 gap-2">
-            <div>
-              <div className="break-words text-sm font-semibold sui-color-active">
+          <div className="grid min-w-0 max-w-full gap-2 overflow-hidden">
+            <div className="min-w-0 max-w-full overflow-hidden">
+              <div className="min-w-0 max-w-full break-words text-sm font-semibold sui-color-active">
                 {selectionSummary}
               </div>
-              <div className="mt-1 flex min-w-0 items-baseline gap-1 text-xs leading-5 sui-color-muted">
+              <div className="mt-1 grid min-w-0 max-w-full grid-cols-[auto_minmax(0,1fr)] items-baseline gap-1 overflow-hidden text-xs leading-5 sui-color-muted">
                 <span className="shrink-0">Generated:</span>
                 <code
-                  className="min-w-0 truncate font-mono sui-color-default"
+                  className="block min-w-0 max-w-full truncate font-mono sui-color-default"
                   title={row.draftDefinition || "Not set"}
                 >
                   {row.draftDefinition || "Not set"}
@@ -3883,13 +4283,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
               changed ? "sui-color-info" : "sui-color-muted"
             }`}
           >
-            {changed ? "Pending review" : "No change"}
+            {changed ? "Will change" : "Unchanged"}
           </span>
         </Table.Cell>
         <Table.Cell align="right">
           <Button
             appearance="standalone"
             aria-label={`Browse indexes for ${getCimModelLabel(row.macro)}`}
+            disabled={isCimLoading ? "dimmed" : false}
             elementRef={(element) => {
               if (element) {
                 setupEditButtonRefs.current.set(
@@ -3950,7 +4351,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           </div>
         </Table.Cell>
         <Table.Cell>
-          <code className="block break-words whitespace-normal font-mono text-xs leading-5 sui-color-active">
+          <code className="block min-w-0 max-w-full overflow-hidden break-words whitespace-normal font-mono text-xs leading-5 sui-color-active">
             {row.draftDefinition || "—"}
           </code>
         </Table.Cell>
@@ -3967,12 +4368,13 @@ export default function MacroIndexTuningPage(): JSX.Element {
               changed ? "sui-color-info" : "sui-color-muted"
             }`}
           >
-            {changed ? "Pending review" : "No change"}
+            {changed ? "Will change" : "Unchanged"}
           </span>
         </Table.Cell>
         <Table.Cell align="right">
           <Button
             appearance="standalone"
+            disabled={scanState === "loading" ? "dimmed" : false}
             elementRef={(element) => {
               if (element) {
                 setupEditButtonRefs.current.set(
@@ -4164,10 +4566,56 @@ export default function MacroIndexTuningPage(): JSX.Element {
               }
               closeSetupEditor(false);
             }}
-            label="Use proposal"
+            label="Apply to draft plan"
           />
         </Modal.Footer>
       </Modal>
+    );
+  };
+
+  const renderSetupRerunConfirmation = () => {
+    const rerunScope = setupRerunScope ?? setupRerunScopeRef.current;
+    const isRoutingRerun = rerunScope === "routing";
+    const changeCount = isRoutingRerun
+      ? setupRoutingChangesToSave.length
+      : setupCimChangesToSave.length;
+    const changeLabel = isRoutingRerun
+      ? `routing macro change${changeCount === 1 ? "" : "s"}`
+      : `CIM allowlist change${changeCount === 1 ? "" : "s"}`;
+
+    return (
+      <SetupRerunModal
+        open={Boolean(setupRerunScope)}
+        onRequestClose={() => setSetupRerunScope(null)}
+        returnFocus={setupRerunReturnFocusRef}
+      >
+        <Modal.Header
+          title={`Replace ${isRoutingRerun ? "routing" : "CIM"} draft changes?`}
+        />
+        <Modal.Body>
+          <p>
+            Running a new {isRoutingRerun ? "routing scan" : "CIM discovery"}
+            {" "}will discard {changeCount} unsaved {changeLabel} and rebuild
+            that part of the draft plan using the selected time range.
+          </p>
+          <p className="mt-3">
+            Your other draft choices will remain unchanged. Running discovery
+            does not save any settings.
+          </p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            appearance="secondary"
+            onClick={() => setSetupRerunScope(null)}
+            label="Keep draft changes"
+          />
+          <Button
+            appearance="destructive"
+            onClick={confirmSetupRerun}
+            label="Discard changes and rerun"
+          />
+        </Modal.Footer>
+      </SetupRerunModal>
     );
   };
 
@@ -4286,11 +4734,27 @@ export default function MacroIndexTuningPage(): JSX.Element {
   }
 
   if (setupMode && setupRoute === "tune-indexes") {
-    const setupScanInProgress = scanState === "loading";
+    const setupScanPreparing =
+      appInventoryState === "loading" && scanState === "idle";
+    const setupScanInProgress = setupScanPreparing || scanState === "loading";
     const setupScanReady = scanState === "ready";
-    let routingStatus = `${setupRowsToSave.length} routing macro${
-      setupRowsToSave.length === 1 ? "" : "s"
-    } will be carried into review.`;
+    const initialPerformanceLabel = usesSummariesOnly(initialAdhocDefinition)
+      ? "Accelerated only"
+      : "Balanced";
+    const selectedPerformanceLabel = summariesOnlyEnabled
+      ? "Accelerated only"
+      : "Balanced";
+    let routingStatus = setupRoutingChangesToSave.length
+      ? `${setupRoutingChangesToSave.length} routing macro${
+          setupRoutingChangesToSave.length === 1 ? "" : "s"
+        } will change.`
+      : `${setupRowsToSave.length} routing macro${
+          setupRowsToSave.length === 1 ? "" : "s"
+        } matched; no routing definitions will change.`;
+    if (shouldSaveAdhocDefinition) {
+      routingStatus += " Search performance will also change.";
+    }
+    routingStatus += " Nothing is saved yet.";
     if (setupScanInProgress) {
       routingStatus = "The automatic routing scan is still running.";
     } else if (scanState === "error") {
@@ -4318,6 +4782,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
         });
         return;
       }
+      if (!setupScanReady) {
+        setSetupStatus({
+          state: "error",
+          message:
+            "The routing scan must finish successfully before you continue. Retry the scan above.",
+        });
+        return;
+      }
       if (summariesOnlyBlocked) {
         setSetupStatus({
           state: "error",
@@ -4335,6 +4807,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
         title="Configure data"
         description="Confirm the detected index routing and choose how dashboard searches should run."
         status={routingStatus}
+        pendingChangeCount={setupChanges.length}
+        pendingChangeDetail={setupPendingChangeDetail}
         surfaceRef={setupSurfaceRef}
         headingRef={setupHeadingRef}
         actions={(
@@ -4348,6 +4822,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
             <Button
               onClick={continueToCim}
               appearance="primary"
+              aria-describedby="scd-routing-scan-guidance"
               label="Continue to CIM"
             />
           </>
@@ -4360,25 +4835,46 @@ export default function MacroIndexTuningPage(): JSX.Element {
           </Message>
         ) : null}
 
-        <section
-          aria-live="polite"
-          className="rounded-md border sui-border-weak sui-bg-section px-4 py-4"
-        >
+        <section className="rounded-md border sui-border-weak sui-bg-section px-4 py-4">
           <div className="scd-setup__scan-controls grid gap-4">
-            <div>
-              <Message type={setupScanInProgress ? "info" : "success"}>
-                {setupScanInProgress
-                  ? "Scanning routing data…"
-                  : "Routing scan complete"}
+            <div role="status" aria-live="polite" aria-atomic="true">
+              <Message
+                type={
+                  scanState === "error"
+                    ? "warning"
+                    : setupScanInProgress
+                      ? "info"
+                      : "success"
+                }
+              >
+                {setupScanPreparing
+                  ? "Preparing routing scan…"
+                  : setupScanInProgress
+                    ? "Scanning routing data…"
+                    : scanState === "error"
+                      ? "Routing scan did not complete"
+                      : setupScanReady
+                        ? "Routing scan complete"
+                        : "Routing scan ready"}
               </Message>
-              <p className="mt-1 max-w-3xl text-xs leading-5 sui-color-default">
-                {setupScanInProgress
-                  ? "This can take several minutes. Routing proposals below will update when the scan finishes."
-                  : "Rerun the scan whenever you need fresh routing proposals."}
+              <p
+                id="scd-routing-scan-guidance"
+                className="mt-1 max-w-3xl text-xs leading-5 sui-color-default"
+              >
+                {setupScanPreparing
+                  ? "Loading the installed app inventory before Cisco routing data is scanned."
+                  : setupScanInProgress
+                    ? "This can take several minutes. Routing proposals below will update when the scan finishes."
+                    : scanState === "error"
+                      ? "Review the error below and run the scan again before continuing."
+                      : setupScanReady
+                        ? "Rerun the scan whenever you need fresh routing proposals."
+                        : "Run the scan to build routing proposals for this environment."}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <TimeRangeDropdown
+                aria-label="Routing scan range"
                 earliest={timeRange.earliest}
                 latest={timeRange.latest}
                 onChange={handleFastTimeRangeChange}
@@ -4391,7 +4887,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 labelMaxChars={24}
               />
               <Button
-                onClick={runScan}
+                elementRef={routingScanButtonRef}
+                onClick={requestRoutingScan}
                 appearance="primary"
                 disabled={setupScanInProgress ? "dimmed" : false}
                 icon={setupScanInProgress ? (
@@ -4429,7 +4926,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
             </div>
           </div>
           {[
-            [setupRowsToSave.length, "Macros"],
+            [setupRowsToSave.length, "Matched"],
+            [setupRoutingChangesToSave.length, "Will change"],
             [setupIndexValueCount, "Indexes"],
             [unknownSourcetypeGroups, "Unmapped"],
           ].map(([value, label]) => (
@@ -4471,11 +4969,20 @@ export default function MacroIndexTuningPage(): JSX.Element {
           <div className="mt-3">
             <Message
               appearance="fill"
-              type={summariesOnlyBlocked ? "error" : "success"}
+              type={
+                summariesOnlyBlocked
+                  ? "error"
+                  : shouldSaveAdhocDefinition
+                    ? "info"
+                    : "success"
+              }
             >
+              {shouldSaveAdhocDefinition
+                ? `Will change: ${initialPerformanceLabel} → ${selectedPerformanceLabel}. `
+                : `Unchanged: ${selectedPerformanceLabel}. `}
               {summariesOnlyEnabled
                 ? `${acceleratedRequiredModels} of ${requiredDataModels.length} required data models are accelerated.`
-                : "Balanced mode is ready with no extra action."}
+                : "Raw-event fallback remains available."}
             </Message>
             <div className="mt-2">
               <CollapsiblePanel
@@ -4537,7 +5044,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           inset={false}
           title={`Review ${setupRowsToSave.length} routing macro${
             setupRowsToSave.length === 1 ? "" : "s"
-          }`}
+          } (${setupRoutingChangesToSave.length} will change)`}
         >
           <div>
             {setupScanReady && setupRowsToSave.length ? (
@@ -4580,6 +5087,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
         </CollapsiblePanel>
 
         {renderSetupEditorModal()}
+        {renderSetupRerunConfirmation()}
       </SetupFlowShell>
     );
   }
@@ -4592,7 +5100,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
       setupCimReviewRows.length === 1 ? "allowlist" : "allowlists";
     const setupCimReviewTitle =
       cimScanState === "ready"
-        ? `Review ${setupCimReviewRows.length} proposed CIM ${setupCimReviewNoun}`
+        ? `Review ${setupCimReviewRows.length} proposed CIM ${setupCimReviewNoun} (${setupCimChangesToSave.length} will change)`
         : `Review ${setupCimReviewRows.length} current CIM ${setupCimReviewNoun}`;
     let setupCimEmptyMessage = "No CIM allowlists are available yet.";
     if (isCimLoading) {
@@ -4607,9 +5115,15 @@ export default function MacroIndexTuningPage(): JSX.Element {
     if (isCimLoading) {
       cimStatus = "CIM discovery is running. This can take several minutes.";
     } else if (cimScanState === "ready") {
-      cimStatus = `${setupCimRowsToSave.length} CIM allowlist${
-        setupCimRowsToSave.length === 1 ? "" : "s"
-      } will be carried into review.`;
+      cimStatus = setupCimChangesToSave.length
+        ? `${setupCimChangesToSave.length} CIM allowlist${
+            setupCimChangesToSave.length === 1 ? "" : "s"
+          } will change. ${setupChanges.length} total draft change${
+            setupChanges.length === 1 ? "" : "s"
+          }; nothing is saved yet.`
+        : `${setupCimRowsToSave.length} CIM model${
+            setupCimRowsToSave.length === 1 ? "" : "s"
+          } matched; no CIM allowlist definitions will change.`;
     }
     let cimDiscoveryMessageType: "info" | "warning" | "success" =
       setupCimAvailable ? "info" : "warning";
@@ -4628,9 +5142,11 @@ export default function MacroIndexTuningPage(): JSX.Element {
       cimDiscoveryMessage = `Discovery complete — ${setupCimRowsToSave.length} model${
         setupCimRowsToSave.length === 1 ? "" : "s"
       } matched`;
-      cimDiscoveryDescription = `${setupCimChangesToSave.length} proposed allowlist change${
-        setupCimChangesToSave.length === 1 ? " is" : "s are"
-      } ready for review. Each row now shows the generated index IN definition.`;
+      cimDiscoveryDescription = setupCimChangesToSave.length
+        ? `${setupCimChangesToSave.length} allowlist change${
+            setupCimChangesToSave.length === 1 ? " was" : "s were"
+          } added to the draft plan. Each row shows the generated index IN definition.`
+        : "The discovered allowlists match the current definitions, so no CIM changes were added to the draft plan.";
     }
 
     const continueToReview = () => {
@@ -4650,6 +5166,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
         title="CIM readiness"
         description="Map Cisco data to the indexes used by Splunk Common Information Model data models."
         status={cimStatus}
+        pendingChangeCount={setupChanges.length}
+        pendingChangeDetail={setupPendingChangeDetail}
         surfaceRef={setupSurfaceRef}
         headingRef={setupHeadingRef}
         actions={(
@@ -4675,12 +5193,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
           </Message>
         ) : null}
 
-        <section
-          aria-live="polite"
-          className="rounded-md border sui-border-weak sui-bg-section px-4 py-4"
-        >
+        <section className="rounded-md border sui-border-weak sui-bg-section px-4 py-4">
           <div className="scd-setup__scan-controls grid gap-4">
-            <div>
+            <div role="status" aria-live="polite" aria-atomic="true">
               <Message type={cimDiscoveryMessageType}>
                 {cimDiscoveryMessage}
               </Message>
@@ -4704,7 +5219,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   labelMaxChars={24}
                 />
                 <Button
-                  onClick={runCimDiscovery}
+                  elementRef={cimScanButtonRef}
+                  onClick={requestCimDiscovery}
                   appearance="primary"
                   disabled={isCimLoading || isCimBulkSaving ? "dimmed" : false}
                   icon={isCimLoading ? (
@@ -4792,6 +5308,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           </CollapsiblePanel>
         ) : null}
         {renderSetupEditorModal()}
+        {renderSetupRerunConfirmation()}
       </SetupFlowShell>
     );
   }
@@ -4799,6 +5316,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
   if (setupMode && setupRoute === "review") {
     const setupCimAvailable = isTargetAppInstalled(CIM_APP_NAME);
     const performanceLabel = summariesOnlyEnabled
+      ? "Accelerated only"
+      : "Balanced";
+    const initialPerformanceLabel = usesSummariesOnly(initialAdhocDefinition)
       ? "Accelerated only"
       : "Balanced";
     const readyDataModels = dataModelReadiness.filter(
@@ -4809,7 +5329,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
     const setupAppNoun = setupChangedAppCount === 1 ? "app" : "apps";
     let reviewStatus =
       "No macro definitions changed. Finishing will only mark setup complete.";
-    if (summariesOnlyBlocked) {
+    if (scanState !== "ready") {
+      reviewStatus =
+        "Return to Configure data and complete the routing scan before finishing setup.";
+    } else if (summariesOnlyBlocked) {
       reviewStatus =
         "Return to Configure data and choose Balanced mode, or finish acceleration first.";
     } else if (setupChanges.length) {
@@ -4840,7 +5363,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
         label: "Search performance",
         value: summariesOnlyBlocked
           ? "Needs attention — acceleration missing"
-          : performanceLabel,
+          : shouldSaveAdhocDefinition
+            ? `Will change: ${initialPerformanceLabel} → ${performanceLabel}`
+            : `Unchanged: ${performanceLabel}`,
         detail: summariesOnlyEnabled
           ? "Queries will use accelerated summaries only"
           : "Queries may fall back to raw events",
@@ -4864,6 +5389,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
         title="Review & finish"
         description="Confirm the choices below. Nothing is saved until you finish setup."
         status={reviewStatus}
+        pendingChangeCount={setupChanges.length}
+        pendingChangeDetail={setupPendingChangeDetail}
         surfaceRef={setupSurfaceRef}
         headingRef={setupHeadingRef}
         actions={(
@@ -4879,7 +5406,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
               onClick={() => setShowFinishConfirmation(true)}
               appearance="primary"
               disabled={
-                setupStatus.state === "saving" || summariesOnlyBlocked
+                setupStatus.state === "saving" ||
+                scanState !== "ready" ||
+                summariesOnlyBlocked
                   ? "dimmed"
                   : false
               }
@@ -4909,12 +5438,12 @@ export default function MacroIndexTuningPage(): JSX.Element {
             {reviewRows.map((item) => (
               <div
                 key={item.label}
-                className="grid gap-2 border-b sui-border-weak px-4 py-3 last:border-b-0 sm:grid-cols-[minmax(180px,0.45fr)_minmax(0,1fr)_auto] sm:items-center"
+                className="grid min-w-0 gap-2 border-b sui-border-weak px-4 py-3 last:border-b-0 sm:grid-cols-[minmax(160px,0.35fr)_minmax(0,1fr)_minmax(180px,0.55fr)] sm:items-center"
               >
                 <dt className="text-sm font-bold sui-color-active">{item.label}</dt>
                 <dd className="text-xs leading-5 sui-color-muted">{item.detail}</dd>
                 <dd
-                  className={`text-sm font-bold sm:text-right ${
+                  className={`break-words text-sm font-bold sm:text-right ${
                     item.warning ? "sui-color-warning" : "sui-color-positive"
                   }`}
                 >
@@ -4962,28 +5491,32 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   {setupChanges.map((change) => (
                     <Table.Row key={`${change.targetApp}:${change.setting}`}>
                       <Table.Cell>
-                        <div className="font-bold sui-color-active">
-                          {getTargetAppLabel(change.targetApp)}
-                        </div>
-                        <div className="mt-1 font-mono text-xs sui-color-muted">
-                          {change.targetApp}
-                        </div>
-                      </Table.Cell>
-                      <Table.Cell>
-                        <div className="text-xs font-bold sui-color-info">
-                          {change.kind}
-                        </div>
-                        <div className="mt-1 break-words font-mono text-sm sui-color-active">
-                          {change.setting}
+                        <div className="min-w-0 max-w-full">
+                          <div className="break-words font-bold sui-color-active">
+                            {getTargetAppLabel(change.targetApp)}
+                          </div>
+                          <div className="mt-1 break-words font-mono text-xs sui-color-muted">
+                            {change.targetApp}
+                          </div>
                         </div>
                       </Table.Cell>
                       <Table.Cell>
-                        <code className="block break-words whitespace-normal font-mono text-xs leading-5 sui-color-default">
+                        <div className="min-w-0 max-w-full">
+                          <div className="text-xs font-bold sui-color-info">
+                            {change.kind}
+                          </div>
+                          <div className="mt-1 break-words font-mono text-sm sui-color-active">
+                            {change.setting}
+                          </div>
+                        </div>
+                      </Table.Cell>
+                      <Table.Cell>
+                        <code className="block min-w-0 max-w-full break-words whitespace-normal font-mono text-xs leading-5 sui-color-default">
                           {change.currentValue}
                         </code>
                       </Table.Cell>
                       <Table.Cell>
-                        <code className="block break-words whitespace-normal font-mono text-xs leading-5 sui-color-active">
+                        <code className="block min-w-0 max-w-full break-words whitespace-normal font-mono text-xs leading-5 sui-color-active">
                           {change.proposedValue}
                         </code>
                       </Table.Cell>

@@ -899,6 +899,34 @@ function scdSetupSetColorScheme(root, colorScheme) {
   );
 }
 
+// Exact outlined geometry from @splunk/react-icons/Sun. The static first step
+// cannot mount React, so it renders the same official Splunk icon with the DOM.
+function scdSetupCreateSunIcon() {
+  const namespace = "http://www.w3.org/2000/svg";
+  const icon = document.createElementNS(namespace, "svg");
+  icon.setAttribute("class", "scd-setup__theme-icon");
+  icon.setAttribute("viewBox", "0 0 24 24");
+  icon.setAttribute("aria-hidden", "true");
+  icon.setAttribute("focusable", "false");
+  icon.setAttribute("fill", "currentColor");
+  [
+    "M12.0002 0C12.5525 0 13.0002 0.447715 13.0002 1V4C13.0002 4.02072 12.9996 4.04129 12.9984 4.06169C12.6713 4.02098 12.3381 4 12 4C11.6621 4 11.329 4.02096 11.0021 4.06163C11.0009 4.04125 11.0002 4.0207 11.0002 4V1C11.0002 0.447715 11.448 0 12.0002 0Z",
+    "M16.9072 5.68133C17.4343 6.09127 17.9087 6.56573 18.3187 7.09284C18.3342 7.07915 18.3493 7.06491 18.3641 7.05011L20.4854 4.92879C20.876 4.53826 20.876 3.9051 20.4854 3.51457C20.0949 3.12405 19.4617 3.12405 19.0712 3.51457L16.9499 5.63589C16.9351 5.6507 16.9208 5.66585 16.9072 5.68133Z",
+    "M20 12C20 12.338 19.979 12.6711 19.9383 12.9981C19.9587 12.9994 19.9793 13 20 13H23C23.5523 13 24 12.5523 24 12C24 11.4477 23.5523 11 23 11H20C19.9793 11 19.9587 11.0006 19.9383 11.0019C19.979 11.3289 20 11.662 20 12Z",
+    "M18.3187 16.9072C17.9087 17.4343 17.4343 17.9087 16.9072 18.3187C16.9208 18.3341 16.9351 18.3493 16.9499 18.3641L19.0712 20.4854C19.4617 20.8759 20.0949 20.8759 20.4854 20.4854C20.8759 20.0949 20.8759 19.4617 20.4854 19.0712L18.3641 16.9499C18.3493 16.9351 18.3341 16.9208 18.3187 16.9072Z",
+    "M12 20C11.6621 20 11.329 19.979 11.0021 19.9384C11.0009 19.9588 11.0002 19.9793 11.0002 20V23C11.0002 23.5523 11.448 24 12.0002 24C12.5525 24 13.0002 23.5523 13.0002 23V20C13.0002 19.9793 12.9996 19.9587 12.9984 19.9383C12.6713 19.979 12.3381 20 12 20Z",
+    "M7.09285 18.3187C6.56574 17.9087 6.09127 17.4343 5.68131 16.9071C5.66593 16.9208 5.65087 16.9349 5.63616 16.9496L3.51483 19.071C3.12431 19.4615 3.12431 20.0946 3.51483 20.4852C3.90536 20.8757 4.53852 20.8757 4.92905 20.4852L7.05037 18.3638C7.06509 18.3491 7.07925 18.3341 7.09285 18.3187Z",
+    "M4 12C4 11.662 4.02097 11.3289 4.06166 11.0019C4.04127 11.0006 4.02071 11 4 11H1C0.447715 11 0 11.4477 0 12C0 12.5523 0.447715 13 1 13H4C4.02071 13 4.04127 12.9994 4.06166 12.9981C4.02097 12.6711 4 12.338 4 12Z",
+    "M5.68131 7.09285C6.09127 6.56573 6.56573 6.09127 7.09285 5.68131C7.07924 5.66593 7.06507 5.65086 7.05035 5.63614L4.92903 3.51482C4.53851 3.12429 3.90534 3.12429 3.51482 3.51482C3.12429 3.90534 3.12429 4.53851 3.51482 4.92903L5.63614 7.05035C5.65086 7.06507 5.66593 7.07924 5.68131 7.09285Z",
+    "M12 7C9.23858 7 7 9.23858 7 12C7 14.7614 9.23858 17 12 17C14.7614 17 17 14.7614 17 12C17 9.23858 14.7614 7 12 7ZM9 12C9 10.3431 10.3431 9 12 9C13.6569 9 15 10.3431 15 12C15 13.6569 13.6569 15 12 15C10.3431 15 9 13.6569 9 12Z",
+  ].forEach((pathData) => {
+    const path = document.createElementNS(namespace, "path");
+    path.setAttribute("d", pathData);
+    icon.appendChild(path);
+  });
+  return icon;
+}
+
 function scdSetupCreateThemeControl(root) {
   const control = scdSetupElement("label", "scd-setup__theme-control");
   const toggle = scdSetupElement("input", "scd-setup__theme-toggle");
@@ -907,6 +935,7 @@ function scdSetupCreateThemeControl(root) {
   toggle.addEventListener("change", () => {
     scdSetupSetColorScheme(root, toggle.checked ? "light" : "dark");
   });
+  control.appendChild(scdSetupCreateSunIcon());
   control.appendChild(toggle);
   control.appendChild(scdSetupElement("span", "", "Light mode"));
   return control;
@@ -1973,7 +2002,7 @@ function scdSetupRenderPackageReviewStep(root) {
     scdSetupElement(
       "p",
       "scd-setup__section-intro",
-      "Resolve required packages first. Recommended updates improve coverage but do not block setup.",
+      "Resolve required packages first. Manage Apps changes take effect immediately and are not part of the final setup save. Return here and select Refresh status after any package action.",
     ),
   );
   packagesHeader.appendChild(packagesCopy);
@@ -2186,13 +2215,13 @@ function scdSetupRenderPackageReviewStep(root) {
   content.appendChild(main);
 
   let packageActionMessage =
-    "The recommended package set is ready. Continue to data routing.";
+    "The recommended package set is ready. No setup draft changes have been made.";
   if (blockingPrerequisites.length) {
     packageActionMessage = `${blockingPrerequisites
       .map((item) => item.name)
       .join(" and ")} must be installed and enabled before data configuration.`;
   } else if (attentionPrerequisites.length) {
-    packageActionMessage = `${attentionPrerequisites.length} recommended package${attentionPrerequisites.length === 1 ? "" : "s"} need attention. You can continue and return later.`;
+    packageActionMessage = `${attentionPrerequisites.length} recommended package${attentionPrerequisites.length === 1 ? "" : "s"} need attention. Package actions happen immediately in Manage Apps; setup draft changes begin in Step 4.`;
   }
 
   scdSetupRenderActions(
@@ -2273,6 +2302,12 @@ function scdSetupRestoreStep(root, step) {
 
 function scdSetupRenderResults(root, dataRows, appEntries, errors, configured) {
   const setupRoot = root;
+  const detectedCapabilityIds = scdSetupResolveCapabilities(dataRows)
+    .filter((capability) => capability.detected)
+    .map((capability) => capability.id);
+  setupRoot.dataset.scdSetupDiscoveryState = errors.data ? "error" : "ready";
+  setupRoot.dataset.scdSetupDetectedCapabilities =
+    detectedCapabilityIds.join(",");
   setupRoot.scdSetupState = {
     appEntries,
     configured,

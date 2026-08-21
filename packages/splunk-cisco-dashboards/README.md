@@ -60,9 +60,14 @@ networking pillars and workplace scenarios.
   START and FINISH lines, responsive progress navigation, persistent dark and
   Light modes, a dedicated CIM readiness step before final review, and the full
   Splunk Secure Networking Essentials product name throughout the journey.
-- Expanded setup performance readiness to check all 13 required Cisco data
-  models, including the eight DC Networking models plus CIM Authentication and
-  Network Traffic, with an on-screen model inventory behind the compact summary.
+- Expanded setup performance readiness to cover 13 supported Cisco data models,
+  including the eight DC Networking models plus CIM Authentication and Network
+  Traffic, while requiring product-specific models only when matching data is
+  detected. The compact inventory and accelerated-only gate now omit DC models
+  when no DC Networking data is present.
+- Prevented parameterized system helpers such as `index_thruput(1)` from
+  entering setup routing SPL, and kept Step 4 incomplete until its routing scan
+  succeeds.
 - Added index multiselects that build routing macro definitions automatically,
   aligned the setup progress rail, and updated the Enterprise Networking app
   add-on, and required data-model names throughout the setup experience.
