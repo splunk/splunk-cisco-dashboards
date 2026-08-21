@@ -76,6 +76,7 @@ import {
 import { defaultFetchInit } from "@splunk/splunk-utils/fetch";
 import { INSIGHTS_APP_ID } from "../../common/lib/constants";
 import {
+  DASHBOARD_MANAGER_FRAMEWORK_VIEW_NAMES,
   DASHBOARD_MANAGER_TAG,
   getDashboardNamespaceApp,
   isDashboardManagerDashboard,
@@ -125,7 +126,7 @@ import {
 
 const ENABLE_EXPERIMENTAL_SPACE_MANAGER = false;
 const DASHBOARD_STUDIO_HEIGHT = 1200;
-const VIEWPORT_FIT_DASHBOARD_IDS = new Set(["sn_zta_posture"]);
+const VIEWPORT_FIT_DASHBOARD_IDS = DASHBOARD_MANAGER_FRAMEWORK_VIEW_NAMES;
 const VIEWPORT_FIT_PADDING = 16;
 
 const getViewportFitLayout = (definition, requestedLayoutId) => {

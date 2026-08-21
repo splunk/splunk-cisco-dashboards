@@ -7,7 +7,12 @@ import debounce from 'lodash/debounce';
 import isString from 'lodash/isString';
 import isPlainObject from 'lodash/isPlainObject';
 import some from 'lodash/some';
-import { parseTimeRangeValue, toTimeRangeValue, DEFAULT_OPTIONS } from './timeRangeUtils';
+import {
+    DEFAULT_SPAN,
+    isValidTimeSpan,
+    parseTimeRangeValue,
+    toTimeRangeValue,
+} from './timeRangeUtils';
 import './SimpleTimePicker.css';
 import CalendarClock from '@splunk/react-icons/CalendarClock';
 import SlidersDoubleHorizontal from '@splunk/react-icons/SlidersDoubleHorizontal';
@@ -20,15 +25,6 @@ import { makeCancelable } from '@splunk/ui-utils/promise';
 import timeParser from './timeparser';
 
 const locale = 'en_US';
-
-const defaultValues = [
-    '-24h@h,now,1h',
-    '-7d@d,now,1d',
-    '-30d@d,now,1w',
-    '-30d@d,now,1w',
-    '-90d@d,now,1mon',
-    '-365d@d,now,1qtr',
-];
 
 const presets = [
     { label: '30 second window', earliest: 'rt-30s', latest: 'rt' },
@@ -81,23 +77,23 @@ const SimpleTimePicker = ({ id, options, value, onValueChange }) => {
             ? options.selections
             : [
                   {
-                      value: '-24h@h,now,1h',
+                      value: '-24h@h,now,auto',
                       label: '24h',
                   },
                   {
-                      value: '-7d@d,now,1d',
+                      value: '-7d@d,now,auto',
                       label: '7d',
                   },
                   {
-                      value: '-30d@d,now,1w',
+                      value: '-30d@d,now,auto',
                       label: '30d',
                   },
                   {
-                      value: '-90d@d,now,1mon',
+                      value: '-90d@d,now,auto',
                       label: '90d',
                   },
                   {
-                      value: '-365d@d,now,1qtr',
+                      value: '-365d@d,now,auto',
                       label: '1y',
                   },
               ];
@@ -121,6 +117,14 @@ const SimpleTimePicker = ({ id, options, value, onValueChange }) => {
         value != null && value.length > 0 //&& some(selections, { value: value })
             ? value
             : defaultValue;
+    const isQuickSelection = selections.some((selection) => selection.value === selected);
+    const isAdvancedSpanValid = isValidTimeSpan(advancedTR.span);
+
+    useEffect(() => {
+        if (!openAdvancedModal) {
+            setAdvancedTR(parseTimeRangeValue(selected));
+        }
+    }, [openAdvancedModal, selected]);
 
     const handleTRChange = (e, newValues) => {
         e.stopPropagation();
@@ -223,11 +227,11 @@ const SimpleTimePicker = ({ id, options, value, onValueChange }) => {
                     <ControlGroup
                         label="Span"
                         labelPosition="left"
-                        help="1h, 1d, 1qtr, 1m, 1y, ..."
+                        help="Auto lets timechart choose. Or enter 1m, 5m, 1h, 1d, 1w, 1mon, 1qtr, or 1y."
                     >
                         <Text
                             style={{ zIndex: 9999 }}
-                            value={advancedTR.span}
+                            value={advancedTR.span === DEFAULT_SPAN ? 'Auto' : advancedTR.span}
                             onChange={(e, { value }) => {
                                 e.stopPropagation();
                                 e.preventDefault();
@@ -241,9 +245,10 @@ const SimpleTimePicker = ({ id, options, value, onValueChange }) => {
                     <Button label="Close" onClick={handleCloseAdvancedModal} appearance="default" />
                     <Button
                         label="Validate"
+                        disabled={!isAdvancedSpanValid}
                         onClick={(e) => {
                             const payload = {
-                                value: `${advancedTR.earliest},${advancedTR.latest},${advancedTR.span}`,
+                                value: toTimeRangeValue(advancedTR),
                             };
                             handleChange(e, payload);
                             setopenAdvancedModal(false);
@@ -274,10 +279,11 @@ const SimpleTimePicker = ({ id, options, value, onValueChange }) => {
                 ))}
                 {showAdvanced && (
                     <Button
+                        aria-label="Advanced time range"
                         appearance="toggle"
                         key="advancedTR"
                         value="advancedTR"
-                        selected={!defaultValues.includes(selected)}
+                        selected={!isQuickSelection}
                         onClick={(e, payload) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -286,10 +292,10 @@ const SimpleTimePicker = ({ id, options, value, onValueChange }) => {
                         }}
                         style={{
                             minWidth: '60px',
-                            background: defaultValues.includes(selected) ? '#fcfcfc' : '#cccccc',
+                            background: isQuickSelection ? '#fcfcfc' : '#cccccc',
                         }}
                     >
-                        <SlidersDoubleHorizontal />
+                        <SlidersDoubleHorizontal aria-hidden="true" />
                     </Button>
                 )}
             </ButtonGroup>
@@ -324,7 +330,7 @@ SimpleTimePicker.tokensToValue = ({ tokens, tokenName, tokenNamespace }) => {
     const earliest = get(tokens, [tokenNamespace, `${tokenName}.earliest`]);
     const latest = get(tokens, [tokenNamespace, `${tokenName}.latest`]);
     const span = get(tokens, [tokenNamespace, `${tokenName}.span`]);
-    return earliest && latest && span ? toTimeRangeValue({ earliest, latest, span }) : null;
+    return earliest && latest ? toTimeRangeValue({ earliest, latest, span }) : null;
 };
 
 SimpleTimePicker.config = {
@@ -335,23 +341,23 @@ SimpleTimePicker.config = {
             showAdvanced: false,
             selections: [
                 {
-                    value: '-24h@h,now,1h',
+                    value: '-24h@h,now,auto',
                     label: '24h',
                 },
                 {
-                    value: '-7d@d,now,1d',
+                    value: '-7d@d,now,auto',
                     label: '7d',
                 },
                 {
-                    value: '-30d@d,now,1w',
+                    value: '-30d@d,now,auto',
                     label: '30d',
                 },
                 {
-                    value: '-90d@d,now,1mon',
+                    value: '-90d@d,now,auto',
                     label: '90d',
                 },
                 {
-                    value: '-365d@d,now,1qtr',
+                    value: '-365d@d,now,auto',
                     label: '1y',
                 },
             ],

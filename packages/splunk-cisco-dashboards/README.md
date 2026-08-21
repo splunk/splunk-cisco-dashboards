@@ -26,14 +26,18 @@ networking pillars and workplace scenarios.
   keeps dashboards that require the extended runtime out of Splunk's standard
   Dashboards listing, while definitions made entirely from native Dashboard
   Studio components remain visible and can open in regular Dashboard Studio.
-- Added one combined Zero Trust Posture pilot that keeps the chart-heavy card
-  structure and Magnify+ actions, gives all six trends distinct palette colors,
-  hides Y-axis labels and gridlines, and uses a shorter full-width canvas that
-  stays centered and refits when the browser or display size changes. Editing
-  and other managed dashboards retain their existing behavior. Each pilot card
-  now also has a separate information action for its primary metric and direct
-  Searchbase source, while the investigation modal uses layered charcoal/navy
-  surfaces and explicit high-contrast Searchbase guidance text.
+- Rolled the approved Zero Trust Posture presentation across all 17 included
+  Secure Networking dashboards and 102 cards without changing their metrics,
+  searches, descriptions, or investigation targets. Every dashboard now keeps
+  its chart-heavy card structure and Magnify+ actions while giving the six
+  trends distinct palette colors, hiding unnecessary Y-axis labels and
+  gridlines, and using a shorter full-width canvas that refits when the browser
+  or display size changes. Every card also has a separate information action
+  for its primary metric and direct Searchbase source. Time pickers default to
+  automatic `timechart` buckets and apply a fixed span only when the user enters
+  an explicit override. Information and investigation dialog titles remain
+  consistent with the card titles that open them, and the shared modal retains
+  its layered charcoal/navy surfaces and high-contrast guidance text.
 - Hid Dashboard Manager-only Secure Networking views from Splunk's native
   Dashboards catalogue so customers enter them through the supported manager
   route with custom time and Searchbase wiring intact.

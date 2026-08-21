@@ -8,27 +8,27 @@
     "inputs": {
         "input_time_range": {
             "options": {
-                "defaultValue": "-24h,now,1h",
+                "defaultValue": "-24h,now,auto",
                 "showAdvanced": true,
                 "selections": [
                     {
-                        "value": "-4h,now,30m",
+                        "value": "-4h,now,auto",
                         "label": "4h"
                     },
                     {
-                        "value": "-24h,now,1h",
+                        "value": "-24h,now,auto",
                         "label": "24h"
                     },
                     {
-                        "value": "-48h,now,2h",
+                        "value": "-48h,now,auto",
                         "label": "48h"
                     },
                     {
-                        "value": "-7d@d,now,1d",
+                        "value": "-7d@d,now,auto",
                         "label": "7d"
                     },
                     {
-                        "value": "-30d@d,now,1d",
+                        "value": "-30d@d,now,auto",
                         "label": "30d"
                     }
                 ],
@@ -467,7 +467,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Hourly trend of Cisco SSE ZTNA connection statuses over time, enabling operators to track ZTNA adoption growth, detect access disruptions, and correlate denial spikes with policy or infrastructure changes\\."
+                "markdown": "Tracks Cisco SSE ZTNA connection statuses over time, enabling operators to follow adoption, detect access disruptions, and correlate denial spikes with policy or infrastructure changes\\."
             }
         },
         "viz_card_03_singlevalue": {
@@ -1104,7 +1104,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/metric-info?origin=Cross-Source%20Activity&target=secure_networking_zta_user_activity_source_trend"
+                        "url": "/metric-info?origin=Cross-Control%20User%20Activity&target=secure_networking_zta_user_activity_source_trend"
                     }
                 }
             ],
@@ -1125,7 +1125,8 @@
                 "ref": "secure_networking_zta_auth_outcome_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -1136,7 +1137,8 @@
                 "ref": "secure_networking_zta_ise_auth_failure_rate_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -1147,7 +1149,8 @@
                 "ref": "secure_networking_zta_ztna_connection_status_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -1158,7 +1161,8 @@
                 "ref": "secure_networking_zta_ravpn_connection_rate",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -1169,7 +1173,8 @@
                 "ref": "secure_networking_zta_duo_auth_outcomes_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -1180,7 +1185,8 @@
                 "ref": "secure_networking_zta_user_activity_source_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"

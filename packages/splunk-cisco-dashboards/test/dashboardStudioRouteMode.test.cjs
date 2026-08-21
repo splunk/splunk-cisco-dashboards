@@ -62,6 +62,31 @@ const drilldownModal = fs.readFileSync(
   ),
   "utf8",
 );
+const simpleTimePicker = fs.readFileSync(
+  path.join(
+    packageRoot,
+    "src/main/webapp/pages/dashboardbuilder/custominput/SimpleTimePicker.jsx",
+  ),
+  "utf8",
+);
+const timeRangeUtils = fs.readFileSync(
+  path.join(
+    packageRoot,
+    "src/main/webapp/pages/dashboardbuilder/custominput/timeRangeUtils.jsx",
+  ),
+  "utf8",
+);
+const searchBaseDataSource = fs.readFileSync(
+  path.join(
+    packageRoot,
+    "src/main/webapp/pages/dashboardbuilder/SearchBaseDataSource.jsx",
+  ),
+  "utf8",
+);
+const searchbaseConf = fs.readFileSync(
+  path.join(packageRoot, "src/main/resources/splunk/default/searchbase.conf"),
+  "utf8",
+);
 const extractSetValues = (exportName) => {
   const match = managerScope.match(
     new RegExp(`export const ${exportName} = new Set\\(\\[([\\s\\S]*?)\\]\\);`),
@@ -99,8 +124,8 @@ assert.match(
 );
 assert.match(
   editor,
-  /VIEWPORT_FIT_DASHBOARD_IDS = new Set\(\["sn_zta_posture"\]\)/,
-  "Zero Trust Posture must remain the only viewport-fit pilot",
+  /VIEWPORT_FIT_DASHBOARD_IDS = DASHBOARD_MANAGER_FRAMEWORK_VIEW_NAMES/,
+  "Every included Dashboard Manager view must use the approved viewport fit",
 );
 assert.match(
   editor,
@@ -257,9 +282,36 @@ assert.match(
   "Help copy must use an explicit semantic foreground token",
 );
 
-const posture = readDefinition("sn_zta_posture");
-assert.equal(posture.layout.layoutDefinitions.layout_overview.options.width, 1920);
-assert.equal(posture.layout.layoutDefinitions.layout_overview.options.height, 1024);
+assert.equal(frameworkViews.length, 17, "The rollout must cover 17 included dashboards");
+assert.match(
+  timeRangeUtils,
+  /DEFAULT_SPAN = 'auto'/,
+  "Simple time ranges must represent no explicit span as Auto",
+);
+assert.match(
+  simpleTimePicker,
+  /Auto lets timechart choose/,
+  "Advanced time-range help must explain automatic bucket selection",
+);
+assert.match(
+  simpleTimePicker,
+  /\{showAdvanced && \(\s*<Button\s*aria-label="Advanced time range"/,
+  "The advanced time-range icon button must retain an accessible name",
+);
+assert.match(
+  searchBaseDataSource,
+  /applySpanOverride[\s\S]*?timechart[\s\S]*?tstats/,
+  "Explicit span overrides must be applied to Searchbase trend transforms",
+);
+const authOutcomeStanza = searchbaseConf.match(
+  /\[secure_networking_zta_auth_outcome_trend\]([\s\S]*?)\n\[/,
+)?.[1];
+assert.ok(authOutcomeStanza, "Authentication Outcomes Searchbase stanza must exist");
+assert.doesNotMatch(
+  authOutcomeStanza,
+  /by _time span=1h, Authentication\.action/,
+  "Authentication Outcomes must not force a one-hour pre-aggregation span",
+);
 const expectedColors = [
   "#e44273",
   "#9b5ff4",
@@ -268,71 +320,144 @@ const expectedColors = [
   "#159352",
   "#0d8e97",
 ];
-expectedColors.forEach((color, index) => {
-  const id = `viz_card_0${index + 1}_trend`;
-  const options = posture.visualizations[id]?.options;
-  assert.ok(options, `${id} must remain in the combined pilot`);
-  assert.equal(options.seriesColors[0], color, `${id} must keep its distinct color`);
-  assert.equal(options.areaOpacity, 0.45);
-  assert.equal(options.lineWidth, 2);
-  assert.equal(options.showYMajorGridLines, false);
-  assert.equal(options.showYMinorGridLines, false);
-  assert.equal(options.yAxisLabelVisibility, "hide");
-  assert.equal(options.yAxisLineVisibility, "hide");
-  assert.equal(options.yAxisMajorTickVisibility, "hide");
-  assert.equal(options.yAxisMinorTickVisibility, "hide");
-});
-
-const expectedMetricInfo = [
-  ["Authentication Outcomes", "secure_networking_zta_auth_outcome_trend", 534],
-  [
-    "Authentication Friction",
-    "secure_networking_zta_ise_auth_failure_rate_trend",
-    1167,
-  ],
-  [
-    "Private Access Status",
-    "secure_networking_zta_ztna_connection_status_trend",
-    1800,
-  ],
-  ["Remote Access Health", "secure_networking_zta_ravpn_connection_rate", 534],
-  ["MFA Outcomes", "secure_networking_zta_duo_auth_outcomes_trend", 1167],
-  [
-    "Cross-Source Activity",
-    "secure_networking_zta_user_activity_source_trend",
-    1800,
-  ],
+const baseSeriesColors = [
+  "#9b5ff4",
+  "#3abdfa",
+  "#0d8e97",
+  "#e2a811",
+  "#e44273",
+  "#a9afda",
+  "#d8580f",
+  "#f88ddc",
+  "#159352",
+  "#9abe2d",
+  "#6574f3",
+  "#ff9297",
+  "#d14baf",
+  "#24c4c9",
+  "#bb6e04",
+  "#6ec641",
+  "#777daf",
+  "#ff9755",
+  "#698c07",
+  "#c69fff",
 ];
-expectedMetricInfo.forEach(([origin, target, x], index) => {
-  const cardId = `0${index + 1}`;
-  const infoId = `viz_card_${cardId}_info_trigger`;
-  const titleId = `viz_card_${cardId}_title`;
-  const infoTrigger = posture.visualizations[infoId];
-  const infoLayout = posture.layout.layoutDefinitions.layout_overview.structure.find(
-    ({ item }) => item === infoId,
-  );
-  const titleLayout = posture.layout.layoutDefinitions.layout_overview.structure.find(
-    ({ item }) => item === titleId,
+const infoXPositions = [534, 1167, 1800, 534, 1167, 1800];
+const normalizeCardTitle = (markdown) =>
+  markdown
+    .replace(/^\*\*/, "")
+    .replace(/\*\*$/, "")
+    .replace(/\\([\-_.])/g, "$1");
+
+let rolloutCardCount = 0;
+let rolloutInfoActionCount = 0;
+let rolloutInvestigationActionCount = 0;
+frameworkViews.forEach((viewName) => {
+  const definition = readDefinition(viewName);
+  const overview = definition.layout.layoutDefinitions.layout_overview;
+  assert.equal(overview.options.width, 1920, `${viewName} must use pilot width`);
+  assert.equal(overview.options.height, 1024, `${viewName} must use pilot height`);
+  assert.equal(overview.structure.length, 52, `${viewName} must have 52 layout items`);
+  assert.equal(
+    Object.keys(definition.visualizations).length,
+    51,
+    `${viewName} must have 51 visualizations`,
   );
   assert.equal(
-    infoTrigger.eventHandlers[0].options.url,
-    `/metric-info?origin=${encodeURIComponent(origin)}&target=${target}`,
-    `${infoId} must identify the card's primary Searchbase stanza`,
+    Object.keys(definition.dataSources).length,
+    6,
+    `${viewName} must retain six primary data sources`,
   );
-  assert.equal(infoLayout.position.x, x);
-  assert.equal(infoLayout.position.w, 42);
-  assert.equal(infoLayout.position.h, 42);
-  assert.equal(titleLayout.position.w, 482);
+  assert.equal(
+    definition.inputs.input_time_range.options.defaultValue,
+    "-24h,now,auto",
+    `${viewName} must default its timechart span to Auto`,
+  );
   assert.ok(
-    posture.layout.layoutDefinitions.layout_overview.structure.findIndex(
-      ({ item }) => item === infoId,
-    ) <
-      posture.layout.layoutDefinitions.layout_overview.structure.findIndex(
-        ({ item }) => item === `viz_card_${cardId}_drilldown_trigger`,
-      ),
-    `${infoId} must precede Magnify+ in both visual and keyboard order`,
+    definition.inputs.input_time_range.options.selections.every(({ value }) =>
+      value.endsWith(",auto"),
+    ),
+    `${viewName} quick ranges must leave timechart bucket selection on Auto`,
   );
+  Object.values(definition.dataSources).forEach((dataSource) => {
+    assert.equal(
+      dataSource.options.queryParameters.span,
+      "$time_tok.span$",
+      `${viewName} must pass the optional span token to every Searchbase source`,
+    );
+  });
+
+  expectedColors.forEach((color, index) => {
+    const cardId = String(index + 1).padStart(2, "0");
+    const trendId = `viz_card_${cardId}_trend`;
+    const titleId = `viz_card_${cardId}_title`;
+    const infoId = `viz_card_${cardId}_info_trigger`;
+    const investigationId = `viz_card_${cardId}_drilldown_trigger`;
+    const options = definition.visualizations[trendId]?.options;
+    const origin = normalizeCardTitle(
+      definition.visualizations[titleId]?.options?.markdown || "",
+    );
+    const target = definition.dataSources[`ds_story_${cardId}`]?.options?.ref;
+    const infoTrigger = definition.visualizations[infoId];
+    const investigationTrigger = definition.visualizations[investigationId];
+    const infoLayout = overview.structure.find(({ item }) => item === infoId);
+    const titleLayout = overview.structure.find(({ item }) => item === titleId);
+
+    assert.ok(options, `${viewName} ${trendId} must exist`);
+    const expectedSeriesColors =
+      index === 5
+        ? [color, ...baseSeriesColors.filter((candidate) => candidate !== color)]
+        : [...baseSeriesColors];
+    if (index !== 5) {
+      const primaryColorIndex = expectedSeriesColors.indexOf(color);
+      expectedSeriesColors[primaryColorIndex] = expectedSeriesColors[0];
+      expectedSeriesColors[0] = color;
+    }
+    assert.deepEqual(
+      options.seriesColors,
+      expectedSeriesColors,
+      `${viewName} ${trendId} must use the approved ordered palette`,
+    );
+    assert.equal(options.areaOpacity, 0.45);
+    assert.equal(options.lineWidth, 2);
+    assert.equal(options.showYMajorGridLines, false);
+    assert.equal(options.showYMinorGridLines, false);
+    assert.equal(options.yAxisLabelVisibility, "hide");
+    assert.equal(options.yAxisLineVisibility, "hide");
+    assert.equal(options.yAxisMajorTickVisibility, "hide");
+    assert.equal(options.yAxisMinorTickVisibility, "hide");
+    assert.equal(options.yAxisTitleVisibility, "hide");
+    assert.equal(
+      infoTrigger?.eventHandlers?.[0]?.options?.url,
+      `/metric-info?origin=${encodeURIComponent(origin)}&target=${target}`,
+      `${viewName} ${infoId} must identify its visible metric and primary Searchbase stanza`,
+    );
+    assert.equal(infoLayout?.position?.x, infoXPositions[index]);
+    assert.equal(infoLayout?.position?.y, index < 3 ? 118 : 574);
+    assert.equal(infoLayout?.position?.w, 42);
+    assert.equal(infoLayout?.position?.h, 42);
+    assert.equal(titleLayout?.position?.w, 482);
+    assert.equal(
+      new URL(
+        investigationTrigger?.eventHandlers?.[0]?.options?.url,
+        "http://dashboard.test",
+      ).searchParams.get("origin"),
+      origin,
+      `${viewName} ${investigationId} must retain the visible card title`,
+    );
+    assert.ok(
+      overview.structure.findIndex(({ item }) => item === infoId) <
+        overview.structure.findIndex(({ item }) => item === investigationId),
+      `${viewName} ${infoId} must precede Magnify+ in visual and keyboard order`,
+    );
+    rolloutCardCount += 1;
+    rolloutInfoActionCount += 1;
+    rolloutInvestigationActionCount += 1;
+  });
 });
+assert.equal(rolloutCardCount, 102);
+assert.equal(rolloutInfoActionCount, 102);
+assert.equal(rolloutInvestigationActionCount, 102);
 assert.match(
   dashboardDrilldown,
   /parseDashboardMetricInfoUrl[\s\S]*?METRIC_INFO_PATH/,
@@ -374,17 +499,6 @@ assert.match(
   "Searchbase HTML paragraphs must retain readable foreground contrast in the modal",
 );
 
-const authenticationPolicy = readDefinition(
-  "sn_zta_authentication_policy_enforcement",
-);
-for (let index = 1; index <= 6; index += 1) {
-  const options =
-    authenticationPolicy.visualizations[`viz_card_0${index}_trend`]?.options;
-  assert.equal(options.seriesColors[0], "#9b5ff4");
-  assert.equal(options.showYMajorGridLines, true);
-  assert.equal(options.yAxisLabelVisibility, undefined);
-}
-
 console.log(
-  "Dashboard Studio route, Manager scope, help, and pilot contract checks passed.",
+  "Dashboard Studio route, Manager scope, help, and 17-dashboard rollout checks passed.",
 );
