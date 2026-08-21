@@ -1802,6 +1802,9 @@ iseval = 0`}</CodeBlock>
                   initial canvas to six searches while details dispatch only
                   when opened. Dashboard Manager view mode still provides
                   Studio-style Display, zoom, JSON export, and clone controls.
+                  Dashboard Manager now honors same-tab edit-route changes
+                  immediately, opening the authoring toolbar without requiring
+                  users to expand the view toolbar and click Edit.
                   Secure Infrastructure Status now spans Meraki access points,
                   Catalyst Center issues, SD-WAN sites, Nexus health, Secure
                   Endpoint incidents, and FMC firewall activity. ZTNA access

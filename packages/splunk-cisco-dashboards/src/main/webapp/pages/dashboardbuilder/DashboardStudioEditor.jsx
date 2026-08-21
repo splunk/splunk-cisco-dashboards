@@ -916,6 +916,8 @@ const DashboardStudioEditor = ({
   //hasCloneSharingPermission,
 }) => {
   const navigate = useNavigate();
+  const { dashboardid, currentmode } = useParams();
+  const requestedRouteMode = currentmode === "edit" ? "edit" : "view";
   const [isCodeEditable, setIsCodeEditable] = useState(false);
 
   const dashboardApiElem = useRef(null);
@@ -1029,7 +1031,7 @@ const DashboardStudioEditor = ({
   };
   const [dashID, setDashID] = useState(openID);
   const [dashMode, setDashMode] = useState(
-    readOnly ? "view" : openID ? "edit" : "view",
+    readOnly ? "view" : openID ? "edit" : requestedRouteMode,
   );
   const [showEditContextNotice, setShowEditContextNotice] = useState(false);
   const previousDashModeRef = useRef();
@@ -1063,8 +1065,6 @@ const DashboardStudioEditor = ({
   delete self.require;
   const mapTileConfig = { defaultTileConfig: testTileConfig };
 
-  const { dashboardid, currentmode } = useParams();
-
   useEffect(() => {
     const activeDashboardTitle = getDefinitionTextValue(
       editedDefinition,
@@ -1075,8 +1075,15 @@ const DashboardStudioEditor = ({
   }, [currentDashboard?.label, dashID, editedDefinition]);
 
   useEffect(() => {
-    if (!openID && !readOnly) setDashMode(currentmode);
-  }, [currentmode]);
+    if (openID || readOnly) {
+      return;
+    }
+
+    setDashMode(requestedRouteMode);
+    if (apiRef && apiRef.getMode() !== requestedRouteMode) {
+      apiRef.switchMode(requestedRouteMode);
+    }
+  }, [apiRef, openID, readOnly, requestedRouteMode]);
 
   useEffect(() => {
     setDashID((prev) => {
