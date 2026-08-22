@@ -79,6 +79,7 @@
         </collection>
 
         <collection label="Visual Labs (Beta)">
+            <a href="secure_networking_pillars">Secure Networking Pillars (React Preview)</a>
             <a href="searchbase_canvas">Searchbase Canvas</a>
             <a href="network_diagram">Network Diagram</a>
             <a href="sn_topology_canvas">Topology Canvas</a>

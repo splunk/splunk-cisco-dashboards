@@ -511,7 +511,7 @@ export const __resetDispatchQueue = () => {
  *   "return all results"); the server-side `max_count` setting still applies.
  * @param {AbortSignal} [params.signal] - When aborted, queued dispatches are
  *   dropped, in-flight fetch is cancelled, and retry sleeps end early.
- * @returns {Promise<{results: Array<Object>}>}
+ * @returns {Promise<{results: Array<Object>, cachedFailure?: boolean}>}
  */
 export const runSearch = async ({
  spl,
@@ -547,7 +547,7 @@ export const runSearch = async ({
  // network log.
  const key = cacheKey(spl, earliestTime, latestTime, resolvedAppContext);
  if (FAILED_SPL_CACHE.has(key)) {
- return { results: [] };
+ return { results: [], cachedFailure: true };
  }
 
  // `oneShot` runs a search synchronously on the server and returns

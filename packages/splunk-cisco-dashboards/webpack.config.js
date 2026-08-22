@@ -122,6 +122,10 @@ const commonConfig = webpackMerge(baseConfig, {
             webappRoot,
             'pages/secure_operations_glass/render.tsx'
         ),
+        secure_networking_pillars: path.join(
+            webappRoot,
+            'pages/secure_networking_pillars/render.tsx'
+        ),
         dashboardbuilder: path.join(webappRoot, 'pages/dashboardbuilder/index.jsx'),
     },
     output: {

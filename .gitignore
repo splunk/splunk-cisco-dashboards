@@ -23,7 +23,9 @@
 /docs/
 /icons/
 /packages/splunk-cisco-dashboards/docs/
-/packages/splunk-cisco-dashboards/test/
+/packages/splunk-cisco-dashboards/test/*
+!/packages/splunk-cisco-dashboards/test/agenticSocWorkspace.test.cjs
+!/packages/splunk-cisco-dashboards/test/secureNetworkingReactPillars.test.cjs
 /tests/
 
 # Operating-system, editor, and document artifacts.

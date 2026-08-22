@@ -26,6 +26,7 @@ const ENTRY_NAMES = [
     'macro_index_tuning',
     'user_guide',
     'secure_operations_glass',
+    'secure_networking_pillars',
     'dashboardbuilder',
 ];
 
