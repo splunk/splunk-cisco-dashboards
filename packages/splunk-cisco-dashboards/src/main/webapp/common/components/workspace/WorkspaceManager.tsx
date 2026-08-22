@@ -128,7 +128,7 @@ const sourceDescription = (sourceWorkspace: WorkspaceSourceId): string => {
         return 'Starts with access, infrastructure, segmentation, firewalling, and agentic operations.';
     }
     if (sourceWorkspace === 'agentic_soc') {
-        return 'Starts with live Umbrella DNS, firewall threat, and Endace/Zeek network detection.';
+        return 'Starts with live Umbrella DNS, firewall threat, Endace/Zeek network detection, and unified XDR and Splunk investigation.';
     }
     return 'Starts with IT operations, security operations, digital experience, and executive signals.';
 };

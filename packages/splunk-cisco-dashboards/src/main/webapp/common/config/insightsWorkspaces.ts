@@ -28,6 +28,7 @@ export const ALL_WORKSPACE_SECTION_IDS = [
   "dns_security",
   "firewall_security",
   "network_detection",
+  "unified_investigation",
 ] as const;
 
 export type SectionId = (typeof ALL_WORKSPACE_SECTION_IDS)[number];
@@ -194,6 +195,13 @@ const AGENTIC_SOC_SECTIONS: readonly WorkspaceSectionMeta[] = [
     href: "searchbase_canvas?category=Security&sub_category=Network%20Detection%20%26%20Response",
     icon: "network",
   },
+  {
+    id: "unified_investigation",
+    title: "Unified Detection & Investigation",
+    linkText: "Open unified investigation searches",
+    href: "searchbase_canvas?category=Security&sub_category=Unified%20Detection%20%26%20Investigation",
+    icon: "shield-check",
+  },
 ] as const;
 
 /**
@@ -216,6 +224,7 @@ export const WORKSPACE_SECTION_SOURCE: Record<SectionId, WorkspaceSourceId> = {
   dns_security: AGENTIC_SOC_WORKSPACE_SOURCE_ID,
   firewall_security: AGENTIC_SOC_WORKSPACE_SOURCE_ID,
   network_detection: AGENTIC_SOC_WORKSPACE_SOURCE_ID,
+  unified_investigation: AGENTIC_SOC_WORKSPACE_SOURCE_ID,
 };
 
 export const getWorkspaceSectionSource = (
@@ -282,10 +291,10 @@ export const WORKSPACE_SOURCES: Record<WorkspaceSourceId, WorkspaceSource> = {
     sections: AGENTIC_SOC_SECTIONS,
     defaultSectionIds: AGENTIC_SOC_DEFAULT_SECTION_IDS,
     defaultVisibleSections: AGENTIC_SOC_DEFAULT_SECTION_IDS,
-    maxVisibleSections: 3,
+    maxVisibleSections: 4,
     minTileCount: 1,
     maxTileCount: 9,
-    fallbackTileCount: 3,
+    fallbackTileCount: 9,
     autoDiscovery: {
       stanzaPrefix: "agentic_soc_",
       requiredTag: "Agentic SOC",
@@ -293,6 +302,7 @@ export const WORKSPACE_SOURCES: Record<WorkspaceSourceId, WorkspaceSource> = {
         "DNS Security": "dns_security",
         "Firewall Threat Defense": "firewall_security",
         "Network Detection & Response": "network_detection",
+        "Unified Detection & Investigation": "unified_investigation",
       },
     },
   },
@@ -452,7 +462,7 @@ export const PACKAGED_WORKSPACE_FALLBACKS: readonly InsightsWorkspace[] = [
     sourceWorkspace: "agentic_soc",
     headerTitle: "Agentic Security Operations Center",
     headerSubtitle:
-      "Live conference DNS, firewall, and full-packet network telemetry",
+      "Live conference DNS, firewall, packet, detection, and investigation telemetry",
     hideDefaultLogo: true,
     isBuiltIn: true,
     sortOrder: 40,
