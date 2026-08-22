@@ -140,3 +140,11 @@ export = system
 [macros/nrs_w_nrs_r]
 access = read : [ * ], write : [ admin, power, sc_admin ]
 export = system
+
+[lookups/sgt_naming.csv]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[transforms/sgt_naming]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system

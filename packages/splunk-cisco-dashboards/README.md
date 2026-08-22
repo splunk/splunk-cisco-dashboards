@@ -15,6 +15,9 @@ networking pillars and workplace scenarios.
   Detection & Response, and Unified Detection & Investigation. Each section
   includes nine purpose-built views, while the six-signal rail and clearly
   labeled fallback rows keep empty or unavailable conference feeds honest.
+- Corrected Secure Group Tag enrichment searches to invoke the packaged
+  `sgt_naming` lookup transform and exported its transform and CSV for app-wide
+  reads.
 - Curated Dashboard Manager to show only the packaged dashboards that depend on
   its Dashboard Studio extensions and the current user's dashboards created
   through the managed workflow. Ordinary Studio dashboards remain excluded even
