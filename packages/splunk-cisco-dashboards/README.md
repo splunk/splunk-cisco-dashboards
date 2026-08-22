@@ -72,16 +72,15 @@ networking pillars and workplace scenarios.
   partner app's legacy colon-delimited field extractions.
 - Redesigned first-run setup as a clear six-step guided flow with explicit
   START and FINISH lines, responsive progress navigation, persistent dark and
-  Light modes, a dedicated CIM readiness step before final review, and the full
-  Splunk Secure Networking Essentials product name throughout the journey.
+  Light modes, a dedicated Tune CIM models step before final review, and the
+  full Splunk Secure Networking Essentials product name throughout the journey.
 - Expanded setup performance readiness to cover 13 supported Cisco data models,
   including the eight DC Networking models plus CIM Authentication and Network
   Traffic, while requiring product-specific models only when matching data is
   detected. The compact inventory and accelerated-only gate now omit DC models
   when no DC Networking data is present.
-- Prevented parameterized system helpers such as `index_thruput(1)` from
-  entering setup routing SPL, and kept Step 4 incomplete until its routing scan
-  succeeds.
+- Prevented parameterized system helpers and foreign app macros from entering
+  setup routing SPL, and kept Step 4 incomplete until its routing scan succeeds.
 - Added index multiselects that build routing macro definitions automatically,
   aligned the setup progress rail, and updated the Enterprise Networking app
   add-on, and required data-model names throughout the setup experience.
@@ -95,6 +94,13 @@ networking pillars and workplace scenarios.
 - Kept setup routing, CIM, and performance edits as drafts until final review,
   added confirmed abandon and save actions, and added an app-by-app before/after
   change summary in the finish step.
+- Made repeated CIM discovery additive so saved allowlist values are preserved,
+  newly detected indexes are merged into the draft, and an unreadable current
+  definition cannot be replaced by an unsafe proposal.
+- Made CIM discovery a read-only matching step and added an explicit data-model
+  picker before review. No model is selected automatically, unselected
+  allowlists remain unchanged, and only selected proposals can enter the Step 6
+  change plan or final save.
 - Corrected Step 4 search-performance radio sizing so selectors remain circular
   in both Light and dark setup modes, and kept expanded setup inventories inside
   the scrollable content area so the header and action footer remain available.
@@ -109,8 +115,9 @@ networking pillars and workplace scenarios.
   definition in a compact review table that fits without horizontal scrolling.
 - Styled each CIM `Browse indexes` action as a blue standalone control so its
   edit behavior is clear without repeating a primary button in every row.
-- Restricted the Step 5 CIM inventory to the 23 approved models and clarified
-  the visible `App`, `Inventory`, and `Network Resolution (DNS)` labels.
+- Restricted the Step 5 CIM inventory to the 22 approved models, removed the
+  `App` model, and retained the clarified `Inventory` and
+  `Network Resolution (DNS)` labels.
 - Corrected 26 row-oriented Searchbase defaults so multi-dimension and
   multi-series results, including Meraki threat categories, Catalyst device
   health, and ZTNA device outcomes, render as complete tables instead of

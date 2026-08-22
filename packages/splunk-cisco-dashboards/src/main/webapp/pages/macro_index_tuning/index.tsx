@@ -16,6 +16,7 @@ import ControlGroup from '@splunk/react-ui/ControlGroup';
 import Message from '@splunk/react-ui/Message';
 import Modal from '@splunk/react-ui/Modal';
 import Multiselect from '@splunk/react-ui/Multiselect';
+import Paragraph from '@splunk/react-ui/Paragraph';
 import Progress from '@splunk/react-ui/Progress';
 import RadioList from '@splunk/react-ui/RadioList';
 import ScreenReaderContent from '@splunk/react-ui/ScreenReaderContent';
@@ -105,6 +106,7 @@ const FALLBACK_SCD_INDEX_MACRO_NAMES = [
   "index_cybervision",
   "index_dc",
   "index_dhcp",
+  "index_dns_umbrella",
   "index_duo",
   "index_f5",
   "index_firewall",
@@ -112,6 +114,7 @@ const FALLBACK_SCD_INDEX_MACRO_NAMES = [
   "index_intersight",
   "index_meraki",
   "index_network",
+  "index_network_ftd",
   "index_nvm",
   "index_sdwan",
   "index_security",
@@ -134,15 +137,6 @@ const CIM_DATA_MODEL_DISCOVERY_CONFIGS = [
     macro: "cim_Alerts_indexes",
     model: "Alerts",
     predicate: cimHasTag("alert"),
-  },
-  {
-    macro: "cim_Application_State_indexes",
-    model: "App",
-    predicate: cimAny(
-      cimAll(cimHasTag("listening"), cimHasTag("port")),
-      cimAll(cimHasTag("process"), cimHasTag("report")),
-      cimAll(cimHasTag("service"), cimHasTag("report")),
-    ),
   },
   {
     macro: "cim_Authentication_indexes",
@@ -890,6 +884,35 @@ const CimSectionMessage = styled(Message)`
   margin-block-end: ${variables.spacingLarge};
 `;
 
+const CimModelSelectionSection = styled.section`
+  border-radius: ${variables.borderRadius};
+  padding: ${variables.spacingLarge};
+`;
+
+const CimModelSelectionTitle = styled.h2`
+  margin: 0;
+  font-size: ${variables.fontSizeLarge};
+  font-weight: ${variables.fontWeightBold};
+  line-height: ${variables.lineHeightSnug};
+`;
+
+const CimModelSelectionDescription = styled.p`
+  margin: ${variables.spacingXSmall} 0 0;
+  max-inline-size: ${variables.lineLength};
+  font-size: ${variables.fontSize};
+  line-height: ${variables.lineHeightSpacious};
+`;
+
+const CimModelSelectionControl = styled.div`
+  margin-block-start: ${variables.spacingLarge};
+`;
+
+const CimModelSelectionStatus = styled.p`
+  margin: ${variables.spacingMedium} 0 0;
+  font-size: ${variables.fontSizeSmall};
+  line-height: ${variables.lineHeightSpacious};
+`;
+
 const CimBulkSaveSummary = styled.div`
   min-block-size: ${variables.spacingLarge};
   margin-block-start: ${variables.spacingSmall};
@@ -1110,6 +1133,22 @@ const normalizeSelectedIndexes = (
   return ["*"];
 };
 
+export const normalizeCimModelSelection = (
+  availableMacroNames: readonly string[],
+  requestedMacroNames: readonly unknown[],
+): string[] => {
+  const requested = new Set(requestedMacroNames.map(String));
+  return availableMacroNames.filter((macro) => requested.has(macro));
+};
+
+export const selectCimRowsByMacroNames = <TRow extends { macro: string }>(
+  rows: readonly TRow[],
+  selectedMacroNames: readonly string[],
+): TRow[] => {
+  const selected = new Set(selectedMacroNames);
+  return rows.filter((row) => selected.has(row.macro));
+};
+
 const getCimModelLabel = (macro: string): string =>
   CIM_MODEL_LABEL_BY_MACRO.get(macro) ||
   macro
@@ -1198,6 +1237,62 @@ const definitionChanged = (
   proposedDefinition: string,
 ): boolean => currentDefinition.trim() !== proposedDefinition.trim();
 
+const isPureIndexAllowlistDefinition = (definition: string): boolean => {
+  const indexToken = String.raw`(?:"[^"]+"|'[^']+'|[^\s|,)]+)`;
+  const indexIn = new RegExp(
+    String.raw`^index\s+IN\s*\(\s*${indexToken}(?:\s*,\s*${indexToken})*\s*\)$`,
+    "i",
+  );
+  const indexOr = new RegExp(
+    String.raw`^\(\s*index\s*=\s*${indexToken}(?:\s+OR\s+index\s*=\s*${indexToken})*\s*\)$`,
+    "i",
+  );
+  const singleIndex = new RegExp(
+    String.raw`^index\s*=\s*${indexToken}$`,
+    "i",
+  );
+  const trimmed = definition.trim();
+  return (
+    indexIn.test(trimmed) ||
+    indexOr.test(trimmed) ||
+    singleIndex.test(trimmed)
+  );
+};
+
+export const buildAdditiveCimDraftDefinition = (
+  currentDefinition: string,
+  discoveredIndexes: readonly string[],
+): string => {
+  const normalizedDiscoveredIndexes = Array.from(
+    new Set(discoveredIndexes.map(cleanIndexToken).filter(Boolean)),
+  );
+  if (!normalizedDiscoveredIndexes.length) return currentDefinition;
+
+  const currentIndexes = extractIndexTokens(currentDefinition);
+  // Preserve an explicit wildcard or a non-standard definition. Discovery may
+  // add concrete indexes to a known allowlist, but removal or rewriting remains
+  // an explicit administrator action in the index picker.
+  if (
+    currentIndexes.includes("*") ||
+    (currentDefinition.trim() &&
+      (!currentIndexes.length ||
+        !isPureIndexAllowlistDefinition(currentDefinition)))
+  ) {
+    return currentDefinition;
+  }
+
+  const currentIndexSet = new Set(currentIndexes);
+  const newIndexes = normalizedDiscoveredIndexes.filter(
+    (index) => !currentIndexSet.has(index),
+  );
+  if (!newIndexes.length) return currentDefinition;
+
+  return formatMacroDefinition(
+    [...currentIndexes, ...newIndexes],
+    "indexIn",
+  );
+};
+
 const buildExpectedEditableRows = (
   configs: readonly TunableMacroConfig[],
   parsedRows: readonly MacroRow[],
@@ -1217,10 +1312,17 @@ const buildExpectedEditableRows = (
         config.definitionFormat,
         config.definitionSuffix,
       );
-    const draftDefinition =
-      config.preserveCurrentDefinition && details?.definition
-        ? details.definition
-        : scanned?.definition || currentDefinition;
+    let draftDefinition = scanned?.definition || currentDefinition;
+    if (config.preserveCurrentDefinition && details?.definition) {
+      draftDefinition = details.definition;
+    } else if (config.family === "cim" && scanned) {
+      draftDefinition = buildAdditiveCimDraftDefinition(
+        currentDefinition,
+        scanned.indexes?.length
+          ? scanned.indexes
+          : extractIndexTokens(scanned.definition),
+      );
+    }
 
     return {
       macro: config.macro,
@@ -1415,6 +1517,25 @@ const injectIndexMacroOrClause = (
   );
 };
 
+interface EffectiveMacroCatalogEntry {
+  name?: unknown;
+  acl?: {
+    app?: unknown;
+  };
+}
+
+export const selectAppOwnedIndexMacroNames = (
+  entries: readonly EffectiveMacroCatalogEntry[],
+  appName: string,
+): string[] => {
+  const names = entries
+    .filter((entry) => String(entry?.acl?.app ?? "").trim() === appName)
+    .map((entry) => String(entry?.name ?? "").trim())
+    .filter((name) => /^index_[A-Za-z0-9_]+$/.test(name));
+
+  return Array.from(new Set(names)).sort();
+};
+
 const loadScdIndexMacroNames = async (): Promise<string[]> => {
   const response = await fetch(scdMacrosCatalogUrl(), {
     ...getDefaultFetchInit(),
@@ -1435,15 +1556,14 @@ const loadScdIndexMacroNames = async (): Promise<string[]> => {
     );
   }
 
-  const entries = (payload as { entry?: Array<{ name?: unknown }> } | null)
-    ?.entry;
-  const names = (entries ?? [])
-    .map((entry) => normalizeText(entry?.name).trim())
-    // The effective macros endpoint can include globally exported helpers such
-    // as index_thruput(1). Only zero-argument routing macros are valid in the
-    // generated tstats predicate; invoking a parameterized helper by its stanza
-    // name passes the argument count ("1") and fails macro validation.
-    .filter((name) => /^index_[A-Za-z0-9_]+$/.test(name));
+  const entries = (
+    payload as { entry?: EffectiveMacroCatalogEntry[] } | null
+  )?.entry;
+  // This is an effective configuration endpoint, so it can include globally
+  // exported macros from unrelated apps. Invoking either a parameterized
+  // helper such as index_thruput(1) or a foreign zero-argument index_* macro
+  // can invalidate the generated tstats predicate after macro expansion.
+  const names = selectAppOwnedIndexMacroNames(entries ?? [], APP_NAME);
 
   return names.length
     ? Array.from(new Set(names)).sort()
@@ -1624,15 +1744,27 @@ const loadMacroDetails = async (
 
 const loadMacroDetailsByConfig = async (
   configs: readonly TunableMacroConfig[],
+  { requireDefinitions = false }: { requireDefinitions?: boolean } = {},
 ): Promise<Record<string, MacroDetails>> => {
   const pairs = await Promise.all(
     configs.map(async (config) => {
       try {
+        const details = await loadMacroDetails(config.macro, config.targetApp);
+        if (requireDefinitions && !details.definition.trim()) {
+          throw new Error("The current definition is empty.");
+        }
         return [
           `${config.targetApp}:${config.macro}`,
-          await loadMacroDetails(config.macro, config.targetApp),
+          details,
         ] as const;
-      } catch {
+      } catch (error) {
+        if (requireDefinitions) {
+          const reason =
+            error instanceof Error ? error.message : "Unknown load error.";
+          throw new Error(
+            `Current definition for ${config.macro} could not be loaded. ${reason}`,
+          );
+        }
         return [
           `${config.targetApp}:${config.macro}`,
           { definition: "", description: "" },
@@ -1961,7 +2093,7 @@ const SETUP_FLOW_STEPS = [
   "Verify readiness",
   "Review packages",
   "Configure data",
-  "CIM readiness",
+  "Tune CIM models",
   "Review & finish",
 ] as const;
 
@@ -2451,6 +2583,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
   const [selectedCimMacro, setSelectedCimMacro] = useState<string>(
     CIM_MACRO_NAMES[0] || "",
   );
+  const [selectedSetupCimMacroNames, setSelectedSetupCimMacroNames] =
+    useState<string[]>([]);
   const [filterText, setFilterText] = useState("");
   const [collapsedRowGroups, setCollapsedRowGroups] = useState<
     Record<string, boolean>
@@ -2807,17 +2941,58 @@ export default function MacroIndexTuningPage(): JSX.Element {
       ),
     [isTargetAppInstalled, rows],
   );
+  const selectedSetupCimMacroNameSet = useMemo(
+    () => new Set(selectedSetupCimMacroNames),
+    [selectedSetupCimMacroNames],
+  );
+  const setupCimMatchedRows = useMemo(
+    () =>
+      cimScanState === "ready"
+        ? cimRows.filter(
+            (row) =>
+              row.targetApp === CIM_APP_NAME &&
+              isTargetAppInstalled(row.targetApp) &&
+              row.events > 0,
+          )
+        : [],
+    [cimRows, cimScanState, isTargetAppInstalled],
+  );
+  const setupCimSelectableRows = useMemo(
+    () =>
+      cimScanState === "ready"
+        ? cimRows.filter(
+            (row) =>
+              row.targetApp === CIM_APP_NAME &&
+              isTargetAppInstalled(row.targetApp) &&
+              (row.events > 0 || selectedSetupCimMacroNameSet.has(row.macro)),
+          )
+        : [],
+    [
+      cimRows,
+      cimScanState,
+      isTargetAppInstalled,
+      selectedSetupCimMacroNameSet,
+    ],
+  );
   const setupCimRowsToSave = useMemo(
     () =>
-      cimRows.filter(
-        (row) =>
-          row.targetApp === CIM_APP_NAME &&
-          isTargetAppInstalled(row.targetApp) &&
-          (row.events > 0 ||
-            definitionChanged(row.definition, row.draftDefinition)) &&
-          row.draftDefinition.trim(),
-      ),
-    [cimRows, isTargetAppInstalled],
+      cimScanState === "ready"
+        ? selectCimRowsByMacroNames(
+            cimRows,
+            selectedSetupCimMacroNames,
+          ).filter(
+            (row) =>
+              row.targetApp === CIM_APP_NAME &&
+              isTargetAppInstalled(row.targetApp) &&
+              row.draftDefinition.trim(),
+          )
+        : [],
+    [
+      cimRows,
+      cimScanState,
+      isTargetAppInstalled,
+      selectedSetupCimMacroNames,
+    ],
   );
   const setupRowsToSave = useMemo(
     () => [...setupScdRowsToSave, ...setupExternalRowsToSave],
@@ -3239,7 +3414,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
       return;
     }
     try {
-      const currentDetails = await loadMacroDetailsByConfig(CIM_MACRO_CONFIGS);
+      const currentDetails = await loadMacroDetailsByConfig(
+        CIM_MACRO_CONFIGS,
+        { requireDefinitions: true },
+      );
       if (cimRowLoadRequestRef.current !== requestId) return;
       const loadedRows = buildExpectedEditableRows(
         CIM_MACRO_CONFIGS,
@@ -3291,7 +3469,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
         tag: `${TUNING_SEARCHBASE_ID}:cim`,
         signal: controller.signal,
       });
-      const currentDetails = await loadMacroDetailsByConfig(CIM_MACRO_CONFIGS);
+      const currentDetails = await loadMacroDetailsByConfig(
+        CIM_MACRO_CONFIGS,
+        { requireDefinitions: true },
+      );
       const parsed = ((result.results || []) as Record<string, unknown>[])
         .map((row) => parseSearchResult(row, macroConfigByName))
         .filter((row): row is MacroRow => Boolean(row));
@@ -4207,7 +4388,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
 
           <CimModelEditorDescription className="sui-color-muted">
             This allowlist constrains searches for the {modelLabel} data model.
-            Discovery can replace it with indexes detected from tagged events.
+            Discovery keeps saved index names and adds indexes detected from
+            tagged events. Remove indexes explicitly when you edit the
+            allowlist.
           </CimModelEditorDescription>
           <CimModelEditorPath className="sui-color-muted">
             {row.targetApp}/local/macros.conf
@@ -4220,7 +4403,16 @@ export default function MacroIndexTuningPage(): JSX.Element {
   const renderSetupCimRow = (row: EditableMacroRow) => {
     const rowKey = macroStatusKey(row);
     const changed = definitionChanged(row.definition, row.draftDefinition);
+    const selected = selectedSetupCimMacroNameSet.has(row.macro);
     const selectionSummary = formatCimAllowlistSummary(row.draftDefinition);
+    let reviewStatus = "Not selected";
+    if (selected && changed) {
+      reviewStatus = "Will change";
+    } else if (selected && row.events === 0) {
+      reviewStatus = "No matching data";
+    } else if (selected) {
+      reviewStatus = "No change needed";
+    }
     const openEditor = (
       event: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>,
     ) => {
@@ -4280,16 +4472,18 @@ export default function MacroIndexTuningPage(): JSX.Element {
         <Table.Cell align="right">
           <span
             className={`text-xs font-bold ${
-              changed ? "sui-color-info" : "sui-color-muted"
+              selected && changed ? "sui-color-info" : "sui-color-muted"
             }`}
           >
-            {changed ? "Will change" : "Unchanged"}
+            {reviewStatus}
           </span>
         </Table.Cell>
         <Table.Cell align="right">
           <Button
             appearance="standalone"
-            aria-label={`Browse indexes for ${getCimModelLabel(row.macro)}`}
+            aria-label={`${selected ? "Browse" : "Select"} indexes for ${getCimModelLabel(
+              row.macro,
+            )}`}
             disabled={isCimLoading ? "dimmed" : false}
             elementRef={(element) => {
               if (element) {
@@ -4301,7 +4495,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 setupEditButtonRefs.current.delete(rowKey);
               }
             }}
-            label="Browse indexes"
+            label={selected ? "Browse indexes" : "Select indexes"}
             onClick={openEditor}
           />
         </Table.Cell>
@@ -4564,6 +4758,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
               if (usesIndexPicker) {
                 updateDraftDefinition(setupEditor.rowKey, proposedDefinition);
               }
+              if (isCimEditor) {
+                setSelectedSetupCimMacroNames((currentSelection) =>
+                  normalizeCimModelSelection(CIM_MACRO_NAMES, [
+                    ...currentSelection,
+                    setupEditorRow.macro,
+                  ]),
+                );
+              }
               closeSetupEditor(false);
             }}
             label="Apply to draft plan"
@@ -4593,15 +4795,24 @@ export default function MacroIndexTuningPage(): JSX.Element {
           title={`Replace ${isRoutingRerun ? "routing" : "CIM"} draft changes?`}
         />
         <Modal.Body>
-          <p>
-            Running a new {isRoutingRerun ? "routing scan" : "CIM discovery"}
-            {" "}will discard {changeCount} unsaved {changeLabel} and rebuild
-            that part of the draft plan using the selected time range.
-          </p>
-          <p className="mt-3">
+          {isRoutingRerun ? (
+            <Paragraph>
+              Running a new routing scan will discard {changeCount} unsaved{" "}
+              {changeLabel} and rebuild that part of the draft plan using the
+              selected time range.
+            </Paragraph>
+          ) : (
+            <Paragraph>
+              Running CIM discovery will discard {changeCount} unsaved{" "}
+              {changeLabel}, reload the saved allowlists, and add indexes found
+              in the selected time range. Saved index values will not be
+              removed.
+            </Paragraph>
+          )}
+          <Paragraph>
             Your other draft choices will remain unchanged. Running discovery
             does not save any settings.
-          </p>
+          </Paragraph>
         </Modal.Body>
         <Modal.Footer>
           <Button
@@ -4823,7 +5034,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               onClick={continueToCim}
               appearance="primary"
               aria-describedby="scd-routing-scan-guidance"
-              label="Continue to CIM"
+              label="Choose CIM models"
             />
           </>
         )}
@@ -5095,58 +5306,75 @@ export default function MacroIndexTuningPage(): JSX.Element {
   if (isOptionalCimSetupPage) {
     const setupCimAvailable = isTargetAppInstalled(CIM_APP_NAME);
     const setupCimReviewRows =
-      cimScanState === "ready" ? setupCimRowsToSave : filteredCimRows;
-    const setupCimReviewNoun =
-      setupCimReviewRows.length === 1 ? "allowlist" : "allowlists";
+      cimScanState === "ready" ? setupCimSelectableRows : [];
+    const selectedMatchedCimRows = setupCimRowsToSave.filter(
+      (row) => row.events > 0,
+    );
+    const selectedUnchangedCimRows = setupCimRowsToSave.filter(
+      (row) =>
+        row.events > 0 &&
+        !definitionChanged(row.definition, row.draftDefinition),
+    );
+    const selectedNoDataCimRows = setupCimRowsToSave.filter(
+      (row) => row.events === 0,
+    );
     const setupCimReviewTitle =
       cimScanState === "ready"
-        ? `Review ${setupCimReviewRows.length} proposed CIM ${setupCimReviewNoun} (${setupCimChangesToSave.length} will change)`
-        : `Review ${setupCimReviewRows.length} current CIM ${setupCimReviewNoun}`;
-    let setupCimEmptyMessage = "No CIM allowlists are available yet.";
+        ? `3. Review matches (${setupCimMatchedRows.length} found · ${setupCimRowsToSave.length} selected · ${setupCimChangesToSave.length} changes)`
+        : "3. Review proposed allowlists";
+    let setupCimEmptyMessage =
+      "Run discovery to find CIM data models with tagged events.";
     if (isCimLoading) {
-      setupCimEmptyMessage = "Discovering indexes for CIM data models…";
+      setupCimEmptyMessage = "Finding CIM data models with tagged events…";
     } else if (cimScanState === "ready") {
       setupCimEmptyMessage =
-        "No CIM allowlist proposals were detected in this time range.";
+        "No tagged Cisco events matched a supported CIM data model in this time range. Nothing was selected or changed.";
     }
     let cimStatus = setupCimAvailable
-      ? "Review detected allowlists, then continue to the final summary."
+      ? "Find matching data models, choose which ones to tune, then review their proposed allowlists."
       : "Splunk_SA_CIM is not available. Review the package requirement before finishing.";
     if (isCimLoading) {
       cimStatus = "CIM discovery is running. This can take several minutes.";
     } else if (cimScanState === "ready") {
-      cimStatus = setupCimChangesToSave.length
-        ? `${setupCimChangesToSave.length} CIM allowlist${
-            setupCimChangesToSave.length === 1 ? "" : "s"
-          } will change. ${setupChanges.length} total draft change${
-            setupChanges.length === 1 ? "" : "s"
-          }; nothing is saved yet.`
-        : `${setupCimRowsToSave.length} CIM model${
-            setupCimRowsToSave.length === 1 ? "" : "s"
-          } matched; no CIM allowlist definitions will change.`;
+      if (!setupCimMatchedRows.length) {
+        cimStatus =
+          "No matching CIM data was found. Continuing will keep every saved CIM allowlist unchanged.";
+      } else if (!setupCimRowsToSave.length) {
+        cimStatus = `${setupCimMatchedRows.length} data model${
+          setupCimMatchedRows.length === 1 ? "" : "s"
+        } matched. No models are selected, so no CIM allowlist will change.`;
+      } else {
+        cimStatus = `${setupCimRowsToSave.length} selected · ${setupCimChangesToSave.length} will change · ${selectedUnchangedCimRows.length} already covered · ${selectedNoDataCimRows.length} with no matching data. Nothing is saved yet.`;
+      }
     }
     let cimDiscoveryMessageType: "info" | "warning" | "success" =
       setupCimAvailable ? "info" : "warning";
     let cimDiscoveryMessage = setupCimAvailable
-      ? "CIM package detected"
+      ? "1. Find matching data models"
       : "CIM package needs attention";
     let cimDiscoveryDescription = setupCimAvailable
-      ? "Run discovery to propose only the indexes that contain tagged CIM data. Review individual models only when a proposal needs adjustment."
+      ? `Discovery is read-only. It checks tagged Cisco events against all ${CIM_MACRO_NAMES.length} supported CIM data models in the selected time range.`
       : "Install and enable Splunk_SA_CIM, then return to this step to discover model allowlists.";
     if (isCimLoading) {
-      cimDiscoveryMessage = "Discovering CIM indexes…";
+      cimDiscoveryMessage = "Finding matching CIM data models…";
       cimDiscoveryDescription =
-        "This can take several minutes. Proposed allowlists below will update when the search finishes.";
+        "This can take several minutes. Saved allowlists are not being changed.";
     } else if (cimScanState === "ready") {
       cimDiscoveryMessageType = "success";
-      cimDiscoveryMessage = `Discovery complete — ${setupCimRowsToSave.length} model${
-        setupCimRowsToSave.length === 1 ? "" : "s"
+      cimDiscoveryMessage = `Discovery complete — ${setupCimMatchedRows.length} data model${
+        setupCimMatchedRows.length === 1 ? "" : "s"
       } matched`;
-      cimDiscoveryDescription = setupCimChangesToSave.length
-        ? `${setupCimChangesToSave.length} allowlist change${
-            setupCimChangesToSave.length === 1 ? " was" : "s were"
-          } added to the draft plan. Each row shows the generated index IN definition.`
-        : "The discovered allowlists match the current definitions, so no CIM changes were added to the draft plan.";
+      cimDiscoveryDescription = setupCimRowsToSave.length
+        ? `${setupCimRowsToSave.length} data model${
+            setupCimRowsToSave.length === 1 ? " is" : "s are"
+          } selected. Only selected models can enter the draft plan.`
+        : "Select the data models you want to tune. No model has been added to the draft plan yet.";
+    }
+    let cimDiscoveryActionLabel = "Find matching models";
+    if (isCimLoading) {
+      cimDiscoveryActionLabel = "Finding matches";
+    } else if (cimScanState === "ready") {
+      cimDiscoveryActionLabel = "Refresh matches";
     }
 
     const continueToReview = () => {
@@ -5163,8 +5391,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
     return (
       <SetupFlowShell
         activeStep={5}
-        title="CIM readiness"
-        description="Map Cisco data to the indexes used by Splunk Common Information Model data models."
+        title="Choose CIM data models to tune"
+        description="Discovery finds indexes containing tagged Cisco events. Select the data models whose saved CIM allowlists you want to update; unselected models remain unchanged. Nothing is saved until Step 6."
         status={cimStatus}
         pendingChangeCount={setupChanges.length}
         pendingChangeDetail={setupPendingChangeDetail}
@@ -5181,7 +5409,11 @@ export default function MacroIndexTuningPage(): JSX.Element {
             <Button
               onClick={continueToReview}
               appearance="primary"
-              label="Review changes"
+              label={
+                setupCimRowsToSave.length
+                  ? "Review changes"
+                  : "Skip CIM tuning"
+              }
             />
           </>
         )}
@@ -5228,7 +5460,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   ) : (
                     <Play aria-hidden="true" size={15} />
                   )}
-                  label={isCimLoading ? "Discovering" : "Run discovery"}
+                  label={cimDiscoveryActionLabel}
                 />
               </div>
             ) : null}
@@ -5241,7 +5473,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   tooltip="Discovering CIM indexes"
                 />
                 <p className="text-xs sui-color-muted">
-                  Searching tagged events and building model allowlists…
+                  Searching tagged events for supported CIM data models…
                 </p>
               </div>
             ) : null}
@@ -5255,9 +5487,72 @@ export default function MacroIndexTuningPage(): JSX.Element {
           </CimSectionMessage>
         ) : null}
 
+        {setupCimAvailable && cimScanState === "ready" ? (
+          <CimModelSelectionSection className="border sui-border-weak sui-bg-section">
+            <CimModelSelectionTitle className="sui-color-active">
+              2. Choose data models to tune
+            </CimModelSelectionTitle>
+            <CimModelSelectionDescription className="sui-color-default">
+              Choose which discovered proposals may enter the draft plan. Saved
+              index values are preserved, newly detected indexes are added, and
+              unselected models remain unchanged.
+            </CimModelSelectionDescription>
+            <CimModelSelectionControl>
+              <CimControlGroup
+                controlsLayout="fill"
+                help="Use Select all or Clear all in the menu. Models without matching tagged data can still be selected for manual index review."
+                label="Data models to tune"
+                labelPosition="top"
+              >
+                <Multiselect
+                  compact
+                  filter
+                  inline={false}
+                  disabled={isCimLoading || isSavingCim ? "dimmed" : false}
+                  footerMessage={`${setupCimRowsToSave.length} of ${CIM_MACRO_NAMES.length} supported models selected · ${setupCimMatchedRows.length} matched`}
+                  noOptionsMessage="No matching CIM data models"
+                  onChange={(_event, { values }) => {
+                    setSelectedSetupCimMacroNames(
+                      normalizeCimModelSelection(CIM_MACRO_NAMES, values),
+                    );
+                    setCimBulkSaveStatus({ state: "idle" });
+                  }}
+                  placeholder="Choose data models…"
+                  selectAllAppearance="checkbox"
+                  showSelectedValuesFirst="nextOpen"
+                  values={selectedSetupCimMacroNames}
+                >
+                  {cimRows.map((row) => (
+                    <Multiselect.Option
+                      description={
+                        row.events > 0
+                          ? `${formatNumber(row.events)} matching events`
+                          : "No matching tagged data"
+                      }
+                      key={row.macro}
+                      label={getCimModelLabel(row.macro)}
+                      value={row.macro}
+                    />
+                  ))}
+                </Multiselect>
+              </CimControlGroup>
+            </CimModelSelectionControl>
+            <CimModelSelectionStatus
+              className="sui-color-muted"
+              role="status"
+              aria-live="polite"
+            >
+              {setupCimRowsToSave.length
+                ? `${setupCimRowsToSave.length} selected · ${selectedMatchedCimRows.length} with matching data · ${setupCimChangesToSave.length} proposed changes`
+                : "No models selected. You can continue without CIM tuning, and every saved allowlist will remain unchanged."}
+            </CimModelSelectionStatus>
+          </CimModelSelectionSection>
+        ) : null}
+
         {setupCimAvailable ? (
           <CollapsiblePanel
             appearance="subtle"
+            defaultOpen
             headingLevel={2}
             inset={false}
             title={setupCimReviewTitle}
@@ -5289,7 +5584,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                       <Table.HeadCell width={125}>Current</Table.HeadCell>
                       <Table.HeadCell width="auto">Proposed allowlist</Table.HeadCell>
                       <Table.HeadCell align="right" width={76}>Events</Table.HeadCell>
-                      <Table.HeadCell align="right" width={92}>Status</Table.HeadCell>
+                      <Table.HeadCell align="right" width={120}>Status</Table.HeadCell>
                       <Table.HeadCell align="right" width={152}>
                         <ScreenReaderContent>Actions</ScreenReaderContent>
                       </Table.HeadCell>
@@ -5338,6 +5633,18 @@ export default function MacroIndexTuningPage(): JSX.Element {
     } else if (setupChanges.length) {
       reviewStatus = `${setupChanges.length} ${setupChangeNoun} across ${setupChangedAppCount} ${setupAppNoun} will be saved after confirmation.`;
     }
+    let cimReviewValue = "Package unavailable";
+    let cimReviewDetail =
+      "Install and enable Splunk_SA_CIM when CIM coverage is required";
+    if (setupCimAvailable && cimScanState === "ready") {
+      cimReviewValue = `${setupCimRowsToSave.length} selected · ${setupCimRowsToSave.filter((row) => row.events > 0).length} matched · ${setupCimChangesToSave.length} changes`;
+      cimReviewDetail =
+        "Only selected Common Information Model allowlists can be saved";
+    } else if (setupCimAvailable) {
+      cimReviewValue = "Not run · no changes";
+      cimReviewDetail =
+        "CIM tuning was skipped; current allowlists will be preserved";
+    }
 
     const reviewRows = [
       {
@@ -5350,13 +5657,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
         warning: scanState === "error",
       },
       {
-        label: "CIM readiness",
-        value: setupCimAvailable
-          ? `${setupCimChangesToSave.length} changes`
-          : "Package unavailable",
-        detail: setupCimAvailable
-          ? "Detected Common Information Model index restrictions"
-          : "Install and enable Splunk_SA_CIM when CIM coverage is required",
+        label: "CIM model tuning",
+        value: cimReviewValue,
+        detail: cimReviewDetail,
         warning: !setupCimAvailable,
       },
       {
@@ -5399,7 +5702,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               to="#tune-cim"
               appearance="secondary"
               icon={<ArrowLeft aria-hidden="true" size={16} />}
-              label="Back to CIM readiness"
+              label="Back to CIM"
             />
             <Button
               elementRef={finishSetupButtonRef}

@@ -843,7 +843,7 @@ const SCD_SETUP_STEPS = [
   "Verify readiness",
   "Review packages",
   "Configure data",
-  "CIM readiness",
+  "Tune CIM models",
   "Review & finish",
 ];
 
@@ -1534,7 +1534,7 @@ function scdSetupRenderWelcomeStep(root) {
   [
     ["Verify readiness", "Confirm data coverage, freshness, packages, and index routing."],
     ["Configure data", "Review only the routing macros detected for this environment."],
-    ["Check CIM", "Review model allowlists separately without blocking the main setup path."],
+    ["Tune CIM models", "Choose which matched model allowlists may enter the final change plan."],
     ["Review and finish", "See the exact changes before anything is saved."],
   ].forEach(([label, description]) => {
     const item = scdSetupElement("li", "");

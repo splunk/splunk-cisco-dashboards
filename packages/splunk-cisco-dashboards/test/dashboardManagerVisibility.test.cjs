@@ -26,6 +26,12 @@ const setupTuner = readSource(
 const setupBootstrap = readSource(
   "src/main/resources/splunk/appserver/static/start_bootstrap.js",
 );
+const defaultMacros = readSource(
+  "src/main/resources/splunk/default/macros.conf",
+);
+const searchbase = readSource(
+  "src/main/resources/splunk/default/searchbase.conf",
+);
 
 const readTopLevelConst = (source, name) => {
   const start = source.indexOf(`const ${name} =`);
@@ -132,37 +138,209 @@ assert.match(
   "Dashboard Manager help must explain conditional native visibility",
 );
 
-const macroLoader = readTopLevelConst(setupTuner, "loadScdIndexMacroNames");
-const indexMacroPatternLiteral = macroLoader.match(
-  /\.filter\(\(name\) => (\/\^index_[^\n]+?\/)\.test\(name\)\)/,
-)?.[1];
-assert.ok(
-  indexMacroPatternLiteral,
-  "Setup routing discovery must use an anchored zero-argument index-macro filter",
+const selectAppOwnedIndexMacroNames = evaluateTypeScriptConst(
+  setupTuner,
+  "selectAppOwnedIndexMacroNames",
 );
-const indexMacroPattern = vm.runInNewContext(indexMacroPatternLiteral);
-const effectiveMacroNames = [
-  "index_identity",
-  "index_thruput(1)",
-  "index_catalyst",
-  "index_bad-name",
-  "not_an_index_macro",
+const effectiveMacros = [
+  { name: "index_identity", acl: { app: "splunk-cisco-dashboards" } },
+  { name: "index_dns_umbrella", acl: { app: "splunk-cisco-dashboards" } },
+  { name: "index_network_ftd", acl: { app: "splunk-cisco-dashboards" } },
+  { name: "index_thruput(1)", acl: { app: "splunk-cisco-dashboards" } },
+  { name: "index_bad-name", acl: { app: "splunk-cisco-dashboards" } },
+  { name: "index_time_delta", acl: { app: "SA-EndpointProtection" } },
+  { name: "not_an_index_macro", acl: { app: "splunk-cisco-dashboards" } },
 ];
-const routingMacroNames = effectiveMacroNames.filter((name) =>
-  indexMacroPattern.test(name),
+const routingMacroNames = selectAppOwnedIndexMacroNames(
+  effectiveMacros,
+  "splunk-cisco-dashboards",
 );
-assert.deepEqual(routingMacroNames, ["index_identity", "index_catalyst"]);
+assert.deepEqual(Array.from(routingMacroNames), [
+  "index_dns_umbrella",
+  "index_identity",
+  "index_network_ftd",
+]);
 const buildIndexMacroOrClause = evaluateTypeScriptConst(
   setupTuner,
   "buildIndexMacroOrClause",
 );
 const routingPredicate = buildIndexMacroOrClause(routingMacroNames);
 assert.match(routingPredicate, /`index_identity`/);
-assert.match(routingPredicate, /`index_catalyst`/);
+assert.match(routingPredicate, /`index_network_ftd`/);
 assert.doesNotMatch(
   routingPredicate,
-  /index_thruput|\([^)]*\)/,
-  "Generated routing SPL must never invoke parameterized helper macros",
+  /index_thruput|index_time_delta|\([^)]*\)/,
+  "Generated routing SPL must never invoke parameterized or foreign macros",
+);
+const injectIndexMacroOrClause = evaluateTypeScriptConst(
+  setupTuner,
+  "injectIndexMacroOrClause",
+  {
+    buildIndexMacroOrClause,
+    SCD_INDEX_MACRO_OR_PLACEHOLDER: "__SCD_INDEX_MACRO_OR__",
+  },
+);
+const tuningSearchBlock = searchbase.match(
+  /\[admin_macro_index_tuning\]([\s\S]*?)(?=\n\[[^\]]+\])/,
+)?.[1];
+assert.ok(tuningSearchBlock, "Searchbase must contain the setup tuning search");
+const tuningTstatsLine = tuningSearchBlock.match(/\nsearch = ([^\n]+)\\\n/)?.[1];
+assert.ok(tuningTstatsLine, "The setup tuning search must start with tstats");
+const injectedTuningSearch = injectIndexMacroOrClause(
+  tuningTstatsLine,
+  routingMacroNames,
+);
+assert.doesNotMatch(injectedTuningSearch, /index_time_delta|index_thruput/);
+assert.equal(
+  Array.from(injectedTuningSearch).filter((character) => character === "(")
+    .length,
+  Array.from(injectedTuningSearch).filter((character) => character === ")")
+    .length,
+  "The generated tstats predicate must keep balanced parentheses",
+);
+assert.match(
+  setupTuner,
+  /selectAppOwnedIndexMacroNames\(entries \?\? \[\], APP_NAME\)/,
+  "The effective macro inventory must be restricted to this app before dispatch",
+);
+
+const cleanIndexToken = evaluateTypeScriptConst(setupTuner, "cleanIndexToken");
+const extractIndexTokens = evaluateTypeScriptConst(
+  setupTuner,
+  "extractIndexTokens",
+  { cleanIndexToken },
+);
+const formatMacroDefinition = evaluateTypeScriptConst(
+  setupTuner,
+  "formatMacroDefinition",
+  {
+    cleanIndexToken,
+    DEFAULT_INDEX_IN_DEFINITION: "index IN (*)",
+    DEFAULT_INDEX_OR_DEFINITION: "(index=*)",
+    DEFAULT_SOURCETYPE_IN_DEFINITION: "sourcetype IN (*)",
+  },
+);
+const isPureIndexAllowlistDefinition = evaluateTypeScriptConst(
+  setupTuner,
+  "isPureIndexAllowlistDefinition",
+);
+const buildAdditiveCimDraftDefinition = evaluateTypeScriptConst(
+  setupTuner,
+  "buildAdditiveCimDraftDefinition",
+  {
+    cleanIndexToken,
+    extractIndexTokens,
+    formatMacroDefinition,
+    isPureIndexAllowlistDefinition,
+  },
+);
+assert.equal(
+  buildAdditiveCimDraftDefinition("index IN (aci, nd)", ["aci"]),
+  "index IN (aci, nd)",
+  "A bounded CIM scan must not remove a saved but dormant index",
+);
+assert.equal(
+  buildAdditiveCimDraftDefinition("(index=aci OR index=nd)", ["aci"]),
+  "(index=aci OR index=nd)",
+  "Discovery must not rewrite an equivalent saved definition when no index is new",
+);
+assert.equal(
+  buildAdditiveCimDraftDefinition("index IN (aci)", ["cisco_ise", "aci"]),
+  "index IN (aci, cisco_ise)",
+  "CIM discovery must add newly detected indexes to the saved allowlist",
+);
+assert.equal(
+  buildAdditiveCimDraftDefinition("index IN (*)", ["aci"]),
+  "index IN (*)",
+  "Discovery must preserve an explicit wildcard allowlist",
+);
+assert.equal(
+  buildAdditiveCimDraftDefinition("custom_current_predicate", ["aci"]),
+  "custom_current_predicate",
+  "Discovery must not rewrite a non-standard current definition",
+);
+assert.equal(
+  buildAdditiveCimDraftDefinition("index=aci sourcetype=cisco:ise:syslog", [
+    "cisco_ise",
+  ]),
+  "index=aci sourcetype=cisco:ise:syslog",
+  "Discovery must preserve non-index predicates in a custom definition",
+);
+const normalizeCimModelSelection = evaluateTypeScriptConst(
+  setupTuner,
+  "normalizeCimModelSelection",
+);
+const approvedCimMacros = [
+  "cim_Alerts_indexes",
+  "cim_Authentication_indexes",
+  "cim_Network_Traffic_indexes",
+];
+assert.deepEqual(
+  Array.from(
+    normalizeCimModelSelection(approvedCimMacros, [
+      "cim_Network_Traffic_indexes",
+      "removed_model",
+      "cim_Authentication_indexes",
+      "cim_Authentication_indexes",
+    ]),
+  ),
+  ["cim_Authentication_indexes", "cim_Network_Traffic_indexes"],
+  "CIM selection must discard unknown values, deduplicate, and retain catalog order",
+);
+assert.deepEqual(
+  Array.from(normalizeCimModelSelection(approvedCimMacros, [])),
+  [],
+  "An empty CIM selection must remain an explicit no-tuning choice",
+);
+const selectCimRowsByMacroNames = evaluateTypeScriptConst(
+  setupTuner,
+  "selectCimRowsByMacroNames",
+);
+const cimSelectionRows = [
+  { macro: "cim_Alerts_indexes", changed: true },
+  { macro: "cim_Authentication_indexes", changed: true },
+  { macro: "cim_Network_Traffic_indexes", changed: false },
+];
+assert.deepEqual(
+  Array.from(
+    selectCimRowsByMacroNames(cimSelectionRows, [
+      "cim_Authentication_indexes",
+      "cim_Network_Traffic_indexes",
+    ]),
+    (row) => ({ ...row }),
+  ),
+  [
+    { macro: "cim_Authentication_indexes", changed: true },
+    { macro: "cim_Network_Traffic_indexes", changed: false },
+  ],
+  "Only explicitly selected CIM rows may reach the setup change derivation",
+);
+assert.deepEqual(
+  Array.from(selectCimRowsByMacroNames(cimSelectionRows, [])),
+  [],
+  "Continuing without CIM tuning must produce no eligible CIM rows",
+);
+assert.match(
+  setupTuner,
+  /loadMacroDetailsByConfig\(\s*CIM_MACRO_CONFIGS,\s*\{ requireDefinitions: true \},\s*\)/,
+  "CIM discovery must require a trustworthy saved-definition baseline",
+);
+const fallbackCatalogSource = setupTuner.match(
+  /const FALLBACK_SCD_INDEX_MACRO_NAMES = \[([\s\S]*?)\] as const;/,
+)?.[1];
+assert.ok(fallbackCatalogSource, "Setup must retain a safe routing fallback");
+const fallbackRoutingMacros = Array.from(
+  fallbackCatalogSource.matchAll(/"(index_[A-Za-z0-9_]+)"/g),
+  ([, name]) => name,
+);
+const configuredRoutingMacros = Array.from(
+  defaultMacros.matchAll(/^\[(index_[A-Za-z0-9_]+)\]$/gm),
+  ([, name]) => name,
+).sort();
+assert.deepEqual(
+  fallbackRoutingMacros,
+  configuredRoutingMacros,
+  "The safe fallback must exactly match this app's shipped index macros",
 );
 
 const requirementsStart = setupTuner.indexOf(
@@ -339,6 +517,52 @@ assert.match(
   setupTuner,
   /if \(integratedSetupView && scanState !== "ready"\) \{[\s\S]*?complete the routing scan before finishing setup/,
   "Direct navigation must not let integrated setup finish after a failed routing scan",
+);
+assert.match(
+  setupTuner,
+  /useState<string\[\]>\(\[\]\)[\s\S]*?label="Data models to tune"[\s\S]*?selectAllAppearance="checkbox"/,
+  "Step 5 must begin with no selected CIM models and provide an accessible select-all picker",
+);
+assert.match(setupBootstrap, /"Tune CIM models"/);
+assert.match(setupTuner, /"Tune CIM models"/);
+const cimDiscoveryCatalog = setupTuner.match(
+  /const CIM_DATA_MODEL_DISCOVERY_CONFIGS = \[([\s\S]*?)\] as const;/,
+)?.[1];
+assert.ok(cimDiscoveryCatalog, "The approved CIM discovery catalog must exist");
+assert.equal(
+  [...cimDiscoveryCatalog.matchAll(/model: "([^"]+)"/g)].length,
+  22,
+  "Step 5 must expose exactly the 22 approved CIM data models",
+);
+assert.doesNotMatch(
+  cimDiscoveryCatalog,
+  /cim_Application_State_indexes|model: "App"/,
+  "The removed App data model must not remain discoverable or selectable",
+);
+assert.match(
+  setupTuner,
+  /<CollapsiblePanel\s+appearance="subtle"\s+defaultOpen[\s\S]*?title=\{setupCimReviewTitle\}/,
+  "The selected-model review must be visible by default",
+);
+assert.match(
+  setupTuner,
+  /cimScanState === "ready"[\s\S]*?selectCimRowsByMacroNames\(\s*cimRows,\s*selectedSetupCimMacroNames,\s*\)[\s\S]*?const setupCimChangesToSave/,
+  "Only explicitly selected rows from a completed CIM discovery may enter setup changes",
+);
+assert.match(
+  setupTuner,
+  /Discovery is read-only\.[\s\S]*?No model has been added to the draft plan yet\./,
+  "Step 5 must explain that discovery does not automatically opt models into the draft plan",
+);
+assert.match(
+  setupTuner,
+  /label=\{[\s\S]*?Skip CIM tuning[\s\S]*?\}/,
+  "An empty CIM selection must offer an explicit no-tuning continuation path",
+);
+assert.match(
+  setupTuner,
+  /for \(const row of setupCimChangesToSave\)/,
+  "Final setup must save only the selected-scoped CIM change list",
 );
 
 console.log("Dashboard Manager visibility and setup regression checks passed.");
