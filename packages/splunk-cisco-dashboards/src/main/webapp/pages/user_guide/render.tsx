@@ -6,4 +6,6 @@ import UserGuidePage from './index';
 
 import '@/common/styles/tailwind.css';
 
-mountPageRaw(UserGuidePage);
+// Share Home's account-scoped appearance preference so the guide opens in the
+// same mode and exposes the same Light/Dark choices.
+mountPageRaw(UserGuidePage, { allowColorSchemeChoice: true });

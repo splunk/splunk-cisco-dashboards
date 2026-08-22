@@ -2,6 +2,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Button from "@splunk/react-ui/Button";
 import Code from "@splunk/react-ui/Code";
+import Dropdown from "@splunk/react-ui/Dropdown";
+import Menu from "@splunk/react-ui/Menu";
 import Typography from "@splunk/react-ui/Typography";
 import { variables } from "@splunk/themes";
 import styled from "styled-components";
@@ -20,14 +22,18 @@ import {
     Layers,
     LifeBuoy,
     Map as MapIcon,
+    Moon,
     PlayCircle,
     Search,
     Settings,
     Shield,
     SlidersHorizontal,
+    Sun,
     Wifi,
 } from '@/common/icons/SuiIcon';
+import AppearanceMenuItems from "@/common/components/AppearanceMenuItems";
 import { APP_VERSION_LABEL } from "@/common/lib/buildInfo";
+import { useAppThemeControls } from "@/common/theme/AppThemeProvider";
 
 import "./user-guide.css";
 
@@ -676,6 +682,7 @@ const troubleshootingRows = [
 ];
 
 export default function UserGuidePage(): JSX.Element {
+  const { canChooseColorScheme, colorScheme } = useAppThemeControls();
   const setupUrl = `${appUrl("setup")}?setup=1`;
   const setupTuningUrl = `${setupUrl}#tune-indexes`;
   const setupCimTuningUrl = `${setupUrl}#tune-cim`;
@@ -686,6 +693,9 @@ export default function UserGuidePage(): JSX.Element {
   const guideContentRef = useRef<HTMLDivElement | null>(null);
   const matchesRef = useRef<HTMLElement[]>([]);
   const currentSearchIndexRef = useRef(-1);
+  const appearanceToggleRef = useRef<
+    HTMLAnchorElement | HTMLButtonElement
+  >(null);
   const [activeSection, setActiveSection] = useState<string>(
     GUIDE_SECTIONS[0].id,
   );
@@ -697,6 +707,12 @@ export default function UserGuidePage(): JSX.Element {
   const [searchStatus, setSearchStatus] = useState("");
   const [searchMatches, setSearchMatches] = useState(0);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
+  const [appearanceMenuOpen, setAppearanceMenuOpen] = useState(false);
+
+  const closeAppearanceMenu = useCallback(() => {
+    setAppearanceMenuOpen(false);
+    window.setTimeout(() => appearanceToggleRef.current?.focus(), 0);
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.add("scd-overview-active");
@@ -956,7 +972,11 @@ export default function UserGuidePage(): JSX.Element {
 
   return (
     <main
-      className="scd-user-guide scd-overview-page scd-c3-surface scd-c3-atmosphere min-h-screen"
+      className={`scd-user-guide scd-overview-page scd-c3-surface min-h-screen${
+        colorScheme === "dark" ? " scd-c3-atmosphere" : ""
+      }`}
+      data-color-scheme={colorScheme}
+      style={{ colorScheme }}
     >
       <div className="scd-guide-layout">
         <GuideContents
@@ -984,6 +1004,33 @@ export default function UserGuidePage(): JSX.Element {
                 </h1>
               </div>
               <div className="scd-guide-hero-actions scd-guide-no-print">
+                {canChooseColorScheme ? (
+                  <Dropdown
+                    defaultPlacement="below"
+                    focusToggleReasons={["escapeKey", "tabKey", "toggleClick"]}
+                    open={appearanceMenuOpen}
+                    onRequestClose={() => setAppearanceMenuOpen(false)}
+                    onRequestOpen={() => setAppearanceMenuOpen(true)}
+                    toggle={
+                      <Button
+                        appearance="secondary"
+                        elementRef={appearanceToggleRef}
+                        icon={
+                          colorScheme === "light" ? (
+                            <Sun aria-hidden="true" size={17} />
+                          ) : (
+                            <Moon aria-hidden="true" size={17} />
+                          )
+                        }
+                        label="Appearance"
+                      />
+                    }
+                  >
+                    <Menu>
+                      <AppearanceMenuItems onSelect={closeAppearanceMenu} />
+                    </Menu>
+                  </Dropdown>
+                ) : null}
                 <Button
                   appearance="secondary"
                   icon={<Download size={17} />}

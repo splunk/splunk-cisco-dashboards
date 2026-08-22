@@ -75,6 +75,10 @@ networking pillars and workplace scenarios.
   START and FINISH lines, responsive progress navigation, persistent dark and
   Light modes, a dedicated Tune CIM models step before final review, and the
   full Splunk Secure Networking Essentials product name throughout the journey.
+- Added Home's account-scoped Light and Dark Appearance choices to the User
+  Guide, including the same official Splunk Sun and Moon icons. Setup now uses
+  the matching Splunk Sun icon beside its Light mode control in both the static
+  readiness steps and the integrated React steps.
 - Expanded setup performance readiness to cover 13 supported Cisco data models,
   including the eight DC Networking models plus CIM Authentication and Network
   Traffic, while requiring product-specific models only when matching data is

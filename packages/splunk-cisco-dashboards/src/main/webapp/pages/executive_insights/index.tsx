@@ -69,8 +69,6 @@ import {
   PanelRightClose,
   PanelTop,
   Sparkles,
-  Sun,
-  Moon,
   Globe,
   Servers,
   NodeModel,
@@ -82,6 +80,7 @@ import {
   type SuiIcon,
 } from "@/common/icons/SuiIcon";
 import { useAppThemeControls } from "@/common/theme/AppThemeProvider";
+import AppearanceMenuItems from "@/common/components/AppearanceMenuItems";
 import { buildWorkspaceDrilldownDefinition } from "@/common/lib/dashboardDrilldown";
 import { DashboardSection } from "@/common/components/workspace/DashboardSection";
 import { OneCdRadioBar } from "@/common/components/workspace/OneCdPrimitives";
@@ -2314,7 +2313,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   const {
     colorScheme,
     canChooseColorScheme,
-    setColorScheme,
   } = useAppThemeControls();
   const tilePagerHeight =
     Number.parseFloat(inputHeight) +
@@ -4975,31 +4973,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 </Menu.Item>
               ))}
               {canChooseColorScheme && (
-                <>
-                  <Menu.Heading>Appearance</Menu.Heading>
-                  <Menu.Item
-                    onClick={() => {
-                      setColorScheme("light");
-                      closeHeaderActions();
-                    }}
-                    selectable
-                    selected={colorScheme === "light"}
-                    startAdornment={<Sun aria-hidden="true" />}
-                  >
-                    Light
-                  </Menu.Item>
-                  <Menu.Item
-                    onClick={() => {
-                      setColorScheme("dark");
-                      closeHeaderActions();
-                    }}
-                    selectable
-                    selected={colorScheme === "dark"}
-                    startAdornment={<Moon aria-hidden="true" />}
-                  >
-                    Dark
-                  </Menu.Item>
-                </>
+                <AppearanceMenuItems onSelect={() => closeHeaderActions()} />
               )}
               {overrideCount > 0 && (
                 <Menu.Item
