@@ -11,7 +11,7 @@
 				"defaultValue": "-7d@h,now",
 				"token": "global_time"
 			},
-			"title": "Time range",
+			"title": "",
 			"type": "input.timerange"
 		}
 	},
@@ -1689,9 +1689,7 @@
 		}
 	},
 	"layout": {
-		"globalInputs": [
-			"input_global_trp"
-		],
+		"globalInputs": [],
 		"layoutDefinitions": {
 			"layout_tab_a": {
 				"options": {
@@ -1726,6 +1724,16 @@
 							"y": 20
 						},
 						"type": "block"
+					},
+					{
+						"item": "input_global_trp",
+						"position": {
+							"h": 70,
+							"w": 198,
+							"x": 20,
+							"y": 10
+						},
+						"type": "input"
 					},
 					{
 						"item": "viz_tab_a_hdr",
@@ -1965,6 +1973,16 @@
 						"type": "block"
 					},
 					{
+						"item": "input_global_trp",
+						"position": {
+							"h": 70,
+							"w": 198,
+							"x": 20,
+							"y": 10
+						},
+						"type": "input"
+					},
+					{
 						"item": "viz_tab_b_hdr",
 						"position": {
 							"h": 25,
@@ -2140,6 +2158,16 @@
 							"y": 20
 						},
 						"type": "block"
+					},
+					{
+						"item": "input_global_trp",
+						"position": {
+							"h": 70,
+							"w": 198,
+							"x": 20,
+							"y": 10
+						},
+						"type": "input"
 					},
 					{
 						"item": "viz_tab_c_hdr",
@@ -2409,6 +2437,16 @@
 						"type": "block"
 					},
 					{
+						"item": "input_global_trp",
+						"position": {
+							"h": 70,
+							"w": 198,
+							"x": 20,
+							"y": 10
+						},
+						"type": "input"
+					},
+					{
 						"item": "viz_tab_d_hdr",
 						"position": {
 							"h": 25,
@@ -2604,6 +2642,16 @@
 							"y": 20
 						},
 						"type": "block"
+					},
+					{
+						"item": "input_global_trp",
+						"position": {
+							"h": 70,
+							"w": 198,
+							"x": 20,
+							"y": 10
+						},
+						"type": "input"
 					},
 					{
 						"item": "viz_section_tab_e",

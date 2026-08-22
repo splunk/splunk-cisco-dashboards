@@ -10,6 +10,9 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Moved the NetOps Readiness time picker into the dashboard title bar on every
+  tab, matching the native Dashboard Studio layout and removing the redundant
+  input strip above the tab navigation.
 - Added a built-in Agentic Security Operations Center workspace with 36
   Searchbase searches across DNS Security, Firewall Threat Defense, Network
   Detection & Response, and Unified Detection & Investigation. Each section
