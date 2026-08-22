@@ -176,7 +176,7 @@ for (const [sectionId, tileIds] of Object.entries(expectedTiles)) {
   assert.deepEqual(field(layout, "tiles").split(","), tileIds);
   assert.equal(
     field(layout, "visible_count"),
-    "9",
+    "3",
   );
 
   for (const tileId of tileIds) {

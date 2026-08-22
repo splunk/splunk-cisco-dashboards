@@ -10,6 +10,9 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Set the packaged Agentic SOC and Security Operations Demo sections to three
+  visible tiles for users without saved workspace customizations, while keeping
+  every configured tile available from the section controls.
 - Moved the NetOps Readiness time picker into the dashboard title bar on every
   tab, matching the native Dashboard Studio layout and removing the redundant
   input strip above the tab navigation.
