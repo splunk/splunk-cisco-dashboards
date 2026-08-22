@@ -26,6 +26,8 @@ yarn clean                # remove build artifacts
 ```
 
 For more detail see [`packages/splunk-cisco-dashboards/README.md`](packages/splunk-cisco-dashboards/README.md).
+The tracked production-hardening backlog is documented in
+[`packages/splunk-cisco-dashboards/CODE_PROTECTION.md`](packages/splunk-cisco-dashboards/CODE_PROTECTION.md).
 
 ## Installation
 
