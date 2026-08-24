@@ -224,6 +224,23 @@ fi
 "${sed_i[@]}" -E "s/^([[:space:]]*build[[:space:]]*=[[:space:]]*)[0-9]+/\\1${new_build}/" "$PKG_APP_CONF"
 echo "[package] app.conf: bumped build ${base} -> ${new_build} (package only, source unchanged)"
 
+# Webpack emits a unique marker rather than the source app.conf build because
+# this package-only counter is selected after compilation (and --from-stage
+# deliberately reuses watcher output). Replace the marker in every staged
+# bundle so the UI badge identifies the exact installed archive bytes.
+bundle_build_markers=0
+while IFS= read -r -d '' bundle_path; do
+  if grep -q '__SCD_PACKAGE_BUILD__' "$bundle_path"; then
+    "${sed_i[@]}" "s/__SCD_PACKAGE_BUILD__/${new_build}/g" "$bundle_path"
+    bundle_build_markers=$((bundle_build_markers + 1))
+  fi
+done < <(find "${TMP_DIR}/${APP_NAME}/appserver/static/pages" -type f -name '*.js' -print0)
+if [[ "$bundle_build_markers" -eq 0 ]]; then
+  echo "ERROR: no React bundle build marker was found; refusing a mismatched package." >&2
+  exit 1
+fi
+echo "[package] React bundles: stamped build ${new_build} in ${bundle_build_markers} bundle(s)"
+
 # Provenance comment block above [install]. Helps debug "which commit
 # produced this tarball" without untarring + diffing the whole tree.
 # Git lookups are best-effort so the build still works in a tarball
