@@ -60,7 +60,11 @@ const readBuildVersion = () => {
     }
     return readAppConfField('version') || '0.0.0';
 };
-const APP_BUILD = readAppConfField('build') || 'unknown';
+// Packaging replaces this unique marker after it chooses the monotonically
+// increasing package build. Reading source app.conf here bakes a stale number
+// into every bundle because package_app.sh intentionally bumps only its
+// temporary copy after webpack has completed.
+const APP_BUILD = process.env.SCD_APP_BUILD || '__SCD_PACKAGE_BUILD__';
 const APP_VERSION = readBuildVersion();
 const MEBIBYTE = 1024 * 1024;
 const FAST_UNMINIFIED_BUILD = process.argv.includes('--no-optimization-minimize');
