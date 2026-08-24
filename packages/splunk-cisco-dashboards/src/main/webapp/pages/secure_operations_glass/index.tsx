@@ -2466,7 +2466,11 @@ const SecureOperationsGlassPage = (): JSX.Element => {
                     />
                 </div>
             </header>
-            <nav className="scd-glass-tabs" aria-label="Dashboard sections">
+            <div
+                className="scd-glass-tabs"
+                aria-label="Dashboard sections"
+                role="tablist"
+            >
                 {TABS.map((tab) => {
                     const Icon = tab.icon;
                     return (
@@ -2475,13 +2479,17 @@ const SecureOperationsGlassPage = (): JSX.Element => {
                             key={tab.id}
                             className={activeTab === tab.id ? 'is-active' : ''}
                             onClick={() => setActiveTab(tab.id)}
+                            role="tab"
+                            id={`scd-glass-tab-${tab.id}`}
+                            aria-selected={activeTab === tab.id}
+                            aria-controls={`scd-glass-panel-${tab.id}`}
                         >
                             <Icon size={16} />
                             <span>{tab.label}</span>
                         </button>
                     );
                 })}
-            </nav>
+            </div>
             {activeFilters.length > 0 ? (
                 <div className="scd-glass-active-filters">
                     <Filter size={15} />
@@ -2517,7 +2525,13 @@ const SecureOperationsGlassPage = (): JSX.Element => {
                     sidebarOpen ? 'has-sidebar' : ''
                 }`}
             >
-                <main>{renderTab()}</main>
+                <main
+                    id={`scd-glass-panel-${activeTab}`}
+                    role="tabpanel"
+                    aria-labelledby={`scd-glass-tab-${activeTab}`}
+                >
+                    {renderTab()}
+                </main>
                 {sidebarOpen ? (
                     <FilterSidebar
                         context={context}
