@@ -47,6 +47,7 @@ import {
 import { cn } from '@/common/lib/utils';
 import ThemeAwareSearch from '@/common/components/ThemeAwareSearch';
 import { C3_VISUALIZATION_COLORS } from '@/common/theme/c3VisualizationPalette';
+import { APP_VERSION_LABEL } from '@/common/lib/buildInfo';
 import {
     authTrend,
     clientActivity,
@@ -57,7 +58,6 @@ import {
     topClientIps,
     topOperations,
     topUsers,
-    versionInfo,
     workloadDistribution,
     type MetricData,
     type MetricTone,
@@ -65,6 +65,12 @@ import {
 } from './data';
 
 const VIEW_NAME = 'workplace_m365_activity_monitoring';
+const VERSION_INFO = [
+    { label: 'App package', value: APP_VERSION_LABEL },
+    { label: 'Data mode', value: 'Bundled sample dataset' },
+    { label: 'Owner', value: 'Splunk Field Solutions Team' },
+    { label: 'Compatibility', value: 'Splunk Enterprise and Splunk Cloud' },
+];
 
 type IconComponent = React.ComponentType<{ className?: string }>;
 
@@ -293,8 +299,8 @@ const AppHeader: React.FC = () => (
         </div>
         <div className="flex items-center gap-4 sui-color-default">
             <div className="inline-flex items-center gap-2 text-sm font-semibold">
-                <span className="h-2 w-2 animate-pulse rounded-full sui-bg-status-positive sui-shadow-overlay" />
-                Live Data
+                <span className="h-2 w-2 rounded-full sui-bg-status-info sui-shadow-overlay" />
+                Bundled sample data
             </div>
             <div className="h-6 w-px sui-bg-popup" />
             {[
@@ -639,11 +645,10 @@ const About: React.FC = () => (
                     </div>
                 </div>
                 <p className="max-w-3xl text-lg leading-8 sui-color-default">
-                    This dashboard provides a comprehensive, modern view of Microsoft
-                    365 activity. It is designed to feel like a highly polished Splunk
-                    Dashboard Studio experience while using standard dashboard building
-                    blocks: single values, bar charts, area charts, line charts, and
-                    pie charts.
+                    This dashboard is a visual preview backed by a bundled sample
+                    dataset, not a live Microsoft 365 search. It demonstrates standard
+                    dashboard building blocks: single values, bar charts, area charts,
+                    line charts, and pie charts.
                 </p>
                 <div className="grid gap-6 md:grid-cols-2">
                     <InfoCard icon={Database} title="Data Sources">
@@ -672,7 +677,7 @@ const About: React.FC = () => (
                         Version Information
                     </h3>
                     <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                        {versionInfo.map((item) => (
+                        {VERSION_INFO.map((item) => (
                             <div key={item.label}>
                                 <div className="text-sm font-semibold sui-color-muted">
                                     {item.label}
