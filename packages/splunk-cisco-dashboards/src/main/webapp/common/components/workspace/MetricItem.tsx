@@ -292,6 +292,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
 }) => {
     const theme = useSplunkTheme();
     const [isFocusOpen, setIsFocusOpen] = React.useState(false);
+    const focusReturnRef = React.useRef<HTMLElement | null>(null);
     const isMock = source === 'mock';
     const numericValue = toFiniteNumber(value);
     const displayValue =
@@ -331,6 +332,15 @@ export const MetricItem: React.FC<MetricItemProps> = ({
         setIsFocusOpen(false);
         onOpenDetailTable?.();
     }, [onOpenDetailTable]);
+    const closeFocus = React.useCallback(() => {
+        setIsFocusOpen(false);
+        window.requestAnimationFrame(() => {
+            if (focusReturnRef.current?.isConnected) {
+                focusReturnRef.current.focus({ preventScroll: true });
+            }
+            focusReturnRef.current = null;
+        });
+    }, []);
 
     return (
         // flex-1 + basis-0 makes every tile grab an equal share of the
@@ -400,7 +410,14 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                             label={label}
                             onOpenInSearch={onOpenInSearch}
                             searchbaseId={searchbaseId}
-                            onExpand={hasExpandableChart ? () => setIsFocusOpen(true) : undefined}
+                            onExpand={
+                                hasExpandableChart
+                                    ? (returnFocus) => {
+                                          focusReturnRef.current = returnFocus ?? null;
+                                          setIsFocusOpen(true);
+                                      }
+                                    : undefined
+                            }
                             onConfigure={onConfigure}
                             isCustomized={isCustomized}
                         />
@@ -609,7 +626,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                 variant="metric"
                 title={label}
                 subtitle={subLabel}
-                onClose={() => setIsFocusOpen(false)}
+                onClose={closeFocus}
                 onOpenInSearch={onOpenInSearch}
                 onOpenDetailTable={
                     onOpenDetailTable ? openDetailFromFocus : undefined

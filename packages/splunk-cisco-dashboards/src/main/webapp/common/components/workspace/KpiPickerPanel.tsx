@@ -889,6 +889,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
   const [detailsCollapsed, setDetailsCollapsed] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const filtersPanelRef = useRef<HTMLDivElement | null>(null);
+  const drilldownFiltersPanelRef = useRef<HTMLDivElement | null>(null);
   const drilldownDraftResetKeyRef = useRef<string>("");
 
   // Lazy-load searchbase.conf when the panel first opens. Cached at
@@ -1993,6 +1995,11 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     setSelectedCategory(ALL_CATEGORIES);
     setSelectedSubCategory(ALL_SUB_CATEGORIES);
     setActiveTags(new Set());
+    window.requestAnimationFrame(() => {
+      filtersPanelRef.current
+        ?.querySelector<HTMLButtonElement>('button[aria-expanded]')
+        ?.focus({ preventScroll: true });
+    });
   };
 
   const handleClearDrilldownFacets = () => {
@@ -2000,6 +2007,11 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     setDrilldownSelectedCategory(ALL_CATEGORIES);
     setDrilldownSelectedSubCategory(ALL_SUB_CATEGORIES);
     setDrilldownActiveTags(new Set());
+    window.requestAnimationFrame(() => {
+      drilldownFiltersPanelRef.current
+        ?.querySelector<HTMLButtonElement>('button[aria-expanded]')
+        ?.focus({ preventScroll: true });
+    });
   };
 
   const handleEditorViewChange = (value: unknown) => {
@@ -2052,27 +2064,30 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 />
               </ControlGroup>
 
-              <CollapsiblePanel
-                actions={
-                  facetsActive ? (
-                    <Button
-                      appearance="subtle"
-                      aria-label="Clear search filters"
-                      label="Clear filters"
-                      onClick={handleClearFacets}
-                    />
-                  ) : null
-                }
-                appearance="subtle"
-                inset
-                onChange={(_event, { action }) => setFiltersOpen(action === "open")}
-                open={filtersOpen}
-                title={
-                  activeFilterCount > 0
-                    ? `Filters (${activeFilterCount} active)`
-                    : "Filters"
-                }
-              >
+              <div ref={filtersPanelRef}>
+                <CollapsiblePanel
+                  actions={
+                    facetsActive ? (
+                      <Button
+                        appearance="subtle"
+                        aria-label="Clear search filters"
+                        label="Clear filters"
+                        onClick={handleClearFacets}
+                      />
+                    ) : null
+                  }
+                  appearance="subtle"
+                  inset
+                  onChange={(_event, { action }) =>
+                    setFiltersOpen(action === "open")
+                  }
+                  open={filtersOpen}
+                  title={
+                    activeFilterCount > 0
+                      ? `Filters (${activeFilterCount} active)`
+                      : "Filters"
+                  }
+                >
                 <ControlGroup label="App">
                   <Multiselect
                     compact
@@ -2197,7 +2212,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                     </Multiselect>
                   </ControlGroup>
                 )}
-              </CollapsiblePanel>
+                </CollapsiblePanel>
+              </div>
 
               <SearchResultSummary
                 aria-atomic="true"
@@ -2735,29 +2751,30 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             />
                           </ControlGroup>
 
-                          <CollapsiblePanel
-                            actions={
-                              drilldownFacetsActive ? (
-                                <Button
-                                  appearance="subtle"
-                                  aria-label="Clear drilldown filters"
-                                  label="Clear filters"
-                                  onClick={handleClearDrilldownFacets}
-                                />
-                              ) : null
-                            }
-                            appearance="subtle"
-                            inset
-                            onChange={(_event, { action }) =>
-                              setDrilldownFiltersOpen(action === "open")
-                            }
-                            open={drilldownFiltersOpen}
-                            title={
-                              drilldownActiveFilterCount > 0
-                                ? `Filters (${drilldownActiveFilterCount} active)`
-                                : "Filters"
-                            }
-                          >
+                          <div ref={drilldownFiltersPanelRef}>
+                            <CollapsiblePanel
+                              actions={
+                                drilldownFacetsActive ? (
+                                  <Button
+                                    appearance="subtle"
+                                    aria-label="Clear drilldown filters"
+                                    label="Clear filters"
+                                    onClick={handleClearDrilldownFacets}
+                                  />
+                                ) : null
+                              }
+                              appearance="subtle"
+                              inset
+                              onChange={(_event, { action }) =>
+                                setDrilldownFiltersOpen(action === "open")
+                              }
+                              open={drilldownFiltersOpen}
+                              title={
+                                drilldownActiveFilterCount > 0
+                                  ? `Filters (${drilldownActiveFilterCount} active)`
+                                  : "Filters"
+                              }
+                            >
                             <ControlGroup label="App">
                               <Multiselect
                                 compact
@@ -2860,7 +2877,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 </Multiselect>
                               </ControlGroup>
                             )}
-                          </CollapsiblePanel>
+                            </CollapsiblePanel>
+                          </div>
 
                           <Layout>
                             <Badge

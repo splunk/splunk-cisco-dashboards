@@ -10,6 +10,8 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Restored keyboard focus without scrolling after clearing Configure tile
+  filters, closing Help, and leaving an expanded tile visualization.
 - Added contextual help actions to Configure tile option panels, with concise
   explanations and direct links to the matching official Splunk documentation.
 - Added a complete native React Secure Networking Pillars dashboard with five

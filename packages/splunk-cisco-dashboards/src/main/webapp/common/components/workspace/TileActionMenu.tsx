@@ -33,7 +33,7 @@ interface TileActionMenuProps {
     label: string;
     onOpenInSearch?: () => void;
     searchbaseId?: string;
-    onExpand?: () => void;
+    onExpand?: (returnFocus?: HTMLElement | null) => void;
     onConfigure?: (returnFocus?: HTMLElement | null) => void;
     isCustomized?: boolean;
 }
@@ -108,6 +108,7 @@ export const TileActionMenu: React.FC<TileActionMenuProps> = ({
     };
 
     const configure = () => onConfigure?.(toggleRef.current);
+    const expand = () => onExpand?.(toggleRef.current);
 
     const removeOrHide = () => {
         if (!removalAction) return;
@@ -160,7 +161,7 @@ export const TileActionMenu: React.FC<TileActionMenuProps> = ({
                 )}
                 {onExpand && (
                     <Menu.Item
-                        onClick={onExpand}
+                        onClick={expand}
                         startAdornment={
                             <ActionIcon>
                                 <Maximize2 />

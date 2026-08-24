@@ -2995,6 +2995,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
 
   // ------------------------------ Help overlay ------------------------------
   const [helpOpen, setHelpOpen] = useState(false);
+  const helpReturnFocusRef = useRef<HTMLElement | null>(null);
   const [headerActionsOpen, setHeaderActionsOpen] = useState(false);
   const headerActionsToggleRef = useRef<HTMLAnchorElement | HTMLButtonElement>(
     null,
@@ -4621,7 +4622,21 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   }, []);
   const closeHelp = useCallback(() => {
     setHelpOpen(false);
+    window.requestAnimationFrame(() => {
+      if (helpReturnFocusRef.current?.isConnected) {
+        helpReturnFocusRef.current.focus({ preventScroll: true });
+      }
+      helpReturnFocusRef.current = null;
+    });
   }, []);
+  const toggleHelp = useCallback(() => {
+    if (helpOpen) {
+      closeHelp();
+      return;
+    }
+    helpReturnFocusRef.current = document.activeElement as HTMLElement | null;
+    setHelpOpen(true);
+  }, [closeHelp, helpOpen]);
 
   const SHORTCUTS = useMemo<
     { keys: string; description: string; handler: () => void }[]
@@ -4664,7 +4679,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       {
         keys: "?",
         description: "Toggle this help overlay",
-        handler: () => setHelpOpen((o) => !o),
+        handler: toggleHelp,
       },
     ];
   }, [
@@ -4674,6 +4689,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     openDrilldown,
     openSignalTickerEditor,
     refreshNow,
+    toggleHelp,
     visibleSections,
   ]);
   const helpShortcutRows = useMemo(
@@ -5014,6 +5030,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               )}
               <Menu.Item
                 onClick={() => {
+                  helpReturnFocusRef.current = headerActionsToggleRef.current;
                   closeHeaderActions();
                   setHelpOpen(true);
                 }}

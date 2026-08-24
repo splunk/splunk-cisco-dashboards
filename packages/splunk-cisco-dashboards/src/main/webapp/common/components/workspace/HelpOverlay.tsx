@@ -72,6 +72,16 @@ const CUSTOMIZATION_SCOPE: ScopeRow[] = [
 ];
 
 export const HelpOverlay = React.memo<HelpOverlayProps>(({ open, onClose, shortcuts }) => {
+    const closeButtonRef = React.useRef<HTMLButtonElement | null>(null);
+
+    React.useEffect(() => {
+        if (!open) return undefined;
+        const frame = window.requestAnimationFrame(() => {
+            closeButtonRef.current?.focus({ preventScroll: true });
+        });
+        return () => window.cancelAnimationFrame(frame);
+    }, [open]);
+
     return (
         <AnimatePresence>
             {open && (
@@ -107,6 +117,7 @@ export const HelpOverlay = React.memo<HelpOverlayProps>(({ open, onClose, shortc
                                 Help &amp; reference
                             </h2>
                             <button
+                                ref={closeButtonRef}
                                 type="button"
                                 onClick={onClose}
                                 aria-label="Close help"
