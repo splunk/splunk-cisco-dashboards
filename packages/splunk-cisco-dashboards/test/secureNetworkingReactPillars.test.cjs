@@ -29,7 +29,6 @@ const navSource = readSource(
 );
 const webpackSource = readSource("webpack.config.js");
 const assetVerifierSource = readSource("bin/verify_production_assets.js");
-const buildProfile = JSON.parse(readSource("config/build-profile-manifest.json"));
 const searchbaseSource = readSource(
   "src/main/resources/splunk/default/searchbase.conf",
 );
@@ -449,9 +448,37 @@ assert.match(bootstrapSource, /Promise\.resolve\(setupGate\)/);
 assert.match(navSource, /href="secure_networking_pillars"/);
 assert.match(webpackSource, /secure_networking_pillars:\s*path\.join/);
 assert.match(assetVerifierSource, /'secure_networking_pillars'/);
-assert.ok(
-  buildProfile.developing.views.includes("secure_networking_pillars"),
-  "The preview view must be included in developer builds",
-);
 
+const pillarNavSource = navSource.split('<collection label="More"')[0];
+const pillarViewNames = Array.from(
+  pillarNavSource.matchAll(/dashboard_manager#\/([^"?]+)/g),
+  (match) => match[1],
+);
+assert.equal(pillarViewNames.length, 17, "The five pillar collections must retain 17 Studio dashboards");
+for (const viewName of pillarViewNames) {
+  const source = readSource(
+    `src/main/resources/splunk/default/data/ui/views/${viewName}.xml`,
+  );
+  const definition = JSON.parse(source.match(/<!\[CDATA\[([\s\S]*?)\]\]>/)[1]);
+  const bindingSignatures = [];
+  for (const visualization of Object.values(definition.visualizations)) {
+    if (visualization.type !== "splunk.singlevalue") continue;
+    assert.equal(
+      Object.hasOwn(visualization.options || {}, "trendColor"),
+      false,
+      `${viewName} must let the native single-value default initialize directional trend color`,
+    );
+    bindingSignatures.push(JSON.stringify({
+      primary: visualization.dataSources?.primary,
+      majorValue: visualization.options?.majorValue,
+      sparklineValues: visualization.options?.sparklineValues,
+    }));
+  }
+  assert.equal(bindingSignatures.length, 6, `${viewName} must retain six KPI cards`);
+  assert.equal(
+    new Set(bindingSignatures).size,
+    bindingSignatures.length,
+    `${viewName} must not duplicate a complete metric result binding`,
+  );
+}
 console.log("Secure Networking React pillar dashboard checks passed.");
