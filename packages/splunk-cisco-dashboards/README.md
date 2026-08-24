@@ -12,6 +12,9 @@ networking pillars and workplace scenarios.
 
 - Restored keyboard focus without scrolling after clearing Configure tile
   filters, closing Help, and leaving an expanded tile visualization.
+- Replaced custom setup routing value pills and their expansion controls with
+  native Splunk UI components, and corrected Insights Workspace Help so it
+  points to the tile action menu and explicit section link users actually see.
 - Added contextual help actions to Configure tile option panels, with concise
   explanations and direct links to the matching official Splunk documentation.
 - Added a complete native React Secure Networking Pillars dashboard with five
