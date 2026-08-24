@@ -10,6 +10,17 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Added contextual help actions to Configure tile option panels, with concise
+  explanations and direct links to the matching official Splunk documentation.
+- Clarified Configure tile search filtering by removing the tag-vocabulary total
+  from `All tags`, adding a live matching-search count, and correcting singular
+  and plural wording in per-tag counts.
+- Prevented Configure tile visibility changes and filter clearing from replaying
+  the bound-search auto-scroll, so the Search drawer stays at the operator's
+  current position while its catalogue refreshes.
+- Added an `Open in Searchbase` action to Insights Workspace tile menus so
+  operators can open the exact backing stanza in the Searchbase SPL editor
+  without leaving the dashboard.
 - Set the packaged Agentic SOC and Security Operations Demo sections to three
   visible tiles for users without saved workspace customizations, while keeping
   every configured tile available from the section controls.

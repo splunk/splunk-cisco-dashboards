@@ -1677,6 +1677,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
       <TableCardLeaf
         effective={effective}
         dispatchedConfig={dispatchedConfig}
+        searchbaseId={sbRecord?.id}
         range={range}
         refreshToken={refreshToken}
         onStatus={onStatus}
@@ -1693,6 +1694,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
       <BarBreakdownCardLeaf
         effective={effective}
         dispatchedConfig={dispatchedConfig}
+        searchbaseId={sbRecord?.id}
         range={range}
         refreshToken={refreshToken}
         onStatus={onStatus}
@@ -1710,6 +1712,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
         effective={effective}
         dispatchedConfig={dispatchedConfig}
         sbRecord={sbRecord}
+        searchbaseId={sbRecord?.id}
         range={range}
         refreshToken={refreshToken}
         onStatus={onStatus}
@@ -1727,6 +1730,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
         effective={effective}
         dispatchedConfig={dispatchedConfig}
         sbRecord={sbRecord}
+        searchbaseId={sbRecord?.id}
         variant={
           showSingleValueRadial
             ? "singlevalueradial"
@@ -1751,6 +1755,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
       effective={effective}
       dispatchedConfig={dispatchedConfig}
       sbRecord={sbRecord}
+      searchbaseId={sbRecord?.id}
       range={range}
       refreshToken={refreshToken}
       onStatus={onStatus}
@@ -1771,6 +1776,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
 interface CommonLeafProps {
   effective: MetricConfig;
   dispatchedConfig: MetricConfig;
+  searchbaseId?: string;
   range: TimeRange;
   refreshToken: number;
   onStatus: (id: string, status: MetricStatus) => void;
@@ -1824,6 +1830,7 @@ interface MetricCardLeafProps extends CommonLeafProps {
 const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
   effective,
   dispatchedConfig,
+  searchbaseId,
   sbRecord,
   range,
   refreshToken,
@@ -1994,6 +2001,7 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
       status={result.status}
       source={result.source}
       onOpenInSearch={drilldownSpl ? handleClick : undefined}
+      searchbaseId={searchbaseId}
       onOpenDetailTable={onOpenDetailTable}
       detailTableTitle={detailTableTitle}
       onConfigure={onConfigure}
@@ -2022,6 +2030,7 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
 const TableCardLeaf: React.FC<CommonLeafProps> = ({
   effective,
   dispatchedConfig,
+  searchbaseId,
   range,
   refreshToken,
   onStatus,
@@ -2062,6 +2071,7 @@ const TableCardLeaf: React.FC<CommonLeafProps> = ({
       totalRowCount={result.totalRowCount}
       source={result.source}
       onOpenInSearch={drilldownSpl ? handleClick : undefined}
+      searchbaseId={searchbaseId}
       onOpenDetailTable={onOpenDetailTable}
       detailTableTitle={detailTableTitle}
       onConfigure={onConfigure}
@@ -2085,6 +2095,7 @@ const TableCardLeaf: React.FC<CommonLeafProps> = ({
 const BarBreakdownCardLeaf: React.FC<CommonLeafProps> = ({
   effective,
   dispatchedConfig,
+  searchbaseId,
   range,
   refreshToken,
   onStatus,
@@ -2124,6 +2135,7 @@ const BarBreakdownCardLeaf: React.FC<CommonLeafProps> = ({
       columns={result.columns}
       source={result.source}
       onOpenInSearch={drilldownSpl ? handleClick : undefined}
+      searchbaseId={searchbaseId}
       onOpenDetailTable={onOpenDetailTable}
       detailTableTitle={detailTableTitle}
       onConfigure={onConfigure}
@@ -2147,6 +2159,7 @@ const PieCardLeaf: React.FC<PieCardLeafProps> = ({
   effective,
   dispatchedConfig,
   sbRecord,
+  searchbaseId,
   range,
   refreshToken,
   onStatus,
@@ -2187,6 +2200,7 @@ const PieCardLeaf: React.FC<PieCardLeafProps> = ({
       seriesColors={seriesColorsFromVizOptions(sbRecord?.vizOptions)}
       source={result.source}
       onOpenInSearch={drilldownSpl ? handleClick : undefined}
+      searchbaseId={searchbaseId}
       onOpenDetailTable={onOpenDetailTable}
       detailTableTitle={detailTableTitle}
       onConfigure={onConfigure}
@@ -2213,6 +2227,7 @@ const ScalarGaugeCardLeaf: React.FC<ScalarGaugeCardLeafProps> = ({
   effective,
   dispatchedConfig,
   sbRecord,
+  searchbaseId,
   variant,
   range,
   refreshToken,
@@ -2262,6 +2277,7 @@ const ScalarGaugeCardLeaf: React.FC<ScalarGaugeCardLeafProps> = ({
     vizOptions: sbRecord?.vizOptions,
     source: result.source,
     onOpenInSearch: drilldownSpl ? handleClick : undefined,
+    searchbaseId,
     onConfigure,
     onOpenDetailTable,
     detailTableTitle,
@@ -5621,6 +5637,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                       <KpiCard
                         label={effectiveMapPrimaryCfg.label}
                         value={mapPrimary.value}
+                        searchbaseId={
+                          resolveSearchbaseRecordForConfig(
+                            effectiveMapPrimaryCfg,
+                            runtimeSearchbaseById,
+                            runtimeSearchbaseByName,
+                          )?.id
+                        }
                         status={mapFooterStatus(
                           mapPrimary.value,
                           effectiveMapPrimaryCfg.thresholds,
@@ -5665,6 +5688,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                       <KpiCard
                         label={effectiveMapSecondaryCfg.label}
                         value={mapSecondary.value}
+                        searchbaseId={
+                          resolveSearchbaseRecordForConfig(
+                            effectiveMapSecondaryCfg,
+                            runtimeSearchbaseById,
+                            runtimeSearchbaseByName,
+                          )?.id
+                        }
                         status={mapFooterStatus(
                           mapSecondary.value,
                           effectiveMapSecondaryCfg.thresholds,
@@ -7051,6 +7081,7 @@ interface KpiCardProps {
   value: string;
   status: MetricStatus;
   onOpenInSearch?: () => void;
+  searchbaseId?: string;
   onConfigure?: (returnFocus?: HTMLElement | null) => void;
 }
 
@@ -8395,6 +8426,7 @@ const KpiCard: React.FC<KpiCardProps> = ({
   value,
   status,
   onOpenInSearch,
+  searchbaseId,
   onConfigure,
 }) => {
   const theme = useSplunkTheme();
@@ -8413,6 +8445,7 @@ const KpiCard: React.FC<KpiCardProps> = ({
           <TileActionMenu
             label={label}
             onOpenInSearch={onOpenInSearch}
+            searchbaseId={searchbaseId}
             onConfigure={onConfigure}
           />
         )}

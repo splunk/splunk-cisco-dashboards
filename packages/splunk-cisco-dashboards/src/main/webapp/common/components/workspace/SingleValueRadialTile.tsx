@@ -56,6 +56,7 @@ export interface SingleValueRadialTileProps {
     vizOptions?: Record<string, unknown>;
     source?: DataSource;
     onOpenInSearch?: () => void;
+    searchbaseId?: string;
     onConfigure?: () => void;
     onOpenDetailTable?: () => void;
     detailTableTitle?: string;
@@ -370,6 +371,7 @@ export const SingleValueRadialTile: React.FC<SingleValueRadialTileProps> = ({
     vizOptions,
     source,
     onOpenInSearch,
+    searchbaseId,
     onConfigure,
     onOpenDetailTable,
     detailTableTitle,
@@ -431,6 +433,7 @@ export const SingleValueRadialTile: React.FC<SingleValueRadialTileProps> = ({
             thresholdNote={thresholdNote}
             source={source}
             onOpenInSearch={onOpenInSearch}
+            searchbaseId={searchbaseId}
             onConfigure={onConfigure}
             onOpenDetailTable={onOpenDetailTable}
             detailTableTitle={detailTableTitle}

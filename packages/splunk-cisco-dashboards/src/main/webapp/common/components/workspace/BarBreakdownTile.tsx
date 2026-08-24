@@ -50,6 +50,7 @@ interface BarBreakdownTileProps {
     columns: ReadonlyArray<string>;
     source?: DataSource;
     onOpenInSearch?: () => void;
+    searchbaseId?: string;
     onOpenDetailTable?: () => void;
     detailTableTitle?: string;
     onConfigure?: () => void;
@@ -174,6 +175,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
     columns,
     source,
     onOpenInSearch,
+    searchbaseId,
     onOpenDetailTable,
     detailTableTitle,
     onConfigure,
@@ -293,6 +295,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                         <TileActionMenu
                             label={label}
                             onOpenInSearch={onOpenInSearch}
+                            searchbaseId={searchbaseId}
                             onExpand={hasData ? () => setIsFocusOpen(true) : undefined}
                             onConfigure={onConfigure}
                             isCustomized={isCustomized}

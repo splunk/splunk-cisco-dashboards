@@ -51,6 +51,7 @@ interface TableTileProps {
     totalRowCount?: number;
     source?: DataSource;
     onOpenInSearch?: () => void;
+    searchbaseId?: string;
     onOpenDetailTable?: () => void;
     detailTableTitle?: string;
     onConfigure?: () => void;
@@ -169,6 +170,7 @@ export const TableTile: React.FC<TableTileProps> = ({
     totalRowCount,
     source,
     onOpenInSearch,
+    searchbaseId,
     onOpenDetailTable,
     detailTableTitle,
     onConfigure,
@@ -292,6 +294,7 @@ export const TableTile: React.FC<TableTileProps> = ({
                         <TileActionMenu
                             label={label}
                             onOpenInSearch={onOpenInSearch}
+                            searchbaseId={searchbaseId}
                             onConfigure={onConfigure}
                             isCustomized={isCustomized}
                         />

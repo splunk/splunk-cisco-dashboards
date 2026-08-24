@@ -3,6 +3,7 @@ import Button from '@splunk/react-ui/Button';
 import Dropdown from '@splunk/react-ui/Dropdown';
 import Menu from '@splunk/react-ui/Menu';
 import {
+    Database,
     ExternalLink,
     Maximize2,
     MoreVertical,
@@ -11,6 +12,7 @@ import {
     EyeOff,
     Trash2,
 } from '@/common/icons/SuiIcon';
+import { splunkSearchbaseEditUrl } from '@/common/lib/splunkSearchUrl';
 
 export interface TileRemovalAction {
     kind: 'hide' | 'remove';
@@ -30,6 +32,7 @@ export const TileActionEnvironmentContext = createContext<TileActionEnvironment 
 interface TileActionMenuProps {
     label: string;
     onOpenInSearch?: () => void;
+    searchbaseId?: string;
     onExpand?: () => void;
     onConfigure?: (returnFocus?: HTMLElement | null) => void;
     isCustomized?: boolean;
@@ -71,6 +74,7 @@ export const TileDrilldownButton: React.FC<TileDrilldownButtonProps> = ({
 export const TileActionMenu: React.FC<TileActionMenuProps> = ({
     label,
     onOpenInSearch,
+    searchbaseId,
     onExpand,
     onConfigure,
     isCustomized = false,
@@ -78,12 +82,28 @@ export const TileActionMenu: React.FC<TileActionMenuProps> = ({
     const toggleRef = React.useRef<HTMLAnchorElement | HTMLButtonElement>(null);
     const removalAction = useContext(TileRemovalActionContext);
     const actionEnvironment = useContext(TileActionEnvironmentContext);
-    if (!onOpenInSearch && !onExpand && !onConfigure && !removalAction) {
+    if (
+        !onOpenInSearch &&
+        !searchbaseId &&
+        !onExpand &&
+        !onConfigure &&
+        !removalAction
+    ) {
         return null;
     }
 
     const openInSearch = () => {
         onOpenInSearch?.();
+        window.requestAnimationFrame(() => toggleRef.current?.focus());
+    };
+
+    const openInSearchbase = () => {
+        if (!searchbaseId) return;
+        window.open(
+            splunkSearchbaseEditUrl(searchbaseId),
+            '_blank',
+            'noopener,noreferrer'
+        );
         window.requestAnimationFrame(() => toggleRef.current?.focus());
     };
 
@@ -123,6 +143,19 @@ export const TileActionMenu: React.FC<TileActionMenuProps> = ({
                         }
                     >
                         Open in Search
+                    </Menu.Item>
+                )}
+                {searchbaseId && (
+                    <Menu.Item
+                        description="Opens new window"
+                        onClick={openInSearchbase}
+                        startAdornment={
+                            <ActionIcon>
+                                <Database />
+                            </ActionIcon>
+                        }
+                    >
+                        Open in Searchbase
                     </Menu.Item>
                 )}
                 {onExpand && (

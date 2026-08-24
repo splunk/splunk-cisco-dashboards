@@ -30,6 +30,7 @@ interface PieTileProps {
     seriesColors?: ReadonlyArray<string>;
     source?: DataSource;
     onOpenInSearch?: () => void;
+    searchbaseId?: string;
     onOpenDetailTable?: () => void;
     detailTableTitle?: string;
     onConfigure?: () => void;
@@ -108,6 +109,7 @@ export const PieTile: React.FC<PieTileProps> = ({
     seriesColors,
     source,
     onOpenInSearch,
+    searchbaseId,
     onOpenDetailTable,
     detailTableTitle,
     onConfigure,
@@ -256,6 +258,7 @@ export const PieTile: React.FC<PieTileProps> = ({
                         <TileActionMenu
                             label={label}
                             onOpenInSearch={onOpenInSearch}
+                            searchbaseId={searchbaseId}
                             onExpand={hasData ? () => setIsFocusOpen(true) : undefined}
                             onConfigure={onConfigure}
                             isCustomized={isCustomized}

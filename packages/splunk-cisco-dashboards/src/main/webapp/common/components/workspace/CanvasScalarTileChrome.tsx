@@ -39,6 +39,7 @@ export interface CanvasScalarTileChromeProps {
     infoAnchor?: InfoTooltipAnchor;
     source?: DataSource;
     onOpenInSearch?: () => void;
+    searchbaseId?: string;
     onConfigure?: () => void;
     onOpenDetailTable?: () => void;
     detailTableTitle?: string;
@@ -57,6 +58,7 @@ export const CanvasScalarTileChrome: React.FC<CanvasScalarTileChromeProps> = ({
     infoAnchor = 'auto',
     source,
     onOpenInSearch,
+    searchbaseId,
     onConfigure,
     onOpenDetailTable,
     detailTableTitle,
@@ -105,6 +107,7 @@ export const CanvasScalarTileChrome: React.FC<CanvasScalarTileChromeProps> = ({
                     <TileActionMenu
                         label={label}
                         onOpenInSearch={onOpenInSearch}
+                        searchbaseId={searchbaseId}
                         onConfigure={onConfigure}
                         isCustomized={isCustomized}
                     />

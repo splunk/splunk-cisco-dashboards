@@ -90,6 +90,8 @@ interface MetricItemProps {
      * sparkline area. When omitted, both affordances are hidden.
      */
     onOpenInSearch?: () => void;
+    /** Searchbase stanza id used by the direct editor action. */
+    searchbaseId?: string;
     /** Optional secondary action for contextual detail, distinct from Search. */
     onOpenDetailTable?: () => void;
     /** Tooltip / accessible label for the detail-table action. */
@@ -273,6 +275,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     status = 'unknown',
     source,
     onOpenInSearch,
+    searchbaseId,
     onOpenDetailTable,
     detailTableTitle,
     onConfigure,
@@ -396,6 +399,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                         <TileActionMenu
                             label={label}
                             onOpenInSearch={onOpenInSearch}
+                            searchbaseId={searchbaseId}
                             onExpand={hasExpandableChart ? () => setIsFocusOpen(true) : undefined}
                             onConfigure={onConfigure}
                             isCustomized={isCustomized}
