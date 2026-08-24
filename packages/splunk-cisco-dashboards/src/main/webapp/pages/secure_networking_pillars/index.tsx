@@ -58,6 +58,7 @@ import { formatPillarValue, PillarVisualization } from './charts';
 import {
     DEFAULT_PILLAR_TIME_RANGE,
     isPillarId,
+    PILLAR_CARDS,
     PILLARS,
     PILLAR_TIME_RANGES,
     type PillarCardDefinition,
@@ -65,7 +66,6 @@ import {
     type PillarIconName,
     type PillarId,
     type PillarTimeRange,
-    ZERO_TRUST_CARDS,
 } from './config';
 import {
     lastFiniteValue,
@@ -301,8 +301,13 @@ const resolveHealthTone = (
 ): HealthTone => {
     if (value === null) return 'unknown';
     if (!card.thresholds) return 'informational';
-    if (value <= card.thresholds.healthyMax) return 'healthy';
-    if (value <= card.thresholds.warningMax) return 'warning';
+    if (card.thresholds.direction === 'lower-is-better') {
+        if (value <= card.thresholds.healthyMax) return 'healthy';
+        if (value <= card.thresholds.warningMax) return 'warning';
+        return 'critical';
+    }
+    if (value >= card.thresholds.healthyMin) return 'healthy';
+    if (value >= card.thresholds.warningMin) return 'warning';
     return 'critical';
 };
 
@@ -337,7 +342,7 @@ const PillarCard = ({
         range,
         refreshToken,
         enabled,
-        zeroOnlyIsEmpty: true,
+        zeroOnlyIsEmpty: card.zeroOnlyIsEmpty,
     });
     const headline = lastFiniteValue(rows, card.headlineField);
     const deltaPair = card.deltaField
@@ -359,7 +364,9 @@ const PillarCard = ({
             <Card.Body className="scd-pillar-card-body">
                 <div className="scd-pillar-card-header">
                     <div className="scd-pillar-card-title-block">
-                        <p className="scd-pillar-eyebrow">Identity · Zero Trust Access</p>
+                        <p className="scd-pillar-eyebrow">
+                            {card.category} · {card.subCategory}
+                        </p>
                         <Heading level={3} variant="title3">
                             {card.title}
                         </Heading>
@@ -383,7 +390,7 @@ const PillarCard = ({
                     </div>
                 </div>
                 <p className="scd-pillar-card-description">{card.description}</p>
-                <ScreenReaderContent role="status">
+                <ScreenReaderContent>
                     {card.title}:{' '}
                     {loading
                         ? 'Loading live signal.'
@@ -497,7 +504,7 @@ const AboutMetricDialog = ({
                 <Badge
                     backgroundColor={variables.backgroundColorSection}
                     foregroundColor={variables.contentColorInfo}
-                    label="Zero Trust Access"
+                    label={card.subCategory}
                 />
             }
             contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden sui-bg-page"
@@ -631,7 +638,7 @@ const InvestigationDialog = ({
                     <Badge
                         backgroundColor={variables.backgroundColorSection}
                         foregroundColor={variables.contentColorInfo}
-                        label={activeRecord.subCategory || 'Zero Trust Access'}
+                        label={activeRecord.subCategory || card.subCategory}
                     />
                 ) : undefined
             }
@@ -794,43 +801,9 @@ const InvestigationDialog = ({
     );
 };
 
-const PillarPreview = ({ pillar }: { pillar: PillarDefinition }): JSX.Element => {
-    const Icon = PILLAR_ICONS[pillar.icon];
-    return (
-        <div className="scd-pillar-preview">
-            <Card className="scd-pillar-preview-card" tag="section">
-                <Card.Body className="scd-pillar-preview-body">
-                    <div className="scd-pillar-preview-icon">
-                        <Icon aria-hidden="true" />
-                    </div>
-                    <Badge
-                        backgroundColor={variables.backgroundColorSection}
-                        foregroundColor={variables.contentColorInfo}
-                        label="Conversion slot ready"
-                    />
-                    <Heading level={2} variant="title2">
-                        {pillar.dashboardTitle}
-                    </Heading>
-                    <p>{pillar.description}</p>
-                    <p className="scd-pillar-preview-note">
-                        This tab is wired into the shared React shell. Zero Trust Access is the
-                        implemented pilot; this pillar can follow the same native data, chart,
-                        theme, and investigation contracts.
-                    </p>
-                    <Button
-                        appearance="secondary"
-                        icon={<ExternalLink aria-hidden="true" />}
-                        label="Open current Studio dashboard"
-                        openInNewContext
-                        to={studioDashboardUrl(pillar.studioView)}
-                    />
-                </Card.Body>
-            </Card>
-        </div>
-    );
-};
-
-const ZeroTrustDashboard = ({
+const PillarDashboard = ({
+    pillar,
+    cards,
     catalogue,
     catalogueError,
     range,
@@ -839,6 +812,8 @@ const ZeroTrustDashboard = ({
     colorScheme,
     onDialog,
 }: {
+    pillar: PillarDefinition;
+    cards: readonly PillarCardDefinition[];
     catalogue: Map<string, SearchbaseRecord> | null;
     catalogueError: string | null;
     range: PillarTimeRange;
@@ -846,44 +821,43 @@ const ZeroTrustDashboard = ({
     enabled: boolean;
     colorScheme: AppColorScheme;
     onDialog: (state: CardDialogState) => void;
-}): JSX.Element => (
-    <div className="scd-pillar-dashboard" data-pillar-dashboard="zero-trust-access">
-        <section className="scd-pillar-hero" aria-labelledby="zero-trust-title">
+}): JSX.Element => {
+    const Icon = PILLAR_ICONS[pillar.icon];
+    const titleId = `${pillar.id}-title`;
+
+    return (
+    <div className="scd-pillar-dashboard" data-pillar-dashboard={pillar.id}>
+        <section className="scd-pillar-hero" aria-labelledby={titleId}>
             <div className="scd-pillar-hero-main">
                 <div className="scd-pillar-hero-icon">
-                    <ShieldKeyhole aria-hidden="true" />
+                    <Icon aria-hidden="true" />
                 </div>
                 <div>
                     <div className="scd-pillar-hero-badges">
                         <Badge
                             backgroundColor={variables.backgroundColorSection}
                             foregroundColor={variables.contentColorInfo}
-                            label="React pilot"
+                            label="Native React"
                         />
                         <Badge
                             backgroundColor={variables.backgroundColorSection}
                             foregroundColor={variables.contentColorPositive}
-                            label="6 Searchbase signals"
+                            label={`${cards.length} Searchbase signals`}
                         />
                     </div>
-                    <Heading id="zero-trust-title" level={2} variant="title2">
-                        Zero Trust Posture
+                    <Heading id={titleId} level={2} variant="title2">
+                        {pillar.dashboardTitle}
                     </Heading>
-                    <p>
-                        Connect identity, posture, policy, and response signals across the
-                        access journey.
-                    </p>
+                    <p>{pillar.description}</p>
                 </div>
             </div>
-            <ol className="scd-pillar-journey" aria-label="Zero Trust control journey">
-                {['ISE authentication', 'Duo MFA', 'Private access', 'Remote access'].map(
-                    (stage, index) => (
+            <ol className="scd-pillar-journey" aria-label={`${pillar.label} signal journey`}>
+                {pillar.journey.map((stage, index) => (
                         <li className="scd-pillar-journey-stage" key={stage}>
                             <span aria-hidden="true">{index + 1}</span>
                             {stage}
                         </li>
-                    )
-                )}
+                    ))}
             </ol>
         </section>
 
@@ -894,8 +868,8 @@ const ZeroTrustDashboard = ({
             </div>
         ) : null}
 
-        <section className="scd-pillar-grid" aria-label="Zero Trust posture signals">
-            {ZERO_TRUST_CARDS.map((card) => (
+        <section className="scd-pillar-grid" aria-label={`${pillar.label} posture signals`}>
+            {cards.map((card) => (
                 <PillarCard
                     key={card.id}
                     card={card}
@@ -909,7 +883,8 @@ const ZeroTrustDashboard = ({
             ))}
         </section>
     </div>
-);
+    );
+};
 
 const SecureNetworkingPillarsPage = (): JSX.Element => {
     const { colorScheme } = useAppThemeControls();
@@ -1101,19 +1076,17 @@ const SecureNetworkingPillarsPage = (): JSX.Element => {
                                 panelId={pillar.id}
                                 tooltip={pillar.label}
                             >
-                                {pillar.implemented ? (
-                                    <ZeroTrustDashboard
-                                        catalogue={catalogue}
-                                        catalogueError={catalogueError}
-                                        range={range}
-                                        refreshToken={refreshToken}
-                                        enabled={activePillar === pillar.id}
-                                        colorScheme={colorScheme}
-                                        onDialog={setDialog}
-                                    />
-                                ) : (
-                                    <PillarPreview pillar={pillar} />
-                                )}
+                                <PillarDashboard
+                                    pillar={pillar}
+                                    cards={PILLAR_CARDS[pillar.id]}
+                                    catalogue={catalogue}
+                                    catalogueError={catalogueError}
+                                    range={range}
+                                    refreshToken={refreshToken}
+                                    enabled={activePillar === pillar.id}
+                                    colorScheme={colorScheme}
+                                    onDialog={setDialog}
+                                />
                             </TabLayout.Panel>
                         );
                     })}
@@ -1121,7 +1094,7 @@ const SecureNetworkingPillarsPage = (): JSX.Element => {
             </main>
 
             <footer className="scd-pillar-footer">
-                <span>React pilot · same Searchbase contracts as Dashboard Manager</span>
+                <span>5 native React pillars · same Searchbase contracts as Dashboard Manager</span>
                 <Button
                     appearance="standalone"
                     icon={<ArrowUpRight aria-hidden="true" />}

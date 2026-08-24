@@ -45,6 +45,43 @@ const LIGHT_SAFE_SERIES_COLORS: Readonly<Record<string, string>> = {
 const resolveSeriesColor = (color: string, colorScheme: AppColorScheme): string =>
     colorScheme === 'light' ? (LIGHT_SAFE_SERIES_COLORS[color] ?? color) : color;
 
+const SERIES_DASH_PATTERNS = [undefined, '7 3', '2 3', '9 3 2 3', '1 3'] as const;
+
+const seriesPatternId = (cardId: string, field: string): string =>
+    `scd-pillar-${cardId}-${field}`.replace(/[^a-zA-Z0-9_-]/g, '-');
+
+const SeriesPattern = ({
+    id,
+    color,
+    index,
+    colorScheme,
+}: {
+    id: string;
+    color: string;
+    index: number;
+    colorScheme: AppColorScheme;
+}): JSX.Element => {
+    const overlay = colorScheme === 'light' ? 'rgba(0, 0, 0, 0.34)' : 'rgba(255, 255, 255, 0.42)';
+    const patternIndex = index % SERIES_DASH_PATTERNS.length;
+    return (
+        <pattern id={id} width="8" height="8" patternUnits="userSpaceOnUse">
+            <rect width="8" height="8" fill={color} />
+            {patternIndex === 1 ? (
+                <path d="M-2 2L2-2M0 8L8 0M6 10L10 6" stroke={overlay} strokeWidth="1.25" />
+            ) : null}
+            {patternIndex === 2 ? (
+                <path d="M-2 6L2 10M0 0L8 8M6-2L10 2" stroke={overlay} strokeWidth="1.25" />
+            ) : null}
+            {patternIndex === 3 ? (
+                <path d="M2 0V8M6 0V8" stroke={overlay} strokeWidth="1.15" />
+            ) : null}
+            {patternIndex === 4 ? (
+                <circle cx="2" cy="2" r="1.2" fill={overlay} />
+            ) : null}
+        </pattern>
+    );
+};
+
 interface PillarVisualizationProps {
     card: PillarCardDefinition;
     rows: readonly PillarSearchRow[];
@@ -124,14 +161,16 @@ const deriveSeries = (
         '_time',
         card.headlineField,
         card.deltaField ?? '',
-        'BucketConnections',
-        'WindowConnections',
+        ...(card.excludedSeriesFields ?? []),
     ]);
     const extraFields: string[] = [];
     rows.forEach((row) => {
         Object.entries(row).forEach(([field, value]) => {
             if (
                 excluded.has(field) ||
+                field.startsWith('_') ||
+                field.startsWith('Window') ||
+                field === 'dashboard_precision_marker' ||
                 configuredFields.has(field) ||
                 extraFields.includes(field) ||
                 toFiniteNumber(value) === null
@@ -162,7 +201,7 @@ const SeriesLegend = ({
     onToggle: (field: string) => void;
 }): JSX.Element => (
     <div className="scd-pillar-chart-legend" role="group" aria-label="Chart series">
-        {series.map((item) => {
+        {series.map((item, index) => {
             const visible = visibleFields.has(item.field);
             const isOnlyVisibleSeries = visible && visibleFields.size === 1;
             return (
@@ -181,7 +220,9 @@ const SeriesLegend = ({
                 >
                     <span
                         aria-hidden="true"
-                        className="scd-pillar-legend-dot"
+                        className={`scd-pillar-legend-dot is-pattern-${
+                            index % SERIES_DASH_PATTERNS.length
+                        }`}
                         style={{ backgroundColor: item.color, opacity: visible ? 1 : 0.28 }}
                     />
                     <span>{item.label}</span>
@@ -234,6 +275,7 @@ const TrendChart = ({ card, rows, colorScheme }: PillarVisualizationProps): JSX.
     };
 
     const seriesSummary = series
+        .filter((item) => visibleFields.has(item.field))
         .map((item) => {
             const values = rows
                 .map((row) => toFiniteNumber(row[item.field]))
@@ -275,16 +317,18 @@ const TrendChart = ({ card, rows, colorScheme }: PillarVisualizationProps): JSX.
                                 domain={card.headlineUnit === '%' ? [0, 100] : [0, 'auto']}
                             />
                             <Tooltip content={<ChartTooltip />} />
-                            {renderedSeries.map((item) =>
+                            {renderedSeries.map((item, index) =>
                                 visibleFields.has(item.field) ? (
                                     <Line
                                         key={item.field}
                                         activeDot={{ r: 4, strokeWidth: 0 }}
                                         dataKey={item.field}
                                         dot={false}
+                                        connectNulls={card.connectNulls}
                                         isAnimationActive={false}
                                         name={item.label}
                                         stroke={item.color}
+                                        strokeDasharray={SERIES_DASH_PATTERNS[index % SERIES_DASH_PATTERNS.length]}
                                         strokeWidth={2}
                                         type="monotone"
                                     />
@@ -293,6 +337,17 @@ const TrendChart = ({ card, rows, colorScheme }: PillarVisualizationProps): JSX.
                         </LineChart>
                     ) : (
                         <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
+                            <defs>
+                                {renderedSeries.map((item, index) => (
+                                    <SeriesPattern
+                                        key={item.field}
+                                        id={seriesPatternId(card.id, item.field)}
+                                        color={item.color}
+                                        index={index}
+                                        colorScheme={colorScheme}
+                                    />
+                                ))}
+                            </defs>
                             <CartesianGrid
                                 stroke={CHART_GRID_COLOR}
                                 strokeDasharray="3 5"
@@ -312,7 +367,7 @@ const TrendChart = ({ card, rows, colorScheme }: PillarVisualizationProps): JSX.
                                     <Bar
                                         key={item.field}
                                         dataKey={item.field}
-                                        fill={item.color}
+                                        fill={`url(#${seriesPatternId(card.id, item.field)})`}
                                         isAnimationActive={false}
                                         maxBarSize={24}
                                         name={item.label}
@@ -370,7 +425,8 @@ const EvidenceTable = ({ card, rows }: PillarVisualizationProps): JSX.Element =>
 const RankedBars = ({ card, rows, colorScheme }: PillarVisualizationProps): JSX.Element => {
     const categoryField = card.categoryField ?? '';
     const valueField = card.valueField ?? '';
-    const data = rows.slice(0, 8).map((row) => ({
+    const valueLabel = card.valueLabel ?? valueField;
+    const data = rows.slice(0, card.rankLimit ?? 10).map((row) => ({
         label: String(row[categoryField] ?? 'Unknown'),
         value: toFiniteNumber(row[valueField]) ?? 0,
     }));
@@ -380,7 +436,7 @@ const RankedBars = ({ card, rows, colorScheme }: PillarVisualizationProps): JSX.
             className="scd-pillar-chart scd-pillar-ranked-chart"
             role="img"
             aria-label={`${card.title} ranked comparison with ${data.length} categories. ${data
-                .map((item) => `${item.label}: ${formatValue(item.value, 2)}`)
+                .map((item) => `${item.label}: ${formatValue(item.value, 2)} ${valueLabel}`)
                 .join('. ')}.`}
         >
             <ResponsiveContainer width="100%" height="100%">
@@ -401,15 +457,18 @@ const RankedBars = ({ card, rows, colorScheme }: PillarVisualizationProps): JSX.
                         tick={{ fill: CHART_TICK_COLOR, fontSize: 12 }}
                         tickLine={false}
                         type="category"
-                        width={92}
+                        width={card.categoryAxisWidth ?? 108}
                     />
                     <Tooltip content={<ChartTooltip />} />
                     <Bar
                         dataKey="value"
-                        fill={resolveSeriesColor(C3_SERIES_PALETTE[1], colorScheme)}
+                        fill={resolveSeriesColor(
+                            card.barColor ?? C3_SERIES_PALETTE[1],
+                            colorScheme
+                        )}
                         isAnimationActive={false}
                         maxBarSize={18}
-                        name="Events"
+                        name={card.valueLabel ?? valueField}
                         radius={[0, 4, 4, 0]}
                     />
                 </BarChart>

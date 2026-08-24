@@ -175,19 +175,22 @@ export const toFiniteNumber = (value: unknown): number | null => {
     return Number.isFinite(parsed) ? parsed : null;
 };
 
-const NO_DATA_MARKER = /(?:no matching (?:telemetry|data|evidence|events|results)|no denied or fraud)/i;
+const NO_DATA_MARKER =
+    /(?:no matching (?:telemetry|data|evidence|events|results)|no denied or fraud|no [^.!]{0,80} telemetry (?:was )?found|^(?:no telemetry|no data)$|no reporting devices|no non-default sgt activity|no attributed zero-coverage sites|no tagged authentication activity)/i;
 
 export const isPillarNoDataRow = (row: PillarSearchRow): boolean =>
-    Object.values(row).some(
+    [...Object.keys(row), ...Object.values(row)].some(
         (value) => typeof value === 'string' && NO_DATA_MARKER.test(value)
     );
 
 const isZeroOnlyResult = (rows: readonly PillarSearchRow[]): boolean => {
-    if (rows.length !== 1) return false;
-    const numericValues = Object.entries(rows[0])
-        .filter(([field]) => field !== '_time')
-        .map(([, value]) => toFiniteNumber(value))
-        .filter((value): value is number => value !== null);
+    if (rows.length === 0) return false;
+    const numericValues = rows.flatMap((row) =>
+        Object.entries(row)
+            .filter(([field]) => field !== '_time')
+            .map(([, value]) => toFiniteNumber(value))
+            .filter((value): value is number => value !== null)
+    );
     return numericValues.length > 0 && numericValues.every((value) => value === 0);
 };
 

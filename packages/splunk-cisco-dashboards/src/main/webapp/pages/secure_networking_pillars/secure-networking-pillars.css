@@ -58,8 +58,7 @@
 }
 
 #scan-root .scd-pillar-brand-mark,
-#scan-root .scd-pillar-hero-icon,
-#scan-root .scd-pillar-preview-icon {
+#scan-root .scd-pillar-hero-icon {
     display: inline-flex;
     flex: 0 0 auto;
     align-items: center;
@@ -586,8 +585,41 @@
 }
 
 #scan-root .scd-pillar-legend-dot {
-    width: 7px;
-    height: 7px;
+    width: 12px;
+    height: 8px;
+    border-radius: 2px;
+}
+
+#scan-root .scd-pillar-legend-dot.is-pattern-1 {
+    background-image: repeating-linear-gradient(
+        135deg,
+        transparent 0 3px,
+        color-mix(in srgb, var(--sui-content-active) 42%, transparent) 3px 4px
+    );
+}
+
+#scan-root .scd-pillar-legend-dot.is-pattern-2 {
+    background-image: repeating-linear-gradient(
+        45deg,
+        transparent 0 3px,
+        color-mix(in srgb, var(--sui-content-active) 42%, transparent) 3px 4px
+    );
+}
+
+#scan-root .scd-pillar-legend-dot.is-pattern-3 {
+    background-image: repeating-linear-gradient(
+        90deg,
+        transparent 0 3px,
+        color-mix(in srgb, var(--sui-content-active) 42%, transparent) 3px 4px
+    );
+}
+
+#scan-root .scd-pillar-legend-dot.is-pattern-4 {
+    background-image: radial-gradient(
+        color-mix(in srgb, var(--sui-content-active) 52%, transparent) 1px,
+        transparent 1px
+    );
+    background-size: 4px 4px;
 }
 
 #scan-root .scd-pillar-chart-tooltip {
@@ -695,64 +727,6 @@
     50% {
         opacity: 0.36;
     }
-}
-
-#scan-root .scd-pillar-preview {
-    display: grid;
-    min-height: min(620px, calc(100vh - 220px));
-    place-items: center;
-    padding: 32px 12px;
-}
-
-#scan-root .scd-pillar-preview-card {
-    width: min(680px, 100%);
-    margin: 0;
-    border-color: var(--sui-border);
-    border-radius: 12px;
-    background: var(--scd-pillar-panel-raised);
-    box-shadow: 0 16px 44px rgb(0 0 0 / 12%);
-}
-
-#scan-root .scd-pillar-preview-body {
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    padding: 36px;
-    text-align: center;
-}
-
-#scan-root .scd-pillar-preview-icon {
-    width: 58px;
-    height: 58px;
-    margin-bottom: 14px;
-    border: 1px solid color-mix(in srgb, var(--sui-content-info) 35%, transparent);
-    border-radius: 14px;
-    background: color-mix(in srgb, var(--sui-content-info) 9%, transparent);
-}
-
-#scan-root .scd-pillar-preview-icon svg {
-    width: 28px;
-    height: 28px;
-}
-
-#scan-root .scd-pillar-preview h2 {
-    margin-top: 14px;
-}
-
-#scan-root .scd-pillar-preview p {
-    max-width: 560px;
-    margin-top: 8px;
-    color: var(--sui-content-muted);
-    font-size: 13px;
-    line-height: 1.55;
-}
-
-#scan-root .scd-pillar-preview .scd-pillar-preview-note {
-    margin: 18px 0 22px;
-    padding: 12px 14px;
-    border: 1px solid var(--sui-border);
-    border-radius: 8px;
-    background: color-mix(in srgb, var(--sui-content-info) 5%, transparent);
 }
 
 #scan-root .scd-pillar-footer {
@@ -937,6 +911,11 @@
     #scan-root .scd-pillar-journey-stage:not(:first-child)::before {
         display: none;
     }
+
+    #scan-root .scd-pillar-journey-stage {
+        min-width: 0;
+        white-space: normal;
+    }
 }
 
 @media (max-width: 560px) {
@@ -982,10 +961,6 @@
 
     #scan-root .scd-pillar-about-action {
         opacity: 1;
-    }
-
-    #scan-root .scd-pillar-preview-body {
-        padding: 26px 18px;
     }
 }
 

@@ -12,6 +12,10 @@ networking pillars and workplace scenarios.
 
 - Added contextual help actions to Configure tile option panels, with concise
   explanations and direct links to the matching official Splunk documentation.
+- Added a complete native React Secure Networking Pillars dashboard with five
+  URL-backed tabs and 30 Searchbase-powered cards. The workspace mirrors the
+  home-page design system, supports light and dark appearance, and provides
+  contextual investigation dialogs while retaining direct Studio comparison.
 - Clarified Configure tile search filtering by removing the tag-vocabulary total
   from `All tags`, adding a live matching-search count, and correcting singular
   and plural wording in per-tag counts.
