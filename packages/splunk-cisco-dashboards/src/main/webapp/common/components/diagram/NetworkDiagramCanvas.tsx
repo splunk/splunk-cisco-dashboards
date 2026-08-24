@@ -3842,7 +3842,9 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                         zoomable
                         nodeStrokeWidth={2}
                         nodeColor={(n) => {
-                            if (n.type === REGION_NODE_TYPE) return '#cbd5e1';
+                            if (n.type === REGION_NODE_TYPE) {
+                                return 'var(--sui-content-muted)';
+                            }
                             if (n.type === DIAGRAM_TITLE_NODE_TYPE) return 'transparent';
                             // Build 115.1 — annotations don't read as
                             // network elements on the minimap. Render
@@ -3850,7 +3852,7 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
                             // communicates "where the devices are" at
                             // a glance, not "where the labels are".
                             if (n.type === TEXT_BOX_NODE_TYPE) return 'transparent';
-                            return '#0ea5e9';
+                            return 'var(--sui-content-info)';
                         }}
                     />
                 )}

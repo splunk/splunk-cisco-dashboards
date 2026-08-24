@@ -565,7 +565,7 @@ const TopologyCanvasInner: React.FC<TopologyCanvasProps> = ({
                 fitView
                 fitViewOptions={{ padding: 0.15 }}
                 proOptions={{ hideAttribution: true }}
-                minZoom={0.2}
+                minZoom={0.5}
                 maxZoom={2.5}
                 connectOnClick={false}
                 edgesReconnectable
@@ -578,8 +578,10 @@ const TopologyCanvasInner: React.FC<TopologyCanvasProps> = ({
                     zoomable
                     nodeStrokeWidth={2}
                     nodeColor={(n) => {
-                        if (n.type === 'topologyZone') return '#cbd5e1';
-                        return '#0ea5e9';
+                        if (n.type === 'topologyZone') {
+                            return 'var(--sui-content-muted)';
+                        }
+                        return 'var(--sui-content-info)';
                     }}
                 />
             </ReactFlow>
