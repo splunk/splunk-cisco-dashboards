@@ -9,7 +9,7 @@
  *   - shipped defaults: default/customer_topology.conf
  *   - operator edits:  local/customer_topology.conf
  *   - read REST:       servicesNS/-/<app>/configs/conf-customer_topology
- *   - write REST:      servicesNS/nobody/<app>/configs/conf-customer_topology
+ *   - write REST:      servicesNS/nobody/<app>/scd_customer_topology
  *
  * Writing as owner `nobody` is intentional: the saved topology is app-wide,
  * so every user with read access to the app sees the same site/link layout.
@@ -242,6 +242,11 @@ const buildBaseUrl = (appName: string, forWrite: boolean): string => {
         appName
     )}/configs/conf-${CONF_BASENAME}`;
 };
+
+const buildMutationBaseUrl = (appName: string): string =>
+    `/en-US/splunkd/__raw/servicesNS/nobody/${encodeURIComponent(
+        appName
+    )}/scd_customer_topology`;
 
 const friendlyMessage = (
     status: number,
@@ -484,7 +489,7 @@ export const saveCustomerTopologyConfig = async (
     });
     const postInit = buildMutationInit(body);
 
-    const updateUrl = `${buildBaseUrl(appName, true)}/${encodeURIComponent(
+    const updateUrl = `${buildMutationBaseUrl(appName)}/${encodeURIComponent(
         stanzaName
     )}`;
     let response: Response;
@@ -506,7 +511,7 @@ export const saveCustomerTopologyConfig = async (
         createBody.set('name', stanzaName);
         const createInit = buildMutationInit(createBody);
         const createResponse = await withRetry(() =>
-            fetch(buildBaseUrl(appName, true), createInit)
+            fetch(buildMutationBaseUrl(appName), createInit)
         );
         if (createResponse.ok) return;
         let createError: unknown = null;

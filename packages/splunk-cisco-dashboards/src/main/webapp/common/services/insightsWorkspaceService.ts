@@ -60,10 +60,11 @@ const isInSplunkRuntime = (): boolean => {
     return Boolean(runtime.$C) || Boolean(document.cookie?.includes('splunkweb_csrf_token'));
 };
 
-const buildBaseUrl = (forWrite: boolean): string => {
-    const owner = forWrite ? 'nobody' : '-';
-    return `/en-US/splunkd/__raw/servicesNS/${owner}/${APP_NAME}/configs/conf-${INSIGHTS_WORKSPACES_CONF_BASENAME}`;
-};
+const buildReadBaseUrl = (): string =>
+    `/en-US/splunkd/__raw/servicesNS/-/${APP_NAME}/configs/conf-${INSIGHTS_WORKSPACES_CONF_BASENAME}`;
+
+const buildMutationBaseUrl = (): string =>
+    `/en-US/splunkd/__raw/servicesNS/nobody/${APP_NAME}/scd_insights_workspaces`;
 
 const getCurrentUser = (): string => {
     if (typeof window === 'undefined') return 'unknown';
@@ -342,7 +343,7 @@ export const loadInsightsWorkspaces = async (): Promise<InsightsWorkspaceBundle>
         };
     }
 
-    const response = await fetch(`${buildBaseUrl(false)}?output_mode=json&count=0`, {
+    const response = await fetch(`${buildReadBaseUrl()}?output_mode=json&count=0`, {
         method: 'GET',
         credentials: 'include',
         headers: { Accept: 'application/json' },
@@ -374,7 +375,7 @@ const upsertStanza = async (
         updated_by: getCurrentUser(),
         output_mode: 'json',
     });
-    const updateUrl = `${buildBaseUrl(true)}/${encodeURIComponent(stanzaName)}`;
+    const updateUrl = `${buildMutationBaseUrl()}/${encodeURIComponent(stanzaName)}`;
     const response = await fetch(
         updateUrl,
         createFetchInit({
@@ -389,7 +390,7 @@ const upsertStanza = async (
         const createBody = new URLSearchParams(body);
         createBody.set('name', stanzaName);
         const createResponse = await fetch(
-            buildBaseUrl(true),
+            buildMutationBaseUrl(),
             createFetchInit({
                 method: 'POST',
                 body: createBody.toString(),
@@ -416,7 +417,7 @@ const upsertStanza = async (
 const deleteStanza = async (stanzaName: string): Promise<void> => {
     if (!isInSplunkRuntime()) return;
     const response = await fetch(
-        `${buildBaseUrl(true)}/${encodeURIComponent(stanzaName)}?output_mode=json`,
+        `${buildMutationBaseUrl()}/${encodeURIComponent(stanzaName)}?output_mode=json`,
         createFetchInit({
             method: 'DELETE',
             headers: { Accept: 'application/json' },
