@@ -26,9 +26,15 @@
 /packages/splunk-cisco-dashboards/test/*
 !/packages/splunk-cisco-dashboards/test/agenticSocWorkspace.test.cjs
 !/packages/splunk-cisco-dashboards/test/kpiPickerSearchContract.test.cjs
-!/packages/splunk-cisco-dashboards/test/kpiPickerOptionHelpContract.test.cjs
 !/packages/splunk-cisco-dashboards/test/workspaceFocusRestoration.test.cjs
+!/packages/splunk-cisco-dashboards/test/macroFieldPillsSui.test.cjs
+!/packages/splunk-cisco-dashboards/test/kpiPickerOptionHelpContract.test.cjs
+!/packages/splunk-cisco-dashboards/test/searchbaseSelfContainedAnomalies.test.cjs
+!/packages/splunk-cisco-dashboards/test/secureNetworkingAssuranceScore.test.cjs
 !/packages/splunk-cisco-dashboards/test/secureNetworkingReactPillars.test.cjs
+!/packages/splunk-cisco-dashboards/test/workspaceDelegatedCapability.test.cjs
+!/packages/splunk-cisco-dashboards/test/workspaceEnterpriseHardening.test.cjs
+!/packages/splunk-cisco-dashboards/test/workspaceRestHandler.test.py
 /tests/
 
 # Operating-system, editor, and document artifacts.
