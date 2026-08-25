@@ -102,10 +102,6 @@ const DEFAULT_INDEX_OR_DEFINITION = "(index=*)";
 const DEFAULT_SOURCETYPE_IN_DEFINITION = "sourcetype IN (*)";
 const SCD_INDEX_MACRO_OR_PLACEHOLDER = "__SCD_INDEX_MACRO_OR__";
 const FALLBACK_SCD_INDEX_MACRO_NAMES = [
-  "index_agentic_soc_dns",
-  "index_agentic_soc_firewall",
-  "index_agentic_soc_investigation",
-  "index_agentic_soc_zeek",
   "index_catalyst",
   "index_cloud_native",
   "index_cybervision",

@@ -97,6 +97,24 @@ body.scd-overview-active {
   overflow-x: hidden;
 }
 
+/* Presentation mode keeps only the React dashboard visible. Native browser
+ * fullscreen is requested when available; this fixed overlay is the reliable
+ * fallback when enterprise browser policy blocks the Fullscreen API. */
+html.scd-presentation-mode,
+body.scd-presentation-mode {
+  overflow: hidden !important;
+}
+
+body.scd-presentation-mode #scan-root {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483000 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+}
+
 body.scd-overview-active .dashboard,
 body.scd-overview-active .dashboard-body,
 body.scd-overview-active .dashboard-layout-row-column,

@@ -26,13 +26,7 @@ const loadTypescriptModule = (relativePath) => {
     "__filename",
     "__dirname",
     output,
-  )(
-    module.exports,
-    module,
-    require,
-    sourcePath,
-    path.dirname(sourcePath),
-  );
+  )(module.exports, module, require, sourcePath, path.dirname(sourcePath));
   return module.exports;
 };
 
@@ -57,6 +51,9 @@ const workspaceConfig = loadTypescriptModule(
 const signalConfig = loadTypescriptModule(
   "src/main/webapp/common/config/signalTicker.ts",
 );
+const metricValueFormat = loadTypescriptModule(
+  "src/main/webapp/common/lib/metricValueFormat.ts",
+);
 const workspacesConf = read(
   "src/main/resources/splunk/default/insights_workspaces.conf",
 );
@@ -64,6 +61,15 @@ const searchbase = read("src/main/resources/splunk/default/searchbase.conf");
 const macros = read("src/main/resources/splunk/default/macros.conf");
 const workspaceManager = read(
   "src/main/webapp/common/components/workspace/WorkspaceManager.tsx",
+);
+const searchbaseTileConfigService = read(
+  "src/main/webapp/common/services/searchbaseTileConfigService.ts",
+);
+const insightsWorkspaceService = read(
+  "src/main/webapp/common/services/insightsWorkspaceService.ts",
+);
+const executiveInsights = read(
+  "src/main/webapp/pages/executive_insights/index.tsx",
 );
 
 assert.ok(workspaceConfig.WORKSPACE_SOURCE_IDS.includes("agentic_soc"));
@@ -86,7 +92,9 @@ assert.ok(workspace, "Expected a packaged Agentic SOC workspace fallback");
 assert.equal(workspace.label, "Agentic Security Operations Center");
 assert.equal(workspace.sourceWorkspace, "agentic_soc");
 assert.equal(workspace.mapVisible, false);
-assert.equal(workspace.fallbackTileCount, 9);
+assert.equal(workspace.minTileCount, 1);
+assert.equal(workspace.maxTileCount, 3);
+assert.equal(workspace.fallbackTileCount, 3);
 assert.equal(workspace.maxVisibleSections, 4);
 assert.deepEqual(
   workspace.sections.map((section) => section.id),
@@ -105,8 +113,11 @@ assert.deepEqual(workspace.defaultVisibleSections, [
 ]);
 
 assert.match(workspaceManager, /Agentic Security Operations Center/);
-assert.match(workspaceManager, /Umbrella DNS, firewall threat, Endace\/Zeek/);
-assert.match(workspaceManager, /unified XDR and Splunk investigation/);
+assert.match(
+  workspaceManager,
+  /Umbrella DNS, Cisco Secure Firewall, Endace\/Zeek/,
+);
+assert.match(workspaceManager, /Splunk-led investigation/);
 
 const workspaceBody = stanza(
   workspacesConf,
@@ -115,6 +126,9 @@ const workspaceBody = stanza(
 assert.equal(field(workspaceBody, "source_workspace"), "agentic_soc");
 assert.equal(field(workspaceBody, "map_visible"), "0");
 assert.equal(field(workspaceBody, "max_visible_sections"), "4");
+assert.equal(field(workspaceBody, "min_tile_count"), "1");
+assert.equal(field(workspaceBody, "max_tile_count"), "3");
+assert.equal(field(workspaceBody, "default_tile_count"), "3");
 assert.equal(
   field(workspaceBody, "default_visible_sections"),
   "dns_security,firewall_security,network_detection,unified_investigation",
@@ -134,14 +148,14 @@ const expectedTiles = {
   ],
   firewall_security: [
     "agentic_soc_firewall_connection_volume",
-    "agentic_soc_firewall_blocked_connections",
-    "agentic_soc_firewall_intrusion_threats",
     "agentic_soc_firewall_security_intelligence",
+    "agentic_soc_firewall_top_destination_ports",
+    "agentic_soc_firewall_top_conversations",
+    "agentic_soc_firewall_intrusion_threats",
+    "agentic_soc_firewall_blocked_connections",
     "agentic_soc_firewall_destinations_by_country",
     "agentic_soc_firewall_top_rules",
     "agentic_soc_firewall_top_applications",
-    "agentic_soc_firewall_top_destination_ports",
-    "agentic_soc_firewall_top_conversations",
   ],
   network_detection: [
     "agentic_soc_zeek_traffic_volume",
@@ -167,45 +181,323 @@ const expectedTiles = {
   ],
 };
 
+assert.equal(
+  workspaceConfig.AGENTIC_SOC_WORKSPACE_ID,
+  "agentic_security_operations_center",
+);
+assert.deepEqual(
+  workspaceConfig.PACKAGED_AGENTIC_SOC_LAYOUT_TILE_IDS,
+  expectedTiles,
+  "Factory reset inventory must mirror all four packaged Agentic layouts",
+);
+assert.deepEqual(
+  workspaceConfig.PACKAGED_AGENTIC_SOC_SEARCHBASE_STANZA_IDS,
+  Object.values(expectedTiles).flat(),
+  "Factory reset must retain all 36 packaged Agentic searchbase stanza IDs",
+);
+assert.equal(
+  new Set(workspaceConfig.PACKAGED_AGENTIC_SOC_SEARCHBASE_STANZA_IDS).size,
+  36,
+);
+
+const demoTiles = Object.fromEntries(
+  Object.entries(expectedTiles).map(([sectionId, tileIds]) => [
+    sectionId,
+    tileIds.slice(0, 3),
+  ]),
+);
+
+assert.deepEqual(demoTiles, {
+  dns_security: [
+    "agentic_soc_umbrella_dns_requests",
+    "agentic_soc_umbrella_unique_domains",
+    "agentic_soc_umbrella_blocked_requests",
+  ],
+  firewall_security: [
+    "agentic_soc_firewall_connection_volume",
+    "agentic_soc_firewall_security_intelligence",
+    "agentic_soc_firewall_top_destination_ports",
+  ],
+  network_detection: [
+    "agentic_soc_zeek_traffic_volume",
+    "agentic_soc_zeek_protocols",
+    "agentic_soc_zeek_top_conversations",
+  ],
+  unified_investigation: [
+    "agentic_soc_unified_threat_activity",
+    "agentic_soc_unified_xdr_severity",
+    "agentic_soc_unified_xdr_status",
+  ],
+});
+
+const expectedDrilldownTargets = {
+  agentic_soc_umbrella_dns_requests: [
+    "agentic_soc_umbrella_top_categories",
+    "agentic_soc_umbrella_top_clients",
+  ],
+  agentic_soc_umbrella_unique_domains: [
+    "agentic_soc_umbrella_top_categories",
+    "agentic_soc_umbrella_top_clients",
+  ],
+  agentic_soc_umbrella_blocked_requests: [
+    "agentic_soc_umbrella_response_codes",
+  ],
+  agentic_soc_firewall_connection_volume: [
+    "agentic_soc_firewall_top_rules",
+    "agentic_soc_firewall_top_conversations",
+  ],
+  agentic_soc_firewall_security_intelligence: [
+    "agentic_soc_firewall_top_rules",
+    "agentic_soc_firewall_top_conversations",
+  ],
+  agentic_soc_firewall_top_destination_ports: [
+    "agentic_soc_firewall_top_rules",
+    "agentic_soc_firewall_top_conversations",
+  ],
+  agentic_soc_zeek_traffic_volume: [
+    "agentic_soc_zeek_top_conversations",
+    "agentic_soc_zeek_file_types",
+  ],
+  agentic_soc_zeek_protocols: [
+    "agentic_soc_zeek_top_conversations",
+    "agentic_soc_zeek_file_types",
+  ],
+  agentic_soc_zeek_top_conversations: [
+    "agentic_soc_zeek_file_types",
+    "agentic_soc_unified_attack_analyzer_detections",
+  ],
+  agentic_soc_unified_threat_activity: [
+    "agentic_soc_unified_xdr_status",
+    "agentic_soc_unified_investigation_queue",
+  ],
+  agentic_soc_unified_xdr_severity: [
+    "agentic_soc_unified_investigation_queue",
+  ],
+  agentic_soc_unified_xdr_status: [
+    "agentic_soc_unified_investigation_queue",
+  ],
+};
+
+for (const tileId of Object.values(demoTiles).flat()) {
+  const search = stanza(searchbase, tileId);
+  assert.ok(
+    field(search, "search_name"),
+    `${tileId} needs an Open in Search target`,
+  );
+  assert.match(field(search, "search"), /^\| tstats /);
+  assert.ok(
+    field(search, "default_viz"),
+    `${tileId} needs an explicit visualization`,
+  );
+  assert.deepEqual(
+    field(search, "drilldown_stanza_ids").split(","),
+    expectedDrilldownTargets[tileId],
+    `${tileId} needs the audited detail-search targets`,
+  );
+  assert.ok(
+    field(search, "drilldown_button_title"),
+    `${tileId} needs an operator-facing drilldown title`,
+  );
+  for (const metadataField of [
+    "description",
+    "explanation",
+    "solution",
+    "related_info",
+  ]) {
+    assert.ok(
+      field(search, metadataField),
+      `${tileId} needs ${metadataField} metadata`,
+    );
+  }
+  const overview = JSON.parse(field(search, "viz_options")).overview[0];
+  assert.ok(
+    overview.thresholdNote,
+    `${tileId} needs operator threshold guidance`,
+  );
+  assert.doesNotMatch(
+    overview.thresholdNote,
+    /^Counts are scoped to the selected dashboard time range/i,
+    `${tileId} needs actionable, metric-specific threshold guidance`,
+  );
+}
+
+for (const [tileId, targets] of Object.entries(expectedDrilldownTargets)) {
+  for (const targetId of targets) {
+    assert.notEqual(targetId, tileId, `${tileId} cannot drill into itself`);
+    assert.ok(stanza(searchbase, targetId), `${targetId} must exist`);
+  }
+}
+
+const visitedDrilldowns = new Set();
+const activeDrilldowns = new Set();
+const visitDrilldowns = (tileId) => {
+  if (visitedDrilldowns.has(tileId)) return;
+  assert.ok(
+    !activeDrilldowns.has(tileId),
+    `Visible-tile drilldown graph must not cycle through ${tileId}`,
+  );
+  activeDrilldowns.add(tileId);
+  for (const targetId of expectedDrilldownTargets[tileId] ?? []) {
+    if (expectedDrilldownTargets[targetId]) visitDrilldowns(targetId);
+  }
+  activeDrilldowns.delete(tileId);
+  visitedDrilldowns.add(tileId);
+};
+for (const tileId of Object.keys(expectedDrilldownTargets)) {
+  visitDrilldowns(tileId);
+}
+
+const dnsFailureOverview = JSON.parse(
+  field(
+    stanza(searchbase, "agentic_soc_umbrella_blocked_requests"),
+    "viz_options",
+  ),
+).overview[0];
+assert.equal(dnsFailureOverview.valueField, "WindowFailureRatePct");
+assert.equal(dnsFailureOverview.unit, "%");
+assert.deepEqual(dnsFailureOverview.thresholds, {
+  warning: 5,
+  critical: 15,
+  direction: "lower_is_better",
+  enabled: true,
+});
+for (const coverageTile of [
+  "agentic_soc_umbrella_dns_requests",
+  "agentic_soc_umbrella_unique_domains",
+  "agentic_soc_firewall_connection_volume",
+  "agentic_soc_firewall_top_destination_ports",
+  "agentic_soc_zeek_traffic_volume",
+  "agentic_soc_unified_threat_activity",
+  "agentic_soc_unified_xdr_severity",
+]) {
+  const overview = JSON.parse(
+    field(stanza(searchbase, coverageTile), "viz_options"),
+  ).overview[0];
+  assert.deepEqual(overview.thresholds, {
+    critical: 1,
+    direction: "higher_is_better",
+    enabled: true,
+  });
+}
+
+const trendContracts = {
+  agentic_soc_umbrella_unique_domains: {
+    valueField: "Peak15mUniqueDomains",
+    sparkDataField: "UniqueDomains",
+    peakExpression: /eventstats max\(UniqueDomains\) as Peak15mUniqueDomains/,
+  },
+  agentic_soc_firewall_top_destination_ports: {
+    valueField: "Peak15mReportingDevices",
+    sparkDataField: "ReportingDevices",
+    peakExpression:
+      /eventstats max\(ReportingDevices\) as Peak15mReportingDevices/,
+  },
+  agentic_soc_unified_xdr_severity: {
+    valueField: "Peak15mObservedDevices",
+    sparkDataField: "ObservedDevices",
+    peakExpression:
+      /eventstats max\(ObservedDevices\) as Peak15mObservedDevices/,
+  },
+};
+for (const [tileId, contract] of Object.entries(trendContracts)) {
+  const search = stanza(searchbase, tileId);
+  const overview = JSON.parse(field(search, "viz_options")).overview[0];
+  assert.equal(field(search, "default_viz"), "splunk.line");
+  assert.equal(overview.valueField, contract.valueField);
+  assert.equal(overview.sparkDataField, contract.sparkDataField);
+  assert.match(overview.subLabel, /peak/i);
+  assert.match(overview.subLabel, /15-minute/i);
+  assert.match(search, /BY _time span=15m/);
+  assert.match(search, contract.peakExpression);
+}
+
+const visibleModelContracts = {
+  dns_security: /Network_Resolution\.DNS/,
+  firewall_security: /Network_Traffic\.All_Traffic/,
+  network_detection: /Network_Traffic\.All_Traffic/,
+  unified_investigation: /Network_Sessions\.All_Sessions/,
+};
+for (const [sectionId, tileIds] of Object.entries(demoTiles)) {
+  for (const tileId of tileIds) {
+    const search = stanza(searchbase, tileId);
+    const operatorMetadata = [
+      field(search, "description"),
+      field(search, "explanation"),
+      field(search, "solution"),
+      field(search, "related_info"),
+    ].join(" ");
+    assert.match(
+      operatorMetadata,
+      visibleModelContracts[sectionId],
+      `${tileId} metadata must name its accelerated data model`,
+    );
+  }
+}
+
 const acceleratedNetworkResolutionTiles = [
   "agentic_soc_umbrella_unique_domains",
   "agentic_soc_umbrella_dns_requests",
+  "agentic_soc_umbrella_blocked_requests",
+  "agentic_soc_umbrella_top_categories",
+  "agentic_soc_umbrella_top_applications",
+  "agentic_soc_umbrella_top_domains",
   "agentic_soc_umbrella_top_clients",
   "agentic_soc_umbrella_response_codes",
+  "agentic_soc_umbrella_application_inventory",
   "agentic_soc_zeek_dns_queries",
   "agentic_soc_zeek_dns_response_codes",
+  "agentic_soc_unified_xdr_top_detections",
 ];
 
 const acceleratedNetworkTrafficTiles = [
   "agentic_soc_firewall_security_intelligence",
   "agentic_soc_firewall_connection_volume",
+  "agentic_soc_firewall_intrusion_threats",
+  "agentic_soc_firewall_destinations_by_country",
+  "agentic_soc_firewall_blocked_connections",
+  "agentic_soc_firewall_top_rules",
+  "agentic_soc_firewall_top_applications",
+  "agentic_soc_firewall_top_destination_ports",
+  "agentic_soc_firewall_top_conversations",
   "agentic_soc_zeek_protocols",
   "agentic_soc_zeek_traffic_volume",
   "agentic_soc_zeek_top_conversations",
+  "agentic_soc_zeek_http_hosts",
+  "agentic_soc_zeek_tls_posture",
+  "agentic_soc_zeek_notices",
+  "agentic_soc_zeek_file_types",
+  "agentic_soc_unified_es_action_activity",
+  "agentic_soc_unified_es_top_rules",
+  "agentic_soc_unified_attack_analyzer_job_scores",
+  "agentic_soc_unified_attack_analyzer_detections",
+  "agentic_soc_unified_investigation_queue",
+];
+
+const acceleratedNetworkSessionsTiles = [
+  "agentic_soc_unified_threat_activity",
+  "agentic_soc_unified_xdr_severity",
+  "agentic_soc_unified_xdr_status",
 ];
 
 const acceleratedTiles = new Set([
   ...acceleratedNetworkResolutionTiles,
   ...acceleratedNetworkTrafficTiles,
+  ...acceleratedNetworkSessionsTiles,
 ]);
-const rawEventTiles = Object.values(expectedTiles)
-  .flat()
-  .filter((tileId) => !acceleratedTiles.has(tileId));
-
-assert.equal(acceleratedTiles.size, 11);
-assert.equal(rawEventTiles.length, 25);
+assert.equal(acceleratedTiles.size, 36);
 
 for (const [sectionId, tileIds] of Object.entries(expectedTiles)) {
-  assert.equal(tileIds.length, 9, `${sectionId} must ship exactly nine searches`);
+  assert.equal(
+    tileIds.length,
+    9,
+    `${sectionId} must ship exactly nine searches`,
+  );
   const layout = stanza(
     workspacesConf,
     `layout.agentic_security_operations_center.${sectionId}`,
   );
   assert.deepEqual(field(layout, "tiles").split(","), tileIds);
-  assert.equal(
-    field(layout, "visible_count"),
-    "3",
-  );
+  assert.equal(field(layout, "visible_count"), "3");
 
   for (const tileId of tileIds) {
     const search = stanza(searchbase, tileId);
@@ -220,9 +512,10 @@ for (const [sectionId, tileIds] of Object.entries(expectedTiles)) {
     assert.match(field(search, "tags"), /Agentic SOC/);
     assert.match(field(search, "tags"), /Custom Conference/);
     assert.ok(
-      /CIM Accelerated|Raw Events/.test(field(search, "tags")),
-      `${tileId} must declare its search execution class`,
+      /CIM Accelerated/.test(field(search, "tags")),
+      `${tileId} must declare accelerated execution`,
     );
+    assert.match(field(search, "search"), /^\| tstats /);
     assert.doesNotMatch(search, /\|\s*makeresults|random\s*\(/i);
   }
 }
@@ -251,81 +544,138 @@ for (const tileId of acceleratedNetworkTrafficTiles) {
   assert.match(search, /FROM datamodel=Network_Traffic\.All_Traffic/i);
 }
 
-for (const tileId of rawEventTiles) {
+for (const tileId of acceleratedNetworkSessionsTiles) {
   const search = stanza(searchbase, tileId);
-  assert.match(field(search, "tags"), /Raw Events/);
-  assert.doesNotMatch(field(search, "tags"), /CIM Accelerated/);
+  assert.match(field(search, "tags"), /CIM Accelerated/);
+  assert.match(field(search, "tags"), /Network Sessions/);
+  assert.match(
+    search,
+    /\| tstats summariesonly=true allow_old_summaries=false/,
+  );
+  assert.match(search, /FROM datamodel=Network_Sessions\.All_Sessions/i);
+  assert.match(search, /`index_dhcp`/);
+  assert.match(search, /sourcetype="dhcp"/);
 }
+
+const dhcpActivity = stanza(searchbase, "agentic_soc_unified_threat_activity");
+const dhcpActivityOverview = JSON.parse(field(dhcpActivity, "viz_options"))
+  .overview[0];
+assert.equal(dhcpActivityOverview.valueField, "WindowSessions");
+assert.equal(dhcpActivityOverview.sparkDataField, "Sessions");
+assert.match(dhcpActivity, /eventstats sum\(Sessions\) as WindowSessions/);
 
 for (const tileId of expectedTiles.dns_security) {
   assert.match(stanza(searchbase, tileId), /`index_dns_umbrella`/);
 }
-assert.match(
-  stanza(searchbase, "agentic_soc_umbrella_blocked_requests"),
-  /sourcetype="cisco:cloud_security:dns" action=blocked/,
+const sharedDnsRailSearch = stanza(
+  searchbase,
+  "agentic_soc_umbrella_dns_requests",
 );
-assert.doesNotMatch(
-  stanza(searchbase, "agentic_soc_umbrella_blocked_requests"),
-  /match\(lower\([^)]*action/,
-);
-assert.match(
-  stanza(searchbase, "agentic_soc_umbrella_top_applications"),
-  /cisco:cloud_security:appdiscovery/,
-);
-assert.match(
-  stanza(searchbase, "agentic_soc_umbrella_top_applications"),
-  /dns_Events/,
-);
-assert.match(
-  stanza(searchbase, "agentic_soc_umbrella_top_applications"),
-  /stats latest\(application_requests\)/,
-);
-assert.doesNotMatch(
-  stanza(searchbase, "agentic_soc_umbrella_top_applications"),
-  /stats sum\(application_requests\)/,
-);
-for (const tileId of [
-  "agentic_soc_umbrella_top_applications",
-  "agentic_soc_umbrella_application_inventory",
+for (const fieldName of [
+  "Requests",
+  "Failures",
+  "FailureRatePct",
+  "WindowRequests",
+  "WindowFailures",
+  "WindowFailureRatePct",
 ]) {
-  const search = stanza(searchbase, tileId);
-  assert.match(search, /DataSource=.*"Live"/);
-  assert.match(search, /Synthetic Demo/);
-  const vizOptions = JSON.parse(field(search, "viz_options"));
-  assert.match(vizOptions.overview[0].subLabel, /labeled demo fallback/);
+  assert.match(
+    sharedDnsRailSearch,
+    new RegExp(`\\b${fieldName}\\b`),
+    `Shared DNS Signal Rail job must emit ${fieldName}`,
+  );
 }
 assert.match(
-  stanza(searchbase, "agentic_soc_umbrella_top_categories"),
-  /split\(dns_categories,","\)/,
+  sharedDnsRailSearch,
+  /FailureRatePct=if\(Requests>0,round\(100\*Failures\/Requests,2\),0\)/,
+);
+assert.match(
+  sharedDnsRailSearch,
+  /WindowFailureRatePct=if\(WindowRequests>0,round\(100\*WindowFailures\/WindowRequests,2\),0\)/,
+);
+assert.match(
+  stanza(searchbase, "agentic_soc_umbrella_blocked_requests"),
+  /Failures=if\(coalesce\('DNS\.reply_code_id',0\)>0,Requests,0\)/,
+);
+assert.match(
+  stanza(searchbase, "agentic_soc_umbrella_blocked_requests"),
+  /WindowFailureRatePct/,
+);
+assert.doesNotMatch(
+  stanza(searchbase, "agentic_soc_umbrella_blocked_requests"),
+  /action=blocked|Blocked DNS requests/,
+);
+assert.match(
+  stanza(searchbase, "agentic_soc_umbrella_top_applications"),
+  /BY DNS\.src/,
+);
+assert.doesNotMatch(
+  stanza(searchbase, "agentic_soc_umbrella_top_applications"),
+  /appdiscovery|Synthetic Demo/,
 );
 assert.match(
   stanza(searchbase, "agentic_soc_umbrella_top_categories"),
-  /tstats max\(_time\) as max_time/,
+  /BY DNS\.query/,
+);
+assert.match(
+  stanza(searchbase, "agentic_soc_umbrella_application_inventory"),
+  /avg\(DNS\.response_time\)/,
 );
 for (const tileId of expectedTiles.firewall_security) {
   const search = stanza(searchbase, tileId);
-  assert.match(search, /`index_network_ftd`/);
-  assert.match(field(search, "tags"), /TA 7404/);
+  if (
+    tileId === "agentic_soc_firewall_destinations_by_country" ||
+    tileId === "agentic_soc_firewall_top_applications"
+  ) {
+    assert.match(search, /`index_zeek`/);
+    assert.match(field(search, "tags"), /Endace/);
+  } else {
+    assert.match(search, /`index_network_ftd`/);
+    assert.match(field(search, "tags"), /TA 7404/);
+  }
   assert.doesNotMatch(field(search, "tags"), /Awaiting Feed/);
+}
+const agenticFtdDeviceSplTiles = Object.values(expectedTiles)
+  .flat()
+  .filter((tileId) =>
+    stanza(searchbase, tileId).includes("All_Traffic.dvc"),
+  );
+assert.deepEqual(agenticFtdDeviceSplTiles, [
+  "agentic_soc_firewall_connection_volume",
+  "agentic_soc_firewall_top_destination_ports",
+]);
+for (const tileId of agenticFtdDeviceSplTiles) {
+  const spl = stanza(searchbase, tileId);
+  assert.match(
+    spl,
+    /NormalizedDevice=lower\(trim\(coalesce\('All_Traffic\.dvc',""\)\)\)/,
+    `${tileId} must normalize blank and unknown device values`,
+  );
+  assert.match(
+    spl,
+    /ReportingDevice=if\(NormalizedDevice="" OR NormalizedDevice="unknown",host,'All_Traffic\.dvc'\)/,
+    `${tileId} must fall back from literal unknown dvc to host`,
+  );
+  assert.doesNotMatch(spl, /ReportingDevice=coalesce\('All_Traffic\.dvc',host\)/);
 }
 assert.match(
   stanza(searchbase, "agentic_soc_firewall_top_rules"),
-  /message_id/,
+  /BY source sourcetype/,
 );
 assert.match(
   field(stanza(searchbase, "agentic_soc_firewall_top_rules"), "search_name"),
-  /Top Message Types/,
+  /Collection Sources/,
 );
 assert.match(
   stanza(searchbase, "agentic_soc_firewall_top_applications"),
-  /severity_level/,
+  /All_Traffic\.app/,
 );
 assert.match(
   field(
     stanza(searchbase, "agentic_soc_firewall_top_applications"),
     "search_name",
   ),
-  /Severity Distribution/,
+  /Top Applications/,
 );
 for (const tileId of expectedTiles.network_detection) {
   const search = stanza(searchbase, tileId);
@@ -333,27 +683,22 @@ for (const tileId of expectedTiles.network_detection) {
   assert.match(search, /sourcetype="zeek:/);
   assert.match(field(search, "tags"), /Stack Validated/);
 }
-for (const tileId of expectedTiles.unified_investigation) {
+for (const tileId of expectedTiles.unified_investigation.slice(3)) {
   const search = stanza(searchbase, tileId);
-  assert.match(search, /`index_security`/);
-  assert.match(field(search, "tags"), /Live First/);
-  assert.match(field(search, "tags"), /Synthetic Fallback/);
-  assert.match(search, /DataSource="Live"/);
-  assert.match(search, /DataSource="Synthetic Demo"/);
-  assert.match(
-    search,
-    /appendpipe \[ stats count as _rows \| where _rows=0/,
-  );
+  assert.match(field(search, "tags"), /CIM Accelerated/);
+  assert.match(field(search, "tags"), /Derived Signal/);
+  assert.match(field(search, "search"), /^\| tstats /);
+  assert.doesNotMatch(search, /Synthetic Demo|makeresults/);
   const vizOptions = JSON.parse(field(search, "viz_options"));
-  assert.match(vizOptions.overview[0].subLabel, /labeled synthetic fallback/);
+  assert.doesNotMatch(vizOptions.overview[0].subLabel, /synthetic/i);
 }
-assert.match(
+assert.doesNotMatch(
   stanza(searchbase, "agentic_soc_unified_investigation_queue"),
   /\.example/,
 );
 assert.match(
   stanza(searchbase, "agentic_soc_unified_xdr_top_detections"),
-  /\| table Title Detections Product DataSource/,
+  /\| table Domain Response Failures Clients/,
 );
 
 assert.ok(stanza(macros, "index_dns_umbrella"));
@@ -376,15 +721,34 @@ assert.deepEqual(railIds, [
   "soc_zeek_sessions",
   "soc_zeek_bytes",
 ]);
+assert.deepEqual(
+  signalConfig.PACKAGED_AGENTIC_SOC_SIGNAL_ITEM_IDS,
+  railIds,
+  "Factory reset must retain all six packaged Agentic Signal Rail item IDs",
+);
 for (const itemId of railIds) {
   assert.ok(stanza(workspacesConf, `signal_item.${itemId}`));
 }
+const dnsFailureRailItem = stanza(
+  workspacesConf,
+  "signal_item.soc_dns_blocks",
+);
+assert.equal(field(dnsFailureRailItem, "label"), "DNS failure rate");
+assert.equal(
+  field(dnsFailureRailItem, "value_field"),
+  "WindowFailureRatePct",
+);
+assert.equal(field(dnsFailureRailItem, "threshold_warning"), "5");
+assert.equal(field(dnsFailureRailItem, "threshold_critical"), "15");
+assert.equal(
+  field(dnsFailureRailItem, "threshold_direction"),
+  "lower_is_better",
+);
+assert.equal(field(dnsFailureRailItem, "threshold_unit"), "%");
 
 for (const searchId of [
   "agentic_soc_umbrella_dns_requests",
-  "agentic_soc_umbrella_blocked_requests",
-  "agentic_soc_firewall_intrusion_threats",
-  "agentic_soc_firewall_security_intelligence",
+  "agentic_soc_firewall_connection_volume",
   "agentic_soc_zeek_traffic_volume",
 ]) {
   assert.match(
@@ -394,11 +758,107 @@ for (const searchId of [
   );
 }
 
+const railSearchNames = railIds.map((itemId) =>
+  field(stanza(workspacesConf, `signal_item.${itemId}`), "search_name"),
+);
+assert.deepEqual(railSearchNames, [
+  "Agentic SOC - Umbrella DNS Request Trend",
+  "Agentic SOC - Umbrella DNS Request Trend",
+  "Agentic SOC - Firewall Event Volume Trend",
+  "Agentic SOC - Firewall Event Volume Trend",
+  "Agentic SOC - Zeek Traffic Volume Trend",
+  "Agentic SOC - Zeek Traffic Volume Trend",
+]);
+assert.equal(
+  new Set(railSearchNames).size,
+  3,
+  "Six Signal Rail values must share three accelerated jobs",
+);
+for (const searchName of railSearchNames) {
+  const matchingId = Object.values(expectedTiles)
+    .flat()
+    .find(
+      (tileId) =>
+        field(stanza(searchbase, tileId), "search_name") === searchName,
+    );
+  assert.ok(matchingId, `Expected Signal Rail search ${searchName}`);
+  assert.match(stanza(searchbase, matchingId), /\| tstats summariesonly=true/);
+}
+
+const fallbackRail = signalConfig.getDefaultSignalTickerConfig(
+  "agentic_security_operations_center",
+);
 assert.deepEqual(
-  signalConfig
-    .getDefaultSignalTickerConfig("agentic_security_operations_center")
-    .items.map((item) => item.id),
+  fallbackRail.items.map((item) => item.id),
   railIds,
 );
+for (const fallbackItem of fallbackRail.items) {
+  const configured = stanza(workspacesConf, `signal_item.${fallbackItem.id}`);
+  assert.equal(
+    fallbackItem.searchName,
+    field(configured, "search_name"),
+    `${fallbackItem.id} fallback search must match insights_workspaces.conf`,
+  );
+  assert.equal(fallbackItem.valueField, field(configured, "value_field"));
+}
+assert.equal(
+  field(stanza(workspacesConf, "signal_item.soc_zeek_bytes"), "threshold_unit"),
+  "B",
+);
+assert.equal(
+  fallbackRail.items.find((item) => item.id === "soc_zeek_bytes").thresholdUnit,
+  "B",
+);
+
+assert.match(
+  searchbaseTileConfigService,
+  /workspaceId === AGENTIC_SOC_WORKSPACE_SOURCE_ID[\s\S]*PACKAGED_AGENTIC_SOC_SEARCHBASE_STANZA_IDS/,
+  "Agentic reset must seed packaged stanza IDs before adding effective runtime IDs",
+);
+assert.match(
+  insightsWorkspaceService,
+  /PACKAGED_WORKSPACE_FALLBACKS\.find\([\s\S]*candidate\.id === workspace\.id/,
+  "Workspace reset must resolve the packaged workspace rather than trust the effective runtime definition",
+);
+assert.match(
+  insightsWorkspaceService,
+  /packagedWorkspace\.sections\.map/,
+  "Workspace reset must delete every packaged layout section override",
+);
+assert.match(
+  insightsWorkspaceService,
+  /getDefaultSignalTickerConfig\(\s*packagedWorkspace\.id/,
+  "Workspace reset must derive Signal Rail items from packaged defaults",
+);
+assert.doesNotMatch(
+  insightsWorkspaceService,
+  /resetBuiltInInsightsWorkspace[\s\S]{0,160}signalItemIds:/,
+  "Workspace reset must not depend on a runtime-visible Signal Rail subset",
+);
+assert.match(
+  executiveInsights,
+  /resetBuiltInInsightsWorkspace\(insightsWorkspace\)/,
+  "Factory reset caller must not pass the effective Signal Rail subset",
+);
+assert.match(
+  executiveInsights,
+  /resetInsightsWorkspaceTileConfig\([\s\S]*?packagedWorkspace\.sourceWorkspace[\s\S]*?resetBuiltInInsightsWorkspace/,
+  "Factory reset caller must use the packaged source instead of an effective workspace override",
+);
+
+assert.equal(metricValueFormat.formatCompactMetricNumber(999), "999");
+assert.equal(metricValueFormat.formatCompactMetricNumber(1_000), "1K");
+assert.equal(metricValueFormat.formatCompactMetricNumber(1_000_000), "1M");
+assert.equal(metricValueFormat.formatCompactMetricNumber(1_000_000_000), "1B");
+assert.equal(
+  metricValueFormat.formatCompactMetricNumber(1_000_000_000_000),
+  "1T",
+);
+assert.equal(metricValueFormat.formatCompactMetricNumber(-1_250), "-1.3K");
+assert.equal(
+  metricValueFormat.formatMetricNumber(1_210_000_000_000, "B"),
+  "1.2 TB",
+);
+assert.equal(metricValueFormat.formatMetricNumber(1_250, "%"), "1,250%");
 
 console.log("Agentic Security Operations Center workspace contract passed.");

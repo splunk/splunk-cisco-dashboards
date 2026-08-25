@@ -18,6 +18,7 @@ import {
     X,
 } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
+import { formatMetricNumber } from '@/common/lib/metricValueFormat';
 import { splunkSearchAppUrl } from '@/common/lib/splunkSearchUrl';
 import {
     plainTextFromHtml,
@@ -132,28 +133,6 @@ export interface SignalTickerMetricDefaults {
     color?: string;
     thresholds?: MetricThresholds;
 }
-
-const formatTickerNumber = (value: number, unit?: string): string => {
-    if (!Number.isFinite(value)) return '--';
-    const abs = Math.abs(value);
-    const format = (divisor: number, suffix: string) => {
-        const n = value / divisor;
-        return `${n >= 10 ? n.toFixed(0) : n.toFixed(1)}${suffix}`;
-    };
-    const body =
-        abs >= 1_000_000_000
-            ? format(1_000_000_000, 'B')
-            : abs >= 1_000_000
-            ? format(1_000_000, 'M')
-            : abs >= 100_000
-            ? `${Math.round(value / 1000)}K`
-            : abs >= 1_000
-            ? format(1_000, 'K')
-            : Number.isInteger(value)
-            ? value.toLocaleString()
-            : value.toLocaleString(undefined, { maximumFractionDigits: 1 });
-    return unit ? `${body}${unit}` : body;
-};
 
 const labelForRecord = (
     item: SignalTickerItem,
@@ -425,6 +404,7 @@ const SignalTickerTile: React.FC<SignalTickerTileProps> = ({
             description: descriptionForRecord(record, metricDefault),
             spl: record?.search,
             dispatchContext: record?.dispatchContext,
+            dispatchPriority: 0,
             valueField: item.valueField ?? metricDefault?.valueField,
             displayField: metricDefault?.displayField,
             sparkDataField: metricDefault?.sparkDataField,
@@ -450,7 +430,7 @@ const SignalTickerTile: React.FC<SignalTickerTileProps> = ({
     const loading = catalogueLoading || result.source === 'loading';
     const valueText = loading
         ? 'Loading'
-        : result.displayValue ?? formatTickerNumber(result.value, unit);
+        : result.displayValue ?? formatMetricNumber(result.value, unit);
     const status: MetricStatus = loading ? 'unknown' : result.status;
     const subtitle = subtitleForRecord(record, metricDefault);
     const deltaDir: SignalRailDeltaDirection =
@@ -461,7 +441,7 @@ const SignalTickerTile: React.FC<SignalTickerTileProps> = ({
             : 'down';
     const delta =
         !loading && Number.isFinite(result.change)
-            ? formatTickerNumber(Math.abs(result.change), unit)
+            ? formatMetricNumber(Math.abs(result.change), unit)
             : undefined;
     const visual = useMemo<SignalTickerTileVisualState>(
         () => ({

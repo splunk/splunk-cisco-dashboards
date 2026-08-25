@@ -26,13 +26,7 @@ const loadTypescriptModule = (relativePath) => {
     "__filename",
     "__dirname",
     output,
-  )(
-    module.exports,
-    module,
-    require,
-    sourcePath,
-    path.dirname(sourcePath),
-  );
+  )(module.exports, module, require, sourcePath, path.dirname(sourcePath));
   return module.exports;
 };
 
@@ -86,7 +80,9 @@ const localStorage = {
   removeItem: (key) => values.delete(key),
 };
 const originalWindow = global.window;
+const originalDocument = global.document;
 try {
+  global.document = { cookie: "" };
   global.window = {
     $C: { USERNAME: "alice@example.com" },
     localStorage,
@@ -105,8 +101,16 @@ try {
     workspaceConfig.readUserScopedStorageItem(aliceKey),
     '{"v":1,"order":{}}',
   );
-  assert.equal(values.has(legacyKey), false, "Legacy state must be consumed once");
-  assert.equal(values.has(aliceKey), true, "Migrated state must belong to Alice");
+  assert.equal(
+    values.has(legacyKey),
+    false,
+    "Legacy state must be consumed once",
+  );
+  assert.equal(
+    values.has(aliceKey),
+    true,
+    "Migrated state must belong to Alice",
+  );
 
   global.window.$C.USERNAME = "bob@example.com";
   const bobKey = workspaceConfig.workspaceStorageKey(
@@ -119,12 +123,85 @@ try {
     null,
     "Bob must not inherit Alice's browser customizations",
   );
+
+  global.window.$C.USERNAME = "alice@example.com";
+  global.window.location = {
+    pathname: "/en-US/app/splunk-cisco-dashboards/workspace_insights",
+    search: "",
+  };
+  const workspaces = workspaceConfig.PACKAGED_WORKSPACE_FALLBACKS;
+  assert.equal(
+    workspaceConfig.rememberLastWorkspace(
+      "agentic_security_operations_center",
+      workspaces,
+    ),
+    true,
+  );
+  assert.equal(
+    workspaceConfig.getWorkspaceFromLocation(workspaces).id,
+    "agentic_security_operations_center",
+    "An app load without a workspace query must restore Alice's last workspace",
+  );
+
+  global.window.location.search = "?workspace=secure_networking";
+  assert.equal(
+    workspaceConfig.getWorkspaceFromLocation(workspaces).id,
+    "secure_networking",
+    "A valid explicit workspace must take precedence over remembered state",
+  );
+
+  global.window.location.search = "?workspace=removed_workspace";
+  assert.equal(
+    workspaceConfig.getWorkspaceFromLocation(workspaces).id,
+    "agentic_security_operations_center",
+    "An invalid explicit ID must fall through to a valid remembered workspace",
+  );
+
+  const lastWorkspaceKey = workspaceConfig.userScopedStorageKey(
+    workspaceConfig.LAST_WORKSPACE_STORAGE_KEY,
+  );
+  values.set(lastWorkspaceKey, "removed_workspace");
+  global.window.location.search = "";
+  assert.equal(
+    workspaceConfig.getWorkspaceFromLocation(workspaces).id,
+    workspaceConfig.DEFAULT_WORKSPACE_ID,
+    "A stale remembered ID must fall back to the factory workspace",
+  );
+  assert.equal(
+    workspaceConfig.rememberLastWorkspace("removed_workspace", workspaces),
+    false,
+    "Unknown workspace IDs must never be persisted",
+  );
+
+  values.delete(lastWorkspaceKey);
+  global.window.localStorage = undefined;
+  global.window.location.search =
+    "?workspace=agentic_security_operations_center";
+  assert.equal(
+    workspaceConfig.rememberLastWorkspace(
+      "agentic_security_operations_center",
+      workspaces,
+    ),
+    true,
+    "A first-party cookie must preserve the workspace when DOM storage is unavailable",
+  );
+  global.window.location.search = "";
+  assert.equal(
+    workspaceConfig.getWorkspaceFromLocation(workspaces).id,
+    "agentic_security_operations_center",
+    "The cookie fallback must restore the last workspace on a bare app load",
+  );
 } finally {
   if (originalWindow === undefined) delete global.window;
   else global.window = originalWindow;
+  if (originalDocument === undefined) delete global.document;
+  else global.document = originalDocument;
 }
 
 const profile = read("src/main/webapp/pages/executive_insights/index.tsx");
+const searchService = read(
+  "src/main/webapp/common/services/splunkSearchService.js",
+);
 const topology = read(
   "src/main/webapp/common/components/workspace/CustomerTopologyMap.tsx",
 );
@@ -143,6 +220,9 @@ const rail = read(
 );
 const metricItem = read(
   "src/main/webapp/common/components/workspace/MetricItem.tsx",
+);
+const barBreakdownTile = read(
+  "src/main/webapp/common/components/workspace/BarBreakdownTile.tsx",
 );
 const tileActionMenu = read(
   "src/main/webapp/common/components/workspace/TileActionMenu.tsx",
@@ -186,11 +266,35 @@ const packageScript = read("bin/package_app.sh");
 const m365Page = read(
   "src/main/webapp/pages/m365_activity_monitoring/index.tsx",
 );
-const m365Data = read(
-  "src/main/webapp/pages/m365_activity_monitoring/data.ts",
-);
+const m365Data = read("src/main/webapp/pages/m365_activity_monitoring/data.ts");
 
 assert.match(profile, /useInsightsWorkspacePermissions\(\)/);
+assert.match(
+  profile,
+  /\{!isSectionCollapsed && \([\s\S]*?<DndContext/,
+  "Collapsed sections must not mount metric hooks or dispatch their searches",
+);
+assert.match(profile, /dispatchPriority=\{10 \+ sectionIndex \* 10\}/);
+assert.match(profile, /<Menu\.Heading>Search loading<\/Menu\.Heading>/);
+assert.match(profile, /Enter full screen presentation mode/);
+assert.match(profile, /scd-presentation-mode/);
+assert.doesNotMatch(
+  profile,
+  /CUSTOMER_NAME_SPL|tag:\s*["']customer_name["']|setCustomerName/,
+  "Workspace headers must not dispatch the deprecated customer_name macro search",
+);
+assert.match(
+  profile,
+  /insightsWorkspace\.headerTitle\s*\|\|\s*insightsWorkspace\.label\s*\|\|\s*DEFAULT_HEADER_TITLE_FALLBACK/,
+  "Workspace title fallback must use config and the packaged label",
+);
+assert.match(
+  profile,
+  /signalTickerPersistenceStatus === ["']loading["'][\s\S]*?\? null[\s\S]*?: searchbaseByName/,
+  "Signal rail SPL must wait until persisted preferences finish hydrating",
+);
+assert.match(searchService, /DEFAULT_CONCURRENT_TILE_SEARCHES = 2/);
+assert.match(searchService, /activeDispatchPriority/);
 assert.match(profile, /canManageTopology=\{canManageSharedTopology\}/);
 assert.match(
   profile,
@@ -198,21 +302,51 @@ assert.match(
 );
 assert.match(profile, /workspaceAddedSearchbaseIds/);
 assert.match(profile, /label="Remove default"/);
-assert.match(
-  profile,
-  /<Modal\.Header title="Remove tile for everyone\?"/,
-);
+assert.match(profile, /<Modal\.Header title="Remove tile for everyone\?"/);
 assert.match(
   profile,
   /aria-label=\{`Remove default: \$\{record\.searchName\} from \$\{sectionTitle\}`\}/,
   "The shared-removal accessible name must contain its visible label",
 );
-assert.doesNotMatch(helpOverlay, /Right-click any tile|via\s+the section title/i);
+assert.doesNotMatch(
+  helpOverlay,
+  /Right-click any tile|via\s+the section title/i,
+);
 assert.match(
   helpOverlay,
   /Open a tile(?:&apos;|')s action menu and choose Configure tile/,
 );
-assert.match(tileActionMenu, /const expand = \(\) => onExpand\?\.\(toggleRef\.current\)/);
+assert.match(
+  tileActionMenu,
+  /const expand = \(\) => onExpand\?\.\(toggleRef\.current\)/,
+);
+assert.match(
+  tileActionMenu,
+  /label=\{`Open \$\{label\} in Search`\}/,
+  "Every searchable tile must expose a visible Open in Search icon",
+);
+assert.match(
+  tileActionMenu,
+  /to=\{openInSearchHref\}/,
+  "Open in Search must use a native link so Splunk Cloud popup policy cannot swallow the drilldown",
+);
+assert.match(
+  profile,
+  /const buildOverviewDescription =/,
+  "Workspace tiles must compose the complete Searchbase metadata contract",
+);
+assert.match(profile, /Operator action/);
+assert.match(profile, /Data source and context/);
+assert.match(
+  searchService,
+  /\[SCD Diagnostics\] ENABLED/,
+  "Opt-in diagnostics must announce themselves at a console level operators can see",
+);
+assert.match(
+  barBreakdownTile,
+  /formatCompactMetricNumber\(n\)/,
+  "Categorical tile headlines and values must use the shared compact formatter",
+);
 assert.match(
   metricItem,
   /focusReturnRef\.current = returnFocus \?\? null/,
@@ -231,13 +365,19 @@ assert.match(
   /<Paginator\.Compact[\s\S]*?aria-label="Drill-down search navigation"[\s\S]*?current=\{activeIndex \+ 1\}[\s\S]*?totalPages=\{config\.targets\.length\}/,
   "Multi-target drill-downs must use the native paginated search navigation",
 );
-assert.match(profile, /<ScreenReaderContent aria-live="polite">[\s\S]*?Showing \{activeConfig\.metadata\.title\}/);
+assert.match(
+  profile,
+  /<ScreenReaderContent aria-live="polite">[\s\S]*?Showing \{activeConfig\.metadata\.title\}/,
+);
 assert.match(
   profile,
   /canManageWorkspace \? \([\s\S]*?<RadioBar[\s\S]*?: \([\s\S]*?<StaticContent>Add for me<\/StaticContent>/,
   "Regular users must see a static personal destination rather than a one-option selector",
 );
-assert.match(topology, /\{canManageTopology && \([\s\S]*?label="Edit topology"/);
+assert.match(
+  topology,
+  /\{canManageTopology && \([\s\S]*?label="Edit topology"/,
+);
 assert.match(
   picker,
   /Search replacement is organization-wide and requires an[\s\S]*?administrator/,
@@ -258,7 +398,26 @@ assert.match(
 );
 assert.match(workspaceService, /class InsightsWorkspaceConflictError/);
 assert.match(workspaceService, /assertLayoutIsCurrent/);
-assert.match(tileConfigService, /restores the target if the source update fails/);
+assert.match(workspaceService, /resetBuiltInInsightsWorkspace/);
+assert.match(
+  profile,
+  /Reset workspace to factory defaults/,
+  "Administrators need a visible full workspace factory-reset action",
+);
+assert.match(
+  profile,
+  /permanently removes app-local insights_workspaces\.conf and [\s\S]*?searchbase\.conf overrides/,
+  "Factory reset must warn before removing shared local overrides",
+);
+assert.match(
+  profile,
+  /resetInsightsWorkspaceTileConfig\([\s\S]*?resetBuiltInInsightsWorkspace\([\s\S]*?handleResetAllCustomizations\(\)/,
+  "Full reset must clear Searchbase, workspace conf, and personal preferences",
+);
+assert.match(
+  tileConfigService,
+  /restores the target if the source update fails/,
+);
 assert.match(
   defaultMeta,
   /\[insights_workspaces\][\s\S]*?write : \[ admin, power, sc_admin \]/,
@@ -285,10 +444,7 @@ assert.match(rail, /variables\.backgroundColorSection/);
 assert.match(rail, /variables\.backgroundColorPage/);
 assert.match(rail, /variables\.uiColorAccent/);
 assert.match(rail, /variables\.uiColorAccentComplement/);
-assert.doesNotMatch(
-  rail,
-  /#0d2b5e|#1749a0|#0d4f8a|#020617|#07142d|#0c1f3d/i,
-);
+assert.doesNotMatch(rail, /#0d2b5e|#1749a0|#0d4f8a|#020617|#07142d|#0c1f3d/i);
 assert.doesNotMatch(
   rail,
   /rgba\((?:34, 211, 238|168, 85, 247|125, 211, 252|103, 232, 249)/,
@@ -346,7 +502,10 @@ assert.doesNotMatch(
   /filtersOpen \? ['"]\^['"] : ['"]v['"]/,
 );
 assert.match(dashboardBuilderPicker, />\s*View in Searchbase\s*<\/Link>/);
-assert.match(dashboardBuilderPicker, /onPointerDown=\{\(event\) => event\.stopPropagation\(\)\}/);
+assert.match(
+  dashboardBuilderPicker,
+  /onPointerDown=\{\(event\) => event\.stopPropagation\(\)\}/,
+);
 assert.match(dashboardBuilderStyles, /\.dropdown-kpi-filter-caret\.is-open/);
 assert.doesNotMatch(
   globalStyles,
@@ -354,7 +513,10 @@ assert.doesNotMatch(
   "The C3 shell must not force every Signal Rail variant onto a fixed dark palette",
 );
 
-assert.match(signalTickerEditor, /import Slider from ['"]@splunk\/react-ui\/Slider['"]/);
+assert.match(
+  signalTickerEditor,
+  /import Slider from ['"]@splunk\/react-ui\/Slider['"]/,
+);
 assert.match(
   signalTickerEditor,
   /<Slider[\s\S]*?inputId="signal-rail-speed"[\s\S]*?onChange=\{\(_event, \{ value \}\) =>[\s\S]*?speed: value/,
@@ -401,7 +563,10 @@ assert.doesNotMatch(topologyCanvas, /return '#0ea5e9'|return '#cbd5e1'/);
 assert.match(topologyCanvas, /minZoom=\{0\.5\}/);
 assert.match(diagramHeader, /<h1 className="flex-shrink-0 whitespace-nowrap/);
 assert.match(securityOperations, /role="tablist"/);
-assert.match(securityOperations, /role="tab"[\s\S]*?aria-selected=\{activeTab === tab\.id\}/);
+assert.match(
+  securityOperations,
+  /role="tab"[\s\S]*?aria-selected=\{activeTab === tab\.id\}/,
+);
 assert.match(
   securityOperationsStyles,
   /\.scd-glass-metric \{[\s\S]*?padding: 12px 78px 10px 14px;/,

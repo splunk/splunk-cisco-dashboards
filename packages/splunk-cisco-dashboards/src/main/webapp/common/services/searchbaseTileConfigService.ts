@@ -37,7 +37,9 @@ import { createFetchInit } from '@splunk/splunk-utils/fetch';
 import { getSearchAppContext } from './splunkSearchService';
 import { clearSearchbaseCache } from './searchbaseCatalogue';
 import {
+    AGENTIC_SOC_WORKSPACE_SOURCE_ID,
     EXECUTIVE_WORKSPACE_SOURCE_ID,
+    PACKAGED_AGENTIC_SOC_SEARCHBASE_STANZA_IDS,
     isWorkspaceSourceId,
     type WorkspaceSourceId,
 } from '@/common/config/insightsWorkspaces';
@@ -702,11 +704,13 @@ export const resetInsightsWorkspaceTileConfig = async (
 ): Promise<void> => {
     if (!isInSplunkRuntime()) return;
 
-    const stanzaIds = new Set<string>(
+    const packagedStanzaIds =
         workspaceId === EXECUTIVE_WORKSPACE_SOURCE_ID
             ? DEFAULT_EXECUTIVE_WORKSPACE_STANZA_IDS
-            : []
-    );
+            : workspaceId === AGENTIC_SOC_WORKSPACE_SOURCE_ID
+              ? PACKAGED_AGENTIC_SOC_SEARCHBASE_STANZA_IDS
+              : [];
+    const stanzaIds = new Set<string>(packagedStanzaIds);
     currentOwnerStanzaIds.forEach((raw) => {
         const stanza = typeof raw === 'string' ? raw.trim() : '';
         if (!stanza || !STANZA_ID_PATTERN.test(stanza)) return;

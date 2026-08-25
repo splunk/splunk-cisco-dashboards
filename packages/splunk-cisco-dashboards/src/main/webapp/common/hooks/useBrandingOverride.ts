@@ -3,10 +3,10 @@
  * for the Overview page header, mirrored to localStorage.
  *
  * Customers want to change the header chrome without redeploying the
- * Splunk app or editing `local/macros.conf`. This hook stores three
+ * Splunk app or editing workspace configuration files. This hook stores three
  * optional override fields:
  *
- *   • title       — overrides the `[customer_name]` macro fetch
+ *   • title       — overrides the configured workspace title
  *   • subtitle    — overrides the hardcoded "Splunk Secure Networking Essentials"
  *   • logoDataUri — overrides the built-in default header logo.
  *                   Stored as a `data:` URI (the editor uses
@@ -24,9 +24,9 @@
  *     logoDataUri: "data:image/png;base64,..."
  *   }
  *
- * Empty / missing fields fall through to the existing defaults
- * (macro for title, hardcoded literal for subtitle, inline SVG mark for
- * logo). That means an operator who only wants to change the
+ * Empty / missing fields fall through to the workspace configuration
+ * (workspace title/label, configured subtitle, and packaged logo). That
+ * means an operator who only wants to change the
  * subtitle leaves title and logo as-is.
  *
  * Logo size cap: 256 KB on the data-URI string. A data URI is

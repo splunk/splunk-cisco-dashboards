@@ -17,6 +17,11 @@ import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
 import { WorkspaceModalShell } from './WorkspaceModalShell';
 import { TileActionMenu, TileDrilldownButton } from './TileActionMenu';
 import { cn } from '@/common/lib/utils';
+import {
+    formatCompactMetricNumber,
+    formatMetricNumber,
+    toFiniteMetricNumber,
+} from '@/common/lib/metricValueFormat';
 import { C3_VISUALIZATION_COLORS } from '@/common/theme/c3VisualizationPalette';
 import type {
     MetricStatus,
@@ -90,6 +95,8 @@ interface MetricItemProps {
      * sparkline area. When omitted, both affordances are hidden.
      */
     onOpenInSearch?: () => void;
+    /** Native Search URL; preferred over callback popups when available. */
+    openInSearchHref?: string;
     /** Searchbase stanza id used by the direct editor action. */
     searchbaseId?: string;
     /** Optional secondary action for contextual detail, distinct from Search. */
@@ -216,35 +223,6 @@ const DemoDataChip: React.FC = () => (
     </span>
 );
 
-const COMPACT_SUFFIXES = [
-    { value: 1_000_000_000_000, suffix: 't' },
-    { value: 1_000_000_000, suffix: 'b' },
-    { value: 1_000_000, suffix: 'm' },
-    { value: 1_000, suffix: 'k' },
-];
-
-const toFiniteNumber = (value: string | number): number | null => {
-    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-    if (typeof value !== 'string') return null;
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-    const parsed = Number(trimmed);
-    return Number.isFinite(parsed) ? parsed : null;
-};
-
-const formatCompactNumber = (value: number): string => {
-    const abs = Math.abs(value);
-    for (const entry of COMPACT_SUFFIXES) {
-        if (abs >= entry.value) {
-            const scaled = value / entry.value;
-            const decimals = Math.abs(scaled) >= 10 ? 0 : 1;
-            const rendered = scaled.toFixed(decimals).replace(/\.0$/, '');
-            return `${rendered}${entry.suffix}`;
-        }
-    }
-    return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, '');
-};
-
 const StatusIcon: React.FC<{ status: MetricStatus }> = ({ status }) => {
     if (status === 'critical')
         return <AlertCircle className="w-3 h-3 sui-color-negative" aria-label="Critical" />;
@@ -275,6 +253,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     status = 'unknown',
     source,
     onOpenInSearch,
+    openInSearchHref,
     searchbaseId,
     onOpenDetailTable,
     detailTableTitle,
@@ -294,23 +273,22 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     const [isFocusOpen, setIsFocusOpen] = React.useState(false);
     const focusReturnRef = React.useRef<HTMLElement | null>(null);
     const isMock = source === 'mock';
-    const numericValue = toFiniteNumber(value);
-    const displayValue =
+    const numericValue = toFiniteMetricNumber(value);
+    const renderedText =
         abbreviateMajorValue &&
         numericValue !== null &&
         unit !== '%' &&
         unit !== 'ms' &&
         unit !== 'Mbps'
-            ? formatCompactNumber(numericValue)
-            : value;
+            ? formatMetricNumber(numericValue, unit)
+            : `${value}${unit}`;
     const displayChange =
         typeof change === 'number' &&
         Number.isFinite(change) &&
         abbreviateTrendValue
-            ? formatCompactNumber(change)
+            ? formatCompactMetricNumber(change)
             : change;
     const isNoData = typeof value === 'number' && Number.isNaN(value);
-    const renderedText = `${displayValue}${unit}`;
     const statusVizColor: Partial<Record<MetricStatus, string>> = {
         healthy: theme.severityColorNormal,
         warning: theme.severityColorWarning,
@@ -324,7 +302,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
         unit !== '%' &&
         unit !== 'ms' &&
         unit !== 'Mbps'
-            ? `${formatCompactNumber(n)}${unit}`
+            ? formatMetricNumber(n, unit)
             : `${n.toLocaleString()}${unit}`;
     const hasExpandableChart = vizType !== 'singlevalue' && sparkData.length > 0;
 
@@ -408,6 +386,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                         />
                         <TileActionMenu
                             label={label}
+                            openInSearchHref={openInSearchHref}
                             onOpenInSearch={onOpenInSearch}
                             searchbaseId={searchbaseId}
                             onExpand={
@@ -503,8 +482,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                                 isMock ? MOCK_HEADLINE_COLOR : STATUS_TEXT_COLOR[status]
                             )}
                         >
-                            {displayValue}
-                            {unit}
+                            {renderedText}
                         </span>
                         {showChange && (
                             <div
@@ -591,7 +569,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                         timeRange={timeRange}
                         // Build 99: tooltip values follow the same
                         // compact-vs-locale rule as the headline (see
-                        // `displayValue` above) — abbreviate to k/M/B/T
+                        // `renderedText` above) — abbreviate to K/M/B/T
                         // for raw counts where the headline already
                         // does, but keep the full number for unit
                         // domains where compaction makes no sense
@@ -606,7 +584,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                             unit !== '%' &&
                             unit !== 'ms' &&
                             unit !== 'Mbps'
-                                ? `${formatCompactNumber(n)}${unit}`
+                                ? formatMetricNumber(n, unit)
                                 : `${n.toLocaleString()}${unit}`
                         }
                         title={sparkTitle}

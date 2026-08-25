@@ -33,6 +33,9 @@ networking pillars and workplace scenarios.
 - Set the packaged Agentic SOC and Security Operations Demo sections to three
   visible tiles for users without saved workspace customizations, while keeping
   every configured tile available from the section controls.
+- Made Agentic SOC factory reset exhaustive by clearing every packaged
+  workspace, layout, Searchbase, and Signal Rail override even when an effective
+  local configuration had hidden items from the dashboard.
 - Moved the NetOps Readiness time picker into the dashboard title bar on every
   tab, matching the native Dashboard Studio layout and removing the redundant
   input strip above the tab navigation.
@@ -181,24 +184,18 @@ The Insights Workspace uses the shared components in
 signal rails, and the customer topology map. Search metadata remains
 centralized in `default/searchbase.conf`.
 
-## Branding (customer name + logo)
+## Branding (workspace title + logo)
 
-The home dashboard (`home_launchpad_v1`) and the React Overview both pull
-the customer name from a single Splunk macro called `customer_name`,
-defined in `default/macros.conf`:
-
-```ini
-[customer_name]
-definition = "Acme Corporation"
-iseval = 1
-```
-
-Override the default in `local/macros.conf` per deployment.
+Workspace titles and subtitles are defined in
+`default/insights_workspaces.conf` and can be updated through Workspace
+Manager. A user can also use the header branding editor to override the title,
+subtitle, or logo for that workspace in their browser profile.
 
 The Overview ships with a neutral inline network mark as its default logo.
-To brand a deployment, use the header editor to upload a logo; the override
-is stored in the browser as a data URI. Title can still be set globally via
-`customer_name`.
+Uploaded logo overrides are stored in the browser as data URIs. The legacy
+`customer_name` macro remains packaged only for compatibility with external or
+custom dashboards that still reference it; the Insights Workspace no longer
+dispatches a search to read that macro.
 
 Each React view is mounted from a Simple XML shell through a RequireJS
 bootstrap in `appserver/static/`. That directory also contains the shared app

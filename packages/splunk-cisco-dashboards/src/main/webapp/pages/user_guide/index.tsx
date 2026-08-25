@@ -622,7 +622,7 @@ const dataSources = [
 const supportMacros = [
   [
     "`customer_name`",
-    "Controls the organization name shown in dashboard headers and report titles.",
+    "Deprecated compatibility macro for external/custom dashboards; Insights Workspace titles now come from workspace configuration and the branding editor.",
   ],
   [
     "`scd_summariesonly`",
@@ -1507,37 +1507,43 @@ iseval = 0`}</CodeBlock>
                 <div className="scd-guide-table-wrap scd-guide-table-inner-spacing">
                   <table
                     aria-labelledby="workspaces-workspace-permissions-by-role-and-capability"
-                    className="min-w-[980px] border-collapse text-left text-sm"
+                    className="min-w-[1120px] border-collapse text-left text-sm"
                   >
                     <thead>
                       <tr className="border-b sui-border-weak sui-bg-page text-xs uppercase tracking-wide sui-color-muted">
                         <th
                           scope="col"
-                          className="w-[36%] px-3 py-2 font-bold"
+                          className="w-[30%] px-3 py-2 font-bold"
                         >
                           Action
                         </th>
                         <th
                           scope="col"
-                          className="w-[16%] px-3 py-2 font-bold"
+                          className="w-[14%] px-3 py-2 font-bold"
                         >
                           user or other role
                         </th>
                         <th
                           scope="col"
-                          className="w-[16%] px-3 py-2 font-bold"
+                          className="w-[14%] px-3 py-2 font-bold"
                         >
                           power
                         </th>
                         <th
                           scope="col"
-                          className="w-[16%] px-3 py-2 font-bold"
+                          className="w-[14%] px-3 py-2 font-bold"
+                        >
+                          delegated capability
+                        </th>
+                        <th
+                          scope="col"
+                          className="w-[14%] px-3 py-2 font-bold"
                         >
                           admin or sc_admin
                         </th>
                         <th
                           scope="col"
-                          className="w-[16%] px-3 py-2 font-bold"
+                          className="w-[14%] px-3 py-2 font-bold"
                         >
                           admin_all_objects
                         </th>
@@ -1553,6 +1559,7 @@ iseval = 0`}</CodeBlock>
                         <td className="px-3 py-3 sui-color-default">Allowed</td>
                         <td className="px-3 py-3 sui-color-default">Allowed</td>
                         <td className="px-3 py-3 sui-color-default">Allowed</td>
+                        <td className="px-3 py-3 sui-color-default">Allowed</td>
                       </tr>
                       <tr className="border-b sui-border-weak align-top">
                         <td className="px-3 py-3 sui-color-default">
@@ -1560,6 +1567,7 @@ iseval = 0`}</CodeBlock>
                           display, branding, private searches, and Signal Rail
                           preferences
                         </td>
+                        <td className="px-3 py-3 sui-color-default">Allowed</td>
                         <td className="px-3 py-3 sui-color-default">Allowed</td>
                         <td className="px-3 py-3 sui-color-default">Allowed</td>
                         <td className="px-3 py-3 sui-color-default">Allowed</td>
@@ -1576,6 +1584,7 @@ iseval = 0`}</CodeBlock>
                         <td className="px-3 py-3 sui-color-default">Allowed</td>
                         <td className="px-3 py-3 sui-color-default">Allowed</td>
                         <td className="px-3 py-3 sui-color-default">Allowed</td>
+                        <td className="px-3 py-3 sui-color-default">Allowed</td>
                       </tr>
                       <tr className="border-b sui-border-weak align-top">
                         <td className="px-3 py-3 sui-color-default">
@@ -1587,11 +1596,15 @@ iseval = 0`}</CodeBlock>
                         <td className="px-3 py-3 sui-color-default">Allowed</td>
                         <td className="px-3 py-3 sui-color-default">Allowed</td>
                         <td className="px-3 py-3 sui-color-default">Allowed</td>
+                        <td className="px-3 py-3 sui-color-default">Allowed</td>
                       </tr>
                       <tr className="border-b sui-border-weak align-top">
                         <td className="px-3 py-3 sui-color-default">
                           Replace a factory tile&apos;s Searchbase or change its
                           shared thresholds, data mapping, and drilldown
+                        </td>
+                        <td className="px-3 py-3 sui-color-default">
+                          Not allowed
                         </td>
                         <td className="px-3 py-3 sui-color-default">
                           Not allowed
@@ -1616,21 +1629,28 @@ iseval = 0`}</CodeBlock>
                   <InlineCode>admin</InlineCode> or{" "}
                   <InlineCode>sc_admin</InlineCode> role grants factory tile
                   management. The{" "}
+                  <InlineCode>scd_manage_insights_workspaces</InlineCode>{" "}
+                  capability grants shared workspace and topology management
+                  without granting factory tile management. The{" "}
                   <InlineCode>admin_all_objects</InlineCode> capability grants both levels
                   regardless of the role name. If the user context cannot be
                   read, the app denies shared and factory changes.
                 </InfoCard>
                 <InfoCard title="Custom roles and data access">
-                  A custom role remains at personal access unless the current
-                  Splunk user context also reports one of the recognized role
-                  names or the <InlineCode>admin_all_objects</InlineCode>{" "}
-                  capability. The
-                  app does not currently define a narrower app-specific
-                  capability. No separate capability setup is required when
-                  you use the recognized roles. Because
+                  Assign <InlineCode>scd_manage_insights_workspaces</InlineCode>{" "}
+                  to a custom role when its members should create, edit,
+                  duplicate, or delete shared workspaces and edit the shared
+                  topology. The app&apos;s capability-protected REST handlers
+                  enforce those mutations on the server. No separate
+                  capability setup is required for the built-in{" "}
+                  <InlineCode>power</InlineCode>, <InlineCode>admin</InlineCode>,
+                  or <InlineCode>sc_admin</InlineCode> roles because the app
+                  grants it to those roles. Because{" "}
                   <InlineCode>admin_all_objects</InlineCode> grants broad Splunk
                   Enterprise access, do not assign it only to enable workspace
-                  editing. App access, the <InlineCode>search</InlineCode>{" "}
+                  editing. The narrower capability does not permit factory
+                  <InlineCode>searchbase.conf</InlineCode> changes. App access,
+                  the <InlineCode>search</InlineCode>{" "}
                   capability, index permissions, and
                   knowledge object permissions continue to control which data
                   each user can view.
@@ -1825,11 +1845,18 @@ iseval = 0`}</CodeBlock>
                         Agentic SOC live-conference visibility, six-card Secure
                         Networking KPI stories, guided setup, workspace
                         customization, Searchbase drilldowns, and
-                        site-connectivity improvements.
+                        site-connectivity improvements. IOS-XR anomaly searches
+                        are now self-contained, and shared workspace management
+                        supports narrow capability delegation.
                       </td>
                       <td className="px-3 py-3 sui-color-default">
-                        Review setup readiness after installing companion apps;
-                        existing workspaces keep their saved configuration.
+                        Install the build through the supported app-management
+                        workflow; no customer-managed Splunk restart is
+                        required. Existing workspaces keep their saved
+                        configuration; assign{" "}
+                        <InlineCode>scd_manage_insights_workspaces</InlineCode>{" "}
+                        only to custom roles that should manage shared
+                        workspaces and topology.
                       </td>
                     </tr>
                   </tbody>
@@ -1886,6 +1913,9 @@ iseval = 0`}</CodeBlock>
                   exception metric with tagged SGT site activity. Command-map controls no longer
                   overlap its topology summary, and map-footer
                   KPI cards now expose Search and configuration actions.
+                  Native single-value trend coloring now initializes without
+                  emitting sparse-result range warnings while keeping
+                  directional increase and decrease meaning.
                 </InfoCard>
                 <InfoCard title="Guided setup and performance readiness">
                   Setup now brings package checks, index macro discovery, data
@@ -1899,6 +1929,12 @@ iseval = 0`}</CodeBlock>
                   by target app. Cancel and Save and finish both require
                   confirmation, and long routing or CIM lists stay inside
                   bounded review tables with focused multiselect editors.
+                  Routing index and sourcetype values now use native Splunk UI
+                  chips with keyboard-safe expansion controls that retain focus
+                  in both light and dark appearance.
+                  Setup regression coverage now protects additive CIM
+                  discovery, explicit model selection, failed-scan gating,
+                  rerun preservation, and bounded final-review tables.
                 </InfoCard>
                 <InfoCard title="Insights Workspaces">
                   Workspaces now own their layout and presentation choices,
@@ -1952,13 +1988,38 @@ iseval = 0`}</CodeBlock>
                   <InlineCode>power</InlineCode>, <InlineCode>admin</InlineCode>,
                   and <InlineCode>sc_admin</InlineCode> roles and the{" "}
                   <InlineCode>admin_all_objects</InlineCode> capability,
-                  including
-                  fail-closed behavior and custom-role guidance.
-                  The guide also uses a quieter documentation layout with
+                  including fail-closed behavior and custom-role guidance.
+                  A new capability-protected server endpoint lets custom roles
+                  holding{" "}
+                  <InlineCode>scd_manage_insights_workspaces</InlineCode>{" "}
+                  manage shared workspaces and customer topology without
+                  gaining factory Searchbase write access.
+                  Workspace Help now points to the tile action menu for
+                  Configure tile and to the explicit top-right section link for
+                  drill-down navigation.
+                  Workspace layers return keyboard focus to the control that
+                  opened them; clearing Configure tile filters returns focus to
+                  the persistent Filters toggle without moving the drawer; and
+                  the optional legacy rail speed now uses the same keyboard- and
+                  pointer-safe Splunk UI slider as topology connector motion.
+                  Agentic Security Operations Center now stages accelerated
+                  Signal Rail and section searches in priority order, defaults
+                  to two concurrent Splunk searches with a per-workspace 1–4
+                  control, and does not dispatch tiles from collapsed sections.
+                  Its conference catalogue uses 36 accelerated DNS, firewall,
+                  Zeek, and DHCP searches backed by the three available
+                  network data models. The guide also uses a
+                  quieter documentation layout with
                   neutral inline code, consistent configuration blocks, wider
                   reading space, and simpler reference tables.
                 </InfoCard>
                 <InfoCard title="Dashboard Studio editing">
+                  React preview pages now use dark-matched Splunk shells,
+                  restrained semantic minimaps, readable topology zoom limits,
+                  explicit selected-tab semantics, and collision-free metric
+                  actions. The M365 visual preview is now clearly labeled as a
+                  bundled sample dataset and reports the installed app build
+                  instead of claiming live data or a hard-coded version.
                   Dashboard pages no longer show the fixed Splunk Inc.
                   copyright badge in the lower-right corner.
                   Dashboard Manager confirmation dialogs now use the edited
@@ -1983,6 +2044,12 @@ iseval = 0`}</CodeBlock>
                   reusable searches instead of visualizations.
                 </InfoCard>
                 <InfoCard title="Searchbase and tile selection">
+                  The IOS-XR CPU and interface-error anomaly searches now use
+                  native sample-count, mean, standard-deviation, and z-score
+                  baselines. They no longer require Splunk MLTK or pre-trained
+                  model artifacts, and they fail closed for undersampled or
+                  zero-variance series while preserving existing saved-canvas
+                  display identifiers.
                   Searchbase Canvas distinguishes failed searches from other
                   attention states and adds app filtering. Its catalogue now
                   uses the same native Splunk UI filter pattern as Insights

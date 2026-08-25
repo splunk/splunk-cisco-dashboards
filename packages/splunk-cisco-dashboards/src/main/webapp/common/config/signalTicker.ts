@@ -5,8 +5,7 @@ export type SignalTickerRows = 1 | 2;
 export type SignalTickerDensity = "compact" | "comfortable";
 export type SignalTickerFontSize = "small" | "standard" | "large";
 export type SignalTickerThresholdDirection =
-  | "higher_is_better"
-  | "lower_is_better";
+  "higher_is_better" | "lower_is_better";
 
 export interface SignalTickerItem {
   id: string;
@@ -310,39 +309,63 @@ export const DEFAULT_SIGNAL_TICKER_CONFIG: SignalTickerConfig = {
       searchName: "Agentic SOC - Umbrella DNS Request Trend",
       label: "DNS requests",
       valueField: "WindowRequests",
+      thresholdCritical: 1,
+      thresholdDirection: "higher_is_better",
     },
     {
       id: "soc_dns_blocks",
-      searchName: "Agentic SOC - Umbrella Blocked Request Trend",
-      label: "Blocked DNS requests",
-      valueField: "WindowBlocked",
+      searchName: "Agentic SOC - Umbrella DNS Request Trend",
+      label: "DNS failure rate",
+      valueField: "WindowFailureRatePct",
+      thresholdWarning: 5,
+      thresholdCritical: 15,
+      thresholdDirection: "lower_is_better",
+      thresholdUnit: "%",
     },
     {
       id: "soc_intrusion_threats",
-      searchName: "Agentic SOC - Firewall Intrusion Threat Trend",
-      label: "Intrusion threats",
-      valueField: "WindowThreats",
+      searchName: "Agentic SOC - Firewall Event Volume Trend",
+      label: "FTD activity",
+      valueField: "WindowEvents",
+      thresholdCritical: 1,
+      thresholdDirection: "higher_is_better",
     },
     {
       id: "soc_security_intelligence",
-      searchName: "Agentic SOC - Firewall Security Intelligence Threat Trend",
-      label: "Security Intelligence hits",
-      valueField: "WindowThreats",
+      searchName: "Agentic SOC - Firewall Event Volume Trend",
+      label: "FTD reporting devices",
+      valueField: "ReportingDevices",
+      thresholdCritical: 1,
+      thresholdDirection: "higher_is_better",
     },
     {
       id: "soc_zeek_sessions",
       searchName: "Agentic SOC - Zeek Traffic Volume Trend",
       label: "Zeek sessions",
       valueField: "WindowSessions",
+      thresholdCritical: 1,
+      thresholdDirection: "higher_is_better",
     },
     {
       id: "soc_zeek_bytes",
       searchName: "Agentic SOC - Zeek Traffic Volume Trend",
       label: "Zeek observed bytes",
       valueField: "WindowBytes",
+      thresholdCritical: 1,
+      thresholdDirection: "higher_is_better",
+      thresholdUnit: "B",
     },
   ],
 };
+
+export const PACKAGED_AGENTIC_SOC_SIGNAL_ITEM_IDS = [
+  "soc_dns_requests",
+  "soc_dns_blocks",
+  "soc_intrusion_threats",
+  "soc_security_intelligence",
+  "soc_zeek_sessions",
+  "soc_zeek_bytes",
+] as const;
 
 const WORKSPACE_SIGNAL_ITEM_IDS: Record<string, readonly string[]> = {
   secure_networking: [
@@ -377,14 +400,7 @@ const WORKSPACE_SIGNAL_ITEM_IDS: Record<string, readonly string[]> = {
     "dc_critical_advisories",
     "palo_alto_sgt_blocks",
   ],
-  agentic_security_operations_center: [
-    "soc_dns_requests",
-    "soc_dns_blocks",
-    "soc_intrusion_threats",
-    "soc_security_intelligence",
-    "soc_zeek_sessions",
-    "soc_zeek_bytes",
-  ],
+  agentic_security_operations_center: PACKAGED_AGENTIC_SOC_SIGNAL_ITEM_IDS,
   executive: [
     "it_domain_score",
     "security_domain_score",

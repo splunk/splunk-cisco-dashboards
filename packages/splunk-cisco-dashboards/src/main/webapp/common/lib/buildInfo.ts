@@ -3,9 +3,9 @@
  * UI-side display.
  *
  * Source of truth:
- *   • APP_BUILD   — read from `default/app.conf`'s `build = NNNN`
- *                   line by webpack at compile time and injected
- *                   via `DefinePlugin` (see `webpack.config.js`).
+ *   • APP_BUILD   — emitted as a unique compile-time marker, then replaced
+ *                   with the final package-only `app.conf` build by
+ *                   `package_app.sh` before the archive is created.
  *   • APP_VERSION — read from `package.json#version` the same way.
  *
  * Why these are baked into the bundle (not fetched at runtime):
