@@ -167,6 +167,34 @@ const expectedTiles = {
   ],
 };
 
+const acceleratedNetworkResolutionTiles = [
+  "agentic_soc_umbrella_unique_domains",
+  "agentic_soc_umbrella_dns_requests",
+  "agentic_soc_umbrella_top_clients",
+  "agentic_soc_umbrella_response_codes",
+  "agentic_soc_zeek_dns_queries",
+  "agentic_soc_zeek_dns_response_codes",
+];
+
+const acceleratedNetworkTrafficTiles = [
+  "agentic_soc_firewall_security_intelligence",
+  "agentic_soc_firewall_connection_volume",
+  "agentic_soc_zeek_protocols",
+  "agentic_soc_zeek_traffic_volume",
+  "agentic_soc_zeek_top_conversations",
+];
+
+const acceleratedTiles = new Set([
+  ...acceleratedNetworkResolutionTiles,
+  ...acceleratedNetworkTrafficTiles,
+]);
+const rawEventTiles = Object.values(expectedTiles)
+  .flat()
+  .filter((tileId) => !acceleratedTiles.has(tileId));
+
+assert.equal(acceleratedTiles.size, 11);
+assert.equal(rawEventTiles.length, 25);
+
 for (const [sectionId, tileIds] of Object.entries(expectedTiles)) {
   assert.equal(tileIds.length, 9, `${sectionId} must ship exactly nine searches`);
   const layout = stanza(
@@ -191,13 +219,55 @@ for (const [sectionId, tileIds] of Object.entries(expectedTiles)) {
     assert.equal(vizOptions.overview[0].tileId, tileId);
     assert.match(field(search, "tags"), /Agentic SOC/);
     assert.match(field(search, "tags"), /Custom Conference/);
+    assert.ok(
+      /CIM Accelerated|Raw Events/.test(field(search, "tags")),
+      `${tileId} must declare its search execution class`,
+    );
     assert.doesNotMatch(search, /\|\s*makeresults|random\s*\(/i);
   }
 }
 
-for (const tileId of expectedTiles.dns_security) {
-  assert.match(stanza(searchbase, tileId), /`index_agentic_soc_dns`/);
+for (const tileId of acceleratedNetworkResolutionTiles) {
+  const search = stanza(searchbase, tileId);
+  assert.match(field(search, "tags"), /CIM Accelerated/);
+  assert.match(field(search, "tags"), /Network Resolution/);
+  assert.match(
+    search,
+    /\| tstats summariesonly=true allow_old_summaries=false/,
+  );
+  assert.doesNotMatch(search, /`scd_summariesonly`/);
+  assert.match(search, /FROM datamodel=Network_Resolution\.DNS/i);
 }
+
+for (const tileId of acceleratedNetworkTrafficTiles) {
+  const search = stanza(searchbase, tileId);
+  assert.match(field(search, "tags"), /CIM Accelerated/);
+  assert.match(field(search, "tags"), /Network Traffic/);
+  assert.match(
+    search,
+    /\| tstats summariesonly=true allow_old_summaries=false/,
+  );
+  assert.doesNotMatch(search, /`scd_summariesonly`/);
+  assert.match(search, /FROM datamodel=Network_Traffic\.All_Traffic/i);
+}
+
+for (const tileId of rawEventTiles) {
+  const search = stanza(searchbase, tileId);
+  assert.match(field(search, "tags"), /Raw Events/);
+  assert.doesNotMatch(field(search, "tags"), /CIM Accelerated/);
+}
+
+for (const tileId of expectedTiles.dns_security) {
+  assert.match(stanza(searchbase, tileId), /`index_dns_umbrella`/);
+}
+assert.match(
+  stanza(searchbase, "agentic_soc_umbrella_blocked_requests"),
+  /sourcetype="cisco:cloud_security:dns" action=blocked/,
+);
+assert.doesNotMatch(
+  stanza(searchbase, "agentic_soc_umbrella_blocked_requests"),
+  /match\(lower\([^)]*action/,
+);
 assert.match(
   stanza(searchbase, "agentic_soc_umbrella_top_applications"),
   /cisco:cloud_security:appdiscovery/,
@@ -214,25 +284,58 @@ assert.doesNotMatch(
   stanza(searchbase, "agentic_soc_umbrella_top_applications"),
   /stats sum\(application_requests\)/,
 );
+for (const tileId of [
+  "agentic_soc_umbrella_top_applications",
+  "agentic_soc_umbrella_application_inventory",
+]) {
+  const search = stanza(searchbase, tileId);
+  assert.match(search, /DataSource=.*"Live"/);
+  assert.match(search, /Synthetic Demo/);
+  const vizOptions = JSON.parse(field(search, "viz_options"));
+  assert.match(vizOptions.overview[0].subLabel, /labeled demo fallback/);
+}
 assert.match(
   stanza(searchbase, "agentic_soc_umbrella_top_categories"),
   /split\(dns_categories,","\)/,
 );
+assert.match(
+  stanza(searchbase, "agentic_soc_umbrella_top_categories"),
+  /tstats max\(_time\) as max_time/,
+);
 for (const tileId of expectedTiles.firewall_security) {
   const search = stanza(searchbase, tileId);
-  assert.match(search, /`index_agentic_soc_firewall`/);
+  assert.match(search, /`index_network_ftd`/);
   assert.match(field(search, "tags"), /TA 7404/);
-  assert.match(field(search, "tags"), /Awaiting Feed/);
+  assert.doesNotMatch(field(search, "tags"), /Awaiting Feed/);
 }
+assert.match(
+  stanza(searchbase, "agentic_soc_firewall_top_rules"),
+  /message_id/,
+);
+assert.match(
+  field(stanza(searchbase, "agentic_soc_firewall_top_rules"), "search_name"),
+  /Top Message Types/,
+);
+assert.match(
+  stanza(searchbase, "agentic_soc_firewall_top_applications"),
+  /severity_level/,
+);
+assert.match(
+  field(
+    stanza(searchbase, "agentic_soc_firewall_top_applications"),
+    "search_name",
+  ),
+  /Severity Distribution/,
+);
 for (const tileId of expectedTiles.network_detection) {
   const search = stanza(searchbase, tileId);
-  assert.match(search, /`index_agentic_soc_zeek`/);
+  assert.match(search, /`index_zeek`/);
   assert.match(search, /sourcetype="zeek:/);
   assert.match(field(search, "tags"), /Stack Validated/);
 }
 for (const tileId of expectedTiles.unified_investigation) {
   const search = stanza(searchbase, tileId);
-  assert.match(search, /`index_agentic_soc_investigation`/);
+  assert.match(search, /`index_security`/);
   assert.match(field(search, "tags"), /Live First/);
   assert.match(field(search, "tags"), /Synthetic Fallback/);
   assert.match(search, /DataSource="Live"/);
@@ -255,16 +358,10 @@ assert.match(
 
 assert.ok(stanza(macros, "index_dns_umbrella"));
 assert.ok(stanza(macros, "index_network_ftd"));
-assert.match(
-  stanza(macros, "index_agentic_soc_dns"),
-  /se_dns_csa.*se_dns_umbrella/s,
-);
-assert.match(stanza(macros, "index_agentic_soc_firewall"), /se_network_ftd/);
-assert.match(stanza(macros, "index_agentic_soc_zeek"), /se_network_endace/);
-assert.match(
-  stanza(macros, "index_agentic_soc_investigation"),
-  /se_incident_xdr_new.*cim_modactions.*se_malware_saa/s,
-);
+assert.ok(stanza(macros, "index_zeek"));
+assert.ok(stanza(macros, "index_security"));
+assert.doesNotMatch(macros, /^\[index_agentic_soc_/m);
+assert.doesNotMatch(searchbase, /`index_agentic_soc_/);
 
 const railBody = stanza(
   workspacesConf,

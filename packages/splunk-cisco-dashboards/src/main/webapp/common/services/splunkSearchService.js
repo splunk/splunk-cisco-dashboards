@@ -215,6 +215,28 @@ const FAILED_SPL_CACHE = new Set();
 const cacheKey = (spl, earliestTime, latestTime, appContext) =>
     `${appContext}|${earliestTime}|${latestTime}|${spl}`;
 
+// Multiple dashboard surfaces can bind to the same Searchbase stanza. The
+// Signal Rail is the most visible example: it intentionally repeats headline
+// searches that also power section tiles. Without coalescing, every consumer
+// creates its own Splunk one-shot job, which wastes search concurrency and can
+// leave the entire page waiting behind duplicate high-volume scans.
+//
+// Entries live only while the server request is unresolved. This keeps manual
+// refresh semantics honest (a later refresh always creates a new job) while
+// allowing consumers mounted in the same render pass to share one dispatch.
+/**
+ * @typedef {{
+ *   controller: AbortController,
+ *   promise: Promise<Object>,
+ *   consumerCount: number,
+ *   settled: boolean,
+ * }} InFlightSearch
+ */
+/** @type {Map<string, InFlightSearch>} */
+const IN_FLIGHT_SEARCHES = new Map();
+const inFlightSearchKey = (spl, earliestTime, latestTime, appContext, count) =>
+    `${cacheKey(spl, earliestTime, latestTime, appContext)}|count=${count}`;
+
 /** Max in-flight Splunk one-shot dispatches (shared FIFO queue). */
 export const MAX_CONCURRENT_TILE_SEARCHES = 4;
 
@@ -490,8 +512,72 @@ export const __resetFailedSplCache = () => FAILED_SPL_CACHE.clear();
  * Test-only: reset the dispatch concurrency queue between cases.
  */
 export const __resetDispatchQueue = () => {
+    IN_FLIGHT_SEARCHES.forEach((entry) => {
+        entry.controller.abort();
+    });
+    IN_FLIGHT_SEARCHES.clear();
     dispatchInFlight = 0;
     dispatchWaitQueue.length = 0;
+};
+
+/**
+ * Attach one caller to a shared in-flight dispatch. A caller abort releases
+ * only its own subscription; the server request is cancelled only after the
+ * final consumer leaves. This prevents a collapsed tile from cancelling the
+ * same search while the Signal Rail still needs it (and vice versa).
+ *
+ * @param {InFlightSearch} entry
+ * @param {AbortSignal | undefined} signal
+ * @returns {Promise<Object>}
+ */
+const consumeInFlightSearch = (entry, signal) => {
+    if (signal?.aborted) {
+        return Promise.reject(makeAbortError());
+    }
+
+    const sharedEntry = entry;
+    sharedEntry.consumerCount += 1;
+    return new Promise((resolve, reject) => {
+        let finished = false;
+        let onAbort;
+        const release = () => {
+            if (finished) {
+                return;
+            }
+            finished = true;
+            if (signal) {
+                signal.removeEventListener('abort', onAbort);
+            }
+            sharedEntry.consumerCount = Math.max(0, sharedEntry.consumerCount - 1);
+            if (sharedEntry.consumerCount === 0 && !sharedEntry.settled) {
+                sharedEntry.controller.abort();
+            }
+        };
+        onAbort = () => {
+            release();
+            reject(makeAbortError());
+        };
+
+        if (signal) {
+            signal.addEventListener('abort', onAbort);
+        }
+        sharedEntry.promise.then(
+            (value) => {
+                if (finished) {
+                    return;
+                }
+                release();
+                resolve(value);
+            },
+            (err) => {
+                if (finished) {
+                    return;
+                }
+                release();
+                reject(err);
+            }
+        );
+    });
 };
 
 /**
@@ -581,12 +667,54 @@ export const runSearch = async ({
  count,
  };
 
+ const sharedKey = inFlightSearchKey(
+ spl,
+ earliestTime,
+ latestTime,
+ resolvedAppContext,
+ count
+ );
+ let inFlight = IN_FLIGHT_SEARCHES.get(sharedKey);
+ if (!inFlight) {
+ const controller = new AbortController();
  let slotHeld = false;
- return acquireDispatchSlot(signal)
+ /** @type {InFlightSearch} */
+ const created = {
+ controller,
+ consumerCount: 0,
+ settled: false,
+ promise: Promise.resolve({}),
+ };
+ created.promise = acquireDispatchSlot(controller.signal)
  .then(() => {
  slotHeld = true;
- return dispatchOneShotWithRetry(searchParameters, namespace, signal);
+ return dispatchOneShotWithRetry(searchParameters, namespace, controller.signal);
  })
+ .finally(() => {
+ created.settled = true;
+ if (slotHeld) {
+ releaseDispatchSlot();
+ }
+ if (IN_FLIGHT_SEARCHES.get(sharedKey) === created) {
+ IN_FLIGHT_SEARCHES.delete(sharedKey);
+ }
+ });
+ // The consumer promises below observe and propagate failures. This extra
+ // observer prevents an unhandled rejection if every consumer aborts before
+ // the shared request finishes cancelling.
+ created.promise.catch(() => {});
+ IN_FLIGHT_SEARCHES.set(sharedKey, created);
+ inFlight = created;
+ } else {
+ canvasDebug('[search/dispatch] coalesced', {
+ tag: tag || null,
+ appContext: resolvedAppContext,
+ spl: splFingerprint(spl),
+ consumers: inFlight.consumerCount + 1,
+ });
+ }
+
+ return consumeInFlightSearch(inFlight, signal)
  .then((response) => {
  canvasDebug('[search/dispatch] resolved', {
  tag: tag || null,
@@ -629,11 +757,6 @@ export const runSearch = async ({
  kind: classified.reason === 'job_failed' ? 'job_failed' : 'dispatch_failed',
  retryable: false,
  });
- })
- .finally(() => {
- if (slotHeld) {
- releaseDispatchSlot();
- }
  });
 };
 
