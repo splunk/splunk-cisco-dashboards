@@ -54,7 +54,7 @@ const CUSTOMIZATION_SCOPE: ScopeRow[] = [
         scope: 'Every tile in the chosen section',
     },
     {
-        action: 'Section title / section keyboard shortcut',
+        action: 'Top-right section link / section keyboard shortcut',
         scope: 'Opens the section dashboard in a new tab (drill-down)',
     },
     {
@@ -194,10 +194,9 @@ export const HelpOverlay = React.memo<HelpOverlayProps>(({ open, onClose, shortc
                                     </h3>
                                 </div>
                                 <p className="text-xs  sui-color-default mb-3 leading-snug">
-                                    Right-click any tile to open the picker. Most
-                                    customisations stay scoped to the tile you
-                                    opened it from — a few fan out further, summarised
-                                    below.
+                                    Open a tile&apos;s action menu and choose Configure tile
+                                    to open the picker. Most customisations stay scoped
+                                    to that tile — a few fan out further, summarised below.
                                 </p>
                                 <ul className="space-y-2">
                                     {CUSTOMIZATION_SCOPE.map((row) => (
@@ -220,7 +219,7 @@ export const HelpOverlay = React.memo<HelpOverlayProps>(({ open, onClose, shortc
                                         KPI tiles stay single-value by design. For
                                         tables, breakdowns, or alternative
                                         visualisations open the section dashboard via
-                                        the section title or keyboard shortcuts.
+                                        the top-right section link or keyboard shortcuts.
                                     </span>
                                 </p>
                             </section>

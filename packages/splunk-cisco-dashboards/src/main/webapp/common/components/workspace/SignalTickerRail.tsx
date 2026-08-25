@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Button from '@splunk/react-ui/Button';
+import Slider from '@splunk/react-ui/Slider';
 import {
     ArrowDown,
     ArrowUp,
@@ -1165,7 +1166,10 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
 
                         <div className="mt-4">
                             <div className="flex items-center justify-between gap-3">
-                                <span className="text-xs font-black uppercase tracking-[0.16em] sui-color-default">
+                                <span
+                                    id="signal-rail-speed-label"
+                                    className="text-xs font-black uppercase tracking-[0.16em] sui-color-default"
+                                >
                                     Legacy ticker speed
                                 </span>
                                 <span className="rounded-full  px-2 py-0.5 text-xs font-black uppercase tracking-[0.12em]  sui-bg-section sui-color-default">
@@ -1178,24 +1182,30 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                 </span>
                             </div>
                             <div className="mt-3 rounded-lg border   px-3 py-2.5 sui-border-weak sui-bg-page">
-                                <input
-                                    type="range"
+                                <Slider
+                                    inputId="signal-rail-speed"
+                                    labelledBy="signal-rail-speed-label"
                                     min={MIN_SIGNAL_TICKER_SPEED}
                                     max={MAX_SIGNAL_TICKER_SPEED}
                                     step={SIGNAL_TICKER_SPEED_STEP}
+                                    stepMarks="always"
                                     value={config.speed}
-                                    onChange={(event) =>
+                                    displayValue={
+                                        config.speed === 0
+                                            ? 'Static'
+                                            : `${(config.speed / NORMAL_SIGNAL_TICKER_SPEED)
+                                                  .toFixed(2)
+                                                  .replace(/\.00$/, '')
+                                                  .replace(/0$/, '')}×`
+                                    }
+                                    minLabel="Static"
+                                    maxLabel="2×"
+                                    onChange={(_event, { value }) =>
                                         updateConfig({
-                                            speed: Number(event.currentTarget.value),
+                                            speed: value,
                                         })
                                     }
-                                    className="w-full accent-sky-500"
-                                    aria-label="Signal rail speed"
                                 />
-                                <div className="mt-1 flex justify-between text-xs font-black uppercase tracking-[0.14em] sui-color-default">
-                                    <span>Static</span>
-                                    <span>2×</span>
-                                </div>
                                 <p className="mt-2 text-xs leading-snug  sui-color-muted">
                                     The 1CD glass status cards remain static. This speed applies only to optional legacy ticker styles.
                                 </p>

@@ -11,6 +11,7 @@ import { versionLabel } from "@splunk/splunk-utils/config";
 import TimeRangeDropdown from "@splunk/react-time-range/Dropdown";
 import Badge from '@splunk/react-ui/Badge';
 import Button from '@splunk/react-ui/Button';
+import Chip from '@splunk/react-ui/Chip';
 import CollapsiblePanel from '@splunk/react-ui/CollapsiblePanel';
 import ControlGroup from '@splunk/react-ui/ControlGroup';
 import Message from '@splunk/react-ui/Message';
@@ -1903,10 +1904,7 @@ function FieldPills({
   const canExpand = expandable && values.length > 6;
   const visible = canExpand && expanded ? values : values.slice(0, 6);
   const extra = Math.max(0, values.length - visible.length);
-  const classes =
-    tone === "sky"
-      ? "sui-border-info sui-bg-section sui-color-info"
-      : "sui-border-weak sui-bg-page sui-color-default";
+  const chipAppearance = tone === "sky" ? "info" : "outline";
 
   if (!values.length) {
     return <span className="text-xs sui-color-muted">None detected</span>;
@@ -1946,43 +1944,30 @@ function FieldPills({
       className="flex min-w-0 max-w-full flex-wrap gap-1.5 overflow-hidden"
     >
       {visible.map((value) => (
-        <span
+        <Chip
+          appearance={chipAppearance}
           key={value}
-          className={`min-w-0 truncate rounded border px-2 py-0.5 font-mono text-xs ${classes}`}
           style={{ maxWidth: "min(220px, 100%)" }}
           title={value}
         >
-          {value}
-        </span>
+          <span className="block min-w-0 truncate font-mono">{value}</span>
+        </Chip>
       ))}
-      {extra > 0 && canExpand && (
-        <button
-          type="button"
-          onClick={() => setExpanded(true)}
+      {canExpand && (
+        <Button
+          appearance="subtle"
+          onClick={() => setExpanded((current) => !current)}
           aria-controls={valuesId}
-          aria-expanded={false}
-          aria-label={`Show ${extra} more ${valueLabel}`}
-          className="rounded border sui-border-default sui-bg-section px-2 py-0.5 text-xs font-semibold sui-color-info sui-hover-border-info sui-hover-bg-info"
-          title={`Show ${extra} more ${valueLabel}`}
-        >
-          +{extra}
-        </button>
+          aria-expanded={expanded}
+          label={
+            expanded
+              ? `Show fewer ${valueLabel}`
+              : `Show ${extra} more ${valueLabel}`
+          }
+        />
       )}
       {extra > 0 && !canExpand && (
-        <span className="rounded border sui-border-weak sui-bg-section px-2 py-0.5 text-xs sui-color-muted">
-          +{extra}
-        </span>
-      )}
-      {canExpand && expanded && (
-        <button
-          type="button"
-          onClick={() => setExpanded(false)}
-          aria-controls={valuesId}
-          aria-expanded
-          className="rounded border sui-border-default sui-bg-section px-2 py-0.5 text-xs font-semibold sui-color-default sui-hover-border-default sui-hover-bg-page"
-        >
-          Show fewer
-        </button>
+        <Chip appearance="outline">{extra} more</Chip>
       )}
     </div>
   );
