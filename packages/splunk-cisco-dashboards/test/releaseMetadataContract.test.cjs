@@ -93,6 +93,7 @@ for (const confName of [
   "insights_workspaces",
   "insights_workspace_preferences",
   "templates",
+  "setup",
 ]) {
   assert.match(
     appConf,
