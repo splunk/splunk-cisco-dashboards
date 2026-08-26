@@ -82,7 +82,7 @@
         "react-dom": "^18.3.1",
         "react-is": "^18.3.1",
         "react-leaflet": "^4.2.1",
-        "react-router-dom": "^6.30.4",
+        "react-router-dom": "^7.18.2",
         "recharts": "^2.12.7",
         "rxjs": "^5.5.12",
         "styled-components": "^5.3.10",
@@ -125,6 +125,6 @@
         "webpack-merge": "^5.10.0"
     },
     "engines": {
-        "node": ">=14"
+        "node": ">=20"
     }
 }

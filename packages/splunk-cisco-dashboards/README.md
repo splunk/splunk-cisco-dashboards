@@ -10,6 +10,11 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Aligned staged app metadata with the canonical release version, preserved
+  package-time version stamping, enabled app-upgrade notifications, and added
+  a reproducible root `yarn test` contract suite.
+- Upgraded React Router to the supported 7.18.2 line and raised the supported
+  Node.js development/build baseline to 20.
 - Made the CIM-tuning footer reflect discovery and selection state, blocked
   continuation while discovery is running, and restored readable semantic
   colors for routing and CIM definition previews in dark mode.
