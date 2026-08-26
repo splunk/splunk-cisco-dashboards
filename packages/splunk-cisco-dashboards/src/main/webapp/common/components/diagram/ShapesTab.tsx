@@ -32,6 +32,7 @@ import { strFromU8, unzipSync } from 'fflate';
 import { ChevronRight, ExternalLink, Trash2, Upload } from '@/common/icons/SuiIcon';
 import ThemeAwareSearch from '@/common/components/ThemeAwareSearch';
 import { cn } from '@/common/lib/utils';
+import { normalizeSharedImageSource } from '@/common/lib/imageSource';
 import { CISCO_ICONS } from '@/common/components/topology/ciscoIcons';
 import type { DeviceShapeId } from '@/common/services/topologyDiscovery';
 import type { CustomStencilAsset } from '@/common/services/diagramPersistenceService';
@@ -253,15 +254,20 @@ const loadCustomStencils = (): CustomStencilAsset[] => {
         if (!raw) return [];
         const parsed = JSON.parse(raw) as CustomStencilAsset[];
         if (!Array.isArray(parsed)) return [];
-        return parsed.filter(
-            (asset) =>
+        return parsed.reduce<CustomStencilAsset[]>((assets, asset) => {
+            const src = normalizeSharedImageSource(asset?.src);
+            if (
                 asset &&
                 typeof asset.id === 'string' &&
                 typeof asset.label === 'string' &&
-                typeof asset.src === 'string' &&
+                src &&
                 (asset.mediaType === 'image/svg+xml' ||
                     asset.mediaType === 'image/png')
-        );
+            ) {
+                assets.push({ ...asset, src });
+            }
+            return assets;
+        }, []);
     } catch {
         return [];
     }
@@ -883,15 +889,18 @@ const CustomStencilTile: React.FC<{
     asset: CustomStencilAsset;
     onAddToCanvas?: (payload: PaletteDragPayload) => void;
 }> = ({ asset, onAddToCanvas }) => {
-    const size = nodeSizeForCustomStencil(asset);
+    const safeSrc = normalizeSharedImageSource(asset.src);
+    if (!safeSrc) return null;
+    const safeAsset = safeSrc === asset.src ? asset : { ...asset, src: safeSrc };
+    const size = nodeSizeForCustomStencil(safeAsset);
     const isWide = size.width / size.height >= 2.5;
     const handleDragStart = (e: React.DragEvent<HTMLButtonElement>): void => {
         const payload: PaletteDragPayload = {
             variant: 'customStencil',
-            asset,
+            asset: safeAsset,
         };
         e.dataTransfer.setData(PALETTE_DND_MIME, JSON.stringify(payload));
-        e.dataTransfer.setData('text/plain', asset.label);
+        e.dataTransfer.setData('text/plain', safeAsset.label);
         e.dataTransfer.effectAllowed = 'copy';
     };
 
@@ -900,9 +909,9 @@ const CustomStencilTile: React.FC<{
             type="button"
             draggable
             onDragStart={handleDragStart}
-            onClick={() => onAddToCanvas?.({ variant: 'customStencil', asset })}
-            aria-label={`Add ${asset.label} to canvas`}
-            title={`${asset.label}. Select to add at the canvas centre, or drag to place it.`}
+            onClick={() => onAddToCanvas?.({ variant: 'customStencil', asset: safeAsset })}
+            aria-label={`Add ${safeAsset.label} to canvas`}
+            title={`${safeAsset.label}. Select to add at the canvas centre, or drag to place it.`}
             className={cn(
                 'group flex appearance-none flex-col items-center justify-center gap-1 rounded-lg p-2 text-inherit cursor-grab active:cursor-grabbing select-none',
                 'border  sui-border-weak  sui-bg-section',
@@ -917,7 +926,7 @@ const CustomStencilTile: React.FC<{
                 )}
             >
                 <img
-                    src={asset.src}
+                    src={safeAsset.src}
                     alt=""
                     className={cn(
                         'block object-contain',
@@ -927,7 +936,7 @@ const CustomStencilTile: React.FC<{
                 />
             </span>
             <span className="text-xs font-medium  sui-color-active text-center leading-tight">
-                {asset.label}
+                {safeAsset.label}
             </span>
         </button>
     );

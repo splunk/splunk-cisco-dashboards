@@ -19,6 +19,7 @@ import {
   type SignalTickerConfig,
   type SignalTickerItem,
 } from "@/common/config/signalTicker";
+import { normalizeSharedImageSource } from "@/common/lib/imageSource";
 
 const APP_NAME = "splunk-cisco-dashboards";
 export const INSIGHTS_WORKSPACES_CONF_BASENAME = "insights_workspaces";
@@ -296,7 +297,7 @@ const parseWorkspaceEntry = (
     fallbackTileCount: optionalInt(content.default_tile_count),
     headerTitle: optionalString(content.header_title),
     headerSubtitle: optionalString(content.header_subtitle),
-    defaultLogoSrc: optionalString(content.default_logo_src),
+    defaultLogoSrc: normalizeSharedImageSource(content.default_logo_src),
     hideDefaultLogo: readBoolean(content.hide_default_logo, false),
     legacyViewNames: splitCsv(content.legacy_view_names),
     isBuiltIn: readBoolean(content.is_builtin, false),
@@ -490,7 +491,7 @@ const workspaceFields = (
   default_tile_count: String(workspace.fallbackTileCount),
   header_title: workspace.headerTitle ?? "",
   header_subtitle: workspace.headerSubtitle ?? "",
-  default_logo_src: workspace.defaultLogoSrc ?? "",
+  default_logo_src: normalizeSharedImageSource(workspace.defaultLogoSrc) ?? "",
   hide_default_logo: workspace.hideDefaultLogo ? "1" : "0",
   legacy_view_names: workspace.legacyViewNames.join(","),
   is_builtin: workspace.isBuiltIn ? "1" : "0",

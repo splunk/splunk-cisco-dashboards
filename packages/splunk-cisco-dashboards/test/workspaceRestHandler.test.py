@@ -160,6 +160,38 @@ class WorkspaceRestValidationTest(unittest.TestCase):
             with self.subTest(field=field), self.assertRaisesRegex(ValueError, "limit"):
                 handler.validate_settings(conf_name, stanza, {field: [value]})
 
+    def test_restricts_shared_workspace_image_sources(self):
+        safe_sources = (
+            "data:image/svg+xml;utf8,%3Csvg%2F%3E",
+            "data:image/png;base64,iVBORw0KGgo=",
+            "/static/app/splunk-cisco-dashboards/icn_view.svg",
+        )
+        for value in safe_sources:
+            with self.subTest(value=value):
+                self.assertEqual(
+                    handler.validate_settings(
+                        handler.WORKSPACE_CONF,
+                        "workspace.delegated_ops",
+                        {"default_logo_src": [value]},
+                    ),
+                    {"default_logo_src": value},
+                )
+        for value in (
+            "https://example.test/logo.png",
+            "//example.test/logo.png",
+            "javascript:alert(1)",
+            "file:///etc/passwd",
+            "data:text/html,<script>alert(1)</script>",
+        ):
+            with self.subTest(value=value), self.assertRaisesRegex(
+                ValueError, "default_logo_src"
+            ):
+                handler.validate_settings(
+                    handler.WORKSPACE_CONF,
+                    "workspace.delegated_ops",
+                    {"default_logo_src": [value]},
+                )
+
     def test_rejects_unbounded_or_malformed_topology_collections(self):
         oversized_sites = {
             "topology": {

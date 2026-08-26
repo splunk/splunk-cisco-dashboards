@@ -36,6 +36,7 @@
 import React, { useState } from 'react';
 import { Handle, NodeResizer, Position } from '@xyflow/react';
 import { ExternalLink } from '@/common/icons/SuiIcon';
+import { normalizeSharedImageSource } from '@/common/lib/imageSource';
 import { cn } from '@/common/lib/utils';
 import type {
     HealthStatus,
@@ -354,6 +355,7 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
         openSplunkSearch(spl);
     };
     const customStencil = data.customStencil;
+    const customStencilSrc = normalizeSharedImageSource(customStencil?.src);
     const title = `${node.label}\nStatus: ${status.label}${
         node.healthScore !== undefined ? ` (${node.healthScore})` : ''
     }${node.managementSource ? `\nSource: ${node.managementSource}` : ''}${
@@ -362,7 +364,7 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
         node.serialNumber ? `\nSerial: ${node.serialNumber}` : ''
     }`;
 
-    if (customStencil) {
+    if (customStencil && customStencilSrc) {
         return (
             <div
                 className="group relative flex h-full w-full items-center justify-center overflow-visible sui-bg-transparent"
@@ -382,7 +384,7 @@ const DeviceShape: React.FC<{ data: ShapeData; selected?: boolean }> = ({
                     selected={selected}
                 />
                 <img
-                    src={customStencil.src}
+                    src={customStencilSrc}
                     alt={customStencil.label}
                     className="pointer-events-none block h-full w-full object-contain"
                     draggable={false}

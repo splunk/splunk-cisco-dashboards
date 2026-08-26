@@ -29,6 +29,14 @@ MAX_TOPOLOGY_PAYLOAD_BYTES = 128 * 1024
 MAX_TOPOLOGY_SITES = 250
 MAX_TOPOLOGY_LINKS = 500
 MAX_TOPOLOGY_SITE_ALIASES = 16
+_SHARED_IMAGE_DATA_URI = re.compile(
+    r"^data:image/(?:png|jpeg|gif|webp|svg\+xml)"
+    r"(?:;(?:base64|utf8|charset=[A-Za-z0-9._-]+))*?,[^\r\n]*$",
+    re.IGNORECASE,
+)
+_SHARED_APP_STATIC_IMAGE_PATH = re.compile(
+    r"^/static/app/splunk-cisco-dashboards/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_.-]+$"
+)
 
 _WORKSPACE_FIELDS = frozenset(
     (
@@ -179,6 +187,17 @@ def validate_topology_payload(payload):
         raise ValueError('Field "payload_json" topology links must contain objects.')
 
 
+def validate_shared_image_source(value):
+    """Allow only bounded self-contained images or this app's static assets."""
+    if value and not (
+        _SHARED_IMAGE_DATA_URI.fullmatch(value)
+        or _SHARED_APP_STATIC_IMAGE_PATH.fullmatch(value)
+    ):
+        raise ValueError(
+            'Field "default_logo_src" must be an image data URI or this app\'s static image path.'
+        )
+
+
 def validate_settings(conf_name, stanza_name, raw_settings):
     """Collapse form values and enforce field, size, and JSON boundaries."""
     permitted = fields_for_stanza(conf_name, stanza_name)
@@ -203,6 +222,8 @@ def validate_settings(conf_name, stanza_name, raw_settings):
         )
         if encoded_size > limit:
             raise ValueError('Field "{}" exceeds its {}-byte limit.'.format(key, limit))
+        if key == "default_logo_src":
+            validate_shared_image_source(value)
         if key in _JSON_FIELDS and value:
             try:
                 parsed = json.loads(value)

@@ -82,6 +82,7 @@ import {
 import { useAppThemeControls } from "@/common/theme/AppThemeProvider";
 import AppearanceMenuItems from "@/common/components/AppearanceMenuItems";
 import { buildWorkspaceDrilldownDefinition } from "@/common/lib/dashboardDrilldown";
+import { normalizeSharedImageSource } from "@/common/lib/imageSource";
 import { DashboardSection } from "@/common/components/workspace/DashboardSection";
 import { OneCdRadioBar } from "@/common/components/workspace/OneCdPrimitives";
 import { MetricItem } from "@/common/components/workspace/MetricItem";
@@ -2461,10 +2462,11 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   // `effectiveTitle` / `effectiveSubtitle` / `effectiveLogoSrc`
   // (derived below) collapse those layers into the strings the
   // JSX actually renders.
-  const [logoSrc, setLogoSrc] = useState<string>(
+  const [logoSrc, setLogoSrc] = useState<string>(() =>
     insightsWorkspace.hideDefaultLogo
       ? ""
-      : insightsWorkspace.defaultLogoSrc || DEFAULT_LOGO_DATA_URI,
+      : normalizeSharedImageSource(insightsWorkspace.defaultLogoSrc) ||
+        DEFAULT_LOGO_DATA_URI,
   );
   const [appVersionLabel, setAppVersionLabel] =
     useState<string>(APP_VERSION_LABEL);
@@ -2497,7 +2499,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   // intentionally empty value, or the neutral built-in mark).
   // Header branding is intentionally independent from tile/layout
   // factory reset.
-  const effectiveLogoSrc = brandingOverride.logoDataUri || logoSrc;
+  const effectiveLogoSrc =
+    normalizeSharedImageSource(brandingOverride.logoDataUri) ||
+    normalizeSharedImageSource(logoSrc);
 
   // ------------------------------ Time + refresh ------------------------------
   const [timeRange, setTimeRange] = useState<TimeRange>(
@@ -8381,7 +8385,9 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
     onClose();
   };
 
-  const previewLogoSrc = logoDataUri || logoFallbackSrc;
+  const previewLogoSrc =
+    normalizeSharedImageSource(logoDataUri) ||
+    normalizeSharedImageSource(logoFallbackSrc);
   const acceptList = BRANDING_ACCEPTED_LOGO_MIME_TYPES.join(",");
 
   return (
