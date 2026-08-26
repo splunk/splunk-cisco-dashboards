@@ -15,7 +15,7 @@ const CopyPlugin = require('copy-webpack-plugin');
  * Why version comes from VERSION (not package.json or app.conf):
  *   • VERSION is the single source of truth for releases —
  *     package_app.sh stamps it into staged app.conf at package
- *     time, matching splunk-cisco-app-navigator.
+ *     time, matching the packaged Splunk app identity.
  *   • package.json's `version` field belongs to the npm
  *     workspace ("0.1.0" today) and intentionally isn't kept
  *     in lock-step with the Splunk app version.

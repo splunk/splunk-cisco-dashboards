@@ -465,6 +465,11 @@ assert.match(
   /dialog\.addEventListener\('keydown', onKeyDown\)[\s\S]*?dialog\.removeEventListener\('keydown', onKeyDown\)/,
   "Each portal dialog must own its keyboard boundary rather than closing a sibling dialog",
 );
+assert.match(
+  kpiBrowser,
+  /<input[\s\S]*?aria-label="Filter KPI library"/,
+  "The initially focused KPI filter must expose its purpose to assistive technology",
+);
 for (const modal of [managerPreviewModal, kpiBrowser, expandedKpiModal]) {
   assert.match(modal, /useModalFocusTrap\(\{/);
   assert.match(modal, /role="dialog"[\s\S]*?aria-modal="true"[\s\S]*?tabIndex=\{-1\}/);
@@ -482,6 +487,24 @@ for (const palette of [inventoryTab, shapesTab]) {
     "Palette items need a native keyboard-operable button action",
   );
 }
+const inventoryRowMarkup = inventoryTab.slice(
+  inventoryTab.indexOf('const InventoryRow'),
+  inventoryTab.indexOf('const FilterDropdown'),
+);
+const shapeTileMarkup = shapesTab.slice(
+  shapesTab.indexOf('const ShapeTile'),
+  shapesTab.indexOf('interface CategoryDrawerProps'),
+);
+assert.doesNotMatch(
+  inventoryRowMarkup,
+  /<div[\s>]/,
+  "Inventory palette buttons must use phrasing-content children",
+);
+assert.doesNotMatch(
+  shapeTileMarkup,
+  /<div[\s>]/,
+  "Shape palette buttons must use phrasing-content children",
+);
 assert.match(diagramPalette, /onAddToCanvas=\{onAddToCanvas\}/);
 assert.match(
   networkDiagramCanvas,

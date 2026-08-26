@@ -266,15 +266,15 @@ const InventoryRow: React.FC<{
                 so each inventory row picks up its icon's per-class
                 accent (router=amber, firewall=rose, etc.). */}
             <Icon className="w-6 h-6 flex-shrink-0" />
-            <div className="min-w-0 flex-1">
-                <div className="text-xs font-medium  sui-color-active truncate">
+            <span className="min-w-0 flex flex-1 flex-col">
+                <span className="text-xs font-medium  sui-color-active truncate">
                     {asset.shortLabel}
-                </div>
-                <div className="text-xs  sui-color-default truncate uppercase tracking-wide">
+                </span>
+                <span className="text-xs  sui-color-default truncate uppercase tracking-wide">
                     {deviceType}
                     {model ? ` · ${model}` : ''}
-                </div>
-            </div>
+                </span>
+            </span>
         </button>
     );
 };

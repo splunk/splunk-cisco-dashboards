@@ -851,7 +851,7 @@ const ShapeTile: React.FC<
                 'transition-all duration-150'
             )}
         >
-            <div
+            <span
                 className={cn(
                     'flex items-center justify-center  sui-color-default  sui-group-hover-color-info',
                     'w-10 h-10'
@@ -863,18 +863,18 @@ const ShapeTile: React.FC<
                     // A typographic "T" reads as "text" at a glance,
                     // matching the affordance of design-tool text
                     // tools (Figma, Sketch, Visio).
-                    <div className="w-9 h-7 rounded border  sui-border-default flex items-center justify-center  font-serif font-semibold  sui-color-default">
+                    <span className="w-9 h-7 rounded border  sui-border-default flex items-center justify-center  font-serif font-semibold  sui-color-default">
                         T
-                    </div>
+                    </span>
                 ) : (
-                    <div className="w-9 h-7 rounded border-2 border-dashed  sui-border-strong flex items-center justify-center text-xs uppercase tracking-wider  sui-color-muted">
+                    <span className="w-9 h-7 rounded border-2 border-dashed  sui-border-strong flex items-center justify-center text-xs uppercase tracking-wider  sui-color-muted">
                         Region
-                    </div>
+                    </span>
                 )}
-            </div>
-            <div className="text-xs font-medium  sui-color-active text-center leading-tight">
+            </span>
+            <span className="text-xs font-medium  sui-color-active text-center leading-tight">
                 {label}
-            </div>
+            </span>
         </button>
     );
 };
@@ -910,7 +910,7 @@ const CustomStencilTile: React.FC<{
                 'transition-all duration-150'
             )}
         >
-            <div
+            <span
                 className={cn(
                     'flex items-center justify-center  sui-color-default  sui-group-hover-color-info',
                     isWide ? 'h-10 w-full px-1' : 'w-10 h-10'
@@ -925,10 +925,10 @@ const CustomStencilTile: React.FC<{
                     )}
                     draggable={false}
                 />
-            </div>
-            <div className="text-xs font-medium  sui-color-active text-center leading-tight">
+            </span>
+            <span className="text-xs font-medium  sui-color-active text-center leading-tight">
                 {asset.label}
-            </div>
+            </span>
         </button>
     );
 };
