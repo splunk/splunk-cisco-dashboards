@@ -68,6 +68,11 @@ import {
 } from "@/common/icons/SuiIcon";
 import { cn } from "@/common/lib/utils";
 import {
+  buildThousandEyesTestLink,
+  normalizeThousandEyesLink,
+  THOUSAND_EYES_APP_URL,
+} from "@/common/lib/thousandEyesUrl";
+import {
   readUserScopedStorageItem,
   userScopedStorageKey,
 } from "@/common/config/insightsWorkspaces";
@@ -1827,15 +1832,6 @@ const selectAutoTeMatch = (
   return best;
 };
 
-const THOUSAND_EYES_APP_URL = "https://app.thousandeyes.com/";
-
-const buildThousandEyesTestLink = (teTestId?: string): string | undefined => {
-  if (!teTestId) return undefined;
-  return `https://app.thousandeyes.com/network-app-synthetics/views/?testId=${encodeURIComponent(
-    teTestId,
-  )}`;
-};
-
 interface ThousandEyesA2AEndpointOption {
   key: string;
   label: string;
@@ -2114,7 +2110,7 @@ const sanitizeTopology = (
         normalized.endpointDevices = endpointDevices;
       }
       const teLink =
-        optionalText(link.teLink) ??
+        normalizeThousandEyesLink(optionalText(link.teLink)) ??
         (isLegacyFactoryLink ? fallbackLinkById?.teLink : undefined);
       if (teLink) normalized.teLink = teLink;
       const lastUpdated = optionalText(link.lastUpdated);
@@ -3594,12 +3590,14 @@ const parseLinkRow = (
           "thousandeyes.test.id",
         ]),
       ) ??
-      textFromRow(row, [
-        "teLink",
-        "te_link",
-        "thousandeyesPermalink",
-        "thousandeyes.permalink",
-      ]) ??
+      normalizeThousandEyesLink(
+        textFromRow(row, [
+          "teLink",
+          "te_link",
+          "thousandeyesPermalink",
+          "thousandeyes.permalink",
+        ]),
+      ) ??
       base.teLink,
     lastUpdated:
       textFromRow(row, ["lastUpdated", "last_updated", "_time"]) ??
@@ -3634,7 +3632,9 @@ const parseTeA2ACandidateRow = (
   const status =
     normalizeStatus(textFromRow(row, ["status", "linkStatus"])) ?? "unknown";
   const teLink =
-    textFromRow(row, ["teLink", "te_link", "thousandeyes.permalink"]) ??
+    normalizeThousandEyesLink(
+      textFromRow(row, ["teLink", "te_link", "thousandeyes.permalink"]),
+    ) ??
     buildThousandEyesTestLink(teTestId);
 
   return {
@@ -10038,8 +10038,9 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                       boundTeMatch?.candidate.teTestId ??
                         link.thousandEyesA2A?.teTestId,
                     ) ??
-                    boundTeMatch?.candidate.teLink ??
-                    link.teLink;
+                    normalizeThousandEyesLink(
+                      boundTeMatch?.candidate.teLink ?? link.teLink,
+                    );
                   return (
                     <div
                       key={link.id}
@@ -11057,7 +11058,8 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({
   // state as a removal regression on 2026-05-14.
   const isLoading = link.dataState === "loading";
   const thousandEyesLink =
-    buildThousandEyesTestLink(link.thousandEyesA2A?.teTestId) ?? link.teLink;
+    buildThousandEyesTestLink(link.thousandEyesA2A?.teTestId) ??
+    normalizeThousandEyesLink(link.teLink);
   const isGenericThousandEyesLink = thousandEyesLink === THOUSAND_EYES_APP_URL;
   return (
     <>
