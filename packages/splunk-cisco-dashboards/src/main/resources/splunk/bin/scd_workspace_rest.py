@@ -23,6 +23,12 @@ APP_NAME = "splunk-cisco-dashboards"
 MAX_SCALAR_BYTES = 4096
 MAX_LIST_BYTES = 64 * 1024
 MAX_TOPOLOGY_PAYLOAD_BYTES = 128 * 1024
+# Keep these admission limits in step with
+# webapp/common/lib/customerTopologyBounds.ts. A byte cap alone still permits
+# thousands of tiny objects that make every viewer's Leaflet map expensive.
+MAX_TOPOLOGY_SITES = 250
+MAX_TOPOLOGY_LINKS = 500
+MAX_TOPOLOGY_SITE_ALIASES = 16
 
 _WORKSPACE_FIELDS = frozenset(
     (
@@ -136,6 +142,43 @@ def fields_for_stanza(conf_name, stanza_name):
     raise ValueError('Stanza "{}" is not writable through this endpoint.'.format(stanza_name))
 
 
+def validate_topology_payload(payload):
+    """Reject topology shapes that are too large to render safely for viewers."""
+    topology = payload.get("topology")
+    if not isinstance(topology, dict):
+        raise ValueError('Field "payload_json" must contain a topology object.')
+    sites = topology.get("sites")
+    links = topology.get("links")
+    if not isinstance(sites, list) or not isinstance(links, list):
+        raise ValueError('Field "payload_json" topology must contain sites and links arrays.')
+    if len(sites) > MAX_TOPOLOGY_SITES:
+        raise ValueError(
+            'Field "payload_json" topology exceeds its {}-site limit.'.format(
+                MAX_TOPOLOGY_SITES
+            )
+        )
+    if len(links) > MAX_TOPOLOGY_LINKS:
+        raise ValueError(
+            'Field "payload_json" topology exceeds its {}-link limit.'.format(
+                MAX_TOPOLOGY_LINKS
+            )
+        )
+    for site in sites:
+        if not isinstance(site, dict):
+            raise ValueError('Field "payload_json" topology sites must contain objects.')
+        aliases = site.get("aliases")
+        if aliases is not None and (
+            not isinstance(aliases, list) or len(aliases) > MAX_TOPOLOGY_SITE_ALIASES
+        ):
+            raise ValueError(
+                'Field "payload_json" topology sites exceed the {}-alias limit.'.format(
+                    MAX_TOPOLOGY_SITE_ALIASES
+                )
+            )
+    if not all(isinstance(link, dict) for link in links):
+        raise ValueError('Field "payload_json" topology links must contain objects.')
+
+
 def validate_settings(conf_name, stanza_name, raw_settings):
     """Collapse form values and enforce field, size, and JSON boundaries."""
     permitted = fields_for_stanza(conf_name, stanza_name)
@@ -167,6 +210,8 @@ def validate_settings(conf_name, stanza_name, raw_settings):
                 raise ValueError('Field "{}" must contain valid JSON.'.format(key))
             if not isinstance(parsed, dict):
                 raise ValueError('Field "{}" must contain a JSON object.'.format(key))
+            if key == "payload_json":
+                validate_topology_payload(parsed)
         settings[key] = value
     return settings
 

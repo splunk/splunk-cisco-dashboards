@@ -23,6 +23,7 @@ import {
     WORKSPACE_SOURCES,
     type SectionId,
 } from '@/common/config/insightsWorkspaces';
+import { hasBoundedCustomerTopology } from '@/common/lib/customerTopologyBounds';
 
 import { getSearchAppContext } from './splunkSearchService';
 
@@ -149,7 +150,7 @@ export const sanitizeCustomerTopologySectionTitles = (
 const sanitizePayload = (raw: unknown): SavedCustomerTopologyPayload | null => {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
     const payload = raw as Partial<SavedCustomerTopologyPayload>;
-    if (!payload.topology || typeof payload.topology !== 'object') return null;
+    if (!hasBoundedCustomerTopology(payload.topology)) return null;
     const topology = payload.topology as CustomerTopology;
     const isLegacyFactoryTopology = topology.id === DEFAULT_TOPOLOGY_ID;
     const migratedTopology = isLegacyFactoryTopology

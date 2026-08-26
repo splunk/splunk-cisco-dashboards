@@ -73,7 +73,14 @@ class WorkspaceRestValidationTest(unittest.TestCase):
                 "overview_customer_connectivity_delegated_ops",
                 {
                     "section_titles": [json.dumps({"security": "Security"})],
-                    "payload_json": [json.dumps({"version": 1})],
+                    "payload_json": [
+                        json.dumps(
+                            {
+                                "version": 1,
+                                "topology": {"sites": [], "links": []},
+                            }
+                        )
+                    ],
                 },
             ),
         )
@@ -152,6 +159,45 @@ class WorkspaceRestValidationTest(unittest.TestCase):
         for conf_name, stanza, field, value in scenarios:
             with self.subTest(field=field), self.assertRaisesRegex(ValueError, "limit"):
                 handler.validate_settings(conf_name, stanza, {field: [value]})
+
+    def test_rejects_unbounded_or_malformed_topology_collections(self):
+        oversized_sites = {
+            "topology": {
+                "sites": [{}] * (handler.MAX_TOPOLOGY_SITES + 1),
+                "links": [],
+            }
+        }
+        oversized_links = {
+            "topology": {
+                "sites": [],
+                "links": [{}] * (handler.MAX_TOPOLOGY_LINKS + 1),
+            }
+        }
+        oversized_aliases = {
+            "topology": {
+                "sites": [
+                    {"aliases": ["site"] * (handler.MAX_TOPOLOGY_SITE_ALIASES + 1)}
+                ],
+                "links": [],
+            }
+        }
+        malformed_entries = {
+            "topology": {"sites": [None], "links": ["not-an-object"]}
+        }
+        for payload in (
+            oversized_sites,
+            oversized_links,
+            oversized_aliases,
+            malformed_entries,
+        ):
+            with self.subTest(payload=payload), self.assertRaisesRegex(
+                ValueError, "topology"
+            ):
+                handler.validate_settings(
+                    handler.TOPOLOGY_CONF,
+                    "overview_customer_connectivity",
+                    {"payload_json": [json.dumps(payload)]},
+                )
 
     def test_live_handler_uses_system_token_after_validation(self):
         app = handler.WorkspaceMutationHandler(None, None)

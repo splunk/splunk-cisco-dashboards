@@ -73,6 +73,11 @@ import {
   THOUSAND_EYES_APP_URL,
 } from "@/common/lib/thousandEyesUrl";
 import {
+  MAX_CUSTOMER_TOPOLOGY_LINKS,
+  MAX_CUSTOMER_TOPOLOGY_SITE_ALIASES,
+  MAX_CUSTOMER_TOPOLOGY_SITES,
+} from "@/common/lib/customerTopologyBounds";
+import {
   readUserScopedStorageItem,
   userScopedStorageKey,
 } from "@/common/config/insightsWorkspaces";
@@ -1545,6 +1550,7 @@ const optionalTextArray = (value: unknown): string[] => {
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(text.slice(0, 80));
+    if (out.length >= MAX_CUSTOMER_TOPOLOGY_SITE_ALIASES) break;
   }
   return out;
 };
@@ -1942,10 +1948,11 @@ const sanitizeTopology = (
   const fallbackLinksById = new Map(
     fallback.links.map((link) => [link.id, link]),
   );
-  const rawSites =
+  const rawSites = (
     Array.isArray(source.sites) && source.sites.length > 0
-      ? source.sites
-      : fallback.sites;
+      ? source.sites.filter(isRecord)
+      : fallback.sites
+  ).slice(0, MAX_CUSTOMER_TOPOLOGY_SITES) as Array<Partial<TopologySite>>;
   const usedSiteIds = new Set<string>();
   const sites = rawSites.map((site, index) => {
     const id = uniqueId(
@@ -2024,7 +2031,9 @@ const sanitizeTopology = (
   });
 
   const validSiteIds = new Set(sites.map((site) => site.id));
-  const rawLinks = Array.isArray(source.links) ? source.links : fallback.links;
+  const rawLinks = (
+    Array.isArray(source.links) ? source.links.filter(isRecord) : fallback.links
+  ).slice(0, MAX_CUSTOMER_TOPOLOGY_LINKS) as Array<Partial<TopologyLink>>;
   const usedLinkIds = new Set<string>();
   const links = rawLinks
     .map((link, index) => {
