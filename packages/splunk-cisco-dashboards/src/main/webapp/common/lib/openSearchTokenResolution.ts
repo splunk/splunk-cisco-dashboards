@@ -107,7 +107,12 @@ export const resolveOpenSearchToken = (
     inputs: DashboardInputDefinitions,
     searchParams: URLSearchParams,
 ) => {
-    const [tokenName, timePart] = token.split('.');
+    const tokenParts = token.split('.');
+    if (tokenParts.length > 2) {
+        return undefined;
+    }
+
+    const [tokenName, timePart] = tokenParts;
     const input = findInput(inputs, tokenName);
     if (!input) {
         return undefined;

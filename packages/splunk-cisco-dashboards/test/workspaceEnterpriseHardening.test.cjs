@@ -157,6 +157,15 @@ assert.equal(
 );
 assert.equal(
   openSearchTokens.resolveOpenSearchQuery(
+    'index=main invalid="$time_tok.earliest.extra$"',
+    openSearchInputs,
+    new URLSearchParams("time_tok.earliest.extra=-4h@m"),
+  ),
+  'index=main invalid="$time_tok.earliest.extra$"',
+  "A dotted suffix beyond earliest/latest must not be treated as a trusted timerange token",
+);
+assert.equal(
+  openSearchTokens.resolveOpenSearchQuery(
     'index=main x="$first$" unknown="$unknown$"',
     {
       first: { type: "input.text", options: { token: "first", defaultValue: "$second$" } },

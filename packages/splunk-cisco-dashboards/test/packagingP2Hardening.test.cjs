@@ -237,20 +237,20 @@ function exerciseReleaseIdentityValidation() {
     const versionPath = path.join(fixture.root, "VERSION");
     const ledgerPath = path.join(fixture.root, "releases", "splunkbase-9257.json");
     const ledger = JSON.parse(fs.readFileSync(ledgerPath, "utf8"));
-    ledger.build_allocations[1].version = "1.2.2";
+    ledger.build_allocations[1].version = "1.2.1";
     fs.writeFileSync(ledgerPath, `${JSON.stringify(ledger, null, 2)}\n`);
-    fs.writeFileSync(versionPath, "1.2.2\n");
+    fs.writeFileSync(versionPath, "1.2.1\n");
     fs.writeFileSync(
       appConfPath,
-      fs.readFileSync(appConfPath, "utf8").replaceAll("1.2.3", "1.2.2"),
+      fs.readFileSync(appConfPath, "utf8").replaceAll("1.2.3", "1.2.1"),
     );
     const unchangedVersionFailure = runExpectFailure("node", [validator], {
       cwd: fixture.packageRoot,
     });
     assert.match(
       unchangedVersionFailure,
-      /current version must differ from the latest published release version/,
-      "Release identity validation must require a new version as well as a new build",
+      /current version must be greater than the latest published release version/,
+      "Release identity validation must reject a version downgrade even when the build increased",
     );
   } finally {
     removeTempRoot(fixture.root);

@@ -24,6 +24,7 @@ const validStates = new Set([
   "current",
 ]);
 const validVersion = /^[A-Za-z0-9][A-Za-z0-9._+-]*$/;
+const comparableVersion = /^(\d+(?:\.\d+)*)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/;
 
 function fail(message) {
   throw new Error(`[release identity] ${message}`);
@@ -51,6 +52,59 @@ function loadJson(filePath) {
   } catch (error) {
     fail(`could not read ${path.relative(repositoryRoot, filePath)}: ${error.message}`);
   }
+}
+
+function compareNumericText(left, right) {
+  const normalizedLeft = left.replace(/^0+(?=\d)/, "");
+  const normalizedRight = right.replace(/^0+(?=\d)/, "");
+  if (normalizedLeft.length !== normalizedRight.length) {
+    return normalizedLeft.length < normalizedRight.length ? -1 : 1;
+  }
+  if (normalizedLeft === normalizedRight) return 0;
+  return normalizedLeft < normalizedRight ? -1 : 1;
+}
+
+function parseComparableVersion(version) {
+  const match = version.match(comparableVersion);
+  if (!match) return null;
+  const numericParts = match[1].split(".");
+  const prereleaseParts = match[2] ? match[2].split(".") : [];
+  if (prereleaseParts.some((part) => part.length === 0)) return null;
+  return { numericParts, prereleaseParts };
+}
+
+function compareReleaseVersions(leftVersion, rightVersion) {
+  const left = parseComparableVersion(leftVersion);
+  const right = parseComparableVersion(rightVersion);
+  if (!left || !right) return null;
+
+  const numericLength = Math.max(left.numericParts.length, right.numericParts.length);
+  for (let index = 0; index < numericLength; index += 1) {
+    const comparison = compareNumericText(
+      left.numericParts[index] || "0",
+      right.numericParts[index] || "0",
+    );
+    if (comparison !== 0) return comparison;
+  }
+
+  if (left.prereleaseParts.length === 0 && right.prereleaseParts.length === 0) return 0;
+  if (left.prereleaseParts.length === 0) return 1;
+  if (right.prereleaseParts.length === 0) return -1;
+
+  const prereleaseLength = Math.max(left.prereleaseParts.length, right.prereleaseParts.length);
+  for (let index = 0; index < prereleaseLength; index += 1) {
+    const leftPart = left.prereleaseParts[index];
+    const rightPart = right.prereleaseParts[index];
+    if (leftPart === undefined) return -1;
+    if (rightPart === undefined) return 1;
+    if (leftPart === rightPart) continue;
+    const leftIsNumeric = /^\d+$/.test(leftPart);
+    const rightIsNumeric = /^\d+$/.test(rightPart);
+    if (leftIsNumeric && rightIsNumeric) return compareNumericText(leftPart, rightPart);
+    if (leftIsNumeric !== rightIsNumeric) return leftIsNumeric ? -1 : 1;
+    return leftPart < rightPart ? -1 : 1;
+  }
+  return 0;
 }
 
 try {
@@ -120,8 +174,14 @@ try {
   const latestPublished = [...allocations]
     .reverse()
     .find((allocation) => allocation.state === "published");
-  if (latestPublished && current.version === latestPublished.version) {
-    fail("the current version must differ from the latest published release version.");
+  if (latestPublished) {
+    const versionComparison = compareReleaseVersions(current.version, latestPublished.version);
+    if (versionComparison === null) {
+      fail("current and latest published versions must use comparable numeric release versions.");
+    }
+    if (versionComparison <= 0) {
+      fail("the current version must be greater than the latest published release version.");
+    }
   }
 
   console.log(
