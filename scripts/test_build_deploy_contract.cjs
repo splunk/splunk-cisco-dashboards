@@ -61,4 +61,55 @@ assert.match(
   "failed promotion must roll the old app back into place",
 );
 
-console.log("Build deploy sibling-promotion contract passed.");
+const archiveIdentityStart = source.indexOf("archive_identity() {");
+const releaseArchiveFinderStart = source.indexOf("find_release_archive() {");
+const releaseArchiveFinderEnd = source.indexOf("sha256_file() {");
+
+assert.notStrictEqual(archiveIdentityStart, -1, "archive identity reader is missing");
+assert.notStrictEqual(releaseArchiveFinderStart, -1, "release archive finder is missing");
+assert.notStrictEqual(releaseArchiveFinderEnd, -1, "release archive finder boundary is missing");
+
+const archiveIdentityBlock = source.slice(archiveIdentityStart, releaseArchiveFinderStart);
+const releaseArchiveFinderBlock = source.slice(
+  releaseArchiveFinderStart,
+  releaseArchiveFinderEnd,
+);
+
+assert.ok(
+  archiveIdentityBlock.includes(
+    'section == "[id]" && /^[[:space:]]*name[[:space:]]*=',
+  ),
+  "archive identity must include the packaged [id] name",
+);
+assert.match(
+  archiveIdentityBlock,
+  /print package_id "\\t" version "\\t" build/,
+  "archive identity must return package ID, version, and build together",
+);
+assert.match(
+  releaseArchiveFinderBlock,
+  /local expected_package_id="\$1"[\s\S]*?local expected_version="\$2"[\s\S]*?local expected_build="\$3"/,
+  "release archive lookup must accept the current source package ID, version, and build",
+);
+assert.match(
+  releaseArchiveFinderBlock,
+  /archive_package_id" == "\$expected_package_id"[\s\S]*?archive_version" == "\$expected_version"[\s\S]*?archive_build" == "\$expected_build"/,
+  "release archive lookup must require every release-identity field to match",
+);
+assert.doesNotMatch(
+  source,
+  /-exec ls -t \{\} \+/,
+  "--no-build must not select an artifact merely because it is newest",
+);
+assert.match(
+  source,
+  /source_package_id="\$\(awk '[\s\S]*?source_app_version="\$\(awk '[\s\S]*?release_build="\$\(awk '/,
+  "current source package ID, version, and build must be read before artifact selection",
+);
+assert.match(
+  source,
+  /find_release_archive "\$source_package_id" "\$build_version" "\$release_build" "\$package_profile"/,
+  "both fresh-build and --no-build paths must resolve only the matching immutable artifact",
+);
+
+console.log("Build deploy and release-identity artifact-selection contracts passed.");

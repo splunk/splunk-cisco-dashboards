@@ -22,8 +22,9 @@
 #   ./build.sh --deploy                                       # filesystem swap (preserves local/ + live lookup CSVs)
 #   SPLUNK_HOME=/opt/10 ./build.sh --deploy --restart         # same against /opt/10, then `splunk restart`
 #
-# Install/deploy WITHOUT rebuilding (re-use the most recent dist/*.tar.gz).
-# Handy when you've built once and want to fan the same artifact out to
+# Install/deploy WITHOUT rebuilding (re-use the immutable dist artifact whose
+# package ID, version, and build match the current source release identity).
+# Handy when you've built once and want to fan that same artifact out to
 # multiple local Splunk instances that each have their own admin password:
 #   ./build.sh                                                                # build once
 #   ./build.sh --no-build --install --auth admin:pw1                          # -> default Splunk
@@ -160,6 +161,11 @@ archive_identity() {
     local archive="$1"
     tar -xzOf "$archive" "${APP_NAME}/default/app.conf" 2>/dev/null | awk '
         /^\[/ { section=$0 }
+        section == "[id]" && /^[[:space:]]*name[[:space:]]*=/ {
+            sub(/^[^=]*=/, "")
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+            package_id=$0
+        }
         section == "[id]" && /^[[:space:]]*version[[:space:]]*=/ {
             sub(/^[^=]*=/, "")
             gsub(/^[[:space:]]+|[[:space:]]+$/, "")
@@ -171,16 +177,19 @@ archive_identity() {
             build=$0
         }
         END {
-            if (version != "" && build != "") print version "\t" build
+            if (package_id != "" && version != "" && build != "") {
+                print package_id "\t" version "\t" build
+            }
         }
     '
 }
 
 find_release_archive() {
-    local expected_version="$1"
-    local expected_build="$2"
-    local expected_profile="$3"
-    local archive archive_profile identity archive_version archive_build
+    local expected_package_id="$1"
+    local expected_version="$2"
+    local expected_build="$3"
+    local expected_profile="$4"
+    local archive archive_profile identity archive_package_id archive_version archive_build
     local match=""
     local match_count=0
 
@@ -191,19 +200,21 @@ find_release_archive() {
 
         identity="$(archive_identity "$archive")"
         [[ -n "$identity" ]] || continue
-        IFS=$'\t' read -r archive_version archive_build <<< "$identity"
-        if [[ "$archive_version" == "$expected_version" && "$archive_build" == "$expected_build" ]]; then
+        IFS=$'\t' read -r archive_package_id archive_version archive_build <<< "$identity"
+        if [[ "$archive_package_id" == "$expected_package_id" \
+            && "$archive_version" == "$expected_version" \
+            && "$archive_build" == "$expected_build" ]]; then
             match="$archive"
             match_count=$((match_count + 1))
         fi
     done < <(find "$DIST_DIR" -maxdepth 1 -type f -name "${APP_NAME}-*-sha256-*.tar.gz" -print0)
 
     if [[ "$match_count" -eq 0 ]]; then
-        err "ERROR: packaging completed but no immutable ${expected_profile} archive was found for version ${expected_version}, build ${expected_build}."
+        err "ERROR: no immutable ${expected_profile} archive was found for package ${expected_package_id}, version ${expected_version}, build ${expected_build}."
         return 1
     fi
     if [[ "$match_count" -gt 1 ]]; then
-        err "ERROR: found ${match_count} immutable ${expected_profile} archives for version ${expected_version}, build ${expected_build}; refusing an ambiguous install target."
+        err "ERROR: found ${match_count} immutable ${expected_profile} archives for package ${expected_package_id}, version ${expected_version}, build ${expected_build}; refusing an ambiguous install target."
         return 1
     fi
 
@@ -505,11 +516,11 @@ Push-to-Splunk options (mutually exclusive):
                          run the install as --remote-splunk-user via sudo.
 
 Other options:
-  --no-build             Skip the yarn package step and use the most
-                         recent dist/<app>-*.tar.gz instead. Requires
-                         --install or --deploy. Lets you fan one build
-                         out to multiple Splunk instances with different
-                         credentials without rebuilding each time.
+  --no-build             Skip the yarn package step and reuse the immutable
+                         dist/<app>-*.tar.gz whose package ID, version, and
+                         build match current source. Requires --install or
+                         --deploy. Lets you fan one build out to multiple
+                         Splunk instances without rebuilding each time.
   --fast, --from-stage   Package the current packages/<app>/stage directory
                          without running clean_build.sh or webpack. Designed
                          for use with a long-running 'yarn start' watcher.
@@ -616,8 +627,8 @@ while [[ $# -gt 0 ]]; do
         --remote-management-port=*) remote_options_set=1; remote_auth_options_set=1; remote_management_port="${1#--remote-management-port=}"; shift ;;
         --no-build|--skip-build)
             # --skip-build is an alias for muscle memory; both do the same
-            # thing: reuse the newest dist/<app>-*.tar.gz instead of running
-            # the yarn pipeline.
+            # thing: reuse the identity-matched dist archive instead of
+            # running the yarn pipeline.
             no_build=1
             shift
             ;;
@@ -776,7 +787,7 @@ fi
 if [[ "$from_stage" -eq 1 && "$no_build" -eq 1 ]]; then
     echo "ERROR: --from-stage and --no-build are mutually exclusive." >&2
     echo "       --from-stage creates a fresh tarball from stage/." >&2
-    echo "       --no-build reuses the newest tarball already in dist/." >&2
+    echo "       --no-build reuses an identity-matched tarball already in dist/." >&2
     exit 2
 fi
 
@@ -829,29 +840,63 @@ fi
 
 build_version=""
 release_build=""
+source_package_id=""
+source_app_version=""
+source_app_conf="${APP_DIR}/src/main/resources/splunk/default/app.conf"
+if [[ ! -f "$VERSION_FILE" ]]; then
+    err "ERROR: VERSION file not found: ${VERSION_FILE}"
+    exit 1
+fi
+if [[ ! -f "$source_app_conf" ]]; then
+    err "ERROR: source app.conf not found: ${source_app_conf}"
+    exit 1
+fi
+build_version="$(tr -d '[:space:]' < "$VERSION_FILE")"
+if [[ -z "$build_version" ]]; then
+    err "ERROR: VERSION file is empty: ${VERSION_FILE}"
+    exit 1
+fi
+source_package_id="$(awk '
+    /^\[/ { in_id = ($0 == "[id]") }
+    in_id && /^[[:space:]]*name[[:space:]]*=/ {
+        sub(/^[^=]*=/, "")
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+        print
+        exit
+    }
+' "$source_app_conf")"
+source_app_version="$(awk '
+    /^\[/ { in_id = ($0 == "[id]") }
+    in_id && /^[[:space:]]*version[[:space:]]*=/ {
+        sub(/^[^=]*=/, "")
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+        print
+        exit
+    }
+' "$source_app_conf")"
+release_build="$(awk '
+    /^\[/ { in_install = ($0 == "[install]") }
+    in_install && /^[[:space:]]*build[[:space:]]*=/ {
+        sub(/^[^=]*=/, "")
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+        print
+        exit
+    }
+' "$source_app_conf")"
+if [[ -z "$source_package_id" || "$source_package_id" != "$APP_NAME" ]]; then
+    err "ERROR: source app.conf [id] name must match package ID ${APP_NAME}."
+    exit 1
+fi
+if [[ "$source_app_version" != "$build_version" ]]; then
+    err "ERROR: source app.conf [id] version must match VERSION (${build_version})."
+    exit 1
+fi
+if [[ ! "$release_build" =~ ^[1-9][0-9]*$ ]]; then
+    err "ERROR: source app.conf must contain a positive numeric [install] build value."
+    exit 1
+fi
+
 if [[ "$no_build" -eq 0 ]]; then
-    if [[ ! -f "$VERSION_FILE" ]]; then
-        err "ERROR: VERSION file not found: ${VERSION_FILE}"
-        exit 1
-    fi
-    build_version="$(tr -d '[:space:]' < "$VERSION_FILE")"
-    if [[ -z "$build_version" ]]; then
-        err "ERROR: VERSION file is empty: ${VERSION_FILE}"
-        exit 1
-    fi
-    release_build="$(awk '
-        /^\[/ { in_install = ($0 == "[install]") }
-        in_install && /^[[:space:]]*build[[:space:]]*=/ {
-            sub(/^[^=]*=/, "")
-            gsub(/^[[:space:]]+|[[:space:]]+$/, "")
-            print
-            exit
-        }
-    ' "${APP_DIR}/src/main/resources/splunk/default/app.conf")"
-    if [[ ! "$release_build" =~ ^[1-9][0-9]*$ ]]; then
-        err "ERROR: source app.conf must contain a positive numeric [install] build value."
-        exit 1
-    fi
 
     # This policy linter is intentionally opt-in. Its broad rules are useful
     # during a focused catalogue audit, but are not accurate enough to block
@@ -905,38 +950,19 @@ else
     fi
 fi
 
-if [[ "$no_build" -eq 1 ]]; then
-    if [[ "$developer_profile" -eq 1 ]]; then
-        package_glob="${APP_NAME}-*-sha256-*-developer.tar.gz"
-        package_path="$(
-            find "$DIST_DIR" -maxdepth 1 -type f -name "$package_glob" \
-                -exec ls -t {} + 2>/dev/null \
-                | head -n 1
-        )"
-    else
-        package_glob="${APP_NAME}-*-sha256-*.tar.gz"
-        package_path="$(
-            find "$DIST_DIR" -maxdepth 1 -type f -name "$package_glob" \
-                ! -name "*-developer.tar.gz" \
-                -exec ls -t {} + 2>/dev/null \
-                | head -n 1
-        )"
-    fi
+if [[ "$developer_profile" -eq 1 ]]; then
+    package_profile="developer"
 else
-    if [[ "$developer_profile" -eq 1 ]]; then
-        package_profile="developer"
-    else
-        package_profile="splunkbase"
-    fi
-    if ! package_path="$(find_release_archive "$build_version" "$release_build" "$package_profile")"; then
-        exit 1
-    fi
+    package_profile="splunkbase"
+fi
+if ! package_path="$(find_release_archive "$source_package_id" "$build_version" "$release_build" "$package_profile")"; then
+    exit 1
 fi
 
 if [[ -z "$package_path" ]]; then
     if [[ "$no_build" -eq 1 ]]; then
-        err "ERROR: --no-build requested but no immutable ${APP_NAME}-*-sha256-*.tar.gz found under ${DIST_DIR}."
-        err "       Run ./build.sh once (without --no-build) to produce a package first."
+        err "ERROR: --no-build requested but no immutable archive matches the current source package identity."
+        err "       Run ./build.sh once (without --no-build) after committing the current release identity."
     else
         err "ERROR: Could not find the immutable ${APP_NAME} archive produced by packaging."
     fi
