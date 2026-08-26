@@ -64,6 +64,11 @@
 
 set -euo pipefail
 
+# Repository Python helpers and tests must not write runtime bytecode into
+# release inputs or other source directories. The packaging path also
+# sanitizes known Python cache artifacts from its temporary archive copy.
+export PYTHONDONTWRITEBYTECODE=1
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_NAME="splunk-cisco-dashboards"
 APP_DIR="${ROOT_DIR}/packages/${APP_NAME}"

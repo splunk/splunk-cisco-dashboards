@@ -135,7 +135,10 @@ fi
 # prevents a release archive from silently containing uncommitted source
 # changes that cannot be reconstructed later. Git status deliberately omits
 # ignored files, though CopyWebpackPlugin can otherwise copy them from the
-# resource tree, so reject ignored release inputs explicitly as well.
+# resource tree, so reject ignored release inputs explicitly as well. Python
+# bytecode and __pycache__ entries are the one disposable exception: they can
+# be created by local handler tests or a live Splunk process, and are removed
+# from the temporary archive copy below before final verification.
 assert_no_ignored_release_inputs() {
   local candidate
   local relative_path
@@ -143,6 +146,11 @@ assert_no_ignored_release_inputs() {
 
   while IFS= read -r -d '' candidate; do
     if git -C "$ROOT_DIR" check-ignore --quiet --no-index -- "$candidate"; then
+      case "$candidate" in
+        */__pycache__/*|*.pyc|*.pyo)
+          continue
+          ;;
+      esac
       relative_path="${candidate#"${ROOT_DIR}"/}"
       ignored_paths+=("$relative_path")
     fi

@@ -8,6 +8,10 @@ import types
 import urllib.parse
 import unittest
 
+# Importing the handler directly from src/main/resources must not create a
+# release-input __pycache__ directory during local validation.
+sys.dont_write_bytecode = True
+
 
 class _PersistentServerConnectionApplication:
     def __init__(self):
