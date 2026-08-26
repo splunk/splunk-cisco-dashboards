@@ -10,6 +10,9 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Made the CIM-tuning footer reflect discovery and selection state, blocked
+  continuation while discovery is running, and restored readable semantic
+  colors for routing and CIM definition previews in dark mode.
 - Restored keyboard focus without scrolling after clearing Configure tile
   filters, closing Help, and leaving an expanded tile visualization.
 - Replaced custom setup routing value pills and their expansion controls with

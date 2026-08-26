@@ -4271,7 +4271,7 @@ div.card-trend-footer [data-test='button'] {
 .diag-modal-content ul {
     margin-left: 15px;
 }
-code {
+.diag-modal-content code {
     color: #2b7f14;
     background: #f1f1f1;
     border-radius: 6px;

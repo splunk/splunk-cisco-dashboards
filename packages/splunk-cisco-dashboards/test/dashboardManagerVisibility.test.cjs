@@ -23,6 +23,7 @@ const homePage = readSource(
 const setupTuner = readSource(
   "src/main/webapp/pages/macro_index_tuning/index.tsx",
 );
+const commonStyles = readSource("src/main/webapp/common/styles/commonstyles.css");
 const setupBootstrap = readSource(
   "src/main/resources/splunk/appserver/static/start_bootstrap.js",
 );
@@ -556,8 +557,43 @@ assert.match(
 );
 assert.match(
   setupTuner,
-  /label=\{[\s\S]*?Skip CIM tuning[\s\S]*?\}/,
-  "An empty CIM selection must offer an explicit no-tuning continuation path",
+  /let cimContinueActionLabel = "Skip CIM tuning";[\s\S]*?isCimLoading[\s\S]*?"Continue to review"[\s\S]*?cimScanState === "ready"[\s\S]*?"Review changes"[\s\S]*?"Continue to review"/,
+  "The Step 5 continuation label must distinguish discovery, review, and the initial skip path",
+);
+assert.match(
+  setupTuner,
+  /disabled=\{isCimLoading \|\| isSavingCim \? "dimmed" : false\}[\s\S]*?label=\{cimContinueActionLabel\}/,
+  "Step 5 must not allow navigation while CIM discovery or saving is active",
+);
+assert.match(
+  commonStyles,
+  /\.diag-modal-content code\s*\{/,
+  "The legacy light-only code treatment must remain scoped to its diagnostic modal",
+);
+assert.doesNotMatch(
+  commonStyles,
+  /(?:^|\n)code\s*\{/,
+  "Legacy code colors must not leak into dark setup surfaces",
+);
+assert.match(
+  setupTuner,
+  /<Typography[\s\S]*?as="code"[\s\S]*?color=\{\$tone\}[\s\S]*?variant="monoSmallBody"[\s\S]*?withReset/,
+  "Definition previews must use reset, theme-aware SUI code typography",
+);
+assert.match(
+  setupTuner,
+  /<SetupDefinitionPreview[^>]*>[\s\S]*?\{row\.draftDefinition \|\| "—"\}[\s\S]*?<\/SetupDefinitionPreview>/,
+  "Step 4 routing definitions must use the theme-safe preview component",
+);
+assert.match(
+  setupTuner,
+  /const SetupTruncatedDefinitionPreview = styled\(SetupDefinitionPreview\)`[\s\S]*?text-overflow: ellipsis;[\s\S]*?white-space: nowrap;/,
+  "Step 5 definition previews must remain one-line and ellipsized inside compact table rows",
+);
+assert.match(
+  setupTuner,
+  /<SetupTruncatedDefinitionPreview[\s\S]*?title=\{row\.draftDefinition \|\| "Not set"\}[\s\S]*?\{row\.draftDefinition \|\| "Not set"\}[\s\S]*?<\/SetupTruncatedDefinitionPreview>/,
+  "Step 5 generated CIM definitions must use the theme-safe preview component",
 );
 assert.match(
   setupTuner,

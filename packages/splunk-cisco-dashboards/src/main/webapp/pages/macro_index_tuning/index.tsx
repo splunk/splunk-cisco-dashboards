@@ -26,6 +26,7 @@ import StepBar from '@splunk/react-ui/StepBar';
 import Switch from '@splunk/react-ui/Switch';
 import Table from '@splunk/react-ui/Table';
 import Text from '@splunk/react-ui/Text';
+import Typography from '@splunk/react-ui/Typography';
 import { variables } from '@splunk/themes';
 import styled from 'styled-components';
 
@@ -2220,11 +2221,46 @@ const SetupProgressCompact = styled.div`
   display: none;
 `;
 
-const SetupDefinitionPreview = styled.code`
+type SetupDefinitionPreviewProps = {
+  $tone?: "active" | "default";
+  children: React.ReactNode;
+  className?: string;
+  title?: string;
+};
+
+function SetupDefinitionTypography({
+  $tone = "active",
+  children,
+  className,
+  title,
+}: SetupDefinitionPreviewProps): JSX.Element {
+  return (
+    <Typography
+      as="code"
+      className={className}
+      color={$tone}
+      title={title}
+      variant="monoSmallBody"
+      withReset
+    >
+      {children}
+    </Typography>
+  );
+}
+
+const SetupDefinitionPreview = styled(SetupDefinitionTypography)`
   display: block;
   overflow-wrap: anywhere;
   white-space: normal;
   word-break: break-word;
+`;
+
+const SetupTruncatedDefinitionPreview = styled(SetupDefinitionPreview)`
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+  white-space: nowrap;
+  word-break: normal;
 `;
 
 function SetupEndpoint({
@@ -4441,12 +4477,13 @@ export default function MacroIndexTuningPage(): JSX.Element {
               </div>
               <div className="mt-1 grid min-w-0 max-w-full grid-cols-[auto_minmax(0,1fr)] items-baseline gap-1 overflow-hidden text-xs leading-5 sui-color-muted">
                 <span className="shrink-0">Generated:</span>
-                <code
-                  className="block min-w-0 max-w-full truncate font-mono sui-color-default"
+                <SetupTruncatedDefinitionPreview
+                  $tone="default"
+                  className="min-w-0 max-w-full truncate"
                   title={row.draftDefinition || "Not set"}
                 >
                   {row.draftDefinition || "Not set"}
-                </code>
+                </SetupTruncatedDefinitionPreview>
               </div>
             </div>
           </div>
@@ -4530,9 +4567,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
           </div>
         </Table.Cell>
         <Table.Cell>
-          <code className="block min-w-0 max-w-full overflow-hidden break-words whitespace-normal font-mono text-xs leading-5 sui-color-active">
+          <SetupDefinitionPreview className="min-w-0 max-w-full overflow-hidden">
             {row.draftDefinition || "—"}
-          </code>
+          </SetupDefinitionPreview>
         </Table.Cell>
         <Table.Cell>
           <FieldPills values={draftIndexes} tone="sky" expandable valueLabel="indexes" />
@@ -4725,7 +4762,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           )}
           <div className="mt-4 rounded-md sui-bg-page px-3 py-3 text-xs sui-color-default">
             <div className="font-bold sui-color-active">Generated definition</div>
-            <SetupDefinitionPreview className="mt-1 font-mono leading-5">
+            <SetupDefinitionPreview className="mt-1">
               {proposedDefinition || "—"}
             </SetupDefinitionPreview>
           </div>
@@ -5361,6 +5398,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
     } else if (cimScanState === "ready") {
       cimDiscoveryActionLabel = "Refresh matches";
     }
+    let cimContinueActionLabel = "Skip CIM tuning";
+    if (isCimLoading) {
+      cimContinueActionLabel = "Continue to review";
+    } else if (cimScanState === "ready") {
+      cimContinueActionLabel = setupCimRowsToSave.length
+        ? "Review changes"
+        : "Continue to review";
+    }
 
     const continueToReview = () => {
       if (isCimLoading || isSavingCim) {
@@ -5394,11 +5439,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
             <Button
               onClick={continueToReview}
               appearance="primary"
-              label={
-                setupCimRowsToSave.length
-                  ? "Review changes"
-                  : "Skip CIM tuning"
-              }
+              disabled={isCimLoading || isSavingCim ? "dimmed" : false}
+              label={cimContinueActionLabel}
             />
           </>
         )}
@@ -5799,14 +5841,17 @@ export default function MacroIndexTuningPage(): JSX.Element {
                         </div>
                       </Table.Cell>
                       <Table.Cell>
-                        <code className="block min-w-0 max-w-full break-words whitespace-normal font-mono text-xs leading-5 sui-color-default">
+                        <SetupDefinitionPreview
+                          $tone="default"
+                          className="min-w-0 max-w-full"
+                        >
                           {change.currentValue}
-                        </code>
+                        </SetupDefinitionPreview>
                       </Table.Cell>
                       <Table.Cell>
-                        <code className="block min-w-0 max-w-full break-words whitespace-normal font-mono text-xs leading-5 sui-color-active">
+                        <SetupDefinitionPreview className="min-w-0 max-w-full">
                           {change.proposedValue}
-                        </code>
+                        </SetupDefinitionPreview>
                       </Table.Cell>
                     </Table.Row>
                   ))}
