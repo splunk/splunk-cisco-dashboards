@@ -36,7 +36,11 @@ for (const role of ["admin", "power", "sc_admin"]) {
   );
 }
 
-for (const endpoint of ["scd_insights_workspaces", "scd_customer_topology"]) {
+for (const endpoint of [
+  "scd_insights_workspaces",
+  "scd_customer_topology",
+  "scd_dashboard_backgrounds",
+]) {
   assert.match(restmap, new RegExp(`\\[script:${endpoint}\\]`));
   assert.match(
     restmap,
@@ -82,6 +86,11 @@ assert.match(topologyService, /buildMutationBaseUrl[\s\S]*?scd_customer_topology
 assert.match(
   defaultMeta,
   /\[searchbase\][\s\S]*?write : \[ admin, sc_admin \]/,
+);
+assert.match(
+  defaultMeta,
+  /\[templates\][\s\S]*?write : \[ admin, sc_admin \]/,
+  "Raw shared template writes must stay restricted while the delegated handler retains UI access",
 );
 assert.match(tileConfigService, /configs\/conf-\$\{CONF_BASENAME\}/);
 assert.doesNotMatch(tileConfigService, /scd_insights_workspaces|scd_customer_topology/);

@@ -1848,8 +1848,9 @@ iseval = 0`}</CodeBlock>
                         site-connectivity improvements. IOS-XR anomaly searches
                         are now self-contained, Open in Search accepts only
                         dashboard-defined safe filter values, and shared
-                        workspace management supports narrow capability
-                        delegation. Topology palette items and key manager/KPI
+                        workspace and bounded Dashboard Builder background
+                        management support narrow capability delegation.
+                        Topology palette items and key manager/KPI
                         dialogs now support complete keyboard operation. Release
                         metadata now follows the canonical app version,
                         upgrade notifications are explicit, and React Router
@@ -1864,7 +1865,8 @@ iseval = 0`}</CodeBlock>
                         configuration; assign{" "}
                         <InlineCode>scd_manage_insights_workspaces</InlineCode>{" "}
                         only to custom roles that should manage shared
-                        workspaces and topology.
+                        workspaces, topology, and shared Dashboard Builder
+                        backgrounds.
                       </td>
                     </tr>
                   </tbody>
@@ -2000,8 +2002,9 @@ iseval = 0`}</CodeBlock>
                   A new capability-protected server endpoint lets custom roles
                   holding{" "}
                   <InlineCode>scd_manage_insights_workspaces</InlineCode>{" "}
-                  manage shared workspaces and customer topology without
-                  gaining factory Searchbase write access.
+                  manage shared workspaces, customer topology, and bounded
+                  Dashboard Builder backgrounds without gaining factory
+                  Searchbase write access.
                   Workspace Help now points to the tile action menu for
                   Configure tile and to the explicit top-right section link for
                   drill-down navigation.

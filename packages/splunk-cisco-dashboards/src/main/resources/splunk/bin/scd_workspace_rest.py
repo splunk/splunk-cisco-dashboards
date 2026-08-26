@@ -1,13 +1,15 @@
-"""Validated custom REST persistence for shared Insights workspaces.
+"""Validated custom REST persistence for shared dashboard configuration.
 
 The browser reads merged configuration through Splunk's generic conf endpoints,
 but all shared mutations use these capability-protected handlers. This lets a
-custom role manage workspaces and topology without receiving the broad
-``admin_all_objects`` capability or write access to factory ``searchbase.conf``.
+custom role manage workspaces, topology, and bounded background uploads without
+receiving the broad ``admin_all_objects`` capability or direct write access to
+the relevant shared configuration objects.
 """
 
 from __future__ import absolute_import
 
+import base64
 import json
 import re
 import urllib.parse
@@ -19,10 +21,14 @@ from splunk.persistconn.application import PersistentServerConnectionApplication
 
 WORKSPACE_CONF = "insights_workspaces"
 TOPOLOGY_CONF = "customer_topology"
+TEMPLATES_CONF = "templates"
 APP_NAME = "splunk-cisco-dashboards"
 MAX_SCALAR_BYTES = 4096
 MAX_LIST_BYTES = 64 * 1024
 MAX_TOPOLOGY_PAYLOAD_BYTES = 128 * 1024
+MAX_TEMPLATE_BACKGROUND_DATA_BYTES = 3 * 1024 * 1024
+MAX_TEMPLATE_BACKGROUND_ENTRIES = 48
+MAX_TEMPLATE_BACKGROUND_TOTAL_BYTES = 12 * 1024 * 1024
 # Keep these admission limits in step with
 # webapp/common/lib/customerTopologyBounds.ts. A byte cap alone still permits
 # thousands of tiny objects that make every viewer's Leaflet map expensive.
@@ -36,6 +42,10 @@ _SHARED_IMAGE_DATA_URI = re.compile(
 )
 _SHARED_APP_STATIC_IMAGE_PATH = re.compile(
     r"^/static/app/splunk-cisco-dashboards/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_.-]+$"
+)
+_TEMPLATE_BACKGROUND_DATA_URI = re.compile(
+    r"^data:image/(png|jpeg|gif|webp);base64,([A-Za-z0-9+/]*={0,2})$",
+    re.IGNORECASE,
 )
 
 _WORKSPACE_FIELDS = frozenset(
@@ -105,6 +115,7 @@ _TOPOLOGY_FIELDS = frozenset(
         "payload_json",
     )
 )
+_TEMPLATE_BACKGROUND_FIELDS = frozenset(("data",))
 
 _STANZA_RULES = {
     WORKSPACE_CONF: (
@@ -120,6 +131,12 @@ _STANZA_RULES = {
         (
             re.compile(r"^overview_customer_connectivity(?:_[a-z0-9_]{1,72})?$"),
             _TOPOLOGY_FIELDS,
+        ),
+    ),
+    TEMPLATES_CONF: (
+        (
+            re.compile(r"^background://bg_[a-z0-9][a-z0-9_-]{0,63}$"),
+            _TEMPLATE_BACKGROUND_FIELDS,
         ),
     ),
 }
@@ -198,6 +215,34 @@ def validate_shared_image_source(value):
         )
 
 
+def validate_template_background_data(value):
+    """Allow bounded, verified raster data URIs for shared backgrounds."""
+    match = _TEMPLATE_BACKGROUND_DATA_URI.fullmatch(value)
+    if not match:
+        raise ValueError(
+            'Field "data" must be a base64-encoded PNG, JPEG, GIF, or WebP image.'
+        )
+    try:
+        image_bytes = base64.b64decode(match.group(2), validate=True)
+    except (TypeError, ValueError):
+        raise ValueError('Field "data" must contain valid base64 image bytes.')
+    media_type = match.group(1).lower()
+    is_valid_image = (
+        media_type == "png" and image_bytes.startswith(b"\x89PNG\r\n\x1a\n")
+    ) or (
+        media_type == "jpeg" and image_bytes.startswith(b"\xff\xd8\xff")
+    ) or (
+        media_type == "gif"
+        and (image_bytes.startswith(b"GIF87a") or image_bytes.startswith(b"GIF89a"))
+    ) or (
+        media_type == "webp"
+        and image_bytes.startswith(b"RIFF")
+        and image_bytes[8:12] == b"WEBP"
+    )
+    if not is_valid_image:
+        raise ValueError('Field "data" does not match its declared image type.')
+
+
 def validate_settings(conf_name, stanza_name, raw_settings):
     """Collapse form values and enforce field, size, and JSON boundaries."""
     permitted = fields_for_stanza(conf_name, stanza_name)
@@ -216,6 +261,8 @@ def validate_settings(conf_name, stanza_name, raw_settings):
         limit = (
             MAX_TOPOLOGY_PAYLOAD_BYTES
             if key == "payload_json"
+            else MAX_TEMPLATE_BACKGROUND_DATA_BYTES
+            if conf_name == TEMPLATES_CONF and key == "data"
             else MAX_LIST_BYTES
             if key in _LONG_FIELDS
             else MAX_SCALAR_BYTES
@@ -224,6 +271,8 @@ def validate_settings(conf_name, stanza_name, raw_settings):
             raise ValueError('Field "{}" exceeds its {}-byte limit.'.format(key, limit))
         if key == "default_logo_src":
             validate_shared_image_source(value)
+        if conf_name == TEMPLATES_CONF and key == "data":
+            validate_template_background_data(value)
         if key in _JSON_FIELDS and value:
             try:
                 parsed = json.loads(value)
@@ -240,6 +289,7 @@ def validate_settings(conf_name, stanza_name, raw_settings):
 _ENDPOINTS = {
     "scd_insights_workspaces": WORKSPACE_CONF,
     "scd_customer_topology": TOPOLOGY_CONF,
+    "scd_dashboard_backgrounds": TEMPLATES_CONF,
 }
 
 
@@ -268,7 +318,7 @@ def _route(request):
         suffix = rest_path[marker_index + len(marker) :].strip("/")
         stanza_name = urllib.parse.unquote(suffix) if suffix else None
         return endpoint, conf_name, stanza_name
-    raise ValueError("Unknown workspace configuration endpoint.")
+    raise ValueError("Unknown shared configuration endpoint.")
 
 
 def _response_payload(content):
@@ -294,25 +344,77 @@ class WorkspaceMutationHandler(PersistentServerConnectionApplication):
     def __init__(self, _command_line, _command_arg):
         PersistentServerConnectionApplication.__init__(self)
 
-    def _proxy(self, request, conf_name, stanza_name, method, settings=None):
+    def _proxy(
+        self, request, conf_name, stanza_name, method, settings=None, query_args=None
+    ):
         system_token = request.get("system_authtoken")
         if not system_token:
             return {"status": 500, "payload": {"error": "System authorization is unavailable."}}
         path = "/servicesNS/nobody/{}/configs/conf-{}".format(APP_NAME, conf_name)
         if stanza_name:
             path = "{}/{}".format(path, urllib.parse.quote(stanza_name, safe=""))
+        get_args = {"output_mode": "json"}
+        if query_args:
+            get_args.update(query_args)
         response, content = rest.simpleRequest(
             path,
             sessionKey=system_token,
             method=method,
             postargs=settings,
-            getargs={"output_mode": "json"},
+            getargs=get_args,
             raiseAllErrors=False,
         )
         return {
             "status": int(response.status),
             "payload": _response_payload(content),
         }
+
+    def _ensure_template_background_quota(self, request, stanza_name, data):
+        """Bound shared background count and bytes before a system-auth write."""
+        existing = self._proxy(
+            request,
+            TEMPLATES_CONF,
+            None,
+            "GET",
+            query_args={"count": "0"},
+        )
+        if existing["status"] < 200 or existing["status"] > 299:
+            raise ValueError("Template background quota could not be checked.")
+        entries = existing["payload"].get("entry", [])
+        if not isinstance(entries, list):
+            raise ValueError("Template background quota response is invalid.")
+        entry_count = 0
+        total_bytes = 0
+        existing_data_bytes = None
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            name = entry.get("name")
+            if not isinstance(name, str) or not name.startswith("background://"):
+                continue
+            entry_count += 1
+            content = entry.get("content")
+            value = content.get("data") if isinstance(content, dict) else ""
+            value_bytes = len(value.encode("utf-8")) if isinstance(value, str) else 0
+            total_bytes += value_bytes
+            if name == stanza_name:
+                existing_data_bytes = value_bytes
+        if existing_data_bytes is None:
+            entry_count += 1
+            existing_data_bytes = 0
+        projected_bytes = total_bytes - existing_data_bytes + len(data.encode("utf-8"))
+        if entry_count > MAX_TEMPLATE_BACKGROUND_ENTRIES:
+            raise ValueError(
+                "Template backgrounds exceed their {}-entry limit.".format(
+                    MAX_TEMPLATE_BACKGROUND_ENTRIES
+                )
+            )
+        if projected_bytes > MAX_TEMPLATE_BACKGROUND_TOTAL_BYTES:
+            raise ValueError(
+                "Template backgrounds exceed their {}-byte total limit.".format(
+                    MAX_TEMPLATE_BACKGROUND_TOTAL_BYTES
+                )
+            )
 
     def handle(self, in_string):
         try:
@@ -328,6 +430,10 @@ class WorkspaceMutationHandler(PersistentServerConnectionApplication):
                     name_values = raw_settings.pop("name", [])
                     stanza_name = name_values[-1] if name_values else None
                 settings = validate_settings(conf_name, stanza_name, raw_settings)
+                if conf_name == TEMPLATES_CONF:
+                    self._ensure_template_background_quota(
+                        request, stanza_name, settings["data"]
+                    )
                 settings["updated_at"] = datetime.now(timezone.utc).isoformat().replace(
                     "+00:00", "Z"
                 )

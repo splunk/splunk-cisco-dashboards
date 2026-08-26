@@ -5,6 +5,7 @@ import json
 import pathlib
 import sys
 import types
+import urllib.parse
 import unittest
 
 
@@ -16,11 +17,16 @@ class _PersistentServerConnectionApplication:
 fake_splunk = types.ModuleType("splunk")
 fake_rest = types.ModuleType("splunk.rest")
 fake_rest.calls = []
+fake_rest.response_status = 201
+fake_rest.response_content = b'{"entry": []}'
 
 
 def _simple_request(path, **kwargs):
     fake_rest.calls.append((path, kwargs))
-    return types.SimpleNamespace(status=201), b'{"entry": []}'
+    return (
+        types.SimpleNamespace(status=fake_rest.response_status),
+        fake_rest.response_content,
+    )
 
 
 fake_rest.simpleRequest = _simple_request
@@ -49,6 +55,8 @@ spec.loader.exec_module(handler)
 class WorkspaceRestValidationTest(unittest.TestCase):
     def setUp(self):
         fake_rest.calls.clear()
+        fake_rest.response_status = 201
+        fake_rest.response_content = b'{"entry": []}'
 
     def test_accepts_every_supported_stanza_family(self):
         scenarios = (
@@ -83,6 +91,11 @@ class WorkspaceRestValidationTest(unittest.TestCase):
                     ],
                 },
             ),
+            (
+                handler.TEMPLATES_CONF,
+                "background://bg_1730000000000",
+                {"data": ["data:image/png;base64,iVBORw0KGgo="]},
+            ),
         )
         for conf_name, stanza, fields in scenarios:
             with self.subTest(stanza=stanza):
@@ -108,6 +121,7 @@ class WorkspaceRestValidationTest(unittest.TestCase):
             (handler.WORKSPACE_CONF, "layout.missing_section"),
             (handler.TOPOLOGY_CONF, "other_topology"),
             (handler.TOPOLOGY_CONF, "overview_customer_connectivity-unsafe"),
+            (handler.TEMPLATES_CONF, "background://factory_override"),
         ):
             with self.subTest(stanza=stanza), self.assertRaises(ValueError):
                 handler.fields_for_stanza(conf_name, stanza)
@@ -155,6 +169,13 @@ class WorkspaceRestValidationTest(unittest.TestCase):
                 "payload_json",
                 json.dumps({"value": "x" * handler.MAX_TOPOLOGY_PAYLOAD_BYTES}),
             ),
+            (
+                handler.TEMPLATES_CONF,
+                "background://bg_1730000000000",
+                "data",
+                "data:image/png;base64,"
+                + "a" * handler.MAX_TEMPLATE_BACKGROUND_DATA_BYTES,
+            ),
         )
         for conf_name, stanza, field, value in scenarios:
             with self.subTest(field=field), self.assertRaisesRegex(ValueError, "limit"):
@@ -190,6 +211,29 @@ class WorkspaceRestValidationTest(unittest.TestCase):
                     handler.WORKSPACE_CONF,
                     "workspace.delegated_ops",
                     {"default_logo_src": [value]},
+                )
+
+    def test_restricts_template_background_sources(self):
+        safe_source = "data:image/png;base64,iVBORw0KGgo="
+        self.assertEqual(
+            handler.validate_settings(
+                handler.TEMPLATES_CONF,
+                "background://bg_1730000000000",
+                {"data": [safe_source]},
+            ),
+            {"data": safe_source},
+        )
+        for value in (
+            "https://example.test/background.png",
+            "data:image/svg+xml;base64,PHN2Zy8+",
+            "data:image/png;base64,aGVsbG8=",
+            "data:image/png;base64,not-base64",
+        ):
+            with self.subTest(value=value), self.assertRaisesRegex(ValueError, "data"):
+                handler.validate_settings(
+                    handler.TEMPLATES_CONF,
+                    "background://bg_1730000000000",
+                    {"data": [value]},
                 )
 
     def test_rejects_unbounded_or_malformed_topology_collections(self):
@@ -275,6 +319,76 @@ class WorkspaceRestValidationTest(unittest.TestCase):
         )
         self.assertEqual(response["status"], 400)
         self.assertEqual(fake_rest.calls, [])
+
+    def test_template_background_handler_checks_quota_before_system_write(self):
+        safe_data = "data:image/png;base64,iVBORw0KGgo="
+        fake_rest.response_content = json.dumps(
+            {
+                "entry": [
+                    {
+                        "name": "background://bg_{}".format(index),
+                        "content": {"data": safe_data},
+                    }
+                    for index in range(handler.MAX_TEMPLATE_BACKGROUND_ENTRIES)
+                ]
+            }
+        ).encode("utf-8")
+        app = handler.WorkspaceMutationHandler(None, None)
+        response = app.handle(
+            json.dumps(
+                {
+                    "method": "POST",
+                    "rest_path": "/scd_dashboard_backgrounds",
+                    "payload": urllib.parse.urlencode(
+                        {
+                            "name": "background://bg_1730000000000",
+                            "data": safe_data,
+                        }
+                    ),
+                    "system_authtoken": "system-token",
+                    "session": {"user": "delegated-user"},
+                }
+            )
+        )
+        self.assertEqual(response["status"], 400)
+        self.assertIn("entry limit", response["payload"]["error"])
+        self.assertEqual(len(fake_rest.calls), 1)
+        self.assertEqual(fake_rest.calls[0][1]["method"], "GET")
+        self.assertEqual(fake_rest.calls[0][1]["getargs"]["count"], "0")
+
+    def test_template_background_handler_uses_system_token_after_validation(self):
+        safe_data = "data:image/png;base64,iVBORw0KGgo="
+        app = handler.WorkspaceMutationHandler(None, None)
+        response = app.handle(
+            json.dumps(
+                {
+                    "method": "POST",
+                    "rest_path": "/scd_dashboard_backgrounds",
+                    "payload": urllib.parse.urlencode(
+                        {
+                            "name": "background://bg_1730000000000",
+                            "data": safe_data,
+                        }
+                    ),
+                    "system_authtoken": "system-token",
+                    "session": {"user": "delegated-user", "authtoken": "caller-token"},
+                }
+            )
+        )
+        self.assertEqual(response["status"], 201)
+        self.assertEqual(len(fake_rest.calls), 2)
+        _list_path, list_kwargs = fake_rest.calls[0]
+        write_path, write_kwargs = fake_rest.calls[1]
+        self.assertEqual(list_kwargs["method"], "GET")
+        self.assertEqual(
+            write_path,
+            "/servicesNS/nobody/splunk-cisco-dashboards/configs/conf-templates",
+        )
+        self.assertEqual(write_kwargs["sessionKey"], "system-token")
+        self.assertNotEqual(write_kwargs["sessionKey"], "caller-token")
+        self.assertEqual(
+            write_kwargs["postargs"]["name"], "background://bg_1730000000000"
+        )
 
 
 if __name__ == "__main__":

@@ -527,6 +527,11 @@ assert.match(
   /Topology palette items and key manager\/KPI[\s\S]*?complete keyboard operation/,
   "The current in-app release notes must disclose the keyboard accessibility improvements",
 );
+assert.match(
+  userGuide,
+  /bounded Dashboard Builder background[\s\S]*?capability delegation/,
+  "The current in-app release notes must disclose bounded shared background management",
+);
 
 assert.match(profile, /useInsightsWorkspacePermissions\(\)/);
 assert.match(

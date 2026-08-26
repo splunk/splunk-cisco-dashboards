@@ -1,6 +1,7 @@
 import { getDefaultFetchInit } from '@splunk/splunk-utils/fetch';
 import { INSIGHTS_APP_ID } from './constants';
 import { requiresDashboardManagerRuntime } from '../config/managedStudioViews';
+import { isAllowedDashboardBackgroundUpload } from './imageSource';
 import { escapeCdata } from './xmlCdata';
 
 const jsonParams = new URLSearchParams({ output_mode: 'json' });
@@ -298,7 +299,18 @@ export async function getBackgrounds() {
 }
 
 export async function addBackgrounds(image) {
-    const name = `background://bg_${Date.now()}`;
+    if (!isAllowedDashboardBackgroundUpload(image)) {
+        return {
+            status: 400,
+            messages: [
+                {
+                    type: 'ERROR',
+                    text: 'Background uploads must be bounded PNG, JPEG, GIF, or WebP images.',
+                },
+            ],
+        };
+    }
+    const name = `background://bg_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
     const body = new URLSearchParams({
         name,
         data: image,
@@ -307,7 +319,7 @@ export async function addBackgrounds(image) {
     return requestJson(
         `/en-US/splunkd/__raw/servicesNS/nobody/${encodeURIComponent(
             INSIGHTS_APP_ID,
-        )}/configs/conf-templates?${jsonParams.toString()}`,
+        )}/scd_dashboard_backgrounds?${jsonParams.toString()}`,
         {
             method: 'POST',
             body: body.toString(),

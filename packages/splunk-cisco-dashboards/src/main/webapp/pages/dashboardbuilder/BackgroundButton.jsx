@@ -7,6 +7,11 @@ import Modal from '@splunk/react-ui/Modal';
 import Picture from '@splunk/react-icons/Picture';
 import '../../common/styles/commonstyles.css';
 import { getBackgrounds, addBackgrounds } from '../../common/lib/splunk';
+import {
+    isAllowedDashboardBackgroundFile,
+    isAllowedDashboardBackgroundUpload,
+    normalizeDashboardBackgroundSource,
+} from '../../common/lib/imageSource';
 import CardLayout from '@splunk/react-ui/CardLayout';
 import Card from '@splunk/react-ui/Card';
 import { cloneDeep, isEqual } from 'lodash-es';
@@ -64,15 +69,21 @@ export const prepareBackgroundChoices = (entries = []) => {
                 background?.content?.data &&
                 !RETIRED_BACKGROUND_NAMES.has(background.name),
         )
-        .map((background) => ({
-            ...background,
-            content: {
-                ...background.content,
-                name:
-                    background.content.name ||
-                    `Custom Background — ${background.name.replace('background://', '')}`,
-            },
-        }))
+        .map((background) => {
+            const source = normalizeDashboardBackgroundSource(background.content.data);
+            if (!source) return undefined;
+            return {
+                ...background,
+                content: {
+                    ...background.content,
+                    data: source,
+                    name:
+                        background.content.name ||
+                        `Custom Background — ${background.name.replace('background://', '')}`,
+                },
+            };
+        })
+        .filter(Boolean)
         .filter((background) => {
             if (seenNames.has(background.name) || seenImages.has(background.content.data)) {
                 return false;
@@ -83,7 +94,7 @@ export const prepareBackgroundChoices = (entries = []) => {
         });
 };
 
-export function ImageBase64Encoder({ setNewBG }) {
+export function ImageBase64Encoder({ setNewBG, setDisplayError }) {
     const [base64, setBase64] = useState(undefined);
     const [dragActive, setDragActive] = useState(false);
 
@@ -100,10 +111,24 @@ export function ImageBase64Encoder({ setNewBG }) {
     // --- Handle file upload ---
     const handleFiles = async (files) => {
         const file = files[0];
-        if (file) {
+        if (!isAllowedDashboardBackgroundFile(file?.type, file?.size)) {
+            setBase64(undefined);
+            setNewBG(undefined);
+            setDisplayError(true);
+            return;
+        }
+        try {
             const encoded = await encodeToBase64(file);
+            if (!isAllowedDashboardBackgroundUpload(encoded)) {
+                throw new Error('Unsupported image data');
+            }
             setBase64(encoded);
             setNewBG(encoded);
+            setDisplayError(false);
+        } catch {
+            setBase64(undefined);
+            setNewBG(undefined);
+            setDisplayError(true);
         }
     };
 
@@ -134,7 +159,7 @@ export function ImageBase64Encoder({ setNewBG }) {
                 <p>Drag & drop your image here, or click to upload</p>
                 <input
                     type="file"
-                    accept="image/*"
+                    accept="image/png,image/jpeg,image/gif,image/webp"
                     onChange={(e) => handleFiles(e.target.files)}
                     id="fileInput"
                     className="file-input"
@@ -187,6 +212,10 @@ const BackgroundButton = (props) => {
     };
 
     const handleUploadBG = () => {
+        if (!isAllowedDashboardBackgroundUpload(newBG)) {
+            setDisplayError(true);
+            return;
+        }
         addBackgrounds(newBG).then((response) => {
             if (response.status >= 200 && response.status <= 299) {
                 setOpenBackgroundModal(false);
@@ -334,11 +363,13 @@ const BackgroundButton = (props) => {
                         Upload your company’s corporate background image to streamline dashboard
                         design aligned with your brand’s visual identity.
                     </span>
-                    <ImageBase64Encoder setNewBG={setNewBG}></ImageBase64Encoder>
+                    <ImageBase64Encoder
+                        setNewBG={setNewBG}
+                        setDisplayError={setDisplayError}
+                    ></ImageBase64Encoder>
                     {displayError && (
                         <span style={{ color: '#FF0000' }}>
-                            An error occurred while trying to upload the new background. Please
-                            check the browser console logs for more details.
+                            Use a PNG, JPEG, GIF, or WebP image no larger than 2 MB.
                         </span>
                     )}
                 </Modal.Body>

@@ -3,6 +3,13 @@
 access = read : [ * ], write : [ admin, sc_admin, power ]
 export = none
 
+# Backgrounds are shared renderer inputs. `power` keeps the intended UI
+# workflow through the capability-protected handler, while direct raw config
+# writes are restricted to trusted application administrators.
+[templates]
+access = read : [ * ], write : [ admin, sc_admin ]
+export = none
+
 [macros/dnac_site_normalize%281%29]
 access = read : [ * ], write : [ admin, power, sc_admin ]
 export = system

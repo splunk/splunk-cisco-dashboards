@@ -10,6 +10,9 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Restricted Dashboard Builder background uploads to bounded PNG, JPEG, GIF, or
+  WebP data, persisted them through the capability-protected shared
+  configuration handler, and ignore unsupported stored sources in the picker.
 - Aligned staged app metadata with the canonical release version, preserved
   package-time version stamping, enabled app-upgrade notifications, and added
   a reproducible root `yarn test` contract suite.

@@ -34,7 +34,15 @@ new Function(
   path.dirname(modulePath),
 );
 
-const { MAX_SHARED_IMAGE_SOURCE_BYTES, normalizeSharedImageSource } = loadedModule.exports;
+const {
+  MAX_DASHBOARD_BACKGROUND_SOURCE_BYTES,
+  MAX_DASHBOARD_BACKGROUND_UPLOAD_BYTES,
+  MAX_SHARED_IMAGE_SOURCE_BYTES,
+  isAllowedDashboardBackgroundFile,
+  isAllowedDashboardBackgroundUpload,
+  normalizeDashboardBackgroundSource,
+  normalizeSharedImageSource,
+} = loadedModule.exports;
 
 for (const safeSource of [
   "data:image/svg+xml;utf8,%3Csvg%2F%3E",
@@ -65,6 +73,52 @@ for (const unsafeSource of [
   );
 }
 
+for (const safeBackground of [
+  "data:image/svg+xml;utf8,%3Csvg%2F%3E",
+  "data:image/png;base64,iVBORw0KGgo=",
+]) {
+  assert.equal(
+    normalizeDashboardBackgroundSource(`  ${safeBackground}  `),
+    safeBackground,
+    `Existing safe dashboard background remains available: ${safeBackground}`,
+  );
+}
+
+for (const unsafeBackground of [
+  "https://example.test/background.png",
+  "javascript:alert(1)",
+  "data:text/html,<script>alert(1)</script>",
+  `data:image/png;base64,${"a".repeat(MAX_DASHBOARD_BACKGROUND_SOURCE_BYTES)}`,
+]) {
+  assert.equal(
+    normalizeDashboardBackgroundSource(unsafeBackground),
+    undefined,
+    `Unsafe persisted dashboard background must not reach the picker: ${unsafeBackground.slice(0, 80)}`,
+  );
+}
+
+assert.equal(
+  isAllowedDashboardBackgroundUpload("data:image/png;base64,iVBORw0KGgo="),
+  true,
+  "New raster uploads remain supported",
+);
+for (const invalidUpload of [
+  "data:image/svg+xml;base64,PHN2Zy8+",
+  "https://example.test/background.png",
+]) {
+  assert.equal(
+    isAllowedDashboardBackgroundUpload(invalidUpload),
+    false,
+    `New uploads reject unsupported source: ${invalidUpload}`,
+  );
+}
+assert.equal(isAllowedDashboardBackgroundFile("image/png", 1024), true);
+assert.equal(isAllowedDashboardBackgroundFile("image/svg+xml", 1024), false);
+assert.equal(
+  isAllowedDashboardBackgroundFile("image/png", MAX_DASHBOARD_BACKGROUND_UPLOAD_BYTES + 1),
+  false,
+);
+
 for (const relativePath of [
   "src/main/webapp/common/services/insightsWorkspaceService.ts",
   "src/main/webapp/common/services/diagramPersistenceService.ts",
@@ -79,6 +133,24 @@ for (const relativePath of [
     `${relativePath} must apply the shared image-source boundary`,
   );
 }
+
+const splunkSource = fs.readFileSync(
+  path.join(packageRoot, "src/main/webapp/common/lib/splunk.js"),
+  "utf8",
+);
+const backgroundButtonSource = fs.readFileSync(
+  path.join(packageRoot, "src/main/webapp/pages/dashboardbuilder/BackgroundButton.jsx"),
+  "utf8",
+);
+const addBackgroundsSource = splunkSource.slice(
+  splunkSource.indexOf("export async function addBackgrounds"),
+  splunkSource.indexOf("export async function isAppInstalled"),
+);
+assert.match(addBackgroundsSource, /isAllowedDashboardBackgroundUpload/);
+assert.match(addBackgroundsSource, /scd_dashboard_backgrounds/);
+assert.doesNotMatch(addBackgroundsSource, /configs\/conf-templates/);
+assert.match(backgroundButtonSource, /normalizeDashboardBackgroundSource/);
+assert.match(backgroundButtonSource, /isAllowedDashboardBackgroundFile/);
 
 test("diagram persistence removes an unsafe nested custom stencil", async () => {
   const diagramSourcePath = path.join(
