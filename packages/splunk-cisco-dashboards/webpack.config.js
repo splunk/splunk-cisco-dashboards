@@ -193,7 +193,22 @@ const commonConfig = webpackMerge(baseConfig, {
                     from: splunkRoot,
                     to: stageRoot,
                     globOptions: {
-                        ignore: ['**/.DS_Store', '**/__pycache__/**', '**/*.pyc'],
+                        // Keep common local-secret artifacts out of every staged app,
+                        // including watcher-linked development installs. SplunkBase
+                        // packaging independently rejects *all* ignored source inputs
+                        // below src/main/resources/splunk so a clean Git status cannot
+                        // mask an archive-only secret.
+                        ignore: [
+                            '**/.DS_Store',
+                            '**/__pycache__/**',
+                            '**/*.pyc',
+                            '**/.env',
+                            '**/.env.*',
+                            '**/*.key',
+                            '**/*.pem',
+                            '**/*.p12',
+                            '**/*.pfx',
+                        ],
                     },
                 },
                 {

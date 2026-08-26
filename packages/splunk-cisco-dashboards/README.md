@@ -19,6 +19,9 @@ networking pillars and workplace scenarios.
 - Applied the same shared image-source boundary to Cisco Spaces floor-plan
   visualizations, so stored map images cannot cause viewer browsers to fetch
   arbitrary network or local URLs.
+- Made release staging reject ignored Splunk resource inputs and exclude common
+  local-secret files before they can reach a watcher-linked app or SplunkBase
+  archive.
 - Aligned staged app metadata with the canonical release version, preserved
   package-time version stamping, enabled app-upgrade notifications, and added
   a reproducible root `yarn test` contract suite.

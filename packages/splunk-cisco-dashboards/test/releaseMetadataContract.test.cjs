@@ -123,6 +123,11 @@ assert.match(
   "webpack must copy the version-aligned source app.conf into stage/",
 );
 assert.match(
+  webpackConfig,
+  /ignore:\s*\[[\s\S]*?'\*\*\/\.env'[\s\S]*?'\*\*\/\.env\.\*'/,
+  "webpack must keep common local-secret files out of every staged app",
+);
+assert.match(
   stampScript,
   /VERSION_FILE="\$\{ROOT_DIR\}\/VERSION"[\s\S]*?\(in_id \|\| in_launcher\)[\s\S]*?version/,
   "the package stamp must continue to read VERSION and stamp both app version fields",
@@ -141,6 +146,11 @@ assert.match(
   packageScript,
   /Splunkbase packaging requires a clean Git worktree[\s\S]*?release-provenance\.json/,
   "canonical Splunkbase packaging must bind the archive to a clean committed source state",
+);
+assert.match(
+  packageScript,
+  /assert_no_ignored_release_inputs\(\)[\s\S]*?git -C "\$ROOT_DIR" check-ignore --quiet --no-index[\s\S]*?find "\$SPLUNK_RESOURCES_DIR" \\\( -type f -o -type l \\\) -print0/,
+  "Splunkbase packaging must reject ignored files that would otherwise evade Git status",
 );
 assert.match(
   execFileSync(process.execPath, [releaseIdentityValidatorPath], {

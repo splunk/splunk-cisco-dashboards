@@ -131,7 +131,29 @@ fi
 # state. A watcher-linked stage can retain stale bundles, so reserve it for
 # explicitly labeled developer packages only. The clean-worktree gate also
 # prevents a release archive from silently containing uncommitted source
-# changes that cannot be reconstructed later.
+# changes that cannot be reconstructed later. Git status deliberately omits
+# ignored files, though CopyWebpackPlugin can otherwise copy them from the
+# resource tree, so reject ignored release inputs explicitly as well.
+assert_no_ignored_release_inputs() {
+  local candidate
+  local relative_path
+  local -a ignored_paths=()
+
+  while IFS= read -r -d '' candidate; do
+    if git -C "$ROOT_DIR" check-ignore --quiet --no-index -- "$candidate"; then
+      relative_path="${candidate#"${ROOT_DIR}"/}"
+      ignored_paths+=("$relative_path")
+    fi
+  done < <(find "$SPLUNK_RESOURCES_DIR" \( -type f -o -type l \) -print0)
+
+  if [[ "${#ignored_paths[@]}" -gt 0 ]]; then
+    echo "ERROR: Splunkbase packaging refuses ignored files under release inputs." >&2
+    echo "       Commit approved resources or remove these ignored files before packaging:" >&2
+    printf '       %s\n' "${ignored_paths[@]}" >&2
+    return 1
+  fi
+}
+
 resolve_clean_release_commit() {
   if ! git -C "$ROOT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "ERROR: Splunkbase packaging requires a Git worktree at ${ROOT_DIR}." >&2
@@ -140,6 +162,9 @@ resolve_clean_release_commit() {
   if [[ -n "$(git -C "$ROOT_DIR" status --porcelain --untracked-files=all)" ]]; then
     echo "ERROR: Splunkbase packaging requires a clean Git worktree." >&2
     echo "       Commit, remove, or intentionally ignore source changes before packaging." >&2
+    return 1
+  fi
+  if ! assert_no_ignored_release_inputs; then
     return 1
   fi
   local commit
