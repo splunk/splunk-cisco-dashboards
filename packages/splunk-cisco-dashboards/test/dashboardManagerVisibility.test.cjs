@@ -158,6 +158,11 @@ assert.match(
   "The Searchbase picker must style both its compact-results control and compact rows",
 );
 assert.match(
+  commonStyles,
+  /\.dropdown-kpi-menu \{[\s\S]*?min-width: 440px;[\s\S]*?max-height: calc\(100vh - 24px\);[\s\S]*?resize: both;/,
+  "The Searchbase picker must be resizable without exceeding the viewport",
+);
+assert.match(
   searchbasePicker,
   /const \[compactResults, setCompactResults\] = useState\(true\)[\s\S]*?Compact rows[\s\S]*?compact=\{compactResults\}/,
   "The Searchbase picker must start compact and let users reveal full metadata",

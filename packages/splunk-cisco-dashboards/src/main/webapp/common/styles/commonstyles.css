@@ -2885,8 +2885,12 @@ div.card-trend-footer [data-test='button'] {
     display: flex;
     flex-direction: column;
     width: 620px;
+    min-width: 440px;
+    min-height: 320px;
     max-width: calc(100vw - 48px);
+    max-height: calc(100vh - 24px);
     overflow: hidden;
+    resize: both;
     background: var(--dashboard-builder-background-popup, #ffffff);
     border-color: var(--dashboard-builder-border-weak, #cccccc);
     color: var(--dashboard-builder-content-default, #4d4d4d);
@@ -3225,6 +3229,13 @@ div.card-trend-footer [data-test='button'] {
 @media (prefers-reduced-motion: reduce) {
     .dropdown-kpi-filter-caret {
         transition: none;
+    }
+}
+
+@media (max-width: 520px) {
+    .dropdown-kpi-menu {
+        min-width: 0;
+        resize: vertical;
     }
 }
 
