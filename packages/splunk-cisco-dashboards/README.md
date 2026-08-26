@@ -24,6 +24,8 @@ networking pillars and workplace scenarios.
   archive.
 - Bound the update-discovery package ID and archive provenance to the numeric
   SplunkBase listing ID recorded in the committed release ledger.
+- Documented the bounded, capability-protected Dashboard Builder background
+  registry and its Search Head Cluster behavior.
 - Aligned staged app metadata with the canonical release version, preserved
   package-time version stamping, enabled app-upgrade notifications, and added
   a reproducible root `yarn test` contract suite.
@@ -377,13 +379,16 @@ You can force one mode or the other with `window.__SPLUNK_RUNTIME__`.
 
 ### Security notes
 
-* SPL strings are validated against an allow-list before they ever reach
-  the search runtime — defense-in-depth against accidental or malicious
-  injection through string concatenation.
+* The shared search service rejects empty, oversized, and control-character
+  SPL before it reaches the runtime. App-owned configuration supplies the
+  queries; Open in Search values have a separate static-choice and time-range
+  guard.
 * The Security page time-window selector is allow-listed with an
   enumerated list and re-validated before the search params are formed.
 * No Splunk credentials are held by the client — Splunk Web manages auth
-  via HttpOnly cookies; the app never touches `localStorage`.
+  via HttpOnly cookies. The app uses `localStorage` only for user-scoped
+  workspace and branding preferences; it does not write Splunk credentials or
+  session tokens there.
 
 ## License
 

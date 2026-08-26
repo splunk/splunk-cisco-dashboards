@@ -22,6 +22,11 @@ const customerTopologySpecPath = path.join(
   packageRoot,
   "src/main/resources/splunk/README/customer_topology.conf.spec",
 );
+const templatesSpecPath = path.join(
+  packageRoot,
+  "src/main/resources/splunk/README/templates.conf.spec",
+);
+const packageReadmePath = path.join(packageRoot, "README.md");
 const releaseIdentityValidatorPath = path.join(
   packageRoot,
   "bin/validate_release_identity.js",
@@ -35,6 +40,8 @@ const packageScript = fs.readFileSync(packageScriptPath, "utf8");
 const stampScript = fs.readFileSync(stampScriptPath, "utf8");
 const serverConf = fs.readFileSync(serverConfPath, "utf8");
 const customerTopologySpec = fs.readFileSync(customerTopologySpecPath, "utf8");
+const templatesSpec = fs.readFileSync(templatesSpecPath, "utf8");
+const packageReadme = fs.readFileSync(packageReadmePath, "utf8");
 const releaseLedger = JSON.parse(fs.readFileSync(releaseLedgerPath, "utf8"));
 
 const stanza = (name) => {
@@ -126,6 +133,36 @@ assert.match(
   customerTopologySpec,
   /128 KiB,[\s\S]*?250 sites, 500 links, and 16 aliases per site/,
   "Topology documentation must describe the enforced rendering-cardinality limits",
+);
+assert.match(
+  templatesSpec,
+  /background:\/\/bg_<slug>[\s\S]*?background:\/\/bg_\[a-z0-9\]/,
+  "Template documentation must distinguish the writable background stanza namespace",
+);
+assert.match(
+  templatesSpec,
+  /data:image\/\(png\|jpeg\|gif\|webp\);base64[\s\S]*?3 MiB[\s\S]*?48 `background:\/\/` stanzas[\s\S]*?12 MiB/,
+  "Template documentation must state the server-enforced data and quota limits",
+);
+assert.match(
+  templatesSpec,
+  /scd_dashboard_backgrounds[\s\S]*?scd_manage_insights_workspaces[\s\S]*?admin and sc_admin[\s\S]*?reload\.templates = simple[\s\S]*?conf_replication_include\.templates = true/,
+  "Template documentation must cover the mutation route, capability, ACL, reload, and SHC boundary",
+);
+assert.doesNotMatch(
+  packageReadme,
+  /SPL strings are validated against an allow-list/,
+  "Security documentation must not claim a broad SPL allow-list that the runtime does not implement",
+);
+assert.doesNotMatch(
+  packageReadme,
+  /the app never touches `localStorage`/,
+  "Security documentation must not deny the user-scoped browser preferences the app actually stores",
+);
+assert.match(
+  packageReadme,
+  /rejects empty, oversized, and control-character[\s\S]*?workspace and branding preferences/,
+  "Security documentation must describe the implemented SPL and browser-storage boundaries",
 );
 
 assert.match(
