@@ -83,6 +83,7 @@ import {
   requiresDashboardManagerRuntime,
 } from "../../common/config/managedStudioViews";
 import { getDashboard } from "../../common/lib/splunk";
+import { escapeCdata } from "../../common/lib/xmlCdata";
 import "../../common/styles/commonstyles.css";
 import Toaster, {
   makeCreateToast,
@@ -373,7 +374,7 @@ async function updateDash(
     <label>${escapeXml(label)}</label>
     <description>${escapeXml(description)}</description>
     <tag>${escapeXml(tag)}</tag>
-   <definition><![CDATA[${jsonDefinition}]]></definition>
+   <definition><![CDATA[${escapeCdata(jsonDefinition)}]]></definition>
    
    <meta type="hiddenElements"><![CDATA[
         {

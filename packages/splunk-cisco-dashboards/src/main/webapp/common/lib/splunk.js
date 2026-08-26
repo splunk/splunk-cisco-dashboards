@@ -1,6 +1,7 @@
 import { getDefaultFetchInit } from '@splunk/splunk-utils/fetch';
 import { INSIGHTS_APP_ID } from './constants';
 import { requiresDashboardManagerRuntime } from '../config/managedStudioViews';
+import { escapeCdata } from './xmlCdata';
 
 const jsonParams = new URLSearchParams({ output_mode: 'json' });
 const jsonCountParams = new URLSearchParams({ output_mode: 'json', count: '0' });
@@ -156,7 +157,7 @@ export async function addDash(
     const definition = `<dashboard version="2" theme="${dashboardTheme}"${visibilityAttribute}>
    <label>${escapeXml(dashLabel || dashName)}</label>
    <description>${escapeXml(dashDescription)}</description>
-   <definition><![CDATA[${jsonDefinition}]]></definition>
+   <definition><![CDATA[${escapeCdata(jsonDefinition)}]]></definition>
    <tag>${escapeXml(dashTag)}</tag>
    <meta type="hiddenElements"><![CDATA[
         {

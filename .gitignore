@@ -42,6 +42,7 @@
 !/packages/splunk-cisco-dashboards/test/routerDependencyContract.test.cjs
 !/packages/splunk-cisco-dashboards/test/thousandEyesUrl.test.cjs
 !/packages/splunk-cisco-dashboards/test/customerTopologyBounds.test.cjs
+!/packages/splunk-cisco-dashboards/test/xmlCdata.test.cjs
 /tests/
 
 # Operating-system, editor, and document artifacts.
