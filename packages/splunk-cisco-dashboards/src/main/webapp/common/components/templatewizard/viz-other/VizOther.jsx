@@ -769,7 +769,7 @@ const VizOther = (props) => {
                                     <Modal.Body>{modalContent}</Modal.Body>
                                     <Modal.Footer>
                                         <Button
-                                            onClick={() => setIsModalOpen(false)}
+                                            onClick={() => setModalOpen(false)}
                                             label="Close"
                                         />
                                         <Button

@@ -1846,13 +1846,21 @@ iseval = 0`}</CodeBlock>
                         Networking KPI stories, guided setup, workspace
                         customization, Searchbase drilldowns, and
                         site-connectivity improvements. IOS-XR anomaly searches
-                        are now self-contained, and shared workspace management
-                        supports narrow capability delegation.
+                        are now self-contained, Open in Search accepts only
+                        dashboard-defined safe filter values, and shared
+                        workspace management supports narrow capability
+                        delegation. Topology palette items and key manager/KPI
+                        dialogs now support complete keyboard operation. Release
+                        metadata now follows the canonical app version,
+                        upgrade notifications are explicit, and React Router
+                        is on its supported security-maintenance line.
                       </td>
                       <td className="px-3 py-3 sui-color-default">
                         Install the build through the supported app-management
                         workflow; no customer-managed Splunk restart is
-                        required. Existing workspaces keep their saved
+                        required. Release archives now use one validated
+                        packaging path and preserve live development-local
+                        configuration. Existing workspaces keep their saved
                         configuration; assign{" "}
                         <InlineCode>scd_manage_insights_workspaces</InlineCode>{" "}
                         only to custom roles that should manage shared

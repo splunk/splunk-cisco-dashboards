@@ -1429,6 +1429,9 @@ export interface NetworkDiagramCanvasHandle {
     /** Idempotent: if a title node already exists, select it; else
      *  insert one at the current viewport center and select it. */
     addOrSelectTitle: () => void;
+    /** Adds a palette item at the current viewport centre. This gives
+     *  keyboard users the same node-creation path as a palette drop. */
+    addPaletteItem: (payload: PaletteDragPayload) => void;
 }
 
 export interface NetworkDiagramCanvasProps {
@@ -2458,27 +2461,11 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
         [edges, isViewMode, nodes, emitChange, commitHistory]
     );
 
-    /** Drop handler. Reads the palette payload off the DnD
-     *  channel, computes the drop point in flow coordinates,
-     *  determines whether it landed inside a region (→ child
-     *  with `parentId`) or on the open canvas, and spawns the
-     *  appropriate node. */
-    const handleDrop = useCallback(
-        (event: React.DragEvent<HTMLDivElement>) => {
-            event.preventDefault();
-            if (!rfInstance) return;
-            const raw = event.dataTransfer.getData(PALETTE_DND_MIME);
-            if (!raw) return;
-            let payload: PaletteDragPayload;
-            try {
-                payload = JSON.parse(raw) as PaletteDragPayload;
-            } catch {
-                return; // malformed payload — ignore
-            }
-            const cursor = rfInstance.screenToFlowPosition({
-                x: event.clientX,
-                y: event.clientY,
-            });
+    /** Shared node-creation boundary for pointer drops and keyboard palette
+     *  activation. Both routes preserve region membership, history, and the
+     *  asset-deduplication rule. */
+    const addPaletteItemAt = useCallback(
+        (payload: PaletteDragPayload, cursor: XYPosition): void => {
 
             /** Build 115.17 — palette drops are now CENTRED on
              *  the cursor instead of placing the shape's
@@ -2760,7 +2747,6 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
             });
         },
         [
-            rfInstance,
             assetIndex,
             visibilityIndex,
             edges,
@@ -2768,6 +2754,31 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
             commitHistory,
             applyDropHover,
         ]
+    );
+
+    /** Drop handler. Reads the palette payload off the DnD channel and sends
+     *  its exact flow-space cursor to the shared creation boundary. */
+    const handleDrop = useCallback(
+        (event: React.DragEvent<HTMLDivElement>) => {
+            event.preventDefault();
+            if (!rfInstance) return;
+            const raw = event.dataTransfer.getData(PALETTE_DND_MIME);
+            if (!raw) return;
+            let payload: PaletteDragPayload;
+            try {
+                payload = JSON.parse(raw) as PaletteDragPayload;
+            } catch {
+                return;
+            }
+            addPaletteItemAt(
+                payload,
+                rfInstance.screenToFlowPosition({
+                    x: event.clientX,
+                    y: event.clientY,
+                })
+            );
+        },
+        [addPaletteItemAt, rfInstance]
     );
 
     const handleDragOver = useCallback(
@@ -3412,10 +3423,28 @@ const NetworkDiagramCanvasInner: React.FC<NetworkDiagramCanvasProps> = ({
         });
     }, [edges, emitChange, commitHistory, reactFlow, fitNodesInViewport]);
 
+    const addPaletteItem = useCallback(
+        (payload: PaletteDragPayload): void => {
+            if (isViewMode || !rfInstance) return;
+            const wrapperRect = wrapperRef.current?.getBoundingClientRect();
+            const screenPoint = wrapperRect
+                ? {
+                      x: wrapperRect.left + wrapperRect.width / 2,
+                      y: wrapperRect.top + wrapperRect.height / 2,
+                  }
+                : { x: 200, y: 160 };
+            addPaletteItemAt(
+                payload,
+                rfInstance.screenToFlowPosition(screenPoint)
+            );
+        },
+        [addPaletteItemAt, isViewMode, rfInstance]
+    );
+
     useImperativeHandle(
         handleRef,
-        () => ({ addOrSelectTitle }),
-        [addOrSelectTitle]
+        () => ({ addOrSelectTitle, addPaletteItem }),
+        [addOrSelectTitle, addPaletteItem]
     );
 
     /** Delete one or many items at once. The selection-driven

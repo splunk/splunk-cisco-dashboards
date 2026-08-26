@@ -50,6 +50,7 @@ import {
 } from '@/common/services/hostVisibilityService';
 import { DiagramHeader } from '@/common/components/diagram/DiagramHeader';
 import { DiagramPalette } from '@/common/components/diagram/DiagramPalette';
+import type { PaletteDragPayload } from '@/common/components/diagram/types';
 import {
     NetworkDiagramCanvas,
     type DiagramMode,
@@ -274,6 +275,12 @@ const NetworkDiagramPage: React.FC = () => {
      *  it to insert / focus the diagram-title node without the page
      *  having to thread title state through props. */
     const canvasHandleRef = useRef<NetworkDiagramCanvasHandle | null>(null);
+    const handleAddPaletteItem = useCallback(
+        (payload: PaletteDragPayload): void => {
+            canvasHandleRef.current?.addPaletteItem(payload);
+        },
+        []
+    );
     /** Build 115.6 — held across renders so the initial-load
      *  effect (which only fires once) can call the latest version
      *  of handleOpen without depending on it. The ref is updated
@@ -771,7 +778,12 @@ const NetworkDiagramPage: React.FC = () => {
                  *  mode. The whole point of view mode is to show the
                  *  diagram as a finished artefact — exposing the
                  *  drag-source palette would break the illusion. */}
-                {!isViewMode && <DiagramPalette className="flex-shrink-0" />}
+                {!isViewMode && (
+                    <DiagramPalette
+                        className="flex-shrink-0"
+                        onAddToCanvas={handleAddPaletteItem}
+                    />
+                )}
                 <div
                     ref={exportTargetRef}
                     className={cn(

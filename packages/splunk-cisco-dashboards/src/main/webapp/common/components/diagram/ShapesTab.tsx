@@ -813,13 +813,17 @@ const tilePayload = (
     };
 };
 
-const ShapeTile: React.FC<ShapeTileSpec> = ({ id, label, description }) => {
+const ShapeTile: React.FC<
+    ShapeTileSpec & {
+        onAddToCanvas?: (payload: PaletteDragPayload) => void;
+    }
+> = ({ id, label, description, onAddToCanvas }) => {
     // `region` and `textbox` are not in `CISCO_ICONS` — they paint
     // their own custom glyph below (a dashed rect for region, an
     // "T" for textbox). Everything else looks up the Cisco SVG.
     const Icon =
         id === 'region' || id === 'textbox' ? null : CISCO_ICONS[id];
-    const handleDragStart = (e: React.DragEvent<HTMLDivElement>): void => {
+    const handleDragStart = (e: React.DragEvent<HTMLButtonElement>): void => {
         const payload = tilePayload(id);
         e.dataTransfer.setData(PALETTE_DND_MIME, JSON.stringify(payload));
         // The text/plain payload is a best-effort fallback for
@@ -833,15 +837,15 @@ const ShapeTile: React.FC<ShapeTileSpec> = ({ id, label, description }) => {
     };
 
     return (
-        <div
+        <button
+            type="button"
             draggable
             onDragStart={handleDragStart}
-            role="button"
-            tabIndex={0}
-            aria-label={`Drag ${label} to canvas`}
-            title={description}
+            onClick={() => onAddToCanvas?.(tilePayload(id))}
+            aria-label={`Add ${label} to canvas`}
+            title={`${description}. Select to add at the canvas centre, or drag to place it.`}
             className={cn(
-                'group flex flex-col items-center justify-center gap-1 p-2 rounded-lg cursor-grab active:cursor-grabbing select-none',
+                'group flex appearance-none flex-col items-center justify-center gap-1 rounded-lg p-2 text-inherit cursor-grab active:cursor-grabbing select-none',
                 'border  sui-border-weak  sui-bg-section',
                 'sui-hover-border-info hover:shadow-md sui-hover-bg-overlay sui-focus-visible-bg-overlay',
                 'transition-all duration-150'
@@ -871,14 +875,17 @@ const ShapeTile: React.FC<ShapeTileSpec> = ({ id, label, description }) => {
             <div className="text-xs font-medium  sui-color-active text-center leading-tight">
                 {label}
             </div>
-        </div>
+        </button>
     );
 };
 
-const CustomStencilTile: React.FC<{ asset: CustomStencilAsset }> = ({ asset }) => {
+const CustomStencilTile: React.FC<{
+    asset: CustomStencilAsset;
+    onAddToCanvas?: (payload: PaletteDragPayload) => void;
+}> = ({ asset, onAddToCanvas }) => {
     const size = nodeSizeForCustomStencil(asset);
     const isWide = size.width / size.height >= 2.5;
-    const handleDragStart = (e: React.DragEvent<HTMLDivElement>): void => {
+    const handleDragStart = (e: React.DragEvent<HTMLButtonElement>): void => {
         const payload: PaletteDragPayload = {
             variant: 'customStencil',
             asset,
@@ -889,15 +896,15 @@ const CustomStencilTile: React.FC<{ asset: CustomStencilAsset }> = ({ asset }) =
     };
 
     return (
-        <div
+        <button
+            type="button"
             draggable
             onDragStart={handleDragStart}
-            role="button"
-            tabIndex={0}
-            aria-label={`Drag ${asset.label} to canvas`}
-            title={asset.label}
+            onClick={() => onAddToCanvas?.({ variant: 'customStencil', asset })}
+            aria-label={`Add ${asset.label} to canvas`}
+            title={`${asset.label}. Select to add at the canvas centre, or drag to place it.`}
             className={cn(
-                'group flex flex-col items-center justify-center gap-1 p-2 rounded-lg cursor-grab active:cursor-grabbing select-none',
+                'group flex appearance-none flex-col items-center justify-center gap-1 rounded-lg p-2 text-inherit cursor-grab active:cursor-grabbing select-none',
                 'border  sui-border-weak  sui-bg-section',
                 'sui-hover-border-info hover:shadow-md sui-hover-bg-overlay sui-focus-visible-bg-overlay',
                 'transition-all duration-150'
@@ -922,7 +929,7 @@ const CustomStencilTile: React.FC<{ asset: CustomStencilAsset }> = ({ asset }) =
             <div className="text-xs font-medium  sui-color-active text-center leading-tight">
                 {asset.label}
             </div>
-        </div>
+        </button>
     );
 };
 
@@ -973,7 +980,9 @@ const CategoryDrawer: React.FC<CategoryDrawerProps> = ({
     </div>
 );
 
-export const ShapesTab: React.FC = () => {
+export const ShapesTab: React.FC<{
+    onAddToCanvas?: (payload: PaletteDragPayload) => void;
+}> = ({ onAddToCanvas }) => {
     const [query, setQuery] = useState('');
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const [customStencils, setCustomStencils] =
@@ -1170,7 +1179,7 @@ export const ShapesTab: React.FC = () => {
                     </>
                 ) : (
                     <>
-                        Drag any shape onto the canvas. Use{' '}
+                        Drag a shape to place it precisely, or select it to add it at the canvas centre. Use{' '}
                         <span className="font-medium  sui-color-active">
                             Region / Site
                         </span>{' '}
@@ -1204,7 +1213,11 @@ export const ShapesTab: React.FC = () => {
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                         {filteredCustomStencils.map((asset) => (
-                            <CustomStencilTile key={asset.id} asset={asset} />
+                            <CustomStencilTile
+                                key={asset.id}
+                                asset={asset}
+                                onAddToCanvas={onAddToCanvas}
+                            />
                         ))}
                     </div>
                 </div>
@@ -1223,7 +1236,11 @@ export const ShapesTab: React.FC = () => {
                         onToggle={() => toggleCategory(cat)}
                     >
                         {tiles.map((s) => (
-                            <ShapeTile key={s.id} {...s} />
+                            <ShapeTile
+                                key={s.id}
+                                {...s}
+                                onAddToCanvas={onAddToCanvas}
+                            />
                         ))}
                     </CategoryDrawer>
                 );

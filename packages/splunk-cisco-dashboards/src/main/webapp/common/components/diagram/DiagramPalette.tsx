@@ -21,6 +21,7 @@ import { Boxes, ListTree, type SuiIcon } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
 import { ShapesTab } from './ShapesTab';
 import { InventoryTab } from './InventoryTab';
+import type { PaletteDragPayload } from './types';
 
 type TabId = 'shapes' | 'inventory';
 
@@ -33,7 +34,10 @@ const TAB_DEFS: Array<{
     { id: 'inventory', label: 'Inventory', Icon: ListTree },
 ];
 
-export const DiagramPalette: React.FC<{ className?: string }> = ({ className }) => {
+export const DiagramPalette: React.FC<{
+    className?: string;
+    onAddToCanvas?: (payload: PaletteDragPayload) => void;
+}> = ({ className, onAddToCanvas }) => {
     const [active, setActive] = useState<TabId>('shapes');
     return (
         <div
@@ -77,7 +81,11 @@ export const DiagramPalette: React.FC<{ className?: string }> = ({ className }) 
              *  wrapper hid the overflow and `ShapesTab` itself
              *  had no scroll viewport of its own. */}
             <div className="flex-1 min-h-0 overflow-y-auto [contain:layout_paint]">
-                {active === 'shapes' ? <ShapesTab /> : <InventoryTab />}
+                {active === 'shapes' ? (
+                    <ShapesTab onAddToCanvas={onAddToCanvas} />
+                ) : (
+                    <InventoryTab onAddToCanvas={onAddToCanvas} />
+                )}
             </div>
         </div>
     );

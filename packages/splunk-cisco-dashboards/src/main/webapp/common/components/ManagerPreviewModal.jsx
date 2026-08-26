@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import Cross from '@splunk/react-icons/Cross';
 import useSplunkTheme from '@splunk/themes/useSplunkTheme';
+import { useModalFocusTrap } from '@/common/hooks/useModalFocusTrap';
 
 const DEFAULT_WIDTH = 1100;
 const DEFAULT_HEIGHT = 720;
@@ -20,6 +21,7 @@ export default function ManagerPreviewModal({
     const splunkTheme = useSplunkTheme();
     const colorScheme = splunkTheme.colorScheme === 'dark' ? 'dark' : 'light';
     const modalRef = useRef(null);
+    const closeButtonRef = useRef(null);
     const dragStartRef = useRef({ mouseX: 0, mouseY: 0, posX: 0, posY: 0 });
 
     const [position, setPosition] = useState(null);
@@ -33,20 +35,12 @@ export default function ManagerPreviewModal({
         }
     }, [open]);
 
-    useEffect(() => {
-        if (!open) {
-            return undefined;
-        }
-
-        const handleKeyDown = (event) => {
-            if (event.key === 'Escape') {
-                onRequestClose();
-            }
-        };
-
-        document.addEventListener('keydown', handleKeyDown);
-        return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [onRequestClose, open]);
+    useModalFocusTrap({
+        isOpen: open,
+        dialogRef: modalRef,
+        initialFocusRef: closeButtonRef,
+        onClose: onRequestClose,
+    });
 
     const handleDragStart = useCallback(
         (event) => {
@@ -148,11 +142,16 @@ export default function ManagerPreviewModal({
                 }`}
                 style={modalStyle}
                 onClick={(event) => event.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-label={title}
+                tabIndex={-1}
             >
                 <div className="manager-preview-modal-header" onMouseDown={handleDragStart}>
                     <div className="manager-preview-modal-title">{title}</div>
                     <button
                         type="button"
+                        ref={closeButtonRef}
                         className="manager-preview-modal-close"
                         aria-label="Close preview"
                         title="Close preview"

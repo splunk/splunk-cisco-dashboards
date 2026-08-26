@@ -35,6 +35,139 @@ const permissions = loadTypescriptModule(
 );
 const resolve = permissions.resolveInsightsWorkspacePermissions;
 
+const openSearchTokens = loadTypescriptModule(
+  "src/main/webapp/common/lib/openSearchTokenResolution.ts",
+);
+const openSearchInputs = {
+  site: {
+    type: "input.text",
+    options: { token: "site_tok", defaultValue: "*" },
+  },
+  clientType: {
+    type: "input.dropdown",
+    options: {
+      token: "client_type_tok",
+      defaultValue: "*",
+      items: [
+        { label: "All", value: "*" },
+        { label: "Wireless", value: "Wireless" },
+        { label: "Wired", value: "Wired" },
+      ],
+    },
+  },
+  deviceType: {
+    type: "input.multiselect",
+    options: {
+      token: "filter_type",
+      defaultValue: ["*"],
+      items: [
+        { label: "All", value: "*" },
+        { label: "AP", value: "AP" },
+        { label: "Switch", value: "Switch" },
+      ],
+    },
+  },
+  time: {
+    type: "input.timerange",
+    options: { token: "time_tok", defaultValue: "-24h@h,now" },
+  },
+};
+
+const injectedSpl = '" | makeresults | eval compromised=1 | search "';
+assert.equal(
+  openSearchTokens.resolveOpenSearchQuery(
+    'index=main Site="$site_tok$"',
+    openSearchInputs,
+    new URLSearchParams(`site_tok=${encodeURIComponent(injectedSpl)}`),
+  ),
+  'index=main Site="*"',
+  "A free-text URL parameter must not enter the Open in Search SPL",
+);
+assert.equal(
+  openSearchTokens.resolveOpenSearchQuery(
+    'index=main Site="$site_tok$"',
+    openSearchInputs,
+    new URLSearchParams(`form.site_tok=${encodeURIComponent(injectedSpl)}`),
+  ),
+  'index=main Site="*"',
+  "The form-prefixed alias must have the same free-text boundary",
+);
+assert.equal(
+  openSearchTokens.resolveOpenSearchQuery(
+    'index=main clientType="$client_type_tok$"',
+    openSearchInputs,
+    new URLSearchParams("form.client_type_tok=Wireless"),
+  ),
+  'index=main clientType="Wireless"',
+  "Fixed dropdown selections remain usable through the form-prefixed URL alias",
+);
+assert.equal(
+  openSearchTokens.resolveOpenSearchQuery(
+    'index=main clientType="$client_type_tok$"',
+    openSearchInputs,
+    new URLSearchParams(`client_type_tok=${encodeURIComponent(injectedSpl)}`),
+  ),
+  'index=main clientType="*"',
+  "A value outside the dashboard's fixed dropdown choices must fall back to its trusted default",
+);
+assert.equal(
+  openSearchTokens.resolveOpenSearchQuery(
+    'index=main type="$filter_type$"',
+    openSearchInputs,
+    new URLSearchParams("filter_type=AP,Switch"),
+  ),
+  'index=main type="AP,Switch"',
+  "Static multiselect choices remain usable",
+);
+assert.equal(
+  openSearchTokens.resolveOpenSearchQuery(
+    'index=main type="$filter_type$"',
+    openSearchInputs,
+    new URLSearchParams(`filter_type=AP,${encodeURIComponent(injectedSpl)}`),
+  ),
+  'index=main type="*"',
+  "One unsafe multiselect value must reject the entire URL selection",
+);
+assert.equal(
+  openSearchTokens.resolveOpenSearchQuery(
+    'index=main earliest="$time_tok.earliest$" latest="$time_tok.latest$"',
+    openSearchInputs,
+    new URLSearchParams("time_tok.earliest=-4h@m&form.time_tok.latest=now"),
+  ),
+  'index=main earliest="-4h@m" latest="now"',
+  "Bounded time values remain usable from either supported URL key",
+);
+assert.equal(
+  openSearchTokens.resolveOpenSearchQuery(
+    'index=main earliest="$time_tok.earliest$"',
+    openSearchInputs,
+    new URLSearchParams(`time_tok.earliest=${encodeURIComponent(`-4h@m ${injectedSpl}`)}`),
+  ),
+  'index=main earliest="-24h@h"',
+  "Unsafe time syntax must fall back to the app-defined default",
+);
+assert.equal(
+  openSearchTokens.resolveOpenSearchQuery(
+    'index=main invalid="$site_tok.unexpected$"',
+    openSearchInputs,
+    new URLSearchParams(`form.site_tok.unexpected=${encodeURIComponent(injectedSpl)}`),
+  ),
+  'index=main invalid="$site_tok.unexpected$"',
+  "Only the documented earliest/latest timerange suffixes may be resolved",
+);
+assert.equal(
+  openSearchTokens.resolveOpenSearchQuery(
+    'index=main x="$first$" unknown="$unknown$"',
+    {
+      first: { type: "input.text", options: { token: "first", defaultValue: "$second$" } },
+      second: { type: "input.text", options: { token: "second", defaultValue: "resolved" } },
+    },
+    new URLSearchParams("first=value&unknown=attacker"),
+  ),
+  'index=main x="$second$" unknown="$unknown$"',
+  "Token replacements must be one-pass and unknown URL tokens must remain unresolved",
+);
+
 assert.deepEqual(
   resolve({ roles: ["user"], capabilities: ["search"] }),
   {
@@ -261,12 +394,107 @@ const securityOperations = read(
 const securityOperationsStyles = read(
   "src/main/webapp/pages/secure_operations_glass/secure-operations-glass.css",
 );
+const customOpenSearch = read(
+  "src/main/webapp/pages/dashboardbuilder/CustomOpenSearch.jsx",
+);
+const modalFocusTrap = read("src/main/webapp/common/hooks/useModalFocusTrap.ts");
+const managerPreviewModal = read(
+  "src/main/webapp/common/components/ManagerPreviewModal.jsx",
+);
+const kpiBrowser = read(
+  "src/main/webapp/pages/health_monitoring/components/KPIBrowser.tsx",
+);
+const expandedKpiModal = read(
+  "src/main/webapp/pages/health_monitoring/components/ExpandedKPIModal.tsx",
+);
+const vizOther = read(
+  "src/main/webapp/common/components/templatewizard/viz-other/VizOther.jsx",
+);
+const diagramPalette = read(
+  "src/main/webapp/common/components/diagram/DiagramPalette.tsx",
+);
+const inventoryTab = read("src/main/webapp/common/components/diagram/InventoryTab.tsx");
+const shapesTab = read("src/main/webapp/common/components/diagram/ShapesTab.tsx");
+const networkDiagramPage = read("src/main/webapp/pages/network_diagram/index.tsx");
 const webpackConfig = read("webpack.config.js");
 const packageScript = read("bin/package_app.sh");
+const buildScript = read("bin/build.js");
+const packageManifest = JSON.parse(read("package.json"));
 const m365Page = read(
   "src/main/webapp/pages/m365_activity_monitoring/index.tsx",
 );
 const m365Data = read("src/main/webapp/pages/m365_activity_monitoring/data.ts");
+const userGuide = read("src/main/webapp/pages/user_guide/index.tsx");
+
+assert.match(
+  customOpenSearch,
+  /resolveOpenSearchQuery\([\s\S]*?dashboardApi\?\.getDefinition\?\.\(\)\.inputs \|\| \{\}/,
+  "Open in Search must use the policy resolver at the SPL boundary",
+);
+assert.doesNotMatch(
+  customOpenSearch,
+  /getUrlParameter|spl\.replaceAll\(/,
+  "Open in Search must not copy URL values directly into SPL",
+);
+assert.match(
+  customOpenSearch,
+  /ds\.chain[\s\S]*?ds\.searchbase[\s\S]*?ds\.search[\s\S]*?setSplSearch\(resolveTokenValue\(spl\)\)/,
+  "Every supported data source type must converge through the guarded resolver",
+);
+assert.match(
+  modalFocusTrap,
+  /const previouslyFocused = document\.activeElement[\s\S]*?focus\(\{ preventScroll: true \}\)/,
+  "Portal dialogs must restore the invoking control after closing",
+);
+assert.match(
+  modalFocusTrap,
+  /event\.key === 'Escape'[\s\S]*?event\.key !== 'Tab'[\s\S]*?FOCUSABLE_SELECTOR/,
+  "Portal dialogs must handle Escape and contain Tab traversal",
+);
+assert.match(
+  modalFocusTrap,
+  /dialog\.addEventListener\('keydown', onKeyDown\)[\s\S]*?dialog\.removeEventListener\('keydown', onKeyDown\)/,
+  "Each portal dialog must own its keyboard boundary rather than closing a sibling dialog",
+);
+for (const modal of [managerPreviewModal, kpiBrowser, expandedKpiModal]) {
+  assert.match(modal, /useModalFocusTrap\(\{/);
+  assert.match(modal, /role="dialog"[\s\S]*?aria-modal="true"[\s\S]*?tabIndex=\{-1\}/);
+}
+assert.match(
+  vizOther,
+  /<Modal open=\{modalOpen\}[\s\S]*?<Button[\s\S]*?onClick=\{\(\) => setModalOpen\(false\)\}/,
+  "The nested description dialog must close itself rather than the outer wizard",
+);
+for (const palette of [inventoryTab, shapesTab]) {
+  assert.doesNotMatch(palette, /role="button"/);
+  assert.match(
+    palette,
+    /<button[\s\S]*?type="button"[\s\S]*?onClick=\{\(\) => onAddToCanvas\?\.\(/,
+    "Palette items need a native keyboard-operable button action",
+  );
+}
+assert.match(diagramPalette, /onAddToCanvas=\{onAddToCanvas\}/);
+assert.match(
+  networkDiagramCanvas,
+  /const addPaletteItemAt = useCallback[\s\S]*?const handleDrop = useCallback[\s\S]*?addPaletteItemAt\(/,
+  "Pointer drops must retain the common palette item creation boundary",
+);
+assert.match(
+  networkDiagramCanvas,
+  /const addPaletteItem = useCallback[\s\S]*?addPaletteItemAt\([\s\S]*?\(\) => \(\{ addOrSelectTitle, addPaletteItem \}\)/,
+  "Keyboard palette activation must create nodes through the same canvas path",
+);
+assert.match(networkDiagramPage, /onAddToCanvas=\{handleAddPaletteItem\}/);
+assert.match(
+  userGuide,
+  /Open in Search accepts only[\s\S]*?dashboard-defined safe filter values/,
+  "The current in-app release notes must disclose the Open in Search safety boundary",
+);
+assert.match(
+  userGuide,
+  /Topology palette items and key manager\/KPI[\s\S]*?complete keyboard operation/,
+  "The current in-app release notes must disclose the keyboard accessibility improvements",
+);
 
 assert.match(profile, /useInsightsWorkspacePermissions\(\)/);
 assert.match(
@@ -579,6 +807,41 @@ assert.match(
   "Packaging must stamp the chosen app build into the compiled bundle badge",
 );
 assert.match(packageScript, /refusing a mismatched package/);
+assert.doesNotMatch(
+  packageScript,
+  /rm\s+-rf\s+["']?\$\{STAGE_DIR\}\/local["']?/,
+  "Packaging must not delete stage/local because it can belong to a live linked app",
+);
+assert.doesNotMatch(
+  packageScript,
+  /rm\s+-f\s+["']?\$\{STAGE_DIR\}\/metadata\/local\.meta["']?/,
+  "Packaging must not delete source stage metadata created by a live linked app",
+);
+assert.match(
+  packageScript,
+  /rm -rf "\$\{TMP_DIR\}\/\$\{APP_NAME\}\/local"/,
+  "Runtime local state must be removed only from the temporary archive copy",
+);
+assert.match(
+  packageScript,
+  /rm -f\s+"\$\{TMP_DIR\}\/\$\{APP_NAME\}\/metadata\/local\.meta"/,
+  "Runtime metadata must be removed only from the temporary archive copy",
+);
+assert.equal(
+  packageManifest.scripts["pack:app"],
+  "bash bin/package_app.sh",
+  "yarn pack:app must use the canonical packaging path",
+);
+assert.match(
+  buildScript,
+  /function pack\(\{ minify = false \} = \{\}\) \{[\s\S]*?run\("bash", packageArgs\);/,
+  "The legacy build.js pack entry point must delegate to the canonical package script",
+);
+assert.doesNotMatch(
+  buildScript,
+  /run\("tar",/,
+  "build.js must not create a divergent archive directly",
+);
 assert.match(m365Page, /Bundled sample data/);
 assert.match(m365Page, /APP_VERSION_LABEL/);
 assert.doesNotMatch(m365Page, />\s*Live Data\s*</);
