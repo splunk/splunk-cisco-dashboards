@@ -153,6 +153,13 @@ export const getDashboardManagerScope = (dashboard, currentUsername) => {
     return "included";
   }
 
+  if (
+    normalizeValue(dashboard?.sharing) === "app" &&
+    hasLegacyDashboardManagerIdentity(dashboard)
+  ) {
+    return "yours";
+  }
+
   return undefined;
 };
 

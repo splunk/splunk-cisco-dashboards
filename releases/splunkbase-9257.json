@@ -42,6 +42,12 @@
     {
       "version": "1.0.46",
       "build": 2068,
+      "state": "retired_candidate",
+      "note": "Superseded before packaging by build 2069; this is not evidence of publication."
+    },
+    {
+      "version": "1.0.46",
+      "build": 2069,
       "state": "current",
       "note": "Committed source release identity; this is not a claim of publication."
     }

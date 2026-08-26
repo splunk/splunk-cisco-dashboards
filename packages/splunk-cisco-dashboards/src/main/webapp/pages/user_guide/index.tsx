@@ -1861,6 +1861,8 @@ iseval = 0`}</CodeBlock>
                         Manager now makes Edit visible from library cards and
                         previews, while its Searchbase picker starts with compact
                         search-name rows and can reveal full metadata on demand.
+                        New dashboards default to Shared in App, with Private
+                        retained as an explicit creation-time choice.
                       </td>
                       <td className="px-3 py-3 sui-color-default">
                         Install the build through the supported app-management

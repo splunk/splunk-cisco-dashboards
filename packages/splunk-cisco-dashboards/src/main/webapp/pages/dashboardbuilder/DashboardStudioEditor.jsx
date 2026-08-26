@@ -1086,7 +1086,7 @@ const DashboardStudioEditor = ({
   const previousDashModeRef = useRef();
   const [serverInfo, setServerInfo] = useState();
   const hideDashboardEdit =
-    editedDefinition?.applicationProperties?.hideEdit ?? true;
+    editedDefinition?.applicationProperties?.hideEdit ?? false;
 
   const dashboardUsesSearchbase = useMemo(() => {
     if (editedDefinition) {

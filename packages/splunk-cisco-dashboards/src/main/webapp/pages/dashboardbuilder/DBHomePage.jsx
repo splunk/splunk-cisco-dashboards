@@ -38,6 +38,7 @@ import Toaster, {
 import { TOAST_TYPES } from "@splunk/react-toast-notifications/ToastConstants";
 import ToastMessages from "@splunk/react-toast-notifications/ToastMessages";
 import TextArea from "@splunk/react-ui/TextArea";
+import Select from "@splunk/react-ui/Select";
 import Tooltip from "@splunk/react-ui/Tooltip";
 import CustomTooltip from "../../common/components/CustomTooltip/CustomTooltip";
 import ManagerPreviewModal from "../../common/components/ManagerPreviewModal";
@@ -226,11 +227,12 @@ export default function DBHomePage() {
   const [openCreateDashboard, setOpenCreateDashboard] = useState(false);
   const [dashboardTitle, setDashboardTitle] = useState("");
   const [dashboardDescription, setDashboardDescription] = useState("");
+  const [dashboardSharing, setDashboardSharing] = useState("app");
   const [gridLayout, setGridLayout] = useState("absolute");
   const [openDeleteDashboard, setOpenDeleteDashboard] = useState(false);
   const [DashboardToDelete, setDashboardToDelete] = useState();
   const [pageNum, setPageNum] = useState(1);
-  const [dashboardScope, setDashboardScope] = useState("included");
+  const [dashboardScope, setDashboardScope] = useState("yours");
   const [dashboardLibraryView, setDashboardLibraryView] = useState("cards");
   const [openDashboardMetadataEditor, setOpenDashboardMetadataEditor] =
     useState(false);
@@ -363,6 +365,7 @@ export default function DBHomePage() {
       DASHBOARD_MANAGER_TAG,
       "dark",
       currentSplunkUser,
+      dashboardSharing,
     ).then((response) => {
       if (response.status >= 200 && response.status <= 299) {
         console.log(response);
@@ -489,6 +492,7 @@ export default function DBHomePage() {
     setOpenCreateDashboard(false);
     setDashboardTitle("");
     setDashboardDescription("");
+    setDashboardSharing("app");
     setGridLayout("absolute");
   };
 
@@ -612,6 +616,7 @@ export default function DBHomePage() {
       dashboardMetadataTarget.tag || DASHBOARD_MANAGER_TAG,
       dashboardMetadataTarget.theme,
       dashboardMetadataTarget.owner,
+      dashboardMetadataTarget.sharing,
     ).then((response) => {
       if (response.status >= 200 && response.status <= 299) {
         makeCreateToast(Toaster)({
@@ -770,6 +775,18 @@ export default function DBHomePage() {
                 ></TextArea>
               </SplunkControlGroup>
             </div>
+            <SplunkControlGroup
+              label={<span className="dashboard-builder-field-label">Permissions</span>}
+              labelPosition="top"
+            >
+              <Select
+                value={dashboardSharing}
+                onChange={(event, { value }) => setDashboardSharing(value)}
+              >
+                <Select.Option label="Shared in App — Visible to app users" value="app" />
+                <Select.Option label="Private — Visible only to you" value="user" />
+              </Select>
+            </SplunkControlGroup>
             <SplunkControlGroup
               className="dashboard-builder-mode-group"
               label={

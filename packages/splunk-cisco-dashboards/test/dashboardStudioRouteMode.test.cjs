@@ -109,6 +109,11 @@ assert.match(
 );
 assert.match(
   editor,
+  /editedDefinition\?\.applicationProperties\?\.hideEdit \?\? false[\s\S]*?!hideDashboardEdit && <ModeSwitch/,
+  "View-mode Dashboard Manager toolbars must show native Edit unless a dashboard explicitly hides it",
+);
+assert.match(
+  editor,
   /readOnly \? "view" : openID \? "edit" : requestedRouteMode/,
   "Cold /edit loads must initialize Dashboard Studio in edit mode",
 );

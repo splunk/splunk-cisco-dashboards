@@ -82,7 +82,7 @@ loadManagerScope(
   moduleRecord.exports,
 );
 
-const { requiresDashboardManagerRuntime } = moduleRecord.exports;
+const { getDashboardManagerScope, requiresDashboardManagerRuntime } = moduleRecord.exports;
 
 assert.equal(
   requiresDashboardManagerRuntime({
@@ -126,6 +126,20 @@ assert.equal(
   false,
   "Text mentioning an extension type must not hide an otherwise native dashboard",
 );
+assert.equal(
+  getDashboardManagerScope(
+    {
+      title: "scd_shared_dashboard",
+      app: "splunk-cisco-dashboards",
+      tag: "dashboard_manager",
+      owner: "creator",
+      sharing: "app",
+    },
+    "another-app-user",
+  ),
+  "yours",
+  "App-shared Dashboard Manager dashboards must remain discoverable to app users",
+);
 
 assert.match(
   dashboardPersistence,
@@ -151,6 +165,26 @@ assert.match(
   homePage,
   /label="Edit Dashboard"[\s\S]*?handleEditDashboard\(selectedDash\)/,
   "Dashboard previews must let builders resume editing directly",
+);
+assert.match(
+  homePage,
+  /const \[dashboardScope, setDashboardScope\] = useState\("yours"\)/,
+  "Dashboard Manager must open on the user's dashboards so newly created dashboards expose Edit",
+);
+assert.match(
+  homePage,
+  /const \[dashboardSharing, setDashboardSharing\] = useState\("app"\)/,
+  "New Dashboard Manager dashboards must default to app sharing",
+);
+assert.match(
+  homePage,
+  /Shared in App — Visible to app users[\s\S]*?Private — Visible only to you/,
+  "The create dialog must expose the native-style app and private permission choices",
+);
+assert.match(
+  dashboardPersistence,
+  /sharing = 'app'[\s\S]*?owner: namespaceOwner[\s\S]*?sharing: 'app'[\s\S]*?'perms\.read': '\*'/,
+  "Dashboard creation must promote the default to an app-shared readable ACL",
 );
 assert.match(
   commonStyles,

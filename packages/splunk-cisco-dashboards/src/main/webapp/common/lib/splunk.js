@@ -137,6 +137,7 @@ export async function addDash(
     dashTag = '',
     dashTheme = 'light',
     owner = undefined,
+    sharing = 'app',
 ) {
     const namespaceOwner = await resolveDashboardOwner(owner);
     if (!namespaceOwner) {
@@ -179,14 +180,30 @@ export async function addDash(
         body: createBody.toString(),
     });
 
-    if (response.status !== 409) {
-        return response;
+    const savedResponse =
+        response.status !== 409
+            ? response
+            : await requestJson(`${dashboardUrl(namespaceOwner, dashName)}?${jsonParams.toString()}`, {
+                  method: 'POST',
+                  body: new URLSearchParams({ 'eai:data': definition }).toString(),
+              });
+
+    if (savedResponse.status < 200 || savedResponse.status > 299 || sharing !== 'app') {
+        return savedResponse;
     }
 
-    return requestJson(`${dashboardUrl(namespaceOwner, dashName)}?${jsonParams.toString()}`, {
+    const aclResponse = await requestJson(`${dashboardUrl(namespaceOwner, dashName)}/acl?${jsonParams.toString()}`, {
         method: 'POST',
-        body: new URLSearchParams({ 'eai:data': definition }).toString(),
+        body: new URLSearchParams({
+            owner: namespaceOwner,
+            sharing: 'app',
+            'perms.read': '*',
+        }).toString(),
     });
+
+    return aclResponse.status >= 200 && aclResponse.status <= 299
+        ? savedResponse
+        : aclResponse;
 }
 
 export async function syncDashboardManagerNavigation(dashboards = []) {
@@ -205,6 +222,7 @@ export async function updateDashMetadata(
     dashTag = '',
     dashTheme = 'light',
     owner = undefined,
+    sharing = 'user',
 ) {
     const updatedDefinition = {
         ...dashboardDefinition,
@@ -221,6 +239,7 @@ export async function updateDashMetadata(
         dashTag,
         dashTheme,
         owner,
+        sharing,
     );
 }
 
