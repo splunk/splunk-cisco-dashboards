@@ -153,7 +153,16 @@ function makePackageFixture() {
   );
   writeFile(path.join(packageRoot, "bin", "stamp_version.sh"), "#!/usr/bin/env bash\nexit 0\n", 0o755);
   writeFile(path.join(packageRoot, "bin", "apply_build_profile.js"), "process.exit(0);\n");
-  writeFile(path.join(packageRoot, "bin", "verify_production_assets.js"), "process.exit(0);\n");
+  writeFile(
+    path.join(packageRoot, "bin", "verify_production_assets.js"),
+    [
+      "const fs = require('fs');",
+      "if (process.env.SCD_FIXTURE_VERIFY_LOG) {",
+      "  fs.appendFileSync(process.env.SCD_FIXTURE_VERIFY_LOG, String(process.argv[2] || '') + '\\n');",
+      "}",
+      "",
+    ].join("\n"),
+  );
   writeFile(path.join(root, "VERSION"), "1.2.3\n");
   writeFile(
     path.join(root, "releases", "splunkbase-9257.json"),
@@ -348,6 +357,8 @@ function listArchives(distDir) {
 function exercisePackagingProfiles() {
   const fixture = makePackageFixture();
   const distDir = path.join(fixture.root, "dist");
+  const archiveAuditRoot = makeTempRoot("archive-audit");
+  const verifyLog = path.join(archiveAuditRoot, "verifier-paths.log");
   try {
     const legacyArchive = path.join(distDir, `${APP_NAME}-1.2.3.tar.gz`);
     fs.mkdirSync(distDir, { recursive: true });
@@ -405,7 +416,13 @@ function exercisePackagingProfiles() {
 
     run("bash", [fixture.packageScript], {
       cwd: fixture.packageRoot,
+      env: { ...process.env, SCD_FIXTURE_VERIFY_LOG: verifyLog },
     });
+    assert.match(
+      fs.readFileSync(verifyLog, "utf8"),
+      /archive-audit[\\/]splunk-cisco-dashboards/,
+      "Splunkbase packaging must re-extract and verify the final archive before publication",
+    );
 
     const firstArchiveName = listArchives(distDir).find((name) =>
       new RegExp(`^${APP_NAME}-1\\.2\\.3-sha256-[0-9a-f]{64}\\.tar\\.gz$`).test(name),
@@ -552,6 +569,7 @@ function exercisePackagingProfiles() {
     );
   } finally {
     removeTempRoot(fixture.root);
+    removeTempRoot(archiveAuditRoot);
   }
 }
 
@@ -780,6 +798,11 @@ assert.match(
   fs.readFileSync(VERIFY_SCRIPT_SOURCE, "utf8"),
   /SOURCE_MAP_DIRECTIVE_PATTERN[\s\S]*?source-map directives/,
   "Final production verification must reject source maps embedded in JavaScript bundles",
+);
+assert.match(
+  fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
+  /verify_final_archive\(\)[\s\S]*?tar -xzf "\$archive_path"[\s\S]*?verify_production_assets\.js[\s\S]*?verify_final_archive "\$ARCHIVE_TMP"/,
+  "Packaging must re-extract and validate the completed archive before publication",
 );
 const buildScript = fs.readFileSync(BUILD_SCRIPT_SOURCE, "utf8");
 assert.match(

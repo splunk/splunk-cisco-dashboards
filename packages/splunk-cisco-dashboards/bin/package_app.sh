@@ -433,6 +433,25 @@ xattr -cr "${TMP_DIR}/${APP_NAME}" 2>/dev/null || true
 # replace the checked JavaScript between verification and packaging.
 node "${PKG_ROOT}/bin/verify_production_assets.js" "${TMP_DIR}/${APP_NAME}"
 
+# Re-extract and verify the completed archive before calculating its digest or
+# publishing it. This catches a future tar/file-list regression that the
+# directory preflight cannot see, while keeping the audit inside this command's
+# private temporary workspace.
+verify_final_archive() {
+  local archive_path="$1"
+  local archive_audit_dir="${TMP_DIR}/archive-audit"
+  mkdir -p "$archive_audit_dir"
+  if ! tar -xzf "$archive_path" -C "$archive_audit_dir"; then
+    echo "ERROR: could not re-extract the release archive for final verification." >&2
+    return 1
+  fi
+  if [[ ! -d "${archive_audit_dir}/${APP_NAME}" ]]; then
+    echo "ERROR: release archive did not contain the expected ${APP_NAME} directory." >&2
+    return 1
+  fi
+  node "${PKG_ROOT}/bin/verify_production_assets.js" "${archive_audit_dir}/${APP_NAME}"
+}
+
 # Build the archive in dist/ so the final hard-link promotion is atomic on
 # that filesystem. Archive files and symlinks only: supplying both a directory
 # and its descendants to tar makes tar recurse into the directory and write
@@ -449,6 +468,7 @@ ARCHIVE_TMP="$(mktemp "${DIST_DIR}/.${APP_NAME}.${VERSION}.archive.XXXXXX")"
   # COPYFILE_DISABLE prevents macOS tar from embedding AppleDouble resource forks
   COPYFILE_DISABLE=1 tar czf "$ARCHIVE_TMP" -T "$ARCHIVE_FILELIST"
 )
+verify_final_archive "$ARCHIVE_TMP"
 PACKAGE_SHA256="$(sha256_file "$ARCHIVE_TMP")"
 if [[ ! "$PACKAGE_SHA256" =~ ^[0-9a-fA-F]{64}$ ]]; then
   echo "ERROR: could not calculate a valid SHA-256 for the package archive." >&2

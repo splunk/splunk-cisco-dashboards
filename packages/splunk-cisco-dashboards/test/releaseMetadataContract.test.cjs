@@ -27,6 +27,7 @@ const templatesSpecPath = path.join(
   "src/main/resources/splunk/README/templates.conf.spec",
 );
 const packageReadmePath = path.join(packageRoot, "README.md");
+const codeProtectionPath = path.join(packageRoot, "CODE_PROTECTION.md");
 const releaseIdentityValidatorPath = path.join(
   packageRoot,
   "bin/validate_release_identity.js",
@@ -42,6 +43,7 @@ const serverConf = fs.readFileSync(serverConfPath, "utf8");
 const customerTopologySpec = fs.readFileSync(customerTopologySpecPath, "utf8");
 const templatesSpec = fs.readFileSync(templatesSpecPath, "utf8");
 const packageReadme = fs.readFileSync(packageReadmePath, "utf8");
+const codeProtection = fs.readFileSync(codeProtectionPath, "utf8");
 const releaseLedger = JSON.parse(fs.readFileSync(releaseLedgerPath, "utf8"));
 
 const stanza = (name) => {
@@ -219,6 +221,16 @@ assert.match(
   packageReadme,
   /SplunkBase profile always minifies JavaScript[\s\S]*?source-map files[\s\S]*?or directives/,
   "Release documentation must describe the production code-distribution boundary",
+);
+assert.doesNotMatch(
+  codeProtection,
+  /Status: queued; implementation has not started|Minification is opt-in/,
+  "The code-protection roadmap must not describe superseded release behavior",
+);
+assert.match(
+  codeProtection,
+  /re-extracts the final archive[\s\S]*?source files, source maps, or source-map directives/,
+  "The code-protection roadmap must document final archive verification",
 );
 assert.match(
   execFileSync(process.execPath, [releaseIdentityValidatorPath], {

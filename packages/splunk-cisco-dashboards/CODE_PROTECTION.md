@@ -1,43 +1,34 @@
 # Code protection roadmap
 
-Status: queued; implementation has not started.
+Status: partially enforced in source as of August 26, 2026. The controls below
+were verified with static and temporary-fixture tests; no new production archive
+was created or inspected during this source audit.
 
 This document tracks defense-in-depth measures for reducing unnecessary source
 exposure in production packages. It does not claim that JavaScript installed on
 a customer-controlled Splunk system can be made impossible to inspect or reverse
 engineer.
 
-## Verified baseline
+## Enforced release controls
 
-The following state was verified on August 21, 2026:
-
-- The latest `1.0.42` Splunkbase archive was minified.
-- The staged app, Splunkbase archive, and developer archive contained no
-  separate or embedded source-map payloads and no `.map`, `.ts`, `.tsx`, or
-  `.jsx` files.
-- `bin/verify_production_assets.js` rejects source files and separate source
-  maps before `bin/package_app.sh` creates the release archive.
-- Production React is used for both release and development-package builds.
-- Minification is opt-in. A normal Splunkbase build and the `--from-stage` path
-  can package unminified production bundles without failing validation.
+- The standard SplunkBase profile always invokes the production build with
+  `--minify`. Fast, unminified output remains available only for explicitly
+  labeled developer builds and watch mode.
+- SplunkBase packaging rejects `--from-stage`, so watcher output cannot become a
+  public release artifact.
+- `webpack.config.js` explicitly sets `devtool: false`.
+- `bin/verify_production_assets.js` rejects `.map`, `.ts`, `.tsx`, and `.jsx`
+  files; Python bytecode/cache artifacts; development React markers; and both
+  external and embedded source-map directives in JavaScript bundles.
+- Packaging verifies the exact temporary directory about to be archived, then
+  re-extracts the final archive and verifies it again before calculating its
+  checksum and publishing the immutable artifact. The archive check fails on
+  source files, source maps, or source-map directives.
+- Production React is used for both release and developer-package builds.
 - The repository and packaged app declare the Apache License 2.0 in `LICENSE`,
   `NOTICE`, the root package manifest, and the app package manifest.
 
-## Prioritized to-do list
-
-### Release controls
-
-- [ ] Make minification mandatory for every Splunkbase package while keeping
-  watch mode and explicitly labeled developer packages fast and unminified.
-- [ ] Prevent `--from-stage` from producing a Splunkbase package unless the
-  staged bundles carry verified minified-build provenance.
-- [ ] Set `devtool: false` explicitly in `webpack.config.js` so production
-  source-map policy does not rely on inherited or default webpack behavior.
-- [ ] Extend `bin/verify_production_assets.js` to reject external and embedded
-  source maps and to require minified-build provenance for the Splunkbase
-  profile.
-- [ ] Add a release-pipeline check that inspects the final archive and fails if
-  it contains source files, source maps, or unverified JavaScript bundles.
+## Remaining work and decisions
 
 ### Intellectual-property and licensing review
 
@@ -66,17 +57,16 @@ The following state was verified on August 21, 2026:
 
 ## Acceptance criteria for enforced release minification
 
-- Running the standard Splunkbase packaging command always produces minified
-  JavaScript without requiring developers to remember a special flag.
-- Watch mode and developer packages remain available without the release build's
-  minification cost and are clearly identified as non-release artifacts.
-- `--from-stage` cannot silently turn watcher output into a release artifact.
-- The exact directory and final archive intended for distribution contain no
-  original source files, separate source maps, or embedded source-map payloads.
-- Validation fails closed when the build profile or minification provenance
-  cannot be established.
-- Documentation and automated tests cover the supported development and release
-  paths.
+- [x] Running the standard SplunkBase packaging command always requests
+  minified JavaScript without requiring developers to remember a special flag.
+- [x] Watch mode and developer packages remain available without the release
+  build's minification cost and are clearly identified as non-release artifacts.
+- [x] `--from-stage` cannot silently turn watcher output into a release artifact.
+- [x] The exact directory and final archive intended for distribution are
+  checked for original source files, separate source maps, and embedded
+  source-map directives.
+- [x] Documentation and automated tests cover the supported development and
+  release paths.
 
 ## Non-goals
 
