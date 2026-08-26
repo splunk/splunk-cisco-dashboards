@@ -14,6 +14,14 @@ const appConfPath = path.join(
 const webpackConfigPath = path.join(packageRoot, "webpack.config.js");
 const packageScriptPath = path.join(packageRoot, "bin/package_app.sh");
 const stampScriptPath = path.join(packageRoot, "bin/stamp_version.sh");
+const serverConfPath = path.join(
+  packageRoot,
+  "src/main/resources/splunk/default/server.conf",
+);
+const customerTopologySpecPath = path.join(
+  packageRoot,
+  "src/main/resources/splunk/README/customer_topology.conf.spec",
+);
 const releaseIdentityValidatorPath = path.join(
   packageRoot,
   "bin/validate_release_identity.js",
@@ -25,6 +33,8 @@ const appConf = fs.readFileSync(appConfPath, "utf8");
 const webpackConfig = fs.readFileSync(webpackConfigPath, "utf8");
 const packageScript = fs.readFileSync(packageScriptPath, "utf8");
 const stampScript = fs.readFileSync(stampScriptPath, "utf8");
+const serverConf = fs.readFileSync(serverConfPath, "utf8");
+const customerTopologySpec = fs.readFileSync(customerTopologySpecPath, "utf8");
 const releaseLedger = JSON.parse(fs.readFileSync(releaseLedgerPath, "utf8"));
 
 const stanza = (name) => {
@@ -73,6 +83,37 @@ assert.equal(
   setting(stanza("package"), "show_upgrade_notification"),
   "true",
   "upgrade notifications must be explicitly enabled for update-aware releases",
+);
+
+for (const confName of [
+  "searchbase",
+  "searchbase_canvases",
+  "network_diagrams",
+  "customer_topology",
+  "insights_workspaces",
+  "insights_workspace_preferences",
+  "templates",
+]) {
+  assert.match(
+    appConf,
+    new RegExp(`^reload\\.${confName} = simple$`, "m"),
+    `${confName}.conf must have a simple-reload trigger for runtime REST changes`,
+  );
+  assert.match(
+    serverConf,
+    new RegExp(`^conf_replication_include\\.${confName} = true$`, "m"),
+    `${confName}.conf must replicate runtime changes across search-head-cluster members`,
+  );
+}
+assert.match(
+  customerTopologySpec,
+  /app UI writes them[\s\S]*?scd_customer_topology[\s\S]*?configs\/conf-customer_topology is the merged read endpoint/,
+  "Topology documentation must describe the capability-protected mutation route actually used by the app",
+);
+assert.match(
+  customerTopologySpec,
+  /128 KiB,[\s\S]*?250 sites, 500 links, and 16 aliases per site/,
+  "Topology documentation must describe the enforced rendering-cardinality limits",
 );
 
 assert.match(
