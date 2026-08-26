@@ -90,6 +90,33 @@ const splunkRoot = path.join(__dirname, 'src/main/resources/splunk');
 const stageRoot = path.join(__dirname, 'stage');
 const workspaceRoot = path.resolve(__dirname, '..', '..');
 
+const SOURCE_MAP_DIRECTIVE_PATTERN = /^[ \t]*(?:\/\/|\/\*)[#@]\s*sourceMappingURL\s*=[^\r\n]*(?:\*\/)?(?:\r?\n|$)/gm;
+
+class StripSourceMapDirectivesPlugin {
+    apply(compiler) {
+        compiler.hooks.thisCompilation.tap('StripSourceMapDirectivesPlugin', (compilation) => {
+            compilation.hooks.processAssets.tap(
+                {
+                    name: 'StripSourceMapDirectivesPlugin',
+                    stage: webpack.Compilation.PROCESS_ASSETS_STAGE_REPORT,
+                },
+                (assets) => {
+                    Object.keys(assets)
+                        .filter((assetName) => assetName.endsWith('.js'))
+                        .forEach((assetName) => {
+                            const asset = compilation.getAsset(assetName);
+                            const source = asset.source.source().toString();
+                            const stripped = source.replace(SOURCE_MAP_DIRECTIVE_PATTERN, '');
+                            if (stripped !== source) {
+                                compilation.updateAsset(assetName, new webpack.sources.RawSource(stripped));
+                            }
+                        });
+                },
+            );
+        });
+    }
+}
+
 const commonConfig = webpackMerge(baseConfig, {
     // SplunkBase archives must not expose source maps. Keep this explicit so a
     // future inherited webpack-default change cannot silently publish them.
@@ -190,6 +217,7 @@ const commonConfig = webpackMerge(baseConfig, {
         },
     },
     plugins: [
+        new StripSourceMapDirectivesPlugin(),
         new CopyPlugin({
             patterns: [
                 {

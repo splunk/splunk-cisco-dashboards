@@ -189,12 +189,21 @@ archive_identity() {
     '
 }
 
+archive_modified_epoch() {
+    local archive="$1"
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+        stat -f '%m' "$archive"
+    else
+        stat -c '%Y' "$archive"
+    fi
+}
+
 find_release_archive() {
     local expected_package_id="$1"
     local expected_version="$2"
     local expected_build="$3"
     local expected_profile="$4"
-    local archive archive_profile identity archive_package_id archive_version archive_build
+    local archive archive_profile identity archive_package_id archive_version archive_build archive_mtime newest_mtime=""
     local match=""
     local match_count=0
 
@@ -209,8 +218,18 @@ find_release_archive() {
         if [[ "$archive_package_id" == "$expected_package_id" \
             && "$archive_version" == "$expected_version" \
             && "$archive_build" == "$expected_build" ]]; then
-            match="$archive"
-            match_count=$((match_count + 1))
+            if [[ "$expected_profile" == "developer" ]]; then
+                archive_mtime="$(archive_modified_epoch "$archive")" || return 1
+                if [[ -z "$newest_mtime" || "$archive_mtime" -gt "$newest_mtime" \
+                    || ("$archive_mtime" -eq "$newest_mtime" && "$archive" > "$match") ]]; then
+                    match="$archive"
+                    newest_mtime="$archive_mtime"
+                fi
+                match_count=$((match_count + 1))
+            else
+                match="$archive"
+                match_count=$((match_count + 1))
+            fi
         fi
     done < <(find "$DIST_DIR" -maxdepth 1 -type f -name "${APP_NAME}-*-sha256-*.tar.gz" -print0)
 
@@ -218,7 +237,7 @@ find_release_archive() {
         err "ERROR: no immutable ${expected_profile} archive was found for package ${expected_package_id}, version ${expected_version}, build ${expected_build}."
         return 1
     fi
-    if [[ "$match_count" -gt 1 ]]; then
+    if [[ "$expected_profile" != "developer" && "$match_count" -gt 1 ]]; then
         err "ERROR: found ${match_count} immutable ${expected_profile} archives for package ${expected_package_id}, version ${expected_version}, build ${expected_build}; refusing an ambiguous install target."
         return 1
     fi
@@ -531,6 +550,8 @@ Other options:
                          for use with a long-running 'yarn start' watcher.
                          Refreshes non-JavaScript Splunk resources from src/
                          before packaging; React bundles come from the watcher.
+                         Stage reuse automatically selects the developer
+                         profile; --developer may also be supplied explicitly.
                          Still creates a fresh tarball and can still use
                          --install, so splunkd remains the installer.
   --minify               Enable JavaScript minification for a clean developer
@@ -794,6 +815,13 @@ if [[ "$from_stage" -eq 1 && "$no_build" -eq 1 ]]; then
     echo "       --from-stage creates a fresh tarball from stage/." >&2
     echo "       --no-build reuses an identity-matched tarball already in dist/." >&2
     exit 2
+fi
+
+# A watcher-built stage can contain developing resources and is not a clean
+# production build. Preserve the historical --fast behavior by making stage
+# reuse imply the developer profile unless the caller already selected it.
+if [[ "$from_stage" -eq 1 ]]; then
+    developer_profile=1
 fi
 
 # Minification changes webpack output, so it cannot be applied to a stage/

@@ -362,6 +362,28 @@ function listArchives(distDir) {
     .sort();
 }
 
+function exerciseFromStageDefaultsToDeveloperProfile() {
+  const fixture = makePackageFixture();
+  try {
+    const output = run("bash", [fixture.packageScript, "--from-stage"], {
+      cwd: fixture.packageRoot,
+    });
+    assert.match(
+      output,
+      /-developer\.tar\.gz/,
+      "Stage reuse without an explicit profile must select the developer profile",
+    );
+    assert.ok(
+      listArchives(path.join(fixture.root, "dist")).some((name) =>
+        name.endsWith("-developer.tar.gz"),
+      ),
+      "Stage reuse without --developer must create a developer archive",
+    );
+  } finally {
+    removeTempRoot(fixture.root);
+  }
+}
+
 function exercisePackagingProfiles() {
   const fixture = makePackageFixture();
   const distDir = path.join(fixture.root, "dist");
@@ -393,17 +415,6 @@ function exercisePackagingProfiles() {
       "A clean Git worktree must still reject ignored resource inputs",
     );
     fs.rmSync(ignoredResourcePath);
-
-    const fromStageFailure = runExpectFailure(
-      "bash",
-      [fixture.packageScript, "--from-stage"],
-      { cwd: fixture.packageRoot },
-    );
-    assert.match(
-      fromStageFailure,
-      /--from-stage is only allowed with --developer/,
-      "Splunkbase packaging must not reuse watcher-built stage artifacts",
-    );
 
     const reservedIdentity = path.join(
       distDir,
@@ -558,15 +569,16 @@ function exercisePackagingProfiles() {
       path.join(fixture.stage, "appserver", "static", "pages", "fixture.js"),
       'const appBuild = "__SCD_PACKAGE_BUILD__"; const developerChange = true;\n',
     );
-    const developerDuplicateFailure = runExpectFailure(
-      "bash",
-      [fixture.packageScript, "--from-stage", "--developer"],
-      { cwd: fixture.packageRoot },
+    run("bash", [fixture.packageScript, "--from-stage", "--developer"], {
+      cwd: fixture.packageRoot,
+    });
+    const developerArchives = listArchives(distDir).filter((name) =>
+      name.endsWith("-developer.tar.gz"),
     );
-    assert.match(
-      developerDuplicateFailure,
-      /release identity version 1\.2\.3, build 7 already exists/,
-      "A second developer archive with the same version/build must also be rejected",
+    assert.equal(
+      developerArchives.length,
+      2,
+      "Developer stage packaging must permit repeated iterations with the same version/build",
     );
 
     writeFile(path.join(fixture.root, "uncommitted-release-input.txt"), "dirty\n");
@@ -779,8 +791,8 @@ assert.match(
 );
 assert.match(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
-  /--from-stage is only allowed with --developer[\s\S]*?Splunkbase packages always run a clean production build/,
-  "Splunkbase packaging must reject watcher-linked stage reuse",
+  /FROM_STAGE.*?DEVELOPER_PROFILE=1/s,
+  "Stage reuse must imply the developer profile for direct package callers",
 );
 assert.match(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
@@ -799,8 +811,8 @@ assert.doesNotMatch(
 );
 assert.match(
   fs.readFileSync(APP_CONF_SOURCE, "utf8"),
-  /^build = 2068$/m,
-  "The committed app source must carry the authorized release build 2068",
+  /^build = 2069$/m,
+  "The committed app source must carry the authorized release build 2069",
 );
 assert.match(
   fs.readFileSync(VERIFY_SCRIPT_SOURCE, "utf8"),
@@ -818,6 +830,16 @@ assert.match(
   "Packaging must re-extract and validate the completed archive before publication",
 );
 const buildScript = fs.readFileSync(BUILD_SCRIPT_SOURCE, "utf8");
+assert.match(
+  buildScript,
+  /from_stage.*?developer_profile=1/s,
+  "The root build wrapper must make --fast imply the developer profile",
+);
+assert.match(
+  buildScript,
+  /archive_modified_epoch\(\)[\s\S]*?expected_profile.*?developer[\s\S]*?newest_mtime/s,
+  "The root build wrapper must choose the newest matching developer archive",
+);
 assert.match(
   buildScript,
   /find_release_archive\(\)[\s\S]*?expected_package_id[\s\S]*?expected_version[\s\S]*?expected_build[\s\S]*?-sha256-\*\.tar\.gz/,
@@ -841,6 +863,7 @@ assert.match(
 
 exerciseCleanBuild();
 exerciseReleaseIdentityValidation();
+exerciseFromStageDefaultsToDeveloperProfile();
 exercisePackagingProfiles();
 exercisePostBuildSourceVerification();
 exerciseProductionVerifierCacheRejection();

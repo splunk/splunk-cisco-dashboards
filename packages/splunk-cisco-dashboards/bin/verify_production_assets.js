@@ -38,7 +38,7 @@ const DEVELOPMENT_REACT_MARKERS = [
     'react-dom.development.js',
     'jsxDEV(',
 ];
-const SOURCE_MAP_DIRECTIVE_PATTERN = /(?:\/\/|\/\*)[#@]\s*sourceMappingURL\s*=/;
+const SOURCE_MAP_DIRECTIVE_PATTERN = /^[ \t]*(?:\/\/|\/\*)[#@]\s*sourceMappingURL\s*=/m;
 
 function walkFiles(directory) {
     return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {

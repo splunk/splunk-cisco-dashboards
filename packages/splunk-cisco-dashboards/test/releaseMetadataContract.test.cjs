@@ -179,6 +179,11 @@ assert.match(
 );
 assert.match(
   webpackConfig,
+  /StripSourceMapDirectivesPlugin[\s\S]*?PROCESS_ASSETS_STAGE_REPORT[\s\S]*?updateAsset/,
+  "webpack must strip dependency source-map directives before staging assets",
+);
+assert.match(
+  webpackConfig,
   /ignore:\s*\[[\s\S]*?'\*\*\/\.env'[\s\S]*?'\*\*\/\.env\.\*'/,
   "webpack must keep common local-secret files out of every staged app",
 );

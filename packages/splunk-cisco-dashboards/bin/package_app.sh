@@ -24,8 +24,8 @@ manifest.
 
 Options:
   --from-stage, --stage   Package the current stage/ directory without running
-                          clean_build.sh or webpack. This is available only
-                          with --developer. Current non-JavaScript Splunk
+                          clean_build.sh or webpack. Stage reuse implies the
+                          developer profile. Current non-JavaScript Splunk
                           resources are overlaid from src/ first; React bundles
                           still come from the webpack --watch output.
   --minify                Enable JavaScript minification for a slower, smaller
@@ -95,6 +95,13 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+# A watcher-built stage can contain developing resources and is not a clean
+# production build. Preserve the historical --from-stage behavior by making
+# stage reuse imply the developer profile for direct package-script callers.
+if [[ "$FROM_STAGE" -eq 1 ]]; then
+  DEVELOPER_PROFILE=1
+fi
 
 if [[ "$FROM_STAGE" -eq 1 && "$MINIFY" -eq 1 ]]; then
   echo "ERROR: --minify and --from-stage are mutually exclusive." >&2
@@ -201,11 +208,6 @@ resolve_splunkbase_app_id() {
 
 RELEASE_COMMIT=""
 SPLUNKBASE_APP_ID=""
-if [[ "$FROM_STAGE" -eq 1 && "$DEVELOPER_PROFILE" -ne 1 ]]; then
-  echo "ERROR: --from-stage is only allowed with --developer." >&2
-  echo "       Splunkbase packages always run a clean production build." >&2
-  exit 2
-fi
 if [[ "$APP_PROFILE" == "splunkbase" ]]; then
   RELEASE_COMMIT="$(resolve_clean_release_commit)"
   SPLUNKBASE_APP_ID="$(resolve_splunkbase_app_id)"
@@ -353,8 +355,9 @@ if [[ -f "$META_FILE" ]]; then
 fi
 
 # The committed [install] build is the release identity. It is deliberately
-# not derived from dist/: release authors must bump and commit it before a new
-# archive is created, so the package, source, and release record agree.
+# not derived from dist/ for SplunkBase releases: release authors must bump
+# and commit it before a new archive is created, so the package, source, and
+# release record agree. Developer packages may iterate against the same build.
 PKG_APP_CONF="${TMP_DIR}/${APP_NAME}/default/app.conf"
 source_build=$(awk '
   /^\[/ { in_install = ($0 == "[install]") }
@@ -380,7 +383,7 @@ for prev_tar in "${DIST_DIR}"/${APP_NAME}-*.tar.gz; do
   previous_identity="$(archive_identity "$prev_tar" || true)"
   [[ -n "$previous_identity" ]] || continue
   IFS=$'\t' read -r previous_version previous_build <<< "$previous_identity"
-  if [[ "$previous_version" == "$VERSION" && "$previous_build" == "$new_build" ]]; then
+  if [[ "$APP_PROFILE" == "splunkbase" && "$previous_version" == "$VERSION" && "$previous_build" == "$new_build" ]]; then
     echo "ERROR: release identity version ${VERSION}, build ${new_build} already exists in ${prev_tar}." >&2
     echo "       Bump and commit [install] build before producing another archive." >&2
     exit 1
@@ -486,6 +489,14 @@ PACKAGE_SHA256="$(printf '%s' "$PACKAGE_SHA256" | tr '[:upper:]' '[:lower:]')"
 PKG_PATH="${DIST_DIR}/${APP_NAME}-${VERSION}-sha256-${PACKAGE_SHA256}${ARTIFACT_PROFILE_SUFFIX}.tar.gz"
 PKG_SHA256_PATH="${PKG_PATH}.sha256"
 if [[ -e "$PKG_PATH" || -e "$PKG_SHA256_PATH" ]]; then
+  if [[ "$APP_PROFILE" == "developer" && -f "$PKG_PATH" && -f "$PKG_SHA256_PATH" \
+      && "$(sha256_file "$PKG_PATH")" == "$PACKAGE_SHA256" \
+      && "$(cat "$PKG_SHA256_PATH")" == "${PACKAGE_SHA256}  $(basename "$PKG_PATH")" ]]; then
+    rm -f "$ARCHIVE_TMP"
+    ARCHIVE_TMP=""
+    echo "Reusing existing developer archive ${PKG_PATH}"
+    exit 0
+  fi
   echo "ERROR: immutable package path already exists: ${PKG_PATH}" >&2
   echo "       Refusing to overwrite a prior archive or checksum record." >&2
   exit 1
