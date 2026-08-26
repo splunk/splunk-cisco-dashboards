@@ -22,6 +22,8 @@ networking pillars and workplace scenarios.
 - Made release staging reject ignored Splunk resource inputs and exclude common
   local-secret files before they can reach a watcher-linked app or SplunkBase
   archive.
+- Bound the update-discovery package ID and archive provenance to the numeric
+  SplunkBase listing ID recorded in the committed release ledger.
 - Aligned staged app metadata with the canonical release version, preserved
   package-time version stamping, enabled app-upgrade notifications, and added
   a reproducible root `yarn test` contract suite.

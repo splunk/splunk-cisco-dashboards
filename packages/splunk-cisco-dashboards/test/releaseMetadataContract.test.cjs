@@ -69,6 +69,17 @@ assert.equal(
   releaseLedger.app.package_id,
   "the source app id must remain tied to the Splunkbase release identity ledger",
 );
+assert.equal(
+  setting(stanza("package"), "id"),
+  releaseLedger.app.package_id,
+  "the update-discovery package id must remain tied to the Splunkbase release identity ledger",
+);
+assert.equal(
+  Number.isSafeInteger(releaseLedger.app.splunkbase_app_id) &&
+    releaseLedger.app.splunkbase_app_id > 0,
+  true,
+  "the release ledger must retain the positive numeric Splunkbase application id",
+);
 assert.match(
   setting(stanza("install"), "build"),
   /^[1-9][0-9]*$/,
@@ -151,6 +162,11 @@ assert.match(
   packageScript,
   /assert_no_ignored_release_inputs\(\)[\s\S]*?git -C "\$ROOT_DIR" check-ignore --quiet --no-index[\s\S]*?find "\$SPLUNK_RESOURCES_DIR" \\\( -type f -o -type l \\\) -print0/,
   "Splunkbase packaging must reject ignored files that would otherwise evade Git status",
+);
+assert.match(
+  packageScript,
+  /resolve_splunkbase_app_id\(\)[\s\S]*?splunkbase_app_id[\s\S]*?"splunkbase_app_id": %s/,
+  "Splunkbase archives must bind their provenance to the numeric listing identity",
 );
 assert.match(
   execFileSync(process.execPath, [releaseIdentityValidatorPath], {

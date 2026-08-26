@@ -174,6 +174,7 @@ function makePackageFixture() {
     "[launcher]",
     "version = 1.2.3",
     "[package]",
+    `id = ${APP_NAME}`,
     "check_for_updates = true",
     "show_upgrade_notification = true",
     "",
@@ -188,10 +189,9 @@ function makePackageFixture() {
   writeFile(path.join(stage, "bin", "runtime.pyc"), "bytecode");
   writeFile(path.join(stage, "bin", "legacy.pyo"), "bytecode");
   writeFile(path.join(stage, "bin", "__pycache__", "module.pyc"), "bytecode");
-  writeFile(path.join(sourceRoot, "bin", "overlay.pyc"), "bytecode");
   writeFile(
     path.join(root, ".gitignore"),
-    ["/dist/", "/packages/splunk-cisco-dashboards/stage/", "*.pyc", "__pycache__/", ""].join("\n"),
+    ["/dist/", "/packages/splunk-cisco-dashboards/stage/", ".env", "*.pyc", "__pycache__/", ""].join("\n"),
   );
   run("git", ["init"], { cwd: root });
   run("git", ["config", "user.email", "fixture@example.invalid"], { cwd: root });
@@ -217,7 +217,7 @@ function exerciseReleaseIdentityValidation() {
   try {
     assert.match(
       run("node", [validator], { cwd: fixture.packageRoot }),
-      /Release identity validated: splunk-cisco-dashboards v1\.2\.3 build 7/,
+      /Release identity validated: splunk-cisco-dashboards \(Splunkbase 9257\) v1\.2\.3 build 7/,
       "The fixture release identity must validate before packaging",
     );
     const appConfPath = path.join(
@@ -244,6 +244,22 @@ function exerciseReleaseIdentityValidation() {
     fs.writeFileSync(
       appConfPath,
       fs.readFileSync(appConfPath, "utf8").replace("build = 0", "build = 7"),
+    );
+    fs.writeFileSync(
+      appConfPath,
+      fs.readFileSync(appConfPath, "utf8").replace(`id = ${APP_NAME}`, "id = wrong-package-id"),
+    );
+    const packageIdFailure = runExpectFailure("node", [validator], {
+      cwd: fixture.packageRoot,
+    });
+    assert.match(
+      packageIdFailure,
+      /\[package\] id must match the release ledger package_id/,
+      "Release identity validation must reject update-discovery package ID drift",
+    );
+    fs.writeFileSync(
+      appConfPath,
+      fs.readFileSync(appConfPath, "utf8").replace("id = wrong-package-id", `id = ${APP_NAME}`),
     );
     const versionPath = path.join(fixture.root, "VERSION");
     const ledgerPath = path.join(fixture.root, "releases", "splunkbase-9257.json");
@@ -311,6 +327,27 @@ function exercisePackagingProfiles() {
     writeFile(legacyArchive, "legacy archive must remain untouched\n");
     const legacyDigest = sha256(legacyArchive);
 
+    const ignoredResourcePath = path.join(
+      fixture.packageRoot,
+      "src",
+      "main",
+      "resources",
+      "splunk",
+      ".env",
+    );
+    writeFile(ignoredResourcePath, "SPLUNKBASE_RELEASE_SECRET=must-not-package\n");
+    const ignoredInputFailure = runExpectFailure(
+      "bash",
+      [fixture.packageScript],
+      { cwd: fixture.packageRoot },
+    );
+    assert.match(
+      ignoredInputFailure,
+      /Splunkbase packaging refuses ignored files under release inputs/,
+      "A clean Git worktree must still reject ignored resource inputs",
+    );
+    fs.rmSync(ignoredResourcePath);
+
     const fromStageFailure = runExpectFailure(
       "bash",
       [fixture.packageScript, "--from-stage"],
@@ -375,6 +412,7 @@ function exercisePackagingProfiles() {
       releaseProvenance,
       {
         schema_version: 1,
+        splunkbase_app_id: 9257,
         package_id: APP_NAME,
         version: "1.2.3",
         build: 7,
@@ -535,6 +573,7 @@ function makeRootBuildFixture() {
     "build = 7",
     "",
     "[id]",
+    `name = ${APP_NAME}`,
     "version = 1.2.3",
     "",
   ].join("\n");
@@ -558,7 +597,7 @@ function makeRootBuildFixture() {
       'WORK_DIR="$(mktemp -d)"',
       "trap 'rm -rf \"${WORK_DIR}\"' EXIT",
       'mkdir -p "${WORK_DIR}/${APP_NAME}/default" "${ROOT_DIR}/dist"',
-      'printf "[install]\\nbuild = %s\\n\\n[id]\\nversion = %s\\n" "${BUILD}" "${VERSION}" > "${WORK_DIR}/${APP_NAME}/default/app.conf"',
+      'printf "[install]\\nbuild = %s\\n\\n[id]\\nname = splunk-cisco-dashboards\\nversion = %s\\n" "${BUILD}" "${VERSION}" > "${WORK_DIR}/${APP_NAME}/default/app.conf"',
       'ARCHIVE_TMP="${ROOT_DIR}/dist/.fixture-archive.tar.gz"',
       '(cd "${WORK_DIR}" && tar czf "${ARCHIVE_TMP}" "${APP_NAME}")',
       'SHA256="$(shasum -a 256 "${ARCHIVE_TMP}" | awk \'{print $1}\')"',
@@ -622,7 +661,7 @@ function exerciseRootBuildArchiveResolution() {
     );
     assert.match(
       missingArchiveFailure,
-      /--no-build requested but no immutable splunk-cisco-dashboards-\*-sha256-\*\.tar\.gz found/,
+      /no immutable splunkbase archive was found for package splunk-cisco-dashboards, version 1\.2\.3, build 7/,
       "An empty dist directory must fail with the intended no-archive diagnostic",
     );
     assert.doesNotMatch(
@@ -713,12 +752,12 @@ assert.match(
 const buildScript = fs.readFileSync(BUILD_SCRIPT_SOURCE, "utf8");
 assert.match(
   buildScript,
-  /find_release_archive\(\)[\s\S]*?expected_version[\s\S]*?expected_build[\s\S]*?-sha256-\*\.tar\.gz/,
-  "The root build wrapper must resolve the hash-addressed archive by packaged version and build",
+  /find_release_archive\(\)[\s\S]*?expected_package_id[\s\S]*?expected_version[\s\S]*?expected_build[\s\S]*?-sha256-\*\.tar\.gz/,
+  "The root build wrapper must resolve the hash-addressed archive by packaged ID, version, and build",
 );
 assert.match(
   buildScript,
-  /package_path="\$\(find_release_archive "\$build_version" "\$release_build" "\$package_profile"\)"/,
+  /package_path="\$\(find_release_archive "\$source_package_id" "\$build_version" "\$release_build" "\$package_profile"\)"/,
   "A fresh root build must use the exact archive that packaging produced",
 );
 assert.doesNotMatch(

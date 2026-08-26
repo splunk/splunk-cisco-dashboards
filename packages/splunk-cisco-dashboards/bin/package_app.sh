@@ -176,7 +176,21 @@ resolve_clean_release_commit() {
   printf '%s\n' "$commit"
 }
 
+resolve_splunkbase_app_id() {
+  node -e '
+    const fs = require("fs");
+    const ledger = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+    const appId = ledger?.app?.splunkbase_app_id;
+    if (!Number.isSafeInteger(appId) || appId < 1) {
+      console.error("ERROR: release ledger must contain a positive numeric app.splunkbase_app_id.");
+      process.exit(1);
+    }
+    process.stdout.write(String(appId));
+  ' "${ROOT_DIR}/releases/splunkbase-9257.json"
+}
+
 RELEASE_COMMIT=""
+SPLUNKBASE_APP_ID=""
 if [[ "$FROM_STAGE" -eq 1 && "$DEVELOPER_PROFILE" -ne 1 ]]; then
   echo "ERROR: --from-stage is only allowed with --developer." >&2
   echo "       Splunkbase packages always run a clean production build." >&2
@@ -184,6 +198,7 @@ if [[ "$FROM_STAGE" -eq 1 && "$DEVELOPER_PROFILE" -ne 1 ]]; then
 fi
 if [[ "$APP_PROFILE" == "splunkbase" ]]; then
   RELEASE_COMMIT="$(resolve_clean_release_commit)"
+  SPLUNKBASE_APP_ID="$(resolve_splunkbase_app_id)"
 fi
 
 if [[ "$FROM_STAGE" -eq 1 ]]; then
@@ -383,8 +398,8 @@ echo "[package] app.conf: retained committed build ${new_build}"
 # workstation, branch name, timestamp, or dirty-worktree details to app users.
 if [[ "$APP_PROFILE" == "splunkbase" ]]; then
   provenance_file="${TMP_DIR}/${APP_NAME}/release-provenance.json"
-  printf '{\n  "schema_version": 1,\n  "package_id": "%s",\n  "version": "%s",\n  "build": %s,\n  "git_commit": "%s",\n  "source_tree_clean": true\n}\n' \
-    "$APP_NAME" "$VERSION" "$new_build" "$RELEASE_COMMIT" > "$provenance_file"
+  printf '{\n  "schema_version": 1,\n  "splunkbase_app_id": %s,\n  "package_id": "%s",\n  "version": "%s",\n  "build": %s,\n  "git_commit": "%s",\n  "source_tree_clean": true\n}\n' \
+    "$SPLUNKBASE_APP_ID" "$APP_NAME" "$VERSION" "$new_build" "$RELEASE_COMMIT" > "$provenance_file"
   echo "[package] release provenance: committed source ${RELEASE_COMMIT}"
 fi
 

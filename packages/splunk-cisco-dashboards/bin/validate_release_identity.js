@@ -125,6 +125,15 @@ try {
   if (setting(id, "name") !== ledger.app?.package_id) {
     fail("[id] name must match the release ledger package_id.");
   }
+  if (setting(pkg, "id") !== ledger.app?.package_id) {
+    fail("[package] id must match the release ledger package_id.");
+  }
+  if (
+    !Number.isSafeInteger(ledger.app?.splunkbase_app_id) ||
+    ledger.app.splunkbase_app_id < 1
+  ) {
+    fail("release ledger must contain a positive numeric app.splunkbase_app_id.");
+  }
   if (setting(id, "version") !== version || setting(launcher, "version") !== version) {
     fail("VERSION, [id] version, and [launcher] version must match.");
   }
@@ -185,7 +194,7 @@ try {
   }
 
   console.log(
-    `Release identity validated: ${ledger.app.package_id} v${version} build ${sourceBuild}.`,
+    `Release identity validated: ${ledger.app.package_id} (Splunkbase ${ledger.app.splunkbase_app_id}) v${version} build ${sourceBuild}.`,
   );
 } catch (error) {
   console.error(error.message);
