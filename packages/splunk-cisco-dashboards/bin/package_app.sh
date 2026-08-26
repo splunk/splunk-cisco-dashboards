@@ -18,8 +18,9 @@ usage() {
   cat <<EOF
 Usage: bin/package_app.sh [--from-stage] [--minify] [--developer]
 
-Default behavior: clean stage/, run production webpack, then create the
-Splunkbase profile without resources listed as developing in the app manifest.
+Default behavior: clean stage/, run minified production webpack, then create
+the Splunkbase profile without resources listed as developing in the app
+manifest.
 
 Options:
   --from-stage, --stage   Package the current stage/ directory without running
@@ -28,7 +29,8 @@ Options:
                           resources are overlaid from src/ first; React bundles
                           still come from the webpack --watch output.
   --minify                Enable JavaScript minification for a slower, smaller
-                          release build. Not valid with --from-stage.
+                          developer clean build. Splunkbase packages are always
+                          minified. Not valid with --from-stage.
   --developer             Include all resources listed as developing and write
                           a clearly labeled developer tarball. Intended for
                           local use.
@@ -199,6 +201,10 @@ fi
 if [[ "$APP_PROFILE" == "splunkbase" ]]; then
   RELEASE_COMMIT="$(resolve_clean_release_commit)"
   SPLUNKBASE_APP_ID="$(resolve_splunkbase_app_id)"
+  # Published bundles are an operator-facing release surface. Keep fast,
+  # unminified output for explicit developer packages, but make the default
+  # SplunkBase profile consistently minified regardless of its caller.
+  MINIFY=1
 fi
 
 if [[ "$FROM_STAGE" -eq 1 ]]; then

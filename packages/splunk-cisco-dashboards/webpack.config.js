@@ -91,6 +91,9 @@ const stageRoot = path.join(__dirname, 'stage');
 const workspaceRoot = path.resolve(__dirname, '..', '..');
 
 const commonConfig = webpackMerge(baseConfig, {
+    // SplunkBase archives must not expose source maps. Keep this explicit so a
+    // future inherited webpack-default change cannot silently publish them.
+    devtool: false,
     entry: {
         executive_insights: path.join(
             webappRoot,

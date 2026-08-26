@@ -38,6 +38,7 @@ const DEVELOPMENT_REACT_MARKERS = [
     'react-dom.development.js',
     'jsxDEV(',
 ];
+const SOURCE_MAP_DIRECTIVE_PATTERN = /(?:\/\/|\/\*)[#@]\s*sourceMappingURL\s*=/;
 
 function walkFiles(directory) {
     return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -132,6 +133,7 @@ if (
 const missingEntries = [];
 const developmentEntries = [];
 const invalidEntries = [];
+const sourceMapDirectiveEntries = [];
 
 ENTRY_NAMES.forEach((entryName) => {
     const bundlePath = path.join(PAGES_DIR, `${entryName}.js`);
@@ -146,6 +148,9 @@ ENTRY_NAMES.forEach((entryName) => {
     );
     if (matchedMarker) {
         developmentEntries.push(`${entryName}.js (${matchedMarker})`);
+    }
+    if (SOURCE_MAP_DIRECTIVE_PATTERN.test(bundle)) {
+        sourceMapDirectiveEntries.push(`${entryName}.js`);
     }
 
     try {
@@ -162,6 +167,10 @@ if (missingEntries.length > 0) {
 
 if (developmentEntries.length > 0) {
     fail('Development React code was found in production bundles.', developmentEntries);
+}
+
+if (sourceMapDirectiveEntries.length > 0) {
+    fail('Production entry bundles contain source-map directives.', sourceMapDirectiveEntries);
 }
 
 if (invalidEntries.length > 0) {

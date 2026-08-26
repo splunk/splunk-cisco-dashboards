@@ -172,6 +172,11 @@ assert.match(
 );
 assert.match(
   webpackConfig,
+  /devtool:\s*false/,
+  "webpack must explicitly disable source-map emission for staged app assets",
+);
+assert.match(
+  webpackConfig,
   /ignore:\s*\[[\s\S]*?'\*\*\/\.env'[\s\S]*?'\*\*\/\.env\.\*'/,
   "webpack must keep common local-secret files out of every staged app",
 );
@@ -204,6 +209,16 @@ assert.match(
   packageScript,
   /resolve_splunkbase_app_id\(\)[\s\S]*?splunkbase_app_id[\s\S]*?"splunkbase_app_id": %s/,
   "Splunkbase archives must bind their provenance to the numeric listing identity",
+);
+assert.match(
+  packageScript,
+  /if \[\[ "\$APP_PROFILE" == "splunkbase" \]\]; then[\s\S]*?MINIFY=1/,
+  "Splunkbase packaging must enforce minified production bundles",
+);
+assert.match(
+  packageReadme,
+  /SplunkBase profile always minifies JavaScript[\s\S]*?source-map files[\s\S]*?or directives/,
+  "Release documentation must describe the production code-distribution boundary",
 );
 assert.match(
   execFileSync(process.execPath, [releaseIdentityValidatorPath], {

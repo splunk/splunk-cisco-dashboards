@@ -8,7 +8,7 @@
 # staged/package app.conf at package time.
 #
 # Default workflow:
-#   ./build.sh                                                # Splunkbase profile: released resources only
+#   ./build.sh                                                # Splunkbase profile: minified released resources only
 #   ./build.sh --developer                                    # developer profile: includes developing resources
 #
 # Install workflows (splunkd-managed; goes through REST mgmt port 8089):
@@ -50,7 +50,7 @@
 #
 # Useful options:
 #   ./build.sh --splunk-bin /some/custom/path/splunk          # override the Splunk CLI path directly
-#   ./build.sh --minify                                       # slower, smaller release package
+#   ./build.sh --developer --minify                           # slower, smaller developer package
 #   ./build.sh --lint-spl-antipatterns                        # opt in to the experimental SPL policy gate
 #
 # Environment:
@@ -528,8 +528,8 @@ Other options:
                          before packaging; React bundles come from the watcher.
                          Still creates a fresh tarball and can still use
                          --install, so splunkd remains the installer.
-  --minify               Enable JavaScript minification for this clean release
-                         build. Slower, but produces smaller browser bundles.
+  --minify               Enable JavaScript minification for a clean developer
+                         build. SplunkBase packages are always minified.
                          Not valid with --fast or --no-build.
   --developer            Include resources listed in the app's
                          config/build-profile-manifest.json. Writes a
@@ -570,8 +570,8 @@ Examples:
   SPLUNK_HOME=/opt/10 ./build.sh --install --auth admin:******** --restart
   ./build.sh --deploy                                         # build + filesystem swap
   SPLUNK_HOME=/opt/10 ./build.sh --deploy --restart           # ... against /opt/10 + restart
-  ./build.sh --minify                                         # minified release package
-  ./build.sh --minify --install --auth admin:********          # minify + install
+  ./build.sh                                                   # minified SplunkBase release package
+  ./build.sh --developer --minify                              # minified developer package
 
   # Build once, install to multiple instances:
   ./build.sh
@@ -938,7 +938,7 @@ else
         if [[ "$developer_profile" -eq 1 ]]; then
             hdr "Packaging ${APP_NAME} v${build_version} (developer profile)..."
         else
-            hdr "Packaging ${APP_NAME} v${build_version} (Splunkbase profile)..."
+            hdr "Packaging ${APP_NAME} v${build_version} (minified Splunkbase profile; required for release)..."
         fi
     fi
     # macOS ships Bash 3.2, where expanding an empty array under `set -u`

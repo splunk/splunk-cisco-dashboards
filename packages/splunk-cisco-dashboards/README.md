@@ -311,13 +311,14 @@ staging.
 
 ```bash
 cd ../..
-./build.sh                    # Splunkbase: released resources only
+./build.sh                    # Splunkbase: minified, released resources only
 ./build.sh --developer        # local: released + developing resources
-./build.sh --minify           # slower, minified Splunkbase package
+./build.sh --developer --minify # slower, minified developer package
 ```
 
-Minification is opt-in; normal builds and `yarn start` keep fast,
-unminified production-React bundles.
+The SplunkBase profile always minifies JavaScript and rejects source-map files
+or directives. Normal developer builds and `yarn start` keep fast, unminified
+production-React bundles.
 
 The committed release ledger at
 [`../../releases/splunkbase-9257.json`](../../releases/splunkbase-9257.json)

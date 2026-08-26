@@ -141,7 +141,16 @@ function makePackageFixture() {
     path.join(packageRoot, "bin", "validate_release_identity.js"),
   );
   writeFile(path.join(packageRoot, "bin", "clean_build.sh"), "#!/usr/bin/env bash\nexit 0\n", 0o755);
-  writeFile(path.join(packageRoot, "bin", "build.js"), "process.exit(0);\n");
+  writeFile(
+    path.join(packageRoot, "bin", "build.js"),
+    [
+      "if (!process.argv.includes('--minify')) {",
+      "  console.error('SplunkBase fixture build must be minified');",
+      "  process.exit(1);",
+      "}",
+      "",
+    ].join("\n"),
+  );
   writeFile(path.join(packageRoot, "bin", "stamp_version.sh"), "#!/usr/bin/env bash\nexit 0\n", 0o755);
   writeFile(path.join(packageRoot, "bin", "apply_build_profile.js"), "process.exit(0);\n");
   writeFile(path.join(packageRoot, "bin", "verify_production_assets.js"), "process.exit(0);\n");
@@ -305,6 +314,24 @@ function exerciseProductionVerifierCacheRejection() {
       cacheFailure,
       /Production stage contains Python bytecode or cache files/,
       "The production verifier must reject runtime Python caches directly",
+    );
+    fs.rmSync(path.join(stage, "bin", "__pycache__"), {
+      recursive: true,
+      force: true,
+    });
+    writeFile(
+      path.join(stage, "appserver", "static", "pages", "executive_insights.js"),
+      "void 0;\n//# sourceMappingURL=data:application/json;base64,e30=\n",
+    );
+    const sourceMapDirectiveFailure = runExpectFailure(
+      "node",
+      [VERIFY_SCRIPT_SOURCE, stage],
+      { cwd: root },
+    );
+    assert.match(
+      sourceMapDirectiveFailure,
+      /Production entry bundles contain source-map directives/,
+      "The production verifier must reject inline or external source-map directives",
     );
   } finally {
     removeTempRoot(root);
@@ -748,6 +775,11 @@ assert.match(
   fs.readFileSync(VERIFY_SCRIPT_SOURCE, "utf8"),
   /FORBIDDEN_RUNTIME_FILE_EXTENSIONS[\s\S]*?findDirectoriesNamed[\s\S]*?__pycache__/,
   "Final production verification must reject bytecode and cache directories",
+);
+assert.match(
+  fs.readFileSync(VERIFY_SCRIPT_SOURCE, "utf8"),
+  /SOURCE_MAP_DIRECTIVE_PATTERN[\s\S]*?source-map directives/,
+  "Final production verification must reject source maps embedded in JavaScript bundles",
 );
 const buildScript = fs.readFileSync(BUILD_SCRIPT_SOURCE, "utf8");
 assert.match(
