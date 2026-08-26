@@ -10,6 +10,9 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Made Dashboard Manager easier to resume: library cards and preview dialogs
+  now expose direct edit actions, and Searchbase picker rows start compact with
+  a toggle for full search metadata.
 - Restricted Dashboard Builder background uploads to bounded PNG, JPEG, GIF, or
   WebP data, persisted them through the capability-protected shared
   configuration handler, and ignore unsupported stored sources in the picker.

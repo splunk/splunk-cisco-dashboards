@@ -987,6 +987,14 @@ export default function DBHomePage() {
             )}
             {selectedDash && (
               <Button
+                label="Edit Dashboard"
+                appearance="primary"
+                icon={<Pencil />}
+                onClick={() => handleEditDashboard(selectedDash)}
+              />
+            )}
+            {selectedDash && (
+              <Button
                 label="Edit Metadata"
                 appearance="secondary"
                 icon={<FileCharts />}
@@ -1357,8 +1365,9 @@ export default function DBHomePage() {
                                 </Tooltip>
                                 <Tooltip content="Edit dashboard">
                                   <Button
-                                    appearance="subtle"
+                                    appearance="primary"
                                     icon={<Pencil />}
+                                    label="Edit"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleEditDashboard(dash);

@@ -3044,6 +3044,27 @@ div.card-trend-footer [data-test='button'] {
     font-size: var(--sui-font-size-small);
 }
 
+.dropdown-kpi-filter-summary-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.dropdown-kpi-compact-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--dashboard-builder-content-muted, #5f6b7a);
+    cursor: pointer;
+    font-size: var(--sui-font-size-small);
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.dropdown-kpi-compact-toggle input {
+    accent-color: var(--dashboard-builder-accent, #0064d7);
+}
+
 .dropdown-kpi-clear-button,
 .dropdown-kpi-select-all-button {
     border: 0;
@@ -3125,6 +3146,13 @@ div.card-trend-footer [data-test='button'] {
     align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
+}
+
+.dropdown-kpi-item-compact {
+    align-items: center;
+    min-height: 44px;
+    padding-bottom: 6px;
+    padding-top: 6px;
 }
 
 .dropdown-kpi-item-main {

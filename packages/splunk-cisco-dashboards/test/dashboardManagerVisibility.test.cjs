@@ -20,10 +20,14 @@ const editor = readSource(
 const homePage = readSource(
   "src/main/webapp/pages/dashboardbuilder/DBHomePage.jsx",
 );
+const searchbasePicker = readSource(
+  "src/main/webapp/pages/dashboardbuilder/DropdownWithSearch.jsx",
+);
 const setupTuner = readSource(
   "src/main/webapp/pages/macro_index_tuning/index.tsx",
 );
 const commonStyles = readSource("src/main/webapp/common/styles/commonstyles.css");
+const userGuide = readSource("src/main/webapp/pages/user_guide/index.tsx");
 const setupBootstrap = readSource(
   "src/main/resources/splunk/appserver/static/start_bootstrap.js",
 );
@@ -137,6 +141,41 @@ assert.match(
   homePage,
   /need those extensions are hidden[\s\S]*?native-only definitions remain available/,
   "Dashboard Manager help must explain conditional native visibility",
+);
+assert.match(
+  homePage,
+  /label="Edit"[\s\S]*?handleEditDashboard\(dash\)/,
+  "Dashboard library cards must expose a labeled Edit action",
+);
+assert.match(
+  homePage,
+  /label="Edit Dashboard"[\s\S]*?handleEditDashboard\(selectedDash\)/,
+  "Dashboard previews must let builders resume editing directly",
+);
+assert.match(
+  commonStyles,
+  /dropdown-kpi-compact-toggle[\s\S]*?dropdown-kpi-item-compact/,
+  "The Searchbase picker must style both its compact-results control and compact rows",
+);
+assert.match(
+  searchbasePicker,
+  /const \[compactResults, setCompactResults\] = useState\(true\)[\s\S]*?Compact rows[\s\S]*?compact=\{compactResults\}/,
+  "The Searchbase picker must start compact and let users reveal full metadata",
+);
+assert.match(
+  searchbasePicker,
+  /useId[\s\S]*?htmlFor=\{compactResultsToggleId\}[\s\S]*?id=\{compactResultsToggleId\}/,
+  "The compact-results label must remain associated with its native checkbox",
+);
+assert.match(
+  searchbasePicker,
+  /\{!compact && \([\s\S]*?dropdown-kpi-item-id[\s\S]*?dropdown-kpi-row-tags/,
+  "Compact rows must omit secondary search metadata without changing selection behavior",
+);
+assert.match(
+  userGuide,
+  /Dashboard\s+Manager now makes Edit visible[\s\S]*?compact[\s\S]*?metadata on demand/,
+  "Current in-app release notes must cover Dashboard Manager resume and compact picker changes",
 );
 
 const selectAppOwnedIndexMacroNames = evaluateTypeScriptConst(

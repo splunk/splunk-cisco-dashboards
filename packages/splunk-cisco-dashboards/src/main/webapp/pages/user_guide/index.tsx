@@ -1854,7 +1854,10 @@ iseval = 0`}</CodeBlock>
                         dialogs now support complete keyboard operation. Release
                         metadata now follows the canonical app version,
                         upgrade notifications are explicit, and React Router
-                        is on its supported security-maintenance line.
+                        is on its supported security-maintenance line. Dashboard
+                        Manager now makes Edit visible from library cards and
+                        previews, while its Searchbase picker starts with compact
+                        search-name rows and can reveal full metadata on demand.
                       </td>
                       <td className="px-3 py-3 sui-color-default">
                         Install the build through the supported app-management

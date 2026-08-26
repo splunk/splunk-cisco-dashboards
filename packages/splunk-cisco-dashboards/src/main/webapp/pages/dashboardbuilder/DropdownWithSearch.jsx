@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useId, useLayoutEffect, useRef, useState } from 'react';
 import '../../common/styles/commonstyles.css';
 import Button from '@splunk/react-ui/Button';
 import Select from '@splunk/react-ui/Select';
@@ -139,6 +139,8 @@ export default function DropdownWithSearch({
     const [includeHiddenSearches, setIncludeHiddenSearches] = useState(false);
     const [includeDrilldownSearches, setIncludeDrilldownSearches] = useState(false);
     const [includeTableSearches, setIncludeTableSearches] = useState(false);
+    const [compactResults, setCompactResults] = useState(true);
+    const compactResultsToggleId = useId();
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const [menuPosition, setMenuPosition] = useState(undefined);
@@ -594,15 +596,31 @@ export default function DropdownWithSearch({
                                 <span>
                                     {sortedSearches.length} of {searches.length} KPIs
                                 </span>
-                                {hasActiveFilters && (
-                                    <button
-                                        type="button"
-                                        className="dropdown-kpi-clear-button"
-                                        onClick={resetFilters}
+                                <div className="dropdown-kpi-filter-summary-actions">
+                                    <label
+                                        className="dropdown-kpi-compact-toggle"
+                                        htmlFor={compactResultsToggleId}
                                     >
-                                        Clear filters
-                                    </button>
-                                )}
+                                        <input
+                                            id={compactResultsToggleId}
+                                            type="checkbox"
+                                            checked={compactResults}
+                                            onChange={(event) =>
+                                                setCompactResults(event.target.checked)
+                                            }
+                                        />
+                                        <span>Compact rows</span>
+                                    </label>
+                                    {hasActiveFilters && (
+                                        <button
+                                            type="button"
+                                            className="dropdown-kpi-clear-button"
+                                            onClick={resetFilters}
+                                        >
+                                            Clear filters
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -664,6 +682,7 @@ export default function DropdownWithSearch({
                                         tags={search.tags || []}
                                         icon={getVizIcon(search.defaultViz)}
                                         searchbaseUrl={splunkSearchbaseEditUrl(search.id)}
+                                        compact={compactResults}
                                         updateSelection={updateSelection}
                                         selection={selection}
                                     />
@@ -693,9 +712,14 @@ export function DropdownItem({
     app,
     tags = [],
     searchbaseUrl,
+    compact = false,
 }) {
     return (
-        <li className="dropdown-item dropdown-kpi-item">
+        <li
+            className={`dropdown-item dropdown-kpi-item${
+                compact ? ' dropdown-kpi-item-compact' : ''
+            }`}
+        >
             <div className="dropdown-kpi-item-main">
                 <Checkbox
                     aria-label={`Select ${label}`}
@@ -711,18 +735,25 @@ export function DropdownItem({
                     {icon && <span className="dropdown-icon">{icon}</span>}
                     <span className="dropdown-kpi-item-copy">
                         <span className="dropdown-kpi-item-title">{label}</span>
-                        <span className="dropdown-kpi-item-id">{value}</span>
-                        <span className="dropdown-kpi-item-meta">
-                            {[category, subCategory, app].filter(Boolean).join(' / ')}
-                        </span>
-                        {tags.length > 0 && (
-                            <span className="dropdown-kpi-row-tags">
-                                {tags.slice(0, 4).map((tag) => (
-                                    <span key={`${value}-${tag}`} className="dropdown-kpi-row-tag">
-                                        {tag}
+                        {!compact && (
+                            <>
+                                <span className="dropdown-kpi-item-id">{value}</span>
+                                <span className="dropdown-kpi-item-meta">
+                                    {[category, subCategory, app].filter(Boolean).join(' / ')}
+                                </span>
+                                {tags.length > 0 && (
+                                    <span className="dropdown-kpi-row-tags">
+                                        {tags.slice(0, 4).map((tag) => (
+                                            <span
+                                                key={`${value}-${tag}`}
+                                                className="dropdown-kpi-row-tag"
+                                            >
+                                                {tag}
+                                            </span>
+                                        ))}
                                     </span>
-                                ))}
-                            </span>
+                                )}
+                            </>
                         )}
                     </span>
                 </button>
