@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "app": {
+    "splunkbase_app_id": 9257,
+    "package_id": "splunk-cisco-dashboards"
+  },
+  "build_allocations": [
+    {
+      "version": "1.0.42",
+      "build": 2000,
+      "state": "observed_archive",
+      "note": "Retained standard archive; publication status is not independently verified."
+    },
+    {
+      "version": "1.0.43",
+      "build": 2046,
+      "state": "observed_archive",
+      "note": "Retained standard archive; publication status is not independently verified."
+    },
+    {
+      "version": "1.0.44",
+      "build": 2048,
+      "state": "observed_archive",
+      "note": "Retained standard archive; publication status is not independently verified."
+    },
+    {
+      "version": "1.0.45",
+      "build": 2065,
+      "state": "published",
+      "artifact": {
+        "filename": "splunk-cisco-dashboards-1.0.45.tar.gz",
+        "sha256": "f148380ba4011bfe5faa072dd3fc78e2690ff01fd457a4cc74336a560916cd8a"
+      },
+      "note": "User confirmed this public archive and its hash after download on 2026-08-26; version visibility was also confirmed in the Splunkbase management UI on 2026-08-25."
+    },
+    {
+      "version": "1.0.46",
+      "build": 2067,
+      "state": "retired_candidate",
+      "note": "Retained local candidate only; this is not evidence of public publication."
+    },
+    {
+      "version": "1.0.46",
+      "build": 2068,
+      "state": "current",
+      "note": "Committed source release identity; this is not a claim of publication."
+    }
+  ]
+}

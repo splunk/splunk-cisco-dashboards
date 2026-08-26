@@ -156,6 +156,104 @@ run_quietly() {
     return "$rc"
 }
 
+archive_identity() {
+    local archive="$1"
+    tar -xzOf "$archive" "${APP_NAME}/default/app.conf" 2>/dev/null | awk '
+        /^\[/ { section=$0 }
+        section == "[id]" && /^[[:space:]]*version[[:space:]]*=/ {
+            sub(/^[^=]*=/, "")
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+            version=$0
+        }
+        section == "[install]" && /^[[:space:]]*build[[:space:]]*=/ {
+            sub(/^[^=]*=/, "")
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+            build=$0
+        }
+        END {
+            if (version != "" && build != "") print version "\t" build
+        }
+    '
+}
+
+find_release_archive() {
+    local expected_version="$1"
+    local expected_build="$2"
+    local expected_profile="$3"
+    local archive archive_profile identity archive_version archive_build
+    local match=""
+    local match_count=0
+
+    while IFS= read -r -d '' archive; do
+        archive_profile="splunkbase"
+        [[ "$archive" == *-developer.tar.gz ]] && archive_profile="developer"
+        [[ "$archive_profile" == "$expected_profile" ]] || continue
+
+        identity="$(archive_identity "$archive")"
+        [[ -n "$identity" ]] || continue
+        IFS=$'\t' read -r archive_version archive_build <<< "$identity"
+        if [[ "$archive_version" == "$expected_version" && "$archive_build" == "$expected_build" ]]; then
+            match="$archive"
+            match_count=$((match_count + 1))
+        fi
+    done < <(find "$DIST_DIR" -maxdepth 1 -type f -name "${APP_NAME}-*-sha256-*.tar.gz" -print0)
+
+    if [[ "$match_count" -eq 0 ]]; then
+        err "ERROR: packaging completed but no immutable ${expected_profile} archive was found for version ${expected_version}, build ${expected_build}."
+        return 1
+    fi
+    if [[ "$match_count" -gt 1 ]]; then
+        err "ERROR: found ${match_count} immutable ${expected_profile} archives for version ${expected_version}, build ${expected_build}; refusing an ambiguous install target."
+        return 1
+    fi
+
+    printf '%s\n' "$match"
+}
+
+sha256_file() {
+    local file="$1"
+    if command -v shasum >/dev/null 2>&1; then
+        shasum -a 256 "$file" | awk '{print $1}'
+    elif command -v sha256sum >/dev/null 2>&1; then
+        sha256sum "$file" | awk '{print $1}'
+    else
+        err "ERROR: neither shasum nor sha256sum is available to verify the release archive."
+        return 1
+    fi
+}
+
+verify_release_archive() {
+    local archive="$1"
+    local archive_name expected_sha actual_sha checksum_path checksum_record
+
+    if [[ ! -f "$archive" ]]; then
+        err "ERROR: release archive is missing: ${archive}"
+        return 1
+    fi
+    archive_name="$(basename "$archive")"
+    if [[ ! "$archive_name" =~ ^${APP_NAME}-[A-Za-z0-9][A-Za-z0-9._+-]*-sha256-([0-9a-f]{64})(-developer)?\.tar\.gz$ ]]; then
+        err "ERROR: release archive does not use the required immutable SHA-256 filename: ${archive_name}"
+        return 1
+    fi
+    expected_sha="${BASH_REMATCH[1]}"
+    checksum_path="${archive}.sha256"
+    if [[ ! -f "$checksum_path" ]]; then
+        err "ERROR: release archive checksum sidecar is missing: ${checksum_path}"
+        return 1
+    fi
+    checksum_record="$(cat "$checksum_path")"
+    if [[ "$checksum_record" != "${expected_sha}  ${archive_name}" ]]; then
+        err "ERROR: checksum sidecar does not exactly describe ${archive_name}."
+        return 1
+    fi
+    actual_sha="$(sha256_file "$archive")" || return 1
+    actual_sha="$(printf '%s' "$actual_sha" | tr '[:upper:]' '[:lower:]')"
+    if [[ "$actual_sha" != "$expected_sha" ]]; then
+        err "ERROR: SHA-256 mismatch for ${archive_name}; expected ${expected_sha}, got ${actual_sha}."
+        return 1
+    fi
+}
+
 write_remote_rest_helper() {
     local helper_path="$1"
 
@@ -395,12 +493,12 @@ Version is read from ./VERSION and stamped at package time.
 
 Push-to-Splunk options (mutually exclusive):
   --install              splunkd-managed install via REST mgmt port. Calls
-                         \`splunk install app dist/<app>.tar.gz -update 1
+                         \`splunk install app dist/<app>-<version>-sha256-<digest>.tar.gz -update 1
                           -auth user:pass\`. Requires --auth.
   --deploy               Filesystem swap into \$SPLUNK_HOME/etc/apps/<app>
-                         (rm -rf + cp -R, preserves local/ and runtime lookup
-                         CSVs). Faster than --install for dev iteration. No
-                         auth required.
+                         through a prepared sibling replacement (preserves
+                         local/ and runtime lookup CSVs). Faster than
+                         --install for dev iteration. No auth required.
   --remote-install USER@HOST
                          Upload and install on a remote Splunk host over SSH.
                          Direct OS login as splunk avoids sudo; other OS users
@@ -424,7 +522,8 @@ Other options:
                          Not valid with --fast or --no-build.
   --developer            Include resources listed in the app's
                          config/build-profile-manifest.json. Writes a
-                         *-developer.tar.gz intended only for local testing.
+                         SHA-256-addressed *-developer.tar.gz intended only
+                         for local testing.
                          Without this flag, packaging is Splunkbase-safe.
   --lint-spl-antipatterns
                          Run the experimental Searchbase SPL anti-pattern
@@ -729,6 +828,7 @@ if [[ "$do_deploy" -eq 1 ]]; then
 fi
 
 build_version=""
+release_build=""
 if [[ "$no_build" -eq 0 ]]; then
     if [[ ! -f "$VERSION_FILE" ]]; then
         err "ERROR: VERSION file not found: ${VERSION_FILE}"
@@ -737,6 +837,19 @@ if [[ "$no_build" -eq 0 ]]; then
     build_version="$(tr -d '[:space:]' < "$VERSION_FILE")"
     if [[ -z "$build_version" ]]; then
         err "ERROR: VERSION file is empty: ${VERSION_FILE}"
+        exit 1
+    fi
+    release_build="$(awk '
+        /^\[/ { in_install = ($0 == "[install]") }
+        in_install && /^[[:space:]]*build[[:space:]]*=/ {
+            sub(/^[^=]*=/, "")
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+            print
+            exit
+        }
+    ' "${APP_DIR}/src/main/resources/splunk/default/app.conf")"
+    if [[ ! "$release_build" =~ ^[1-9][0-9]*$ ]]; then
+        err "ERROR: source app.conf must contain a positive numeric [install] build value."
         exit 1
     fi
 
@@ -794,38 +907,43 @@ fi
 
 if [[ "$no_build" -eq 1 ]]; then
     if [[ "$developer_profile" -eq 1 ]]; then
-        package_glob="${APP_NAME}-*-developer.tar.gz"
+        package_glob="${APP_NAME}-*-sha256-*-developer.tar.gz"
         package_path="$(
             find "$DIST_DIR" -maxdepth 1 -type f -name "$package_glob" \
-                -print0 \
-                | xargs -0 ls -t 2>/dev/null \
+                -exec ls -t {} + 2>/dev/null \
                 | head -n 1
         )"
     else
-        package_glob="${APP_NAME}-*.tar.gz"
+        package_glob="${APP_NAME}-*-sha256-*.tar.gz"
         package_path="$(
             find "$DIST_DIR" -maxdepth 1 -type f -name "$package_glob" \
                 ! -name "*-developer.tar.gz" \
-                -print0 \
-                | xargs -0 ls -t 2>/dev/null \
+                -exec ls -t {} + 2>/dev/null \
                 | head -n 1
         )"
     fi
 else
     if [[ "$developer_profile" -eq 1 ]]; then
-        package_path="${DIST_DIR}/${APP_NAME}-${build_version}-developer.tar.gz"
+        package_profile="developer"
     else
-        package_path="${DIST_DIR}/${APP_NAME}-${build_version}.tar.gz"
+        package_profile="splunkbase"
+    fi
+    if ! package_path="$(find_release_archive "$build_version" "$release_build" "$package_profile")"; then
+        exit 1
     fi
 fi
 
 if [[ -z "$package_path" ]]; then
     if [[ "$no_build" -eq 1 ]]; then
-        err "ERROR: --no-build requested but no ${APP_NAME}-*.tar.gz found under ${DIST_DIR}."
+        err "ERROR: --no-build requested but no immutable ${APP_NAME}-*-sha256-*.tar.gz found under ${DIST_DIR}."
         err "       Run ./build.sh once (without --no-build) to produce a package first."
     else
-        err "ERROR: Could not find ${APP_NAME}-*.tar.gz under ${DIST_DIR}."
+        err "ERROR: Could not find the immutable ${APP_NAME} archive produced by packaging."
     fi
+    exit 1
+fi
+
+if ! verify_release_archive "$package_path"; then
     exit 1
 fi
 
@@ -873,9 +991,9 @@ if [[ "$remote_install" -eq 1 ]]; then
     remote_install_archive "$package_path"
 fi
 
-# --deploy path: rm -rf + cp -R into etc/apps. Faster than --install for
-# dev iteration because splunkd doesn't have to extract anything, and
-# (more importantly) we don't go through the REST mgmt port at all. We
+# --deploy path: stage a complete replacement alongside the live app, then
+# promote it with same-filesystem renames. This avoids the old delete-then-copy
+# window, where a failed or slow copy left Splunk with no app at all. We
 # preserve $TARGET/local/ across the swap because that's where operator-edited
 # stanzas live. We also preserve live lookups/*.csv files: saved searches and
 # editors update those at runtime, while the package intentionally carries
@@ -885,6 +1003,43 @@ if [[ "$do_deploy" -eq 1 ]]; then
     APPS_DIR="${SPLUNK_HOME}/etc/apps"
     TARGET="${APPS_DIR}/${APP_NAME}"
     STATE_BACKUP="$(mktemp -d)"
+    UNPACK_DIR="$(mktemp -d)"
+    CANDIDATE_DIR=""
+    PREVIOUS_TARGET=""
+    target_moved_to_previous=0
+    candidate_promoted=0
+
+    deploy_cleanup() {
+        local status=$?
+        trap - EXIT
+
+        # A failed promotion must leave the previous app in place. Both
+        # renames occur inside APPS_DIR, so each individual move is atomic on
+        # normal POSIX/macOS filesystems. POSIX cannot atomically replace a
+        # non-empty directory in one rename, hence the guarded rollback.
+        if [[ "$target_moved_to_previous" -eq 1 && "$candidate_promoted" -eq 0 ]] \
+            && [[ -n "$PREVIOUS_TARGET" ]] \
+            && { [[ -e "$PREVIOUS_TARGET" ]] || [[ -L "$PREVIOUS_TARGET" ]]; } \
+            && [[ ! -e "$TARGET" && ! -L "$TARGET" ]]; then
+            err "WARNING: candidate promotion failed; restoring the previous app at ${TARGET} ..."
+            if ! mv "$PREVIOUS_TARGET" "$TARGET"; then
+                err "ERROR: automatic rollback failed; previous app remains at ${PREVIOUS_TARGET}"
+            fi
+        fi
+
+        if [[ -n "$CANDIDATE_DIR" ]] && { [[ -d "$CANDIDATE_DIR" ]] || [[ -L "$CANDIDATE_DIR" ]]; }; then
+            rm -rf "$CANDIDATE_DIR"
+        fi
+        if [[ -d "$UNPACK_DIR" ]]; then
+            rm -rf "$UNPACK_DIR"
+        fi
+        if [[ -d "$STATE_BACKUP" ]]; then
+            rm -rf "$STATE_BACKUP"
+        fi
+        exit "$status"
+    }
+    trap 'deploy_cleanup' EXIT
+
     preserved_lookup_count=0
     hdr "Deploying to ${TARGET} ..."
     if [[ -d "${TARGET}/local" ]]; then
@@ -902,10 +1057,6 @@ if [[ "$do_deploy" -eq 1 ]]; then
         fi
     fi
 
-    UNPACK_DIR="$(mktemp -d)"
-    # shellcheck disable=SC2064
-    trap "rm -rf '${UNPACK_DIR}' '${STATE_BACKUP}'" EXIT
-
     say "[build] Extracting ${package_path} -> ${UNPACK_DIR} ..."
     run_quietly tar xzf "$package_path" -C "$UNPACK_DIR"
     if [[ ! -d "${UNPACK_DIR}/${APP_NAME}" ]]; then
@@ -913,20 +1064,58 @@ if [[ "$do_deploy" -eq 1 ]]; then
         exit 1
     fi
 
-    say "[build] Swapping ${TARGET} ..."
-    rm -rf "$TARGET"
-    cp -R "${UNPACK_DIR}/${APP_NAME}" "$TARGET"
+    # Keep the candidate under etc/apps so its promotion is a same-filesystem
+    # rename. The dot prefix keeps the temporary sibling distinct from the
+    # live app name while its contents are assembled and validated.
+    CANDIDATE_DIR="$(mktemp -d "${APPS_DIR}/.${APP_NAME}.deploy.XXXXXX")"
+    say "[build] Preparing replacement alongside ${TARGET} ..."
+    cp -R "${UNPACK_DIR}/${APP_NAME}/." "$CANDIDATE_DIR/"
 
+    # Restore mutable state into the candidate before changing the live path.
+    # A copy failure here leaves TARGET untouched.
     if [[ -d "${STATE_BACKUP}/local" ]]; then
-        say "[build] Restoring local/ ..."
-        cp -R "${STATE_BACKUP}/local" "${TARGET}/local"
+        if [[ -e "${CANDIDATE_DIR}/local" || -L "${CANDIDATE_DIR}/local" ]]; then
+            err "ERROR: replacement archive unexpectedly contains local/; refusing to merge mutable state."
+            exit 1
+        fi
+        say "[build] Restoring local/ into replacement ..."
+        cp -R "${STATE_BACKUP}/local" "${CANDIDATE_DIR}/local"
     fi
     if [[ "$preserved_lookup_count" -gt 0 ]]; then
-        say "[build] Restoring ${preserved_lookup_count} live lookup CSV(s) ..."
-        mkdir -p "${TARGET}/lookups"
+        say "[build] Restoring ${preserved_lookup_count} live lookup CSV(s) into replacement ..."
+        mkdir -p "${CANDIDATE_DIR}/lookups"
         while IFS= read -r -d '' lookup_path; do
-            cp -p "$lookup_path" "${TARGET}/lookups/"
+            cp -p "$lookup_path" "${CANDIDATE_DIR}/lookups/"
         done < <(find "${STATE_BACKUP}/lookups" -maxdepth 1 -type f -name '*.csv' -print0)
+    fi
+
+    # Reserve a unique sibling path for the current app. `mv` needs a path
+    # that does not exist, so release the empty mktemp directory immediately.
+    PREVIOUS_TARGET="$(mktemp -d "${APPS_DIR}/.${APP_NAME}.previous.XXXXXX")"
+    rmdir "$PREVIOUS_TARGET"
+    if [[ -e "$TARGET" || -L "$TARGET" ]]; then
+        say "[build] Promoting replacement for ${TARGET} ..."
+        if ! mv "$TARGET" "$PREVIOUS_TARGET"; then
+            err "ERROR: could not move the existing app aside; live app was left unchanged."
+            exit 1
+        fi
+        target_moved_to_previous=1
+    fi
+    if ! mv "$CANDIDATE_DIR" "$TARGET"; then
+        err "ERROR: could not promote the prepared replacement."
+        exit 1
+    fi
+    candidate_promoted=1
+    CANDIDATE_DIR=""
+
+    # The replacement is live and has all mutable state. Remove the prior
+    # directory only now; if cleanup fails it remains as a recoverable sibling.
+    if [[ "$target_moved_to_previous" -eq 1 ]] && { [[ -e "$PREVIOUS_TARGET" ]] || [[ -L "$PREVIOUS_TARGET" ]]; }; then
+        if rm -rf "$PREVIOUS_TARGET"; then
+            PREVIOUS_TARGET=""
+        else
+            err "WARNING: deployed successfully, but the prior app remains at ${PREVIOUS_TARGET}"
+        fi
     fi
 fi
 

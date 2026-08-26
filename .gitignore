@@ -35,6 +35,11 @@
 !/packages/splunk-cisco-dashboards/test/workspaceDelegatedCapability.test.cjs
 !/packages/splunk-cisco-dashboards/test/workspaceEnterpriseHardening.test.cjs
 !/packages/splunk-cisco-dashboards/test/workspaceRestHandler.test.py
+!/packages/splunk-cisco-dashboards/test/netopsReadinessScore.test.cjs
+!/packages/splunk-cisco-dashboards/test/setupJourneyContract.test.cjs
+!/packages/splunk-cisco-dashboards/test/releaseMetadataContract.test.cjs
+!/packages/splunk-cisco-dashboards/test/packagingP2Hardening.test.cjs
+!/packages/splunk-cisco-dashboards/test/routerDependencyContract.test.cjs
 /tests/
 
 # Operating-system, editor, and document artifacts.

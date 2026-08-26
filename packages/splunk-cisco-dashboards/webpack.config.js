@@ -60,10 +60,9 @@ const readBuildVersion = () => {
     }
     return readAppConfField('version') || '0.0.0';
 };
-// Packaging replaces this unique marker after it chooses the monotonically
-// increasing package build. Reading source app.conf here bakes a stale number
-// into every bundle because package_app.sh intentionally bumps only its
-// temporary copy after webpack has completed.
+// Packaging replaces this unique marker with the committed release build.
+// Reading source app.conf here would make watcher output look release-ready
+// before packaging has validated the identity and copied the bundle.
 const APP_BUILD = process.env.SCD_APP_BUILD || '__SCD_PACKAGE_BUILD__';
 const APP_VERSION = readBuildVersion();
 const MEBIBYTE = 1024 * 1024;

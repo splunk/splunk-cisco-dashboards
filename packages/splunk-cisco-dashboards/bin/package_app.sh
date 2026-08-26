@@ -2,7 +2,7 @@
 # Create a .tar.gz package from stage/. Run from package root (e.g. yarn run package:app).
 # Ensures stage exists (runs clean:build if not), then creates a tar.gz with the
 # correct top-level directory name for Splunk installation.
-set -e
+set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PKG_ROOT="${SCRIPT_DIR}/.."
 STAGE_DIR="${PKG_ROOT}/stage"
@@ -33,6 +33,38 @@ Options:
                           local use.
   -h, --help              Show this help.
 EOF
+}
+
+sha256_file() {
+  local file="$1"
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$file" | awk '{print $1}'
+  elif command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$file" | awk '{print $1}'
+  else
+    echo "ERROR: neither shasum nor sha256sum is available to record package provenance." >&2
+    return 1
+  fi
+}
+
+archive_identity() {
+  local archive="$1"
+  tar -xzOf "$archive" "${APP_NAME}/default/app.conf" 2>/dev/null | awk '
+    /^\[/ { section=$0 }
+    section == "[id]" && /^[[:space:]]*version[[:space:]]*=/ {
+      sub(/^[^=]*=/, "")
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+      version=$0
+    }
+    section == "[install]" && /^[[:space:]]*build[[:space:]]*=/ {
+      sub(/^[^=]*=/, "")
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+      build=$0
+    }
+    END {
+      if (version != "" && build != "") print version "\t" build
+    }
+  '
 }
 
 while [[ $# -gt 0 ]]; do
@@ -78,15 +110,20 @@ if [[ -z "$VERSION" ]]; then
   echo "ERROR: VERSION file is empty: ${VERSION_FILE}" >&2
   exit 1
 fi
+if [[ ! "$VERSION" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]*$ ]]; then
+  echo "ERROR: VERSION contains unsupported artifact-name characters: ${VERSION}" >&2
+  exit 1
+fi
+node "${PKG_ROOT}/bin/validate_release_identity.js"
 
 DIST_DIR="${PKG_ROOT}/../../dist"
 mkdir -p "$DIST_DIR"
 if [[ "$DEVELOPER_PROFILE" -eq 1 ]]; then
   APP_PROFILE="developer"
-  PKG_PATH="${DIST_DIR}/${APP_NAME}-${VERSION}-developer.tar.gz"
+  ARTIFACT_PROFILE_SUFFIX="-developer"
 else
   APP_PROFILE="splunkbase"
-  PKG_PATH="${DIST_DIR}/${APP_NAME}-${VERSION}.tar.gz"
+  ARTIFACT_PROFILE_SUFFIX=""
 fi
 
 if [[ "$FROM_STAGE" -eq 1 ]]; then
@@ -135,25 +172,43 @@ fi
 
 bash "${SCRIPT_DIR}/stamp_version.sh" "$STAGE_DIR"
 
-# Remove Splunk-generated runtime artifacts from stage itself before copying.
-# When developers symlink SPLUNK_HOME/etc/apps/splunk-cisco-dashboards to
-# stage/, splunkd may create these files inside the repo. They are runtime
-# state and should never remain in the project or ship in a package.
-rm -rf "${STAGE_DIR}/local"
-rm -f  "${STAGE_DIR}/metadata/local.meta"
-
 # Stage into a temp directory with the correct app directory name
 TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+ARCHIVE_TMP=""
+DIGEST_TMP=""
+IDENTITY_LOCK=""
+cleanup_package_temp() {
+  rm -rf "$TMP_DIR"
+  [[ -z "$ARCHIVE_TMP" ]] || rm -f "$ARCHIVE_TMP"
+  [[ -z "$DIGEST_TMP" ]] || rm -f "$DIGEST_TMP"
+  [[ -z "$IDENTITY_LOCK" ]] || rmdir "$IDENTITY_LOCK" 2>/dev/null || true
+}
+trap cleanup_package_temp EXIT
 cp -R "$STAGE_DIR" "${TMP_DIR}/${APP_NAME}"
 find "${TMP_DIR}" -name ".DS_Store" -delete
 find "${TMP_DIR}" -name "* copy.*" -delete
 find "${TMP_DIR}" -name "* copy" -delete
-# Remove Splunk-generated runtime artifacts — they should never ship in the package.
-# Because /opt/splunk/etc/apps/splunk-cisco-dashboards symlinks to stage/,
-# Splunk creates local.meta and local/ at runtime inside our build output.
+# Remove runtime artifacts from the temporary archive copy only. stage/ can
+# be linked to a live Splunk app, so packaging must not delete its local
+# configuration or metadata.
 rm -rf "${TMP_DIR}/${APP_NAME}/local"
 rm -f  "${TMP_DIR}/${APP_NAME}/metadata/local.meta"
+
+# Splunk can compile Python files in a watcher-linked stage/. Keep those
+# runtime caches out of the package while leaving the live stage untouched so
+# --from-stage remains safe and fast.
+removed_python_runtime_artifacts=0
+while IFS= read -r -d '' bytecode_path; do
+  rm -f "$bytecode_path"
+  removed_python_runtime_artifacts=$((removed_python_runtime_artifacts + 1))
+done < <(find "${TMP_DIR}/${APP_NAME}" -type f \( -name '*.pyc' -o -name '*.pyo' \) -print0)
+while IFS= read -r -d '' pycache_dir; do
+  rm -rf "$pycache_dir"
+  removed_python_runtime_artifacts=$((removed_python_runtime_artifacts + 1))
+done < <(find "${TMP_DIR}/${APP_NAME}" -type d -name '__pycache__' -print0)
+if [[ "$removed_python_runtime_artifacts" -gt 0 ]]; then
+  echo "[package] removed ${removed_python_runtime_artifacts} Python bytecode/cache artifact(s) from package staging"
+fi
 
 # A watch-linked Splunk instance can also write mutable lookup CSVs into
 # stage/lookups. Package only lookup files that exist in the source resource
@@ -196,24 +251,51 @@ if [[ -f "$META_FILE" ]]; then
   echo "[package] default.meta: ensured app-wide export is 'none'"
 fi
 
-# Bump [install] build in the packaged app.conf only. Source app.conf is
-# never modified. Counter climbs across runs: new = max(source_build, highest
-# build stamped in any existing dist/ tarball) + 1. The .tar.gz files in
-# dist/ act as the persistent counter — no state file needed.
+# The committed [install] build is the release identity. It is deliberately
+# not derived from dist/: release authors must bump and commit it before a new
+# archive is created, so the package, source, and release record agree.
 PKG_APP_CONF="${TMP_DIR}/${APP_NAME}/default/app.conf"
-source_build=$(grep -E '^\s*build\s*=' "$APP_CONF" | head -1 | sed -E 's/.*=\s*//' | tr -d '[:space:]')
-highest_prev=0
+source_build=$(awk '
+  /^\[/ { in_install = ($0 == "[install]") }
+  in_install && /^[[:space:]]*build[[:space:]]*=/ {
+    sub(/^[^=]*=/, "")
+    gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+    print
+    exit
+  }
+' "$APP_CONF")
+if [[ ! "$source_build" =~ ^[1-9][0-9]*$ ]]; then
+  echo "ERROR: source app.conf must contain a positive numeric [install] build value." >&2
+  exit 1
+fi
+new_build="$source_build"
 for prev_tar in "${DIST_DIR}"/${APP_NAME}-*.tar.gz; do
   [[ -f "$prev_tar" ]] || continue
-  b=$(tar -xzOf "$prev_tar" "${APP_NAME}/default/app.conf" 2>/dev/null \
-      | grep -E '^\s*build\s*=' | head -1 | sed -E 's/.*=\s*//' | tr -d '[:space:]')
-  if [[ "$b" =~ ^[0-9]+$ ]] && (( b > highest_prev )); then
-    highest_prev=$b
+  previous_profile="splunkbase"
+  [[ "$prev_tar" == *-developer.tar.gz ]] && previous_profile="developer"
+  [[ "$previous_profile" == "$APP_PROFILE" ]] || continue
+  # Older local artifacts may be incomplete or use the retired filename.
+  # They cannot establish a release identity unless app.conf can be read.
+  previous_identity="$(archive_identity "$prev_tar" || true)"
+  [[ -n "$previous_identity" ]] || continue
+  IFS=$'\t' read -r previous_version previous_build <<< "$previous_identity"
+  if [[ "$previous_version" == "$VERSION" && "$previous_build" == "$new_build" ]]; then
+    echo "ERROR: release identity version ${VERSION}, build ${new_build} already exists in ${prev_tar}." >&2
+    echo "       Bump and commit [install] build before producing another archive." >&2
+    exit 1
   fi
 done
-base=$source_build
-(( highest_prev > base )) && base=$highest_prev
-new_build=$((base + 1))
+# The archive name is content-addressed, so two concurrent package commands
+# could otherwise produce two different filenames for one version/build.
+# Reserve the release identity atomically until this command exits. A stale
+# reservation is intentionally fail-closed and must be inspected explicitly.
+IDENTITY_LOCK="${DIST_DIR}/.${APP_NAME}-${VERSION}-build${new_build}${ARTIFACT_PROFILE_SUFFIX}.lock"
+if ! mkdir "$IDENTITY_LOCK"; then
+  echo "ERROR: release identity version ${VERSION}, build ${new_build} is currently being packaged for ${APP_PROFILE}." >&2
+  echo "       Inspect ${IDENTITY_LOCK}; remove it only after confirming no package command is active." >&2
+  IDENTITY_LOCK=""
+  exit 1
+fi
 # sed -i has different syntax on macOS (BSD) vs Linux (GNU). Detect once
 # so this script keeps working in CI containers as well as on developer macs.
 if sed --version >/dev/null 2>&1; then
@@ -222,12 +304,11 @@ else
   sed_i=( sed -i '' )
 fi
 "${sed_i[@]}" -E "s/^([[:space:]]*build[[:space:]]*=[[:space:]]*)[0-9]+/\\1${new_build}/" "$PKG_APP_CONF"
-echo "[package] app.conf: bumped build ${base} -> ${new_build} (package only, source unchanged)"
+echo "[package] app.conf: retained committed build ${new_build}"
 
-# Webpack emits a unique marker rather than the source app.conf build because
-# this package-only counter is selected after compilation (and --from-stage
-# deliberately reuses watcher output). Replace the marker in every staged
-# bundle so the UI badge identifies the exact installed archive bytes.
+# Webpack emits a unique marker rather than reading app.conf at compile time.
+# Replace it in the archive copy with the committed release build so a
+# --from-stage package and its UI badge carry the same release identity.
 bundle_build_markers=0
 while IFS= read -r -d '' bundle_path; do
   if grep -q '__SCD_PACKAGE_BUILD__' "$bundle_path"; then
@@ -241,24 +322,6 @@ if [[ "$bundle_build_markers" -eq 0 ]]; then
 fi
 echo "[package] React bundles: stamped build ${new_build} in ${bundle_build_markers} bundle(s)"
 
-# Provenance comment block above [install]. Helps debug "which commit
-# produced this tarball" without untarring + diffing the whole tree.
-# Git lookups are best-effort so the build still works in a tarball
-# extracted outside a git checkout. Matches the convention used by
-# ta_cisco_common/build.sh and field-solutions-demo-data-gen/package_app.sh.
-BUILD_TS=$(date -u '+%Y-%m-%dT%H:%M:%SZ')
-GIT_SHA=$(cd "$PKG_ROOT" && git rev-parse --short=12 HEAD 2>/dev/null || echo "unknown")
-GIT_DIRTY=$(cd "$PKG_ROOT" && git diff --quiet 2>/dev/null && echo "" || echo "-dirty")
-GIT_BRANCH=$(cd "$PKG_ROOT" && git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
-BUILD_USER="${USER:-unknown}@$(hostname -s 2>/dev/null || echo unknown)"
-PROVENANCE="# Built: ${BUILD_TS} commit ${GIT_SHA}${GIT_DIRTY} branch ${GIT_BRANCH} by ${BUILD_USER}"
-# Insert the provenance line immediately before the first occurrence of
-# [install]. awk is portable across BSD/GNU and avoids sed escaping headaches.
-awk -v line="$PROVENANCE" '
-  !inserted && /^\[install\]/ { print line; inserted=1 }
-  { print }
-' "$PKG_APP_CONF" > "${PKG_APP_CONF}.tmp" && mv "${PKG_APP_CONF}.tmp" "$PKG_APP_CONF"
-
 # Strip macOS extended attributes to keep archive clean
 xattr -cr "${TMP_DIR}/${APP_NAME}" 2>/dev/null || true
 
@@ -267,8 +330,56 @@ xattr -cr "${TMP_DIR}/${APP_NAME}" 2>/dev/null || true
 # replace the checked JavaScript between verification and packaging.
 node "${PKG_ROOT}/bin/verify_production_assets.js" "${TMP_DIR}/${APP_NAME}"
 
-cd "$TMP_DIR"
-# COPYFILE_DISABLE prevents macOS tar from embedding AppleDouble resource forks
-COPYFILE_DISABLE=1 tar czf "$PKG_PATH" "$APP_NAME"
+# Build the archive in dist/ so the final hard-link promotion is atomic on
+# that filesystem. Archive files and symlinks only: supplying both a directory
+# and its descendants to tar makes tar recurse into the directory and write
+# duplicate members. The sorted file list makes member ordering stable without
+# reintroducing mutable developer/host provenance into app.conf.
+ARCHIVE_FILELIST="${TMP_DIR}/archive-files.txt"
+(
+  cd "$TMP_DIR"
+  LC_ALL=C find "$APP_NAME" \( -type f -o -type l \) -print | LC_ALL=C sort > "$ARCHIVE_FILELIST"
+)
+ARCHIVE_TMP="$(mktemp "${DIST_DIR}/.${APP_NAME}.${VERSION}.archive.XXXXXX")"
+(
+  cd "$TMP_DIR"
+  # COPYFILE_DISABLE prevents macOS tar from embedding AppleDouble resource forks
+  COPYFILE_DISABLE=1 tar czf "$ARCHIVE_TMP" -T "$ARCHIVE_FILELIST"
+)
+PACKAGE_SHA256="$(sha256_file "$ARCHIVE_TMP")"
+if [[ ! "$PACKAGE_SHA256" =~ ^[0-9a-fA-F]{64}$ ]]; then
+  echo "ERROR: could not calculate a valid SHA-256 for the package archive." >&2
+  exit 1
+fi
+PACKAGE_SHA256="$(printf '%s' "$PACKAGE_SHA256" | tr '[:upper:]' '[:lower:]')"
+PKG_PATH="${DIST_DIR}/${APP_NAME}-${VERSION}-sha256-${PACKAGE_SHA256}${ARTIFACT_PROFILE_SUFFIX}.tar.gz"
+PKG_SHA256_PATH="${PKG_PATH}.sha256"
+if [[ -e "$PKG_PATH" || -e "$PKG_SHA256_PATH" ]]; then
+  echo "ERROR: immutable package path already exists: ${PKG_PATH}" >&2
+  echo "       Refusing to overwrite a prior archive or checksum record." >&2
+  exit 1
+fi
+DIGEST_TMP="$(mktemp "${DIST_DIR}/.${APP_NAME}.${VERSION}.sha256.XXXXXX")"
+printf '%s  %s\n' "$PACKAGE_SHA256" "$(basename "$PKG_PATH")" > "$DIGEST_TMP"
+
+# ln(2) fails if the destination already exists, unlike tar's normal
+# truncating create path. This leaves an existing release artifact untouched
+# if two package invocations race for the same release identity.
+if ! ln "$ARCHIVE_TMP" "$PKG_PATH"; then
+  echo "ERROR: immutable package path was created concurrently: ${PKG_PATH}" >&2
+  echo "       Refusing to overwrite the existing archive." >&2
+  exit 1
+fi
+rm -f "$ARCHIVE_TMP"
+ARCHIVE_TMP=""
+if ! ln "$DIGEST_TMP" "$PKG_SHA256_PATH"; then
+  echo "ERROR: immutable checksum path was created concurrently: ${PKG_SHA256_PATH}" >&2
+  echo "       Archive was preserved at ${PKG_PATH}; calculate and retain its SHA-256 manually." >&2
+  exit 1
+fi
+rm -f "$DIGEST_TMP"
+DIGEST_TMP=""
 SIZE=$(du -h "$PKG_PATH" | cut -f1 | xargs)
 echo "Created ${PKG_PATH} (${SIZE})"
+echo "SHA-256 ${PACKAGE_SHA256}  $(basename "$PKG_PATH")"
+echo "Checksum ${PKG_SHA256_PATH}"

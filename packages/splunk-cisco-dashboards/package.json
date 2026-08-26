@@ -8,7 +8,7 @@
         "clean:build": "bash bin/clean_build.sh && node bin/build.js build",
         "package:app": "bash bin/package_app.sh",
         "package:app:developer": "bash bin/package_app.sh --developer",
-        "pack:app": "node bin/build.js pack",
+        "pack:app": "bash bin/package_app.sh",
         "link:app": "node bin/build.js link",
         "unlink:app": "node bin/build.js unlink",
         "start": "node bin/build.js watch",

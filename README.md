@@ -58,6 +58,20 @@ For a smaller, minified release package (slower to build):
 
 Minification is opt-in and does not affect the fast `yarn start` watch workflow.
 
+Release identity is controlled by the committed
+[`releases/splunkbase-9257.json`](releases/splunkbase-9257.json) ledger and
+the source `[install] build` in `default/app.conf`. Before each Splunkbase
+release, append one strictly higher `current` build allocation, change both
+the app version and build in source, and change the preceding `current`
+allocation to `published` after public confirmation or `retired_candidate`
+otherwise. Packaging rejects metadata that does
+not match this ledger, as well as a second archive with the same packaged
+version and build within one Splunkbase or developer profile.
+Artifacts are content-addressed as
+`splunk-cisco-dashboards-<version>-sha256-<digest>.tar.gz` with a matching
+immutable `.sha256` sidecar. The root build wrapper verifies both before it
+will use an archive, so retain both files used for a Splunkbase upload.
+
 ## Usage
 
 For local development, run the app package webpack watcher:

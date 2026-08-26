@@ -31,6 +31,7 @@ const ENTRY_NAMES = [
 ];
 
 const FORBIDDEN_SOURCE_EXTENSIONS = new Set(['.jsx', '.ts', '.tsx', '.map']);
+const FORBIDDEN_RUNTIME_FILE_EXTENSIONS = new Set(['.pyc', '.pyo']);
 const DEVELOPMENT_REACT_MARKERS = [
     'This page is using the development build of React',
     'react.development.js',
@@ -42,6 +43,17 @@ function walkFiles(directory) {
     return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
         const entryPath = path.join(directory, entry.name);
         return entry.isDirectory() ? walkFiles(entryPath) : [entryPath];
+    });
+}
+
+function findDirectoriesNamed(directory, name) {
+    return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+        if (!entry.isDirectory()) return [];
+        const entryPath = path.join(directory, entry.name);
+        return [
+            ...(entry.name === name ? [entryPath] : []),
+            ...findDirectoriesNamed(entryPath, name),
+        ];
     });
 }
 
@@ -84,11 +96,36 @@ if (!notice.includes('Copyright 2026 Splunk Inc.')) {
 const leakedSourceFiles = stagedFiles.filter((filePath) =>
     FORBIDDEN_SOURCE_EXTENSIONS.has(path.extname(filePath).toLowerCase())
 );
+const leakedPythonRuntimeArtifacts = stagedFiles.filter((filePath) => {
+    const relativeParts = path.relative(STAGE_DIR, filePath).split(path.sep);
+    return (
+        FORBIDDEN_RUNTIME_FILE_EXTENSIONS.has(
+            path.extname(filePath).toLowerCase()
+        ) || relativeParts.includes('__pycache__')
+    );
+});
+const leakedPythonCacheDirectories = findDirectoriesNamed(
+    STAGE_DIR,
+    '__pycache__'
+);
 
 if (leakedSourceFiles.length > 0) {
     fail(
         'Production stage contains source files or source maps.',
         leakedSourceFiles.map((filePath) => path.relative(STAGE_DIR, filePath))
+    );
+}
+
+if (
+    leakedPythonRuntimeArtifacts.length > 0 ||
+    leakedPythonCacheDirectories.length > 0
+) {
+    fail(
+        'Production stage contains Python bytecode or cache files.',
+        [
+            ...leakedPythonRuntimeArtifacts,
+            ...leakedPythonCacheDirectories,
+        ].map((filePath) => path.relative(STAGE_DIR, filePath))
     );
 }
 

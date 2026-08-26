@@ -234,7 +234,8 @@ packages/splunk-cisco-dashboards/
 ├── .eslintrc.js
 ├── stylelint.config.js
 ├── bin/
-│   └── build.js                  # webpack + stage + tarball orchestrator
+│   ├── build.js                  # webpack/stage orchestration; pack delegates safely
+│   └── package_app.sh            # canonical Splunk release archive builder
 └── src/
     └── main/
         ├── webapp/
@@ -296,6 +297,19 @@ cd ../..
 
 Minification is opt-in; normal builds and `yarn start` keep fast,
 unminified production-React bundles.
+
+The committed release ledger at
+[`../../releases/splunkbase-9257.json`](../../releases/splunkbase-9257.json)
+and `[install] build` in `default/app.conf` define the release identity. Before
+each Splunkbase release, append a strictly higher `current` allocation, change
+both source version fields and the build, then mark the preceding `current`
+allocation as `published` after public confirmation or `retired_candidate`
+otherwise. Packaging rejects metadata that
+does not match the ledger, and a second archive with the same packaged version
+and build in the same profile. Successful packages are named
+`splunk-cisco-dashboards-<version>-sha256-<digest>.tar.gz` (plus
+`-developer` when applicable) and include an immutable matching `.sha256`
+sidecar; the root build wrapper verifies both before use.
 
 Resource inclusion is controlled by `config/build-profile-manifest.json`.
 The complete workflow and local install command are documented in

@@ -13,7 +13,8 @@
         "lint": "yarn workspaces run lint",
         "clean": "yarn workspaces run clean",
         "clean:build": "yarn workspaces run clean:build",
-        "package:app": "cd packages/splunk-cisco-dashboards && yarn package:app"
+        "package:app": "cd packages/splunk-cisco-dashboards && yarn package:app",
+        "test": "node --test packages/splunk-cisco-dashboards/test/*.test.cjs && node scripts/test_build_deploy_contract.cjs"
     },
     "resolutions": {
         "qs": "^6.15.2",

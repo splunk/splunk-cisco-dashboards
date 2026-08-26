@@ -1,12 +1,14 @@
 /**
- * Build 115.21 — compile-time build / version constants for
- * UI-side display.
+ * Compile-time app identity for UI-side display.
  *
  * Source of truth:
- *   • APP_BUILD   — emitted as a unique compile-time marker, then replaced
- *                   with the final package-only `app.conf` build by
- *                   `package_app.sh` before the archive is created.
- *   • APP_VERSION — read from `package.json#version` the same way.
+ *   • APP_BUILD is a unique marker emitted by webpack. The canonical package
+ *     workflow replaces it in its temporary archive copy only after selecting
+ *     the final package `[install] build`. A staged/watch bundle deliberately
+ *     retains the marker because it is not a released archive.
+ *   • APP_VERSION is read by webpack from the repo-root `VERSION` file. That
+ *     file is the Splunk app release version; package.json's version belongs
+ *     to the JavaScript workspace and is intentionally independent.
  *
  * Why these are baked into the bundle (not fetched at runtime):
  * the whole point of surfacing a build number in the UI is to
@@ -26,38 +28,9 @@
 
 declare const process: { env: { [key: string]: string | undefined } };
 
-/** Build 115.22 — DROP the `typeof process` defensive guard.
- *
- *  Earlier (115.21) we wrote:
- *      (typeof process !== 'undefined' && process.env &&
- *       process.env.APP_BUILD) || 'dev'
- *
- *  …reasoning that we should be safe if the bundle ever ran
- *  outside webpack. That was wrong. Splunk Web bundles run in
- *  the BROWSER, where `process` is not a defined global. So
- *  the guard `typeof process !== 'undefined'` evaluates to
- *  false at runtime, and the chain short-circuits to 'dev'
- *  BEFORE DefinePlugin's substituted literal can be returned.
- *  The 115.21 build pill rendered "Build dev" for that exact
- *  reason — a defensive-coding miss-step.
- *
- *  Trust the substitution. DefinePlugin does an exact string
- *  match on `process.env.APP_BUILD` and replaces the entire
- *  expression with the JSON-stringified literal at compile
- *  time. After substitution, the runtime code becomes:
- *
- *      "1171" || 'dev'
- *
- *  Which evaluates trivially to `"1171"`. No `process` global
- *  ever needs to exist at runtime; the reference is gone by
- *  the time the bundle is shipped.
- *
- *  The fallback ('dev' / '0.0.0') is only hit if webpack runs
- *  WITHOUT our DefinePlugin — typically a unit test harness
- *  or an ad-hoc `node` script eval. In those contexts node's
- *  `process` IS a real global, so `process.env.APP_BUILD`
- *  resolves to undefined (the env var isn't set) and the OR
- *  fallback kicks in. No throw, no surprise. */
+// DefinePlugin replaces these exact expressions with string literals before
+// the browser executes the bundle. Do not add a `typeof process` guard: it
+// would bypass that substitution in a browser, where `process` is absent.
 export const APP_BUILD: string = process.env.APP_BUILD || 'dev';
 
 export const APP_VERSION: string = process.env.APP_VERSION || '0.0.0';
