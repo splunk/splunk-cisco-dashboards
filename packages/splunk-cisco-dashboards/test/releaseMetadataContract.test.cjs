@@ -96,6 +96,11 @@ assert.match(
   "canonical packaging must enforce the committed release identity ledger",
 );
 assert.match(
+  packageScript,
+  /Splunkbase packaging requires a clean Git worktree[\s\S]*?release-provenance\.json/,
+  "canonical Splunkbase packaging must bind the archive to a clean committed source state",
+);
+assert.match(
   execFileSync(process.execPath, [releaseIdentityValidatorPath], {
     cwd: packageRoot,
     encoding: "utf8",

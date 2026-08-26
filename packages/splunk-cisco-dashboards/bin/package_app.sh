@@ -23,9 +23,10 @@ Splunkbase profile without resources listed as developing in the app manifest.
 
 Options:
   --from-stage, --stage   Package the current stage/ directory without running
-                          clean_build.sh or webpack. Current non-JavaScript
-                          Splunk resources are overlaid from src/ first; React
-                          bundles still come from the webpack --watch output.
+                          clean_build.sh or webpack. This is available only
+                          with --developer. Current non-JavaScript Splunk
+                          resources are overlaid from src/ first; React bundles
+                          still come from the webpack --watch output.
   --minify                Enable JavaScript minification for a slower, smaller
                           release build. Not valid with --from-stage.
   --developer             Include all resources listed as developing and write
@@ -126,6 +127,40 @@ else
   ARTIFACT_PROFILE_SUFFIX=""
 fi
 
+# A Splunkbase artifact must be attributable to one exact, committed source
+# state. A watcher-linked stage can retain stale bundles, so reserve it for
+# explicitly labeled developer packages only. The clean-worktree gate also
+# prevents a release archive from silently containing uncommitted source
+# changes that cannot be reconstructed later.
+resolve_clean_release_commit() {
+  if ! git -C "$ROOT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "ERROR: Splunkbase packaging requires a Git worktree at ${ROOT_DIR}." >&2
+    return 1
+  fi
+  if [[ -n "$(git -C "$ROOT_DIR" status --porcelain --untracked-files=all)" ]]; then
+    echo "ERROR: Splunkbase packaging requires a clean Git worktree." >&2
+    echo "       Commit, remove, or intentionally ignore source changes before packaging." >&2
+    return 1
+  fi
+  local commit
+  commit="$(git -C "$ROOT_DIR" rev-parse --verify HEAD)"
+  if [[ ! "$commit" =~ ^[0-9a-f]{40}$ ]]; then
+    echo "ERROR: could not resolve a full Git commit for Splunkbase provenance." >&2
+    return 1
+  fi
+  printf '%s\n' "$commit"
+}
+
+RELEASE_COMMIT=""
+if [[ "$FROM_STAGE" -eq 1 && "$DEVELOPER_PROFILE" -ne 1 ]]; then
+  echo "ERROR: --from-stage is only allowed with --developer." >&2
+  echo "       Splunkbase packages always run a clean production build." >&2
+  exit 2
+fi
+if [[ "$APP_PROFILE" == "splunkbase" ]]; then
+  RELEASE_COMMIT="$(resolve_clean_release_commit)"
+fi
+
 if [[ "$FROM_STAGE" -eq 1 ]]; then
   if [[ ! -d "$STAGE_DIR" ]]; then
     echo "ERROR: --from-stage requested but stage/ does not exist." >&2
@@ -171,6 +206,18 @@ else
 fi
 
 bash "${SCRIPT_DIR}/stamp_version.sh" "$STAGE_DIR"
+
+# Building must not introduce an uncommitted source change or advance HEAD
+# between the first gate and archive staging. Check again before copying the
+# files that will become the release candidate.
+if [[ "$APP_PROFILE" == "splunkbase" ]]; then
+  post_build_commit="$(resolve_clean_release_commit)"
+  if [[ "$post_build_commit" != "$RELEASE_COMMIT" ]]; then
+    echo "ERROR: Git HEAD changed while the Splunkbase package was building." >&2
+    echo "       Re-run packaging from one stable committed source state." >&2
+    exit 1
+  fi
+fi
 
 # Stage into a temp directory with the correct app directory name
 TMP_DIR="$(mktemp -d)"
@@ -305,6 +352,16 @@ else
 fi
 "${sed_i[@]}" -E "s/^([[:space:]]*build[[:space:]]*=[[:space:]]*)[0-9]+/\\1${new_build}/" "$PKG_APP_CONF"
 echo "[package] app.conf: retained committed build ${new_build}"
+
+# Keep source provenance in a standalone package manifest rather than
+# app.conf. This records the reproducible source identity without exposing a
+# workstation, branch name, timestamp, or dirty-worktree details to app users.
+if [[ "$APP_PROFILE" == "splunkbase" ]]; then
+  provenance_file="${TMP_DIR}/${APP_NAME}/release-provenance.json"
+  printf '{\n  "schema_version": 1,\n  "package_id": "%s",\n  "version": "%s",\n  "build": %s,\n  "git_commit": "%s",\n  "source_tree_clean": true\n}\n' \
+    "$APP_NAME" "$VERSION" "$new_build" "$RELEASE_COMMIT" > "$provenance_file"
+  echo "[package] release provenance: committed source ${RELEASE_COMMIT}"
+fi
 
 # Webpack emits a unique marker rather than reading app.conf at compile time.
 # Replace it in the archive copy with the committed release build so a

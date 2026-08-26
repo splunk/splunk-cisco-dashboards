@@ -140,6 +140,8 @@ function makePackageFixture() {
     RELEASE_IDENTITY_VALIDATOR_SOURCE,
     path.join(packageRoot, "bin", "validate_release_identity.js"),
   );
+  writeFile(path.join(packageRoot, "bin", "clean_build.sh"), "#!/usr/bin/env bash\nexit 0\n", 0o755);
+  writeFile(path.join(packageRoot, "bin", "build.js"), "process.exit(0);\n");
   writeFile(path.join(packageRoot, "bin", "stamp_version.sh"), "#!/usr/bin/env bash\nexit 0\n", 0o755);
   writeFile(path.join(packageRoot, "bin", "apply_build_profile.js"), "process.exit(0);\n");
   writeFile(path.join(packageRoot, "bin", "verify_production_assets.js"), "process.exit(0);\n");
@@ -187,6 +189,15 @@ function makePackageFixture() {
   writeFile(path.join(stage, "bin", "legacy.pyo"), "bytecode");
   writeFile(path.join(stage, "bin", "__pycache__", "module.pyc"), "bytecode");
   writeFile(path.join(sourceRoot, "bin", "overlay.pyc"), "bytecode");
+  writeFile(
+    path.join(root, ".gitignore"),
+    ["/dist/", "/packages/splunk-cisco-dashboards/stage/", "*.pyc", "__pycache__/", ""].join("\n"),
+  );
+  run("git", ["init"], { cwd: root });
+  run("git", ["config", "user.email", "fixture@example.invalid"], { cwd: root });
+  run("git", ["config", "user.name", "Package Fixture"], { cwd: root });
+  run("git", ["add", "."], { cwd: root });
+  run("git", ["commit", "-m", "Fixture source"], { cwd: root });
 
   return {
     root,
@@ -291,7 +302,7 @@ function listArchives(distDir) {
     .sort();
 }
 
-function exerciseFastPackaging() {
+function exercisePackagingProfiles() {
   const fixture = makePackageFixture();
   const distDir = path.join(fixture.root, "dist");
   try {
@@ -300,14 +311,25 @@ function exerciseFastPackaging() {
     writeFile(legacyArchive, "legacy archive must remain untouched\n");
     const legacyDigest = sha256(legacyArchive);
 
+    const fromStageFailure = runExpectFailure(
+      "bash",
+      [fixture.packageScript, "--from-stage"],
+      { cwd: fixture.packageRoot },
+    );
+    assert.match(
+      fromStageFailure,
+      /--from-stage is only allowed with --developer/,
+      "Splunkbase packaging must not reuse watcher-built stage artifacts",
+    );
+
     const reservedIdentity = path.join(
       distDir,
-      `.${APP_NAME}-1.2.3-build7.lock`,
+      `.${APP_NAME}-1.2.3-build7-developer.lock`,
     );
     fs.mkdirSync(reservedIdentity);
     const reservationFailure = runExpectFailure(
       "bash",
-      [fixture.packageScript, "--from-stage"],
+      [fixture.packageScript, "--from-stage", "--developer"],
       { cwd: fixture.packageRoot },
     );
     assert.match(
@@ -317,14 +339,14 @@ function exerciseFastPackaging() {
     );
     fs.rmdirSync(reservedIdentity);
 
-    run("bash", [fixture.packageScript, "--from-stage"], {
+    run("bash", [fixture.packageScript], {
       cwd: fixture.packageRoot,
     });
 
     const firstArchiveName = listArchives(distDir).find((name) =>
       new RegExp(`^${APP_NAME}-1\\.2\\.3-sha256-[0-9a-f]{64}\\.tar\\.gz$`).test(name),
     );
-    assert.ok(firstArchiveName, "Fast packaging must write a hash-qualified archive name");
+    assert.ok(firstArchiveName, "Splunkbase packaging must write a hash-qualified archive name");
     const firstArchive = path.join(distDir, firstArchiveName);
     const firstDigestPath = `${firstArchive}.sha256`;
     const firstDigest = sha256(firstArchive);
@@ -345,6 +367,21 @@ function exerciseFastPackaging() {
       run("tar", ["-xzOf", firstArchive, `${APP_NAME}/default/app.conf`]),
       /^build = 7$/m,
       "The package must retain the source [install] build verbatim",
+    );
+    const releaseProvenance = JSON.parse(
+      run("tar", ["-xzOf", firstArchive, `${APP_NAME}/release-provenance.json`]),
+    );
+    assert.deepEqual(
+      releaseProvenance,
+      {
+        schema_version: 1,
+        package_id: APP_NAME,
+        version: "1.2.3",
+        build: 7,
+        git_commit: run("git", ["rev-parse", "HEAD"], { cwd: fixture.root }).trim(),
+        source_tree_clean: true,
+      },
+      "Splunkbase archives must carry only the exact clean source commit provenance",
     );
     assert.equal(
       fs.existsSync(path.join(fixture.stage, "bin", "runtime.pyc")),
@@ -373,7 +410,7 @@ function exerciseFastPackaging() {
     );
     const duplicateFailure = runExpectFailure(
       "bash",
-      [fixture.packageScript, "--from-stage"],
+      [fixture.packageScript],
       { cwd: fixture.packageRoot },
     );
     assert.match(
@@ -416,6 +453,11 @@ function exerciseFastPackaging() {
       /^build = 7$/m,
       "Developer packaging must use the same committed build without a dist counter",
     );
+    assert.doesNotMatch(
+      run("tar", ["tzf", path.join(distDir, developerArchiveName)]),
+      /release-provenance\.json/,
+      "Watcher-linked developer packages must not claim Splunkbase source provenance",
+    );
 
     writeFile(
       path.join(fixture.stage, "appserver", "static", "pages", "fixture.js"),
@@ -430,6 +472,44 @@ function exerciseFastPackaging() {
       developerDuplicateFailure,
       /release identity version 1\.2\.3, build 7 already exists/,
       "A second developer archive with the same version/build must also be rejected",
+    );
+
+    writeFile(path.join(fixture.root, "uncommitted-release-input.txt"), "dirty\n");
+    const dirtyWorktreeFailure = runExpectFailure(
+      "bash",
+      [fixture.packageScript],
+      { cwd: fixture.packageRoot },
+    );
+    assert.match(
+      dirtyWorktreeFailure,
+      /Splunkbase packaging requires a clean Git worktree/,
+      "Splunkbase packaging must reject source that cannot be reproduced from a commit",
+    );
+  } finally {
+    removeTempRoot(fixture.root);
+  }
+}
+
+function exercisePostBuildSourceVerification() {
+  const fixture = makePackageFixture();
+  try {
+    writeFile(
+      path.join(fixture.packageRoot, "bin", "clean_build.sh"),
+      "#!/usr/bin/env bash\nprintf 'dirty\\n' > ../../build-generated-source.txt\n",
+      0o755,
+    );
+    const failure = runExpectFailure("bash", [fixture.packageScript], {
+      cwd: fixture.packageRoot,
+    });
+    assert.match(
+      failure,
+      /Splunkbase packaging requires a clean Git worktree/,
+      "Splunkbase packaging must recheck source cleanliness after its build steps",
+    );
+    assert.equal(
+      listArchives(path.join(fixture.root, "dist")).length,
+      0,
+      "A post-build source mutation must stop before a release archive is created",
     );
   } finally {
     removeTempRoot(fixture.root);
@@ -600,6 +680,21 @@ assert.match(
   /node "\$\{PKG_ROOT\}\/bin\/validate_release_identity\.js"/,
   "Packaging must validate the committed release identity before building an archive",
 );
+assert.match(
+  fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
+  /--from-stage is only allowed with --developer[\s\S]*?Splunkbase packages always run a clean production build/,
+  "Splunkbase packaging must reject watcher-linked stage reuse",
+);
+assert.match(
+  fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
+  /resolve_clean_release_commit\(\)[\s\S]*?git -C "\$ROOT_DIR" status --porcelain --untracked-files=all[\s\S]*?post_build_commit="\$\(resolve_clean_release_commit\)"/,
+  "Splunkbase packaging must require a clean, committed source state",
+);
+assert.match(
+  fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
+  /release-provenance\.json[\s\S]*?"git_commit"[\s\S]*?"source_tree_clean": true/,
+  "Splunkbase packaging must emit a standalone source-provenance manifest",
+);
 assert.doesNotMatch(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
   /# Built:/,
@@ -639,7 +734,8 @@ assert.match(
 
 exerciseCleanBuild();
 exerciseReleaseIdentityValidation();
-exerciseFastPackaging();
+exercisePackagingProfiles();
+exercisePostBuildSourceVerification();
 exerciseProductionVerifierCacheRejection();
 exerciseRootBuildArchiveResolution();
 
