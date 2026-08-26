@@ -125,6 +125,7 @@ for (const relativePath of [
   "src/main/webapp/common/components/topology/shapes.tsx",
   "src/main/webapp/common/components/diagram/ShapesTab.tsx",
   "src/main/webapp/pages/executive_insights/index.tsx",
+  "src/main/webapp/pages/dashboardbuilder/SpaceManager/SpaceManagerViz.jsx",
 ]) {
   const source = fs.readFileSync(path.join(packageRoot, relativePath), "utf8");
   assert.match(
@@ -133,6 +134,17 @@ for (const relativePath of [
     `${relativePath} must apply the shared image-source boundary`,
   );
 }
+
+const spaceManagerSource = fs.readFileSync(
+  path.join(
+    packageRoot,
+    "src/main/webapp/pages/dashboardbuilder/SpaceManager/SpaceManagerViz.jsx",
+  ),
+  "utf8",
+);
+assert.match(spaceManagerSource, /const mapImageSrc = normalizeSharedImageSource\(map\.imageUrl\)/);
+assert.match(spaceManagerSource, /href=\{mapImageSrc\}/);
+assert.doesNotMatch(spaceManagerSource, /href=\{map\.imageUrl\}/);
 
 const splunkSource = fs.readFileSync(
   path.join(packageRoot, "src/main/webapp/common/lib/splunk.js"),

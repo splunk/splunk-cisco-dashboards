@@ -16,6 +16,9 @@ networking pillars and workplace scenarios.
 - Restricted Dashboard Builder background uploads to bounded PNG, JPEG, GIF, or
   WebP data, persisted them through the capability-protected shared
   configuration handler, and ignore unsupported stored sources in the picker.
+- Applied the same shared image-source boundary to Cisco Spaces floor-plan
+  visualizations, so stored map images cannot cause viewer browsers to fetch
+  arbitrary network or local URLs.
 - Aligned staged app metadata with the canonical release version, preserved
   package-time version stamping, enabled app-upgrade notifications, and added
   a reproducible root `yarn test` contract suite.

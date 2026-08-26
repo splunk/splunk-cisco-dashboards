@@ -1849,7 +1849,10 @@ iseval = 0`}</CodeBlock>
                         are now self-contained, Open in Search accepts only
                         dashboard-defined safe filter values, and shared
                         workspace and bounded Dashboard Builder background
-                        management support narrow capability delegation.
+                        management support narrow capability delegation. Cisco
+                        Spaces floor-plan images use the same safe shared-image
+                        boundary, so configured map artwork cannot fetch
+                        arbitrary network or local URLs from a viewer browser.
                         Topology palette items and key manager/KPI
                         dialogs now support complete keyboard operation. Release
                         metadata now follows the canonical app version,
