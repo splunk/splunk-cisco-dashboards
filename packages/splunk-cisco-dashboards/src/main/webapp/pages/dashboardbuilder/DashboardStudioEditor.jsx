@@ -387,22 +387,32 @@ async function updateDash(
 
   const body = `eai:data=${encodeURIComponent(definition)}`;
 
-  const fetchInit = defaultFetchInit; // from splunk-utils API
-  fetchInit.method = "POST";
-  const response = await fetch(
-    `/en-US/splunkd/__raw/servicesNS/${encodeURIComponent(
-      owner,
-    )}/${encodeURIComponent(app)}/data/ui/views/${encodeURIComponent(
-      dashName,
-    )}?output_mode=json`,
-    {
-      ...fetchInit,
-      body: body,
-    },
-  );
-  const data = await response.json();
-  data.status = response.status;
-  return data;
+  const namespaceOwners = [...new Set([owner, "nobody"].filter(Boolean))];
+  let lastResponse;
+
+  for (const namespaceOwner of namespaceOwners) {
+    const response = await fetch(
+      `/en-US/splunkd/__raw/servicesNS/${encodeURIComponent(
+        namespaceOwner,
+      )}/${encodeURIComponent(app)}/data/ui/views/${encodeURIComponent(
+        dashName,
+      )}?output_mode=json`,
+      {
+        ...defaultFetchInit,
+        method: "POST",
+        body: body,
+      },
+    );
+    const data = await response.json();
+    data.status = response.status;
+    lastResponse = data;
+
+    if (response.status !== 404) {
+      return data;
+    }
+  }
+
+  return lastResponse;
 }
 
 const getDefinitionTextValue = (definition, key, fallback = "") => {
@@ -1733,6 +1743,8 @@ const DashboardStudioEditor = ({
         dashboardDefinition.description || currentDashboard?.description || "",
         DASHBOARD_MANAGER_TAG,
         currentDashboard?.theme || dashboardColorScheme,
+        undefined,
+        "app",
       );
       if (response.status < 200 || response.status > 299) {
         throw new Error(
@@ -2256,6 +2268,8 @@ const DashboardStudioEditor = ({
         "",
         DASHBOARD_MANAGER_TAG,
         "dark",
+        undefined,
+        "app",
       ).then((response) => {
         if (response.status >= 200 && response.status <= 299) {
           console.log(response);

@@ -183,8 +183,23 @@ assert.match(
 );
 assert.match(
   dashboardPersistence,
-  /sharing = 'app'[\s\S]*?owner: namespaceOwner[\s\S]*?sharing: 'app'[\s\S]*?'perms\.read': '\*'/,
-  "Dashboard creation must promote the default to an app-shared readable ACL",
+  /sharing = 'user'[\s\S]*?sharing !== 'app'[\s\S]*?owner: 'nobody'[\s\S]*?sharing: 'app'[\s\S]*?'perms\.read': '\*'/,
+  "Only explicit app-shared creation must promote the dashboard to the native shared-app ACL",
+);
+assert.match(
+  editor,
+  /const namespaceOwners = \[\.\.\.new Set\(\[owner, "nobody"\]\.filter\(Boolean\)\)\][\s\S]*?if \(response\.status !== 404\)/,
+  "Dashboard saves must retry the native shared-app owner namespace after a missing private namespace",
+);
+assert.match(
+  editor,
+  /DASHBOARD_MANAGER_TAG,[\s\S]*?undefined,[\s\S]*?"app"/,
+  "Dashboard Manager clone and legacy create paths must explicitly request app sharing",
+);
+assert.match(
+  readSource("src/main/webapp/pages/dashboardbuilder/DashboardStudioDrilldownModal.jsx"),
+  /colorScheme,[\s\S]*?undefined,[\s\S]*?'app'/,
+  "Generated drilldown dashboards must explicitly request app sharing",
 );
 assert.match(
   commonStyles,

@@ -224,6 +224,8 @@ const DashboardStudioDrilldownModal = ({
                 dashboardDescription,
                 '',
                 colorScheme,
+                undefined,
+                'app',
             );
             if (response.status < 200 || response.status > 299) {
                 throw new Error(`Dashboard creation failed (${response.status}).`);

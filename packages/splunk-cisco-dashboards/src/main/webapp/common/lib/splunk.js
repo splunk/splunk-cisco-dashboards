@@ -137,7 +137,7 @@ export async function addDash(
     dashTag = '',
     dashTheme = 'light',
     owner = undefined,
-    sharing = 'app',
+    sharing = 'user',
 ) {
     const namespaceOwner = await resolveDashboardOwner(owner);
     if (!namespaceOwner) {
@@ -195,7 +195,7 @@ export async function addDash(
     const aclResponse = await requestJson(`${dashboardUrl(namespaceOwner, dashName)}/acl?${jsonParams.toString()}`, {
         method: 'POST',
         body: new URLSearchParams({
-            owner: namespaceOwner,
+            owner: 'nobody',
             sharing: 'app',
             'perms.read': '*',
         }).toString(),
