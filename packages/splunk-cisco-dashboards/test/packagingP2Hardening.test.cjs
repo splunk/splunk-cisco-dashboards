@@ -744,6 +744,80 @@ function exerciseRootBuildArchiveResolution() {
   }
 }
 
+function exerciseLocalInstallProfileDefaults() {
+  const fixture = makeRootBuildFixture();
+  try {
+    const splunkHome = path.join(fixture.root, "splunk");
+    const splunkLog = path.join(fixture.root, "splunk-install.log");
+    writeFile(
+      path.join(splunkHome, "bin", "splunk"),
+      [
+        "#!/usr/bin/env bash",
+        "set -euo pipefail",
+        'printf "%s\\n" "$*" >> "${SCD_FIXTURE_SPLUNK_LOG}"',
+        "",
+      ].join("\n"),
+      0o755,
+    );
+    const env = {
+      ...process.env,
+      SPLUNK_HOME: splunkHome,
+      SCD_FIXTURE_SPLUNK_LOG: splunkLog,
+    };
+
+    const developerOutput = run(
+      "bash",
+      [fixture.buildPath, "--install", "--minify", "--auth", "fixture:password"],
+      { cwd: fixture.root, env },
+    );
+    assert.match(
+      developerOutput,
+      /Profile:\s+developer \(released \+ developing resources\)/,
+      "A fresh local install must default to the developer profile",
+    );
+    assert.match(
+      developerOutput,
+      /Tarball: .*-[0-9a-f]{64}-developer\.tar\.gz/,
+      "An implicit local developer install must use the developer artifact namespace",
+    );
+
+    const splunkbaseOutput = run(
+      "bash",
+      [
+        fixture.buildPath,
+        "--splunkbase",
+        "--install",
+        "--minify",
+        "--auth",
+        "fixture:password",
+      ],
+      { cwd: fixture.root, env },
+    );
+    assert.match(
+      splunkbaseOutput,
+      /Profile:\s+Splunkbase \(released resources only\)/,
+      "--splunkbase must preserve explicit local release-profile validation",
+    );
+    assert.match(
+      splunkbaseOutput,
+      /Tarball: .*-[0-9a-f]{64}\.tar\.gz/,
+      "An explicit SplunkBase install must use the release artifact namespace",
+    );
+    assert.doesNotMatch(
+      splunkbaseOutput.match(/Tarball: .*$/m)?.[0] || "",
+      /-developer\.tar\.gz/,
+      "An explicit SplunkBase install must not resolve a developer archive",
+    );
+    assert.equal(
+      fs.readFileSync(splunkLog, "utf8").trim().split("\n").length,
+      2,
+      "Both profile selections must reach the local Splunk installer",
+    );
+  } finally {
+    removeTempRoot(fixture.root);
+  }
+}
+
 assert.doesNotMatch(
   fs.readFileSync(CLEAN_BUILD_SOURCE, "utf8"),
   /_scd_local_backup/,
@@ -837,6 +911,16 @@ assert.match(
 );
 assert.match(
   buildScript,
+  /no_build.*?do_install.*?do_deploy[\s\S]*?developer_profile=1/,
+  "Fresh local install and deploy workflows must default to the developer profile",
+);
+assert.match(
+  buildScript,
+  /--splunkbase cannot be used with --fast\/--from-stage/,
+  "An explicit SplunkBase profile must reject watcher-built stage reuse",
+);
+assert.match(
+  buildScript,
   /archive_modified_epoch\(\)[\s\S]*?expected_profile.*?developer[\s\S]*?newest_mtime/s,
   "The root build wrapper must choose the newest matching developer archive",
 );
@@ -868,5 +952,6 @@ exercisePackagingProfiles();
 exercisePostBuildSourceVerification();
 exerciseProductionVerifierCacheRejection();
 exerciseRootBuildArchiveResolution();
+exerciseLocalInstallProfileDefaults();
 
 console.log("Packaging P2 hardening contracts passed.");

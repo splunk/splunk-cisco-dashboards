@@ -532,6 +532,11 @@ assert.match(
   /bounded Dashboard Builder background[\s\S]*?capability delegation/,
   "The current in-app release notes must disclose bounded shared background management",
 );
+assert.match(
+  userGuide,
+  /build\.sh --install[\s\S]*?developer-profile archives[\s\S]*?--splunkbase/,
+  "The current in-app release notes must document local developer-profile defaults",
+);
 
 assert.match(profile, /useInsightsWorkspacePermissions\(\)/);
 assert.match(

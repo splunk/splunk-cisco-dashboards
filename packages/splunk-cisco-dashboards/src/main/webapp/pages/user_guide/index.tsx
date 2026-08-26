@@ -1867,9 +1867,14 @@ iseval = 0`}</CodeBlock>
                       <td className="px-3 py-3 sui-color-default">
                         Install the build through the supported app-management
                         workflow; no customer-managed Splunk restart is
-                        required. Release archives now use one validated
-                        packaging path and preserve live development-local
-                        configuration. Existing workspaces keep their saved
+                        required. Fresh local <InlineCode>build.sh --install</InlineCode>{" "}
+                        and <InlineCode>--deploy</InlineCode> builds default to
+                        developer-profile archives so iterative installs do not
+                        collide with immutable SplunkBase release identities;
+                        pass <InlineCode>--splunkbase</InlineCode> when validating
+                        the released-resources-only profile. Release archives
+                        use one validated packaging path and preserve live
+                        development-local configuration. Existing workspaces keep their saved
                         configuration; assign{" "}
                         <InlineCode>scd_manage_insights_workspaces</InlineCode>{" "}
                         only to custom roles that should manage shared

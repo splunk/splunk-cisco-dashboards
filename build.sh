@@ -12,8 +12,9 @@
 #   ./build.sh --developer                                    # developer profile: includes developing resources
 #
 # Install workflows (splunkd-managed; goes through REST mgmt port 8089):
-#   ./build.sh --install --auth admin:********                # build + `splunk install app` against the default Splunk
-#   SPLUNK_HOME=/opt/10 ./build.sh --install --auth admin:pw  # build + install against a non-default Splunk
+#   ./build.sh --install --auth admin:********                # developer build + `splunk install app` against the default Splunk
+#   SPLUNK_HOME=/opt/10 ./build.sh --install --auth admin:pw  # developer build + install against a non-default Splunk
+#   SPLUNK_HOME=/opt/10 ./build.sh --splunkbase --install --auth admin:pw  # explicit release-profile install
 #   ./build.sh --install --auth admin:pw --restart            # build + install + restart Splunk
 #   ./build.sh --remote-install splunk@host --ssh-port 10000
 #   ./build.sh --no-build --remote-install splunk@host --ssh-port 10000 --remote-auth-user admin
@@ -81,6 +82,8 @@ no_build=0
 from_stage=0
 minify=0
 developer_profile=0
+developer_profile_explicit=0
+splunkbase_profile_explicit=0
 lint_spl_antipatterns=0
 restart_after_install=0
 verbose=0
@@ -530,6 +533,8 @@ Push-to-Splunk options (mutually exclusive):
   --install              splunkd-managed install via REST mgmt port. Calls
                          \`splunk install app dist/<app>-<version>-sha256-<digest>.tar.gz -update 1
                           -auth user:pass\`. Requires --auth.
+                         Fresh local installs default to the developer profile;
+                         use --splunkbase for an explicit release-profile test.
   --deploy               Filesystem swap into \$SPLUNK_HOME/etc/apps/<app>
                          through a prepared sibling replacement (preserves
                          local/ and runtime lookup CSVs). Faster than
@@ -561,7 +566,9 @@ Other options:
                          config/build-profile-manifest.json. Writes a
                          SHA-256-addressed *-developer.tar.gz intended only
                          for local testing.
-                         Without this flag, packaging is Splunkbase-safe.
+  --splunkbase           Explicitly use the released-resources-only SplunkBase
+                         profile. Build-only and remote packaging use this
+                         profile by default; local install/deploy builds do not.
   --lint-spl-antipatterns
                          Run the experimental Searchbase SPL anti-pattern
                          policy gate before packaging. Disabled by default
@@ -591,7 +598,8 @@ Other options:
 Examples:
   ./build.sh                                                  # Splunkbase package (released resources only)
   ./build.sh --developer                                      # local developer package
-  ./build.sh --install --auth admin:********                  # build + splunkd install
+  ./build.sh --install --auth admin:********                  # developer build + splunkd install
+  ./build.sh --splunkbase --install --auth admin:********     # release-profile validation install
   SPLUNK_HOME=/opt/10 ./build.sh --developer --fast --install --auth admin:********
   SPLUNK_HOME=/opt/10 ./build.sh --install --auth admin:******** --restart
   ./build.sh --deploy                                         # build + filesystem swap
@@ -668,6 +676,12 @@ while [[ $# -gt 0 ]]; do
             ;;
         --developer)
             developer_profile=1
+            developer_profile_explicit=1
+            shift
+            ;;
+        --splunkbase)
+            developer_profile=0
+            splunkbase_profile_explicit=1
             shift
             ;;
         --lint-spl-antipatterns)
@@ -798,6 +812,23 @@ if [[ "$restart_after_install" -eq 1 && "$remote_install" -eq 1 ]]; then
     exit 2
 fi
 
+if [[ "$developer_profile_explicit" -eq 1 && "$splunkbase_profile_explicit" -eq 1 ]]; then
+    echo "ERROR: --developer and --splunkbase are mutually exclusive." >&2
+    exit 2
+fi
+
+# Fresh local installs are development iterations even when minified. Default
+# them to the developer artifact namespace so committed SplunkBase identities
+# remain immutable across source commits. Build-only, remote-install, and
+# --no-build workflows retain the SplunkBase default unless explicitly
+# overridden; --splunkbase keeps exact local release-profile validation
+# available when that is the caller's intent.
+if [[ "$developer_profile_explicit" -eq 0 && "$splunkbase_profile_explicit" -eq 0 \
+    && "$no_build" -eq 0 \
+    && ( "$do_install" -eq 1 || "$do_deploy" -eq 1 ) ]]; then
+    developer_profile=1
+fi
+
 # --no-build only makes sense when paired with --install or --deploy.
 # On its own it would be a noop (build is already the default, and
 # we'd have nothing to push) -- catch that here rather than producing
@@ -820,6 +851,11 @@ fi
 # A watcher-built stage can contain developing resources and is not a clean
 # production build. Preserve the historical --fast behavior by making stage
 # reuse imply the developer profile unless the caller already selected it.
+if [[ "$from_stage" -eq 1 && "$splunkbase_profile_explicit" -eq 1 ]]; then
+    echo "ERROR: --splunkbase cannot be used with --fast/--from-stage." >&2
+    echo "       Watcher-built stage reuse is always a developer profile." >&2
+    exit 2
+fi
 if [[ "$from_stage" -eq 1 ]]; then
     developer_profile=1
 fi
