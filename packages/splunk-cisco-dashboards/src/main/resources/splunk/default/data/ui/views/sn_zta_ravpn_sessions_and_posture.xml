@@ -141,6 +141,7 @@
                 "sparklineValues": "> primary | seriesByName(\"Clients\")",
                 "trendValue": "> sparklineValues | delta(-2)",
                 "shouldAbbreviateTrendValue": true,
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "unit": " clients",
                 "unitPosition": "after"
@@ -312,6 +313,7 @@
                 "sparklineValues": "> primary | seriesByName(\"Failure Rate %\")",
                 "trendValue": "> sparklineValues | delta(-2)",
                 "shouldAbbreviateTrendValue": false,
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "numberPrecision": 1,
                 "unit": "%",
@@ -486,6 +488,7 @@
                 "sparklineValues": "> primary | seriesByName(\"ActiveProfiles\")",
                 "trendValue": "> sparklineValues | delta(-2)",
                 "shouldAbbreviateTrendValue": true,
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "unit": " profiles",
                 "unitPosition": "after"
@@ -657,6 +660,7 @@
                 "sparklineValues": "> primary | seriesByName(\"ActiveRegions\")",
                 "trendValue": "> sparklineValues | delta(-2)",
                 "shouldAbbreviateTrendValue": true,
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "unit": " regions",
                 "unitPosition": "after"
@@ -982,6 +986,7 @@
                 "sparklineValues": "> primary | seriesByName(\"PostureIssues\")",
                 "trendValue": "> sparklineValues | delta(-2)",
                 "shouldAbbreviateTrendValue": true,
+                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "unit": " events",
                 "unitPosition": "after"

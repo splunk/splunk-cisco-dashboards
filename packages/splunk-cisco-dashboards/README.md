@@ -10,6 +10,11 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Restored readable semantic trend colors across all 17 managed Secure
+  Networking dashboards. Visible single-value deltas now apply their configured
+  positive, neutral, negative, or informational palette instead of falling back
+  to black on dark cards, with a color and contrast contract covering every
+  shipped dark Dashboard Studio view.
 - Restored Street, Terrain, Satellite, Dark Ops, Navigation, and Offline Grid
   map styles with normal interactive zoom. Topology placement remains restricted
   to the offline city list or explicit coordinates, so operator-entered location

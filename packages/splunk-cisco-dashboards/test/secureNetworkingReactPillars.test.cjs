@@ -449,12 +449,41 @@ assert.match(navSource, /href="secure_networking_pillars"/);
 assert.match(webpackSource, /secure_networking_pillars:\s*path\.join/);
 assert.match(assetVerifierSource, /'secure_networking_pillars'/);
 
+const DARK_STUDIO_CARD_SURFACE = "#131a23";
+const relativeLuminance = (hexColor) => {
+  const channels = hexColor
+    .match(/[0-9a-f]{2}/gi)
+    .map((channel) => Number.parseInt(channel, 16) / 255)
+    .map((channel) =>
+      channel <= 0.04045
+        ? channel / 12.92
+        : ((channel + 0.055) / 1.055) ** 2.4,
+    );
+  return (
+    0.2126 * channels[0] +
+    0.7152 * channels[1] +
+    0.0722 * channels[2]
+  );
+};
+const contrastRatio = (foreground, background) => {
+  const lighter = Math.max(
+    relativeLuminance(foreground),
+    relativeLuminance(background),
+  );
+  const darker = Math.min(
+    relativeLuminance(foreground),
+    relativeLuminance(background),
+  );
+  return (lighter + 0.05) / (darker + 0.05);
+};
+
 const pillarNavSource = navSource.split('<collection label="More"')[0];
 const pillarViewNames = Array.from(
   pillarNavSource.matchAll(/dashboard_manager#\/([^"?]+)/g),
   (match) => match[1],
 );
 assert.equal(pillarViewNames.length, 17, "The five pillar collections must retain 17 Studio dashboards");
+let pillarVisibleTrendCount = 0;
 for (const viewName of pillarViewNames) {
   const source = readSource(
     `src/main/resources/splunk/default/data/ui/views/${viewName}.xml`,
@@ -463,15 +492,27 @@ for (const viewName of pillarViewNames) {
   const bindingSignatures = [];
   for (const visualization of Object.values(definition.visualizations)) {
     if (visualization.type !== "splunk.singlevalue") continue;
-    assert.equal(
-      Object.hasOwn(visualization.options || {}, "trendColor"),
-      false,
-      `${viewName} must let the native single-value default initialize directional trend color`,
-    );
+    const options = visualization.options || {};
+    const showsTrend =
+      options.showTrendIndicator === true && options.trendDisplay !== "off";
+    if (showsTrend) {
+      pillarVisibleTrendCount += 1;
+      assert.equal(
+        options.trendColor,
+        "> trendValue | rangeValue(trendColorEditorConfig)",
+        `${viewName} must apply semantic colors to visible trend values`,
+      );
+    } else {
+      assert.equal(
+        Object.hasOwn(options, "trendColor"),
+        false,
+        `${viewName} must not initialize color for a hidden trend value`,
+      );
+    }
     bindingSignatures.push(JSON.stringify({
       primary: visualization.dataSources?.primary,
-      majorValue: visualization.options?.majorValue,
-      sparklineValues: visualization.options?.sparklineValues,
+      majorValue: options.majorValue,
+      sparklineValues: options.sparklineValues,
     }));
   }
   assert.equal(bindingSignatures.length, 6, `${viewName} must retain six KPI cards`);
@@ -481,4 +522,89 @@ for (const viewName of pillarViewNames) {
     `${viewName} must not duplicate a complete metric result binding`,
   );
 }
+assert.equal(
+  pillarVisibleTrendCount,
+  65,
+  "all visible Secure Networking trends must retain semantic color bindings",
+);
+
+const studioViewsPath = path.join(
+  packageRoot,
+  "src/main/resources/splunk/default/data/ui/views",
+);
+const studioViewFiles = fs
+  .readdirSync(studioViewsPath)
+  .filter((fileName) => fileName.endsWith(".xml"))
+  .filter((fileName) =>
+    /<dashboard\s+version="2"/.test(
+      fs.readFileSync(path.join(studioViewsPath, fileName), "utf8"),
+    ),
+  )
+  .sort();
+let allVisibleTrendCount = 0;
+for (const fileName of studioViewFiles) {
+  const source = fs.readFileSync(path.join(studioViewsPath, fileName), "utf8");
+  const definition = JSON.parse(source.match(/<!\[CDATA\[([\s\S]*?)\]\]>/)[1]);
+  assert.match(
+    source,
+    /<dashboard\s+version="2"[^>]*theme="dark"/,
+    `${fileName} must declare the dark Studio theme`,
+  );
+
+  for (const [visualizationId, visualization] of Object.entries(
+    definition.visualizations || {},
+  )) {
+    const options = visualization.options || {};
+    for (const propertyName of ["fontColor", "majorColor"]) {
+      const color = options[propertyName];
+      if (typeof color !== "string" || !/^#[0-9a-f]{6}$/i.test(color)) {
+        continue;
+      }
+      const minimumContrast = propertyName === "fontColor" ? 4.5 : 3;
+      assert.ok(
+        contrastRatio(color, DARK_STUDIO_CARD_SURFACE) >= minimumContrast,
+        `${fileName}:${visualizationId} ${propertyName} ${color} is too dark for the managed dark surface`,
+      );
+    }
+
+    if (visualization.type !== "splunk.singlevalue") continue;
+    const showsTrend =
+      options.showTrendIndicator === true && options.trendDisplay !== "off";
+    if (!showsTrend) continue;
+
+    allVisibleTrendCount += 1;
+    assert.ok(
+      options.trendColor,
+      `${fileName}:${visualizationId} must bind a visible trend color instead of falling back to black`,
+    );
+    if (/^#[0-9a-f]{6}$/i.test(options.trendColor)) {
+      assert.ok(
+        contrastRatio(options.trendColor, DARK_STUDIO_CARD_SURFACE) >= 3,
+        `${fileName}:${visualizationId} trend color ${options.trendColor} is too dark for the managed dark surface`,
+      );
+    }
+    for (const { value: color } of
+      visualization.context?.trendColorEditorConfig || []) {
+      assert.match(
+        color,
+        /^#[0-9a-f]{6}$/i,
+        `${fileName}:${visualizationId} must use a literal semantic trend color`,
+      );
+      assert.ok(
+        contrastRatio(color, DARK_STUDIO_CARD_SURFACE) >= 3,
+        `${fileName}:${visualizationId} semantic trend color ${color} is too dark for the managed dark surface`,
+      );
+    }
+  }
+}
+assert.equal(
+  studioViewFiles.length,
+  26,
+  "the color audit must cover every shipped Studio dashboard",
+);
+assert.equal(
+  allVisibleTrendCount,
+  107,
+  "the color audit must cover every visible Studio trend value",
+);
 console.log("Secure Networking React pillar dashboard checks passed.");
