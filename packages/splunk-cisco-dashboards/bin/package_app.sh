@@ -11,12 +11,13 @@ APP_NAME="splunk-cisco-dashboards"
 FROM_STAGE=0
 MINIFY=0
 DEVELOPER_PROFILE=0
+LOCAL_VALIDATION=0
 ROOT_DIR="${PKG_ROOT}/../.."
 VERSION_FILE="${ROOT_DIR}/VERSION"
 
 usage() {
   cat <<EOF
-Usage: bin/package_app.sh [--from-stage] [--minify] [--developer]
+Usage: bin/package_app.sh [--from-stage] [--minify] [--developer] [--local-validation]
 
 Default behavior: clean stage/, run minified production webpack, then create
 the Splunkbase profile without resources listed as developing in the app
@@ -34,6 +35,10 @@ Options:
   --developer             Include all resources listed as developing and write
                           a clearly labeled developer tarball. Intended for
                           local use.
+  --local-validation      Build the released-resources-only Splunkbase profile
+                          from the current worktree for a local install/deploy.
+                          Dirty source is marked non-release-eligible in the
+                          package provenance. Build-only releases remain strict.
   -h, --help              Show this help.
 EOF
 }
@@ -109,6 +114,10 @@ while [[ $# -gt 0 ]]; do
       DEVELOPER_PROFILE=1
       shift
       ;;
+    --local-validation)
+      LOCAL_VALIDATION=1
+      shift
+      ;;
     -h|--help)
       usage
       exit 0
@@ -126,6 +135,11 @@ done
 # stage reuse imply the developer profile for direct package-script callers.
 if [[ "$FROM_STAGE" -eq 1 ]]; then
   DEVELOPER_PROFILE=1
+fi
+
+if [[ "$LOCAL_VALIDATION" -eq 1 && "$DEVELOPER_PROFILE" -eq 1 ]]; then
+  echo "ERROR: --local-validation is only valid with the Splunkbase profile." >&2
+  exit 2
 fi
 
 if [[ "$FROM_STAGE" -eq 1 && "$MINIFY" -eq 1 ]]; then
@@ -196,14 +210,9 @@ assert_no_ignored_release_inputs() {
   fi
 }
 
-resolve_clean_release_commit() {
+resolve_release_commit() {
   if ! git -C "$ROOT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "ERROR: Splunkbase packaging requires a Git worktree at ${ROOT_DIR}." >&2
-    return 1
-  fi
-  if [[ -n "$(git -C "$ROOT_DIR" status --porcelain --untracked-files=all)" ]]; then
-    echo "ERROR: Splunkbase packaging requires a clean Git worktree." >&2
-    echo "       Commit, remove, or intentionally ignore source changes before packaging." >&2
     return 1
   fi
   if ! assert_no_ignored_release_inputs; then
@@ -216,6 +225,15 @@ resolve_clean_release_commit() {
     return 1
   fi
   printf '%s\n' "$commit"
+}
+
+resolve_clean_release_commit() {
+  if [[ -n "$(git -C "$ROOT_DIR" status --porcelain --untracked-files=all)" ]]; then
+    echo "ERROR: publishable Splunkbase packaging requires a clean Git worktree." >&2
+    echo "       Local install/deploy callers must use --local-validation." >&2
+    return 1
+  fi
+  resolve_release_commit
 }
 
 resolve_splunkbase_app_id() {
@@ -233,8 +251,19 @@ resolve_splunkbase_app_id() {
 
 RELEASE_COMMIT=""
 SPLUNKBASE_APP_ID=""
+SOURCE_TREE_CLEAN=true
+RELEASE_ELIGIBLE=true
 if [[ "$APP_PROFILE" == "splunkbase" ]]; then
-  RELEASE_COMMIT="$(resolve_clean_release_commit)"
+  if [[ "$LOCAL_VALIDATION" -eq 1 ]]; then
+    RELEASE_COMMIT="$(resolve_release_commit)"
+    if [[ -n "$(git -C "$ROOT_DIR" status --porcelain --untracked-files=all)" ]]; then
+      SOURCE_TREE_CLEAN=false
+      RELEASE_ELIGIBLE=false
+      echo "[package] local Splunkbase validation: current worktree is dirty; artifact is not release-eligible" >&2
+    fi
+  else
+    RELEASE_COMMIT="$(resolve_clean_release_commit)"
+  fi
   SPLUNKBASE_APP_ID="$(resolve_splunkbase_app_id)"
   # Published bundles are an operator-facing release surface. Keep fast,
   # unminified output for explicit developer packages, but make the default
@@ -292,7 +321,11 @@ bash "${SCRIPT_DIR}/stamp_version.sh" "$STAGE_DIR"
 # between the first gate and archive staging. Check again before copying the
 # files that will become the release candidate.
 if [[ "$APP_PROFILE" == "splunkbase" ]]; then
-  post_build_commit="$(resolve_clean_release_commit)"
+  if [[ "$LOCAL_VALIDATION" -eq 1 ]]; then
+    post_build_commit="$(resolve_release_commit)"
+  else
+    post_build_commit="$(resolve_clean_release_commit)"
+  fi
   if [[ "$post_build_commit" != "$RELEASE_COMMIT" ]]; then
     echo "ERROR: Git HEAD changed while the Splunkbase package was building." >&2
     echo "       Re-run packaging from one stable committed source state." >&2
@@ -416,10 +449,9 @@ build_floor="$source_build"
 (( target_build > build_floor )) && build_floor="$target_build"
 new_build=$((build_floor + 1))
 
-# The archive name is content-addressed, so two concurrent package commands
-# could otherwise produce two different filenames for one version/build.
-# Reserve the release identity atomically until this command exits. A stale
-# reservation is intentionally fail-closed and must be inspected explicitly.
+# Reserve the version/build identity atomically until this command exits. A
+# stale reservation is intentionally fail-closed and must be inspected
+# explicitly.
 IDENTITY_LOCK="${DIST_DIR}/.${APP_NAME}-build${new_build}.lock"
 if ! mkdir "$IDENTITY_LOCK"; then
   echo "ERROR: build ${new_build} is currently being packaged." >&2
@@ -438,13 +470,14 @@ fi
 echo "[package] app.conf: stamped build ${new_build} into package output (source=${source_build}, history=${history_build}, dist=${dist_build}, target=${target_build})"
 
 # Keep source provenance in a standalone package manifest rather than
-# app.conf. This records the reproducible source identity without exposing a
-# workstation, branch name, timestamp, or dirty-worktree details to app users.
+# app.conf. This records the source commit and release eligibility without
+# exposing a workstation, branch name, timestamp, or dirty file details.
 if [[ "$APP_PROFILE" == "splunkbase" ]]; then
   provenance_file="${TMP_DIR}/${APP_NAME}/release-provenance.json"
-  printf '{\n  "schema_version": 1,\n  "splunkbase_app_id": %s,\n  "package_id": "%s",\n  "version": "%s",\n  "build": %s,\n  "git_commit": "%s",\n  "source_tree_clean": true\n}\n' \
-    "$SPLUNKBASE_APP_ID" "$APP_NAME" "$VERSION" "$new_build" "$RELEASE_COMMIT" > "$provenance_file"
-  echo "[package] release provenance: committed source ${RELEASE_COMMIT}"
+  printf '{\n  "schema_version": 1,\n  "splunkbase_app_id": %s,\n  "package_id": "%s",\n  "version": "%s",\n  "build": %s,\n  "git_commit": "%s",\n  "source_tree_clean": %s,\n  "release_eligible": %s\n}\n' \
+    "$SPLUNKBASE_APP_ID" "$APP_NAME" "$VERSION" "$new_build" "$RELEASE_COMMIT" \
+    "$SOURCE_TREE_CLEAN" "$RELEASE_ELIGIBLE" > "$provenance_file"
+  echo "[package] source provenance: commit ${RELEASE_COMMIT}; release_eligible=${RELEASE_ELIGIBLE}"
 fi
 
 # Webpack emits a unique marker rather than reading app.conf at compile time.
@@ -569,22 +602,14 @@ if [[ ! "$PACKAGE_SHA256" =~ ^[0-9a-fA-F]{64}$ ]]; then
   exit 1
 fi
 PACKAGE_SHA256="$(printf '%s' "$PACKAGE_SHA256" | tr '[:upper:]' '[:lower:]')"
-PKG_PATH="${DIST_DIR}/${APP_NAME}-${VERSION}-sha256-${PACKAGE_SHA256}${ARTIFACT_PROFILE_SUFFIX}.tar.gz"
+PKG_PATH="${DIST_DIR}/${APP_NAME}-${VERSION}-${new_build}${ARTIFACT_PROFILE_SUFFIX}.tar.gz"
 PKG_SHA256_PATH="${PKG_PATH}.sha256"
 if [[ -e "$PKG_PATH" || -e "$PKG_SHA256_PATH" ]]; then
-  if [[ "$APP_PROFILE" == "developer" && -f "$PKG_PATH" && -f "$PKG_SHA256_PATH" \
-      && "$(sha256_file "$PKG_PATH")" == "$PACKAGE_SHA256" \
-      && "$(cat "$PKG_SHA256_PATH")" == "${PACKAGE_SHA256}  $(basename "$PKG_PATH")" ]]; then
-    rm -f "$ARCHIVE_TMP"
-    ARCHIVE_TMP=""
-    echo "Reusing existing developer archive ${PKG_PATH}"
-    exit 0
-  fi
   echo "ERROR: immutable package path already exists: ${PKG_PATH}" >&2
   echo "       Refusing to overwrite a prior archive or checksum record." >&2
   exit 1
 fi
-DIGEST_TMP="$(mktemp "${DIST_DIR}/.${APP_NAME}.${VERSION}.sha256.XXXXXX")"
+DIGEST_TMP="$(mktemp "${DIST_DIR}/.${APP_NAME}.${VERSION}.${new_build}.sha256.XXXXXX")"
 printf '%s  %s\n' "$PACKAGE_SHA256" "$(basename "$PKG_PATH")" > "$DIGEST_TMP"
 
 # ln(2) fails if the destination already exists, unlike tar's normal

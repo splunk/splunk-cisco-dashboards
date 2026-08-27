@@ -15,6 +15,14 @@ networking pillars and workplace scenarios.
   positive, neutral, negative, or informational palette instead of falling back
   to black on dark cards, with a color and contrast contract covering every
   shipped dark Dashboard Studio view.
+- Made package artifacts operator-readable as
+  `splunk-cisco-dashboards-<version>-<build>.tar.gz`, while retaining checksum
+  sidecars and immutable collision checks. Build, install, deploy, and remote
+  workflows now default to the released-resources-only SplunkBase profile;
+  developer resources require `--developer` or the explicit `--fast` workflow.
+  Local install/deploy validation accepts intentional uncommitted source and
+  marks dirty artifacts non-release-eligible, while build-only and remote
+  release artifacts retain the clean-source gate.
 - Restored Street, Terrain, Satellite, Dark Ops, Navigation, and Offline Grid
   map styles with normal interactive zoom. Topology placement remains restricted
   to the offline city list or explicit coordinates, so operator-entered location
@@ -349,9 +357,10 @@ target's installed build when available. The committed ledger at
 [`../../releases/splunkbase-9257.json`](../../releases/splunkbase-9257.json) is
 publication history and a build floor, not a manual `current` allocation.
 Successful packages are named
-`splunk-cisco-dashboards-<version>-sha256-<digest>.tar.gz` (plus
-`-developer` when applicable) and include an immutable matching `.sha256`
-sidecar; the root build wrapper verifies both before use.
+`splunk-cisco-dashboards-<version>-<build>.tar.gz` (plus `-developer` for an
+explicit developer profile) and include an immutable matching `.sha256`
+sidecar; the root build wrapper verifies the filename identity, checksum, and
+archive bytes before use.
 
 Resource inclusion is controlled by `config/build-profile-manifest.json`.
 The complete workflow and local install command are documented in

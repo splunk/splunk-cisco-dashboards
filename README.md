@@ -68,10 +68,14 @@ readable `dist/` artifacts, and the target's installed build when available.
 The [`releases/splunkbase-9257.json`](releases/splunkbase-9257.json) ledger is
 historical publication evidence and a safe build floor; it is not a manual
 pre-build allocation step.
-Artifacts are content-addressed as
-`splunk-cisco-dashboards-<version>-sha256-<digest>.tar.gz` with a matching
-immutable `.sha256` sidecar. The root build wrapper verifies both before it
-will use an archive, so retain both files used for a Splunkbase upload.
+Artifacts use the operator-readable name
+`splunk-cisco-dashboards-<version>-<build>.tar.gz` (plus `-developer` only for
+an explicitly selected developer profile) with a matching immutable `.sha256`
+sidecar. The root build wrapper verifies the filename identity, sidecar, and
+archive bytes before use, so retain both files used for a Splunkbase upload.
+Local `--install` and `--deploy` validation may package intentional uncommitted
+changes and marks such artifacts non-release-eligible in their provenance.
+Build-only and remote Splunkbase artifacts still require a clean Git worktree.
 
 ## Usage
 

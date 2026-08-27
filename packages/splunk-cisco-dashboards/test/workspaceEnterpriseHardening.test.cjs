@@ -543,8 +543,13 @@ assert.match(
 );
 assert.match(
   userGuide,
-  /build\.sh --install[\s\S]*?developer-profile archives[\s\S]*?--splunkbase/,
-  "The current in-app release notes must document local developer-profile defaults",
+  /build\.sh --install[\s\S]*?SplunkBase[\s\S]*?--developer[\s\S]*?--fast/,
+  "The current in-app release notes must document SplunkBase defaults and explicit developer workflows",
+);
+assert.match(
+  userGuide,
+  /Local install and deploy validation[\s\S]*?non-release-eligible[\s\S]*?clean-source gate/,
+  "The current in-app release notes must distinguish dirty local validation from publishable release builds",
 );
 assert.match(
   userGuide,

@@ -498,10 +498,10 @@ function exercisePackagingProfiles() {
       "Splunkbase packaging must re-extract and verify the final archive before publication",
     );
 
-    const firstArchiveName = listArchives(distDir).find((name) =>
-      new RegExp(`^${APP_NAME}-1\\.2\\.3-sha256-[0-9a-f]{64}\\.tar\\.gz$`).test(name),
+    const firstArchiveName = listArchives(distDir).find(
+      (name) => name === `${APP_NAME}-1.2.3-8.tar.gz`,
     );
-    assert.ok(firstArchiveName, "Splunkbase packaging must write a hash-qualified archive name");
+    assert.ok(firstArchiveName, "Splunkbase packaging must expose version and build in the archive name");
     const firstArchive = path.join(distDir, firstArchiveName);
     const firstDigestPath = `${firstArchive}.sha256`;
     const firstDigest = sha256(firstArchive);
@@ -542,6 +542,7 @@ function exercisePackagingProfiles() {
         build: 8,
         git_commit: run("git", ["rev-parse", "HEAD"], { cwd: fixture.root }).trim(),
         source_tree_clean: true,
+        release_eligible: true,
       },
       "Splunkbase archives must carry only the exact clean source commit provenance",
     );
@@ -568,7 +569,7 @@ function exercisePackagingProfiles() {
     assert.equal(
       sha256(legacyArchive),
       legacyDigest,
-      "Hash-qualified packaging must not overwrite legacy version-only artifacts",
+      "Version-build packaging must not overwrite legacy version-only artifacts",
     );
 
     writeFile(
@@ -577,7 +578,7 @@ function exercisePackagingProfiles() {
     );
     run("bash", [fixture.packageScript], { cwd: fixture.packageRoot });
     const releaseArchives = listArchives(distDir).filter((name) =>
-      name.includes("-sha256-") && !name.endsWith("-developer.tar.gz"),
+      new RegExp(`^${APP_NAME}-1\\.2\\.3-[0-9]+\\.tar\\.gz$`).test(name),
     );
     assert.equal(
       releaseArchives.length,
@@ -598,10 +599,8 @@ function exercisePackagingProfiles() {
     run("bash", [fixture.packageScript, "--from-stage", "--developer"], {
       cwd: fixture.packageRoot,
     });
-    const developerArchiveName = listArchives(distDir).find((name) =>
-      new RegExp(
-        `^${APP_NAME}-1\\.2\\.3-sha256-[0-9a-f]{64}-developer\\.tar\\.gz$`,
-      ).test(name),
+    const developerArchiveName = listArchives(distDir).find(
+      (name) => name === `${APP_NAME}-1.2.3-10-developer.tar.gz`,
     );
     assert.ok(
       developerArchiveName,
@@ -664,6 +663,28 @@ function exercisePackagingProfiles() {
     );
 
     writeFile(path.join(fixture.root, "uncommitted-release-input.txt"), "dirty\n");
+    run("bash", [fixture.packageScript, "--local-validation"], {
+      cwd: fixture.packageRoot,
+    });
+    const localValidationArchive = path.join(
+      distDir,
+      `${APP_NAME}-1.2.3-12.tar.gz`,
+    );
+    assert.equal(
+      fs.existsSync(localValidationArchive),
+      true,
+      "Local Splunkbase validation must package intentional uncommitted source",
+    );
+    const localValidationProvenance = JSON.parse(
+      run("tar", [
+        "-xzOf",
+        localValidationArchive,
+        `${APP_NAME}/release-provenance.json`,
+      ]),
+    );
+    assert.equal(localValidationProvenance.source_tree_clean, false);
+    assert.equal(localValidationProvenance.release_eligible, false);
+
     const dirtyWorktreeFailure = runExpectFailure(
       "bash",
       [fixture.packageScript],
@@ -760,7 +781,7 @@ function makeRootBuildFixture() {
       'ARCHIVE_TMP="${ROOT_DIR}/dist/.fixture-archive.tar.gz"',
       '(cd "${WORK_DIR}" && tar czf "${ARCHIVE_TMP}" "${APP_NAME}")',
       'SHA256="$(shasum -a 256 "${ARCHIVE_TMP}" | awk \'{print $1}\')"',
-      'ARCHIVE="${ROOT_DIR}/dist/${APP_NAME}-${VERSION}-sha256-${SHA256}${SUFFIX}.tar.gz"',
+      'ARCHIVE="${ROOT_DIR}/dist/${APP_NAME}-${VERSION}-${BUILD}${SUFFIX}.tar.gz"',
       'mv "${ARCHIVE_TMP}" "${ARCHIVE}"',
       'printf "%s  %s\\n" "${SHA256}" "$(basename "${ARCHIVE}")" > "${ARCHIVE}.sha256"',
       "",
@@ -778,8 +799,8 @@ function exerciseRootBuildArchiveResolution() {
     });
     assert.match(
       standardOutput,
-      /Tarball: .*splunk-cisco-dashboards-1\.2\.3-sha256-[0-9a-f]{64}\.tar\.gz/,
-      "A fresh root build must resolve the newly created hash-addressed Splunkbase archive",
+      /Tarball: .*splunk-cisco-dashboards-1\.2\.3-1\.tar\.gz/,
+      "A fresh root build must resolve the newly created version-build Splunkbase archive",
     );
 
     const standardArchive = fs
@@ -803,7 +824,7 @@ function exerciseRootBuildArchiveResolution() {
     });
     assert.match(
       developerOutput,
-      /Tarball: .*splunk-cisco-dashboards-1\.2\.3-sha256-[0-9a-f]{64}-developer\.tar\.gz/,
+      /Tarball: .*splunk-cisco-dashboards-1\.2\.3-2-developer\.tar\.gz/,
       "A fresh developer build must resolve its profile-specific immutable archive",
     );
   } finally {
@@ -858,32 +879,37 @@ function exerciseLocalInstallProfileDefaults() {
       SCD_FIXTURE_SPLUNK_LOG: splunkLog,
     };
 
-    const developerOutput = run(
+    const splunkbaseOutput = run(
       "bash",
       [fixture.buildPath, "--install", "--minify", "--auth", "fixture:password"],
       { cwd: fixture.root, env },
     );
     assert.match(
-      developerOutput,
-      /Profile:\s+developer \(released \+ developing resources\)/,
-      "A fresh local install must default to the developer profile",
+      splunkbaseOutput,
+      /Profile:\s+Splunkbase \(released resources only\)/,
+      "A fresh local install must default to the SplunkBase profile",
     );
     assert.match(
-      developerOutput,
-      /Tarball: .*-[0-9a-f]{64}-developer\.tar\.gz/,
-      "An implicit local developer install must use the developer artifact namespace",
+      splunkbaseOutput,
+      /Tarball: .*splunk-cisco-dashboards-1\.2\.3-21\.tar\.gz/,
+      "An implicit local install must use the release artifact namespace",
+    );
+    assert.doesNotMatch(
+      splunkbaseOutput.match(/Tarball: .*$/m)?.[0] || "",
+      /-developer\.tar\.gz/,
+      "A default local install must not resolve a developer archive",
     );
     assert.match(
-      developerOutput,
+      splunkbaseOutput,
       /v1\.2\.3 \(build 21\)/,
       "A local install must allocate above the target's installed build",
     );
 
-    const splunkbaseOutput = run(
+    const developerOutput = run(
       "bash",
       [
         fixture.buildPath,
-        "--splunkbase",
+        "--developer",
         "--install",
         "--minify",
         "--auth",
@@ -892,24 +918,19 @@ function exerciseLocalInstallProfileDefaults() {
       { cwd: fixture.root, env },
     );
     assert.match(
-      splunkbaseOutput,
-      /Profile:\s+Splunkbase \(released resources only\)/,
-      "--splunkbase must preserve explicit local release-profile validation",
+      developerOutput,
+      /Profile:\s+developer \(released \+ developing resources\)/,
+      "--developer must explicitly select the local developer profile",
     );
     assert.match(
-      splunkbaseOutput,
-      /Tarball: .*-[0-9a-f]{64}\.tar\.gz/,
-      "An explicit SplunkBase install must use the release artifact namespace",
-    );
-    assert.doesNotMatch(
-      splunkbaseOutput.match(/Tarball: .*$/m)?.[0] || "",
-      /-developer\.tar\.gz/,
-      "An explicit SplunkBase install must not resolve a developer archive",
+      developerOutput,
+      /Tarball: .*splunk-cisco-dashboards-1\.2\.3-22-developer\.tar\.gz/,
+      "An explicit developer install must use the developer artifact namespace",
     );
     assert.match(
-      splunkbaseOutput,
+      developerOutput,
       /v1\.2\.3 \(build 22\)/,
-      "The explicit SplunkBase build must continue above prior generated artifacts",
+      "The explicit developer build must continue above prior generated artifacts",
     );
     assert.equal(
       fs.readFileSync(splunkLog, "utf8").trim().split("\n").length,
@@ -943,8 +964,13 @@ assert.match(
 );
 assert.match(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
-  /PKG_PATH=.*-sha256-\$\{PACKAGE_SHA256\}/,
-  "Artifact names must remain content-addressed",
+  /PKG_PATH=.*\$\{VERSION\}-\$\{new_build\}\$\{ARTIFACT_PROFILE_SUFFIX\}\.tar\.gz/,
+  "Artifact names must expose the package version and allocated build",
+);
+assert.doesNotMatch(
+  fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
+  /PKG_PATH=.*sha256/,
+  "Artifact filenames must never contain the SHA-256 digest",
 );
 assert.match(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
@@ -968,13 +994,13 @@ assert.match(
 );
 assert.match(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
-  /resolve_clean_release_commit\(\)[\s\S]*?git -C "\$ROOT_DIR" status --porcelain --untracked-files=all[\s\S]*?post_build_commit="\$\(resolve_clean_release_commit\)"/,
-  "Splunkbase packaging must require a clean, committed source state",
+  /resolve_clean_release_commit\(\)[\s\S]*?git -C "\$ROOT_DIR" status --porcelain --untracked-files=all[\s\S]*?LOCAL_VALIDATION[\s\S]*?post_build_commit="\$\(resolve_clean_release_commit\)"/,
+  "Publishable Splunkbase packaging must retain the clean, committed source gate",
 );
 assert.match(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
-  /release-provenance\.json[\s\S]*?"git_commit"[\s\S]*?"source_tree_clean": true/,
-  "Splunkbase packaging must emit a standalone source-provenance manifest",
+  /release-provenance\.json[\s\S]*?"git_commit"[\s\S]*?"source_tree_clean": %s[\s\S]*?"release_eligible": %s/,
+  "Splunkbase packaging must emit source cleanliness and release eligibility provenance",
 );
 assert.doesNotMatch(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
@@ -1016,10 +1042,15 @@ assert.match(
   /from_stage.*?developer_profile=1/s,
   "The root build wrapper must make --fast imply the developer profile",
 );
+assert.doesNotMatch(
+  buildScript,
+  /do_install.*?do_deploy[\s\S]{0,300}?developer_profile=1/,
+  "Fresh local install and deploy workflows must not silently select the developer profile",
+);
 assert.match(
   buildScript,
-  /no_build.*?do_install.*?do_deploy[\s\S]*?developer_profile=1/,
-  "Fresh local install and deploy workflows must default to the developer profile",
+  /local_splunkbase_validation=0[\s\S]*?do_install[\s\S]*?do_deploy[\s\S]*?local_splunkbase_validation=1[\s\S]*?package_args\+=\(--local-validation\)/,
+  "Local Splunkbase install and deploy workflows must allow dirty validation without weakening release builds",
 );
 assert.match(
   buildScript,
@@ -1028,13 +1059,8 @@ assert.match(
 );
 assert.match(
   buildScript,
-  /archive_modified_epoch\(\)[\s\S]*?expected_profile.*?developer[\s\S]*?newest_mtime/s,
-  "The root build wrapper must choose the newest matching developer archive",
-);
-assert.match(
-  buildScript,
-  /find_release_archive\(\)[\s\S]*?expected_package_id[\s\S]*?expected_version[\s\S]*?expected_profile[\s\S]*?highest_build[\s\S]*?-sha256-\*\.tar\.gz/,
-  "The root build wrapper must resolve the highest hash-addressed build by package, VERSION, and profile",
+  /find_release_archive\(\)[\s\S]*?expected_package_id[\s\S]*?expected_version[\s\S]*?expected_profile[\s\S]*?expected_name="\$\{APP_NAME\}-\$\{archive_version\}-\$\{archive_build\}\$\{profile_suffix\}\.tar\.gz"/,
+  "The root build wrapper must resolve version-build archives by package identity and profile",
 );
 assert.match(
   buildScript,
@@ -1046,15 +1072,11 @@ assert.match(
   /app_conf_build\(\)[\s\S]*?installed_app_conf=[\s\S]*?app_conf_build[\s\S]*?SCD_PACKAGE_BUILD_FLOOR="\$package_build_floor"/,
   "Local build/install must pass the installed app build as an allocation floor",
 );
-assert.doesNotMatch(
-  buildScript,
-  /package_path="\$\{DIST_DIR\}\/\$\{APP_NAME\}-\$\{build_version\}(?:-developer)?\.tar\.gz"/,
-  "The root build wrapper must not expect the retired version-only archive name",
-);
+assert.doesNotMatch(buildScript, /-sha256-/, "The root build wrapper must not require hash-qualified filenames");
 assert.match(
   buildScript,
-  /verify_release_archive\(\)[\s\S]*?checksum sidecar[\s\S]*?SHA-256 mismatch[\s\S]*?verify_release_archive "\$package_path"/,
-  "The root build wrapper must verify the immutable filename, sidecar, and bytes before use",
+  /verify_release_archive\(\)[\s\S]*?filename must contain its version and build[\s\S]*?checksum sidecar[\s\S]*?SHA-256 mismatch[\s\S]*?verify_release_archive "\$package_path"/,
+  "The root build wrapper must verify the version-build filename, sidecar, and bytes before use",
 );
 
 exerciseCleanBuild();

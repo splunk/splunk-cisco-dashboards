@@ -12,9 +12,9 @@
 #   ./build.sh --developer                                    # developer profile: includes developing resources
 #
 # Install workflows (splunkd-managed; goes through REST mgmt port 8089):
-#   ./build.sh --install --auth admin:********                # developer build + `splunk install app` against the default Splunk
-#   SPLUNK_HOME=/opt/10 ./build.sh --install --auth admin:pw  # developer build + install against a non-default Splunk
-#   SPLUNK_HOME=/opt/10 ./build.sh --splunkbase --install --auth admin:pw  # explicit release-profile install
+#   ./build.sh --install --auth admin:********                # Splunkbase build + `splunk install app` against the default Splunk
+#   SPLUNK_HOME=/opt/10 ./build.sh --install --auth admin:pw  # Splunkbase build + install against a non-default Splunk
+#   SPLUNK_HOME=/opt/10 ./build.sh --developer --install --auth admin:pw  # explicit developer-profile install
 #   ./build.sh --install --auth admin:pw --restart            # build + install + restart Splunk
 #   ./build.sh --remote-install splunk@host --ssh-port 10000
 #   ./build.sh --no-build --remote-install splunk@host --ssh-port 10000 --remote-auth-user admin
@@ -192,15 +192,6 @@ archive_identity() {
     '
 }
 
-archive_modified_epoch() {
-    local archive="$1"
-    if [[ "$(uname -s)" == "Darwin" ]]; then
-        stat -f '%m' "$archive"
-    else
-        stat -c '%Y' "$archive"
-    fi
-}
-
 app_conf_build() {
     local file="$1"
     [[ -f "$file" ]] || return 1
@@ -219,12 +210,13 @@ find_release_archive() {
     local expected_package_id="$1"
     local expected_version="$2"
     local expected_profile="$3"
-    local archive archive_profile identity archive_package_id archive_version archive_build archive_mtime newest_mtime=""
+    local archive archive_name archive_profile profile_suffix identity archive_package_id archive_version archive_build expected_name
     local match=""
     local highest_build=0
     local match_count=0
 
     while IFS= read -r -d '' archive; do
+        archive_name="$(basename "$archive")"
         archive_profile="splunkbase"
         [[ "$archive" == *-developer.tar.gz ]] && archive_profile="developer"
         [[ "$archive_profile" == "$expected_profile" ]] || continue
@@ -235,26 +227,21 @@ find_release_archive() {
         if [[ "$archive_package_id" == "$expected_package_id" \
             && "$archive_version" == "$expected_version" \
             && "$archive_build" =~ ^[1-9][0-9]*$ ]]; then
+            profile_suffix=""
+            [[ "$archive_profile" == "developer" ]] && profile_suffix="-developer"
+            expected_name="${APP_NAME}-${archive_version}-${archive_build}${profile_suffix}.tar.gz"
+            [[ "$archive_name" == "$expected_name" ]] || continue
             if (( archive_build > highest_build )); then
                 match="$archive"
                 highest_build="$archive_build"
                 match_count=1
-                newest_mtime=""
             elif (( archive_build < highest_build )); then
                 continue
             else
                 match_count=$((match_count + 1))
             fi
-            if [[ "$expected_profile" == "developer" ]]; then
-                archive_mtime="$(archive_modified_epoch "$archive")" || return 1
-                if [[ -z "$newest_mtime" || "$archive_mtime" -gt "$newest_mtime" \
-                    || ("$archive_mtime" -eq "$newest_mtime" && "$archive" > "$match") ]]; then
-                    match="$archive"
-                    newest_mtime="$archive_mtime"
-                fi
-            fi
         fi
-    done < <(find "$DIST_DIR" -maxdepth 1 -type f -name "${APP_NAME}-*-sha256-*.tar.gz" -print0)
+    done < <(find "$DIST_DIR" -maxdepth 1 -type f -name "${APP_NAME}-*.tar.gz" -print0)
 
     if [[ "$match_count" -eq 0 ]]; then
         err "ERROR: no immutable ${expected_profile} archive was found for package ${expected_package_id}, version ${expected_version}."
@@ -282,25 +269,41 @@ sha256_file() {
 
 verify_release_archive() {
     local archive="$1"
-    local archive_name expected_sha actual_sha checksum_path checksum_record
+    local archive_name identity archive_package_id archive_version archive_build profile_suffix expected_name
+    local expected_sha actual_sha checksum_path checksum_record
 
     if [[ ! -f "$archive" ]]; then
         err "ERROR: release archive is missing: ${archive}"
         return 1
     fi
     archive_name="$(basename "$archive")"
-    if [[ ! "$archive_name" =~ ^${APP_NAME}-[A-Za-z0-9][A-Za-z0-9._+-]*-sha256-([0-9a-f]{64})(-developer)?\.tar\.gz$ ]]; then
-        err "ERROR: release archive does not use the required immutable SHA-256 filename: ${archive_name}"
+    identity="$(archive_identity "$archive")"
+    if [[ -z "$identity" ]]; then
+        err "ERROR: release archive does not contain a readable package/version/build identity: ${archive_name}"
         return 1
     fi
-    expected_sha="${BASH_REMATCH[1]}"
+    IFS=$'\t' read -r archive_package_id archive_version archive_build <<< "$identity"
+    if [[ "$archive_package_id" != "$APP_NAME" || ! "$archive_build" =~ ^[1-9][0-9]*$ ]]; then
+        err "ERROR: release archive contains an invalid package identity: ${archive_name}"
+        return 1
+    fi
+    profile_suffix=""
+    [[ "$archive_name" == *-developer.tar.gz ]] && profile_suffix="-developer"
+    expected_name="${APP_NAME}-${archive_version}-${archive_build}${profile_suffix}.tar.gz"
+    if [[ "$archive_name" != "$expected_name" ]]; then
+        err "ERROR: release archive filename must contain its version and build: ${expected_name}"
+        return 1
+    fi
     checksum_path="${archive}.sha256"
     if [[ ! -f "$checksum_path" ]]; then
         err "ERROR: release archive checksum sidecar is missing: ${checksum_path}"
         return 1
     fi
     checksum_record="$(cat "$checksum_path")"
-    if [[ "$checksum_record" != "${expected_sha}  ${archive_name}" ]]; then
+    expected_sha="${checksum_record%% *}"
+    expected_sha="$(printf '%s' "$expected_sha" | tr '[:upper:]' '[:lower:]')"
+    if [[ ! "$expected_sha" =~ ^[0-9a-f]{64}$ \
+        || "$checksum_record" != "${expected_sha}  ${archive_name}" ]]; then
         err "ERROR: checksum sidecar does not exactly describe ${archive_name}."
         return 1
     fi
@@ -551,10 +554,11 @@ Version is read from ./VERSION and stamped at package time.
 
 Push-to-Splunk options (mutually exclusive):
   --install              splunkd-managed install via REST mgmt port. Calls
-                         \`splunk install app dist/<app>-<version>-sha256-<digest>.tar.gz -update 1
+                         \`splunk install app dist/<app>-<version>-<build>.tar.gz -update 1
                           -auth user:pass\`. Requires --auth.
-                         Fresh local installs default to the developer profile;
-                         use --splunkbase for an explicit release-profile test.
+                         Fresh local installs use the Splunkbase profile unless
+                         --developer or --fast is explicitly selected. Current
+                         source changes are allowed for local validation only.
   --deploy               Filesystem swap into \$SPLUNK_HOME/etc/apps/<app>
                          through a prepared sibling replacement (preserves
                          local/ and runtime lookup CSVs). Faster than
@@ -583,12 +587,11 @@ Other options:
                          build. SplunkBase packages are always minified.
                          Not valid with --fast or --no-build.
   --developer            Include resources listed in the app's
-                         config/build-profile-manifest.json. Writes a
-                         SHA-256-addressed *-developer.tar.gz intended only
-                         for local testing.
-  --splunkbase           Explicitly use the released-resources-only SplunkBase
-                         profile. Build-only and remote packaging use this
-                         profile by default; local install/deploy builds do not.
+                         config/build-profile-manifest.json. Writes a clearly
+                         labeled *-developer.tar.gz intended only for local testing.
+  --splunkbase           Use the released-resources-only SplunkBase profile.
+                         This is the default for build, install, deploy, and
+                         remote-install workflows.
   --lint-spl-antipatterns
                          Run the experimental Searchbase SPL anti-pattern
                          policy gate before packaging. Disabled by default
@@ -618,8 +621,8 @@ Other options:
 Examples:
   ./build.sh                                                  # Splunkbase package (released resources only)
   ./build.sh --developer                                      # local developer package
-  ./build.sh --install --auth admin:********                  # developer build + splunkd install
-  ./build.sh --splunkbase --install --auth admin:********     # release-profile validation install
+  ./build.sh --install --auth admin:********                  # Splunkbase build + splunkd install
+  ./build.sh --developer --install --auth admin:********      # explicit developer-profile install
   SPLUNK_HOME=/opt/10 ./build.sh --developer --fast --install --auth admin:********
   SPLUNK_HOME=/opt/10 ./build.sh --install --auth admin:******** --restart
   ./build.sh --deploy                                         # build + filesystem swap
@@ -837,17 +840,9 @@ if [[ "$developer_profile_explicit" -eq 1 && "$splunkbase_profile_explicit" -eq 
     exit 2
 fi
 
-# Fresh local installs are development iterations even when minified. Default
-# them to the developer artifact namespace so committed SplunkBase identities
-# remain immutable across source commits. Build-only, remote-install, and
-# --no-build workflows retain the SplunkBase default unless explicitly
-# overridden; --splunkbase keeps exact local release-profile validation
-# available when that is the caller's intent.
-if [[ "$developer_profile_explicit" -eq 0 && "$splunkbase_profile_explicit" -eq 0 \
-    && "$no_build" -eq 0 \
-    && ( "$do_install" -eq 1 || "$do_deploy" -eq 1 ) ]]; then
-    developer_profile=1
-fi
+# The released-resources-only Splunkbase profile is the default for every
+# workflow. Developing resources require an explicit --developer selection or
+# the explicitly watcher-backed --fast/--from-stage path below.
 
 # --no-build only makes sense when paired with --install or --deploy.
 # On its own it would be a noop (build is already the default, and
@@ -966,6 +961,15 @@ if [[ "$do_install" -eq 1 || "$do_deploy" -eq 1 ]]; then
     fi
 fi
 
+# Local Splunkbase installs and filesystem deploys validate the exact current
+# worktree, including intentional uncommitted changes. Build-only and remote
+# Splunkbase artifacts retain the clean-source publication gate.
+local_splunkbase_validation=0
+if [[ "$developer_profile" -eq 0 \
+    && ( "$do_install" -eq 1 || "$do_deploy" -eq 1 ) ]]; then
+    local_splunkbase_validation=1
+fi
+
 if [[ "$no_build" -eq 0 ]]; then
 
     # This policy linter is intentionally opt-in. Its broad rules are useful
@@ -997,6 +1001,9 @@ else
     if [[ "$developer_profile" -eq 1 ]]; then
         package_args+=(--developer)
     fi
+    if [[ "$local_splunkbase_validation" -eq 1 ]]; then
+        package_args+=(--local-validation)
+    fi
     if [[ "$minify" -eq 1 ]]; then
         package_args+=(--minify)
         if [[ "$developer_profile" -eq 1 ]]; then
@@ -1007,13 +1014,15 @@ else
     else
         if [[ "$developer_profile" -eq 1 ]]; then
             hdr "Packaging ${APP_NAME} v${build_version} (developer profile)..."
+        elif [[ "$local_splunkbase_validation" -eq 1 ]]; then
+            hdr "Packaging ${APP_NAME} v${build_version} (minified Splunkbase profile; local validation)..."
         else
             hdr "Packaging ${APP_NAME} v${build_version} (minified Splunkbase profile; required for release)..."
         fi
     fi
     # macOS ships Bash 3.2, where expanding an empty array under `set -u`
     # raises "unbound variable" instead of passing zero arguments.
-    if [[ "$developer_profile" -eq 1 || "$minify" -eq 1 ]]; then
+    if [[ "$developer_profile" -eq 1 || "$minify" -eq 1 || "$local_splunkbase_validation" -eq 1 ]]; then
         run_quietly env SCD_PACKAGE_BUILD_FLOOR="$package_build_floor" bash "${APP_DIR}/bin/package_app.sh" "${package_args[@]}"
     else
         run_quietly env SCD_PACKAGE_BUILD_FLOOR="$package_build_floor" bash "${APP_DIR}/bin/package_app.sh"

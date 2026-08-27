@@ -1879,7 +1879,16 @@ iseval = 0`}</CodeBlock>
                         as its single release input. Source app.conf and
                         app.manifest retain placeholders; generated packages
                         stamp the release version and date and allocate the next
-                        build automatically. Upgrade notifications are explicit,
+                        build automatically. Package filenames expose that
+                        version and build directly while retaining SHA-256
+                        sidecars for integrity checks. Build, install, deploy,
+                        and remote workflows default to the released-resources-only
+                        SplunkBase profile; developer resources require an explicit
+                        developer or fast workflow. Local install and deploy validation
+                        can include intentional uncommitted source, which is marked
+                        non-release-eligible in package provenance; build-only and
+                        remote release artifacts retain the clean-source gate.
+                        Upgrade notifications are explicit,
                         and React Router is on its supported security-maintenance
                         line. Dashboard Manager now makes Edit visible from
                         library cards and previews, while its Searchbase picker
@@ -1891,12 +1900,12 @@ iseval = 0`}</CodeBlock>
                       <td className="px-3 py-3 sui-color-default">
                         Install the build through the supported app-management
                         workflow; no customer-managed Splunk restart is
-                        required. Fresh local <InlineCode>build.sh --install</InlineCode>{" "}
-                        and <InlineCode>--deploy</InlineCode> builds default to
-                        developer-profile archives so iterative installs do not
-                        collide with immutable SplunkBase release identities;
-                        pass <InlineCode>--splunkbase</InlineCode> when validating
-                        the released-resources-only profile. For a release,
+                        required. <InlineCode>build.sh --install</InlineCode>{" "}
+                        and <InlineCode>--deploy</InlineCode> use the SplunkBase
+                        profile by default. Pass <InlineCode>--developer</InlineCode>{" "}
+                        only when developing resources are intentionally needed;
+                        the explicit <InlineCode>--fast</InlineCode> workflow also
+                        remains developer-only. For a release,
                         change and commit only the repository-root
                         <InlineCode>VERSION</InlineCode> file; do not edit source
                         <InlineCode>app.conf</InlineCode> or
