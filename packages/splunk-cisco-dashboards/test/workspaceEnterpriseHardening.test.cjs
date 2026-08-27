@@ -38,6 +38,9 @@ const resolve = permissions.resolveInsightsWorkspacePermissions;
 const openSearchTokens = loadTypescriptModule(
   "src/main/webapp/common/lib/openSearchTokenResolution.ts",
 );
+const appCatalog = loadTypescriptModule(
+  "src/main/webapp/common/lib/appCatalogUrl.ts",
+);
 const openSearchInputs = {
   site: {
     type: "input.text",
@@ -350,6 +353,31 @@ try {
 }
 
 const profile = read("src/main/webapp/pages/executive_insights/index.tsx");
+const appCatalogUrl = new URL(
+  appCatalog.secureNetworkingEssentialsCatalogUrl(),
+  "https://splunk.example",
+);
+assert.equal(
+  appCatalogUrl.pathname.endsWith("/manager/launcher/appsremote"),
+  true,
+);
+assert.equal(appCatalogUrl.searchParams.get("order"), "relevance");
+assert.equal(
+  appCatalogUrl.searchParams.get("query"),
+  '"Secure Networking Essentials"',
+);
+assert.equal(appCatalogUrl.searchParams.get("offset"), "0");
+assert.equal(appCatalogUrl.searchParams.get("type"), "app");
+assert.deepEqual(appCatalogUrl.searchParams.getAll("category"), [
+  "it_operations_management",
+  "network_security",
+]);
+assert.equal(appCatalogUrl.searchParams.get("support"), "developer");
+assert.equal(appCatalogUrl.searchParams.get("cim_version"), "8.x");
+assert.match(
+  profile,
+  /openInNewContext\s+to=\{appCatalogUrl\}[\s\S]*?App details and upgrades/,
+);
 const searchService = read(
   "src/main/webapp/common/services/splunkSearchService.js",
 );

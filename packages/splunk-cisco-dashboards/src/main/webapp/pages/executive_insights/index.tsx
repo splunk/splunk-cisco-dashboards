@@ -11,7 +11,6 @@ import { DashboardContextProvider } from "@splunk/dashboard-context";
 import { DashboardCore } from "@splunk/dashboard-core";
 import EnterpriseViewOnlyPreset from "@splunk/dashboard-presets/EnterpriseViewOnlyPreset";
 import DotsThreeVertical from "@splunk/react-icons/DotsThreeVertical";
-import { createURL } from "@splunk/splunk-utils/url";
 import Badge from "@splunk/react-ui/Badge";
 import Button from "@splunk/react-ui/Button";
 import Card from "@splunk/react-ui/Card";
@@ -81,6 +80,7 @@ import {
 } from "@/common/icons/SuiIcon";
 import { useAppThemeControls } from "@/common/theme/AppThemeProvider";
 import AppearanceMenuItems from "@/common/components/AppearanceMenuItems";
+import { secureNetworkingEssentialsCatalogUrl } from "@/common/lib/appCatalogUrl";
 import { buildWorkspaceDrilldownDefinition } from "@/common/lib/dashboardDrilldown";
 import { normalizeSharedImageSource } from "@/common/lib/imageSource";
 import { DashboardSection } from "@/common/components/workspace/DashboardSection";
@@ -240,7 +240,6 @@ import { cn } from "@/common/lib/utils";
 // =============================================================================
 
 const APP_NAME = "splunk-cisco-dashboards";
-const APP_CATALOG_SEARCH_NAME = "Splunk Secure Networking Essentials";
 const WORKSPACE_MENU_WIDTH_PX = 200;
 const HEADER_TIME_RANGE_WIDTH_PX = 130;
 const HEADER_REFRESH_RATE_WIDTH_PX = 140;
@@ -2470,11 +2469,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   );
   const [appVersionLabel, setAppVersionLabel] =
     useState<string>(APP_VERSION_LABEL);
-  const appCatalogUrl = createURL("/manager/launcher/appsremote", {
-    order: "relevance",
-    query: APP_CATALOG_SEARCH_NAME,
-    offset: 0,
-  });
+  const appCatalogUrl = secureNetworkingEssentialsCatalogUrl();
   const {
     override: brandingOverride,
     setOverride: setBrandingOverride,

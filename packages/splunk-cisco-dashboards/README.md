@@ -10,6 +10,9 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Focused the Insights Workspace's App details and upgrades action on exact
+  Secure Networking Essentials catalog results, filtered to the app's IT
+  operations, network security, developer-support, and CIM 8.x metadata.
 - Restored readable semantic trend colors across all 17 managed Secure
   Networking dashboards. Visible single-value deltas now apply their configured
   positive, neutral, negative, or informational palette instead of falling back
