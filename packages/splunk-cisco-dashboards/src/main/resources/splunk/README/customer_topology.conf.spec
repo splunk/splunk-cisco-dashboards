@@ -43,9 +43,10 @@ Runtime:
 
   The write owner is `nobody` so saved topology is app-wide rather than
   private to one user. Splunk requires the app-specific
-  `scd_manage_insights_workspaces` capability at this endpoint. The app grants
-  that capability to power, admin, and sc_admin by default; administrators can
-  grant it to a custom role without also granting `admin_all_objects`.
+  `ssne_manage_insights_workspaces` capability at this endpoint. The app grants
+  that capability to admin and sc_admin by default; user and power remain
+  read-only unless an administrator explicitly delegates the capability to a
+  separate custom role.
 
   The handler accepts only overview_customer_connectivity stanza names and the
   fields above, validates JSON object fields, and caps payload_json at 128 KiB,

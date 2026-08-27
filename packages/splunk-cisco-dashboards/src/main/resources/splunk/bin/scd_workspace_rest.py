@@ -336,7 +336,7 @@ class WorkspaceMutationHandler(PersistentServerConnectionApplication):
     """Capability-gated proxy to app-local conf persistence.
 
     ``passSystemAuth`` supplies the system token only after splunkd has checked
-    ``scd_manage_insights_workspaces``. The handler validates the exact stanza
+    ``ssne_manage_insights_workspaces``. The handler validates the exact stanza
     and field surface, then uses that token for the generic conf write so a
     narrow custom role does not need the raw conf object's write ACL.
     """

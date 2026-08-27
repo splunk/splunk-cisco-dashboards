@@ -47,11 +47,11 @@ Runtime:
     DELETE /servicesNS/nobody/splunk-cisco-dashboards/scd_dashboard_backgrounds/<stanza>
 
 Authorization:
-  The custom mutation endpoint requires `scd_manage_insights_workspaces`.
-  The app grants that capability to power, admin, and sc_admin by default so a
-  custom role can receive only this shared-workspace-management capability.
+  The custom mutation endpoint requires `ssne_manage_insights_workspaces`.
+  The app grants that capability to admin and sc_admin by default so a custom
+  role can receive only this shared-workspace-management capability.
   Direct raw writes to templates.conf remain restricted to admin and sc_admin
-  by metadata/default.meta; power uses the validated endpoint.
+  by metadata/default.meta; user and power cannot mutate shared backgrounds.
 
 Reload and clustering:
   reload.templates = simple in app.conf applies saved backgrounds without a

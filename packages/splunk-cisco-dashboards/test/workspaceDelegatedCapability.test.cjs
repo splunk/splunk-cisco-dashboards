@@ -24,17 +24,31 @@ const topologyService = read(
 const tileConfigService = read(
   "src/main/webapp/common/services/searchbaseTileConfigService.ts",
 );
+const backgroundButton = read(
+  "src/main/webapp/pages/dashboardbuilder/BackgroundButton.jsx",
+);
 const handler = read("src/main/resources/splunk/bin/scd_workspace_rest.py");
+const liveValidator = read("../../scripts/validate_workspace_capability_live.py");
 
-const capability = "scd_manage_insights_workspaces";
+const capability = "ssne_manage_insights_workspaces";
 assert.match(authorize, new RegExp(`\\[capability::${capability}\\]`));
-for (const role of ["admin", "power", "sc_admin"]) {
+assert.doesNotMatch(
+  authorize,
+  /scd_manage_insights_workspaces/,
+  "The legacy app acronym must not remain in the capability contract",
+);
+for (const role of ["admin", "sc_admin"]) {
   assert.match(
     authorize,
     new RegExp(`\\[role_${role}\\][\\s\\S]*?${capability} = enabled`),
     `${role} must retain shared workspace management`,
   );
 }
+assert.doesNotMatch(
+  authorize,
+  /\[role_power\]/,
+  "The built-in power role must not receive shared workspace management",
+);
 
 for (const endpoint of [
   "scd_insights_workspaces",
@@ -59,7 +73,7 @@ for (const endpoint of [
 
 assert.match(
   permissions,
-  /INSIGHTS_WORKSPACE_MANAGEMENT_CAPABILITY[\s\S]*?scd_manage_insights_workspaces/,
+  /INSIGHTS_WORKSPACE_MANAGEMENT_CAPABILITY[\s\S]*?ssne_manage_insights_workspaces/,
 );
 assert.match(
   permissions,
@@ -92,8 +106,23 @@ assert.match(
   /\[templates\][\s\S]*?write : \[ admin, sc_admin \]/,
   "Raw shared template writes must stay restricted while the delegated handler retains UI access",
 );
+assert.match(
+  defaultMeta,
+  /\[customer_topology\][\s\S]*?write : \[ admin, sc_admin \]/,
+  "Raw shared topology writes must stay restricted while the delegated handler retains UI access",
+);
+assert.match(
+  defaultMeta,
+  /\[insights_workspaces\][\s\S]*?write : \[ admin, sc_admin \]/,
+  "Raw shared workspace writes must stay restricted while the delegated handler retains UI access",
+);
 assert.match(tileConfigService, /configs\/conf-\$\{CONF_BASENAME\}/);
 assert.doesNotMatch(tileConfigService, /scd_insights_workspaces|scd_customer_topology/);
+assert.match(
+  backgroundButton,
+  /useCanManageInsightsWorkspaces\(\)[\s\S]*?canManageSharedBackgrounds[\s\S]*?Add new background/,
+  "Shared background upload controls must use the workspace-management capability",
+);
 
 for (const prefix of ["workspace", "layout", "signal_item", "signal_rail"]) {
   assert.match(handler, new RegExp(`${prefix}\\\\\\.`));
@@ -104,5 +133,21 @@ assert.match(handler, /must contain valid JSON/);
 assert.match(handler, /class WorkspaceMutationHandler/);
 assert.match(handler, /system_authtoken/);
 assert.match(handler, /configs\/conf-\{\}/);
+
+assert.match(
+  liveValidator,
+  /CAPABILITY = "ssne_manage_insights_workspaces"/,
+  "Live validation must exercise the SSNE capability contract",
+);
+assert.match(
+  liveValidator,
+  /if CAPABILITY in current_capabilities\(base_url, power_auth, verify_ssl\)/,
+  "Live validation must reject an inherited capability on power",
+);
+assert.match(
+  liveValidator,
+  /configs\/conf-insights_workspaces\?output_mode=json/,
+  "Live validation must test the raw-conf bypass path",
+);
 
 console.log("Delegated workspace capability contract passed.");

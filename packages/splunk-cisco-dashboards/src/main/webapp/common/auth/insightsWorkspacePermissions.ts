@@ -14,13 +14,8 @@ export interface InsightsWorkspacePermissions {
 }
 
 export const INSIGHTS_WORKSPACE_MANAGEMENT_CAPABILITY =
-    'scd_manage_insights_workspaces';
+    'ssne_manage_insights_workspaces';
 
-const SHARED_WORKSPACE_MANAGER_ROLES = new Set([
-    'admin',
-    'power',
-    'sc_admin',
-]);
 const FACTORY_TILE_MANAGER_ROLES = new Set(['admin', 'sc_admin']);
 
 const stringList = (value: unknown): string[] =>
@@ -40,16 +35,10 @@ export const resolveInsightsWorkspacePermissions = (
     const hasDelegatedWorkspaceCapability = capabilities.includes(
         INSIGHTS_WORKSPACE_MANAGEMENT_CAPABILITY,
     );
-    const hasSharedManagerRole = roles.some((role) =>
-        SHARED_WORKSPACE_MANAGER_ROLES.has(role),
-    );
     const hasFactoryTileManagerRole = roles.some((role) =>
         FACTORY_TILE_MANAGER_ROLES.has(role),
     );
-    const canManageSharedConfiguration =
-        canManageAllObjects ||
-        hasDelegatedWorkspaceCapability ||
-        hasSharedManagerRole;
+    const canManageSharedConfiguration = hasDelegatedWorkspaceCapability;
     const username =
         typeof context.username === 'string' && context.username.trim()
             ? context.username.trim()

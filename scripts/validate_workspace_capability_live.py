@@ -20,7 +20,7 @@ import uuid
 
 
 APP = "splunk-cisco-dashboards"
-CAPABILITY = "scd_manage_insights_workspaces"
+CAPABILITY = "ssne_manage_insights_workspaces"
 
 
 class LiveValidationError(RuntimeError):
@@ -214,6 +214,41 @@ def exercise_workspace_crud(
     cleanup.remove((endpoint, stanza))
 
 
+def expect_workspace_writes_denied(
+    base_url: str,
+    auth: tuple[str, str],
+    stanza: str,
+    verify_ssl: bool,
+    cleanup: list[tuple[str, str]],
+    scenario: str,
+) -> None:
+    endpoint = "scd_insights_workspaces"
+    status, _body = request(
+        base_url,
+        auth,
+        f"/servicesNS/nobody/{APP}/{endpoint}?output_mode=json",
+        "POST",
+        {"name": stanza, **workspace_fields("Must be denied")},
+        verify_ssl,
+    )
+    if status in (200, 201):
+        cleanup.append((endpoint, stanza))
+    expect(status, (403,), f"{scenario} custom endpoint write denial")
+
+    raw_stanza = f"{stanza}_raw"
+    status, _body = request(
+        base_url,
+        auth,
+        f"/servicesNS/nobody/{APP}/configs/conf-insights_workspaces?output_mode=json",
+        "POST",
+        {"name": raw_stanza, **workspace_fields("Must be denied")},
+        verify_ssl,
+    )
+    if status in (200, 201):
+        cleanup.append((endpoint, raw_stanza))
+    expect(status, (403,), f"{scenario} raw conf write denial")
+
+
 def exercise_topology_crud(
     base_url: str,
     auth: tuple[str, str],
@@ -272,17 +307,17 @@ def main() -> int:
         "no",
     }
     suffix = uuid.uuid4().hex[:8]
-    delegated_role = f"scd14_delegated_{suffix}"
-    viewer_role = f"scd14_viewer_{suffix}"
-    delegated_user = f"scd14_delegated_{suffix}"
-    viewer_user = f"scd14_viewer_{suffix}"
-    power_user = f"scd14_power_{suffix}"
-    sc_admin_user = f"scd14_sc_admin_{suffix}"
-    password = f"SCD-14-{suffix}-Test!"
+    delegated_role = f"ssne14_delegated_{suffix}"
+    viewer_role = f"ssne14_viewer_{suffix}"
+    delegated_user = f"ssne14_delegated_{suffix}"
+    viewer_user = f"ssne14_viewer_{suffix}"
+    power_user = f"ssne14_power_{suffix}"
+    sc_admin_user = f"ssne14_sc_admin_{suffix}"
+    password = f"SSNE-14-{suffix}-Test!"
     created_roles: list[str] = []
     created_users: list[str] = []
     cleanup_stanzas: list[tuple[str, str]] = []
-    factory_probe = f"scd14_factory_probe_{suffix}"
+    factory_probe = f"ssne14_factory_probe_{suffix}"
     factory_probe_created = False
     results: dict[str, str] = {}
 
@@ -293,7 +328,7 @@ def main() -> int:
         exercise_workspace_crud(
             base_url,
             admin_auth,
-            f"workspace.scd14_admin_{suffix}",
+            f"workspace.ssne14_admin_{suffix}",
             verify_ssl,
             cleanup_stanzas,
         )
@@ -315,16 +350,21 @@ def main() -> int:
         viewer_auth = (viewer_user, password)
         power_auth = (power_user, password)
 
-        if CAPABILITY not in current_capabilities(base_url, power_auth, verify_ssl):
-            raise LiveValidationError("power did not inherit the workspace capability")
-        exercise_workspace_crud(
+        if CAPABILITY in current_capabilities(base_url, power_auth, verify_ssl):
+            raise LiveValidationError(
+                "power unexpectedly inherited the workspace capability"
+            )
+        expect_workspace_writes_denied(
             base_url,
             power_auth,
-            f"workspace.scd14_power_{suffix}",
+            f"workspace.ssne14_power_{suffix}",
             verify_ssl,
             cleanup_stanzas,
+            "power",
         )
-        results["power"] = "capability inherited; shared workspace CRUD allowed"
+        results["power"] = (
+            "capability absent; custom and raw shared workspace writes denied"
+        )
 
         delegated_caps = current_capabilities(base_url, delegated_auth, verify_ssl)
         if CAPABILITY not in delegated_caps or "admin_all_objects" in delegated_caps:
@@ -334,14 +374,14 @@ def main() -> int:
         exercise_workspace_crud(
             base_url,
             delegated_auth,
-            f"workspace.scd14_delegated_{suffix}",
+            f"workspace.ssne14_delegated_{suffix}",
             verify_ssl,
             cleanup_stanzas,
         )
         exercise_topology_crud(
             base_url,
             delegated_auth,
-            f"overview_customer_connectivity_scd14_{suffix}",
+            f"overview_customer_connectivity_ssne14_{suffix}",
             verify_ssl,
             cleanup_stanzas,
         )
@@ -367,19 +407,17 @@ def main() -> int:
                 verify_ssl=verify_ssl,
             )
             expect(status, (200,), f"viewer generic read for {conf_name}")
-        status, _body = request(
+        expect_workspace_writes_denied(
             base_url,
             viewer_auth,
-            f"/servicesNS/nobody/{APP}/scd_insights_workspaces?output_mode=json",
-            "POST",
-            {
-                "name": f"workspace.scd14_viewer_{suffix}",
-                **workspace_fields("Must be denied"),
-            },
+            f"workspace.ssne14_viewer_{suffix}",
             verify_ssl,
+            cleanup_stanzas,
+            "viewer",
         )
-        expect(status, (403,), "viewer shared workspace mutation denial")
-        results["unprivileged_custom_role"] = "generic reads allowed; mutation denied"
+        results["unprivileged_custom_role"] = (
+            "generic reads allowed; custom and raw writes denied"
+        )
 
         validation_auth = delegated_auth
         validation_scenarios = (
@@ -390,17 +428,17 @@ def main() -> int:
             ),
             (
                 "cross-schema field",
-                f"/servicesNS/nobody/{APP}/scd_insights_workspaces/{quoted(f'layout.scd14_{suffix}.security')}?output_mode=json",
+                f"/servicesNS/nobody/{APP}/scd_insights_workspaces/{quoted(f'layout.ssne14_{suffix}.security')}?output_mode=json",
                 {"source_workspace": "secure_networking"},
             ),
             (
                 "invalid topology JSON",
-                f"/servicesNS/nobody/{APP}/scd_customer_topology/{quoted(f'overview_customer_connectivity_scd14_invalid_{suffix}')}?output_mode=json",
+                f"/servicesNS/nobody/{APP}/scd_customer_topology/{quoted(f'overview_customer_connectivity_ssne14_invalid_{suffix}')}?output_mode=json",
                 {"payload_json": "[]"},
             ),
             (
                 "oversized topology JSON",
-                f"/servicesNS/nobody/{APP}/scd_customer_topology/{quoted(f'overview_customer_connectivity_scd14_large_{suffix}')}?output_mode=json",
+                f"/servicesNS/nobody/{APP}/scd_customer_topology/{quoted(f'overview_customer_connectivity_ssne14_large_{suffix}')}?output_mode=json",
                 {"payload_json": json.dumps({"value": "x" * (128 * 1024)})},
             ),
         )
@@ -446,7 +484,7 @@ def main() -> int:
                 exercise_workspace_crud(
                     base_url,
                     sc_admin_auth,
-                    f"workspace.scd14_sc_admin_{suffix}",
+                    f"workspace.ssne14_sc_admin_{suffix}",
                     verify_ssl,
                     cleanup_stanzas,
                 )

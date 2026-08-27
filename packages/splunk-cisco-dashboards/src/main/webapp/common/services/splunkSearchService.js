@@ -74,7 +74,7 @@ const announceCanvasDebug = () => {
   // hidden. Search contents and result data are never logged.
   // eslint-disable-next-line no-console
   console.warn(
-    "[SCD Diagnostics] ENABLED — filter for [SCD Search] or [SCD Tile]. " +
+    "[SSNE Diagnostics] ENABLED — filter for [SSNE Search] or [SSNE Tile]. " +
       "Timeline entries include stage, queue wait, run time, result count, " +
       "no-data outcomes, and failures.",
   );
@@ -98,7 +98,7 @@ const canvasTrace = (outcome, detail) => {
   // read it without expanding an opaque `Object`, and browser automation can
   // capture the same timing/failure evidence during live verification.
   // eslint-disable-next-line no-console
-  console.info(`[SCD Search] ${outcome} ${JSON.stringify(detail)}`);
+  console.info(`[SSNE Search] ${outcome} ${JSON.stringify(detail)}`);
 };
 
 const elapsedMs = (startedAt, endedAt = Date.now()) =>

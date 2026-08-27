@@ -3,10 +3,16 @@
 access = read : [ * ], write : [ admin, sc_admin, power ]
 export = none
 
-# Backgrounds are shared renderer inputs. `power` keeps the intended UI
-# workflow through the capability-protected handler, while direct raw config
-# writes are restricted to trusted application administrators.
+# Backgrounds are shared renderer inputs. Delegated managers use the
+# capability-protected handler, while direct raw config writes are restricted
+# to trusted application administrators.
 [templates]
+access = read : [ * ], write : [ admin, sc_admin ]
+export = none
+
+# Shared topology mutations follow the same capability-protected path. Keep
+# raw generic-conf writes administrator-only so power cannot bypass validation.
+[customer_topology]
 access = read : [ * ], write : [ admin, sc_admin ]
 export = none
 
@@ -102,7 +108,7 @@ access = read : [ * ], write : [ admin, power, sc_admin ]
 export = system
 
 [insights_workspaces]
-access = read : [ * ], write : [ admin, power, sc_admin ]
+access = read : [ * ], write : [ admin, sc_admin ]
 export = system
 
 # Signal Rail deltas are written into the authenticated user's namespace.

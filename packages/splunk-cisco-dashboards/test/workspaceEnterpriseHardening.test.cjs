@@ -191,26 +191,35 @@ assert.deepEqual(
 );
 
 const power = resolve({ roles: ["user", "power"], capabilities: ["search"] });
-assert.equal(power.canManageWorkspaces, true);
-assert.equal(power.canManageSharedTopology, true);
+assert.equal(power.canManageWorkspaces, false);
+assert.equal(power.canManageSharedTopology, false);
 assert.equal(power.canManageFactoryTileConfig, false);
 
 const admin = resolve({
   username: "admin-user",
   roles: ["admin"],
-  capabilities: ["search"],
+  capabilities: ["search", "ssne_manage_insights_workspaces"],
 });
 assert.equal(admin.username, "admin-user");
 assert.equal(admin.canManageWorkspaces, true);
 assert.equal(admin.canManageSharedTopology, true);
 assert.equal(admin.canManageFactoryTileConfig, true);
 
-const delegatedAdmin = resolve({
+const delegatedManager = resolve({
+  roles: ["workspace_curator"],
+  capabilities: ["search", "ssne_manage_insights_workspaces"],
+});
+assert.equal(delegatedManager.canManageWorkspaces, true);
+assert.equal(delegatedManager.canManageSharedTopology, true);
+assert.equal(delegatedManager.canManageFactoryTileConfig, false);
+
+const broadAdmin = resolve({
   roles: ["workspace_curator"],
   capabilities: ["admin_all_objects"],
 });
-assert.equal(delegatedAdmin.canManageWorkspaces, true);
-assert.equal(delegatedAdmin.canManageFactoryTileConfig, true);
+assert.equal(broadAdmin.canManageWorkspaces, false);
+assert.equal(broadAdmin.canManageSharedTopology, false);
+assert.equal(broadAdmin.canManageFactoryTileConfig, true);
 
 const workspaceConfig = loadTypescriptModule(
   "src/main/webapp/common/config/insightsWorkspaces.ts",
@@ -614,7 +623,7 @@ assert.match(profile, /Operator action/);
 assert.match(profile, /Data source and context/);
 assert.match(
   searchService,
-  /\[SCD Diagnostics\] ENABLED/,
+  /\[SSNE Diagnostics\] ENABLED/,
   "Opt-in diagnostics must announce themselves at a console level operators can see",
 );
 assert.match(
@@ -695,8 +704,8 @@ assert.match(
 );
 assert.match(
   defaultMeta,
-  /\[insights_workspaces\][\s\S]*?write : \[ admin, power, sc_admin \]/,
-  "Shared workspace writes must be enforced for power and administrator roles",
+  /\[insights_workspaces\][\s\S]*?write : \[ admin, sc_admin \]/,
+  "Raw shared workspace writes must be restricted to administrator roles",
 );
 assert.match(
   defaultMeta,

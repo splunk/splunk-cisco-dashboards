@@ -33,10 +33,11 @@ Runtime:
     DELETE /servicesNS/nobody/splunk-cisco-dashboards/scd_insights_workspaces/<stanza>
 
 Authorization:
-  scd_manage_insights_workspaces is required by the mutation endpoint. The app
-  grants it to power, admin, and sc_admin so existing behavior is preserved. A
-  custom role may receive only this capability to manage shared workspaces and
-  customer topology. It does not grant writes to factory searchbase.conf.
+  ssne_manage_insights_workspaces is required by the mutation endpoint. The app
+  grants it to admin and sc_admin by default. The built-in user and power roles
+  remain read-only for shared workspace configuration. A custom role may
+  receive only this capability to manage shared workspaces and customer
+  topology. It does not grant writes to factory searchbase.conf.
 
 Validation:
   The handler allowlists stanza-name shapes and fields per stanza family,

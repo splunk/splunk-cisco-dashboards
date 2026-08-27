@@ -1118,7 +1118,7 @@ export default function UserGuidePage(): JSX.Element {
                         Data Model
                       </th>
                       <th className="w-[20%] px-3 py-2 font-bold">
-                        How SCD Uses It
+                        How SSNE Uses It
                       </th>
                     </tr>
                   </thead>
@@ -1243,7 +1243,7 @@ export default function UserGuidePage(): JSX.Element {
                   <InlineCode>admin_macro_index_tuning</InlineCode> Searchbase
                   entry, which performs a tstats pass over known Cisco
                   sourcetypes and generates macro definitions. The UI discovers
-                  every SCD macro whose name starts with{" "}
+                  every SSNE macro whose name starts with{" "}
                   <InlineCode>index_</InlineCode> from this app at runtime, so
                   newly added index macros appear in the scan without updating
                   a hardcoded list. It also centralizes companion macro tuning,
@@ -1266,7 +1266,7 @@ export default function UserGuidePage(): JSX.Element {
                 </p>
               </div>
               <div className="scd-guide-reference-grid">
-                <CodeBlock>{`# SCD macro format
+                <CodeBlock>{`# SSNE macro format
 [index_catalyst]
 definition = index IN (cisco_catcenter, dnac)
 iseval = 0
@@ -1279,7 +1279,7 @@ iseval = 0`}</CodeBlock>
                   <InfoCard title="Where saves go">
                     <ul className="m-0 space-y-2 pl-4">
                       <li>
-                        SCD macros save to{" "}
+                        SSNE macros save to{" "}
                         <InlineCode>
                           splunk-cisco-dashboards/local/macros.conf
                         </InlineCode>
@@ -1308,7 +1308,7 @@ iseval = 0`}</CodeBlock>
                   <div className="scd-guide-reference-links">
                     <GuideLink href={scdMacrosUrl}>
                       <Settings size={15} />
-                      SCD Macros
+                      SSNE Macros
                     </GuideLink>
                     <GuideLink href={cimMacrosUrl}>
                       <Settings size={15} />
@@ -1581,10 +1581,14 @@ iseval = 0`}</CodeBlock>
                         <td className="px-3 py-3 sui-color-default">
                           Not allowed
                         </td>
+                        <td className="px-3 py-3 sui-color-default">
+                          Not allowed
+                        </td>
                         <td className="px-3 py-3 sui-color-default">Allowed</td>
                         <td className="px-3 py-3 sui-color-default">Allowed</td>
-                        <td className="px-3 py-3 sui-color-default">Allowed</td>
-                        <td className="px-3 py-3 sui-color-default">Allowed</td>
+                        <td className="px-3 py-3 sui-color-default">
+                          Requires delegated capability
+                        </td>
                       </tr>
                       <tr className="border-b sui-border-weak align-top">
                         <td className="px-3 py-3 sui-color-default">
@@ -1593,10 +1597,14 @@ iseval = 0`}</CodeBlock>
                         <td className="px-3 py-3 sui-color-default">
                           Not allowed
                         </td>
+                        <td className="px-3 py-3 sui-color-default">
+                          Not allowed
+                        </td>
                         <td className="px-3 py-3 sui-color-default">Allowed</td>
                         <td className="px-3 py-3 sui-color-default">Allowed</td>
-                        <td className="px-3 py-3 sui-color-default">Allowed</td>
-                        <td className="px-3 py-3 sui-color-default">Allowed</td>
+                        <td className="px-3 py-3 sui-color-default">
+                          Requires delegated capability
+                        </td>
                       </tr>
                       <tr className="border-b sui-border-weak align-top">
                         <td className="px-3 py-3 sui-color-default">
@@ -1622,35 +1630,40 @@ iseval = 0`}</CodeBlock>
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <InfoCard title="How the capability check works">
                   When the workspace opens, the app reads the current Splunk
-                  user context. An exact <InlineCode>power</InlineCode>,{" "}
-                  <InlineCode>admin</InlineCode>, or{" "}
-                  <InlineCode>sc_admin</InlineCode> role grants shared workspace
-                  and topology management. An exact{" "}
+                  user context. The{" "}
+                  <InlineCode>ssne_manage_insights_workspaces</InlineCode>{" "}
+                  capability is required for shared workspace and topology
+                  management. The app grants it to the exact{" "}
+                  <InlineCode>admin</InlineCode> and{" "}
+                  <InlineCode>sc_admin</InlineCode> roles by default, but not to{" "}
+                  <InlineCode>user</InlineCode> or{" "}
+                  <InlineCode>power</InlineCode>. An exact{" "}
                   <InlineCode>admin</InlineCode> or{" "}
                   <InlineCode>sc_admin</InlineCode> role grants factory tile
-                  management. The{" "}
-                  <InlineCode>scd_manage_insights_workspaces</InlineCode>{" "}
-                  capability grants shared workspace and topology management
-                  without granting factory tile management. The{" "}
-                  <InlineCode>admin_all_objects</InlineCode> capability grants both levels
-                  regardless of the role name. If the user context cannot be
-                  read, the app denies shared and factory changes.
+                  management. The <InlineCode>admin_all_objects</InlineCode>{" "}
+                  capability grants factory tile management but does not open
+                  Workspace Manager without the app capability. If the user
+                  context cannot be read, the app denies shared and factory
+                  changes.
                 </InfoCard>
                 <InfoCard title="Custom roles and data access">
-                  Assign <InlineCode>scd_manage_insights_workspaces</InlineCode>{" "}
+                  Assign <InlineCode>ssne_manage_insights_workspaces</InlineCode>{" "}
                   to a custom role when its members should create, edit,
                   duplicate, or delete shared workspaces and edit the shared
                   topology. The app&apos;s capability-protected REST handlers
                   enforce those mutations on the server. No separate
                   capability setup is required for the built-in{" "}
-                  <InlineCode>power</InlineCode>, <InlineCode>admin</InlineCode>,
-                  or <InlineCode>sc_admin</InlineCode> roles because the app
-                  grants it to those roles. Because{" "}
+                  <InlineCode>admin</InlineCode> or{" "}
+                  <InlineCode>sc_admin</InlineCode> roles because the app grants
+                  it to those roles. Built-in <InlineCode>user</InlineCode> and{" "}
+                  <InlineCode>power</InlineCode> roles cannot change shared
+                  configuration. Because{" "}
                   <InlineCode>admin_all_objects</InlineCode> grants broad Splunk
                   Enterprise access, do not assign it only to enable workspace
-                  editing. The narrower capability does not permit factory
-                  <InlineCode>searchbase.conf</InlineCode> changes. App access,
-                  the <InlineCode>search</InlineCode>{" "}
+                  editing; the app capability is still required to open the
+                  shared management workflow. The narrower capability does not
+                  permit factory <InlineCode>searchbase.conf</InlineCode>{" "}
+                  changes. App access, the <InlineCode>search</InlineCode>{" "}
                   capability, index permissions, and
                   knowledge object permissions continue to control which data
                   each user can view.
@@ -1885,7 +1898,7 @@ iseval = 0`}</CodeBlock>
                         use one validated packaging path and preserve live
                         development-local configuration. Existing workspaces keep their saved
                         configuration; assign{" "}
-                        <InlineCode>scd_manage_insights_workspaces</InlineCode>{" "}
+                        <InlineCode>ssne_manage_insights_workspaces</InlineCode>{" "}
                         only to custom roles that should manage shared
                         workspaces, topology, and shared Dashboard Builder
                         backgrounds.
@@ -2021,9 +2034,11 @@ iseval = 0`}</CodeBlock>
                   and <InlineCode>sc_admin</InlineCode> roles and the{" "}
                   <InlineCode>admin_all_objects</InlineCode> capability,
                   including fail-closed behavior and custom-role guidance.
+                  Built-in user and power roles are read-only for shared
+                  workspace, topology, and background configuration.
                   A new capability-protected server endpoint lets custom roles
                   holding{" "}
-                  <InlineCode>scd_manage_insights_workspaces</InlineCode>{" "}
+                  <InlineCode>ssne_manage_insights_workspaces</InlineCode>{" "}
                   manage shared workspaces, customer topology, and bounded
                   Dashboard Builder backgrounds without gaining factory
                   Searchbase write access.

@@ -64,7 +64,7 @@ const loadService = (fetchImpl) => {
 const nextTurn = () => new Promise((resolve) => setImmediate(resolve));
 
 const parseSearchTrace = ([message]) => {
-  const match = /^\[SCD Search\] ([A-Z ]+) (\{.*\})$/.exec(message);
+  const match = /^\[SSNE Search\] ([A-Z ]+) (\{.*\})$/.exec(message);
   assert.ok(match, `Expected serialized search trace, received: ${message}`);
   return { outcome: match[1], detail: JSON.parse(match[2]) };
 };

@@ -10,6 +10,11 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Restricted shared workspace, topology, and Dashboard Builder background
+  management to `admin`, `sc_admin`, and explicitly delegated custom roles.
+  Built-in `user` and `power` roles remain read-only for shared configuration
+  while retaining personal workspace preferences. The delegated capability is
+  named `ssne_manage_insights_workspaces` to match the SSNE product acronym.
 - Simplified release preparation to one operator-maintained value: change the
   repository-root `VERSION` file while source `app.conf` and `app.manifest`
   retain placeholders. Generated packages stamp the release metadata and

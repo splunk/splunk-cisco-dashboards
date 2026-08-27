@@ -154,7 +154,7 @@ assert.match(
 );
 assert.match(
   templatesSpec,
-  /scd_dashboard_backgrounds[\s\S]*?scd_manage_insights_workspaces[\s\S]*?admin and sc_admin[\s\S]*?reload\.templates = simple[\s\S]*?conf_replication_include\.templates = true/,
+  /scd_dashboard_backgrounds[\s\S]*?ssne_manage_insights_workspaces[\s\S]*?admin and sc_admin[\s\S]*?reload\.templates = simple[\s\S]*?conf_replication_include\.templates = true/,
   "Template documentation must cover the mutation route, capability, ACL, reload, and SHC boundary",
 );
 assert.doesNotMatch(

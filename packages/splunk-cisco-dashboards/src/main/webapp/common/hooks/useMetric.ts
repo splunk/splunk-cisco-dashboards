@@ -650,7 +650,7 @@ const canvasNotice = (
 ): void => {
   if (!isCanvasDebug()) return;
   // eslint-disable-next-line no-console
-  console.info(`[SCD Tile] ${outcome} ${JSON.stringify(detail)}`);
+  console.info(`[SSNE Tile] ${outcome} ${JSON.stringify(detail)}`);
 };
 
 const debugLog = (id: string, msg: string, payload: unknown): void => {

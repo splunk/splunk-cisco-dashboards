@@ -12,6 +12,7 @@ import {
     isAllowedDashboardBackgroundUpload,
     normalizeDashboardBackgroundSource,
 } from '../../common/lib/imageSource';
+import { useCanManageInsightsWorkspaces } from '../../common/hooks/useCanManageInsightsWorkspaces';
 import CardLayout from '@splunk/react-ui/CardLayout';
 import Card from '@splunk/react-ui/Card';
 import { cloneDeep, isEqual } from 'lodash-es';
@@ -180,6 +181,7 @@ export function ImageBase64Encoder({ setNewBG, setDisplayError }) {
 }
 
 const BackgroundButton = (props) => {
+    const { canManage: canManageSharedBackgrounds } = useCanManageInsightsWorkspaces();
     const [openBackgroundModal, setOpenBackgroundModal] = useState(false);
     const [openChangeBackgroundModal, setOpenChangeBackgroundModal] = useState(false);
     const [newBG, setNewBG] = useState(undefined);
@@ -316,19 +318,23 @@ const BackgroundButton = (props) => {
                     <div
                         style={{
                             display: 'flex',
-                            justifyContent: 'space-between',
+                            justifyContent: canManageSharedBackgrounds
+                                ? 'space-between'
+                                : 'flex-end',
                             alignItems: 'center',
                             width: 850,
                         }}
                     >
-                        <Button
-                            label="Add new background"
-                            onClick={() => {
-                                setDisplayError(false);
-                                setOpenBackgroundModal(true);
-                            }}
-                            style={{ maxWidth: 160 }}
-                        ></Button>
+                        {canManageSharedBackgrounds && (
+                            <Button
+                                label="Add new background"
+                                onClick={() => {
+                                    setDisplayError(false);
+                                    setOpenBackgroundModal(true);
+                                }}
+                                style={{ maxWidth: 160 }}
+                            ></Button>
+                        )}
                         <div style={{ display: 'flex', gap: '10px' }}>
                             <Button
                                 label="Select"
@@ -348,49 +354,51 @@ const BackgroundButton = (props) => {
                     </div>
                 </Modal.Footer>
             </Modal>
-            <Modal
-                open={openBackgroundModal}
-                style={{ width: '500px' }}
-                onRequestClose={handleRequestCloseModal}
-            >
-                <Modal.Header
-                    title="Upload New Backgrounds"
-                    icon={<Picture style={{ width: 30, height: 30 }}></Picture>}
-                />
+            {canManageSharedBackgrounds && (
+                <Modal
+                    open={openBackgroundModal}
+                    style={{ width: '500px' }}
+                    onRequestClose={handleRequestCloseModal}
+                >
+                    <Modal.Header
+                        title="Upload New Backgrounds"
+                        icon={<Picture style={{ width: 30, height: 30 }}></Picture>}
+                    />
 
-                <Modal.Body>
-                    <span>
-                        Upload your company’s corporate background image to streamline dashboard
-                        design aligned with your brand’s visual identity.
-                    </span>
-                    <ImageBase64Encoder
-                        setNewBG={setNewBG}
-                        setDisplayError={setDisplayError}
-                    ></ImageBase64Encoder>
-                    {displayError && (
-                        <span style={{ color: '#FF0000' }}>
-                            Use a PNG, JPEG, GIF, or WebP image no larger than 2 MB.
+                    <Modal.Body>
+                        <span>
+                            Upload your company’s corporate background image to streamline
+                            dashboard design aligned with your brand’s visual identity.
                         </span>
-                    )}
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button
-                        label="Upload"
-                        onClick={() => {
-                            handleUploadBG();
-                        }}
-                        appearance="primary"
-                        disabled={newBG == undefined || newBG == '' || newBG == false}
-                    ></Button>
-                    <Button
-                        label="Cancel"
-                        onClick={() => {
-                            setOpenBackgroundModal(false);
-                            setNewBG(undefined);
-                        }}
-                    ></Button>
-                </Modal.Footer>
-            </Modal>
+                        <ImageBase64Encoder
+                            setNewBG={setNewBG}
+                            setDisplayError={setDisplayError}
+                        ></ImageBase64Encoder>
+                        {displayError && (
+                            <span style={{ color: '#FF0000' }}>
+                                Use a PNG, JPEG, GIF, or WebP image no larger than 2 MB.
+                            </span>
+                        )}
+                    </Modal.Body>
+                    <Modal.Footer>
+                        <Button
+                            label="Upload"
+                            onClick={() => {
+                                handleUploadBG();
+                            }}
+                            appearance="primary"
+                            disabled={newBG == undefined || newBG == '' || newBG == false}
+                        ></Button>
+                        <Button
+                            label="Cancel"
+                            onClick={() => {
+                                setOpenBackgroundModal(false);
+                                setNewBG(undefined);
+                            }}
+                        ></Button>
+                    </Modal.Footer>
+                </Modal>
+            )}
             <Tooltip content="Cisco extension: choose dashboard background/theme">
                 <Button
                     style={{ maxWidth: 32 }}

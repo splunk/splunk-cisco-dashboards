@@ -1554,7 +1554,7 @@ const loadScdIndexMacroNames = async (): Promise<string[]> => {
   if (!response.ok) {
     throw new Error(
       extractSplunkError(payload) ||
-        `Could not list SCD index macros (HTTP ${response.status}).`,
+        `Could not list SSNE index macros (HTTP ${response.status}).`,
     );
   }
 
@@ -7682,7 +7682,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 className={`${lightButtonBase} sui-border-default sui-bg-section sui-color-default sui-hover-border-info sui-hover-color-info`}
               >
                 <ExternalLink size={16} />
-                Open SCD macros
+                Open SSNE macros
               </a>
             </div>
           </div>
