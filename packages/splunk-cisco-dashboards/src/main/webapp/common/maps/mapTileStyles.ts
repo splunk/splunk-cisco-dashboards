@@ -20,15 +20,16 @@ const OFFLINE_MAP_TILE_LIGHT_URL =
 const OFFLINE_MAP_TILE_DARK_URL =
   "/static/app/splunk-cisco-dashboards/offline-map-tile-dark.png";
 
+const ESRI_WORLD_STREET_TILE_URL =
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}";
+
 export const MAP_TILE_STYLE_PRESETS: readonly MapTileStylePreset[] = [
   {
     id: "street",
     label: "Street",
-    lightUrl:
-      "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    darkUrl:
-      "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-    attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
+    lightUrl: ESRI_WORLD_STREET_TILE_URL,
+    darkUrl: ESRI_WORLD_STREET_TILE_URL,
+    attribution: "Tiles &copy; Esri",
   },
   {
     id: "satellite",
@@ -60,10 +61,8 @@ export const MAP_TILE_STYLE_PRESETS: readonly MapTileStylePreset[] = [
   {
     id: "navigation",
     label: "Navigation",
-    lightUrl:
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
-    darkUrl:
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+    lightUrl: ESRI_WORLD_STREET_TILE_URL,
+    darkUrl: ESRI_WORLD_STREET_TILE_URL,
     attribution: "Tiles &copy; Esri",
   },
   {
@@ -76,4 +75,4 @@ export const MAP_TILE_STYLE_PRESETS: readonly MapTileStylePreset[] = [
 ];
 
 export const defaultMapTileStyleId = (isDark: boolean): MapTileStyleId =>
-  isDark ? "street" : "terrain";
+  isDark ? "dark-ops" : "terrain";

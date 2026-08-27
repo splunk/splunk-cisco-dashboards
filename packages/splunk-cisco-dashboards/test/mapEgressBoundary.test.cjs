@@ -48,7 +48,7 @@ test("shipped map surfaces never send placement text to public services", () => 
   }
 });
 
-test("map styles restore functional provider tiles with an offline option", () => {
+test("map styles use fixed keyless provider tiles with an offline option", () => {
   assert.match(
     mapTileStyles,
     /\/static\/app\/splunk-cisco-dashboards\/offline-map-tile-light\.png/,
@@ -67,8 +67,9 @@ test("map styles restore functional provider tiles with an offline option", () =
   ]) {
     assert.match(mapTileStyles, new RegExp(`label: "${style}"`));
   }
-  assert.match(mapTileStyles, /basemaps\.cartocdn\.com/);
   assert.match(mapTileStyles, /server\.arcgisonline\.com/);
+  assert.doesNotMatch(mapTileStyles, /carto|api[_-]?key|access[_-]?token|token=/i);
+  assert.match(mapTileStyles, /isDark \? "dark-ops" : "terrain"/);
   assert.match(customerTopology, /Switch base map\. Current:/);
   assert.match(customerTopology, /scrollWheelZoom/);
   assert.match(customerTopology, /MAP_TILE_STYLE_PRESETS/);
@@ -76,7 +77,11 @@ test("map styles restore functional provider tiles with an offline option", () =
   assert.match(secureOperations, /aria-pressed=\{mapStyle === preset\.id\}/);
   assert.match(
     workplaceSpaces,
-    /"baseLayerTileServer": "https:\/\/basemaps\.cartocdn\.com\/dark_all\/\{z\}\/\{x\}\/\{y\}\.png"/,
+    /"baseLayerTileServer": "https:\/\/server\.arcgisonline\.com\/ArcGIS\/rest\/services\/Canvas\/World_Dark_Gray_Base\/MapServer\/tile\/\{z\}\/\{y\}\/\{x\}"/,
+  );
+  assert.doesNotMatch(
+    workplaceSpaces,
+    /carto|api[_-]?key|access[_-]?token|token=/i,
   );
 
   for (const asset of [

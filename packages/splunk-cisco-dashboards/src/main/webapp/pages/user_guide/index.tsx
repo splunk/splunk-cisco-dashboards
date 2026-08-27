@@ -1871,7 +1871,8 @@ iseval = 0`}</CodeBlock>
                         styles. Topology placement uses the offline city list or
                         explicit coordinates, so operator-entered location text
                         is never sent to a public geocoder. Online styles send
-                        only fixed tile requests to the attributed map provider.
+                        only fixed, API-key-free tile requests to the attributed
+                        Esri provider.
                         Topology palette items and key manager/KPI
                         dialogs now support complete keyboard operation. Release
                         metadata now follows the repository-root VERSION file

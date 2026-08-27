@@ -13,8 +13,8 @@ networking pillars and workplace scenarios.
 - Restored Street, Terrain, Satellite, Dark Ops, Navigation, and Offline Grid
   map styles with normal interactive zoom. Topology placement remains restricted
   to the offline city list or explicit coordinates, so operator-entered location
-  text is never sent to a public geocoder; online styles issue only fixed map-tile
-  requests to their attributed CARTO or Esri provider.
+  text is never sent to a public geocoder; online styles issue only fixed,
+  API-key-free map-tile requests to their attributed Esri provider.
 - Restricted shared workspace, topology, and Dashboard Builder background
   management to `admin`, `sc_admin`, and explicitly delegated custom roles.
   Built-in `user` and `power` roles remain read-only for shared configuration
