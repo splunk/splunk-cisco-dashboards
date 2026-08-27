@@ -43,18 +43,6 @@ Options:
 EOF
 }
 
-sha256_file() {
-  local file="$1"
-  if command -v shasum >/dev/null 2>&1; then
-    shasum -a 256 "$file" | awk '{print $1}'
-  elif command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$file" | awk '{print $1}'
-  else
-    echo "ERROR: neither shasum nor sha256sum is available to record package provenance." >&2
-    return 1
-  fi
-}
-
 archive_identity() {
   local archive="$1"
   tar -xzOf "$archive" "${APP_NAME}/default/app.conf" 2>/dev/null | awk '
@@ -336,12 +324,10 @@ fi
 # Stage into a temp directory with the correct app directory name
 TMP_DIR="$(mktemp -d)"
 ARCHIVE_TMP=""
-DIGEST_TMP=""
 IDENTITY_LOCK=""
 cleanup_package_temp() {
   rm -rf "$TMP_DIR"
   [[ -z "$ARCHIVE_TMP" ]] || rm -f "$ARCHIVE_TMP"
-  [[ -z "$DIGEST_TMP" ]] || rm -f "$DIGEST_TMP"
   [[ -z "$IDENTITY_LOCK" ]] || rmdir "$IDENTITY_LOCK" 2>/dev/null || true
 }
 trap cleanup_package_temp EXIT
@@ -560,10 +546,9 @@ xattr -cr "${TMP_DIR}/${APP_NAME}" 2>/dev/null || true
 # replace the checked JavaScript between verification and packaging.
 node "${PKG_ROOT}/bin/verify_production_assets.js" "${TMP_DIR}/${APP_NAME}"
 
-# Re-extract and verify the completed archive before calculating its digest or
-# publishing it. This catches a future tar/file-list regression that the
-# directory preflight cannot see, while keeping the audit inside this command's
-# private temporary workspace.
+# Re-extract and verify the completed archive before publishing it. This catches
+# a future tar/file-list regression that the directory preflight cannot see,
+# while keeping the audit inside this command's private temporary workspace.
 verify_final_archive() {
   local archive_path="$1"
   local archive_audit_dir="${TMP_DIR}/archive-audit"
@@ -596,21 +581,12 @@ ARCHIVE_TMP="$(mktemp "${DIST_DIR}/.${APP_NAME}.${VERSION}.archive.XXXXXX")"
   COPYFILE_DISABLE=1 tar czf "$ARCHIVE_TMP" -T "$ARCHIVE_FILELIST"
 )
 verify_final_archive "$ARCHIVE_TMP"
-PACKAGE_SHA256="$(sha256_file "$ARCHIVE_TMP")"
-if [[ ! "$PACKAGE_SHA256" =~ ^[0-9a-fA-F]{64}$ ]]; then
-  echo "ERROR: could not calculate a valid SHA-256 for the package archive." >&2
-  exit 1
-fi
-PACKAGE_SHA256="$(printf '%s' "$PACKAGE_SHA256" | tr '[:upper:]' '[:lower:]')"
 PKG_PATH="${DIST_DIR}/${APP_NAME}-${VERSION}-${new_build}${ARTIFACT_PROFILE_SUFFIX}.tar.gz"
-PKG_SHA256_PATH="${PKG_PATH}.sha256"
-if [[ -e "$PKG_PATH" || -e "$PKG_SHA256_PATH" ]]; then
+if [[ -e "$PKG_PATH" ]]; then
   echo "ERROR: immutable package path already exists: ${PKG_PATH}" >&2
-  echo "       Refusing to overwrite a prior archive or checksum record." >&2
+  echo "       Refusing to overwrite a prior archive." >&2
   exit 1
 fi
-DIGEST_TMP="$(mktemp "${DIST_DIR}/.${APP_NAME}.${VERSION}.${new_build}.sha256.XXXXXX")"
-printf '%s  %s\n' "$PACKAGE_SHA256" "$(basename "$PKG_PATH")" > "$DIGEST_TMP"
 
 # ln(2) fails if the destination already exists, unlike tar's normal
 # truncating create path. This leaves an existing release artifact untouched
@@ -622,14 +598,5 @@ if ! ln "$ARCHIVE_TMP" "$PKG_PATH"; then
 fi
 rm -f "$ARCHIVE_TMP"
 ARCHIVE_TMP=""
-if ! ln "$DIGEST_TMP" "$PKG_SHA256_PATH"; then
-  echo "ERROR: immutable checksum path was created concurrently: ${PKG_SHA256_PATH}" >&2
-  echo "       Archive was preserved at ${PKG_PATH}; calculate and retain its SHA-256 manually." >&2
-  exit 1
-fi
-rm -f "$DIGEST_TMP"
-DIGEST_TMP=""
 SIZE=$(du -h "$PKG_PATH" | cut -f1 | xargs)
 echo "Created ${PKG_PATH} (${SIZE})"
-echo "SHA-256 ${PACKAGE_SHA256}  $(basename "$PKG_PATH")"
-echo "Checksum ${PKG_SHA256_PATH}"

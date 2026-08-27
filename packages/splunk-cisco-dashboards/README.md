@@ -16,8 +16,9 @@ networking pillars and workplace scenarios.
   to black on dark cards, with a color and contrast contract covering every
   shipped dark Dashboard Studio view.
 - Made package artifacts operator-readable as
-  `splunk-cisco-dashboards-<version>-<build>.tar.gz`, while retaining checksum
-  sidecars and immutable collision checks. Build, install, deploy, and remote
+  `splunk-cisco-dashboards-<version>-<build>.tar.gz`, with no separate checksum
+  sidecar and with immutable collision checks retained. Packaging validates the
+  completed archive internally before publication. Build, install, deploy, and remote
   workflows now default to the released-resources-only SplunkBase profile;
   developer resources require `--developer` or the explicit `--fast` workflow.
   Local install/deploy validation accepts intentional uncommitted source and
@@ -358,9 +359,9 @@ target's installed build when available. The committed ledger at
 publication history and a build floor, not a manual `current` allocation.
 Successful packages are named
 `splunk-cisco-dashboards-<version>-<build>.tar.gz` (plus `-developer` for an
-explicit developer profile) and include an immutable matching `.sha256`
-sidecar; the root build wrapper verifies the filename identity, checksum, and
-archive bytes before use.
+explicit developer profile). That tarball is the only emitted package file;
+packaging validates it internally, and the root build wrapper verifies its
+filename identity and gzip integrity before use.
 
 Resource inclusion is controlled by `config/build-profile-manifest.json`.
 The complete workflow and local install command are documented in

@@ -70,9 +70,10 @@ historical publication evidence and a safe build floor; it is not a manual
 pre-build allocation step.
 Artifacts use the operator-readable name
 `splunk-cisco-dashboards-<version>-<build>.tar.gz` (plus `-developer` only for
-an explicitly selected developer profile) with a matching immutable `.sha256`
-sidecar. The root build wrapper verifies the filename identity, sidecar, and
-archive bytes before use, so retain both files used for a Splunkbase upload.
+an explicitly selected developer profile). This tarball is the only package
+file emitted. Packaging re-extracts and validates it before publication, and
+the root build wrapper verifies its filename identity and gzip integrity before
+use.
 Local `--install` and `--deploy` validation may package intentional uncommitted
 changes and marks such artifacts non-release-eligible in their provenance.
 Build-only and remote Splunkbase artifacts still require a clean Git worktree.

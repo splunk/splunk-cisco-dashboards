@@ -63,7 +63,7 @@ assert.match(
 
 const archiveIdentityStart = source.indexOf("archive_identity() {");
 const releaseArchiveFinderStart = source.indexOf("find_release_archive() {");
-const releaseArchiveFinderEnd = source.indexOf("sha256_file() {");
+const releaseArchiveFinderEnd = source.indexOf("verify_release_archive() {");
 
 assert.notStrictEqual(archiveIdentityStart, -1, "archive identity reader is missing");
 assert.notStrictEqual(releaseArchiveFinderStart, -1, "release archive finder is missing");

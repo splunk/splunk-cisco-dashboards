@@ -503,12 +503,11 @@ function exercisePackagingProfiles() {
     );
     assert.ok(firstArchiveName, "Splunkbase packaging must expose version and build in the archive name");
     const firstArchive = path.join(distDir, firstArchiveName);
-    const firstDigestPath = `${firstArchive}.sha256`;
     const firstDigest = sha256(firstArchive);
     assert.equal(
-      fs.readFileSync(firstDigestPath, "utf8"),
-      `${firstDigest}  ${firstArchiveName}\n`,
-      "The immutable checksum sidecar must describe the exact archive bytes",
+      fs.existsSync(`${firstArchive}.sha256`),
+      false,
+      "Packaging must emit only the tarball without a checksum sidecar",
     );
     const firstContents = run("tar", ["tzf", firstArchive]);
     const firstMembers = firstContents.trim().split("\n").filter(Boolean);
@@ -780,10 +779,8 @@ function makeRootBuildFixture() {
       'printf "[install]\\nbuild = %s\\n\\n[id]\\nname = splunk-cisco-dashboards\\nversion = %s\\n" "${BUILD}" "${VERSION}" > "${WORK_DIR}/${APP_NAME}/default/app.conf"',
       'ARCHIVE_TMP="${ROOT_DIR}/dist/.fixture-archive.tar.gz"',
       '(cd "${WORK_DIR}" && tar czf "${ARCHIVE_TMP}" "${APP_NAME}")',
-      'SHA256="$(shasum -a 256 "${ARCHIVE_TMP}" | awk \'{print $1}\')"',
       'ARCHIVE="${ROOT_DIR}/dist/${APP_NAME}-${VERSION}-${BUILD}${SUFFIX}.tar.gz"',
       'mv "${ARCHIVE_TMP}" "${ARCHIVE}"',
-      'printf "%s  %s\\n" "${SHA256}" "$(basename "${ARCHIVE}")" > "${ARCHIVE}.sha256"',
       "",
     ].join("\n"),
     0o755,
@@ -815,8 +812,8 @@ function exerciseRootBuildArchiveResolution() {
     );
     assert.match(
       tamperFailure,
-      /SHA-256 mismatch/,
-      "The root wrapper must reject a changed immutable archive before any install action",
+      /failed gzip integrity validation/,
+      "The root wrapper must reject a corrupt archive before any install action",
     );
 
     const developerOutput = run("bash", [fixture.buildPath, "--developer"], {
@@ -846,8 +843,8 @@ function exerciseRootBuildArchiveResolution() {
     );
     assert.doesNotMatch(
       missingArchiveFailure,
-      /SHA-256 mismatch|splunk.*install app/,
-      "The no-archive path must stop before checksum or Splunk installation work",
+      /gzip integrity validation|splunk.*install app/,
+      "The no-archive path must stop before archive validation or Splunk installation work",
     );
   } finally {
     removeTempRoot(emptyFixture.root);
@@ -972,6 +969,11 @@ assert.doesNotMatch(
   /PKG_PATH=.*sha256/,
   "Artifact filenames must never contain the SHA-256 digest",
 );
+assert.doesNotMatch(
+  fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
+  /\.sha256|PKG_SHA256_PATH|DIGEST_TMP/,
+  "Packaging must not create a checksum sidecar",
+);
 assert.match(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
   /history_build="\$\(resolve_release_history_build_floor\)"[\s\S]*?dist_build=0[\s\S]*?target_build[\s\S]*?new_build=\$\(\(build_floor \+ 1\)\)/,
@@ -1075,8 +1077,13 @@ assert.match(
 assert.doesNotMatch(buildScript, /-sha256-/, "The root build wrapper must not require hash-qualified filenames");
 assert.match(
   buildScript,
-  /verify_release_archive\(\)[\s\S]*?filename must contain its version and build[\s\S]*?checksum sidecar[\s\S]*?SHA-256 mismatch[\s\S]*?verify_release_archive "\$package_path"/,
-  "The root build wrapper must verify the version-build filename, sidecar, and bytes before use",
+  /verify_release_archive\(\)[\s\S]*?gzip -t[\s\S]*?filename must contain its version and build[\s\S]*?verify_release_archive "\$package_path"/,
+  "The root build wrapper must verify gzip integrity and the version-build filename before use",
+);
+assert.doesNotMatch(
+  buildScript,
+  /\.sha256|sha256_file|checksum sidecar/,
+  "The root build wrapper must not require a checksum sidecar",
 );
 
 exerciseCleanBuild();

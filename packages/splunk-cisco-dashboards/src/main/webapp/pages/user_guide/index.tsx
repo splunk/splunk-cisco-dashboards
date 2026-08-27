@@ -1880,8 +1880,9 @@ iseval = 0`}</CodeBlock>
                         app.manifest retain placeholders; generated packages
                         stamp the release version and date and allocate the next
                         build automatically. Package filenames expose that
-                        version and build directly while retaining SHA-256
-                        sidecars for integrity checks. Build, install, deploy,
+                        version and build directly. The tarball is the only
+                        emitted package file and is validated internally during
+                        creation. Build, install, deploy,
                         and remote workflows default to the released-resources-only
                         SplunkBase profile; developer resources require an explicit
                         developer or fast workflow. Local install and deploy validation

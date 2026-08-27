@@ -255,25 +255,16 @@ find_release_archive() {
     printf '%s\n' "$match"
 }
 
-sha256_file() {
-    local file="$1"
-    if command -v shasum >/dev/null 2>&1; then
-        shasum -a 256 "$file" | awk '{print $1}'
-    elif command -v sha256sum >/dev/null 2>&1; then
-        sha256sum "$file" | awk '{print $1}'
-    else
-        err "ERROR: neither shasum nor sha256sum is available to verify the release archive."
-        return 1
-    fi
-}
-
 verify_release_archive() {
     local archive="$1"
     local archive_name identity archive_package_id archive_version archive_build profile_suffix expected_name
-    local expected_sha actual_sha checksum_path checksum_record
 
     if [[ ! -f "$archive" ]]; then
         err "ERROR: release archive is missing: ${archive}"
+        return 1
+    fi
+    if ! gzip -t "$archive"; then
+        err "ERROR: release archive failed gzip integrity validation: ${archive}"
         return 1
     fi
     archive_name="$(basename "$archive")"
@@ -292,25 +283,6 @@ verify_release_archive() {
     expected_name="${APP_NAME}-${archive_version}-${archive_build}${profile_suffix}.tar.gz"
     if [[ "$archive_name" != "$expected_name" ]]; then
         err "ERROR: release archive filename must contain its version and build: ${expected_name}"
-        return 1
-    fi
-    checksum_path="${archive}.sha256"
-    if [[ ! -f "$checksum_path" ]]; then
-        err "ERROR: release archive checksum sidecar is missing: ${checksum_path}"
-        return 1
-    fi
-    checksum_record="$(cat "$checksum_path")"
-    expected_sha="${checksum_record%% *}"
-    expected_sha="$(printf '%s' "$expected_sha" | tr '[:upper:]' '[:lower:]')"
-    if [[ ! "$expected_sha" =~ ^[0-9a-f]{64}$ \
-        || "$checksum_record" != "${expected_sha}  ${archive_name}" ]]; then
-        err "ERROR: checksum sidecar does not exactly describe ${archive_name}."
-        return 1
-    fi
-    actual_sha="$(sha256_file "$archive")" || return 1
-    actual_sha="$(printf '%s' "$actual_sha" | tr '[:upper:]' '[:lower:]')"
-    if [[ "$actual_sha" != "$expected_sha" ]]; then
-        err "ERROR: SHA-256 mismatch for ${archive_name}; expected ${expected_sha}, got ${actual_sha}."
         return 1
     fi
 }
