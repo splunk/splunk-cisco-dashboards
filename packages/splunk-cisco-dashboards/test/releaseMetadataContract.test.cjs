@@ -11,6 +11,7 @@ const appConfPath = path.join(
   packageRoot,
   "src/main/resources/splunk/default/app.conf",
 );
+const appManifestPath = path.join(packageRoot, "src/main/resources/splunk/app.manifest");
 const webpackConfigPath = path.join(packageRoot, "webpack.config.js");
 const packageScriptPath = path.join(packageRoot, "bin/package_app.sh");
 const stampScriptPath = path.join(packageRoot, "bin/stamp_version.sh");
@@ -36,6 +37,7 @@ const releaseLedgerPath = path.join(repositoryRoot, "releases/splunkbase-9257.js
 
 const version = fs.readFileSync(path.join(repositoryRoot, "VERSION"), "utf8").trim();
 const appConf = fs.readFileSync(appConfPath, "utf8");
+const appManifest = JSON.parse(fs.readFileSync(appManifestPath, "utf8"));
 const webpackConfig = fs.readFileSync(webpackConfigPath, "utf8");
 const packageScript = fs.readFileSync(packageScriptPath, "utf8");
 const stampScript = fs.readFileSync(stampScriptPath, "utf8");
@@ -65,13 +67,13 @@ const setting = (body, key) => {
 assert.notEqual(version, "", "repo-root VERSION must not be empty");
 assert.equal(
   setting(stanza("id"), "version"),
-  version,
-  "the source app.conf copied into stage/ must match the canonical release version",
+  "0.0.0",
+  "the source app identity version must remain a build-time placeholder",
 );
 assert.equal(
   setting(stanza("launcher"), "version"),
-  version,
-  "the launcher version must match the app identity version",
+  "0.0.0",
+  "the source launcher version must remain a build-time placeholder",
 );
 assert.equal(
   setting(stanza("id"), "name"),
@@ -89,11 +91,15 @@ assert.equal(
   true,
   "the release ledger must retain the positive numeric Splunkbase application id",
 );
-assert.match(
+assert.equal(
   setting(stanza("install"), "build"),
-  /^[1-9][0-9]*$/,
-  "the source build must be a positive decimal integer",
+  "0",
+  "the source build must remain zero for output-only allocation",
 );
+assert.equal(appManifest.info.id.name, releaseLedger.app.package_id);
+assert.equal(appManifest.info.id.version, "0.0.0");
+assert.equal(appManifest.info.releaseDate, "1970-01-01");
+assert.equal(appManifest.info.releaseNotes.name, "Version 0.0.0 Release Notes");
 assert.equal(
   setting(stanza("package"), "check_for_updates"),
   "true",
@@ -170,7 +176,7 @@ assert.match(
 assert.match(
   webpackConfig,
   /from:\s*splunkRoot,[\s\S]*?to:\s*stageRoot,/,
-  "webpack must copy the version-aligned source app.conf into stage/",
+  "webpack must copy source metadata templates into stage/ before stamping",
 );
 assert.match(
   webpackConfig,
@@ -184,6 +190,11 @@ assert.match(
 );
 assert.match(
   webpackConfig,
+  /StampSplunkMetadataPlugin[\s\S]*?afterEmit[\s\S]*?bin\/stamp_version\.sh[\s\S]*?stageRoot/,
+  "webpack build and watch output must stamp staged metadata from VERSION after every compile",
+);
+assert.match(
+  webpackConfig,
   /ignore:\s*\[[\s\S]*?'\*\*\/\.env'[\s\S]*?'\*\*\/\.env\.\*'/,
   "webpack must keep common local-secret files out of every staged app",
 );
@@ -193,6 +204,11 @@ assert.match(
   "the package stamp must continue to read VERSION and stamp both app version fields",
 );
 assert.match(
+  stampScript,
+  /stamp_manifest\(\)[\s\S]*?info\.id\.version[\s\S]*?releaseDate[\s\S]*?releaseNotes\.name/,
+  "the package stamp must derive manifest version and release metadata from VERSION",
+);
+assert.match(
   packageScript,
   /bash "\$\{SCRIPT_DIR\}\/stamp_version\.sh" "\$STAGE_DIR"/,
   "canonical packaging must stamp the staged copy before archive creation",
@@ -200,7 +216,7 @@ assert.match(
 assert.match(
   packageScript,
   /node "\$\{PKG_ROOT\}\/bin\/validate_release_identity\.js"/,
-  "canonical packaging must enforce the committed release identity ledger",
+  "canonical packaging must enforce the VERSION-only source template",
 );
 assert.match(
   packageScript,
@@ -242,8 +258,8 @@ assert.match(
     cwd: packageRoot,
     encoding: "utf8",
   }),
-  /Release identity validated:/,
-  "the current source metadata and release ledger must validate together",
+  /Release template validated:/,
+  "the source placeholders, VERSION, and release history must validate together",
 );
 
-console.log("Release metadata follows VERSION, validates build identity, and enables update discovery/notifications.");
+console.log("Release metadata uses VERSION-only stamping, automatic builds, and update discovery/notifications.");

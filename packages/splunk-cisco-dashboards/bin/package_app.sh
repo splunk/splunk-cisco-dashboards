@@ -70,6 +70,31 @@ archive_identity() {
   '
 }
 
+read_app_conf_build() {
+  local file="$1"
+  awk '
+    /^\[/ { section=$0 }
+    section == "[install]" && /^[[:space:]]*build[[:space:]]*=/ {
+      sub(/^[^=]*=/, "")
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+      print
+      exit
+    }
+  ' "$file"
+}
+
+resolve_release_history_build_floor() {
+  node -e '
+    const fs = require("fs");
+    const ledger = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+    const builds = Array.isArray(ledger.build_allocations)
+      ? ledger.build_allocations.map((entry) => entry.build)
+      : [];
+    const validBuilds = builds.filter((build) => Number.isSafeInteger(build) && build > 0);
+    process.stdout.write(String(validBuilds.length ? Math.max(...validBuilds) : 0));
+  ' "${ROOT_DIR}/releases/splunkbase-9257.json"
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --from-stage|--stage)
@@ -354,48 +379,50 @@ if [[ -f "$META_FILE" ]]; then
   echo "[package] default.meta: ensured app-wide export is 'none'"
 fi
 
-# The committed [install] build is the release identity. It is deliberately
-# not derived from dist/ for SplunkBase releases: release authors must bump
-# and commit it before a new archive is created, so the package, source, and
-# release record agree. Developer packages may iterate against the same build.
+# Allocate the next build into the package output only. VERSION is the sole
+# operator-maintained release value; source app.conf deliberately stays at the
+# build-zero template used by the sibling TA. Historical release records keep a
+# clean checkout above published builds, dist/ preserves normal local progress,
+# and the root wrapper can provide an installed-target floor.
 PKG_APP_CONF="${TMP_DIR}/${APP_NAME}/default/app.conf"
-source_build=$(awk '
-  /^\[/ { in_install = ($0 == "[install]") }
-  in_install && /^[[:space:]]*build[[:space:]]*=/ {
-    sub(/^[^=]*=/, "")
-    gsub(/^[[:space:]]+|[[:space:]]+$/, "")
-    print
-    exit
-  }
-' "$APP_CONF")
-if [[ ! "$source_build" =~ ^[1-9][0-9]*$ ]]; then
-  echo "ERROR: source app.conf must contain a positive numeric [install] build value." >&2
+source_build="$(read_app_conf_build "$APP_CONF")"
+if [[ ! "$source_build" =~ ^[0-9]+$ ]]; then
+  echo "ERROR: source app.conf must contain a non-negative numeric [install] build template." >&2
   exit 1
 fi
-new_build="$source_build"
+history_build="$(resolve_release_history_build_floor)"
+if [[ ! "$history_build" =~ ^[0-9]+$ ]]; then
+  echo "ERROR: could not resolve a numeric build floor from the release ledger." >&2
+  exit 1
+fi
+target_build="${SCD_PACKAGE_BUILD_FLOOR:-0}"
+if [[ ! "$target_build" =~ ^[0-9]+$ ]]; then
+  echo "ERROR: SCD_PACKAGE_BUILD_FLOOR must be a non-negative integer." >&2
+  exit 1
+fi
+dist_build=0
 for prev_tar in "${DIST_DIR}"/${APP_NAME}-*.tar.gz; do
   [[ -f "$prev_tar" ]] || continue
-  previous_profile="splunkbase"
-  [[ "$prev_tar" == *-developer.tar.gz ]] && previous_profile="developer"
-  [[ "$previous_profile" == "$APP_PROFILE" ]] || continue
-  # Older local artifacts may be incomplete or use the retired filename.
-  # They cannot establish a release identity unless app.conf can be read.
   previous_identity="$(archive_identity "$prev_tar" || true)"
   [[ -n "$previous_identity" ]] || continue
   IFS=$'\t' read -r previous_version previous_build <<< "$previous_identity"
-  if [[ "$APP_PROFILE" == "splunkbase" && "$previous_version" == "$VERSION" && "$previous_build" == "$new_build" ]]; then
-    echo "ERROR: release identity version ${VERSION}, build ${new_build} already exists in ${prev_tar}." >&2
-    echo "       Bump and commit [install] build before producing another archive." >&2
-    exit 1
+  if [[ "$previous_build" =~ ^[0-9]+$ ]] && (( previous_build > dist_build )); then
+    dist_build="$previous_build"
   fi
 done
+build_floor="$source_build"
+(( history_build > build_floor )) && build_floor="$history_build"
+(( dist_build > build_floor )) && build_floor="$dist_build"
+(( target_build > build_floor )) && build_floor="$target_build"
+new_build=$((build_floor + 1))
+
 # The archive name is content-addressed, so two concurrent package commands
 # could otherwise produce two different filenames for one version/build.
 # Reserve the release identity atomically until this command exits. A stale
 # reservation is intentionally fail-closed and must be inspected explicitly.
-IDENTITY_LOCK="${DIST_DIR}/.${APP_NAME}-${VERSION}-build${new_build}${ARTIFACT_PROFILE_SUFFIX}.lock"
+IDENTITY_LOCK="${DIST_DIR}/.${APP_NAME}-build${new_build}.lock"
 if ! mkdir "$IDENTITY_LOCK"; then
-  echo "ERROR: release identity version ${VERSION}, build ${new_build} is currently being packaged for ${APP_PROFILE}." >&2
+  echo "ERROR: build ${new_build} is currently being packaged." >&2
   echo "       Inspect ${IDENTITY_LOCK}; remove it only after confirming no package command is active." >&2
   IDENTITY_LOCK=""
   exit 1
@@ -408,7 +435,7 @@ else
   sed_i=( sed -i '' )
 fi
 "${sed_i[@]}" -E "s/^([[:space:]]*build[[:space:]]*=[[:space:]]*)[0-9]+/\\1${new_build}/" "$PKG_APP_CONF"
-echo "[package] app.conf: retained committed build ${new_build}"
+echo "[package] app.conf: stamped build ${new_build} into package output (source=${source_build}, history=${history_build}, dist=${dist_build}, target=${target_build})"
 
 # Keep source provenance in a standalone package manifest rather than
 # app.conf. This records the reproducible source identity without exposing a
@@ -421,7 +448,7 @@ if [[ "$APP_PROFILE" == "splunkbase" ]]; then
 fi
 
 # Webpack emits a unique marker rather than reading app.conf at compile time.
-# Replace it in the archive copy with the committed release build so a
+# Replace it in the archive copy with the allocated package build so a
 # --from-stage package and its UI badge carry the same release identity.
 bundle_build_markers=0
 while IFS= read -r -d '' bundle_path; do
@@ -430,8 +457,64 @@ while IFS= read -r -d '' bundle_path; do
     bundle_build_markers=$((bundle_build_markers + 1))
   fi
 done < <(find "${TMP_DIR}/${APP_NAME}/appserver/static/pages" -type f -name '*.js' -print0)
+
+# A long-running webpack watcher keeps the config values loaded when it starts.
+# If that watcher predates the package-marker configuration, its unminified
+# entry bundles contain the old literal APP_BUILD/APP_VERSION assignment. Fast
+# developer packaging repairs that stable generated assignment in the archive
+# copy, so users do not have to restart yarn start just to package current
+# resources. Clean Splunkbase builds must still contain the canonical marker.
+if [[ "$FROM_STAGE" -eq 1 && "$APP_PROFILE" == "developer" ]]; then
+  legacy_bundle_stamps="$(node -e '
+    const fs = require("fs");
+    const path = require("path");
+    const [pagesRoot, build, version] = process.argv.slice(1);
+    const assignment = /var APP_BUILD="[^"]*"\|\|0;var APP_VERSION="[^"]*"\|\|0;/g;
+    let count = 0;
+    for (const name of fs.readdirSync(pagesRoot)) {
+      if (!name.endsWith(".js")) continue;
+      const file = path.join(pagesRoot, name);
+      const source = fs.readFileSync(file, "utf8");
+      const matches = source.match(assignment);
+      if (!matches) continue;
+      const updated = source.replace(
+        assignment,
+        `var APP_BUILD="${build}"||0;var APP_VERSION="${version}"||0;`,
+      );
+      fs.writeFileSync(file, updated, "utf8");
+      count += matches.length;
+    }
+    process.stdout.write(String(count));
+  ' "${TMP_DIR}/${APP_NAME}/appserver/static/pages" "$new_build" "$VERSION")"
+  if [[ "$legacy_bundle_stamps" =~ ^[0-9]+$ ]] && (( legacy_bundle_stamps > 0 )); then
+    bundle_build_markers=$((bundle_build_markers + legacy_bundle_stamps))
+    echo "[package] repaired ${legacy_bundle_stamps} stale watcher bundle identity assignment(s) in package staging"
+  fi
+
+  stripped_source_map_directives="$(node -e '
+    const fs = require("fs");
+    const path = require("path");
+    const pagesRoot = process.argv[1];
+    const directive = /^[ \t]*(?:\/\/|\/\*)[#@]\s*sourceMappingURL\s*=[^\r\n]*(?:\*\/)?(?:\r?\n|$)/gm;
+    let count = 0;
+    for (const name of fs.readdirSync(pagesRoot)) {
+      if (!name.endsWith(".js")) continue;
+      const file = path.join(pagesRoot, name);
+      const source = fs.readFileSync(file, "utf8");
+      const matches = source.match(directive);
+      if (!matches) continue;
+      fs.writeFileSync(file, source.replace(directive, ""), "utf8");
+      count += matches.length;
+    }
+    process.stdout.write(String(count));
+  ' "${TMP_DIR}/${APP_NAME}/appserver/static/pages")"
+  if [[ "$stripped_source_map_directives" =~ ^[0-9]+$ ]] && (( stripped_source_map_directives > 0 )); then
+    echo "[package] stripped ${stripped_source_map_directives} stale watcher source-map directive(s) from package staging"
+  fi
+fi
 if [[ "$bundle_build_markers" -eq 0 ]]; then
   echo "ERROR: no React bundle build marker was found; refusing a mismatched package." >&2
+  echo "       Restart yarn start once so webpack reloads the package-marker configuration." >&2
   exit 1
 fi
 echo "[package] React bundles: stamped build ${new_build} in ${bundle_build_markers} bundle(s)"

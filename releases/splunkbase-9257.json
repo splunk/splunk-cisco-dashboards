@@ -48,8 +48,8 @@
     {
       "version": "1.0.46",
       "build": 2069,
-      "state": "current",
-      "note": "Committed source release identity; this is not a claim of publication."
+      "state": "retired_candidate",
+      "note": "Retained local candidate only. Build numbers are now allocated automatically into package output; this ledger is release history, not a manual current-release input."
     }
   ]
 }

@@ -321,15 +321,14 @@ The SplunkBase profile always minifies JavaScript and rejects source-map files
 or directives. Normal developer builds and `yarn start` keep fast, unminified
 production-React bundles.
 
-The committed release ledger at
-[`../../releases/splunkbase-9257.json`](../../releases/splunkbase-9257.json)
-and `[install] build` in `default/app.conf` define the release identity. Before
-each Splunkbase release, append a strictly higher `current` allocation, change
-both source version fields and the build, then mark the preceding `current`
-allocation as `published` after public confirmation or `retired_candidate`
-otherwise. Packaging rejects metadata that
-does not match the ledger, and a second archive with the same packaged version
-and build in the same profile. Successful packages are named
+For a release, edit only the repository-root `VERSION` file. Source `app.conf`
+and `app.manifest` keep `0.0.0`/`0` placeholders and are never bumped by the
+operator. Packaging stamps generated output and automatically chooses the next
+build above the historical ledger, readable `dist/` artifacts, and a local
+target's installed build when available. The committed ledger at
+[`../../releases/splunkbase-9257.json`](../../releases/splunkbase-9257.json) is
+publication history and a build floor, not a manual `current` allocation.
+Successful packages are named
 `splunk-cisco-dashboards-<version>-sha256-<digest>.tar.gz` (plus
 `-developer` when applicable) and include an immutable matching `.sha256`
 sidecar; the root build wrapper verifies both before use.

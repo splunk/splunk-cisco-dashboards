@@ -88,13 +88,18 @@ assert.match(
 );
 assert.match(
   releaseArchiveFinderBlock,
-  /local expected_package_id="\$1"[\s\S]*?local expected_version="\$2"[\s\S]*?local expected_build="\$3"/,
-  "release archive lookup must accept the current source package ID, version, and build",
+  /local expected_package_id="\$1"[\s\S]*?local expected_version="\$2"[\s\S]*?local expected_profile="\$3"/,
+  "release archive lookup must accept package ID, VERSION, and profile",
 );
 assert.match(
   releaseArchiveFinderBlock,
-  /archive_package_id" == "\$expected_package_id"[\s\S]*?archive_version" == "\$expected_version"[\s\S]*?archive_build" == "\$expected_build"/,
-  "release archive lookup must require every release-identity field to match",
+  /archive_package_id" == "\$expected_package_id"[\s\S]*?archive_version" == "\$expected_version"[\s\S]*?archive_build" =~ \^\[1-9\]/,
+  "release archive lookup must require the package, VERSION, and a positive packaged build",
+);
+assert.match(
+  releaseArchiveFinderBlock,
+  /archive_build > highest_build[\s\S]*?highest_build="\$archive_build"/,
+  "release archive lookup must select the highest packaged build",
 );
 assert.doesNotMatch(
   source,
@@ -103,13 +108,18 @@ assert.doesNotMatch(
 );
 assert.match(
   source,
-  /source_package_id="\$\(awk '[\s\S]*?source_app_version="\$\(awk '[\s\S]*?release_build="\$\(awk '/,
-  "current source package ID, version, and build must be read before artifact selection",
+  /build_version="\$\(tr[\s\S]*?source_package_id="\$\(awk '/,
+  "VERSION and source package ID must be read before artifact selection",
+);
+assert.doesNotMatch(
+  source,
+  /source_app_version=|release_build=/,
+  "source app.conf version/build must not drive release artifact selection",
 );
 assert.match(
   source,
-  /find_release_archive "\$source_package_id" "\$build_version" "\$release_build" "\$package_profile"/,
-  "both fresh-build and --no-build paths must resolve only the matching immutable artifact",
+  /find_release_archive "\$source_package_id" "\$build_version" "\$package_profile"/,
+  "fresh-build and --no-build paths must resolve the highest matching immutable artifact",
 );
 
-console.log("Build deploy and release-identity artifact-selection contracts passed.");
+console.log("Build deploy and VERSION-only artifact-selection contracts passed.");

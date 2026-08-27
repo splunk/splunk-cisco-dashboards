@@ -21,6 +21,7 @@ const RELEASE_IDENTITY_VALIDATOR_SOURCE = path.join(
   "bin",
   "validate_release_identity.js",
 );
+const STAMP_VERSION_SOURCE = path.join(PACKAGE_ROOT, "bin", "stamp_version.sh");
 const BUILD_SCRIPT_SOURCE = path.resolve(PACKAGE_ROOT, "..", "..", "build.sh");
 const REPOSITORY_ROOT = path.resolve(PACKAGE_ROOT, "..", "..");
 const PRODUCTION_ENTRY_NAMES = [
@@ -44,6 +45,14 @@ const APP_CONF_SOURCE = path.join(
   "splunk",
   "default",
   "app.conf",
+);
+const APP_MANIFEST_SOURCE = path.join(
+  PACKAGE_ROOT,
+  "src",
+  "main",
+  "resources",
+  "splunk",
+  "app.manifest",
 );
 
 function makeTempRoot(label) {
@@ -151,7 +160,8 @@ function makePackageFixture() {
       "",
     ].join("\n"),
   );
-  writeFile(path.join(packageRoot, "bin", "stamp_version.sh"), "#!/usr/bin/env bash\nexit 0\n", 0o755);
+  fs.copyFileSync(STAMP_VERSION_SOURCE, path.join(packageRoot, "bin", "stamp_version.sh"));
+  fs.chmodSync(path.join(packageRoot, "bin", "stamp_version.sh"), 0o755);
   writeFile(path.join(packageRoot, "bin", "apply_build_profile.js"), "process.exit(0);\n");
   writeFile(
     path.join(packageRoot, "bin", "verify_production_assets.js"),
@@ -172,7 +182,7 @@ function makePackageFixture() {
         app: { splunkbase_app_id: 9257, package_id: APP_NAME },
         build_allocations: [
           { version: "1.2.2", build: 6, state: "published" },
-          { version: "1.2.3", build: 7, state: "current" },
+          { version: "1.2.3", build: 7, state: "retired_candidate" },
         ],
       },
       null,
@@ -184,13 +194,13 @@ function makePackageFixture() {
 
   const appConf = [
     "[install]",
-    "build = 7",
+    "build = 0",
     "",
     "[id]",
     `name = ${APP_NAME}`,
-    "version = 1.2.3",
+    "version = 0.0.0",
     "[launcher]",
-    "version = 1.2.3",
+    "version = 0.0.0",
     "[package]",
     `id = ${APP_NAME}`,
     "check_for_updates = true",
@@ -199,6 +209,16 @@ function makePackageFixture() {
   ].join("\n");
   writeFile(path.join(sourceRoot, "default", "app.conf"), appConf);
   writeFile(path.join(stage, "default", "app.conf"), appConf);
+  const appManifest = {
+    schemaVersion: "2.0.0",
+    info: {
+      id: { name: APP_NAME, version: "0.0.0" },
+      releaseDate: "1970-01-01",
+      releaseNotes: { name: "Version 0.0.0 Release Notes" },
+    },
+  };
+  writeFile(path.join(sourceRoot, "app.manifest"), `${JSON.stringify(appManifest, null, 2)}\n`);
+  writeFile(path.join(stage, "app.manifest"), `${JSON.stringify(appManifest, null, 2)}\n`);
   writeFile(
     path.join(stage, "appserver", "static", "pages", "fixture.js"),
     'const appBuild = "__SCD_PACKAGE_BUILD__";\n',
@@ -243,8 +263,8 @@ function exerciseReleaseIdentityValidation() {
   try {
     assert.match(
       run("node", [validator], { cwd: fixture.packageRoot }),
-      /Release identity validated: splunk-cisco-dashboards \(Splunkbase 9257\) v1\.2\.3 build 7/,
-      "The fixture release identity must validate before packaging",
+      /Release template validated: splunk-cisco-dashboards \(Splunkbase 9257\) v1\.2\.3; build allocated automatically/,
+      "The VERSION-only release template must validate before packaging",
     );
     const appConfPath = path.join(
       fixture.packageRoot,
@@ -257,19 +277,19 @@ function exerciseReleaseIdentityValidation() {
     );
     fs.writeFileSync(
       appConfPath,
-      fs.readFileSync(appConfPath, "utf8").replace("build = 7", "build = 0"),
+      fs.readFileSync(appConfPath, "utf8").replace("build = 0", "build = 7"),
     );
-    const zeroBuildFailure = runExpectFailure("node", [validator], {
+    const fixedBuildFailure = runExpectFailure("node", [validator], {
       cwd: fixture.packageRoot,
     });
     assert.match(
-      zeroBuildFailure,
-      /build must be a positive safe integer/,
-      "Release identity validation must reject build zero before a package can be created",
+      fixedBuildFailure,
+      /build must remain the placeholder 0/,
+      "Release template validation must reject a manually maintained source build",
     );
     fs.writeFileSync(
       appConfPath,
-      fs.readFileSync(appConfPath, "utf8").replace("build = 0", "build = 7"),
+      fs.readFileSync(appConfPath, "utf8").replace("build = 7", "build = 0"),
     );
     fs.writeFileSync(
       appConfPath,
@@ -287,23 +307,24 @@ function exerciseReleaseIdentityValidation() {
       appConfPath,
       fs.readFileSync(appConfPath, "utf8").replace("id = wrong-package-id", `id = ${APP_NAME}`),
     );
-    const versionPath = path.join(fixture.root, "VERSION");
-    const ledgerPath = path.join(fixture.root, "releases", "splunkbase-9257.json");
-    const ledger = JSON.parse(fs.readFileSync(ledgerPath, "utf8"));
-    ledger.build_allocations[1].version = "1.2.1";
-    fs.writeFileSync(ledgerPath, `${JSON.stringify(ledger, null, 2)}\n`);
-    fs.writeFileSync(versionPath, "1.2.1\n");
-    fs.writeFileSync(
-      appConfPath,
-      fs.readFileSync(appConfPath, "utf8").replaceAll("1.2.3", "1.2.1"),
+    const appManifestPath = path.join(
+      fixture.packageRoot,
+      "src",
+      "main",
+      "resources",
+      "splunk",
+      "app.manifest",
     );
-    const unchangedVersionFailure = runExpectFailure("node", [validator], {
+    const manifest = JSON.parse(fs.readFileSync(appManifestPath, "utf8"));
+    manifest.info.id.version = "1.2.3";
+    fs.writeFileSync(appManifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    const fixedManifestVersionFailure = runExpectFailure("node", [validator], {
       cwd: fixture.packageRoot,
     });
     assert.match(
-      unchangedVersionFailure,
-      /current version must be greater than the latest published release version/,
-      "Release identity validation must reject a version downgrade even when the build increased",
+      fixedManifestVersionFailure,
+      /app\.manifest info\.id\.version must remain the 0\.0\.0 placeholder/,
+      "Release template validation must reject a manually maintained manifest version",
     );
   } finally {
     removeTempRoot(fixture.root);
@@ -362,9 +383,20 @@ function listArchives(distDir) {
     .sort();
 }
 
+function readArchiveBuild(archivePath) {
+  const appConf = run("tar", ["-xzOf", archivePath, `${APP_NAME}/default/app.conf`]);
+  const match = appConf.match(/^build\s*=\s*([0-9]+)$/m);
+  assert.ok(match, `Packaged build is missing from ${archivePath}`);
+  return Number(match[1]);
+}
+
 function exerciseFromStageDefaultsToDeveloperProfile() {
   const fixture = makePackageFixture();
   try {
+    writeFile(
+      path.join(fixture.stage, "appserver", "static", "pages", "fixture.js"),
+      'var APP_BUILD="6"||0;var APP_VERSION="1.2.2"||0;\n//# sourceMappingURL=fixture.js.map\n',
+    );
     const output = run("bash", [fixture.packageScript, "--from-stage"], {
       cwd: fixture.packageRoot,
     });
@@ -378,6 +410,29 @@ function exerciseFromStageDefaultsToDeveloperProfile() {
         name.endsWith("-developer.tar.gz"),
       ),
       "Stage reuse without --developer must create a developer archive",
+    );
+    assert.match(
+      output,
+      /repaired 1 stale watcher bundle identity assignment/,
+      "Fast packaging must repair a watcher started with old identity literals",
+    );
+    assert.match(
+      output,
+      /stripped 1 stale watcher source-map directive/,
+      "Fast packaging must remove directives emitted by an old watcher configuration",
+    );
+    const developerArchive = listArchives(path.join(fixture.root, "dist")).find((name) =>
+      name.endsWith("-developer.tar.gz"),
+    );
+    assert.ok(developerArchive);
+    assert.equal(
+      run("tar", [
+        "-xzOf",
+        path.join(fixture.root, "dist", developerArchive),
+        `${APP_NAME}/appserver/static/pages/fixture.js`,
+      ]),
+      'var APP_BUILD="8"||0;var APP_VERSION="1.2.3"||0;\n',
+      "Fast packaging must stamp the allocated build and VERSION into stale watcher bundles",
     );
   } finally {
     removeTempRoot(fixture.root);
@@ -418,7 +473,7 @@ function exercisePackagingProfiles() {
 
     const reservedIdentity = path.join(
       distDir,
-      `.${APP_NAME}-1.2.3-build7-developer.lock`,
+      `.${APP_NAME}-build8.lock`,
     );
     fs.mkdirSync(reservedIdentity);
     const reservationFailure = runExpectFailure(
@@ -428,8 +483,8 @@ function exercisePackagingProfiles() {
     );
     assert.match(
       reservationFailure,
-      /release identity version 1\.2\.3, build 7 is currently being packaged/,
-      "An active same-profile reservation must prevent a concurrent duplicate package",
+      /build 8 is currently being packaged/,
+      "An active build reservation must prevent a concurrent duplicate package",
     );
     fs.rmdirSync(reservedIdentity);
 
@@ -465,9 +520,15 @@ function exercisePackagingProfiles() {
     assert.doesNotMatch(firstContents, /(?:\.py[co]|__pycache__)/);
     assert.match(
       run("tar", ["-xzOf", firstArchive, `${APP_NAME}/default/app.conf`]),
-      /^build = 7$/m,
-      "The package must retain the source [install] build verbatim",
+      /^build = 8$/m,
+      "The package must allocate the next build above release history",
     );
+    const packagedManifest = JSON.parse(
+      run("tar", ["-xzOf", firstArchive, `${APP_NAME}/app.manifest`]),
+    );
+    assert.equal(packagedManifest.info.id.version, "1.2.3");
+    assert.equal(packagedManifest.info.releaseNotes.name, "Version 1.2.3 Release Notes");
+    assert.match(packagedManifest.info.releaseDate, /^\d{4}-\d{2}-\d{2}$/);
     const releaseProvenance = JSON.parse(
       run("tar", ["-xzOf", firstArchive, `${APP_NAME}/release-provenance.json`]),
     );
@@ -478,7 +539,7 @@ function exercisePackagingProfiles() {
         splunkbase_app_id: 9257,
         package_id: APP_NAME,
         version: "1.2.3",
-        build: 7,
+        build: 8,
         git_commit: run("git", ["rev-parse", "HEAD"], { cwd: fixture.root }).trim(),
         source_tree_clean: true,
       },
@@ -514,28 +575,24 @@ function exercisePackagingProfiles() {
       path.join(fixture.stage, "appserver", "static", "pages", "fixture.js"),
       'const appBuild = "__SCD_PACKAGE_BUILD__"; const changed = true;\n',
     );
-    const duplicateFailure = runExpectFailure(
-      "bash",
-      [fixture.packageScript],
-      { cwd: fixture.packageRoot },
-    );
-    assert.match(
-      duplicateFailure,
-      /release identity version 1\.2\.3, build 7 already exists/,
-      "A changed stage cannot create a second archive with the same release identity",
-    );
+    run("bash", [fixture.packageScript], { cwd: fixture.packageRoot });
     const releaseArchives = listArchives(distDir).filter((name) =>
-      name.includes("-sha256-"),
+      name.includes("-sha256-") && !name.endsWith("-developer.tar.gz"),
     );
     assert.equal(
       releaseArchives.length,
-      1,
-      "A duplicate version/build must be rejected before another archive is created",
+      2,
+      "Repeated same-version release builds must receive distinct immutable archives",
+    );
+    assert.deepEqual(
+      releaseArchives.map((name) => readArchiveBuild(path.join(distDir, name))).sort((a, b) => a - b),
+      [8, 9],
+      "Repeated same-version release builds must increment automatically",
     );
     assert.equal(
       sha256(firstArchive),
       firstDigest,
-      "A rejected duplicate package must not mutate the retained artifact",
+      "A later package must not mutate the retained artifact",
     );
 
     run("bash", [fixture.packageScript, "--from-stage", "--developer"], {
@@ -556,8 +613,8 @@ function exercisePackagingProfiles() {
         path.join(distDir, developerArchiveName),
         `${APP_NAME}/default/app.conf`,
       ]),
-      /^build = 7$/m,
-      "Developer packaging must use the same committed build without a dist counter",
+      /^build = 10$/m,
+      "Developer packaging must continue the shared automatic build sequence",
     );
     assert.doesNotMatch(
       run("tar", ["tzf", path.join(distDir, developerArchiveName)]),
@@ -578,7 +635,32 @@ function exercisePackagingProfiles() {
     assert.equal(
       developerArchives.length,
       2,
-      "Developer stage packaging must permit repeated iterations with the same version/build",
+      "Developer stage packaging must permit repeated auto-incremented iterations",
+    );
+    assert.deepEqual(
+      developerArchives
+        .map((name) => readArchiveBuild(path.join(distDir, name)))
+        .sort((a, b) => a - b),
+      [10, 11],
+      "Developer iterations must receive distinct increasing builds",
+    );
+    assert.match(
+      fs.readFileSync(
+        path.join(fixture.packageRoot, "src", "main", "resources", "splunk", "default", "app.conf"),
+        "utf8",
+      ),
+      /^build = 0$/m,
+      "Packaging must never modify the source app.conf build placeholder",
+    );
+    assert.equal(
+      JSON.parse(
+        fs.readFileSync(
+          path.join(fixture.packageRoot, "src", "main", "resources", "splunk", "app.manifest"),
+          "utf8",
+        ),
+      ).info.id.version,
+      "0.0.0",
+      "Packaging must never modify the source app.manifest version placeholder",
     );
 
     writeFile(path.join(fixture.root, "uncommitted-release-input.txt"), "dirty\n");
@@ -640,11 +722,11 @@ function makeRootBuildFixture() {
   const buildPath = path.join(root, "build.sh");
   const appConf = [
     "[install]",
-    "build = 7",
+    "build = 0",
     "",
     "[id]",
     `name = ${APP_NAME}`,
-    "version = 1.2.3",
+    "version = 0.0.0",
     "",
   ].join("\n");
 
@@ -661,12 +743,19 @@ function makeRootBuildFixture() {
       'ROOT_DIR="$(cd "${PKG_ROOT}/../.." && pwd)"',
       'APP_NAME="splunk-cisco-dashboards"',
       'VERSION="$(tr -d "[:space:]" < "${ROOT_DIR}/VERSION")"',
-      'BUILD="$(awk \'/^\\[install\\]/{inside=1; next} /^\\[/{inside=0} inside && /^[[:space:]]*build[[:space:]]*=/{sub(/.*=/, ""); gsub(/[[:space:]]/, ""); print; exit}\' "${PKG_ROOT}/src/main/resources/splunk/default/app.conf")"',
+      'FLOOR="${SCD_PACKAGE_BUILD_FLOOR:-0}"',
+      'mkdir -p "${ROOT_DIR}/dist"',
+      'for PRIOR in "${ROOT_DIR}/dist"/${APP_NAME}-*.tar.gz; do',
+      '  [[ -f "${PRIOR}" ]] || continue',
+      '  PRIOR_BUILD="$(tar -xzOf "${PRIOR}" "${APP_NAME}/default/app.conf" 2>/dev/null | awk -F= \'/^[[:space:]]*build[[:space:]]*=/{gsub(/[[:space:]]/, "", $2); print $2; exit}\' || true)"',
+      '  if [[ "${PRIOR_BUILD}" =~ ^[0-9]+$ ]] && (( PRIOR_BUILD > FLOOR )); then FLOOR="${PRIOR_BUILD}"; fi',
+      'done',
+      'BUILD=$((FLOOR + 1))',
       'SUFFIX=""',
       '[[ "${1:-}" == "--developer" ]] && SUFFIX="-developer"',
       'WORK_DIR="$(mktemp -d)"',
       "trap 'rm -rf \"${WORK_DIR}\"' EXIT",
-      'mkdir -p "${WORK_DIR}/${APP_NAME}/default" "${ROOT_DIR}/dist"',
+      'mkdir -p "${WORK_DIR}/${APP_NAME}/default"',
       'printf "[install]\\nbuild = %s\\n\\n[id]\\nname = splunk-cisco-dashboards\\nversion = %s\\n" "${BUILD}" "${VERSION}" > "${WORK_DIR}/${APP_NAME}/default/app.conf"',
       'ARCHIVE_TMP="${ROOT_DIR}/dist/.fixture-archive.tar.gz"',
       '(cd "${WORK_DIR}" && tar czf "${ARCHIVE_TMP}" "${APP_NAME}")',
@@ -731,7 +820,7 @@ function exerciseRootBuildArchiveResolution() {
     );
     assert.match(
       missingArchiveFailure,
-      /no immutable splunkbase archive was found for package splunk-cisco-dashboards, version 1\.2\.3, build 7/,
+      /no immutable splunkbase archive was found for package splunk-cisco-dashboards, version 1\.2\.3/,
       "An empty dist directory must fail with the intended no-archive diagnostic",
     );
     assert.doesNotMatch(
@@ -759,6 +848,10 @@ function exerciseLocalInstallProfileDefaults() {
       ].join("\n"),
       0o755,
     );
+    writeFile(
+      path.join(splunkHome, "etc", "apps", APP_NAME, "default", "app.conf"),
+      "[install]\nbuild = 20\n",
+    );
     const env = {
       ...process.env,
       SPLUNK_HOME: splunkHome,
@@ -779,6 +872,11 @@ function exerciseLocalInstallProfileDefaults() {
       developerOutput,
       /Tarball: .*-[0-9a-f]{64}-developer\.tar\.gz/,
       "An implicit local developer install must use the developer artifact namespace",
+    );
+    assert.match(
+      developerOutput,
+      /v1\.2\.3 \(build 21\)/,
+      "A local install must allocate above the target's installed build",
     );
 
     const splunkbaseOutput = run(
@@ -807,6 +905,11 @@ function exerciseLocalInstallProfileDefaults() {
       splunkbaseOutput.match(/Tarball: .*$/m)?.[0] || "",
       /-developer\.tar\.gz/,
       "An explicit SplunkBase install must not resolve a developer archive",
+    );
+    assert.match(
+      splunkbaseOutput,
+      /v1\.2\.3 \(build 22\)/,
+      "The explicit SplunkBase build must continue above prior generated artifacts",
     );
     assert.equal(
       fs.readFileSync(splunkLog, "utf8").trim().split("\n").length,
@@ -840,28 +943,23 @@ assert.match(
 );
 assert.match(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
-  /new_build="\$source_build"[\s\S]*?-sha256-\$\{PACKAGE_SHA256\}/,
-  "Artifact names must use their content hash, not a mutable build counter",
-);
-assert.doesNotMatch(
-  fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
-  /highest_prev|new_build=\$\(\(base \+ 1\)\)/,
-  "dist/ archives must not auto-increment the committed release build",
+  /PKG_PATH=.*-sha256-\$\{PACKAGE_SHA256\}/,
+  "Artifact names must remain content-addressed",
 );
 assert.match(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
-  /previous_profile[\s\S]*?previous_version[\s\S]*?previous_build[\s\S]*?already exists/,
-  "Packaging must reject a duplicate packaged version/build identity within its profile",
+  /history_build="\$\(resolve_release_history_build_floor\)"[\s\S]*?dist_build=0[\s\S]*?target_build[\s\S]*?new_build=\$\(\(build_floor \+ 1\)\)/,
+  "Packaging must allocate the next build from history, dist, and target floors",
 );
 assert.match(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
-  /IDENTITY_LOCK=.*?mkdir "\$IDENTITY_LOCK"/s,
-  "Packaging must reserve the same-profile release identity atomically during creation",
+  /IDENTITY_LOCK="\$\{DIST_DIR\}\/\.\$\{APP_NAME\}-build\$\{new_build\}\.lock"[\s\S]*?mkdir "\$IDENTITY_LOCK"/,
+  "Packaging must reserve the globally allocated build atomically during creation",
 );
 assert.match(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
   /node "\$\{PKG_ROOT\}\/bin\/validate_release_identity\.js"/,
-  "Packaging must validate the committed release identity before building an archive",
+  "Packaging must validate the VERSION-only source template before building an archive",
 );
 assert.match(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
@@ -885,9 +983,18 @@ assert.doesNotMatch(
 );
 assert.match(
   fs.readFileSync(APP_CONF_SOURCE, "utf8"),
-  /^build = 2069$/m,
-  "The committed app source must carry the authorized release build 2069",
+  /^build = 0$/m,
+  "The committed app source must keep a build-zero placeholder",
 );
+assert.equal(
+  (fs.readFileSync(APP_CONF_SOURCE, "utf8").match(/^version = 0\.0\.0$/gm) || []).length,
+  2,
+  "The source app.conf must keep both version fields at the placeholder",
+);
+const sourceManifest = JSON.parse(fs.readFileSync(APP_MANIFEST_SOURCE, "utf8"));
+assert.equal(sourceManifest.info.id.version, "0.0.0");
+assert.equal(sourceManifest.info.releaseDate, "1970-01-01");
+assert.equal(sourceManifest.info.releaseNotes.name, "Version 0.0.0 Release Notes");
 assert.match(
   fs.readFileSync(VERIFY_SCRIPT_SOURCE, "utf8"),
   /FORBIDDEN_RUNTIME_FILE_EXTENSIONS[\s\S]*?findDirectoriesNamed[\s\S]*?__pycache__/,
@@ -926,13 +1033,18 @@ assert.match(
 );
 assert.match(
   buildScript,
-  /find_release_archive\(\)[\s\S]*?expected_package_id[\s\S]*?expected_version[\s\S]*?expected_build[\s\S]*?-sha256-\*\.tar\.gz/,
-  "The root build wrapper must resolve the hash-addressed archive by packaged ID, version, and build",
+  /find_release_archive\(\)[\s\S]*?expected_package_id[\s\S]*?expected_version[\s\S]*?expected_profile[\s\S]*?highest_build[\s\S]*?-sha256-\*\.tar\.gz/,
+  "The root build wrapper must resolve the highest hash-addressed build by package, VERSION, and profile",
 );
 assert.match(
   buildScript,
-  /package_path="\$\(find_release_archive "\$source_package_id" "\$build_version" "\$release_build" "\$package_profile"\)"/,
-  "A fresh root build must use the exact archive that packaging produced",
+  /package_path="\$\(find_release_archive "\$source_package_id" "\$build_version" "\$package_profile"\)"/,
+  "A fresh root build must select the highest archive produced for VERSION and profile",
+);
+assert.match(
+  buildScript,
+  /app_conf_build\(\)[\s\S]*?installed_app_conf=[\s\S]*?app_conf_build[\s\S]*?SCD_PACKAGE_BUILD_FLOOR="\$package_build_floor"/,
+  "Local build/install must pass the installed app build as an allocation floor",
 );
 assert.doesNotMatch(
   buildScript,

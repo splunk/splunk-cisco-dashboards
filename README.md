@@ -56,17 +56,18 @@ For a smaller, minified release package (slower to build):
 ./build.sh --minify
 ```
 
-Minification is opt-in and does not affect the fast `yarn start` watch workflow.
+Splunkbase packaging always minifies; `--minify` is optional there and remains
+explicit for developer builds. It does not affect the fast `yarn start` watch
+workflow.
 
-Release identity is controlled by the committed
-[`releases/splunkbase-9257.json`](releases/splunkbase-9257.json) ledger and
-the source `[install] build` in `default/app.conf`. Before each Splunkbase
-release, append one strictly higher `current` build allocation, change both
-the app version and build in source, and change the preceding `current`
-allocation to `published` after public confirmation or `retired_candidate`
-otherwise. Packaging rejects metadata that does
-not match this ledger, as well as a second archive with the same packaged
-version and build within one Splunkbase or developer profile.
+For a release, edit only the root [`VERSION`](VERSION) file and run the build.
+Source `app.conf` and `app.manifest` intentionally retain `0.0.0`/`0`
+placeholders. Packaging stamps VERSION and the release date into generated
+output, then automatically allocates the next build above release history,
+readable `dist/` artifacts, and the target's installed build when available.
+The [`releases/splunkbase-9257.json`](releases/splunkbase-9257.json) ledger is
+historical publication evidence and a safe build floor; it is not a manual
+pre-build allocation step.
 Artifacts are content-addressed as
 `splunk-cisco-dashboards-<version>-sha256-<digest>.tar.gz` with a matching
 immutable `.sha256` sidecar. The root build wrapper verifies both before it

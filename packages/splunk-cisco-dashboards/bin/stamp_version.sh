@@ -43,6 +43,25 @@ stamp_app_conf() {
   mv "$tmp" "$file"
 }
 
+stamp_manifest() {
+  local file="${APP_ROOT}/app.manifest"
+  [[ -f "$file" ]] || return 0
+
+  node -e '
+    const fs = require("fs");
+    const [file, version, releaseDate] = process.argv.slice(1);
+    const manifest = JSON.parse(fs.readFileSync(file, "utf8"));
+    manifest.info = manifest.info || {};
+    manifest.info.id = manifest.info.id || {};
+    manifest.info.releaseNotes = manifest.info.releaseNotes || {};
+    manifest.info.id.version = version;
+    manifest.info.releaseDate = releaseDate;
+    manifest.info.releaseNotes.name = `Version ${version} Release Notes`;
+    fs.writeFileSync(file, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+  ' "$file" "$APP_VERSION" "$(date +%Y-%m-%d)"
+}
+
 stamp_app_conf
+stamp_manifest
 
 echo "[stamp] VERSION ${APP_VERSION} stamped into ${APP_ROOT}"

@@ -23,8 +23,8 @@
 #   ./build.sh --deploy                                       # filesystem swap (preserves local/ + live lookup CSVs)
 #   SPLUNK_HOME=/opt/10 ./build.sh --deploy --restart         # same against /opt/10, then `splunk restart`
 #
-# Install/deploy WITHOUT rebuilding (re-use the immutable dist artifact whose
-# package ID, version, and build match the current source release identity).
+# Install/deploy WITHOUT rebuilding (re-use the highest immutable dist artifact
+# whose package ID and version match VERSION for the selected profile).
 # Handy when you've built once and want to fan that same artifact out to
 # multiple local Splunk instances that each have their own admin password:
 #   ./build.sh                                                                # build once
@@ -201,13 +201,27 @@ archive_modified_epoch() {
     fi
 }
 
+app_conf_build() {
+    local file="$1"
+    [[ -f "$file" ]] || return 1
+    awk '
+        /^\[/ { section=$0 }
+        section == "[install]" && /^[[:space:]]*build[[:space:]]*=/ {
+            sub(/^[^=]*=/, "")
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+            print
+            exit
+        }
+    ' "$file"
+}
+
 find_release_archive() {
     local expected_package_id="$1"
     local expected_version="$2"
-    local expected_build="$3"
-    local expected_profile="$4"
+    local expected_profile="$3"
     local archive archive_profile identity archive_package_id archive_version archive_build archive_mtime newest_mtime=""
     local match=""
+    local highest_build=0
     local match_count=0
 
     while IFS= read -r -d '' archive; do
@@ -220,7 +234,17 @@ find_release_archive() {
         IFS=$'\t' read -r archive_package_id archive_version archive_build <<< "$identity"
         if [[ "$archive_package_id" == "$expected_package_id" \
             && "$archive_version" == "$expected_version" \
-            && "$archive_build" == "$expected_build" ]]; then
+            && "$archive_build" =~ ^[1-9][0-9]*$ ]]; then
+            if (( archive_build > highest_build )); then
+                match="$archive"
+                highest_build="$archive_build"
+                match_count=1
+                newest_mtime=""
+            elif (( archive_build < highest_build )); then
+                continue
+            else
+                match_count=$((match_count + 1))
+            fi
             if [[ "$expected_profile" == "developer" ]]; then
                 archive_mtime="$(archive_modified_epoch "$archive")" || return 1
                 if [[ -z "$newest_mtime" || "$archive_mtime" -gt "$newest_mtime" \
@@ -228,20 +252,16 @@ find_release_archive() {
                     match="$archive"
                     newest_mtime="$archive_mtime"
                 fi
-                match_count=$((match_count + 1))
-            else
-                match="$archive"
-                match_count=$((match_count + 1))
             fi
         fi
     done < <(find "$DIST_DIR" -maxdepth 1 -type f -name "${APP_NAME}-*-sha256-*.tar.gz" -print0)
 
     if [[ "$match_count" -eq 0 ]]; then
-        err "ERROR: no immutable ${expected_profile} archive was found for package ${expected_package_id}, version ${expected_version}, build ${expected_build}."
+        err "ERROR: no immutable ${expected_profile} archive was found for package ${expected_package_id}, version ${expected_version}."
         return 1
     fi
     if [[ "$expected_profile" != "developer" && "$match_count" -gt 1 ]]; then
-        err "ERROR: found ${match_count} immutable ${expected_profile} archives for package ${expected_package_id}, version ${expected_version}, build ${expected_build}; refusing an ambiguous install target."
+        err "ERROR: found ${match_count} immutable ${expected_profile} archives for package ${expected_package_id}, version ${expected_version}, build ${highest_build}; refusing an ambiguous install target."
         return 1
     fi
 
@@ -908,9 +928,7 @@ if [[ "$do_deploy" -eq 1 ]]; then
 fi
 
 build_version=""
-release_build=""
 source_package_id=""
-source_app_version=""
 source_app_conf="${APP_DIR}/src/main/resources/splunk/default/app.conf"
 if [[ ! -f "$VERSION_FILE" ]]; then
     err "ERROR: VERSION file not found: ${VERSION_FILE}"
@@ -934,35 +952,18 @@ source_package_id="$(awk '
         exit
     }
 ' "$source_app_conf")"
-source_app_version="$(awk '
-    /^\[/ { in_id = ($0 == "[id]") }
-    in_id && /^[[:space:]]*version[[:space:]]*=/ {
-        sub(/^[^=]*=/, "")
-        gsub(/^[[:space:]]+|[[:space:]]+$/, "")
-        print
-        exit
-    }
-' "$source_app_conf")"
-release_build="$(awk '
-    /^\[/ { in_install = ($0 == "[install]") }
-    in_install && /^[[:space:]]*build[[:space:]]*=/ {
-        sub(/^[^=]*=/, "")
-        gsub(/^[[:space:]]+|[[:space:]]+$/, "")
-        print
-        exit
-    }
-' "$source_app_conf")"
 if [[ -z "$source_package_id" || "$source_package_id" != "$APP_NAME" ]]; then
     err "ERROR: source app.conf [id] name must match package ID ${APP_NAME}."
     exit 1
 fi
-if [[ "$source_app_version" != "$build_version" ]]; then
-    err "ERROR: source app.conf [id] version must match VERSION (${build_version})."
-    exit 1
-fi
-if [[ ! "$release_build" =~ ^[1-9][0-9]*$ ]]; then
-    err "ERROR: source app.conf must contain a positive numeric [install] build value."
-    exit 1
+
+package_build_floor=0
+if [[ "$do_install" -eq 1 || "$do_deploy" -eq 1 ]]; then
+    installed_app_conf="${SPLUNK_HOME%/}/etc/apps/${APP_NAME}/default/app.conf"
+    installed_build="$(app_conf_build "$installed_app_conf" || true)"
+    if [[ "$installed_build" =~ ^[0-9]+$ ]]; then
+        package_build_floor="$installed_build"
+    fi
 fi
 
 if [[ "$no_build" -eq 0 ]]; then
@@ -990,7 +991,7 @@ elif [[ "$from_stage" -eq 1 ]]; then
     else
         hdr "Packaging current stage/ v${build_version} (--from-stage, Splunkbase profile)..."
     fi
-    run_quietly bash "${APP_DIR}/bin/package_app.sh" "${package_args[@]}"
+    run_quietly env SCD_PACKAGE_BUILD_FLOOR="$package_build_floor" bash "${APP_DIR}/bin/package_app.sh" "${package_args[@]}"
 else
     package_args=()
     if [[ "$developer_profile" -eq 1 ]]; then
@@ -1013,9 +1014,9 @@ else
     # macOS ships Bash 3.2, where expanding an empty array under `set -u`
     # raises "unbound variable" instead of passing zero arguments.
     if [[ "$developer_profile" -eq 1 || "$minify" -eq 1 ]]; then
-        run_quietly bash "${APP_DIR}/bin/package_app.sh" "${package_args[@]}"
+        run_quietly env SCD_PACKAGE_BUILD_FLOOR="$package_build_floor" bash "${APP_DIR}/bin/package_app.sh" "${package_args[@]}"
     else
-        run_quietly bash "${APP_DIR}/bin/package_app.sh"
+        run_quietly env SCD_PACKAGE_BUILD_FLOOR="$package_build_floor" bash "${APP_DIR}/bin/package_app.sh"
     fi
 fi
 
@@ -1024,14 +1025,14 @@ if [[ "$developer_profile" -eq 1 ]]; then
 else
     package_profile="splunkbase"
 fi
-if ! package_path="$(find_release_archive "$source_package_id" "$build_version" "$release_build" "$package_profile")"; then
+if ! package_path="$(find_release_archive "$source_package_id" "$build_version" "$package_profile")"; then
     exit 1
 fi
 
 if [[ -z "$package_path" ]]; then
     if [[ "$no_build" -eq 1 ]]; then
-        err "ERROR: --no-build requested but no immutable archive matches the current source package identity."
-        err "       Run ./build.sh once (without --no-build) after committing the current release identity."
+        err "ERROR: --no-build requested but no immutable archive matches VERSION ${build_version} and profile ${package_profile}."
+        err "       Run ./build.sh once (without --no-build) to create one."
     else
         err "ERROR: Could not find the immutable ${APP_NAME} archive produced by packaging."
     fi
