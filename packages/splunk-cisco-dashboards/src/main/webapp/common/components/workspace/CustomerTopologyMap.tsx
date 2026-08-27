@@ -68,6 +68,11 @@ import {
 } from "@/common/icons/SuiIcon";
 import { cn } from "@/common/lib/utils";
 import {
+  defaultMapTileStyleId,
+  MAP_TILE_STYLE_PRESETS,
+  type MapTileStyleId,
+} from "@/common/maps/mapTileStyles";
+import {
   buildThousandEyesTestLink,
   normalizeThousandEyesLink,
   THOUSAND_EYES_APP_URL,
@@ -262,17 +267,6 @@ const MotionSettingsCard = styled(OneCdGlassCard)`
   width: 16rem;
   padding: ${variables.spacingLarge};
 `;
-
-delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })
-  ._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-  iconUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-  shadowUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-});
 
 export const CUSTOMER_TOPOLOGY: CustomerTopology = {
   id: "customer-site-connectivity",
@@ -2236,39 +2230,6 @@ const escapeRegex = (value: string): string =>
 const includesPlacementPhrase = (query: string, alias: string): boolean =>
   new RegExp(`(^|\\s)${escapeRegex(alias)}($|\\s)`).test(query);
 
-const buildPlacementLookupQueries = (value: string): string[] => {
-  const trimmed = value.trim();
-  if (!trimmed) return [];
-
-  const queries: string[] = [];
-  const add = (candidate: string) => {
-    const normalized = candidate.replace(/\s+/g, " ").trim();
-    if (normalized && !queries.includes(normalized)) queries.push(normalized);
-  };
-
-  add(trimmed);
-
-  const commaParts = trimmed
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-  if (commaParts.length > 1) {
-    add(commaParts.slice(-2).join(", "));
-    add(commaParts[0]);
-  }
-
-  const words = trimmed
-    .replace(/[^a-zA-Z0-9\s,-]+/g, " ")
-    .split(/\s+/)
-    .map((word) => word.trim())
-    .filter(Boolean);
-  for (let count = Math.min(4, words.length); count >= 1; count -= 1) {
-    add(words.slice(-count).join(" "));
-  }
-
-  return queries;
-};
-
 const placementShortName = (name: string): string => {
   const words = normalizePlacementQuery(name)
     .replace(/,/g, " ")
@@ -2353,88 +2314,6 @@ const resolveSitePlacement = (value: string): SitePlacement | null => {
 
   return bestPreset ? sitePlacementFromPreset(bestPreset.preset) : null;
 };
-
-const pickRemoteGeocodeText = (
-  query: string,
-  address: Record<string, unknown>,
-): string => {
-  const city =
-    textValue(address.city) ||
-    textValue(address.town) ||
-    textValue(address.village) ||
-    textValue(address.hamlet) ||
-    textValue(address.municipality) ||
-    textValue(address.county);
-  const region = textValue(address.state);
-  const country = textValue(address.country);
-  const suffix = region || country;
-  if (
-    city &&
-    suffix &&
-    normalizePlacementQuery(city) !== normalizePlacementQuery(suffix)
-  ) {
-    return `${city}, ${suffix}`;
-  }
-  return city || query;
-};
-
-const resolveRemoteSitePlacement = async (
-  value: string,
-): Promise<SitePlacement | null> => {
-  if (typeof window === "undefined" || typeof window.fetch !== "function") {
-    return null;
-  }
-
-  for (const query of buildPlacementLookupQueries(value)) {
-    try {
-      const response = await window.fetch(
-        `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&q=${encodeURIComponent(
-          query,
-        )}`,
-        {
-          headers: {
-            Accept: "application/json",
-          },
-        },
-      );
-      if (!response.ok) continue;
-      const rows = (await response.json()) as unknown;
-      const first = Array.isArray(rows) ? rows[0] : null;
-      if (!isRecord(first)) continue;
-
-      const lat = Number(first.lat);
-      const lng = Number(first.lon);
-      if (
-        !Number.isFinite(lat) ||
-        !Number.isFinite(lng) ||
-        lat < -85 ||
-        lat > 85 ||
-        lng < -180 ||
-        lng > 180
-      ) {
-        continue;
-      }
-
-      const address = isRecord(first.address) ? first.address : {};
-      const name = pickRemoteGeocodeText(query, address);
-      return {
-        name,
-        shortName: placementShortName(name),
-        lat,
-        lng,
-      };
-    } catch {
-      // A failed geocoder request should not block manual coordinate entry.
-    }
-  }
-
-  return null;
-};
-
-const resolveSitePlacementWithFallback = async (
-  value: string,
-): Promise<SitePlacement | null> =>
-  resolveSitePlacement(value) ?? resolveRemoteSitePlacement(value);
 
 const looksLikeGeneratedSiteName = (value: string): boolean =>
   /^site\s+\d+$/i.test(value.trim());
@@ -3119,64 +2998,6 @@ const topologyAnimationCss = `
         }
     }
 `;
-
-interface TileLayerPreset {
-  id: "street" | "satellite" | "terrain" | "dark-ops" | "navigation";
-  label: string;
-  light: string;
-  dark: string;
-  attribution: string;
-}
-
-const TILE_LAYER_PRESETS: TileLayerPreset[] = [
-  {
-    id: "street",
-    label: "Street",
-    light: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-    attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
-  },
-  {
-    id: "satellite",
-    label: "Satellite",
-    light:
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    dark: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    attribution: "Tiles &copy; Esri",
-  },
-  {
-    id: "terrain",
-    label: "Terrain",
-    light:
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
-    dark: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
-    attribution: "Tiles &copy; Esri",
-  },
-  {
-    id: "dark-ops",
-    label: "Dark Ops",
-    light:
-      "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
-    dark: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
-    attribution: "Tiles &copy; Esri",
-  },
-  {
-    id: "navigation",
-    label: "Navigation",
-    light:
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
-    dark: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
-    attribution: "Tiles &copy; Esri",
-  },
-];
-
-const DEFAULT_LIGHT_TILE_LAYER_PRESET_ID: TileLayerPreset["id"] = "terrain";
-const DEFAULT_DARK_TILE_LAYER_PRESET_ID: TileLayerPreset["id"] = "street";
-
-const defaultTileLayerPresetId = (isDark: boolean): TileLayerPreset["id"] =>
-  isDark
-    ? DEFAULT_DARK_TILE_LAYER_PRESET_ID
-    : DEFAULT_LIGHT_TILE_LAYER_PRESET_ID;
 
 const escapeHtml = (value: string): string =>
   value.replace(/[&<>"']/g, (ch) => {
@@ -5771,8 +5592,8 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   const [motionSettingsOpen, setMotionSettingsOpen] = useState(false);
   const [motionSettingsAnchor, setMotionSettingsAnchor] =
     useState<HTMLAnchorElement | HTMLButtonElement | null>(null);
-  const [tilePresetId, setTilePresetId] = useState<TileLayerPreset["id"]>(() =>
-    defaultTileLayerPresetId(isDark),
+  const [tilePresetId, setTilePresetId] = useState<MapTileStyleId>(() =>
+    defaultMapTileStyleId(isDark),
   );
   const [catalogueByName, setCatalogueByName] = useState<Record<
     string,
@@ -6723,12 +6544,12 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   // phase from inside the popup component itself.
 
   const tilePreset =
-    TILE_LAYER_PRESETS.find((preset) => preset.id === tilePresetId) ??
-    TILE_LAYER_PRESETS.find(
-      (preset) => preset.id === defaultTileLayerPresetId(isDark),
+    MAP_TILE_STYLE_PRESETS.find((preset) => preset.id === tilePresetId) ??
+    MAP_TILE_STYLE_PRESETS.find(
+      (preset) => preset.id === defaultMapTileStyleId(isDark),
     ) ??
-    TILE_LAYER_PRESETS[0];
-  const tileUrl = isDark ? tilePreset.dark : tilePreset.light;
+    MAP_TILE_STYLE_PRESETS[0];
+  const tileUrl = isDark ? tilePreset.darkUrl : tilePreset.lightUrl;
   const effectiveMapBounds = boundsForTopologySites(
     resolvedTopology.map.bounds,
     resolvedTopology.sites,
@@ -6752,10 +6573,11 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   };
 
   const cycleTilePreset = () => {
-    const index = TILE_LAYER_PRESETS.findIndex(
+    const index = MAP_TILE_STYLE_PRESETS.findIndex(
       (preset) => preset.id === tilePresetId,
     );
-    const next = TILE_LAYER_PRESETS[(index + 1) % TILE_LAYER_PRESETS.length];
+    const next =
+      MAP_TILE_STYLE_PRESETS[(index + 1) % MAP_TILE_STYLE_PRESETS.length];
     setTilePresetId(next.id);
   };
 
@@ -7049,8 +6871,8 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
           maxZoom={resolvedTopology.map.maxZoom}
           style={{ height: "100%", width: "100%" }}
           zoomControl={false}
-          scrollWheelZoom={false}
-          attributionControl={false}
+          scrollWheelZoom
+          attributionControl
           className="customer-topology-map z-10"
         >
           <MapFrame
@@ -7071,7 +6893,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
           />
           <TileLayer
             key={`${tilePreset.id}-${tileUrl}`}
-            attribution=""
+            attribution={tilePreset.attribution}
             url={tileUrl}
           />
           <ZoomControl position="bottomleft" />
@@ -8864,13 +8686,13 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
       setSitePlacementErrors((current) => ({
         ...current,
         [siteId]:
-          "Enter a city, address, or coordinates. Renamed sites can be placed by name too.",
+          "Enter a supported city or coordinates. Renamed sites in the offline city list can be placed by name too.",
       }));
       return;
     }
 
     setPlacingSiteIds((current) => ({ ...current, [siteId]: true }));
-    const placement = await resolveSitePlacementWithFallback(lookupText);
+    const placement = resolveSitePlacement(lookupText);
     setPlacingSiteIds((current) => {
       const next = { ...current };
       delete next[siteId];
@@ -8880,7 +8702,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
       setSitePlacementErrors((current) => ({
         ...current,
         [siteId]:
-          "Could not place that location. Try a city, address, or coordinates like 48.8566,2.3522.",
+          "That location is not in the offline city list. Enter coordinates like 48.8566,2.3522.",
       }));
       return;
     }
@@ -9600,7 +9422,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 aria-label={`Place site ${site.id}`}
                                 className={editorInputClass(isDark)}
                                 value={sitePlacementDrafts[site.id] ?? ""}
-                                placeholder="City, address, or 48.8566,2.3522"
+                                placeholder="Supported city or 48.8566,2.3522"
                                 onChange={(event) =>
                                   updateSitePlacementDraft(
                                     site.id,

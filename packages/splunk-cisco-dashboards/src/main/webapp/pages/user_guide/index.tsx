@@ -1866,6 +1866,12 @@ iseval = 0`}</CodeBlock>
                         Spaces floor-plan images use the same safe shared-image
                         boundary, so configured map artwork cannot fetch
                         arbitrary network or local URLs from a viewer browser.
+                        Geographic views retain interactive Street, Terrain,
+                        Satellite, Dark Ops, Navigation, and Offline Grid map
+                        styles. Topology placement uses the offline city list or
+                        explicit coordinates, so operator-entered location text
+                        is never sent to a public geocoder. Online styles send
+                        only fixed tile requests to the attributed map provider.
                         Topology palette items and key manager/KPI
                         dialogs now support complete keyboard operation. Release
                         metadata now follows the repository-root VERSION file
