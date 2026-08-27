@@ -537,6 +537,11 @@ assert.match(
   /build\.sh --install[\s\S]*?developer-profile archives[\s\S]*?--splunkbase/,
   "The current in-app release notes must document local developer-profile defaults",
 );
+assert.match(
+  userGuide,
+  /repository-root VERSION file[\s\S]*?Source app\.conf and[\s\S]*?app\.manifest retain placeholders[\s\S]*?allocate the next[\s\S]*?build automatically/,
+  "The current in-app release notes must document VERSION-only release packaging",
+);
 
 assert.match(profile, /useInsightsWorkspacePermissions\(\)/);
 assert.match(

@@ -1855,12 +1855,16 @@ iseval = 0`}</CodeBlock>
                         arbitrary network or local URLs from a viewer browser.
                         Topology palette items and key manager/KPI
                         dialogs now support complete keyboard operation. Release
-                        metadata now follows the canonical app version,
-                        upgrade notifications are explicit, and React Router
-                        is on its supported security-maintenance line. Dashboard
-                        Manager now makes Edit visible from library cards and
-                        previews, while its Searchbase picker starts with compact
-                        search-name rows and can reveal full metadata on demand.
+                        metadata now follows the repository-root VERSION file
+                        as its single release input. Source app.conf and
+                        app.manifest retain placeholders; generated packages
+                        stamp the release version and date and allocate the next
+                        build automatically. Upgrade notifications are explicit,
+                        and React Router is on its supported security-maintenance
+                        line. Dashboard Manager now makes Edit visible from
+                        library cards and previews, while its Searchbase picker
+                        starts with compact search-name rows and can reveal full
+                        metadata on demand.
                         New dashboards default to Shared in App, with Private
                         retained as an explicit creation-time choice.
                       </td>
@@ -1872,7 +1876,12 @@ iseval = 0`}</CodeBlock>
                         developer-profile archives so iterative installs do not
                         collide with immutable SplunkBase release identities;
                         pass <InlineCode>--splunkbase</InlineCode> when validating
-                        the released-resources-only profile. Release archives
+                        the released-resources-only profile. For a release,
+                        change and commit only the repository-root
+                        <InlineCode>VERSION</InlineCode> file; do not edit source
+                        <InlineCode>app.conf</InlineCode> or
+                        <InlineCode>app.manifest</InlineCode> version/build
+                        placeholders. Release archives
                         use one validated packaging path and preserve live
                         development-local configuration. Existing workspaces keep their saved
                         configuration; assign{" "}

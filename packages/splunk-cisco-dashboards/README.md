@@ -10,6 +10,11 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Simplified release preparation to one operator-maintained value: change the
+  repository-root `VERSION` file while source `app.conf` and `app.manifest`
+  retain placeholders. Generated packages stamp the release metadata and
+  automatically allocate the next build above release history, readable local
+  artifacts, and the installed target when available.
 - Made Dashboard Manager easier to resume: library cards and preview dialogs
   now expose direct edit actions, and Searchbase picker rows start compact with
   a toggle for full search metadata. New dashboards default to Shared in App,
