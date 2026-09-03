@@ -32,16 +32,17 @@ import {
     ArrowUpDown,
     ArrowUpRight,
     CheckCircle2,
+    ColumnArrowsLeftRight,
     ExternalLink,
     FileSearch,
+    FingerprintNodes,
+    GlobeDivision,
     Info,
     MoreVertical,
-    NodeModel,
     RefreshCw,
-    RobotFaceWrench,
-    Server,
+    RobotFaceSparkle,
+    ServerBrackets,
     ShieldKeyhole,
-    WallBricks,
     type SuiIcon,
 } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
@@ -105,11 +106,11 @@ interface TimeParseResult {
 }
 
 const PILLAR_ICONS: Record<PillarIconName, SuiIcon> = {
-    'shield-keyhole': ShieldKeyhole,
-    servers: Server,
-    'node-model': NodeModel,
-    'wall-bricks': WallBricks,
-    'robot-face-wrench': RobotFaceWrench,
+    'fingerprint-nodes': FingerprintNodes,
+    'server-brackets': ServerBrackets,
+    'globe-division': GlobeDivision,
+    'column-arrows-left-right': ColumnArrowsLeftRight,
+    'robot-face-sparkle': RobotFaceSparkle,
 };
 
 const APP_NAME = 'splunk-cisco-dashboards';

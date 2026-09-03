@@ -72,6 +72,56 @@ const executiveInsights = read(
   "src/main/webapp/pages/executive_insights/index.tsx",
 );
 
+const secureNetworkingIcons = workspaceConfig.WORKSPACE_SOURCES.secure_networking.sections
+  .filter((section) =>
+    [
+      "zta",
+      "secure_infrastructure",
+      "scalable_network_segmentation",
+      "hybrid_mesh_firewalling",
+      "agentic_ops",
+    ].includes(section.id),
+  )
+  .map((section) => section.icon);
+assert.deepEqual(secureNetworkingIcons, [
+  "fingerprint-nodes",
+  "server-brackets",
+  "globe-division",
+  "column-arrows-left-right",
+  "robot-face-sparkle",
+]);
+for (const iconName of [
+  "FingerprintNodes",
+  "ServerBrackets",
+  "GlobeDivision",
+  "ColumnArrowsLeftRight",
+  "RobotFaceSparkle",
+]) {
+  assert.match(executiveInsights, new RegExp(`\\b${iconName}\\b`));
+}
+for (const expectedTimeRange of [
+  "Last 4 hours",
+  "Last 24 hours",
+  "Last 48 hours",
+  "Last 7 days",
+  "Last 30 days",
+]) {
+  assert.match(executiveInsights, new RegExp(expectedTimeRange));
+}
+assert.doesNotMatch(
+  executiveInsights,
+  /label: "Last 90 days"/,
+  "The quick selector must reserve its compact layout for the approved ranges",
+);
+assert.match(executiveInsights, /Quick dashboard time range/);
+assert.match(executiveInsights, /SlidersTripleHorizontal/);
+assert.match(executiveInsights, /Custom range/);
+assert.match(executiveInsights, /Custom time range mode/);
+assert.match(executiveInsights, /type="datetime-local"/);
+assert.match(executiveInsights, /scd-time-range-quick/);
+assert.match(executiveInsights, /scd-time-range-compact/);
+assert.match(executiveInsights, /SAFE_TIME_RANGE_PATTERN/);
+
 assert.ok(workspaceConfig.WORKSPACE_SOURCE_IDS.includes("agentic_soc"));
 for (const sectionId of [
   "dns_security",

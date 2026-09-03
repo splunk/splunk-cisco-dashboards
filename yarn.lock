@@ -1786,10 +1786,10 @@
     "@splunk/ui-utils" "^1.14.0"
     prop-types "^15.8.1"
 
-"@splunk/react-icons@5.14.0", "@splunk/react-icons@^5.0.0", "@splunk/react-icons@^5.10.0", "@splunk/react-icons@^5.12.0", "@splunk/react-icons@^5.13.0", "@splunk/react-icons@^5.14.0":
-  version "5.14.0"
-  resolved "https://registry.npmjs.org/@splunk/react-icons/-/react-icons-5.14.0.tgz#c6a18a0df80329fa9895762482ab1c71ceea07c7"
-  integrity sha512-VFlnWyqjw9G+V9DqsYYMQh5RQXkd1PZZR52UcPQwk4schIVVhPKCV19eLkpcw+RONEiUBxUiuJZrlphXIjQFnw==
+"@splunk/react-icons@5.15.0", "@splunk/react-icons@^5.0.0", "@splunk/react-icons@^5.10.0", "@splunk/react-icons@^5.12.0", "@splunk/react-icons@^5.13.0", "@splunk/react-icons@^5.14.0":
+  version "5.15.0"
+  resolved "https://registry.npmjs.org/@splunk/react-icons/-/react-icons-5.15.0.tgz#79a5867237a3567c01949f2cce33f08de672e880"
+  integrity sha512-xuskaIsho1e9+q90WkbopQxIQikF4iygPKXsDwfiTp5X2vmh9t3Hq2S8wsfcoOCrrsOkofjtsvufAsQ7Og1r9w==
   dependencies:
     "@splunk/ui-utils" "^1.14.0"
     lodash "^4.18.1"

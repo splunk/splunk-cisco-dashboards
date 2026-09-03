@@ -1,6 +1,6 @@
 /*
  * Splunk's navigation registry exposes ShieldKeyhole directly, but not the
- * other four approved pillar icons available to the app through
+ * other approved pillar icons available to the app through
  * @splunk/react-icons. Replace only those four shell fallbacks with one
  * unmodified copy of the matching outlined SUI vector at Splunk's native
  * 24px rendered size. Splunk still owns inactive, hover, and selected color.
@@ -54,23 +54,23 @@
 }
 
 #root-nav-menu [title="Zero Trust Access"] {
-  --scd-pillar-icon: url("images/nav-icons/Fingerprint.svg");
+  --scd-pillar-icon: url("images/nav-icons/FingerprintNodes.svg");
 }
 
 #root-nav-menu [title="Secure Infrastructure"] {
-  --scd-pillar-icon: url("images/nav-icons/NetworkDevices.svg");
+  --scd-pillar-icon: url("images/nav-icons/ServerBrackets.svg");
 }
 
 #root-nav-menu [title="Scalable Network Segmentation"] {
-  --scd-pillar-icon: url("images/nav-icons/Globe.svg");
+  --scd-pillar-icon: url("images/nav-icons/GlobeDivision.svg");
 }
 
 #root-nav-menu [title="Hybrid Mesh Firewalling"] {
-  --scd-pillar-icon: url("images/nav-icons/ArrowsDoubleLeftRight.svg");
+  --scd-pillar-icon: url("images/nav-icons/ColumnArrowsLeftRight.svg");
 }
 
 #root-nav-menu [title="Agentic Ops"] {
-  --scd-pillar-icon: url("images/nav-icons/RobotAgent.svg");
+  --scd-pillar-icon: url("images/nav-icons/RobotFaceSparkle.svg");
 }
 
 #root-nav-menu [data-test="monogram"] {

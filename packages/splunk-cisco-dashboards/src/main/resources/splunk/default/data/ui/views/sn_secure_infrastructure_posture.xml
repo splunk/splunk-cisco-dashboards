@@ -60,7 +60,7 @@
             "title": "Infrastructure Posture",
             "options": {
                 "preserveAspectRatio": true,
-                "src": "/static/app/splunk-cisco-dashboards/images/nav-icons/NetworkDevices.svg"
+                "src": "/static/app/splunk-cisco-dashboards/images/nav-icons/ServerBrackets.svg"
             }
         },
         "viz_header": {

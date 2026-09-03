@@ -60,7 +60,7 @@
             "title": "Zero Trust Posture",
             "options": {
                 "preserveAspectRatio": true,
-                "src": "/static/app/splunk-cisco-dashboards/images/nav-icons/Fingerprint.svg"
+                "src": "/static/app/splunk-cisco-dashboards/images/nav-icons/FingerprintNodes.svg"
             }
         },
         "viz_header": {

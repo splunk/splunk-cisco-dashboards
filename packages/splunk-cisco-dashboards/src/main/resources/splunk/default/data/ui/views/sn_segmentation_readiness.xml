@@ -60,7 +60,7 @@
             "title": "Segmentation Readiness",
             "options": {
                 "preserveAspectRatio": true,
-                "src": "/static/app/splunk-cisco-dashboards/images/nav-icons/Globe.svg"
+                "src": "/static/app/splunk-cisco-dashboards/images/nav-icons/GlobeDivision.svg"
             }
         },
         "viz_header": {

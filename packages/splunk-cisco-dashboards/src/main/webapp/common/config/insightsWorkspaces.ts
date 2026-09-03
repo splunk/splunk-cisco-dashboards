@@ -105,6 +105,11 @@ export type WorkspaceSectionIcon =
   | "node-model"
   | "wall-bricks"
   | "robot-face-wrench"
+  | "fingerprint-nodes"
+  | "server-brackets"
+  | "globe-division"
+  | "column-arrows-left-right"
+  | "robot-face-sparkle"
   | "shield-check"
   | "server-cog"
   | "network"
@@ -203,35 +208,35 @@ const SECURE_NETWORKING_SECTIONS: readonly WorkspaceSectionMeta[] = [
     title: "Zero Trust Access",
     linkText: "Open Zero Trust Access",
     href: "dashboard_manager#/sn_zta_posture",
-    icon: "shield-keyhole",
+    icon: "fingerprint-nodes",
   },
   {
     id: "secure_infrastructure",
     title: "Secure Infrastructure",
     linkText: "Open Secure Infrastructure",
     href: "dashboard_manager#/sn_secure_infrastructure_posture",
-    icon: "servers",
+    icon: "server-brackets",
   },
   {
     id: "scalable_network_segmentation",
     title: "Scalable Network Segmentation",
     linkText: "Open Scalable Network Segmentation",
     href: "dashboard_manager#/sn_segmentation_readiness",
-    icon: "node-model",
+    icon: "globe-division",
   },
   {
     id: "hybrid_mesh_firewalling",
     title: "Hybrid Mesh Firewalling",
     linkText: "Open Hybrid Mesh Firewalling",
     href: "dashboard_manager#/sn_hmf_enforcement",
-    icon: "wall-bricks",
+    icon: "column-arrows-left-right",
   },
   {
     id: "agentic_ops",
     title: "Agentic Ops",
     linkText: "Open Agentic Ops",
     href: "dashboard_manager#/sn_agentic_ops_operational_intelligence",
-    icon: "robot-face-wrench",
+    icon: "robot-face-sparkle",
   },
 ] as const;
 

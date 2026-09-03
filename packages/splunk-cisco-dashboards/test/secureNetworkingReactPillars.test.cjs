@@ -13,6 +13,7 @@ const readSource = (relativePath) =>
 const pageRoot = "src/main/webapp/pages/secure_networking_pillars";
 const configSource = readSource(`${pageRoot}/config.ts`);
 const pageSource = readSource(`${pageRoot}/index.tsx`);
+const iconSource = readSource("src/main/webapp/common/icons/SuiIcon.tsx");
 const chartSource = readSource(`${pageRoot}/charts.tsx`);
 const searchSource = readSource(`${pageRoot}/search.ts`);
 const renderSource = readSource(`${pageRoot}/render.tsx`);
@@ -26,6 +27,9 @@ const bootstrapSource = readSource(
 );
 const navSource = readSource(
   "src/main/resources/splunk/default/data/ui/nav/default.xml",
+);
+const applicationStyles = readSource(
+  "src/main/resources/splunk/appserver/static/application.css",
 );
 const webpackSource = readSource("webpack.config.js");
 const assetVerifierSource = readSource("bin/verify_production_assets.js");
@@ -137,6 +141,27 @@ assert.deepEqual(
   Object.values(studioViewsByPillar),
   "Each native tab must retain its side-by-side Studio comparison target",
 );
+assert.deepEqual(
+  Array.from(PILLARS, (pillar) => pillar.icon),
+  [
+    "fingerprint-nodes",
+    "server-brackets",
+    "globe-division",
+    "column-arrows-left-right",
+    "robot-face-sparkle",
+  ],
+  "Pillar tabs must use the approved left-to-right icon order",
+);
+for (const iconName of [
+  "FingerprintNodes",
+  "ServerBrackets",
+  "GlobeDivision",
+  "ColumnArrowsLeftRight",
+  "RobotFaceSparkle",
+]) {
+  assert.match(iconSource, new RegExp(`@splunk/react-icons/${iconName}`));
+  assert.match(pageSource, new RegExp(`\\b${iconName}\\b`));
+}
 
 const allCards = Array.from(PILLARS).flatMap((pillar) =>
   Array.from(PILLAR_CARDS[pillar.id]),
@@ -446,6 +471,73 @@ assert.match(bootstrapSource, /pages\/secure_networking_pillars\.js\?v=/);
 assert.match(bootstrapSource, /window\.scdSetupGatePromise/);
 assert.match(bootstrapSource, /Promise\.resolve\(setupGate\)/);
 assert.match(navSource, /href="secure_networking_pillars"/);
+assert.deepEqual(
+  Array.from(
+    navSource.matchAll(
+      /<collection label="(?:Zero Trust Access|Secure Infrastructure|Scalable Network Segmentation|Hybrid Mesh Firewalling|Agentic Ops)" icon="([^"]+)"/g,
+    ),
+    (match) => match[1],
+  ),
+  [
+    "FingerprintNodes",
+    "ServerBrackets",
+    "GlobeDivision",
+    "ColumnArrowsLeftRight",
+    "RobotFaceSparkle",
+  ],
+  "The native Splunk navigation must use the approved pillar icons",
+);
+const studioHeaderIconFiles = [
+  "FingerprintNodes.svg",
+  "ServerBrackets.svg",
+  "GlobeDivision.svg",
+  "ColumnArrowsLeftRight.svg",
+  "RobotFaceSparkle.svg",
+];
+for (const [pillarId, iconFile] of Object.entries(
+  Object.fromEntries(
+    Object.keys(studioViewsByPillar).map((pillarId, index) => [
+      pillarId,
+      studioHeaderIconFiles[index],
+    ]),
+  ),
+)) {
+  const studioViewName = studioViewsByPillar[pillarId];
+  const studioSource = readSource(
+    `src/main/resources/splunk/default/data/ui/views/${studioViewName}.xml`,
+  );
+  assert.match(
+    studioSource,
+    new RegExp(`images/nav-icons/${iconFile}`),
+    `${studioViewName} must use the approved Dashboard Studio header icon`,
+  );
+  assert.ok(
+    fs.existsSync(
+      path.join(
+        packageRoot,
+        "src/main/resources/splunk/appserver/static/images/nav-icons",
+        iconFile,
+      ),
+    ),
+    `Missing Dashboard Studio icon asset: ${iconFile}`,
+  );
+}
+const nativeSidebarIconMappings = {
+  "Zero Trust Access": "FingerprintNodes.svg",
+  "Secure Infrastructure": "ServerBrackets.svg",
+  "Scalable Network Segmentation": "GlobeDivision.svg",
+  "Hybrid Mesh Firewalling": "ColumnArrowsLeftRight.svg",
+  "Agentic Ops": "RobotFaceSparkle.svg",
+};
+for (const [title, iconFile] of Object.entries(nativeSidebarIconMappings)) {
+  assert.match(
+    applicationStyles,
+    new RegExp(
+      `\\[title="${title}"\\][\\s\\S]*?--scd-pillar-icon: url\\("images/nav-icons/${iconFile}"\\)`,
+    ),
+    `${title} must use the approved rendered sidebar icon`,
+  );
+}
 assert.match(webpackSource, /secure_networking_pillars:\s*path\.join/);
 assert.match(assetVerifierSource, /'secure_networking_pillars'/);
 

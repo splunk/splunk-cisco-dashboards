@@ -68,7 +68,13 @@ import {
   PanelRightClose,
   PanelTop,
   Sparkles,
+  SlidersTripleHorizontal,
   Globe,
+  FingerprintNodes,
+  ServerBrackets,
+  GlobeDivision,
+  ColumnArrowsLeftRight,
+  RobotFaceSparkle,
   Servers,
   NodeModel,
   WallBricks,
@@ -241,7 +247,7 @@ import { cn } from "@/common/lib/utils";
 
 const APP_NAME = "splunk-cisco-dashboards";
 const WORKSPACE_MENU_WIDTH_PX = 200;
-const HEADER_TIME_RANGE_WIDTH_PX = 130;
+const HEADER_TIME_RANGE_WIDTH_PX = 150;
 const HEADER_REFRESH_RATE_WIDTH_PX = 140;
 
 // Default subtitle shown beneath the workspace title when no per-user
@@ -378,6 +384,12 @@ const TIME_RANGE_OPTIONS: TimeRange[] = [
     spanSeconds: 24 * 3600,
   },
   {
+    earliest: "-48h@h",
+    latest: "now",
+    label: "Last 48 hours",
+    spanSeconds: 48 * 3600,
+  },
+  {
     earliest: "-7d@d",
     latest: "now",
     label: "Last 7 days",
@@ -389,14 +401,398 @@ const TIME_RANGE_OPTIONS: TimeRange[] = [
     label: "Last 30 days",
     spanSeconds: 30 * 86400,
   },
-  {
-    earliest: "-90d@d",
-    latest: "now",
-    label: "Last 90 days",
-    spanSeconds: 90 * 86400,
-  },
 ];
 const DEFAULT_TIME_RANGE_LABEL = "Last 24 hours";
+const CUSTOM_TIME_RANGE_VALUE = "__custom_time_range__";
+const SAFE_TIME_RANGE_PATTERN = /^[A-Za-z0-9@._:+\-*/ ]+$/;
+
+type TimeRangeEditorMode = "relative" | "absolute";
+
+interface TimeRangeDraft {
+  mode: TimeRangeEditorMode;
+  earliest: string;
+  latest: string;
+  from: string;
+  to: string;
+}
+
+const toDateTimeLocalValue = (date: Date): string => {
+  const pad = (value: number): string => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+    date.getDate(),
+  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
+const parseDateTimeLocalValue = (value: string): Date | null => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const parseAbsoluteTime = (value: string): Date | null => {
+  if (!value || SAFE_TIME_RANGE_PATTERN.test(value) === false) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const createTimeRangeDraft = (range: TimeRange): TimeRangeDraft => {
+  const from = parseAbsoluteTime(range.earliest);
+  const to = parseAbsoluteTime(range.latest);
+  const end = to ?? new Date();
+  const start = from ?? new Date(end.getTime() - range.spanSeconds * 1000);
+  return {
+    mode: from && to ? "absolute" : "relative",
+    earliest: range.earliest,
+    latest: range.latest,
+    from: toDateTimeLocalValue(start),
+    to: toDateTimeLocalValue(end),
+  };
+};
+
+const relativeRangeSpanSeconds = (
+  earliest: string,
+  fallback: number,
+): number => {
+  const match = earliest.trim().match(
+    /^-(\d+(?:\.\d+)?)(s|m|h|d|w)(?:@[A-Za-z]+)?$/i,
+  );
+  if (!match) return fallback;
+  const unitSeconds: Record<string, number> = {
+    s: 1,
+    m: 60,
+    h: 3600,
+    d: 86400,
+    w: 604800,
+  };
+  return Math.max(1, Math.round(Number(match[1]) * unitSeconds[match[2].toLowerCase()]));
+};
+
+const customAbsoluteLabel = (from: Date, to: Date): string =>
+  `Custom: ${from.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })} – ${to.toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })}`;
+
+const TimeRangeControlShell = styled.div`
+  display: flex;
+  min-width: 0;
+  align-items: center;
+
+  .scd-time-range-quick {
+    display: flex;
+    align-items: center;
+    gap: ${variables.spacingXSmall};
+  }
+
+  .scd-time-range-quick [role="menuitemradio"] {
+    min-width: 38px;
+    padding-inline: ${variables.spacingSmall};
+  }
+
+  .scd-time-range-compact {
+    display: none;
+  }
+
+  @media (max-width: 1319px) {
+    .scd-time-range-quick {
+      display: none;
+    }
+
+    .scd-time-range-compact {
+      display: block;
+    }
+  }
+`;
+
+const TimeRangeEditor = styled.div`
+  display: grid;
+  gap: ${variables.spacingMedium};
+  min-width: 0;
+
+  .scd-time-range-editor-fields {
+    display: grid;
+    gap: ${variables.spacingSmall};
+  }
+
+  .scd-time-range-editor-field {
+    display: grid;
+    gap: ${variables.spacingXSmall};
+  }
+
+  .scd-time-range-editor-field label {
+    color: ${variables.contentColorDefault};
+    font-size: ${variables.fontSizeSmall};
+    font-weight: ${variables.fontWeightSemiBold};
+  }
+
+  .scd-time-range-editor-field input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 32px;
+    padding: 0 ${variables.spacingSmall};
+    border: 1px solid ${variables.borderColor};
+    border-radius: 4px;
+    background: ${variables.backgroundColor};
+    color: ${variables.contentColorDefault};
+    font: inherit;
+  }
+
+  .scd-time-range-editor-field input:focus-visible {
+    outline: none;
+    box-shadow: ${variables.focusShadow};
+  }
+
+  .scd-time-range-editor-help {
+    margin: 0;
+    color: ${variables.contentColorMuted};
+    font-size: ${variables.fontSizeSmall};
+    line-height: ${variables.lineHeight};
+  }
+`;
+
+interface TimeRangeControlProps {
+  range: TimeRange;
+  onChange: (range: TimeRange) => void;
+}
+
+const TimeRangeControl: React.FC<TimeRangeControlProps> = ({
+  range,
+  onChange,
+}) => {
+  const [customEditorOpen, setCustomEditorOpen] = useState(false);
+  const [draft, setDraft] = useState<TimeRangeDraft>(() =>
+    createTimeRangeDraft(range),
+  );
+  const [editorError, setEditorError] = useState<string | null>(null);
+  const customEditorTriggerRef = useRef<HTMLElement | null>(null);
+  const isPreset = TIME_RANGE_OPTIONS.some((option) => option.label === range.label);
+
+  const openCustomEditor = useCallback((event?: React.SyntheticEvent) => {
+    if (event?.currentTarget instanceof HTMLElement) {
+      customEditorTriggerRef.current = event.currentTarget;
+    } else if (document.activeElement instanceof HTMLElement) {
+      customEditorTriggerRef.current = document.activeElement;
+    }
+    setDraft(createTimeRangeDraft(range));
+    setEditorError(null);
+    setCustomEditorOpen(true);
+  }, [range]);
+
+  const applyCustomRange = useCallback(() => {
+    if (draft.mode === "relative") {
+      const earliest = draft.earliest.trim();
+      const latest = draft.latest.trim();
+      if (
+        !earliest ||
+        !latest ||
+        earliest.length > 128 ||
+        latest.length > 128 ||
+        !SAFE_TIME_RANGE_PATTERN.test(earliest) ||
+        !SAFE_TIME_RANGE_PATTERN.test(latest)
+      ) {
+        setEditorError(
+          "Enter valid Splunk time expressions, such as -24h@h and now.",
+        );
+        return;
+      }
+      onChange({
+        earliest,
+        latest,
+        label: "Custom range",
+        spanSeconds: relativeRangeSpanSeconds(earliest, range.spanSeconds),
+      });
+    } else {
+      const from = parseDateTimeLocalValue(draft.from);
+      const to = parseDateTimeLocalValue(draft.to);
+      if (!from || !to || from >= to) {
+        setEditorError("Choose a start and end time, with the start before the end.");
+        return;
+      }
+      onChange({
+        earliest: from.toISOString(),
+        latest: to.toISOString(),
+        label: customAbsoluteLabel(from, to),
+        spanSeconds: Math.max(1, Math.round((to.getTime() - from.getTime()) / 1000)),
+      });
+    }
+    setCustomEditorOpen(false);
+  }, [draft, onChange, range.spanSeconds]);
+
+  const selectRange = useCallback(
+    (value: string) => {
+      if (value === CUSTOM_TIME_RANGE_VALUE) {
+        openCustomEditor();
+        return;
+      }
+      const next = TIME_RANGE_OPTIONS.find((option) => option.label === value);
+      if (next) onChange(next);
+    },
+    [onChange, openCustomEditor],
+  );
+
+  return (
+    <>
+      <TimeRangeControlShell aria-label="Dashboard time range">
+        <div className="scd-time-range-quick">
+          <OneCdRadioBar
+            ariaLabel="Quick dashboard time range"
+            options={TIME_RANGE_OPTIONS.map((option) => ({
+              ariaLabel: option.label,
+              label: option.label.replace("Last ", "").replace(" hours", "h").replace(" days", "d"),
+              value: option.label,
+            }))}
+            value={isPreset ? range.label : ""}
+            onChange={selectRange}
+          />
+          <Button
+            appearance="subtle"
+            icon={<SlidersTripleHorizontal aria-hidden="true" />}
+            label="Open custom dashboard time range"
+            onClick={openCustomEditor}
+          />
+        </div>
+        <div className="scd-time-range-compact">
+          <Select
+            appearance="subtle"
+            data-shortcut-search
+            inline
+            labelText="Dashboard time range"
+            onChange={(_event, { value }) => selectRange(String(value))}
+            style={{ width: HEADER_TIME_RANGE_WIDTH_PX }}
+            value={isPreset ? range.label : CUSTOM_TIME_RANGE_VALUE}
+          >
+            {TIME_RANGE_OPTIONS.map((option) => (
+              <Select.Option
+                key={option.label}
+                label={option.label}
+                value={option.label}
+              />
+            ))}
+            <Select.Option
+              label="Custom range…"
+              value={CUSTOM_TIME_RANGE_VALUE}
+            />
+          </Select>
+        </div>
+      </TimeRangeControlShell>
+      {customEditorOpen && (
+        <Modal
+          onRequestClose={() => setCustomEditorOpen(false)}
+          open={customEditorOpen}
+          returnFocus={() => customEditorTriggerRef.current?.focus()}
+          style={{ maxWidth: "calc(100vw - 32px)", width: "440px" }}
+        >
+          <Modal.Header title="Choose dashboard time range" />
+          <Modal.Body>
+            <TimeRangeEditor>
+              <RadioBar
+                aria-label="Custom time range mode"
+                inline
+                onChange={(_event, { value }) => {
+                  setEditorError(null);
+                  setDraft((current) => ({
+                    ...current,
+                    mode: value as TimeRangeEditorMode,
+                  }));
+                }}
+                value={draft.mode}
+              >
+                <RadioBar.Option label="Relative" value="relative" />
+                <RadioBar.Option label="Absolute" value="absolute" />
+              </RadioBar>
+              {draft.mode === "relative" ? (
+                <div className="scd-time-range-editor-fields">
+                  <div className="scd-time-range-editor-field">
+                    <label htmlFor="custom-time-earliest">Earliest</label>
+                    <input
+                      id="custom-time-earliest"
+                      onChange={(event) =>
+                        setDraft((current) => ({
+                          ...current,
+                          earliest: event.target.value,
+                        }))
+                      }
+                      spellCheck={false}
+                      value={draft.earliest}
+                    />
+                  </div>
+                  <div className="scd-time-range-editor-field">
+                    <label htmlFor="custom-time-latest">Latest</label>
+                    <input
+                      id="custom-time-latest"
+                      onChange={(event) =>
+                        setDraft((current) => ({
+                          ...current,
+                          latest: event.target.value,
+                        }))
+                      }
+                      spellCheck={false}
+                      value={draft.latest}
+                    />
+                  </div>
+                  <p className="scd-time-range-editor-help">
+                    Use Splunk expressions such as -24h@h, -7d@d, @d, or now.
+                  </p>
+                </div>
+              ) : (
+                <div className="scd-time-range-editor-fields">
+                  <div className="scd-time-range-editor-field">
+                    <label htmlFor="custom-time-from">From</label>
+                    <input
+                      id="custom-time-from"
+                      onChange={(event) =>
+                        setDraft((current) => ({
+                          ...current,
+                          from: event.target.value,
+                        }))
+                      }
+                      type="datetime-local"
+                      value={draft.from}
+                    />
+                  </div>
+                  <div className="scd-time-range-editor-field">
+                    <label htmlFor="custom-time-to">To</label>
+                    <input
+                      id="custom-time-to"
+                      onChange={(event) =>
+                        setDraft((current) => ({
+                          ...current,
+                          to: event.target.value,
+                        }))
+                      }
+                      type="datetime-local"
+                      value={draft.to}
+                    />
+                  </div>
+                </div>
+              )}
+              {editorError && (
+                <div role="alert">
+                  <Message type="error">{editorError}</Message>
+                </div>
+              )}
+            </TimeRangeEditor>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button
+              appearance="secondary"
+              label="Cancel"
+              onClick={() => setCustomEditorOpen(false)}
+            />
+            <Button label="Apply range" onClick={applyCustomRange} />
+          </Modal.Footer>
+        </Modal>
+      )}
+    </>
+  );
+};
 
 // =============================================================================
 // Auto-refresh
@@ -963,6 +1359,11 @@ const SECTION_ICON_COMPONENTS: Record<WorkspaceSectionIcon, SuiIcon> = {
   "node-model": NodeModel,
   "wall-bricks": WallBricks,
   "robot-face-wrench": RobotFaceWrench,
+  "fingerprint-nodes": FingerprintNodes,
+  "server-brackets": ServerBrackets,
+  "globe-division": GlobeDivision,
+  "column-arrows-left-right": ColumnArrowsLeftRight,
+  "robot-face-sparkle": RobotFaceSparkle,
   "shield-check": ShieldKeyhole,
   "server-cog": Servers,
   network: NodeModel,
@@ -4945,28 +5346,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               onChange={updateMapLayout}
             />
           </div>
-          <Select
-            appearance="subtle"
-            data-shortcut-search
-            inline
-            labelText="Dashboard time range"
-            onChange={(_event, { value }) => {
-              const next = TIME_RANGE_OPTIONS.find(
-                (option) => option.label === String(value),
-              );
-              if (next) setTimeRange(next);
-            }}
-            style={{ width: HEADER_TIME_RANGE_WIDTH_PX }}
-            value={timeRange.label}
-          >
-            {TIME_RANGE_OPTIONS.map((option) => (
-              <Select.Option
-                key={option.label}
-                label={option.label}
-                value={option.label}
-              />
-            ))}
-          </Select>
+          <TimeRangeControl range={timeRange} onChange={setTimeRange} />
           <Select
             appearance="subtle"
             className="scd-header-refresh-rate"

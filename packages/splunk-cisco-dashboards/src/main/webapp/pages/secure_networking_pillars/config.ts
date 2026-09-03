@@ -8,11 +8,11 @@ export type PillarId =
     | 'agentic-ops';
 
 export type PillarIconName =
-    | 'shield-keyhole'
-    | 'servers'
-    | 'node-model'
-    | 'wall-bricks'
-    | 'robot-face-wrench';
+    | 'fingerprint-nodes'
+    | 'server-brackets'
+    | 'globe-division'
+    | 'column-arrows-left-right'
+    | 'robot-face-sparkle';
 
 export interface PillarDefinition {
     id: PillarId;
@@ -94,7 +94,7 @@ export const PILLARS: readonly PillarDefinition[] = [
         description:
             'Connect identity, posture, policy, and response signals across the access journey.',
         studioView: 'sn_zta_posture',
-        icon: 'shield-keyhole',
+        icon: 'fingerprint-nodes',
         journey: ['ISE authentication', 'Duo MFA', 'Private access', 'Remote access'],
         implemented: true,
     },
@@ -106,7 +106,7 @@ export const PILLARS: readonly PillarDefinition[] = [
         description:
             'Unify infrastructure assurance, exposure, and operational control signals.',
         studioView: 'sn_secure_infrastructure_posture',
-        icon: 'servers',
+        icon: 'server-brackets',
         journey: [
             'Data center assurance',
             'Wireless coverage',
@@ -123,7 +123,7 @@ export const PILLARS: readonly PillarDefinition[] = [
         description:
             'Connect segmentation posture, trust boundaries, and enforcement coverage at scale.',
         studioView: 'sn_segmentation_readiness',
-        icon: 'node-model',
+        icon: 'globe-division',
         journey: [
             'Hardware baseline',
             'SGT assignment',
@@ -140,7 +140,7 @@ export const PILLARS: readonly PillarDefinition[] = [
         description:
             'Unify firewall posture, enforcement, and workload protection across the hybrid mesh.',
         studioView: 'sn_hmf_enforcement',
-        icon: 'wall-bricks',
+        icon: 'column-arrows-left-right',
         journey: [
             'Firewall coverage',
             'Unified enforcement',
@@ -157,7 +157,7 @@ export const PILLARS: readonly PillarDefinition[] = [
         description:
             'Coordinate test health, path quality, routing instability, and AI Defense signals.',
         studioView: 'sn_agentic_ops_operational_intelligence',
-        icon: 'robot-face-wrench',
+        icon: 'robot-face-sparkle',
         journey: ['Test health', 'Path quality', 'App availability', 'Routing stability'],
         implemented: true,
     },

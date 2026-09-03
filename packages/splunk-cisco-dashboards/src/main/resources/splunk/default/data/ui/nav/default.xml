@@ -11,7 +11,7 @@
         from one dashboard into a complete journey without changing the
         primary navigation structure.
     -->
-    <collection label="Zero Trust Access" icon="Fingerprint">
+    <collection label="Zero Trust Access" icon="FingerprintNodes">
         <a href="dashboard_manager#/sn_zta_posture">Zero Trust Posture</a>
         <divider />
         <a href="dashboard_manager#/sn_zta_authentication_policy_enforcement">Authentication and Policy Enforcement</a>
@@ -21,27 +21,27 @@
         <a href="dashboard_manager#/sn_zta_ravpn_sessions_and_posture">Remote Access VPN (RaVPN) Sessions and Posture</a>
     </collection>
 
-    <collection label="Secure Infrastructure" icon="NetworkDevices">
+    <collection label="Secure Infrastructure" icon="ServerBrackets">
         <a href="dashboard_manager#/sn_secure_infrastructure_posture">Infrastructure Posture</a>
         <divider />
         <a href="dashboard_manager#/sn_secure_infrastructure_status">Secure Infrastructure Status</a>
         <a href="dashboard_manager#/sn_hmf_sdwan_network_health">SD-WAN and Network Health Monitoring</a>
     </collection>
 
-    <collection label="Scalable Network Segmentation" icon="Globe">
+    <collection label="Scalable Network Segmentation" icon="GlobeDivision">
         <a href="dashboard_manager#/sn_segmentation_readiness">Segmentation Readiness</a>
         <divider />
         <a href="dashboard_manager#/sn_segmentation_operations">Segmentation Operations</a>
     </collection>
 
-    <collection label="Hybrid Mesh Firewalling" icon="ArrowsDoubleLeftRight">
+    <collection label="Hybrid Mesh Firewalling" icon="ColumnArrowsLeftRight">
         <a href="dashboard_manager#/sn_hmf_enforcement">Hybrid Mesh Enforcement</a>
         <divider />
         <a href="dashboard_manager#/sn_hmf_threat_detection_enforcement">Threat Detection and Enforcement</a>
         <a href="dashboard_manager#/sn_hmf_dlp_cloud_native_security">DLP and Cloud Native Security</a>
     </collection>
 
-    <collection label="Agentic Ops" icon="RobotAgent">
+    <collection label="Agentic Ops" icon="RobotFaceSparkle">
         <a href="dashboard_manager#/sn_agentic_ops_operational_intelligence">Operational Intelligence</a>
         <a href="dashboard_manager#/sn_agentic_ops_secure_networking_assurance">Secure Networking Assurance</a>
         <divider />
