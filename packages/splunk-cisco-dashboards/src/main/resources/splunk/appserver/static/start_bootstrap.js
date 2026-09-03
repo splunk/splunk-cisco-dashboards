@@ -102,6 +102,17 @@ const SCD_SETUP_DEPENDENCIES = [
     impact: "Zero Trust, firewall, identity, and Security Operations panels",
   },
   {
+    id: "intersight-ta",
+    name: "Cisco Intersight Add-On for Splunk",
+    appIds: ["Splunk_TA_Cisco_Intersight"],
+    pattern: /^cisco:intersight(?::|$)/i,
+    importance: "required",
+    splunkbase:
+      "https://splunkbase.splunk.com/apps/#/search/Cisco%20Intersight%20Add-On/",
+    purpose: "Collects Intersight telemetry and provides the Cisco_Intersight data model.",
+    impact: "Secure Infrastructure inventory, hardware health, and audit panels",
+  },
+  {
     id: "meraki-ta",
     name: "Cisco Meraki Add-on for Splunk",
     appIds: ["Splunk_TA_cisco_meraki"],
@@ -176,6 +187,12 @@ const SCD_SETUP_CAPABILITIES = [
     name: "Data-center networking",
     pattern: /^cisco:(?:dc:)?(?:aci|nd|ndfc|nexus(?:9k)?)(?::|$)/i,
     impact: "Secure Infrastructure fabric, anomaly, and inventory",
+  },
+  {
+    id: "intersight",
+    name: "Cisco Intersight",
+    pattern: /^cisco:intersight(?::|$)/i,
+    impact: "Secure Infrastructure inventory, hardware health, and audit",
   },
   {
     id: "security",

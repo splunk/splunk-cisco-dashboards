@@ -473,7 +473,7 @@ const dataModelRequirements = requirementObjects.map((source) => {
     ...(applicableCapabilities ? { applicableCapabilities } : {}),
   };
 });
-assert.equal(dataModelRequirements.length, 13);
+assert.equal(dataModelRequirements.length, 14);
 
 const dataCenterModels = dataModelRequirements
   .filter((requirement) =>
@@ -499,6 +499,7 @@ const nonDataCenterCapabilities = new Set([
   "enterprise-networking",
   "identity",
   "security",
+  "intersight",
   "thousandeyes",
 ]);
 const withoutDataCenterModels = selectApplicableDataModelRequirements(
@@ -510,6 +511,7 @@ assert.deepEqual(
   [
     "Cisco_Catalyst_App",
     "Cisco_Security",
+    "Cisco_Intersight",
     "Cisco_ThousandEyes",
     "Authentication",
     "Network_Traffic",
@@ -517,6 +519,17 @@ assert.deepEqual(
   "A completed discovery without DC evidence must omit every DC Networking model",
 );
 
+assert.deepEqual(
+  Array.from(
+    selectApplicableDataModelRequirements(
+      dataModelRequirements,
+      new Set(["intersight"]),
+    ),
+    (requirement) => requirement.model,
+  ),
+  ["Cisco_Intersight", "Authentication", "Network_Traffic"],
+  "Intersight data must require its vendor model and the CIM baseline",
+);
 assert.deepEqual(
   Array.from(
     selectApplicableDataModelRequirements(

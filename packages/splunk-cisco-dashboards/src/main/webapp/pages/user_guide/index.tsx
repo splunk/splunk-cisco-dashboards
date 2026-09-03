@@ -515,6 +515,12 @@ const macroFamilies = [
     note: "Used by the Cisco Security Cloud app data models.",
   },
   {
+    app: "Splunk_TA_Cisco_Intersight",
+    format: "index IN (idx1, idx2)",
+    examples: "cisco_intersight_index",
+    note: "Used by the Cisco Intersight data model and its tstats-backed diagnostics.",
+  },
+  {
     app: "ta_cisco_thousandeyes",
     format: "(index=idx1 OR index=idx2)",
     examples:
@@ -531,6 +537,15 @@ const dependencyApps = [
     models: "Cisco_Security",
     usage:
       "Required for Cisco Security Cloud data model macros and security model-backed content.",
+  },
+  {
+    name: "Cisco Intersight Add-On for Splunk",
+    folder: "Splunk_TA_Cisco_Intersight",
+    splunkbase:
+      "https://splunkbase.splunk.com/apps/#/search/Cisco%20Intersight%20Add-On/",
+    models: "Cisco_Intersight",
+    usage:
+      "Collects Intersight telemetry and provides the Cisco_Intersight model used for acceleration readiness and model-coverage diagnostics.",
   },
   {
     name: "Cisco ThousandEyes App for Splunk",
@@ -1157,12 +1172,17 @@ export default function UserGuidePage(): JSX.Element {
                 </table>
               </div>
               <p className="mt-4 text-sm leading-6 sui-color-default">
-                Splunk Secure Networking Essentials currently uses the Cisco
-                Security Cloud and Cisco ThousandEyes data models, and will use
-                the Cisco_Catalyst_App data model from Cisco Enterprise
-                Networking for Splunk Platform. For best performance, the data
-                models in those three Cisco apps are expected to be accelerated
-                when you enable their related content.
+                Splunk Secure Networking Essentials uses the Cisco Security
+                Cloud, Cisco Intersight, Cisco ThousandEyes, and Cisco Enterprise
+                Networking data models. For best performance, accelerate each
+                applicable model when you enable its related content.
+              </p>
+              <p className="mt-3 text-sm leading-6 sui-color-default">
+                Search selection follows a portability-first order: use an
+                accelerated CIM model when it preserves the required meaning and
+                fields, use a Cisco app or add-on model for vendor-specific
+                coverage, and use raw indexed events only when neither model can
+                represent the search faithfully.
               </p>
             </Section>
 
@@ -1248,8 +1268,8 @@ export default function UserGuidePage(): JSX.Element {
                   newly added index macros appear in the scan without updating
                   a hardcoded list. It also centralizes companion macro tuning,
                   including Cisco Data Center Networking, Cisco Security Cloud,
-                  and ThousandEyes definitions, so their dashboards are ready
-                  when you open them.
+                  Cisco Intersight, and ThousandEyes definitions, so their
+                  dashboards are ready when you open them.
                 </p>
                 <p className="m-0">
                   CIM discovery is intentionally separate because it uses
@@ -2109,6 +2129,14 @@ iseval = 0`}</CodeBlock>
                   reusable searches instead of visualizations.
                 </InfoCard>
                 <InfoCard title="Searchbase and tile selection">
+                  Cisco Security model coverage now includes FTD total-event,
+                  connection-application, file-versus-malware, advanced-logging,
+                  and DNS query-type summaries. Guided Setup detects Intersight
+                  sourcetypes, includes <InlineCode>Cisco_Intersight</InlineCode>{" "}
+                  in acceleration readiness, and provides a root-versus-child
+                  coverage diagnostic. Field-dependent Intersight panels remain
+                  raw when their model children cannot preserve the required
+                  fields.
                   The IOS-XR CPU and interface-error anomaly searches now use
                   native sample-count, mean, standard-deviation, and z-score
                   baselines. They no longer require Splunk MLTK or pre-trained

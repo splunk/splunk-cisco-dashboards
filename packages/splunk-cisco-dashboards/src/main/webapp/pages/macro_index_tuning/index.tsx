@@ -94,7 +94,7 @@ const DATA_MODEL_ACCELERATION_SEARCH = `
 | rename field.* AS *
 | rename acceleration.* AS *
 | stats last(disabled) AS disabled last(acceleration) AS acceleration last(allow_old_summaries) AS allow_old_summaries last(earliest_time) AS earliest_time by app title
-| search (app=Splunk_SA_CIM title IN (Authentication, Network_Traffic)) OR app IN (CiscoSecurityCloud, ta_cisco_thousandeyes, cisco-catalyst-app, cisco_dc_networking_app_for_splunk)
+| search (app=Splunk_SA_CIM title IN (Authentication, Network_Traffic)) OR app IN (CiscoSecurityCloud, Splunk_TA_Cisco_Intersight, ta_cisco_thousandeyes, cisco-catalyst-app, cisco_dc_networking_app_for_splunk)
 | sort 0 app title
 | table app title acceleration allow_old_summaries earliest_time disabled
 `;
@@ -649,6 +649,14 @@ const CORE_DATA_MODEL_REQUIREMENTS: readonly DataModelRequirement[] = [
     applicableCapabilities: ["security"],
   },
   {
+    key: "intersight",
+    label: "Cisco Intersight",
+    app: INTERSIGHT_APP_NAME,
+    model: "Cisco_Intersight",
+    priority: "required",
+    applicableCapabilities: ["intersight"],
+  },
+  {
     key: "thousandeyes",
     label: "Cisco ThousandEyes",
     app: THOUSAND_EYES_APP_NAME,
@@ -753,6 +761,7 @@ export const selectApplicableDataModelRequirements = (
 const DATA_MODEL_APP_LABELS: Readonly<Record<string, string>> = {
   [CATALYST_APP_NAME]: "Cisco Enterprise Networking",
   [CISCO_SECURITY_APP_NAME]: "Cisco Security Cloud",
+  [INTERSIGHT_APP_NAME]: "Cisco Intersight Add-On for Splunk",
   [THOUSAND_EYES_APP_NAME]: "Cisco ThousandEyes",
   [DATA_CENTER_NETWORKING_APP_NAME]: "Cisco Data Center Networking",
   [CIM_APP_NAME]: "Splunk Common Information Model",
@@ -761,6 +770,7 @@ const DATA_MODEL_APP_LABELS: Readonly<Record<string, string>> = {
 const DATA_MODEL_APP_ORDER = [
   CATALYST_APP_NAME,
   CISCO_SECURITY_APP_NAME,
+  INTERSIGHT_APP_NAME,
   THOUSAND_EYES_APP_NAME,
   DATA_CENTER_NETWORKING_APP_NAME,
   CIM_APP_NAME,

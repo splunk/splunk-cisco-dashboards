@@ -27,10 +27,38 @@ const tunerRender = fs.readFileSync(
   path.join(packageRoot, "src/main/webapp/pages/macro_index_tuning/render.tsx"),
   "utf8",
 );
+const searchbase = fs.readFileSync(
+  path.join(packageRoot, "src/main/resources/splunk/default/searchbase.conf"),
+  "utf8",
+);
+const userGuide = fs.readFileSync(
+  path.join(packageRoot, "src/main/webapp/pages/user_guide/index.tsx"),
+  "utf8",
+);
+const readme = fs.readFileSync(path.join(packageRoot, "README.md"), "utf8");
 const { browseAppsUrl } = require(path.join(
   packageRoot,
   "src/main/resources/splunk/appserver/static/start_bootstrap.js",
 ));
+
+const searchbaseStanza = (name) => {
+  const header = `[${name}]\n`;
+  const start = searchbase.indexOf(header);
+  assert.notEqual(start, -1, `Expected Searchbase stanza ${name}`);
+  const bodyStart = start + header.length;
+  const nextStanza = searchbase.indexOf("\n[", bodyStart);
+  return searchbase.slice(
+    bodyStart,
+    nextStanza === -1 ? searchbase.length : nextStanza,
+  );
+};
+
+const searchbaseSearch = (name) => {
+  const body = searchbaseStanza(name);
+  const searchStart = body.indexOf("search = ");
+  assert.notEqual(searchStart, -1, `Expected ${name} to define a search`);
+  return body.slice(searchStart + "search = ".length).trimEnd().replace(/\\\n/g, "\n");
+};
 
 const expectedSteps = [
   "Welcome",
@@ -567,13 +595,17 @@ test("CIM review table fits its panel without forced horizontal scrolling", () =
   assert.doesNotMatch(cimSetupBranch, /horizontalOverflow="scroll"/);
 });
 
-test("the supported acceleration catalog keeps all thirteen dashboard data models", () => {
+test("the supported acceleration catalog keeps all fourteen dashboard data models", () => {
   const requirementsStart = tuner.indexOf(
     "const CORE_DATA_MODEL_REQUIREMENTS:",
   );
   const requirementsEnd = tuner.indexOf("] as const;", requirementsStart);
   const requirements = tuner.slice(requirementsStart, requirementsEnd);
-  assert.equal((requirements.match(/priority: "required"/g) || []).length, 13);
+  assert.equal((requirements.match(/priority: "required"/g) || []).length, 14);
+  assert.match(
+    requirements,
+    /model: "Cisco_Intersight",\s*priority: "required",\s*applicableCapabilities: \["intersight"\]/s,
+  );
   assert.match(
     requirements,
     /model: "Authentication",\s*priority: "required"/s,
@@ -586,4 +618,120 @@ test("the supported acceleration catalog keeps all thirteen dashboard data model
     tuner,
     /selectApplicableDataModelRequirements\([\s\S]*?readDetectedSetupCapabilityIds\(\)/,
   );
+});
+
+test("Cisco Security model searches use exact populated datasets and fields", () => {
+  assert.match(
+    searchbaseSearch("secure_networking_fmc_total_events_count"),
+    /FROM datamodel=Cisco_Security WHERE nodename=Secure_Firewall_Dataset sourcetype="cisco:ftd:\*"/,
+  );
+  assert.doesNotMatch(
+    searchbaseSearch("secure_networking_fmc_total_events_count"),
+    /`index_firewall`/,
+  );
+
+  const applications = searchbaseSearch(
+    "secure_networking_fmc_connection_application_inventory_dm",
+  );
+  assert.match(
+    applications,
+    /nodename=Secure_Firewall_Dataset\.Connection_Events/,
+  );
+  for (const field of ["client_application", "initiator_ip", "responder_ip"]) {
+    assert.match(applications, new RegExp(`Secure_Firewall_Dataset\\.${field}`));
+  }
+
+  const fileMalware = searchbaseSearch(
+    "secure_networking_fmc_file_malware_volume_dm",
+  );
+  assert.match(fileMalware, /nodename=Secure_Firewall_Dataset\.File_Events/);
+  assert.match(fileMalware, /nodename=Secure_Firewall_Dataset\.Malware_Events/);
+  assert.match(
+    searchbaseSearch("network_intelligence_ftd_advanced_logging_coverage_dm"),
+    /nodename=Secure_Firewall_Dataset\.Advanced_Logging BY sourcetype/,
+  );
+
+  const dnsQueryTypes = searchbaseSearch(
+    "network_intelligence_ftd_dns_query_type_volume_dm",
+  );
+  assert.match(
+    dnsQueryTypes,
+    /nodename=Secure_Firewall_Dataset\.DNS_Events[\s\S]*Secure_Firewall_Dataset\.qtype_name/,
+  );
+  assert.doesNotMatch(dnsQueryTypes, /initiator_ip|responder_ip/);
+});
+
+test("CIM is used only where it preserves the existing search semantics", () => {
+  const blockedCount = searchbaseSearch("secure_networking_fmc_blocked_count");
+  assert.match(blockedCount, /AC_RuleAction="Block"/);
+  assert.doesNotMatch(blockedCount, /datamodel=Network_Traffic/);
+
+  assert.match(
+    userGuide,
+    /use an[\s\S]*accelerated CIM model when it preserves the required meaning and[\s\S]*fields[\s\S]*use a Cisco app or add-on model for vendor-specific[\s\S]*coverage[\s\S]*use raw indexed events only when neither model can[\s\S]*represent the search faithfully/,
+  );
+  assert.match(
+    readme,
+    /use CIM when it preserves the[\s\S]*required semantics[\s\S]*use Cisco app or add-on models for vendor-specific fields[\s\S]*retain raw searches/,
+  );
+});
+
+test("Intersight setup and diagnostics expose the model without hiding child coverage gaps", () => {
+  assert.match(
+    tuner,
+    /app IN \(CiscoSecurityCloud, Splunk_TA_Cisco_Intersight, ta_cisco_thousandeyes/,
+  );
+  assert.match(
+    tuner,
+    /model: "Cisco_Intersight",\s*priority: "required",\s*applicableCapabilities: \["intersight"\]/s,
+  );
+  assert.match(
+    bootstrap,
+    /id: "intersight-ta",[\s\S]*appIds: \["Splunk_TA_Cisco_Intersight"\][\s\S]*Cisco_Intersight data model/,
+  );
+  assert.match(
+    bootstrap,
+    /id: "intersight",\s*name: "Cisco Intersight",\s*pattern: \/\^cisco:intersight/s,
+  );
+
+  const coverage = searchbaseSearch(
+    "secure_networking_intersight_data_model_coverage",
+  );
+  for (const node of [
+    "cisco_intersight",
+    "cisco_intersight.cisco_intersight_serverProfiles",
+    "cisco_intersight.cisco_intersight_condAlarms",
+    "cisco_intersight.cisco_intersight_network",
+    "cisco_intersight.cisco_intersight_memory",
+    "cisco_intersight.cisco_intersight_cpu_utilization",
+  ]) {
+    assert.match(coverage, new RegExp(`nodename=${node.replaceAll(".", "\\.")}`));
+  }
+  assert.match(coverage, /No events match this model child/);
+  assert.match(
+    userGuide,
+    /folder: "Splunk_TA_Cisco_Intersight"[\s\S]*models: "Cisco_Intersight"/,
+  );
+});
+
+test("field-dependent Intersight searches stay raw until model children are populated", () => {
+  const existingIntersightSearches = [
+    "secure_networking_intersight_advisory_exposure",
+    "secure_networking_intersight_eol_field_notice_milestones",
+    "secure_networking_intersight_hcl_validation_status",
+    "secure_networking_intersight_server_physical_health",
+    "secure_networking_intersight_fabric_interconnect_health",
+    "secure_networking_intersight_network_port_health",
+    "secure_networking_intersight_memory_ecc_errors",
+    "secure_networking_intersight_fan_temperature_health",
+    "secure_networking_intersight_target_connection_health",
+    "secure_networking_intersight_audit_trail_by_user",
+    "secure_networking_intersight_profile_deployment_state",
+  ];
+
+  for (const name of existingIntersightSearches) {
+    const search = searchbaseSearch(name);
+    assert.match(search, /`index_intersight`/);
+    assert.doesNotMatch(search, /datamodel=Cisco_Intersight/);
+  }
 });

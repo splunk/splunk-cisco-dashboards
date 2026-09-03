@@ -18,9 +18,15 @@ networking pillars and workplace scenarios.
   time-range selector, including preset, relative, date-range, date-and-time,
   and advanced modes.
 - Made operational trend buckets follow the active dashboard time range across
-  Agentic SOC, Catalyst Center, ThousandEyes, security, data-center, and IOS-XR
+  Agentic SOC, building and workplace intelligence, Catalyst Center,
+  ThousandEyes, Secure Networking Assurance, security, data-center, and IOS-XR
   searches while retaining fixed grids for forecasts and interval-dependent
   calculations.
+- Expanded Cisco Security model coverage with FTD event-volume, application,
+  file/malware, advanced-logging, and DNS summaries. Guided Setup now detects
+  Cisco Intersight data, includes its model in acceleration readiness, and ships
+  a root-versus-child coverage diagnostic while retaining field-dependent raw
+  searches until their model children preserve the required data.
 - Focused the Insights Workspace's App details and upgrades action on exact
   Secure Networking Essentials catalog results, filtered to the app's IT
   operations, network security, developer-support, and CIM 8.x metadata.
@@ -176,11 +182,14 @@ networking pillars and workplace scenarios.
   Guide, including the same official Splunk Sun and Moon icons. Setup now uses
   the matching Splunk Sun icon beside its Light mode control in both the static
   readiness steps and the integrated React steps.
-- Expanded setup performance readiness to cover 13 supported Cisco data models,
-  including the eight DC Networking models plus CIM Authentication and Network
-  Traffic, while requiring product-specific models only when matching data is
-  detected. The compact inventory and accelerated-only gate now omit DC models
-  when no DC Networking data is present.
+- Expanded setup performance readiness to cover 14 supported data models,
+  including Cisco Intersight, the eight DC Networking models, and CIM
+  Authentication and Network Traffic, while requiring product-specific models
+  only when matching data is detected. The compact inventory and
+  accelerated-only gate omit product models when their matching data is absent.
+- Documented the search-source preference: use CIM when it preserves the
+  required semantics, use Cisco app or add-on models for vendor-specific fields,
+  and retain raw searches when neither model can represent the panel faithfully.
 - Prevented parameterized system helpers and foreign app macros from entering
   setup routing SPL, and kept Step 4 incomplete until its routing scan succeeds.
 - Added index multiselects that build routing macro definitions automatically,

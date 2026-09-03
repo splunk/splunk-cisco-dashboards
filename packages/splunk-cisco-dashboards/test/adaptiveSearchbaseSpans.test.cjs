@@ -156,6 +156,43 @@ for (const name of pickerAdaptiveTimecharts) {
   }
 }
 
+const pickerAdaptiveBins = [
+  "building_resilience_user_presence_trend",
+  "catalyst_center_ap_reachability",
+  "catalyst_center_client_activity_and_onboarding",
+  "catalyst_center_device_aggregate_throughput_trend",
+  "catalyst_center_wired_client_trend",
+  "dashboard_building_v1_device_presence_trend",
+  "dashboard_building_v1_occupancy_trend",
+  "dashboard_building_v1_webex_people_trend",
+  "dashboard_it_health_v1_config_trend",
+  "dashboard_netops_readiness_v1_q4_onboarding_per_site",
+  "dashboard_spaces_intelligence_v1_capacity_trend",
+  "dashboard_spaces_intelligence_v1_convergence_health",
+  "dashboard_spaces_intelligence_v1_env_occupancy_overlay",
+  "dashboard_spaces_intelligence_v1_issues_with_occupancy",
+  "dashboard_spaces_intelligence_v1_onboarding_vs_occupancy",
+  "dashboard_spaces_intelligence_v1_operations_surge",
+  "dashboard_spaces_intelligence_v1_wifi_with_occupancy",
+  "dashboard_workplace_spog_v1_t3_network_power_kpi",
+  "enterprise_ds_wired_client_trend_24h",
+  "enterprise_ds_wireless_client_trend_24h",
+  "secure_networking_assurance_contextual_risk_trend",
+  "secure_networking_assurance_quality_trend",
+];
+
+for (const name of pickerAdaptiveBins) {
+  const temporalBins = commands(name, "bin").filter((command) =>
+    /\b_time\b/i.test(command),
+  );
+  assert.ok(temporalBins.length > 0, `${name} must bucket its time-series input`);
+  assert.doesNotMatch(
+    searchText(name),
+    /\bspan\s*=/i,
+    `${name} must let Splunk choose its bin size from the dispatch range`,
+  );
+}
+
 const stanzaParts = searchbase.split(/^\[([^\]]+)\]\n/m);
 const numericSpanStanzas = (commandName) => {
   const result = new Set();
@@ -210,10 +247,6 @@ assert.match(
   searchText("dashboard_netops_readiness_v1_score_nrs_trend"),
   /bin _time span=1h/g,
 );
-assert.match(
-  searchText("catalyst_center_device_aggregate_throughput_trend"),
-  /bin _time span=15m/,
-);
 assert.equal(
   (searchText("dc_networking_vmware_esx_server_farm").match(/bin _time span=1m/g) || [])
     .length,
@@ -240,11 +273,17 @@ assert.match(
   /timechart avg\(avg_load_s\)/,
 );
 
-for (const name of [
+const pickerAdaptiveBinNames = new Set(pickerAdaptiveBins);
+for (const name of new Set([
   ...pickerAdaptiveTstats.filter(
     (stanza) => stanza !== "executive_summary_healthy_device_count",
   ),
   ...pickerAdaptiveTimecharts,
-]) {
+])) {
+  if (pickerAdaptiveBinNames.has(name)) continue;
   assert.match(stanzaBody(name), /^date_updated = 2026-09-02$/m);
+}
+
+for (const name of pickerAdaptiveBins) {
+  assert.match(stanzaBody(name), /^date_updated = 2026-09-03$/m);
 }
