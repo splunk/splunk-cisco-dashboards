@@ -10,6 +10,10 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Preserved DensityFunction anomaly results across seven Cisco Spaces,
+  ThousandEyes, and building-resilience searches by preventing Splunk's search
+  optimizer from pruning MLTK-generated `IsOutlier(...)` fields during final
+  output projection.
 - Updated the Secure Networking workspace sidebar, pillar tab menu, and
   Dashboard Studio pillar headers to use the new Fingerprint Nodes, Server
   Brackets, Globe Division, Column Arrows Left-Right, and Robot Face Sparkle
