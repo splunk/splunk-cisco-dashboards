@@ -113,14 +113,14 @@ assert.doesNotMatch(
   /label: "Last 90 days"/,
   "The quick selector must reserve its compact layout for the approved ranges",
 );
-assert.match(executiveInsights, /Quick dashboard time range/);
-assert.match(executiveInsights, /SlidersTripleHorizontal/);
-assert.match(executiveInsights, /Custom range/);
-assert.match(executiveInsights, /Custom time range mode/);
-assert.match(executiveInsights, /type="datetime-local"/);
-assert.match(executiveInsights, /scd-time-range-quick/);
-assert.match(executiveInsights, /scd-time-range-compact/);
-assert.match(executiveInsights, /SAFE_TIME_RANGE_PATTERN/);
+assert.match(executiveInsights, /@splunk\/react-time-range\/Dropdown/);
+assert.match(executiveInsights, /<TimeRangeDropdown/);
+assert.match(executiveInsights, /Today/);
+assert.match(executiveInsights, /presets=\{\[\.\.\.TIME_RANGE_PRESETS\]\}/);
+assert.doesNotMatch(
+  executiveInsights,
+  /scd-time-range-quick|Custom time range mode|type="datetime-local"/,
+);
 
 assert.ok(workspaceConfig.WORKSPACE_SOURCE_IDS.includes("agentic_soc"));
 for (const sectionId of [
@@ -432,21 +432,21 @@ for (const coverageTile of [
 
 const trendContracts = {
   agentic_soc_umbrella_unique_domains: {
-    valueField: "Peak15mUniqueDomains",
+    valueField: "PeakBucketUniqueDomains",
     sparkDataField: "UniqueDomains",
-    peakExpression: /eventstats max\(UniqueDomains\) as Peak15mUniqueDomains/,
+    peakExpression: /eventstats max\(UniqueDomains\) as PeakBucketUniqueDomains/,
   },
   agentic_soc_firewall_top_destination_ports: {
-    valueField: "Peak15mReportingDevices",
+    valueField: "PeakBucketReportingDevices",
     sparkDataField: "ReportingDevices",
     peakExpression:
-      /eventstats max\(ReportingDevices\) as Peak15mReportingDevices/,
+      /eventstats max\(ReportingDevices\) as PeakBucketReportingDevices/,
   },
   agentic_soc_unified_xdr_severity: {
-    valueField: "Peak15mObservedDevices",
+    valueField: "PeakBucketObservedDevices",
     sparkDataField: "ObservedDevices",
     peakExpression:
-      /eventstats max\(ObservedDevices\) as Peak15mObservedDevices/,
+      /eventstats max\(ObservedDevices\) as PeakBucketObservedDevices/,
   },
 };
 for (const [tileId, contract] of Object.entries(trendContracts)) {
@@ -456,8 +456,8 @@ for (const [tileId, contract] of Object.entries(trendContracts)) {
   assert.equal(overview.valueField, contract.valueField);
   assert.equal(overview.sparkDataField, contract.sparkDataField);
   assert.match(overview.subLabel, /peak/i);
-  assert.match(overview.subLabel, /15-minute/i);
-  assert.match(search, /BY _time span=15m/);
+  assert.match(overview.subLabel, /automatic/i);
+  assert.match(search, /BY _time span=auto/);
   assert.match(search, contract.peakExpression);
 }
 

@@ -11,6 +11,7 @@ import { DashboardContextProvider } from "@splunk/dashboard-context";
 import { DashboardCore } from "@splunk/dashboard-core";
 import EnterpriseViewOnlyPreset from "@splunk/dashboard-presets/EnterpriseViewOnlyPreset";
 import DotsThreeVertical from "@splunk/react-icons/DotsThreeVertical";
+import TimeRangeDropdown from "@splunk/react-time-range/Dropdown";
 import Badge from "@splunk/react-ui/Badge";
 import Button from "@splunk/react-ui/Button";
 import Card from "@splunk/react-ui/Card";
@@ -68,7 +69,6 @@ import {
   PanelRightClose,
   PanelTop,
   Sparkles,
-  SlidersTripleHorizontal,
   Globe,
   FingerprintNodes,
   ServerBrackets,
@@ -175,6 +175,7 @@ import { usePersistedSectionTileOrder } from "@/common/hooks/usePersistedSection
 import { usePersistedSectionHeights } from "@/common/hooks/usePersistedSectionHeights";
 import { usePersistedSectionPresentation } from "@/common/hooks/usePersistedSectionPresentation";
 import { usePersistedSearchConcurrency } from "@/common/hooks/usePersistedSearchConcurrency";
+import timeParser from "../dashboardbuilder/custominput/timeparser";
 import {
   getDefaultSignalTickerConfig,
   usePersistedSignalTicker,
@@ -247,7 +248,6 @@ import { cn } from "@/common/lib/utils";
 
 const APP_NAME = "splunk-cisco-dashboards";
 const WORKSPACE_MENU_WIDTH_PX = 200;
-const HEADER_TIME_RANGE_WIDTH_PX = 150;
 const HEADER_REFRESH_RATE_WIDTH_PX = 140;
 
 // Default subtitle shown beneath the workspace title when no per-user
@@ -403,49 +403,115 @@ const TIME_RANGE_OPTIONS: TimeRange[] = [
   },
 ];
 const DEFAULT_TIME_RANGE_LABEL = "Last 24 hours";
-const CUSTOM_TIME_RANGE_VALUE = "__custom_time_range__";
-const SAFE_TIME_RANGE_PATTERN = /^[A-Za-z0-9@._:+\-*/ ]+$/;
+const TIME_RANGE_PRESETS = [
+  { label: "Today", earliest: "@d", latest: "now" },
+  { label: "Week to date", earliest: "@w0", latest: "now" },
+  { label: "Business week to date", earliest: "@w1", latest: "now" },
+  { label: "Month to date", earliest: "@mon", latest: "now" },
+  { label: "Year to date", earliest: "@y", latest: "now" },
+  { label: "Yesterday", earliest: "-1d@d", latest: "@d" },
+  { label: "Previous week", earliest: "-7d@w0", latest: "@w0" },
+  {
+    label: "Previous business week",
+    earliest: "-6d@w1",
+    latest: "-1d@w6",
+  },
+  { label: "Previous month", earliest: "-1mon@mon", latest: "@mon" },
+  { label: "Previous year", earliest: "-1y@y", latest: "@y" },
+  { label: "Last 15 minutes", earliest: "-15m", latest: "now" },
+  { label: "Last 60 minutes", earliest: "-60m@m", latest: "now" },
+  { label: "Last 4 hours", earliest: "-4h@m", latest: "now" },
+  { label: "Last 24 hours", earliest: "-24h@h", latest: "now" },
+  { label: "Last 7 days", earliest: "-7d@h", latest: "now" },
+  { label: "Last 30 days", earliest: "-30d@d", latest: "now" },
+  { label: "All time", earliest: "0", latest: "" },
+  // Keep the existing workspace shortcut available in the native preset panel.
+  { label: "Last 48 hours", earliest: "-48h@h", latest: "now" },
+] as const;
 
-type TimeRangeEditorMode = "relative" | "absolute";
-
-interface TimeRangeDraft {
-  mode: TimeRangeEditorMode;
-  earliest: string;
-  latest: string;
-  from: string;
-  to: string;
+interface TimeRangeChange {
+  earliest?: string | null;
+  latest?: string | null;
 }
 
-const toDateTimeLocalValue = (date: Date): string => {
-  const pad = (value: number): string => String(value).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
-    date.getDate(),
-  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-};
+interface TimeParseResult {
+  error?: Record<string, unknown>;
+  iso?: string;
+  time?: string;
+  displayValue?: string;
+}
 
-const parseDateTimeLocalValue = (value: string): Date | null => {
-  if (!value) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
-};
+const normalizeTimeParseResult = (
+  result: TimeParseResult,
+  fallbackTime: string,
+): TimeParseResult => ({
+  error: result.error
+    ? { message: String(result.error.message || result.error) }
+    : undefined,
+  iso: result.iso,
+  time: result.time || fallbackTime,
+  displayValue: result.displayValue,
+});
 
-const parseAbsoluteTime = (value: string): Date | null => {
-  if (!value || SAFE_TIME_RANGE_PATTERN.test(value) === false) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date;
-};
+const useTimeRangeParser = (): {
+  parseEarliest: TimeParseResult | undefined;
+  parseLatest: TimeParseResult | undefined;
+  handleRequestParseEarliest: (time: string) => void;
+  handleRequestParseLatest: (time: string) => void;
+} => {
+  const [parseEarliest, setParseEarliest] = useState<TimeParseResult>();
+  const [parseLatest, setParseLatest] = useState<TimeParseResult>();
+  const mountedRef = useRef(true);
+  const earliestRequestRef = useRef(0);
+  const latestRequestRef = useRef(0);
 
-const createTimeRangeDraft = (range: TimeRange): TimeRangeDraft => {
-  const from = parseAbsoluteTime(range.earliest);
-  const to = parseAbsoluteTime(range.latest);
-  const end = to ?? new Date();
-  const start = from ?? new Date(end.getTime() - range.spanSeconds * 1000);
+  useEffect(() => () => {
+    mountedRef.current = false;
+  }, []);
+
+  const handleRequestParseEarliest = useCallback((time: string) => {
+    const requestId = earliestRequestRef.current + 1;
+    earliestRequestRef.current = requestId;
+    void timeParser(time, "en_US")
+      .then((result: TimeParseResult) => {
+        if (mountedRef.current && requestId === earliestRequestRef.current) {
+          setParseEarliest(normalizeTimeParseResult(result, time));
+        }
+      })
+      .catch(() => {
+        if (mountedRef.current && requestId === earliestRequestRef.current) {
+          setParseEarliest({
+            error: { message: "The time string could not be parsed" },
+            time,
+          });
+        }
+      });
+  }, []);
+
+  const handleRequestParseLatest = useCallback((time: string) => {
+    const requestId = latestRequestRef.current + 1;
+    latestRequestRef.current = requestId;
+    void timeParser(time || "now", "en_US")
+      .then((result: TimeParseResult) => {
+        if (mountedRef.current && requestId === latestRequestRef.current) {
+          setParseLatest(normalizeTimeParseResult(result, time));
+        }
+      })
+      .catch(() => {
+        if (mountedRef.current && requestId === latestRequestRef.current) {
+          setParseLatest({
+            error: { message: "The time string could not be parsed" },
+            time,
+          });
+        }
+      });
+  }, []);
+
   return {
-    mode: from && to ? "absolute" : "relative",
-    earliest: range.earliest,
-    latest: range.latest,
-    from: toDateTimeLocalValue(start),
-    to: toDateTimeLocalValue(end),
+    parseEarliest,
+    parseLatest,
+    handleRequestParseEarliest,
+    handleRequestParseLatest,
   };
 };
 
@@ -454,7 +520,7 @@ const relativeRangeSpanSeconds = (
   fallback: number,
 ): number => {
   const match = earliest.trim().match(
-    /^-(\d+(?:\.\d+)?)(s|m|h|d|w)(?:@[A-Za-z]+)?$/i,
+  /^-(\d+(?:\.\d+)?)(s|m|h|d|w|mon|qtr|y)(?:@[A-Za-z0-9]+)?$/i,
   );
   if (!match) return fallback;
   const unitSeconds: Record<string, number> = {
@@ -463,99 +529,50 @@ const relativeRangeSpanSeconds = (
     h: 3600,
     d: 86400,
     w: 604800,
+    mon: 30 * 86400,
+    qtr: 90 * 86400,
+    y: 365 * 86400,
   };
   return Math.max(1, Math.round(Number(match[1]) * unitSeconds[match[2].toLowerCase()]));
 };
 
-const customAbsoluteLabel = (from: Date, to: Date): string =>
-  `Custom: ${from.toLocaleString([], {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  })} – ${to.toLocaleString([], {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  })}`;
-
-const TimeRangeControlShell = styled.div`
-  display: flex;
-  min-width: 0;
-  align-items: center;
-
-  .scd-time-range-quick {
-    display: flex;
-    align-items: center;
-    gap: ${variables.spacingXSmall};
+const spanSecondsForTimeRange = (
+  earliest: string,
+  latest: string,
+  fallback: number,
+): number => {
+  const start = new Date(earliest).getTime();
+  const end = new Date(latest).getTime();
+  if (Number.isFinite(start) && Number.isFinite(end) && end > start) {
+    return Math.max(1, Math.round((end - start) / 1000));
   }
+  return relativeRangeSpanSeconds(earliest, fallback);
+};
 
-  .scd-time-range-quick [role="menuitemradio"] {
-    min-width: 38px;
-    padding-inline: ${variables.spacingSmall};
-  }
-
-  .scd-time-range-compact {
-    display: none;
-  }
-
-  @media (max-width: 1319px) {
-    .scd-time-range-quick {
-      display: none;
-    }
-
-    .scd-time-range-compact {
-      display: block;
-    }
-  }
-`;
-
-const TimeRangeEditor = styled.div`
-  display: grid;
-  gap: ${variables.spacingMedium};
-  min-width: 0;
-
-  .scd-time-range-editor-fields {
-    display: grid;
-    gap: ${variables.spacingSmall};
-  }
-
-  .scd-time-range-editor-field {
-    display: grid;
-    gap: ${variables.spacingXSmall};
-  }
-
-  .scd-time-range-editor-field label {
-    color: ${variables.contentColorDefault};
-    font-size: ${variables.fontSizeSmall};
-    font-weight: ${variables.fontWeightSemiBold};
-  }
-
-  .scd-time-range-editor-field input {
-    box-sizing: border-box;
-    width: 100%;
-    min-height: 32px;
-    padding: 0 ${variables.spacingSmall};
-    border: 1px solid ${variables.borderColor};
-    border-radius: 4px;
-    background: ${variables.backgroundColor};
-    color: ${variables.contentColorDefault};
-    font: inherit;
-  }
-
-  .scd-time-range-editor-field input:focus-visible {
-    outline: none;
-    box-shadow: ${variables.focusShadow};
-  }
-
-  .scd-time-range-editor-help {
-    margin: 0;
-    color: ${variables.contentColorMuted};
-    font-size: ${variables.fontSizeSmall};
-    line-height: ${variables.lineHeight};
-  }
-`;
+const timeRangeFromChange = (
+  current: TimeRange,
+  data?: TimeRangeChange,
+): TimeRange => {
+  const earliest = data?.earliest ?? current.earliest;
+  const latest = data?.latest ?? current.latest;
+  const preset = TIME_RANGE_OPTIONS.find(
+    (option) => option.earliest === earliest && option.latest === latest,
+  );
+  if (preset) return preset;
+  const nativePreset = TIME_RANGE_PRESETS.find(
+    (option) => option.earliest === earliest && option.latest === latest,
+  );
+  return {
+    earliest,
+    latest,
+    label: nativePreset?.label ?? "Custom range",
+    spanSeconds: spanSecondsForTimeRange(
+      earliest,
+      latest,
+      current.spanSeconds,
+    ),
+  };
+};
 
 interface TimeRangeControlProps {
   range: TimeRange;
@@ -566,231 +583,29 @@ const TimeRangeControl: React.FC<TimeRangeControlProps> = ({
   range,
   onChange,
 }) => {
-  const [customEditorOpen, setCustomEditorOpen] = useState(false);
-  const [draft, setDraft] = useState<TimeRangeDraft>(() =>
-    createTimeRangeDraft(range),
-  );
-  const [editorError, setEditorError] = useState<string | null>(null);
-  const customEditorTriggerRef = useRef<HTMLElement | null>(null);
-  const isPreset = TIME_RANGE_OPTIONS.some((option) => option.label === range.label);
-
-  const openCustomEditor = useCallback((event?: React.SyntheticEvent) => {
-    if (event?.currentTarget instanceof HTMLElement) {
-      customEditorTriggerRef.current = event.currentTarget;
-    } else if (document.activeElement instanceof HTMLElement) {
-      customEditorTriggerRef.current = document.activeElement;
-    }
-    setDraft(createTimeRangeDraft(range));
-    setEditorError(null);
-    setCustomEditorOpen(true);
-  }, [range]);
-
-  const applyCustomRange = useCallback(() => {
-    if (draft.mode === "relative") {
-      const earliest = draft.earliest.trim();
-      const latest = draft.latest.trim();
-      if (
-        !earliest ||
-        !latest ||
-        earliest.length > 128 ||
-        latest.length > 128 ||
-        !SAFE_TIME_RANGE_PATTERN.test(earliest) ||
-        !SAFE_TIME_RANGE_PATTERN.test(latest)
-      ) {
-        setEditorError(
-          "Enter valid Splunk time expressions, such as -24h@h and now.",
-        );
-        return;
-      }
-      onChange({
-        earliest,
-        latest,
-        label: "Custom range",
-        spanSeconds: relativeRangeSpanSeconds(earliest, range.spanSeconds),
-      });
-    } else {
-      const from = parseDateTimeLocalValue(draft.from);
-      const to = parseDateTimeLocalValue(draft.to);
-      if (!from || !to || from >= to) {
-        setEditorError("Choose a start and end time, with the start before the end.");
-        return;
-      }
-      onChange({
-        earliest: from.toISOString(),
-        latest: to.toISOString(),
-        label: customAbsoluteLabel(from, to),
-        spanSeconds: Math.max(1, Math.round((to.getTime() - from.getTime()) / 1000)),
-      });
-    }
-    setCustomEditorOpen(false);
-  }, [draft, onChange, range.spanSeconds]);
-
-  const selectRange = useCallback(
-    (value: string) => {
-      if (value === CUSTOM_TIME_RANGE_VALUE) {
-        openCustomEditor();
-        return;
-      }
-      const next = TIME_RANGE_OPTIONS.find((option) => option.label === value);
-      if (next) onChange(next);
+  const timeRangeParser = useTimeRangeParser();
+  const handleChange = useCallback(
+    (_event: React.SyntheticEvent, data?: TimeRangeChange): void => {
+      onChange(timeRangeFromChange(range, data));
     },
-    [onChange, openCustomEditor],
+    [onChange, range],
   );
 
   return (
-    <>
-      <TimeRangeControlShell aria-label="Dashboard time range">
-        <div className="scd-time-range-quick">
-          <OneCdRadioBar
-            ariaLabel="Quick dashboard time range"
-            options={TIME_RANGE_OPTIONS.map((option) => ({
-              ariaLabel: option.label,
-              label: option.label.replace("Last ", "").replace(" hours", "h").replace(" days", "d"),
-              value: option.label,
-            }))}
-            value={isPreset ? range.label : ""}
-            onChange={selectRange}
-          />
-          <Button
-            appearance="subtle"
-            icon={<SlidersTripleHorizontal aria-hidden="true" />}
-            label="Open custom dashboard time range"
-            onClick={openCustomEditor}
-          />
-        </div>
-        <div className="scd-time-range-compact">
-          <Select
-            appearance="subtle"
-            data-shortcut-search
-            inline
-            labelText="Dashboard time range"
-            onChange={(_event, { value }) => selectRange(String(value))}
-            style={{ width: HEADER_TIME_RANGE_WIDTH_PX }}
-            value={isPreset ? range.label : CUSTOM_TIME_RANGE_VALUE}
-          >
-            {TIME_RANGE_OPTIONS.map((option) => (
-              <Select.Option
-                key={option.label}
-                label={option.label}
-                value={option.label}
-              />
-            ))}
-            <Select.Option
-              label="Custom range…"
-              value={CUSTOM_TIME_RANGE_VALUE}
-            />
-          </Select>
-        </div>
-      </TimeRangeControlShell>
-      {customEditorOpen && (
-        <Modal
-          onRequestClose={() => setCustomEditorOpen(false)}
-          open={customEditorOpen}
-          returnFocus={() => customEditorTriggerRef.current?.focus()}
-          style={{ maxWidth: "calc(100vw - 32px)", width: "440px" }}
-        >
-          <Modal.Header title="Choose dashboard time range" />
-          <Modal.Body>
-            <TimeRangeEditor>
-              <RadioBar
-                aria-label="Custom time range mode"
-                inline
-                onChange={(_event, { value }) => {
-                  setEditorError(null);
-                  setDraft((current) => ({
-                    ...current,
-                    mode: value as TimeRangeEditorMode,
-                  }));
-                }}
-                value={draft.mode}
-              >
-                <RadioBar.Option label="Relative" value="relative" />
-                <RadioBar.Option label="Absolute" value="absolute" />
-              </RadioBar>
-              {draft.mode === "relative" ? (
-                <div className="scd-time-range-editor-fields">
-                  <div className="scd-time-range-editor-field">
-                    <label htmlFor="custom-time-earliest">Earliest</label>
-                    <input
-                      id="custom-time-earliest"
-                      onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          earliest: event.target.value,
-                        }))
-                      }
-                      spellCheck={false}
-                      value={draft.earliest}
-                    />
-                  </div>
-                  <div className="scd-time-range-editor-field">
-                    <label htmlFor="custom-time-latest">Latest</label>
-                    <input
-                      id="custom-time-latest"
-                      onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          latest: event.target.value,
-                        }))
-                      }
-                      spellCheck={false}
-                      value={draft.latest}
-                    />
-                  </div>
-                  <p className="scd-time-range-editor-help">
-                    Use Splunk expressions such as -24h@h, -7d@d, @d, or now.
-                  </p>
-                </div>
-              ) : (
-                <div className="scd-time-range-editor-fields">
-                  <div className="scd-time-range-editor-field">
-                    <label htmlFor="custom-time-from">From</label>
-                    <input
-                      id="custom-time-from"
-                      onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          from: event.target.value,
-                        }))
-                      }
-                      type="datetime-local"
-                      value={draft.from}
-                    />
-                  </div>
-                  <div className="scd-time-range-editor-field">
-                    <label htmlFor="custom-time-to">To</label>
-                    <input
-                      id="custom-time-to"
-                      onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          to: event.target.value,
-                        }))
-                      }
-                      type="datetime-local"
-                      value={draft.to}
-                    />
-                  </div>
-                </div>
-              )}
-              {editorError && (
-                <div role="alert">
-                  <Message type="error">{editorError}</Message>
-                </div>
-              )}
-            </TimeRangeEditor>
-          </Modal.Body>
-          <Modal.Footer>
-            <Button
-              appearance="secondary"
-              label="Cancel"
-              onClick={() => setCustomEditorOpen(false)}
-            />
-            <Button label="Apply range" onClick={applyCustomRange} />
-          </Modal.Footer>
-        </Modal>
-      )}
-    </>
+    <TimeRangeDropdown
+      aria-label="Dashboard time range"
+      earliest={range.earliest}
+      inline
+      latest={range.latest}
+      labelMaxChars={30}
+      onChange={handleChange}
+      onRequestParseEarliest={timeRangeParser.handleRequestParseEarliest}
+      onRequestParseLatest={timeRangeParser.handleRequestParseLatest}
+      parseEarliest={timeRangeParser.parseEarliest}
+      parseLatest={timeRangeParser.parseLatest}
+      presets={[...TIME_RANGE_PRESETS]}
+      realTimeDisabled
+    />
   );
 };
 

@@ -14,9 +14,13 @@ networking pillars and workplace scenarios.
   Dashboard Studio pillar headers to use the new Fingerprint Nodes, Server
   Brackets, Globe Division, Column Arrows Left-Right, and Robot Face Sparkle
   icons.
-- Added a responsive Dashboard time range selector with quick 4h, 24h, 48h,
-  7d, and 30d ranges plus custom relative and absolute time inputs; the Custom
-  action uses the familiar Dashboard Manager sliders icon.
+- Replaced the bespoke Dashboard time range editor with Splunk's native
+  time-range selector, including preset, relative, date-range, date-and-time,
+  and advanced modes.
+- Made operational trend buckets follow the active dashboard time range across
+  Agentic SOC, Catalyst Center, ThousandEyes, security, data-center, and IOS-XR
+  searches while retaining fixed grids for forecasts and interval-dependent
+  calculations.
 - Focused the Insights Workspace's App details and upgrades action on exact
   Secure Networking Essentials catalog results, filtered to the app's IT
   operations, network security, developer-support, and CIM 8.x metadata.
