@@ -4,6 +4,17 @@
     "splunkbase_app_id": 9257,
     "package_id": "splunk-cisco-dashboards"
   },
+  "public_listing_observations": [
+    {
+      "version": "1.0.46",
+      "release_id": 123822,
+      "release_date": "2026-08-27",
+      "filename": "splunk-secure-networking-essentials-beta_1046.tar.gz",
+      "md5": "8aa1fa1900709caf5084fc2ef28ce514",
+      "observed_at": "2026-09-03",
+      "note": "Observed on the public Splunkbase listing. The authenticated archive was unavailable, so its package build, embedded commit, and SHA-256 remain unverified and are intentionally not assigned to a build allocation."
+    }
+  ],
   "build_allocations": [
     {
       "version": "1.0.42",
