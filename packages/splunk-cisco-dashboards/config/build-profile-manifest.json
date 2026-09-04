@@ -9,7 +9,8 @@
       "network_diagram",
       "secure_networking_pillars",
       "sn_topology_canvas",
-      "workplace_m365_activity_monitoring"
+      "workplace_m365_activity_monitoring",
+      "searchbase_canvas"
     ],
     "searchbaseStanzas": [
       "dc_networking_vmware_esx_server_farm",
