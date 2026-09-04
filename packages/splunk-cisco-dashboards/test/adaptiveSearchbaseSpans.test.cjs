@@ -287,3 +287,14 @@ for (const name of new Set([
 for (const name of pickerAdaptiveBins) {
   assert.match(stanzaBody(name), /^date_updated = 2026-09-03$/m);
 }
+
+assert.match(
+  stanzaBody("building_resilience_user_presence_trend"),
+  /^solution = .*buckets selected automatically for the active time range\./m,
+  "the user-presence guidance must describe its adaptive buckets",
+);
+assert.doesNotMatch(
+  stanzaBody("building_resilience_user_presence_trend"),
+  /^solution = .*15-minute buckets/m,
+  "the user-presence guidance must not promise the retired fixed span",
+);
