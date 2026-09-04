@@ -576,8 +576,13 @@ assert.match(
 );
 assert.match(
   userGuide,
-  /Local install and deploy validation[\s\S]*?non-release-eligible[\s\S]*?clean-source gate/,
-  "The current in-app release notes must distinguish dirty local validation from publishable release builds",
+  /SplunkBase build, install,[\s\S]*?one[\s\S]*?clean-source packaging path[\s\S]*?exact release-eligible archive/,
+  "The current in-app release notes must document one clean release path for build and install",
+);
+assert.match(
+  userGuide,
+  /successful SplunkBase install[\s\S]*?upload-ready archive[\s\S]*?target's installed build does not affect package/,
+  "The current in-app release notes must document target-independent package construction",
 );
 assert.match(
   userGuide,

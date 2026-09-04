@@ -10,6 +10,10 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Unified Splunkbase build and install packaging so a successful
+  `--install --splunkbase` run creates one clean, release-eligible artifact and
+  installs that exact tarball. The target's installed build no longer changes
+  package allocation; dirty local iterations use the developer profile.
 - Restored the Guided Setup finish-confirmation copy in light mode by using
   theme-aware Splunk UI paragraphs, preventing the no-change explanation from
   rendering white on the dialog's white background. The completion action now
@@ -51,12 +55,12 @@ networking pillars and workplace scenarios.
 - Made package artifacts operator-readable as
   `splunk-cisco-dashboards-<version>-<build>.tar.gz`, with no separate checksum
   sidecar and with immutable collision checks retained. Packaging validates the
-  completed archive internally before publication. Build, install, deploy, and remote
-  workflows now default to the released-resources-only SplunkBase profile;
-  developer resources require `--developer` or the explicit `--fast` workflow.
-  Local install/deploy validation accepts intentional uncommitted source and
-  marks dirty artifacts non-release-eligible, while build-only and remote
-  release artifacts retain the clean-source gate.
+  completed archive internally before publication. Build, install, deploy, and
+  remote workflows now default to one clean-source, released-resources-only
+  SplunkBase profile. Install and deploy apply the exact release-eligible archive
+  produced by that path, and the installed target never affects package build
+  allocation. Uncommitted local iterations require `--developer` or the explicit
+  `--fast` workflow.
 - Restored Street, Terrain, Satellite, Dark Ops, Navigation, and Offline Grid
   map styles with normal interactive zoom. Topology placement remains restricted
   to the offline city list or explicit coordinates, so operator-entered location
@@ -389,15 +393,19 @@ production-React bundles.
 For a release, edit only the repository-root `VERSION` file. Source `app.conf`
 and `app.manifest` keep `0.0.0`/`0` placeholders and are never bumped by the
 operator. Packaging stamps generated output and automatically chooses the next
-build above the historical ledger, readable `dist/` artifacts, and a local
-target's installed build when available. The committed ledger at
+build above the historical ledger and readable `dist/` artifacts. The
+installation target does not influence package allocation. The committed ledger at
 [`../../releases/splunkbase-9257.json`](../../releases/splunkbase-9257.json) is
 publication history and a build floor, not a manual `current` allocation.
 Successful packages are named
 `splunk-cisco-dashboards-<version>-<build>.tar.gz` (plus `-developer` for an
 explicit developer profile). That tarball is the only emitted package file;
 packaging validates it internally, and the root build wrapper verifies its
-filename identity and gzip integrity before use.
+filename identity, gzip integrity, and release-eligible provenance before use.
+A successful `./build.sh --install --splunkbase --auth user:password` run
+installs the exact upload-ready tarball it creates. Splunkbase builds require a
+clean committed worktree; use `--developer` or `--fast` for uncommitted local
+iterations.
 
 Resource inclusion is controlled by `config/build-profile-manifest.json`.
 The complete workflow and local install command are documented in

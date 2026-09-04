@@ -11,13 +11,12 @@ APP_NAME="splunk-cisco-dashboards"
 FROM_STAGE=0
 MINIFY=0
 DEVELOPER_PROFILE=0
-LOCAL_VALIDATION=0
 ROOT_DIR="${PKG_ROOT}/../.."
 VERSION_FILE="${ROOT_DIR}/VERSION"
 
 usage() {
   cat <<EOF
-Usage: bin/package_app.sh [--from-stage] [--minify] [--developer] [--local-validation]
+Usage: bin/package_app.sh [--from-stage] [--minify] [--developer]
 
 Default behavior: clean stage/, run minified production webpack, then create
 the Splunkbase profile without resources listed as developing in the app
@@ -35,10 +34,6 @@ Options:
   --developer             Include all resources listed as developing and write
                           a clearly labeled developer tarball. Intended for
                           local use.
-  --local-validation      Build the released-resources-only Splunkbase profile
-                          from the current worktree for a local install/deploy.
-                          Dirty source is marked non-release-eligible in the
-                          package provenance. Build-only releases remain strict.
   -h, --help              Show this help.
 EOF
 }
@@ -102,10 +97,6 @@ while [[ $# -gt 0 ]]; do
       DEVELOPER_PROFILE=1
       shift
       ;;
-    --local-validation)
-      LOCAL_VALIDATION=1
-      shift
-      ;;
     -h|--help)
       usage
       exit 0
@@ -123,11 +114,6 @@ done
 # stage reuse imply the developer profile for direct package-script callers.
 if [[ "$FROM_STAGE" -eq 1 ]]; then
   DEVELOPER_PROFILE=1
-fi
-
-if [[ "$LOCAL_VALIDATION" -eq 1 && "$DEVELOPER_PROFILE" -eq 1 ]]; then
-  echo "ERROR: --local-validation is only valid with the Splunkbase profile." >&2
-  exit 2
 fi
 
 if [[ "$FROM_STAGE" -eq 1 && "$MINIFY" -eq 1 ]]; then
@@ -218,7 +204,7 @@ resolve_release_commit() {
 resolve_clean_release_commit() {
   if [[ -n "$(git -C "$ROOT_DIR" status --porcelain --untracked-files=all)" ]]; then
     echo "ERROR: publishable Splunkbase packaging requires a clean Git worktree." >&2
-    echo "       Local install/deploy callers must use --local-validation." >&2
+    echo "       Commit the release source, or use --developer/--from-stage for local testing." >&2
     return 1
   fi
   resolve_release_commit
@@ -242,16 +228,7 @@ SPLUNKBASE_APP_ID=""
 SOURCE_TREE_CLEAN=true
 RELEASE_ELIGIBLE=true
 if [[ "$APP_PROFILE" == "splunkbase" ]]; then
-  if [[ "$LOCAL_VALIDATION" -eq 1 ]]; then
-    RELEASE_COMMIT="$(resolve_release_commit)"
-    if [[ -n "$(git -C "$ROOT_DIR" status --porcelain --untracked-files=all)" ]]; then
-      SOURCE_TREE_CLEAN=false
-      RELEASE_ELIGIBLE=false
-      echo "[package] local Splunkbase validation: current worktree is dirty; artifact is not release-eligible" >&2
-    fi
-  else
-    RELEASE_COMMIT="$(resolve_clean_release_commit)"
-  fi
+  RELEASE_COMMIT="$(resolve_clean_release_commit)"
   SPLUNKBASE_APP_ID="$(resolve_splunkbase_app_id)"
   # Published bundles are an operator-facing release surface. Keep fast,
   # unminified output for explicit developer packages, but make the default
@@ -309,11 +286,7 @@ bash "${SCRIPT_DIR}/stamp_version.sh" "$STAGE_DIR"
 # between the first gate and archive staging. Check again before copying the
 # files that will become the release candidate.
 if [[ "$APP_PROFILE" == "splunkbase" ]]; then
-  if [[ "$LOCAL_VALIDATION" -eq 1 ]]; then
-    post_build_commit="$(resolve_release_commit)"
-  else
-    post_build_commit="$(resolve_clean_release_commit)"
-  fi
+  post_build_commit="$(resolve_clean_release_commit)"
   if [[ "$post_build_commit" != "$RELEASE_COMMIT" ]]; then
     echo "ERROR: Git HEAD changed while the Splunkbase package was building." >&2
     echo "       Re-run packaging from one stable committed source state." >&2
@@ -401,8 +374,8 @@ fi
 # Allocate the next build into the package output only. VERSION is the sole
 # operator-maintained release value; source app.conf deliberately stays at the
 # build-zero template used by the sibling TA. Historical release records keep a
-# clean checkout above published builds, dist/ preserves normal local progress,
-# and the root wrapper can provide an installed-target floor.
+# clean checkout above published builds, while dist/ preserves normal local
+# progress. The installation target never influences package construction.
 PKG_APP_CONF="${TMP_DIR}/${APP_NAME}/default/app.conf"
 source_build="$(read_app_conf_build "$APP_CONF")"
 if [[ ! "$source_build" =~ ^[0-9]+$ ]]; then
@@ -412,11 +385,6 @@ fi
 history_build="$(resolve_release_history_build_floor)"
 if [[ ! "$history_build" =~ ^[0-9]+$ ]]; then
   echo "ERROR: could not resolve a numeric build floor from the release ledger." >&2
-  exit 1
-fi
-target_build="${SCD_PACKAGE_BUILD_FLOOR:-0}"
-if [[ ! "$target_build" =~ ^[0-9]+$ ]]; then
-  echo "ERROR: SCD_PACKAGE_BUILD_FLOOR must be a non-negative integer." >&2
   exit 1
 fi
 dist_build=0
@@ -432,7 +400,6 @@ done
 build_floor="$source_build"
 (( history_build > build_floor )) && build_floor="$history_build"
 (( dist_build > build_floor )) && build_floor="$dist_build"
-(( target_build > build_floor )) && build_floor="$target_build"
 new_build=$((build_floor + 1))
 
 # Reserve the version/build identity atomically until this command exits. A
@@ -453,7 +420,7 @@ else
   sed_i=( sed -i '' )
 fi
 "${sed_i[@]}" -E "s/^([[:space:]]*build[[:space:]]*=[[:space:]]*)[0-9]+/\\1${new_build}/" "$PKG_APP_CONF"
-echo "[package] app.conf: stamped build ${new_build} into package output (source=${source_build}, history=${history_build}, dist=${dist_build}, target=${target_build})"
+echo "[package] app.conf: stamped build ${new_build} into package output (source=${source_build}, history=${history_build}, dist=${dist_build})"
 
 # Keep source provenance in a standalone package manifest rather than
 # app.conf. This records the source commit and release eligibility without

@@ -1905,10 +1905,11 @@ iseval = 0`}</CodeBlock>
                         creation. Build, install, deploy,
                         and remote workflows default to the released-resources-only
                         SplunkBase profile; developer resources require an explicit
-                        developer or fast workflow. Local install and deploy validation
-                        can include intentional uncommitted source, which is marked
-                        non-release-eligible in package provenance; build-only and
-                        remote release artifacts retain the clean-source gate.
+                        developer or fast workflow. SplunkBase build, install,
+                        deploy, and remote-install workflows now share one
+                        clean-source packaging path; installation applies the
+                        exact release-eligible archive without changing its
+                        build allocation or provenance.
                         Upgrade notifications are explicit,
                         and React Router is on its supported security-maintenance
                         line. Dashboard Manager now makes Edit visible from
@@ -1942,8 +1943,11 @@ iseval = 0`}</CodeBlock>
                         <InlineCode>VERSION</InlineCode> file; do not edit source
                         <InlineCode>app.conf</InlineCode> or
                         <InlineCode>app.manifest</InlineCode> version/build
-                        placeholders. Release archives
-                        use one validated packaging path and preserve live
+                        placeholders. A successful SplunkBase install creates
+                        one upload-ready archive and installs that exact file;
+                        the target's installed build does not affect package
+                        allocation. Release archives use one validated packaging
+                        path and preserve live
                         development-local configuration. Existing workspaces keep their saved
                         configuration; assign{" "}
                         <InlineCode>ssne_manage_insights_workspaces</InlineCode>{" "}

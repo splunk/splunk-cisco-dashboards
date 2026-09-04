@@ -63,8 +63,9 @@ workflow.
 For a release, edit only the root [`VERSION`](VERSION) file and run the build.
 Source `app.conf` and `app.manifest` intentionally retain `0.0.0`/`0`
 placeholders. Packaging stamps VERSION and the release date into generated
-output, then automatically allocates the next build above release history,
-readable `dist/` artifacts, and the target's installed build when available.
+output, then automatically allocates the next build above release history and
+readable `dist/` artifacts. The installation target never influences package
+construction.
 The [`releases/splunkbase-9257.json`](releases/splunkbase-9257.json) ledger is
 historical publication evidence and a safe build floor; it is not a manual
 pre-build allocation step.
@@ -74,9 +75,10 @@ an explicitly selected developer profile). This tarball is the only package
 file emitted. Packaging re-extracts and validates it before publication, and
 the root build wrapper verifies its filename identity and gzip integrity before
 use.
-Local `--install` and `--deploy` validation may package intentional uncommitted
-changes and marks such artifacts non-release-eligible in their provenance.
-Build-only and remote Splunkbase artifacts still require a clean Git worktree.
+A successful Splunkbase build always requires clean committed source and emits
+a release-eligible archive. Adding `--install` or `--deploy` applies that exact
+archive after packaging without changing its identity or provenance. Use
+`--developer` or `--fast` for intentional uncommitted local changes.
 
 ## Usage
 

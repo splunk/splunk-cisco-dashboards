@@ -192,20 +192,6 @@ archive_identity() {
     '
 }
 
-app_conf_build() {
-    local file="$1"
-    [[ -f "$file" ]] || return 1
-    awk '
-        /^\[/ { section=$0 }
-        section == "[install]" && /^[[:space:]]*build[[:space:]]*=/ {
-            sub(/^[^=]*=/, "")
-            gsub(/^[[:space:]]+|[[:space:]]+$/, "")
-            print
-            exit
-        }
-    ' "$file"
-}
-
 find_release_archive() {
     local expected_package_id="$1"
     local expected_version="$2"
@@ -257,7 +243,8 @@ find_release_archive() {
 
 verify_release_archive() {
     local archive="$1"
-    local archive_name identity archive_package_id archive_version archive_build profile_suffix expected_name
+    local expected_profile="$2"
+    local archive_name identity archive_package_id archive_version archive_build profile_suffix expected_name provenance
 
     if [[ ! -f "$archive" ]]; then
         err "ERROR: release archive is missing: ${archive}"
@@ -284,6 +271,36 @@ verify_release_archive() {
     if [[ "$archive_name" != "$expected_name" ]]; then
         err "ERROR: release archive filename must contain its version and build: ${expected_name}"
         return 1
+    fi
+    if [[ "$expected_profile" == "splunkbase" ]]; then
+        if ! provenance="$(tar -xzOf "$archive" "${APP_NAME}/release-provenance.json" 2>/dev/null)"; then
+            err "ERROR: Splunkbase archive is missing release provenance: ${archive_name}"
+            return 1
+        fi
+        if ! printf '%s' "$provenance" | node -e '
+            const fs = require("fs");
+            const [expectedPackageId, expectedVersion, expectedBuild] = process.argv.slice(1);
+            let value;
+            try {
+                value = JSON.parse(fs.readFileSync(0, "utf8"));
+            } catch {
+                process.exit(1);
+            }
+            if (
+                value.package_id !== expectedPackageId ||
+                value.version !== expectedVersion ||
+                value.build !== Number(expectedBuild) ||
+                value.source_tree_clean !== true ||
+                value.release_eligible !== true ||
+                !/^[0-9a-f]{40}$/.test(value.git_commit || "")
+            ) {
+                process.exit(1);
+            }
+        ' "$archive_package_id" "$archive_version" "$archive_build"; then
+            err "ERROR: Splunkbase archive is not release-eligible: ${archive_name}"
+            err "       Build from one clean committed source state before upload or installation."
+            return 1
+        fi
     fi
 }
 
@@ -529,8 +546,9 @@ Push-to-Splunk options (mutually exclusive):
                          \`splunk install app dist/<app>-<version>-<build>.tar.gz -update 1
                           -auth user:pass\`. Requires --auth.
                          Fresh local installs use the Splunkbase profile unless
-                         --developer or --fast is explicitly selected. Current
-                         source changes are allowed for local validation only.
+                         --developer or --fast is explicitly selected. A
+                         successful Splunkbase install first creates one clean,
+                         release-eligible archive, then installs that exact file.
   --deploy               Filesystem swap into \$SPLUNK_HOME/etc/apps/<app>
                          through a prepared sibling replacement (preserves
                          local/ and runtime lookup CSVs). Faster than
@@ -563,7 +581,8 @@ Other options:
                          labeled *-developer.tar.gz intended only for local testing.
   --splunkbase           Use the released-resources-only SplunkBase profile.
                          This is the default for build, install, deploy, and
-                         remote-install workflows.
+                         remote-install workflows. Requires a clean committed
+                         worktree; use --developer or --fast for local changes.
   --lint-spl-antipatterns
                          Run the experimental Searchbase SPL anti-pattern
                          policy gate before packaging. Disabled by default
@@ -593,7 +612,7 @@ Other options:
 Examples:
   ./build.sh                                                  # Splunkbase package (released resources only)
   ./build.sh --developer                                      # local developer package
-  ./build.sh --install --auth admin:********                  # Splunkbase build + splunkd install
+  ./build.sh --install --splunkbase --auth admin:********     # upload-ready package + exact local install
   ./build.sh --developer --install --auth admin:********      # explicit developer-profile install
   SPLUNK_HOME=/opt/10 ./build.sh --developer --fast --install --auth admin:********
   SPLUNK_HOME=/opt/10 ./build.sh --install --auth admin:******** --restart
@@ -924,24 +943,6 @@ if [[ -z "$source_package_id" || "$source_package_id" != "$APP_NAME" ]]; then
     exit 1
 fi
 
-package_build_floor=0
-if [[ "$do_install" -eq 1 || "$do_deploy" -eq 1 ]]; then
-    installed_app_conf="${SPLUNK_HOME%/}/etc/apps/${APP_NAME}/default/app.conf"
-    installed_build="$(app_conf_build "$installed_app_conf" || true)"
-    if [[ "$installed_build" =~ ^[0-9]+$ ]]; then
-        package_build_floor="$installed_build"
-    fi
-fi
-
-# Local Splunkbase installs and filesystem deploys validate the exact current
-# worktree, including intentional uncommitted changes. Build-only and remote
-# Splunkbase artifacts retain the clean-source publication gate.
-local_splunkbase_validation=0
-if [[ "$developer_profile" -eq 0 \
-    && ( "$do_install" -eq 1 || "$do_deploy" -eq 1 ) ]]; then
-    local_splunkbase_validation=1
-fi
-
 if [[ "$no_build" -eq 0 ]]; then
 
     # This policy linter is intentionally opt-in. Its broad rules are useful
@@ -967,14 +968,11 @@ elif [[ "$from_stage" -eq 1 ]]; then
     else
         hdr "Packaging current stage/ v${build_version} (--from-stage, Splunkbase profile)..."
     fi
-    run_quietly env SCD_PACKAGE_BUILD_FLOOR="$package_build_floor" bash "${APP_DIR}/bin/package_app.sh" "${package_args[@]}"
+    run_quietly bash "${APP_DIR}/bin/package_app.sh" "${package_args[@]}"
 else
     package_args=()
     if [[ "$developer_profile" -eq 1 ]]; then
         package_args+=(--developer)
-    fi
-    if [[ "$local_splunkbase_validation" -eq 1 ]]; then
-        package_args+=(--local-validation)
     fi
     if [[ "$minify" -eq 1 ]]; then
         package_args+=(--minify)
@@ -986,18 +984,16 @@ else
     else
         if [[ "$developer_profile" -eq 1 ]]; then
             hdr "Packaging ${APP_NAME} v${build_version} (developer profile)..."
-        elif [[ "$local_splunkbase_validation" -eq 1 ]]; then
-            hdr "Packaging ${APP_NAME} v${build_version} (minified Splunkbase profile; local validation)..."
         else
             hdr "Packaging ${APP_NAME} v${build_version} (minified Splunkbase profile; required for release)..."
         fi
     fi
     # macOS ships Bash 3.2, where expanding an empty array under `set -u`
     # raises "unbound variable" instead of passing zero arguments.
-    if [[ "$developer_profile" -eq 1 || "$minify" -eq 1 || "$local_splunkbase_validation" -eq 1 ]]; then
-        run_quietly env SCD_PACKAGE_BUILD_FLOOR="$package_build_floor" bash "${APP_DIR}/bin/package_app.sh" "${package_args[@]}"
+    if [[ "$developer_profile" -eq 1 || "$minify" -eq 1 ]]; then
+        run_quietly bash "${APP_DIR}/bin/package_app.sh" "${package_args[@]}"
     else
-        run_quietly env SCD_PACKAGE_BUILD_FLOOR="$package_build_floor" bash "${APP_DIR}/bin/package_app.sh"
+        run_quietly bash "${APP_DIR}/bin/package_app.sh"
     fi
 fi
 
@@ -1020,7 +1016,7 @@ if [[ -z "$package_path" ]]; then
     exit 1
 fi
 
-if ! verify_release_archive "$package_path"; then
+if ! verify_release_archive "$package_path" "$package_profile"; then
     exit 1
 fi
 
@@ -1266,3 +1262,8 @@ echo "================================================================"
 echo "  Mode:    ${mode_label}"
 echo "  Profile: ${app_profile_label}"
 echo "  Tarball: ${package_path}"
+if [[ "$package_profile" == "splunkbase" ]]; then
+    echo "  Upload:  ready for Splunkbase submission"
+else
+    echo "  Upload:  no (developer profile)"
+fi
