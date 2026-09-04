@@ -474,11 +474,48 @@ const userGuide = read("src/main/webapp/pages/user_guide/index.tsx");
 const workspaceManager = read(
   "src/main/webapp/common/components/workspace/WorkspaceManager.tsx",
 );
+const insightsWorkspaceService = read(
+  "src/main/webapp/common/services/insightsWorkspaceService.ts",
+);
+const executiveInsights = read(
+  "src/main/webapp/pages/executive_insights/index.tsx",
+);
 
 assert.match(
   workspaceManager,
   /const TemplateRadioList = styled\(RadioList\)[\s\S]*?grid-template-columns: \[input\] 20px \[label\] minmax\(0, 1fr\)[\s\S]*?min-inline-size: 20px[\s\S]*?<TemplateRadioList/,
   "Workspace template radios must retain a circular 20px control track in the narrow editor",
+);
+
+assert.match(
+  insightsWorkspaceService,
+  /getWorkspaceSignalRailFallback[\s\S]*?workspace\.sourceWorkspace === "agentic_soc"[\s\S]*?: workspace\.sourceWorkspace[\s\S]*?getDefaultSignalTickerConfig\(templateWorkspaceId\)/,
+  "Custom workspaces without a rail stanza must inherit the six-item rail for their selected template",
+);
+assert.match(
+  workspaceManager,
+  /copyDraft\([\s\S]*?signalRails\[selected\.id\]/,
+  "Duplicating a workspace must carry its resolved Signal Rail into persistence",
+);
+assert.match(
+  workspaceManager,
+  /saveInsightsWorkspace\([\s\S]*?draft\.signalRailToCopy/,
+  "Saving a cloned workspace must persist the carried Signal Rail",
+);
+assert.match(
+  insightsWorkspaceService,
+  /saveWorkspaceSignalRail[\s\S]*?signalRailStanzaName\(workspace\.id\)[\s\S]*?items: sanitized\.items\.map\(\(item\) => item\.id\)\.join\(","\)/,
+  "The cloned workspace must own an explicit Signal Rail stanza with the source item order",
+);
+assert.match(
+  insightsWorkspaceService,
+  /deleteInsightsWorkspace[\s\S]*?deleteStanza\(signalRailStanzaName\(workspace\.id\)\)/,
+  "Deleting a custom workspace must also remove its cloned Signal Rail stanza",
+);
+assert.match(
+  executiveInsights,
+  /<WorkspaceManager[\s\S]*?signalRails=\{signalRails\}/,
+  "The workspace manager must receive the resolved rails used by the live workspace",
 );
 
 assert.match(

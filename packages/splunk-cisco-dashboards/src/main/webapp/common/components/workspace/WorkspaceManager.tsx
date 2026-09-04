@@ -23,6 +23,7 @@ import {
     type WorkspaceRegionalView,
     type WorkspaceSourceId,
 } from '@/common/config/insightsWorkspaces';
+import type { SignalTickerConfig } from '@/common/config/signalTicker';
 import {
     deleteInsightsWorkspace,
     saveInsightsWorkspace,
@@ -35,6 +36,7 @@ interface WorkspaceManagerProps {
     currentWorkspace: InsightsWorkspace;
     workspaces: readonly InsightsWorkspace[];
     layouts: Record<WorkspaceId, WorkspaceLayoutConfig>;
+    signalRails: Record<WorkspaceId, SignalTickerConfig>;
     onClose: () => void;
     onWorkspaceSaved: (workspaceId: WorkspaceId) => void;
     onWorkspaceDeleted: (workspaceId: WorkspaceId) => void;
@@ -54,6 +56,7 @@ interface WorkspaceDraft {
     regionalView: WorkspaceRegionalView;
     existingWorkspace?: InsightsWorkspace;
     layoutToCopy?: WorkspaceLayoutConfig;
+    signalRailToCopy?: SignalTickerConfig;
 }
 
 const slugifyWorkspaceId = (raw: string): string => {
@@ -104,6 +107,7 @@ const emptyDraft = (sourceWorkspace: WorkspaceSourceId): WorkspaceDraft => {
 const copyDraft = (
     workspace: InsightsWorkspace,
     layout?: WorkspaceLayoutConfig,
+    signalRail?: SignalTickerConfig,
 ): WorkspaceDraft => {
     const label = `${workspace.label} Copy`;
     return {
@@ -113,6 +117,7 @@ const copyDraft = (
         headerTitle: workspace.headerTitle ? `${workspace.headerTitle} Copy` : label,
         existingWorkspace: undefined,
         layoutToCopy: layout,
+        signalRailToCopy: signalRail,
         sortOrder: 100,
     };
 };
@@ -308,6 +313,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
     currentWorkspace,
     workspaces,
     layouts,
+    signalRails,
     onClose,
     onWorkspaceSaved,
     onWorkspaceDeleted,
@@ -385,7 +391,13 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
 
     const startCopy = () => {
         const selected = draft.existingWorkspace ?? currentWorkspace;
-        setDraft(copyDraft(selected, layouts[selected.id]));
+        setDraft(
+            copyDraft(
+                selected,
+                layouts[selected.id],
+                signalRails[selected.id],
+            ),
+        );
         setIdTouched(false);
         setErrorMessage('');
         setValidationAttempted(false);
@@ -473,6 +485,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                 input,
                 draft.layoutToCopy,
                 draft.existingWorkspace,
+                draft.signalRailToCopy,
             );
             onWorkspaceSaved(draft.id);
         } catch (error) {

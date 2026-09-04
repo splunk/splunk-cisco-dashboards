@@ -14,6 +14,10 @@ networking pillars and workplace scenarios.
   through the bounded REST proxy so the client can create the new stanza.
   Template choices now retain circular 20-pixel radio controls in the narrow
   workspace editor.
+- Fixed workspace duplication so the clone owns the source workspace's
+  six-item Signal Rail instead of expanding to the global 24-item fallback,
+  while preserving the copied section layouts and cleaning up the cloned rail
+  when the workspace is deleted.
 - Unified Splunkbase build and install packaging so a successful
   `--install --splunkbase` run creates one clean, release-eligible artifact and
   installs that exact tarball. The target's installed build no longer changes

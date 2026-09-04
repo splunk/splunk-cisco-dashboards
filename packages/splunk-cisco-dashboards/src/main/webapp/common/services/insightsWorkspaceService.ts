@@ -31,6 +31,16 @@ const LAYOUT_STANZA_PREFIX = "layout.";
 const SIGNAL_ITEM_STANZA_PREFIX = "signal_item.";
 const SIGNAL_RAIL_STANZA_PREFIX = "signal_rail.";
 
+const getWorkspaceSignalRailFallback = (
+  workspace: InsightsWorkspace,
+): SignalTickerConfig => {
+  const templateWorkspaceId: WorkspaceId =
+    workspace.sourceWorkspace === "agentic_soc"
+      ? "agentic_security_operations_center"
+      : workspace.sourceWorkspace;
+  return getDefaultSignalTickerConfig(templateWorkspaceId);
+};
+
 export interface WorkspaceLayoutSection {
   tiles: string[];
   visibleCount?: number;
@@ -141,7 +151,7 @@ const fallbackSignalRails = (
   Object.fromEntries(
     workspaces.map((workspace) => [
       workspace.id,
-      getDefaultSignalTickerConfig(workspace.id),
+      getWorkspaceSignalRailFallback(workspace),
     ]),
   );
 
@@ -410,6 +420,9 @@ const layoutStanzaName = (
   sectionId: SectionId,
 ): string => `${LAYOUT_STANZA_PREFIX}${workspaceId}.${sectionId}`;
 
+const signalRailStanzaName = (workspaceId: WorkspaceId): string =>
+  `${SIGNAL_RAIL_STANZA_PREFIX}${workspaceId}`;
+
 const upsertStanza = async (
   stanzaName: string,
   fields: Record<string, string>,
@@ -578,6 +591,7 @@ export const saveInsightsWorkspace = async (
   input: WorkspaceDefinitionInput,
   layout?: WorkspaceLayoutConfig,
   expectedWorkspace?: InsightsWorkspace,
+  signalRail?: SignalTickerConfig,
 ): Promise<InsightsWorkspace> => {
   if (!isWorkspaceId(input.id)) {
     throw new Error(
@@ -591,7 +605,27 @@ export const saveInsightsWorkspace = async (
     workspaceFields(workspace),
   );
   if (layout) await saveWorkspaceLayout(workspace, layout);
+  if (signalRail) await saveWorkspaceSignalRail(workspace, signalRail);
   return workspace;
+};
+
+export const saveWorkspaceSignalRail = async (
+  workspace: InsightsWorkspace,
+  config: SignalTickerConfig,
+): Promise<void> => {
+  const sanitized = sanitizeSignalTickerConfig(config);
+  if (!sanitized) {
+    throw new Error("Signal Rail configuration is invalid.");
+  }
+  await upsertStanza(signalRailStanzaName(workspace.id), {
+    enabled: sanitized.enabled ? "1" : "0",
+    show_priority_drilldown: sanitized.showPriorityDrilldown ? "1" : "0",
+    rows: String(sanitized.rows),
+    speed: String(sanitized.speed),
+    density: sanitized.density,
+    font_size: sanitized.fontSize,
+    items: sanitized.items.map((item) => item.id).join(","),
+  });
 };
 
 export const saveWorkspaceLayout = async (
@@ -631,9 +665,12 @@ export const deleteInsightsWorkspace = async (
   }
   await assertWorkspaceIsCurrent(workspace);
   await Promise.all(
-    workspace.sections.map((section) =>
-      deleteStanza(layoutStanzaName(workspace.id, section.id)),
-    ),
+    [
+      ...workspace.sections.map((section) =>
+        deleteStanza(layoutStanzaName(workspace.id, section.id)),
+      ),
+      deleteStanza(signalRailStanzaName(workspace.id)),
+    ],
   );
   await deleteStanza(workspaceStanzaName(workspace.id));
 };

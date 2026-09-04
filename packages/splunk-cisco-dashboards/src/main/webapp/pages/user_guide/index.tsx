@@ -1932,6 +1932,9 @@ iseval = 0`}</CodeBlock>
                         Custom Insights workspaces can now be created through
                         the bounded persistence endpoint, and template choices
                         retain circular radio controls in the workspace editor.
+                        Duplicated workspaces now keep their source Signal Rail
+                        and section layouts instead of expanding to every
+                        fallback signal.
                       </td>
                       <td className="px-3 py-3 sui-color-default">
                         Install the build through the supported app-management

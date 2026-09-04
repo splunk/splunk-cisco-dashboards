@@ -2542,6 +2542,7 @@ interface InsightsWorkspaceRuntimeProps {
   workspaces: readonly InsightsWorkspace[];
   initialLayout: WorkspaceLayoutConfig;
   layouts: Record<WorkspaceId, WorkspaceLayoutConfig>;
+  signalRails: Record<WorkspaceId, SignalTickerConfig>;
   signalTickerDefault: SignalTickerConfig;
 }
 
@@ -2550,6 +2551,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   workspaces,
   initialLayout,
   layouts,
+  signalRails,
   signalTickerDefault,
 }) => {
   // ------------------------------ Theme ------------------------------
@@ -6128,6 +6130,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         currentWorkspace={insightsWorkspace}
         workspaces={workspaces}
         layouts={layouts}
+        signalRails={signalRails}
         onClose={() => setWorkspaceManagerOpen(false)}
         onWorkspaceSaved={(workspaceId) => {
           if (workspaceId === insightsWorkspace.id) {
@@ -8882,6 +8885,7 @@ const InsightsWorkspacePage: React.FC = () => {
       workspaces={bundle.workspaces}
       initialLayout={bundle.layouts[workspace.id] ?? {}}
       layouts={bundle.layouts}
+      signalRails={bundle.signalRails}
       signalTickerDefault={
         bundle.signalRails[workspace.id] ??
         getDefaultSignalTickerConfig(workspace.id)
