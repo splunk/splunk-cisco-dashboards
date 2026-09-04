@@ -1925,6 +1925,9 @@ iseval = 0`}</CodeBlock>
                         longer blocks completion solely because an optional
                         companion-app routing macro is unavailable; the exact
                         companion setting remains visible for later follow-up.
+                        The final confirmation copy now remains readable in
+                        both light and dark modes, and the completion action
+                        clearly identifies the home dashboard destination.
                       </td>
                       <td className="px-3 py-3 sui-color-default">
                         Install the build through the supported app-management

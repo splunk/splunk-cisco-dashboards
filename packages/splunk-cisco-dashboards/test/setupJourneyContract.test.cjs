@@ -191,6 +191,26 @@ test("final review shows exact before and after values and requires confirmation
   assert.match(tuner, /title="Save changes and finish setup\?"/);
   assert.match(tuner, /label="Save changes and finish"/);
   assert.match(tuner, /finishInitialSetup\(\)/);
+  const finishConfirmationStart = tuner.indexOf(
+    'open={showFinishConfirmation}',
+  );
+  const finishConfirmationEnd = tuner.indexOf(
+    "</Modal>",
+    finishConfirmationStart,
+  );
+  assert.ok(
+    finishConfirmationStart > -1 &&
+      finishConfirmationEnd > finishConfirmationStart,
+  );
+  const finishConfirmation = tuner.slice(
+    finishConfirmationStart,
+    finishConfirmationEnd,
+  );
+  assert.equal(
+    (finishConfirmation.match(/<Paragraph(?:\s|>)/g) || []).length,
+    3,
+  );
+  assert.doesNotMatch(finishConfirmation, /<p(?:\s|>)/);
   assert.match(
     tuner,
     /<Table\.Cell>\s*<div className="min-w-0 max-w-full">[\s\S]*?\{change\.setting\}[\s\S]*?<\/div>\s*<\/Table\.Cell>/,
@@ -221,7 +241,8 @@ test("rerunning discovery protects scope-specific draft changes", () => {
 
 test("the journey has explicit completion, sequential navigation, and compact progress", () => {
   assert.match(tuner, /if \(setupMode && setupComplete\)/);
-  assert.match(tuner, /label="Open dashboards"/);
+  assert.match(tuner, /const APP_HOME_VIEW = "workspace_insights";/);
+  assert.match(tuner, /label="Open home dashboard"/);
   assert.match(tuner, /<StepBar activeStepId=\{activeStepId\}/);
   assert.doesNotMatch(tuner, /onStepSelect/);
   assert.doesNotMatch(tuner, /SetupHorizontalStepBar/);

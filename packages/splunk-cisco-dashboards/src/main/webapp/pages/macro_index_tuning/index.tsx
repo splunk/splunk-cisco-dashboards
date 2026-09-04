@@ -5151,7 +5151,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
             to={splunkAppViewUrl(APP_HOME_VIEW)}
             appearance="primary"
             icon={<Check aria-hidden="true" size={16} />}
-            label="Open dashboards"
+            label="Open home dashboard"
           />
         )}
       >
@@ -6174,21 +6174,21 @@ export default function MacroIndexTuningPage(): JSX.Element {
           <Modal.Header title="Save changes and finish setup?" />
           <Modal.Body>
             {setupChanges.length ? (
-              <p>
+              <Paragraph>
                 This will save {setupChanges.length} {setupChangeNoun} across{" "}
                 {setupChangedAppCount} {setupAppNoun} and mark initial setup
                 complete.
-              </p>
+              </Paragraph>
             ) : (
-              <p>
+              <Paragraph>
                 No macro definitions will change. This will mark initial setup
                 complete and unlock the dashboard workspace.
-              </p>
+              </Paragraph>
             )}
-            <p className="mt-3">
+            <Paragraph className="mt-3">
               Review the before-and-after table if you need to verify a value or
               target app before continuing.
-            </p>
+            </Paragraph>
           </Modal.Body>
           <Modal.Footer>
             <Button

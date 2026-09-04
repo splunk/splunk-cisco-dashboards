@@ -10,6 +10,10 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Restored the Guided Setup finish-confirmation copy in light mode by using
+  theme-aware Splunk UI paragraphs, preventing the no-change explanation from
+  rendering white on the dialog's white background. The completion action now
+  clearly identifies its destination as the home dashboard.
 - Made Guided Setup CIM discovery run one independently bounded search per data
   model, with two searches in flight, visible progress, cancellation, and
   preservation of completed results. Setup retries now skip settings that were
