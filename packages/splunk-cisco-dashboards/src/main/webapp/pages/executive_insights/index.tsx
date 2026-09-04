@@ -5214,6 +5214,15 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             }
             onClick={togglePresentationMode}
           />
+          <Button
+            appearance="subtle"
+            className="scd-header-app-version"
+            label={appVersionLabel}
+            openInNewContext
+            title={`App details and upgrades — ${appVersionLabel} (opens in new window)`}
+            aria-label={`App details and upgrades, ${appVersionLabel} (opens in new window)`}
+            to={appCatalogUrl}
+          />
           <Dropdown
             defaultPlacement="below"
             focusToggleReasons={["escapeKey", "tabKey", "toggleClick"]}
@@ -5383,15 +5392,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 startAdornment={<Keyboard aria-hidden="true" />}
               >
                 Keyboard shortcuts
-              </Menu.Item>
-              <Menu.Divider />
-              <Menu.Item
-                description={appVersionLabel}
-                onClick={() => closeHeaderActions()}
-                openInNewContext
-                to={appCatalogUrl}
-              >
-                App details and upgrades
               </Menu.Item>
             </Menu>
           </Dropdown>

@@ -374,16 +374,31 @@ assert.deepEqual(appCatalogUrl.searchParams.getAll("category"), [
 ]);
 assert.equal(appCatalogUrl.searchParams.get("support"), "developer");
 assert.equal(appCatalogUrl.searchParams.get("cim_version"), "8.x");
-assert.match(
-  profile,
-  /openInNewContext\s+to=\{appCatalogUrl\}[\s\S]*?App details and upgrades/,
+const headerStart = profile.indexOf('<header className="scd-c3-toolbar');
+const headerEnd = profile.indexOf("</header>", headerStart);
+const versionLink = profile.indexOf(
+  'className="scd-header-app-version"',
+  headerStart,
 );
+assert.ok(headerStart >= 0 && headerEnd > headerStart);
+assert.ok(
+  versionLink > headerStart && versionLink < headerEnd,
+  "The live app version and build link must remain in the workspace header",
+);
+assert.match(
+  profile.slice(versionLink, headerEnd),
+  /label=\{appVersionLabel\}[\s\S]*?openInNewContext[\s\S]*?to=\{appCatalogUrl\}/,
+);
+assert.doesNotMatch(profile, /description=\{appVersionLabel\}/);
 const searchService = read(
   "src/main/webapp/common/services/splunkSearchService.js",
 );
 const topology = read(
   "src/main/webapp/common/components/workspace/CustomerTopologyMap.tsx",
 );
+assert.match(topology, /attributionControl=\{false\}/);
+assert.match(topology, /label="Map credits"/);
+assert.match(topology, /Map rendering: Leaflet\. Basemap:/);
 const picker = read(
   "src/main/webapp/common/components/workspace/KpiPickerPanel.tsx",
 );

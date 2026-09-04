@@ -1934,7 +1934,10 @@ iseval = 0`}</CodeBlock>
                         retain circular radio controls in the workspace editor.
                         Duplicated workspaces now keep their source Signal Rail
                         and section layouts instead of expanding to every
-                        fallback signal.
+                        fallback signal. The installed app version and build
+                        now remain visible in the Insights header, and map
+                        provider attribution is available from the compact Map
+                        credits control instead of covering map content.
                       </td>
                       <td className="px-3 py-3 sui-color-default">
                         Install the build through the supported app-management

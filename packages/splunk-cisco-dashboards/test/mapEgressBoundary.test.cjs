@@ -73,6 +73,9 @@ test("map styles use fixed keyless provider tiles with an offline option", () =>
   assert.match(customerTopology, /Switch base map\. Current:/);
   assert.match(customerTopology, /scrollWheelZoom/);
   assert.match(customerTopology, /MAP_TILE_STYLE_PRESETS/);
+  assert.match(customerTopology, /attributionControl=\{false\}/);
+  assert.match(customerTopology, /label="Map credits"/);
+  assert.match(customerTopology, /Map rendering: Leaflet\. Basemap:/);
   assert.match(secureOperations, /scd-glass-map-style-switcher/);
   assert.match(secureOperations, /aria-pressed=\{mapStyle === preset\.id\}/);
   assert.match(

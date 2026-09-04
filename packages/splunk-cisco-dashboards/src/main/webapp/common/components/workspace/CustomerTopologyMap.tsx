@@ -249,6 +249,19 @@ const MapLegendToggleButton = styled(Button)`
   }
 `;
 
+const MapCreditsButton = styled(Button)`
+  && {
+    ${mapControlChrome}
+    margin: 0;
+    padding: ${variables.spacingXSmall} ${variables.spacingSmall};
+  }
+
+  &&:focus,
+  &&:focus-visible {
+    box-shadow: ${variables.focusShadow};
+  }
+`;
+
 const MapLegendLabel = styled.span`
   color: inherit;
   font-size: ${variables.fontSizeSmall};
@@ -266,6 +279,11 @@ const MapLegendPreview = styled.span`
 const MotionSettingsCard = styled(OneCdGlassCard)`
   width: 16rem;
   padding: ${variables.spacingLarge};
+`;
+
+const MapCreditsCard = styled(OneCdGlassCard)`
+  width: 15rem;
+  padding: ${variables.spacingMedium};
 `;
 
 export const CUSTOMER_TOPOLOGY: CustomerTopology = {
@@ -5592,6 +5610,9 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   const [motionSettingsOpen, setMotionSettingsOpen] = useState(false);
   const [motionSettingsAnchor, setMotionSettingsAnchor] =
     useState<HTMLAnchorElement | HTMLButtonElement | null>(null);
+  const [mapCreditsOpen, setMapCreditsOpen] = useState(false);
+  const [mapCreditsAnchor, setMapCreditsAnchor] =
+    useState<HTMLAnchorElement | HTMLButtonElement | null>(null);
   const [tilePresetId, setTilePresetId] = useState<MapTileStyleId>(() =>
     defaultMapTileStyleId(isDark),
   );
@@ -6550,6 +6571,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     ) ??
     MAP_TILE_STYLE_PRESETS[0];
   const tileUrl = isDark ? tilePreset.darkUrl : tilePreset.lightUrl;
+  const tileAttribution = tilePreset.attribution.replace(/&copy;/gi, "©");
   const effectiveMapBounds = boundsForTopologySites(
     resolvedTopology.map.bounds,
     resolvedTopology.sites,
@@ -6585,6 +6607,11 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     setMotionSettingsOpen(false);
     window.requestAnimationFrame(() => motionSettingsAnchor?.focus());
   }, [motionSettingsAnchor]);
+
+  const closeMapCredits = useCallback(() => {
+    setMapCreditsOpen(false);
+    window.requestAnimationFrame(() => mapCreditsAnchor?.focus());
+  }, [mapCreditsAnchor]);
 
   // Build 99 fix: the spotlight-pause logic was previously
   // bumping `pauseUntilRef` on EVERY click, including ones that
@@ -6872,7 +6899,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
           style={{ height: "100%", width: "100%" }}
           zoomControl={false}
           scrollWheelZoom
-          attributionControl
+          attributionControl={false}
           className="customer-topology-map z-10"
         >
           <MapFrame
@@ -7089,6 +7116,62 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             />
           ))}
         </MapViewSelect>
+
+        {surfaceMode === "geo" && (
+          <div>
+            <MapCreditsButton
+              appearance="subtle"
+              elementRef={setMapCreditsAnchor}
+              label="Map credits"
+              onClick={() => setMapCreditsOpen((open) => !open)}
+              aria-controls={
+                mapCreditsOpen ? "customer-topology-map-credits" : undefined
+              }
+              aria-haspopup="dialog"
+              aria-expanded={mapCreditsOpen}
+            />
+            <Popover
+              appearance="none"
+              anchor={mapCreditsAnchor}
+              defaultPlacement="above"
+              hideArrow
+              onRequestClose={closeMapCredits}
+              open={mapCreditsOpen}
+              repositionMode="any"
+              retainFocus
+              takeFocus
+            >
+              <MapCreditsCard
+                id="customer-topology-map-credits"
+                tag="section"
+                role="dialog"
+                aria-labelledby="customer-topology-map-credits-title"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h5
+                      id="customer-topology-map-credits-title"
+                      className="text-sm font-bold"
+                    >
+                      Map credits
+                    </h5>
+                    <p className="mt-1 text-xs leading-snug sui-color-default">
+                      Map rendering: Leaflet. Basemap: {tileAttribution}.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeMapCredits}
+                    aria-label="Close map credits"
+                    className="rounded-md p-1 sui-color-default transition-colors sui-hover-bg-floating sui-hover-color-current focus:outline-none focus:ring-1 sui-focus-ring"
+                  >
+                    <X className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                </div>
+              </MapCreditsCard>
+            </Popover>
+          </div>
+        )}
       </MapBottomRightActions>
     </TopologyMapRoot>
   );

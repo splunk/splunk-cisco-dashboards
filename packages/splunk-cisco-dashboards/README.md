@@ -10,6 +10,10 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Kept the installed app version and build visible in the Insights workspace
+  header, with direct access to app details and upgrades. Replaced the map's
+  overlaid Leaflet attribution strip with a compact, keyboard-accessible Map
+  credits disclosure that preserves the active basemap attribution.
 - Fixed custom Insights workspace creation by preserving a missing-stanza 404
   through the bounded REST proxy so the client can create the new stanza.
   Template choices now retain circular 20-pixel radio controls in the narrow
