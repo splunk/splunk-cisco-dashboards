@@ -356,6 +356,9 @@ class WorkspaceMutationHandler(PersistentServerConnectionApplication):
         get_args = {"output_mode": "json"}
         if query_args:
             get_args.update(query_args)
+        # simpleRequest still raises ResourceNotFound for a 404 when only
+        # raiseAllErrors is disabled. Preserve the actual response so clients
+        # can distinguish a missing stanza and retry against the create route.
         response, content = rest.simpleRequest(
             path,
             sessionKey=system_token,
@@ -363,6 +366,7 @@ class WorkspaceMutationHandler(PersistentServerConnectionApplication):
             postargs=settings,
             getargs=get_args,
             raiseAllErrors=False,
+            rawResult=True,
         )
         return {
             "status": int(response.status),

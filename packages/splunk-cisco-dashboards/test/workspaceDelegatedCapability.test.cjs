@@ -133,6 +133,16 @@ assert.match(handler, /must contain valid JSON/);
 assert.match(handler, /class WorkspaceMutationHandler/);
 assert.match(handler, /system_authtoken/);
 assert.match(handler, /configs\/conf-\{\}/);
+assert.match(
+  handler,
+  /rest\.simpleRequest\([\s\S]*?rawResult=True/,
+  "The bounded proxy must preserve a missing-stanza 404 for the client create fallback",
+);
+assert.match(
+  workspaceService,
+  /response\.status === 404[\s\S]*?createBody\.set\("name", stanzaName\)[\s\S]*?buildMutationBaseUrl\(\)/,
+  "Workspace persistence must retry a missing stanza against the collection create route",
+);
 
 assert.match(
   liveValidator,

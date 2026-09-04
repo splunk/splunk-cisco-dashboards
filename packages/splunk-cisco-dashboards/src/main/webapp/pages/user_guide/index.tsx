@@ -1929,6 +1929,9 @@ iseval = 0`}</CodeBlock>
                         The final confirmation copy now remains readable in
                         both light and dark modes, and the completion action
                         clearly identifies the home dashboard destination.
+                        Custom Insights workspaces can now be created through
+                        the bounded persistence endpoint, and template choices
+                        retain circular radio controls in the workspace editor.
                       </td>
                       <td className="px-3 py-3 sui-color-default">
                         Install the build through the supported app-management
@@ -1945,7 +1948,7 @@ iseval = 0`}</CodeBlock>
                         <InlineCode>app.manifest</InlineCode> version/build
                         placeholders. A successful SplunkBase install creates
                         one upload-ready archive and installs that exact file;
-                        the target's installed build does not affect package
+                        the target&apos;s installed build does not affect package
                         allocation. Release archives use one validated packaging
                         path and preserve live
                         development-local configuration. Existing workspaces keep their saved

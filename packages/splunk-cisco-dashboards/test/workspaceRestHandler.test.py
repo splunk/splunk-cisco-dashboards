@@ -23,10 +23,17 @@ fake_rest = types.ModuleType("splunk.rest")
 fake_rest.calls = []
 fake_rest.response_status = 201
 fake_rest.response_content = b'{"entry": []}'
+fake_rest.raise_non_raw_http_errors = False
 
 
 def _simple_request(path, **kwargs):
     fake_rest.calls.append((path, kwargs))
+    if (
+        fake_rest.raise_non_raw_http_errors
+        and fake_rest.response_status >= 400
+        and not kwargs.get("rawResult")
+    ):
+        raise RuntimeError("ResourceNotFound")
     return (
         types.SimpleNamespace(status=fake_rest.response_status),
         fake_rest.response_content,
@@ -61,6 +68,7 @@ class WorkspaceRestValidationTest(unittest.TestCase):
         fake_rest.calls.clear()
         fake_rest.response_status = 201
         fake_rest.response_content = b'{"entry": []}'
+        fake_rest.raise_non_raw_http_errors = False
 
     def test_accepts_every_supported_stanza_family(self):
         scenarios = (
@@ -307,6 +315,27 @@ class WorkspaceRestValidationTest(unittest.TestCase):
         self.assertEqual(kwargs["postargs"]["name"], "workspace.delegated_ops")
         self.assertEqual(kwargs["postargs"]["updated_by"], "delegated-user")
         self.assertNotIn("output_mode", kwargs["postargs"])
+
+    def test_live_handler_preserves_missing_stanza_404_for_create_fallback(self):
+        fake_rest.response_status = 404
+        fake_rest.response_content = b'{"messages":[{"text":"Not found"}]}'
+        fake_rest.raise_non_raw_http_errors = True
+        app = handler.WorkspaceMutationHandler(None, None)
+        response = app.handle(
+            json.dumps(
+                {
+                    "method": "POST",
+                    "rest_path": "/scd_insights_workspaces/workspace.delegated_ops",
+                    "payload": "label=Ops&source_workspace=secure_networking",
+                    "system_authtoken": "system-token",
+                    "session": {"user": "delegated-user"},
+                }
+            )
+        )
+        self.assertEqual(response["status"], 404)
+        self.assertEqual(len(fake_rest.calls), 1)
+        _path, kwargs = fake_rest.calls[0]
+        self.assertTrue(kwargs["rawResult"])
 
     def test_live_handler_rejects_before_system_write(self):
         app = handler.WorkspaceMutationHandler(None, None)

@@ -10,6 +10,10 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Fixed custom Insights workspace creation by preserving a missing-stanza 404
+  through the bounded REST proxy so the client can create the new stanza.
+  Template choices now retain circular 20-pixel radio controls in the narrow
+  workspace editor.
 - Unified Splunkbase build and install packaging so a successful
   `--install --splunkbase` run creates one clean, release-eligible artifact and
   installs that exact tarball. The target's installed build no longer changes

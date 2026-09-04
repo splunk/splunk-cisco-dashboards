@@ -471,6 +471,15 @@ const m365Page = read(
 );
 const m365Data = read("src/main/webapp/pages/m365_activity_monitoring/data.ts");
 const userGuide = read("src/main/webapp/pages/user_guide/index.tsx");
+const workspaceManager = read(
+  "src/main/webapp/common/components/workspace/WorkspaceManager.tsx",
+);
+
+assert.match(
+  workspaceManager,
+  /const TemplateRadioList = styled\(RadioList\)[\s\S]*?grid-template-columns: \[input\] 20px \[label\] minmax\(0, 1fr\)[\s\S]*?min-inline-size: 20px[\s\S]*?<TemplateRadioList/,
+  "Workspace template radios must retain a circular 20px control track in the narrow editor",
+);
 
 assert.match(
   customOpenSearch,
@@ -581,8 +590,13 @@ assert.match(
 );
 assert.match(
   userGuide,
-  /successful SplunkBase install[\s\S]*?upload-ready archive[\s\S]*?target's installed build does not affect package/,
+  /successful SplunkBase install[\s\S]*?upload-ready archive[\s\S]*?target&apos;s installed build does not affect package/,
   "The current in-app release notes must document target-independent package construction",
+);
+assert.match(
+  userGuide,
+  /Custom Insights workspaces can now be created[\s\S]*?template choices[\s\S]*?circular radio controls/,
+  "The current in-app release notes must document workspace creation and radio geometry fixes",
 );
 assert.match(
   userGuide,

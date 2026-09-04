@@ -229,6 +229,19 @@ const FullWidth = styled.div`
     grid-column: 1 / -1;
 `;
 
+const TemplateRadioList = styled(RadioList)`
+    && {
+        grid-template-columns: [input] 20px [label] minmax(0, 1fr);
+    }
+
+    && input[type='radio'] {
+        inline-size: 20px;
+        min-inline-size: 20px;
+        block-size: 20px;
+        min-block-size: 20px;
+    }
+`;
+
 const SectionFieldset = styled.fieldset`
     min-width: 0;
     margin: ${variables.spacingSmall} 0 0;
@@ -647,7 +660,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                             label="Start from a template"
                                             help="Templates provide a useful first configuration. After creation, this workspace owns its sections, rail, map, theme, and layouts."
                                         >
-                                            <RadioList
+                                            <TemplateRadioList
                                                 value={draft.sourceWorkspace}
                                                 onChange={(_event, { value }) =>
                                                     updateSource(
@@ -684,7 +697,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                                         );
                                                     },
                                                 )}
-                                            </RadioList>
+                                            </TemplateRadioList>
                                         </ControlGroup>
                                     </FullWidth>
                                 )}
