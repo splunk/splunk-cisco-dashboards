@@ -1917,6 +1917,14 @@ iseval = 0`}</CodeBlock>
                         metadata on demand.
                         New dashboards default to Shared in App, with Private
                         retained as an explicit creation-time choice.
+                        CIM setup discovery now runs one bounded job per data
+                        model, two at a time, with visible progress,
+                        cancellation, partial-result preservation, and an exact
+                        index scope taken from Configure data. Setup also keeps
+                        successful saves out of subsequent retries and no
+                        longer blocks completion solely because an optional
+                        companion-app routing macro is unavailable; the exact
+                        companion setting remains visible for later follow-up.
                       </td>
                       <td className="px-3 py-3 sui-color-default">
                         Install the build through the supported app-management

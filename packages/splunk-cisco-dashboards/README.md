@@ -10,6 +10,11 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Made Guided Setup CIM discovery run one independently bounded search per data
+  model, with two searches in flight, visible progress, cancellation, and
+  preservation of completed results. Setup retries now skip settings that were
+  already saved, and unavailable optional companion-app routing macros no
+  longer prevent completion.
 - Preserved DensityFunction anomaly results across seven Cisco Spaces,
   ThousandEyes, and building-resilience searches by preventing Splunk's search
   optimizer from pruning MLTK-generated `IsOutlier(...)` fields during final

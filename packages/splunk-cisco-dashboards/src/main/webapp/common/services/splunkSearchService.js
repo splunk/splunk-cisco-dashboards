@@ -104,6 +104,12 @@ const canvasTrace = (outcome, detail) => {
 const elapsedMs = (startedAt, endedAt = Date.now()) =>
   Math.max(0, endedAt - startedAt);
 
+const isTrueSearchJobValue = (value) =>
+  value === true ||
+  value === 1 ||
+  value === "1" ||
+  String(value || "").trim().toLowerCase() === "true";
+
 const dispatchStageLabel = (priority) => {
   const normalized = normalizeDispatchPriority(priority);
   if (normalized === 0) return "Signal Rail";
@@ -357,6 +363,7 @@ export const DEFAULT_DISPATCH_PRIORITY = 100;
 
 const DISPATCH_RETRY_BASE_MS = [500, 1500, 4000];
 const DISPATCH_MAX_ATTEMPTS = 1 + DISPATCH_RETRY_BASE_MS.length;
+const MANAGED_SEARCH_POLL_MS = 1000;
 
 let dispatchConcurrency = DEFAULT_CONCURRENT_TILE_SEARCHES;
 let dispatchInFlight = 0;
@@ -753,6 +760,212 @@ const dispatchOneShotWithRetry = async (
     }
   }
   throw lastError;
+};
+
+const readManagedSearchResponse = async (response, expectedStatuses, label) => {
+  const expected = Array.isArray(expectedStatuses)
+    ? expectedStatuses
+    : [expectedStatuses];
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+  if (!expected.includes(response.status)) {
+    throw new SearchDispatchError(
+      splunkJobErrorText(payload) || `${label} (HTTP ${response.status})`,
+      {
+        httpStatus: response.status,
+        kind: "dispatch_failed",
+        retryable: isRetryableHttpStatus(response.status),
+      },
+    );
+  }
+  return payload || {};
+};
+
+const managedSearchUrl = (path, namespaceOptions) =>
+  createRESTURL(`search/jobs${path}`, namespaceOptions);
+
+const managedSearchResultsUrl = (sid, namespaceOptions) =>
+  createRESTURL(
+    `search/v2/jobs/${encodeURIComponent(sid)}/results`,
+    namespaceOptions,
+  );
+
+const cancelManagedSearchJob = async (sid, namespaceOptions) => {
+  if (!sid) return;
+  try {
+    await fetch(
+      managedSearchUrl(
+        `/${encodeURIComponent(sid)}/control`,
+        namespaceOptions,
+      ),
+      {
+        ...getDefaultFetchInit(),
+        method: "POST",
+        body: querystring.encode({ action: "cancel", output_mode: "json" }),
+      },
+    );
+  } catch {
+    // Cancellation is best-effort because the job can finish between the
+    // caller aborting and this cleanup request reaching the search head.
+  }
+};
+
+const managedSearchState = (payload) => {
+  const entry = Array.isArray(payload?.entry) ? payload.entry[0] : null;
+  const content = entry?.content || {};
+  const dispatchState = String(content.dispatchState || "QUEUED");
+  const progress = Number(content.doneProgress);
+  return {
+    dispatchState,
+    progress: Number.isFinite(progress)
+      ? Math.max(0, Math.min(1, progress))
+      : 0,
+    isDone: isTrueSearchJobValue(content.isDone),
+    isFinalized: isTrueSearchJobValue(content.isFinalized),
+    isFailed:
+      dispatchState.toUpperCase() === "FAILED" ||
+      isTrueSearchJobValue(content.isFailed) ||
+      isTrueSearchJobValue(content.isZombie),
+  };
+};
+
+/**
+ * Run one SID-backed search with progress and server-side cancellation.
+ * This path is intentionally separate from dashboard tile one-shots so the
+ * shared caching and concurrency behavior of runSearch remains unchanged.
+ *
+ * @param {Object} params
+ * @param {string} params.spl
+ * @param {string} [params.earliestTime]
+ * @param {string} [params.latestTime]
+ * @param {string} [params.appContext]
+ * @param {number} [params.count]
+ * @param {number} [params.maxTimeSeconds]
+ * @param {string} [params.tag]
+ * @param {AbortSignal} [params.signal]
+ * @param {(progress: { sid: string, dispatchState: string, progress: number }) => void} [params.onProgress]
+ * @returns {Promise<{results: Array<Object>, sid: string | null, timedOut: boolean}>}
+ */
+export const runManagedSearch = async ({
+  spl,
+  earliestTime = "-24h",
+  latestTime = "now",
+  appContext,
+  count = 1000,
+  maxTimeSeconds = 60,
+  tag,
+  signal,
+  onProgress,
+} = {}) => {
+  assertSafeSpl(spl);
+  const resolvedAppContext = resolveSearchAppContext(appContext);
+  const namespace = { app: resolvedAppContext };
+  const searchLabel = tag || "managed-search";
+  const startedAt = Date.now();
+
+  if (signal?.aborted) throw makeAbortError();
+  if (!isInSplunkRuntime()) {
+    const response = await mockSearch({ tag });
+    onProgress?.({ sid: "", dispatchState: "DONE", progress: 1 });
+    return { results: response.results || [], sid: null, timedOut: false };
+  }
+
+  let sid = "";
+  try {
+    const dispatchResponse = await fetch(managedSearchUrl("", namespace), {
+      ...getDefaultFetchInit(),
+      method: "POST",
+      body: querystring.encode({
+        output_mode: "json",
+        search: addLeadingSearchCommand(spl),
+        earliest_time: earliestTime,
+        latest_time: latestTime,
+        max_time: Math.max(1, Math.round(Number(maxTimeSeconds) || 60)),
+        auto_cancel: 30,
+      }),
+      signal,
+    });
+    const dispatchPayload = await readManagedSearchResponse(
+      dispatchResponse,
+      201,
+      "Managed search dispatch failed",
+    );
+    sid = String(dispatchPayload?.sid || "").trim();
+    if (!sid) {
+      throw new SearchDispatchError("Managed search dispatch returned no SID.");
+    }
+
+    let state = {
+      dispatchState: "QUEUED",
+      progress: 0,
+      isDone: false,
+      isFinalized: false,
+      isFailed: false,
+    };
+    while (!state.isDone && !state.isFinalized) {
+      if (signal?.aborted) throw makeAbortError();
+      const statusResponse = await fetch(
+        `${managedSearchUrl(`/${encodeURIComponent(sid)}`, namespace)}?output_mode=json`,
+        { ...getDefaultFetchInit(), signal },
+      );
+      const statusPayload = await readManagedSearchResponse(
+        statusResponse,
+        200,
+        "Managed search status failed",
+      );
+      state = managedSearchState(statusPayload);
+      onProgress?.({
+        sid,
+        dispatchState: state.dispatchState,
+        progress: state.progress,
+      });
+      if (state.isFailed) {
+        throw new SearchDispatchError(
+          splunkJobErrorText(statusPayload) ||
+            `Search job ${searchLabel} failed in ${state.dispatchState}.`,
+          { kind: "job_failed" },
+        );
+      }
+      if (!state.isDone && !state.isFinalized) {
+        await cancellableSleep(MANAGED_SEARCH_POLL_MS, signal);
+      }
+    }
+
+    const resultsResponse = await fetch(
+      `${managedSearchResultsUrl(sid, namespace)}?${querystring.encode({ output_mode: "json", count })}`,
+      { ...getDefaultFetchInit(), signal },
+    );
+    const resultsPayload = await readManagedSearchResponse(
+      resultsResponse,
+      [200, 204],
+      "Managed search results failed",
+    );
+    const timedOut = state.isFinalized && !state.isDone;
+    canvasTrace(timedOut ? "TIMED OUT" : "COMPLETED", {
+      search: searchLabel,
+      stage: "Managed",
+      rows: Array.isArray(resultsPayload?.results)
+        ? resultsPayload.results.length
+        : 0,
+      totalMs: elapsedMs(startedAt),
+    });
+    return {
+      results: Array.isArray(resultsPayload?.results)
+        ? resultsPayload.results
+        : [],
+      sid,
+      timedOut,
+    };
+  } catch (err) {
+    if (sid && (signal?.aborted || isAbortError(err))) {
+      await cancelManagedSearchJob(sid, namespace);
+    }
+    throw err;
+  }
 };
 
 /**

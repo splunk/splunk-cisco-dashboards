@@ -528,6 +528,9 @@ test("CIM setup reviews only the approved data model inventory", () => {
   const configEnd = tuner.indexOf("] as const;", configStart);
   const config = tuner.slice(configStart, configEnd);
   const models = [...config.matchAll(/model: "([^"]+)"/g)].map((match) => match[1]);
+  const dataModels = [...config.matchAll(/dataModel: "([^"]+)"/g)].map(
+    (match) => match[1],
+  );
 
   assert.deepEqual(models, [
     "Alerts",
@@ -557,15 +560,34 @@ test("CIM setup reviews only the approved data model inventory", () => {
     config,
     /macro: "cim_Compute_Inventory_indexes",\s*model: "Inventory"/,
   );
+  assert.equal(dataModels.length, 22);
+  assert.match(
+    config,
+    /dataModel: "Endpoint",\s*rootNodes: \["Ports", "Processes", "Services", "Filesystem", "Registry"\]/,
+  );
+  assert.match(
+    config,
+    /dataModel: "Malware",\s*rootNodes: \["Malware_Attacks", "Malware_Operations"\]/,
+  );
+  assert.match(
+    config,
+    /dataModel: "Updates",\s*rootNodes: \["Updates", "Update_Errors"\]/,
+  );
   assert.doesNotMatch(config, /Change Analysis|Event Signatures/);
 });
 
-test("CIM discovery defaults to fifteen minutes and reports read-only matches", () => {
+test("CIM discovery is bounded per model and reports progressive read-only matches", () => {
   assert.match(
     tuner,
     /const DEFAULT_CIM_TIME_RANGE: SearchTimeRange = \{\s*earliest: "-15m",\s*latest: "now",\s*\};/s,
   );
-  assert.match(tuner, /Discovery complete — \$\{setupCimMatchedRows\.length\}/);
+  assert.match(tuner, /const CIM_DISCOVERY_CONCURRENCY = 2;/);
+  assert.match(tuner, /const CIM_DISCOVERY_JOB_MAX_SECONDS = 60;/);
+  assert.match(tuner, /const CIM_DISCOVERY_GLOBAL_MAX_MS = 120_000;/);
+  assert.match(tuner, /runManagedSearch\(\{/);
+  assert.match(tuner, /buildCimDataModelDiscoverySearch\(config, discoveryIndexes\)/);
+  assert.match(tuner, /cimDiscoveryActionLabel = "Cancel discovery"/);
+  assert.match(tuner, /completed results were preserved/);
   assert.match(tuner, /Discovery is read-only\./);
   assert.match(
     tuner,
@@ -574,8 +596,21 @@ test("CIM discovery defaults to fifteen minutes and reports read-only matches", 
   assert.match(tuner, /import Progress from '@splunk\/react-ui\/Progress'/);
   assert.match(
     tuner,
-    /<Progress\s+appearance="accent"\s+aria-label="Discovering CIM indexes"\s+indeterminate/s,
+    /<Progress\s+appearance="accent"[\s\S]*?percentage=\{cimDiscoveryPercent\}/,
   );
+  assert.doesNotMatch(tuner, /const CIM_DISCOVERY_SEARCH =/);
+});
+
+test("setup can finish when only an optional companion-app macro cannot save", () => {
+  assert.match(
+    tuner,
+    /if \(row\.targetApp === APP_NAME\) requiredFailures\.push\(detail\);\s*else optionalFailures\.push\(detail\);/,
+  );
+  assert.match(tuner, /await completeInitialSetup\(\);/);
+  assert.match(tuner, /Optional companion settings were not saved/);
+  assert.match(tuner, /savedRow\(row, false\);/);
+  assert.match(tuner, /retry only the remaining highlighted changes/);
+  assert.match(tuner, /Save failed: \{changeStatus\.message/);
 });
 
 test("CIM review table fits its panel without forced horizontal scrolling", () => {

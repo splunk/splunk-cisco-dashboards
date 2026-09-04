@@ -52,6 +52,7 @@ import {
 import {
   getSearchAppContext,
   isAbortError,
+  runManagedSearch,
   runSearch,
 } from "@/common/services/splunkSearchService";
 import { getSearchbaseCatalogue } from "@/common/services/searchbaseCatalogue";
@@ -127,163 +128,138 @@ const FALLBACK_SCD_INDEX_MACRO_NAMES = [
   "index_windows",
   "index_zeek",
 ] as const;
-const cimHasTag = (tag: string): string =>
-  `mvfind(cim_tags,"^${tag}$")>=0`;
-const cimAll = (...predicates: string[]): string =>
-  `(${predicates.join(" AND ")})`;
-const cimAny = (...predicates: string[]): string =>
-  `(${predicates.join(" OR ")})`;
-
 const CIM_DATA_MODEL_DISCOVERY_CONFIGS = [
   {
     macro: "cim_Alerts_indexes",
     model: "Alerts",
-    predicate: cimHasTag("alert"),
+    dataModel: "Alerts",
+    rootNodes: ["Alerts"],
   },
   {
     macro: "cim_Authentication_indexes",
     model: "Authentication",
-    predicate: cimAll(
-      cimHasTag("authentication"),
-      "cim_exclude_authentication==0",
-    ),
+    dataModel: "Authentication",
+    rootNodes: ["Authentication"],
   },
   {
     macro: "cim_Certificates_indexes",
     model: "Certificates",
-    predicate: cimHasTag("certificate"),
+    dataModel: "Certificates",
+    rootNodes: ["All_Certificates"],
   },
   {
     macro: "cim_Change_indexes",
     model: "Change",
-    predicate: cimHasTag("change"),
+    dataModel: "Change",
+    rootNodes: ["All_Changes"],
   },
   {
     macro: "cim_Data_Access_indexes",
     model: "Data Access",
-    predicate: cimAll(cimHasTag("data"), cimHasTag("access")),
+    dataModel: "Data_Access",
+    rootNodes: ["Data_Access"],
   },
   {
     macro: "cim_DLP_indexes",
     model: "Data Loss Prevention",
-    predicate: cimAll(cimHasTag("dlp"), cimHasTag("incident")),
+    dataModel: "DLP",
+    rootNodes: ["DLP_Incidents"],
   },
   {
     macro: "cim_Databases_indexes",
     model: "Databases",
-    predicate: cimHasTag("database"),
+    dataModel: "Databases",
+    rootNodes: ["All_Databases"],
   },
   {
     macro: "cim_Email_indexes",
     model: "Email",
-    predicate: cimHasTag("email"),
+    dataModel: "Email",
+    rootNodes: ["All_Email"],
   },
   {
     macro: "cim_Endpoint_indexes",
     model: "Endpoint",
-    predicate: cimAny(
-      cimAll(cimHasTag("listening"), cimHasTag("port")),
-      cimAll(cimHasTag("process"), cimHasTag("report")),
-      cimAll(cimHasTag("service"), cimHasTag("report")),
-      cimAll(cimHasTag("endpoint"), cimHasTag("filesystem")),
-      cimAll(cimHasTag("endpoint"), cimHasTag("registry")),
-    ),
+    dataModel: "Endpoint",
+    rootNodes: ["Ports", "Processes", "Services", "Filesystem", "Registry"],
   },
   {
     macro: "cim_Interprocess_Messaging_indexes",
     model: "Interprocess Messaging",
-    predicate: cimHasTag("messaging"),
+    dataModel: "Interprocess_Messaging",
+    rootNodes: ["All_Messaging"],
   },
   {
     macro: "cim_Intrusion_Detection_indexes",
     model: "Intrusion Detection",
-    predicate: cimAll(cimHasTag("ids"), cimHasTag("attack")),
+    dataModel: "Intrusion_Detection",
+    rootNodes: ["IDS_Attacks"],
   },
   {
     macro: "cim_Compute_Inventory_indexes",
     model: "Inventory",
-    predicate: cimAll(
-      cimHasTag("inventory"),
-      cimAny(
-        cimHasTag("cpu"),
-        cimHasTag("memory"),
-        cimHasTag("network"),
-        cimHasTag("storage"),
-        cimAll(cimHasTag("system"), cimHasTag("version")),
-        cimHasTag("user"),
-        cimHasTag("virtual"),
-      ),
-    ),
+    dataModel: "Compute_Inventory",
+    rootNodes: ["All_Inventory"],
   },
   {
     macro: "cim_JVM_indexes",
     model: "JVM",
-    predicate: cimHasTag("jvm"),
+    dataModel: "JVM",
+    rootNodes: ["JVM"],
   },
   {
     macro: "cim_Malware_indexes",
     model: "Malware",
-    predicate: cimAll(cimHasTag("malware"), cimHasTag("attack")),
+    dataModel: "Malware",
+    rootNodes: ["Malware_Attacks", "Malware_Operations"],
   },
   {
     macro: "cim_Network_Resolution_indexes",
     model: "Network Resolution (DNS)",
-    predicate: cimAll(
-      cimHasTag("network"),
-      cimHasTag("resolution"),
-      cimHasTag("dns"),
-    ),
+    dataModel: "Network_Resolution",
+    rootNodes: ["DNS"],
   },
   {
     macro: "cim_Network_Sessions_indexes",
     model: "Network Sessions",
-    predicate: cimAll(cimHasTag("network"), cimHasTag("session")),
+    dataModel: "Network_Sessions",
+    rootNodes: ["All_Sessions"],
   },
   {
     macro: "cim_Network_Traffic_indexes",
     model: "Network Traffic",
-    predicate: cimAll(cimHasTag("network"), cimHasTag("communicate")),
+    dataModel: "Network_Traffic",
+    rootNodes: ["All_Traffic"],
   },
   {
     macro: "cim_Performance_indexes",
     model: "Performance",
-    predicate: cimAll(
-      cimHasTag("performance"),
-      cimAny(
-        cimHasTag("cpu"),
-        cimHasTag("facilities"),
-        cimHasTag("memory"),
-        cimHasTag("storage"),
-        cimHasTag("network"),
-        cimAll(
-          cimHasTag("os"),
-          cimAny(
-            cimAll(cimHasTag("time"), cimHasTag("synchronize")),
-            cimHasTag("uptime"),
-          ),
-        ),
-      ),
-    ),
+    dataModel: "Performance",
+    rootNodes: ["All_Performance"],
   },
   {
     macro: "cim_Ticket_Management_indexes",
     model: "Ticket Management",
-    predicate: cimHasTag("ticketing"),
+    dataModel: "Ticket_Management",
+    rootNodes: ["All_Ticket_Management"],
   },
   {
     macro: "cim_Updates_indexes",
     model: "Updates",
-    predicate: cimAll(cimHasTag("update"), cimHasTag("status")),
+    dataModel: "Updates",
+    rootNodes: ["Updates", "Update_Errors"],
   },
   {
     macro: "cim_Vulnerabilities_indexes",
     model: "Vulnerabilities",
-    predicate: cimAll(cimHasTag("vulnerability"), cimHasTag("report")),
+    dataModel: "Vulnerabilities",
+    rootNodes: ["Vulnerabilities"],
   },
   {
     macro: "cim_Web_indexes",
     model: "Web",
-    predicate: cimHasTag("web"),
+    dataModel: "Web",
+    rootNodes: ["Web"],
   },
 ] as const;
 const CIM_MACRO_NAMES = CIM_DATA_MODEL_DISCOVERY_CONFIGS.map(
@@ -597,6 +573,32 @@ interface SaveStatus {
   message?: string;
 }
 
+type CimDiscoveryModelState =
+  | "queued"
+  | "running"
+  | "complete"
+  | "timed_out"
+  | "failed"
+  | "cancelled";
+
+interface CimDiscoveryProgressState {
+  completed: number;
+  failed: number;
+  timedOut: number;
+  total: number;
+  activeModels: string[];
+  modelStates: Record<string, CimDiscoveryModelState>;
+  cancelled: boolean;
+  deadlineReached: boolean;
+}
+
+interface SetupCompletionSummary {
+  routingSaved: number;
+  cimSaved: number;
+  performanceSaved: boolean;
+  optionalFailures: string[];
+}
+
 interface MacroDetails {
   definition: string;
   description: string;
@@ -804,49 +806,22 @@ const TIME_PRESETS = [
   { label: "All time", earliest: "0", latest: "now" },
 ];
 
-const CIM_DISCOVERY_BASE_TAGS = [
-  "alert",
-  "listening",
-  "process",
-  "service",
-  "authentication",
-  "certificate",
-  "change",
-  "inventory",
-  "dlp",
-  "database",
-  "data",
-  "email",
-  "endpoint",
-  "messaging",
-  "ids",
-  "jvm",
-  "malware",
-  "network",
-  "performance",
-  "ticketing",
-  "update",
-  "vulnerability",
-  "web",
-] as const;
-const CIM_DISCOVERY_SEARCH = [
-  `search (${SCD_INDEX_MACRO_OR_PLACEHOLDER}) (${CIM_DISCOVERY_BASE_TAGS.map((tag) => `tag=${tag}`).join(" OR ")})`,
-  "| fields index sourcetype eventtype action user",
-  '| eval sourcetype=coalesce(sourcetype, "(unknown sourcetype)"), cim_exclude_authentication=if(action=="success" AND match(user,"\\$$"),1,0), cim_eventtype_key=mvjoin(mvsort(eventtype),"|")',
-  "| stats count as cim_event_count by index sourcetype cim_eventtype_key cim_exclude_authentication",
-  '| eval eventtype=split(cim_eventtype_key,"|")',
-  "| tags outputfield=cim_tags eventtype",
-  `| eval macro=mvappend(${CIM_DATA_MODEL_DISCOVERY_CONFIGS.map(
-    ({ macro, predicate }) =>
-      `if(${predicate},"${macro}",null())`,
-  ).join(",")})`,
-  "| where isnotnull(macro)",
-  "| mvexpand macro",
-  "| stats values(index) as indexes, values(sourcetype) as sourcetypes, dc(sourcetype) as sourcetype_count, sum(cim_event_count) as events by macro",
-  `| eval target_app="${CIM_APP_NAME}", definition_format="indexIn"`,
-  '| eval definition="index IN (".mvjoin(indexes, ", ").")"',
-  "| table macro, target_app, definition_format, definition, indexes, sourcetypes, sourcetype_count, events",
-].join("\n");
+const CIM_DISCOVERY_CONCURRENCY = 2;
+const CIM_DISCOVERY_JOB_MAX_SECONDS = 60;
+const CIM_DISCOVERY_GLOBAL_MAX_MS = 120_000;
+const CONCRETE_INDEX_NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_.:-]*$/;
+const createInitialCimDiscoveryProgress = (): CimDiscoveryProgressState => ({
+  completed: 0,
+  failed: 0,
+  timedOut: 0,
+  total: CIM_DATA_MODEL_DISCOVERY_CONFIGS.length,
+  activeModels: [],
+  modelStates: Object.fromEntries(
+    CIM_DATA_MODEL_DISCOVERY_CONFIGS.map(({ macro }) => [macro, "queued"]),
+  ) as Record<string, CimDiscoveryModelState>,
+  cancelled: false,
+  deadlineReached: false,
+});
 
 const lightButtonBase =
   "inline-flex h-10 min-h-10 items-center justify-center gap-2 rounded-md border px-3 text-sm font-semibold leading-none transition disabled:cursor-not-allowed disabled:opacity-55";
@@ -1120,6 +1095,49 @@ const extractIndexTokens = (definition: string): string[] => {
   }
 
   return Array.from(tokens);
+};
+
+export const collectConcreteCimDiscoveryIndexes = (
+  rows: readonly Pick<EditableMacroRow, "draftDefinition">[],
+): string[] => {
+  return Array.from(
+    new Set(
+      rows.flatMap((row) => extractIndexTokens(row.draftDefinition)).filter(
+        (indexName) => CONCRETE_INDEX_NAME_PATTERN.test(indexName),
+      ),
+    ),
+  ).sort((left, right) => left.localeCompare(right));
+};
+
+export const buildCimDataModelDiscoverySearch = (
+  config: {
+    macro: string;
+    dataModel: string;
+    rootNodes: readonly string[];
+  },
+  indexNames: readonly string[],
+): string => {
+  if (!indexNames.length) {
+    throw new Error(
+      "CIM discovery needs at least one concrete index from Configure data.",
+    );
+  }
+  if (indexNames.some((indexName) => !CONCRETE_INDEX_NAME_PATTERN.test(indexName))) {
+    throw new Error("CIM discovery received an invalid or wildcard index name.");
+  }
+  const nodeClause = config.rootNodes
+    .map((rootNode) => `nodename=${rootNode}`)
+    .join(" OR ");
+  const indexClause = indexNames
+    .map((indexName) => `"${indexName}"`)
+    .join(", ");
+  return [
+    `| tstats summariesonly=false count as cim_event_count FROM datamodel=${config.dataModel} WHERE (${nodeClause}) AND index IN (${indexClause}) BY index sourcetype`,
+    "| stats sum(cim_event_count) as events values(index) as indexes values(sourcetype) as sourcetypes dc(sourcetype) as sourcetype_count",
+    `| eval macro="${config.macro}", target_app="${CIM_APP_NAME}", definition_format="indexIn"`,
+    '| eval definition="index IN (".mvjoin(indexes, ", ").")"',
+    "| table macro target_app definition_format definition indexes sourcetypes sourcetype_count events",
+  ].join("\n");
 };
 
 const extractSourcetypeTokens = (definition: string): string[] => {
@@ -2668,6 +2686,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
   );
   const [setupStatus, setSetupStatus] = useState<SaveStatus>({ state: "idle" });
   const [setupComplete, setSetupComplete] = useState(false);
+  const [setupCompletionSummary, setSetupCompletionSummary] =
+    useState<SetupCompletionSummary | null>(null);
+  const [cimDiscoveryProgress, setCimDiscoveryProgress] =
+    useState<CimDiscoveryProgressState>(createInitialCimDiscoveryProgress);
   const [showFinishConfirmation, setShowFinishConfirmation] = useState(false);
   const [setupEditor, setSetupEditor] = useState<SetupEditorState | null>(null);
   const [setupRerunScope, setSetupRerunScope] =
@@ -3198,6 +3220,28 @@ export default function MacroIndexTuningPage(): JSX.Element {
   });
   const isLoading = scanState === "loading";
   const isCimLoading = cimScanState === "loading";
+  const cimDiscoveryPercent = Math.round(
+    (cimDiscoveryProgress.completed /
+      Math.max(1, cimDiscoveryProgress.total)) *
+      100,
+  );
+  const cimDiscoverySuccessfulCount = Object.values(
+    cimDiscoveryProgress.modelStates,
+  ).filter((state) => state === "complete").length;
+  const cimDiscoveryIssueCount = Math.max(
+    0,
+    cimDiscoveryProgress.total - cimDiscoverySuccessfulCount,
+  );
+  const cimDiscoveryIssueModels = CIM_DATA_MODEL_DISCOVERY_CONFIGS.filter(
+    ({ macro }) => cimDiscoveryProgress.modelStates[macro] !== "complete",
+  ).map(({ model }) => model);
+  const cimDiscoveryIssueSummary = cimDiscoveryIssueModels.length
+    ? ` Retry: ${cimDiscoveryIssueModels.slice(0, 4).join(", ")}${
+        cimDiscoveryIssueModels.length > 4
+          ? `, and ${cimDiscoveryIssueModels.length - 4} more`
+          : ""
+      }.`
+    : "";
   const isSavingAll = Object.values(saveStatuses).some(
     (status) => status.state === "saving",
   );
@@ -3267,17 +3311,26 @@ export default function MacroIndexTuningPage(): JSX.Element {
       searchSpl ? injectIndexMacroOrClause(searchSpl, scdIndexMacroNames) : "",
     [scdIndexMacroNames, searchSpl],
   );
+  const cimDiscoveryIndexes = useMemo(
+    () => collectConcreteCimDiscoveryIndexes(setupRowsToSave),
+    [setupRowsToSave],
+  );
   const resolvedCimSearchSpl = useMemo(
-    () => injectIndexMacroOrClause(CIM_DISCOVERY_SEARCH, scdIndexMacroNames),
-    [scdIndexMacroNames],
+    () =>
+      cimDiscoveryIndexes.length
+        ? buildCimDataModelDiscoverySearch(
+            CIM_DATA_MODEL_DISCOVERY_CONFIGS[0],
+            cimDiscoveryIndexes,
+          )
+        : "",
+    [cimDiscoveryIndexes],
   );
   const openSearchUrl = resolvedSearchSpl
     ? splunkSearchAppUrl(resolvedSearchSpl, timeRange)
     : "";
-  const openCimSearchUrl = splunkSearchAppUrl(
-    resolvedCimSearchSpl,
-    cimTimeRange,
-  );
+  const openCimSearchUrl = resolvedCimSearchSpl
+    ? splunkSearchAppUrl(resolvedCimSearchSpl, cimTimeRange)
+    : "";
   const openAccelerationSearchUrl = splunkSearchAppUrl(
     DATA_MODEL_ACCELERATION_SEARCH,
     { earliest: "0", latest: "now" },
@@ -3481,37 +3534,136 @@ export default function MacroIndexTuningPage(): JSX.Element {
     const controller = new AbortController();
     cimAbortRef.current = controller;
     setCimScanState("loading");
+    setCimDiscoveryProgress(createInitialCimDiscoveryProgress());
     setCimError("");
     setSaveStatuses({});
     setCimBulkSaveStatus({ state: "idle" });
 
+    let deadlineReached = false;
+    let deadlineTimer: ReturnType<typeof setTimeout> | null = null;
     try {
-      const discoveredIndexMacroNames = await loadScdIndexMacroNames();
-      setScdIndexMacroNames(discoveredIndexMacroNames);
-      const spl = injectIndexMacroOrClause(
-        CIM_DISCOVERY_SEARCH,
-        discoveredIndexMacroNames,
+      const discoveryIndexes = collectConcreteCimDiscoveryIndexes(
+        setupRowsToSave,
       );
-      const result = await runSearch({
-        spl,
-        earliestTime: cimTimeRange.earliest,
-        latestTime: cimTimeRange.latest,
-        count: 0,
-        tag: `${TUNING_SEARCHBASE_ID}:cim`,
-        signal: controller.signal,
-      });
+      if (!discoveryIndexes.length) {
+        throw new Error(
+          "No concrete indexes are available from Configure data. Return to Step 4, run the routing scan, and retry CIM discovery.",
+        );
+      }
+
+      const resultRows: Record<string, unknown>[] = [];
+      let nextConfigIndex = 0;
+      let successfulModels = 0;
+      let failedModels = 0;
+
+      const updateModelState = (
+        macro: string,
+        modelState: CimDiscoveryModelState,
+      ) => {
+        setCimDiscoveryProgress((current) => {
+          const modelStates = { ...current.modelStates, [macro]: modelState };
+          const states = Object.values(modelStates);
+          return {
+            ...current,
+            modelStates,
+            completed: states.filter((state) =>
+              ["complete", "timed_out", "failed", "cancelled"].includes(
+                state,
+              ),
+            ).length,
+            failed: states.filter((state) => state === "failed").length,
+            timedOut: states.filter((state) => state === "timed_out").length,
+            activeModels: CIM_DATA_MODEL_DISCOVERY_CONFIGS.filter(
+              (config) => modelStates[config.macro] === "running",
+            ).map(({ model }) => model),
+          };
+        });
+      };
+
+      deadlineTimer = setTimeout(() => {
+        deadlineReached = true;
+        setCimDiscoveryProgress((current) => ({
+          ...current,
+          deadlineReached: true,
+        }));
+        controller.abort();
+      }, CIM_DISCOVERY_GLOBAL_MAX_MS);
+
+      const worker = async () => {
+        while (!controller.signal.aborted) {
+          const configIndex = nextConfigIndex;
+          nextConfigIndex += 1;
+          if (configIndex >= CIM_DATA_MODEL_DISCOVERY_CONFIGS.length) return;
+          const config = CIM_DATA_MODEL_DISCOVERY_CONFIGS[configIndex];
+          updateModelState(config.macro, "running");
+          try {
+            // Each model is an independently bounded Splunk job. This keeps
+            // one expensive model from hiding progress for every other model.
+            // eslint-disable-next-line no-await-in-loop
+            const result = await runManagedSearch({
+              spl: buildCimDataModelDiscoverySearch(config, discoveryIndexes),
+              earliestTime: cimTimeRange.earliest,
+              latestTime: cimTimeRange.latest,
+              count: 10,
+              maxTimeSeconds: CIM_DISCOVERY_JOB_MAX_SECONDS,
+              tag: `${TUNING_SEARCHBASE_ID}:cim:${config.dataModel}`,
+              signal: controller.signal,
+            });
+            resultRows.push(
+              ...((result.results || []) as Record<string, unknown>[]),
+            );
+            successfulModels += 1;
+            updateModelState(
+              config.macro,
+              result.timedOut ? "timed_out" : "complete",
+            );
+          } catch (modelError) {
+            if (isAbortError(modelError)) {
+              updateModelState(config.macro, "cancelled");
+              return;
+            }
+            failedModels += 1;
+            updateModelState(config.macro, "failed");
+          }
+        }
+      };
+
+      await Promise.all(
+        Array.from(
+          {
+            length: Math.min(
+              CIM_DISCOVERY_CONCURRENCY,
+              CIM_DATA_MODEL_DISCOVERY_CONFIGS.length,
+            ),
+          },
+          () => worker(),
+        ),
+      );
+      if (deadlineTimer) {
+        clearTimeout(deadlineTimer);
+        deadlineTimer = null;
+      }
+      if (cimAbortRef.current !== controller) return;
+
       const currentDetails = await loadMacroDetailsByConfig(
         CIM_MACRO_CONFIGS,
         { requireDefinitions: true },
       );
-      const parsed = ((result.results || []) as Record<string, unknown>[])
+      const parsed = resultRows
         .map((row) => parseSearchResult(row, macroConfigByName))
         .filter((row): row is MacroRow => Boolean(row));
       if (cimAbortRef.current !== controller) return;
       setCimRows(
         buildExpectedEditableRows(CIM_MACRO_CONFIGS, parsed, currentDetails),
       );
-      setCimScanState("ready");
+      if (successfulModels === 0 && failedModels > 0) {
+        setCimScanState("error");
+        setCimError(
+          "Every CIM data-model job failed. No allowlist changes were proposed; review Splunk search permissions and retry.",
+        );
+      } else {
+        setCimScanState("ready");
+      }
       cimAbortRef.current = null;
     } catch (err) {
       if (isAbortError(err)) {
@@ -3525,6 +3677,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
       cimAbortRef.current = null;
       setCimScanState("error");
       setCimError(err instanceof Error ? err.message : String(err));
+    } finally {
+      if (deadlineTimer) clearTimeout(deadlineTimer);
+      if (deadlineReached) {
+        setCimDiscoveryProgress((current) => ({
+          ...current,
+          deadlineReached: true,
+        }));
+      }
     }
   }, [
     cimTimeRange.earliest,
@@ -3532,7 +3692,17 @@ export default function MacroIndexTuningPage(): JSX.Element {
     isCimBulkSaving,
     isTargetAppInstalled,
     macroConfigByName,
+    setupRowsToSave,
   ]);
+
+  const cancelCimDiscovery = useCallback(() => {
+    if (!cimAbortRef.current) return;
+    setCimDiscoveryProgress((current) => ({
+      ...current,
+      cancelled: true,
+    }));
+    cimAbortRef.current.abort();
+  }, []);
 
   const requestRoutingScan = useCallback(() => {
     if (setupMode && setupRoutingChangesToSave.length > 0) {
@@ -3779,9 +3949,36 @@ export default function MacroIndexTuningPage(): JSX.Element {
       state: "saving",
       message: "Saving detected routing macros",
     });
+    setSetupCompletionSummary(null);
 
     try {
-      const failedMacros: string[] = [];
+      const requiredFailures: string[] = [];
+      const optionalFailures: string[] = [];
+      let routingSaved = 0;
+      let cimSaved = 0;
+      let performanceSaved = false;
+
+      const savedRow = (row: EditableMacroRow, cim: boolean) => {
+        const updateRows = (currentRows: EditableMacroRow[]) =>
+          currentRows.map((candidate) =>
+            macroStatusKey(candidate) === macroStatusKey(row)
+              ? {
+                  ...candidate,
+                  definition: row.draftDefinition.trim(),
+                  draftDefinition: row.draftDefinition.trim(),
+                }
+              : candidate,
+          );
+        if (cim) setCimRows(updateRows);
+        else setRows(updateRows);
+      };
+
+      const failureDetail = (row: EditableMacroRow, saveError: unknown) => {
+        const message =
+          saveError instanceof Error ? saveError.message : String(saveError);
+        return `${row.targetApp}:${row.macro} — ${message}`;
+      };
+
       if (shouldSaveAdhocDefinition) {
         setSetupStatus({
           state: "saving",
@@ -3795,13 +3992,21 @@ export default function MacroIndexTuningPage(): JSX.Element {
             APP_NAME,
           );
           setAdhocStatus({ state: "saved", message: "Saved" });
+          setInitialAdhocDefinition(adhocDefinition.trim());
+          performanceSaved = true;
         } catch (saveError) {
           setAdhocStatus({
             state: "error",
             message:
               saveError instanceof Error ? saveError.message : String(saveError),
           });
-          failedMacros.push(ADHOC_MACRO_NAME);
+          requiredFailures.push(
+            `${APP_NAME}:${ADHOC_MACRO_NAME} — ${
+              saveError instanceof Error
+                ? saveError.message
+                : String(saveError)
+            }`,
+          );
         }
       }
 
@@ -3831,6 +4036,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
             ...current,
             [rowKey]: { state: "saved", message: "Saved" },
           }));
+          savedRow(row, false);
+          routingSaved += 1;
         } catch (saveError) {
           setSaveStatuses((current) => ({
             ...current,
@@ -3842,7 +4049,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   : String(saveError),
             },
           }));
-          failedMacros.push(`${row.targetApp}:${row.macro}`);
+          const detail = failureDetail(row, saveError);
+          if (row.targetApp === APP_NAME) requiredFailures.push(detail);
+          else optionalFailures.push(detail);
         }
       }
 
@@ -3872,6 +4081,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
             ...current,
             [rowKey]: { state: "saved", message: "Saved" },
           }));
+          savedRow(row, true);
+          cimSaved += 1;
         } catch (saveError) {
           setSaveStatuses((current) => ({
             ...current,
@@ -3883,20 +4094,18 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   : String(saveError),
             },
           }));
-          failedMacros.push(`${row.targetApp}:${row.macro}`);
+          requiredFailures.push(failureDetail(row, saveError));
         }
       }
 
-      if (failedMacros.length) {
-        const savedMacroCount = setupChanges.length - failedMacros.length;
+      if (requiredFailures.length) {
+        const savedMacroCount = routingSaved + cimSaved + Number(performanceSaved);
         throw new Error(
           savedMacroCount > 0
-            ? `Setup partially saved: ${savedMacroCount} macro${
+            ? `Setup partially saved: ${savedMacroCount} setting${
                 savedMacroCount === 1 ? " was" : "s were"
-              } saved and ${failedMacros.length} failed. Setup was not marked complete; review the highlighted rows and retry the remaining changes.`
-            : `Setup could not save ${failedMacros.length} macro${
-                failedMacros.length === 1 ? "" : "s"
-              }. Setup was not marked complete; review the highlighted rows and retry.`,
+              } saved. Required setting${requiredFailures.length === 1 ? "" : "s"} failed: ${requiredFailures.join("; ")}. Setup was not marked complete; retry only the remaining highlighted changes.`
+            : `Setup could not save required setting${requiredFailures.length === 1 ? "" : "s"}: ${requiredFailures.join("; ")}. Setup was not marked complete.`,
         );
       }
 
@@ -3905,9 +4114,17 @@ export default function MacroIndexTuningPage(): JSX.Element {
         message: "Unlocking the app",
       });
       await completeInitialSetup();
+      setSetupCompletionSummary({
+        routingSaved,
+        cimSaved,
+        performanceSaved,
+        optionalFailures,
+      });
       setSetupStatus({
         state: "saved",
-        message: "Setup saved successfully",
+        message: optionalFailures.length
+          ? `Setup completed with ${optionalFailures.length} optional companion-app setting${optionalFailures.length === 1 ? "" : "s"} left unchanged.`
+          : "Setup saved successfully",
       });
       setSetupComplete(true);
     } catch (setupError) {
@@ -3924,7 +4141,6 @@ export default function MacroIndexTuningPage(): JSX.Element {
     integratedSetupView,
     scanState,
     setupCimChangesToSave,
-    setupChanges.length,
     setupRoutingChangesToSave,
     shouldSaveAdhocDefinition,
     summariesOnlyBlocked,
@@ -4900,8 +5116,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
     });
 
   if (setupMode && setupComplete) {
+    const completion = setupCompletionSummary ?? {
+      routingSaved: 0,
+      cimSaved: 0,
+      performanceSaved: false,
+      optionalFailures: [],
+    };
     let completionPerformanceStatus = "No change";
-    if (shouldSaveAdhocDefinition) {
+    if (completion.performanceSaved) {
       completionPerformanceStatus = summariesOnlyEnabled
         ? "Accelerated only saved"
         : "Balanced saved";
@@ -4912,8 +5134,16 @@ export default function MacroIndexTuningPage(): JSX.Element {
         activeStep={6}
         complete
         title="Setup complete"
-        description="Your reviewed Cisco routing, CIM, and performance settings are saved."
-        status="Finish line reached. Your dashboard workspace is ready."
+        description={
+          completion.optionalFailures.length
+            ? "Required settings are saved. One or more optional companion-app settings need attention."
+            : "Your reviewed Cisco routing, CIM, and performance settings are saved."
+        }
+        status={
+          completion.optionalFailures.length
+            ? "The dashboard workspace is ready; optional companion-app settings can be retried later."
+            : "Finish line reached. Your dashboard workspace is ready."
+        }
         surfaceRef={setupSurfaceRef}
         headingRef={setupHeadingRef}
         actions={(
@@ -4943,14 +5173,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
             {[
               [
                 "Routing",
-                `${setupRoutingChangesToSave.length} macro change${
-                  setupRoutingChangesToSave.length === 1 ? "" : "s"
+                `${completion.routingSaved} macro change${
+                  completion.routingSaved === 1 ? "" : "s"
                 } saved`,
               ],
               [
                 "CIM",
-                `${setupCimChangesToSave.length} allowlist change${
-                  setupCimChangesToSave.length === 1 ? "" : "s"
+                `${completion.cimSaved} allowlist change${
+                  completion.cimSaved === 1 ? "" : "s"
                 } saved`,
               ],
               [
@@ -4971,6 +5201,22 @@ export default function MacroIndexTuningPage(): JSX.Element {
               </div>
             ))}
           </dl>
+          {completion.optionalFailures.length ? (
+            <div className="mt-5 w-full text-left">
+              <Message appearance="fill" type="warning" role="status">
+                <Message.Title>Optional companion settings were not saved</Message.Title>
+                Setup is complete. Reopen Setup later after verifying these
+                companion apps and retry their routing settings:
+                <ul className="mt-2 list-disc pl-5">
+                  {completion.optionalFailures.map((failure) => (
+                    <li key={failure} className="break-words">
+                      {failure}
+                    </li>
+                  ))}
+                </ul>
+              </Message>
+            </div>
+          ) : null}
         </section>
       </SetupFlowShell>
     );
@@ -5355,18 +5601,18 @@ export default function MacroIndexTuningPage(): JSX.Element {
         ? `3. Review matches (${setupCimMatchedRows.length} found · ${setupCimRowsToSave.length} selected · ${setupCimChangesToSave.length} changes)`
         : "3. Review proposed allowlists";
     let setupCimEmptyMessage =
-      "Run discovery to find CIM data models with tagged events.";
+      "Run discovery to find Cisco events mapped into CIM data models.";
     if (isCimLoading) {
-      setupCimEmptyMessage = "Finding CIM data models with tagged events…";
+      setupCimEmptyMessage = "Checking CIM data models with bounded searches…";
     } else if (cimScanState === "ready") {
       setupCimEmptyMessage =
-        "No tagged Cisco events matched a supported CIM data model in this time range. Nothing was selected or changed.";
+        "No Cisco events matched a supported CIM data model in this time range. Nothing was selected or changed.";
     }
     let cimStatus = setupCimAvailable
       ? "Find matching data models, choose which ones to tune, then review their proposed allowlists."
       : "Splunk_SA_CIM is not available. Review the package requirement before finishing.";
     if (isCimLoading) {
-      cimStatus = "CIM discovery is running. This can take several minutes.";
+      cimStatus = `${cimDiscoveryProgress.completed} of ${cimDiscoveryProgress.total} data models checked. Up to two bounded searches run at once.`;
     } else if (cimScanState === "ready") {
       if (!setupCimMatchedRows.length) {
         cimStatus =
@@ -5385,26 +5631,43 @@ export default function MacroIndexTuningPage(): JSX.Element {
       ? "1. Find matching data models"
       : "CIM package needs attention";
     let cimDiscoveryDescription = setupCimAvailable
-      ? `Discovery is read-only. It checks tagged Cisco events against all ${CIM_MACRO_NAMES.length} supported CIM data models in the selected time range.`
+      ? `Discovery is read-only. It checks configured indexes against all ${CIM_MACRO_NAMES.length} supported CIM data models in the selected time range.`
       : "Install and enable Splunk_SA_CIM, then return to this step to discover model allowlists.";
     if (isCimLoading) {
       cimDiscoveryMessage = "Finding matching CIM data models…";
       cimDiscoveryDescription =
-        "This can take several minutes. Saved allowlists are not being changed.";
+        `${cimDiscoveryProgress.completed} of ${cimDiscoveryProgress.total} complete. Each data model has its own 60-second limit; saved allowlists are not being changed.`;
     } else if (cimScanState === "ready") {
-      cimDiscoveryMessageType = "success";
-      cimDiscoveryMessage = `Discovery complete — ${setupCimMatchedRows.length} data model${
+      cimDiscoveryMessageType =
+        cimDiscoveryIssueCount > 0 ||
+        cimDiscoveryProgress.cancelled ||
+        cimDiscoveryProgress.deadlineReached
+          ? "warning"
+          : "success";
+      cimDiscoveryMessage = `${
+        cimDiscoveryProgress.cancelled || cimDiscoveryProgress.deadlineReached
+          ? "Partial discovery"
+          : "Discovery complete"
+      } — ${setupCimMatchedRows.length} data model${
         setupCimMatchedRows.length === 1 ? "" : "s"
       } matched`;
-      cimDiscoveryDescription = setupCimRowsToSave.length
-        ? `${setupCimRowsToSave.length} data model${
-            setupCimRowsToSave.length === 1 ? " is" : "s are"
-          } selected. Only selected models can enter the draft plan.`
-        : "Select the data models you want to tune. No model has been added to the draft plan yet.";
+      if (
+        cimDiscoveryIssueCount > 0 ||
+        cimDiscoveryProgress.cancelled ||
+        cimDiscoveryProgress.deadlineReached
+      ) {
+        cimDiscoveryDescription = `${cimDiscoveryProgress.completed} of ${cimDiscoveryProgress.total} model jobs reached a terminal state; completed results were preserved. ${cimDiscoveryIssueCount} model job${cimDiscoveryIssueCount === 1 ? " needs" : "s need"} another attempt.${cimDiscoveryIssueSummary}`;
+      } else {
+        cimDiscoveryDescription = setupCimRowsToSave.length
+          ? `${setupCimRowsToSave.length} data model${
+              setupCimRowsToSave.length === 1 ? " is" : "s are"
+            } selected. Only selected models can enter the draft plan.`
+          : "Select the data models you want to tune. No model has been added to the draft plan yet.";
+      }
     }
     let cimDiscoveryActionLabel = "Find matching models";
     if (isCimLoading) {
-      cimDiscoveryActionLabel = "Finding matches";
+      cimDiscoveryActionLabel = "Cancel discovery";
     } else if (cimScanState === "ready") {
       cimDiscoveryActionLabel = "Refresh matches";
     }
@@ -5432,7 +5695,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
       <SetupFlowShell
         activeStep={5}
         title="Choose CIM data models to tune"
-        description="Discovery finds indexes containing tagged Cisco events. Select the data models whose saved CIM allowlists you want to update; unselected models remain unchanged. Nothing is saved until Step 6."
+        description="Discovery checks which configured indexes contain events mapped into each CIM data model. Select the saved CIM allowlists you want to update; unselected models remain unchanged. Nothing is saved until Step 6."
         status={cimStatus}
         pendingChangeCount={setupChanges.length}
         pendingChangeDetail={setupPendingChangeDetail}
@@ -5489,9 +5752,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 />
                 <Button
                   elementRef={cimScanButtonRef}
-                  onClick={requestCimDiscovery}
+                  onClick={isCimLoading ? cancelCimDiscovery : requestCimDiscovery}
                   appearance="primary"
-                  disabled={isCimLoading || isCimBulkSaving ? "dimmed" : false}
+                  disabled={isCimBulkSaving ? "dimmed" : false}
                   icon={isCimLoading ? (
                     <Loader2 aria-hidden="true" size={15} className="animate-spin" />
                   ) : (
@@ -5505,12 +5768,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
               <div className="col-span-full grid gap-2">
                 <Progress
                   appearance="accent"
-                  aria-label="Discovering CIM indexes"
-                  indeterminate
-                  tooltip="Discovering CIM indexes"
+                  aria-label={`${cimDiscoveryProgress.completed} of ${cimDiscoveryProgress.total} CIM data models checked`}
+                  percentage={cimDiscoveryPercent}
+                  tooltip={`${cimDiscoveryPercent}% complete`}
                 />
                 <p className="text-xs sui-color-muted">
-                  Searching tagged events for supported CIM data models…
+                  {cimDiscoveryProgress.activeModels.length
+                    ? `Checking ${cimDiscoveryProgress.activeModels.join(" and ")}…`
+                    : "Preparing bounded data-model searches…"}
                 </p>
               </div>
             ) : null}
@@ -5564,7 +5829,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                       description={
                         row.events > 0
                           ? `${formatNumber(row.events)} matching events`
-                          : "No matching tagged data"
+                          : "No matching CIM data"
                       }
                       key={row.macro}
                       label={getCimModelLabel(row.macro)}
@@ -5828,7 +6093,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   <Table.HeadCell width={230}>Proposed value</Table.HeadCell>
                 </Table.Head>
                 <Table.Body>
-                  {setupChanges.map((change) => (
+                  {setupChanges.map((change) => {
+                    const changeStatus =
+                      saveStatuses[`${change.targetApp}:${change.setting}`];
+                    return (
                     <Table.Row key={`${change.targetApp}:${change.setting}`}>
                       <Table.Cell>
                         <div className="min-w-0 max-w-full">
@@ -5862,9 +6130,18 @@ export default function MacroIndexTuningPage(): JSX.Element {
                         <SetupDefinitionPreview className="min-w-0 max-w-full">
                           {change.proposedValue}
                         </SetupDefinitionPreview>
+                        {changeStatus?.state === "error" ? (
+                          <div
+                            className="mt-2 break-words text-xs font-bold sui-color-negative"
+                            role="alert"
+                          >
+                            Save failed: {changeStatus.message || "Unknown error"}
+                          </div>
+                        ) : null}
                       </Table.Cell>
                     </Table.Row>
-                  ))}
+                    );
+                  })}
                 </Table.Body>
               </Table>
             </>
@@ -5990,8 +6267,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   Before you run discovery
                 </h2>
                 <p className="mt-1 max-w-4xl text-sm leading-6 sui-color-default">
-                  Discovery can take several minutes. Start with a short range,
-                  then review each model’s detected index allowlist before saving.
+                  Discovery runs one bounded search per data model, up to two at
+                  a time. Start with a short range, then review each detected
+                  index allowlist before saving.
                 </p>
                 <p className="mt-2 max-w-4xl text-sm leading-6 sui-color-muted">
                   <span className="font-semibold sui-color-default">Prerequisite:</span>{" "}
@@ -6022,15 +6300,15 @@ export default function MacroIndexTuningPage(): JSX.Element {
                   />
                 </div>
                 <Button
-                  onClick={runCimDiscovery}
+                  onClick={isCimLoading ? cancelCimDiscovery : runCimDiscovery}
                   appearance="primary"
-                  disabled={isCimLoading || isCimBulkSaving ? "dimmed" : false}
+                  disabled={isCimBulkSaving ? "dimmed" : false}
                   icon={isCimLoading ? (
                     <Loader2 aria-hidden="true" size={16} className="animate-spin" />
                   ) : (
                     <Play aria-hidden="true" size={16} />
                   )}
-                  label={isCimLoading ? "Discovering CIM macros" : "Run CIM discovery"}
+                  label={isCimLoading ? "Cancel discovery" : "Run CIM discovery"}
                 />
                 <Button
                   onClick={saveAllCim}
@@ -6057,6 +6335,22 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 />
               </div>
             </div>
+            {isCimLoading ? (
+              <div className="mt-4 grid gap-2" role="status">
+                <Progress
+                  appearance="accent"
+                  percentage={cimDiscoveryPercent}
+                  tooltip={`${cimDiscoveryPercent}% complete`}
+                />
+                <p className="text-xs sui-color-muted">
+                  {cimDiscoveryProgress.completed} of {cimDiscoveryProgress.total}{" "}
+                  models checked
+                  {cimDiscoveryProgress.activeModels.length
+                    ? ` · ${cimDiscoveryProgress.activeModels.join(" and ")}`
+                    : ""}
+                </p>
+              </div>
+            ) : null}
             <CimBulkSaveSummary
               id="cim-bulk-save-summary"
               role="status"
@@ -6104,6 +6398,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               <div>
                 <Button
                   appearance="secondary"
+                  disabled={!openCimSearchUrl ? "dimmed" : false}
                   label="Open in Search"
                   openInNewContext
                   to={openCimSearchUrl}
@@ -7860,8 +8155,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
             {!isCimGroupCollapsed && (
               <p className="mt-1 text-sm sui-color-default">
                 CIM data model discovery. Discover all {CIM_MACRO_NAMES.length}{" "}
-                Splunk_SA_CIM index macros with their shipped tag-based
-                constraints only when needed.
+                Splunk_SA_CIM index macros with exact Configure data indexes and
+                independently bounded model searches.
               </p>
             )}
           </div>
@@ -7886,8 +8181,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
             </div>
             <button
               type="button"
-              onClick={runCimDiscovery}
-              disabled={isCimLoading}
+              onClick={isCimLoading ? cancelCimDiscovery : runCimDiscovery}
+              disabled={isCimBulkSaving}
               className={`${lightButtonBase} sui-border-info sui-bg-accent sui-color-active sui-hover-bg-accent`}
             >
               {isCimLoading ? (
@@ -7895,7 +8190,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               ) : (
                 <Play size={16} />
               )}
-              {isCimLoading ? "Running" : "Run all CIM discovery"}
+              {isCimLoading ? "Cancel discovery" : "Run all CIM discovery"}
             </button>
             <button
               type="button"
@@ -7913,15 +8208,17 @@ export default function MacroIndexTuningPage(): JSX.Element {
               )}
               {isSavingCim ? "Saving CIM" : "Save all CIM"}
             </button>
-            <a
-              href={openCimSearchUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`${lightButtonBase} sui-border-default sui-bg-section sui-color-default sui-hover-border-info sui-hover-color-info`}
-            >
-              <ExternalLink size={16} />
-              Open CIM Search
-            </a>
+            {openCimSearchUrl ? (
+              <a
+                href={openCimSearchUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`${lightButtonBase} sui-border-default sui-bg-section sui-color-default sui-hover-border-info sui-hover-color-info`}
+              >
+                <ExternalLink size={16} />
+                Open example model search
+              </a>
+            ) : null}
             <a
               href={cimMacrosManagerUrl}
               target="_blank"
@@ -7937,6 +8234,26 @@ export default function MacroIndexTuningPage(): JSX.Element {
 
         {!isCimGroupCollapsed && (
           <>
+            {isCimLoading ? (
+              <div className="grid gap-2 border-b sui-border-weak px-4 py-3" role="status">
+                <Progress
+                  appearance="accent"
+                  percentage={Math.round(
+                    (cimDiscoveryProgress.completed /
+                      Math.max(1, cimDiscoveryProgress.total)) *
+                      100,
+                  )}
+                  tooltip={`${cimDiscoveryProgress.completed} of ${cimDiscoveryProgress.total} models checked`}
+                />
+                <p className="text-xs sui-color-muted">
+                  {cimDiscoveryProgress.completed} of {cimDiscoveryProgress.total}{" "}
+                  checked
+                  {cimDiscoveryProgress.activeModels.length
+                    ? ` · ${cimDiscoveryProgress.activeModels.join(" and ")}`
+                    : ""}
+                </p>
+              </div>
+            ) : null}
             {cimError && (
               <div className="flex items-start gap-2 border-b sui-border-negative sui-bg-section px-4 py-3 text-sm sui-color-negative">
                 <AlertTriangle className="mt-0.5 shrink-0" size={17} />
@@ -7948,9 +8265,20 @@ export default function MacroIndexTuningPage(): JSX.Element {
             )}
 
             {isCimLoading && cimRows.length === 0 ? (
-              <div className="flex min-h-[180px] items-center justify-center gap-3 text-sm sui-color-default">
-                <Loader2 size={18} className="animate-spin sui-color-info" />
-                Discovering indexes for all CIM data models...
+              <div className="grid min-h-[180px] content-center gap-3 px-6 text-sm sui-color-default">
+                <Progress
+                  appearance="accent"
+                  percentage={Math.round(
+                    (cimDiscoveryProgress.completed /
+                      Math.max(1, cimDiscoveryProgress.total)) *
+                      100,
+                  )}
+                  tooltip={`${cimDiscoveryProgress.completed} of ${cimDiscoveryProgress.total} models checked`}
+                />
+                <p className="text-center">
+                  {cimDiscoveryProgress.completed} of {cimDiscoveryProgress.total}{" "}
+                  CIM data models checked
+                </p>
               </div>
             ) : cimRows.length === 0 ? (
               <div className="min-h-[160px] px-4 py-12 text-center text-sm sui-color-muted">

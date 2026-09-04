@@ -69,6 +69,107 @@ const parseSearchTrace = ([message]) => {
   return { outcome: match[1], detail: JSON.parse(match[2]) };
 };
 
+test("managed searches create a SID, report progress, and fetch results", async () => {
+  const requests = [];
+  const responses = [
+    { status: 201, json: async () => ({ sid: "cim-model-job" }) },
+    {
+      status: 200,
+      json: async () => ({
+        entry: [
+          {
+            content: {
+              dispatchState: "DONE",
+              doneProgress: "1",
+              isDone: "1",
+              isFinalized: "0",
+            },
+          },
+        ],
+      }),
+    },
+    { status: 200, json: async () => ({ results: [{ events: "42" }] }) },
+  ];
+  const loaded = loadService(async (url, init) => {
+    requests.push({ url, init });
+    return responses.shift();
+  });
+
+  try {
+    const progress = [];
+    const result = await loaded.service.runManagedSearch({
+      spl: "| tstats count FROM datamodel=Network_Traffic",
+      earliestTime: "-15m",
+      latestTime: "now",
+      maxTimeSeconds: 60,
+      onProgress: (update) => progress.push(update),
+    });
+
+    assert.deepEqual(result, {
+      results: [{ events: "42" }],
+      sid: "cim-model-job",
+      timedOut: false,
+    });
+    assert.equal(requests.length, 3);
+    const dispatchBody = new URLSearchParams(requests[0].init.body);
+    assert.equal(dispatchBody.get("exec_mode"), null);
+    assert.equal(dispatchBody.get("max_time"), "60");
+    assert.equal(dispatchBody.get("earliest_time"), "-15m");
+    assert.deepEqual(progress, [
+      { sid: "cim-model-job", dispatchState: "DONE", progress: 1 },
+    ]);
+  } finally {
+    loaded.service.__resetDispatchQueue();
+    loaded.restore();
+  }
+});
+
+test("aborting a managed search cancels its server-side job", async () => {
+  const requests = [];
+  const loaded = loadService((url, init) => {
+    requests.push({ url, init });
+    if (requests.length === 1) {
+      return Promise.resolve({
+        status: 201,
+        json: async () => ({ sid: "cancel-me" }),
+      });
+    }
+    if (requests.length === 2) {
+      return new Promise((_resolve, reject) => {
+        init.signal.addEventListener(
+          "abort",
+          () => {
+            const error = new Error("Aborted");
+            error.name = "AbortError";
+            reject(error);
+          },
+          { once: true },
+        );
+      });
+    }
+    return Promise.resolve({ status: 200, json: async () => ({}) });
+  });
+
+  try {
+    const controller = new AbortController();
+    const result = loaded.service.runManagedSearch({
+      spl: "| tstats count FROM datamodel=Endpoint",
+      signal: controller.signal,
+    });
+    await nextTurn();
+    controller.abort();
+    await assert.rejects(result, (error) => error?.name === "AbortError");
+    assert.equal(requests.length, 3);
+    assert.equal(
+      new URLSearchParams(requests[2].init.body).get("action"),
+      "cancel",
+    );
+  } finally {
+    loaded.service.__resetDispatchQueue();
+    loaded.restore();
+  }
+});
+
 test("identical concurrent searches share one Splunk job", async () => {
   const pending = [];
   let fetchCount = 0;

@@ -304,6 +304,61 @@ const extractIndexTokens = evaluateTypeScriptConst(
   "extractIndexTokens",
   { cleanIndexToken },
 );
+const concreteIndexPattern = /^[A-Za-z0-9][A-Za-z0-9_.:-]*$/;
+const collectConcreteCimDiscoveryIndexes = evaluateTypeScriptConst(
+  setupTuner,
+  "collectConcreteCimDiscoveryIndexes",
+  {
+    CONCRETE_INDEX_NAME_PATTERN: concreteIndexPattern,
+    extractIndexTokens,
+  },
+);
+assert.deepEqual(
+  Array.from(
+    collectConcreteCimDiscoveryIndexes([
+      { draftDefinition: "index IN (network, network_dnac)" },
+      { draftDefinition: "index IN (*)" },
+      { draftDefinition: "index=network_spaces" },
+      { draftDefinition: "index IN (network*)" },
+    ]),
+  ),
+  ["network", "network_dnac", "network_spaces"],
+  "CIM discovery must use only exact indexes from the Configure data draft",
+);
+const buildCimDataModelDiscoverySearch = evaluateTypeScriptConst(
+  setupTuner,
+  "buildCimDataModelDiscoverySearch",
+  {
+    CIM_APP_NAME: "Splunk_SA_CIM",
+    CONCRETE_INDEX_NAME_PATTERN: concreteIndexPattern,
+  },
+);
+const endpointDiscoverySearch = buildCimDataModelDiscoverySearch(
+  {
+    macro: "cim_Endpoint_indexes",
+    dataModel: "Endpoint",
+    rootNodes: ["Ports", "Processes"],
+  },
+  ["network", "ep_endpoint"],
+);
+assert.match(endpointDiscoverySearch, /FROM datamodel=Endpoint/);
+assert.match(
+  endpointDiscoverySearch,
+  /WHERE \(nodename=Ports OR nodename=Processes\) AND index IN \("network", "ep_endpoint"\)/,
+);
+assert.doesNotMatch(endpointDiscoverySearch, /index IN \(\*\)/);
+assert.throws(
+  () =>
+    buildCimDataModelDiscoverySearch(
+      {
+        macro: "cim_Endpoint_indexes",
+        dataModel: "Endpoint",
+        rootNodes: ["Ports"],
+      },
+      ["network*"],
+    ),
+  /invalid or wildcard index name/,
+);
 const formatMacroDefinition = evaluateTypeScriptConst(
   setupTuner,
   "formatMacroDefinition",
