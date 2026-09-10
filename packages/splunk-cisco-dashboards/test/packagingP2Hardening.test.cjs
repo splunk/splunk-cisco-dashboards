@@ -77,6 +77,10 @@ const USER_GUIDE_SOURCE = path.join(
   "user_guide",
   "index.tsx",
 );
+const {
+  applyBuildProfile,
+  readManifest,
+} = require("../bin/apply_build_profile.js");
 
 function makeTempRoot(label) {
   return fs.mkdtempSync(path.join(os.tmpdir(), `scd-${label}-`));
@@ -103,6 +107,39 @@ function exerciseExcludedViewLinkSafety() {
     manifest.developing.views.includes("searchbase_canvas"),
     "Searchbase Canvas must remain excluded from the Splunkbase profile",
   );
+  assert.deepEqual(
+    [...manifest.developing.staticAssets].sort(),
+    [
+      "appserver/static/pages/searchbase_canvas.js",
+      "appserver/static/pages/searchbase_canvas.js.LICENSE.txt",
+      "appserver/static/searchbase_canvas_bootstrap.js",
+    ],
+    "The Splunkbase profile must exclude the complete Searchbase Canvas web surface",
+  );
+  assert.deepEqual(
+    [...manifest.developing.configFiles].sort(),
+    [
+      "README/searchbase_canvases.conf.spec",
+      "default/searchbase_canvases.conf",
+    ],
+    "The Splunkbase profile must exclude Canvas-only config files",
+  );
+  assert.deepEqual(
+    manifest.developing.confSettings,
+    [
+      {
+        file: "default/app.conf",
+        stanza: "triggers",
+        key: "reload.searchbase_canvases",
+      },
+      {
+        file: "default/server.conf",
+        stanza: "shclustering",
+        key: "conf_replication_include.searchbase_canvases",
+      },
+    ],
+    "The Splunkbase profile must exclude Canvas-only config declarations",
+  );
 
   for (const sourcePath of [INSIGHTS_WORKSPACES_SOURCE, USER_GUIDE_SOURCE]) {
     const source = fs.readFileSync(sourcePath, "utf8");
@@ -111,6 +148,109 @@ function exerciseExcludedViewLinkSafety() {
       /(?:href:\s*|appUrl\()\s*["']searchbase_canvas(?:[?"'])/,
       `${path.relative(PACKAGE_ROOT, sourcePath)} must not link customers to the excluded Searchbase Canvas`,
     );
+  }
+}
+
+function exerciseDevelopingStaticAssetExclusion() {
+  const appRoot = makeTempRoot("developing-static-assets");
+  const manifest = readManifest(BUILD_PROFILE_MANIFEST_SOURCE);
+  try {
+    for (const viewId of manifest.developing.views) {
+      writeFile(
+        path.join(appRoot, "default", "data", "ui", "views", `${viewId}.xml`),
+        `<view id="${viewId}" />\n`,
+      );
+    }
+    writeFile(path.join(appRoot, "default", "data", "ui", "nav", "default.xml"), "<nav />\n");
+    writeFile(path.join(appRoot, "default", "searchbase.conf"), "");
+    writeFile(path.join(appRoot, "default", "savedsearches.conf"), "");
+    writeFile(
+      path.join(appRoot, "default", "app.conf"),
+      "[triggers]\nreload.searchbase = simple\nreload.searchbase_canvases = simple\n",
+    );
+    writeFile(
+      path.join(appRoot, "default", "server.conf"),
+      "[shclustering]\nconf_replication_include.searchbase = true\nconf_replication_include.searchbase_canvases = true\n",
+    );
+    for (const assetPath of manifest.developing.staticAssets) {
+      writeFile(path.join(appRoot, ...assetPath.split("/")), "development-only\n");
+    }
+    for (const configPath of manifest.developing.configFiles) {
+      writeFile(path.join(appRoot, ...configPath.split("/")), "development-only\n");
+    }
+
+    const developerResult = applyBuildProfile(appRoot, "developer", {
+      manifest,
+    });
+    assert.deepEqual(developerResult.removedStaticAssets, []);
+    for (const assetPath of manifest.developing.staticAssets) {
+      assert.ok(
+        fs.existsSync(path.join(appRoot, ...assetPath.split("/"))),
+        `${assetPath} must remain in the developer profile`,
+      );
+    }
+    for (const configPath of manifest.developing.configFiles) {
+      assert.ok(
+        fs.existsSync(path.join(appRoot, ...configPath.split("/"))),
+        `${configPath} must remain in the developer profile`,
+      );
+    }
+    assert.match(
+      fs.readFileSync(path.join(appRoot, "default", "app.conf"), "utf8"),
+      /reload\.searchbase_canvases\s*=\s*simple/,
+    );
+    assert.match(
+      fs.readFileSync(path.join(appRoot, "default", "server.conf"), "utf8"),
+      /conf_replication_include\.searchbase_canvases\s*=\s*true/,
+    );
+
+    const splunkbaseResult = applyBuildProfile(appRoot, "splunkbase", {
+      manifest,
+    });
+    assert.deepEqual(
+      splunkbaseResult.removedStaticAssets,
+      [...manifest.developing.staticAssets].sort(),
+    );
+    for (const assetPath of manifest.developing.staticAssets) {
+      assert.ok(
+        !fs.existsSync(path.join(appRoot, ...assetPath.split("/"))),
+        `${assetPath} must not ship in the Splunkbase profile`,
+      );
+    }
+    assert.deepEqual(
+      splunkbaseResult.removedConfigFiles,
+      [...manifest.developing.configFiles].sort(),
+    );
+    assert.equal(
+      splunkbaseResult.removedConfSettings.length,
+      manifest.developing.confSettings.length,
+    );
+    for (const configPath of manifest.developing.configFiles) {
+      assert.ok(
+        !fs.existsSync(path.join(appRoot, ...configPath.split("/"))),
+        `${configPath} must not ship in the Splunkbase profile`,
+      );
+    }
+    const releaseAppConf = fs.readFileSync(
+      path.join(appRoot, "default", "app.conf"),
+      "utf8",
+    );
+    assert.match(releaseAppConf, /reload\.searchbase\s*=\s*simple/);
+    assert.doesNotMatch(releaseAppConf, /reload\.searchbase_canvases/);
+    const releaseServerConf = fs.readFileSync(
+      path.join(appRoot, "default", "server.conf"),
+      "utf8",
+    );
+    assert.match(
+      releaseServerConf,
+      /conf_replication_include\.searchbase\s*=\s*true/,
+    );
+    assert.doesNotMatch(
+      releaseServerConf,
+      /conf_replication_include\.searchbase_canvases/,
+    );
+  } finally {
+    removeTempRoot(appRoot);
   }
 }
 
@@ -1171,5 +1311,6 @@ exerciseProductionVerifierCacheRejection();
 exerciseRootBuildArchiveResolution();
 exerciseLocalInstallProfileDefaults();
 exerciseExcludedViewLinkSafety();
+exerciseDevelopingStaticAssetExclusion();
 
 console.log("Packaging P2 hardening contracts passed.");

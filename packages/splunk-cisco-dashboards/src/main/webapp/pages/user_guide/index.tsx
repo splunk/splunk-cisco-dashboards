@@ -2181,7 +2181,10 @@ iseval = 0`}</CodeBlock>
                   controls, and related topology and setup actions now retain
                   readable Splunk UI colors in both appearances. Add search now opens and resets with only this app selected. Entire catalogue remains available for searches from other installed apps.
                   Agentic SOC section headers no longer expose actions that
-                  targeted the development-only Searchbase Canvas.
+                  targeted the development-only Searchbase Canvas. SplunkBase
+                  packages also omit the Canvas bundle, bootstrap, persistence
+                  files, and config declarations; explicit developer builds
+                  retain the complete internal surface.
                 </p>
                 <p>
                   <InlineCode>build.sh --install</InlineCode> and{" "}

@@ -19,7 +19,10 @@ networking pillars and workplace scenarios.
   longer linked from customer-facing guidance.
 - Removed the four Agentic SOC section-header actions that targeted the
   development-only Searchbase Canvas, preventing dead links in Splunkbase
-  packages while no released section overview exists.
+  packages while no released section overview exists. The Splunkbase build
+  profile now also removes the Canvas bundle, license fragment, bootstrap,
+  persistence files, and reload/replication declarations; the complete surface
+  remains available only in explicit developer builds.
 - Restored readable light and dark appearance across Insights workspace
   editors, drawers, map controls, Signal Rail controls, topology and diagram
   actions, and related setup surfaces by keeping complete Splunk UI foreground,
