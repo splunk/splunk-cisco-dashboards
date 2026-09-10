@@ -17,6 +17,9 @@ networking pillars and workplace scenarios.
   Release history now uses accessible collapsible panels with expand and
   collapse controls, and the intentionally unreleased Searchbase Canvas is no
   longer linked from customer-facing guidance.
+- Removed the four Agentic SOC section-header actions that targeted the
+  development-only Searchbase Canvas, preventing dead links in Splunkbase
+  packages while no released section overview exists.
 - Restored readable light and dark appearance across Insights workspace
   editors, drawers, map controls, Signal Rail controls, topology and diagram
   actions, and related setup surfaces by keeping complete Splunk UI foreground,

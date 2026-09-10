@@ -240,33 +240,34 @@ const SECURE_NETWORKING_SECTIONS: readonly WorkspaceSectionMeta[] = [
   },
 ] as const;
 
+/**
+ * Searchbase Canvas remains a development-only surface. Agentic SOC does not
+ * yet have a released section overview, so these sections intentionally omit
+ * `href` instead of exposing a dead or misleading release action.
+ */
 const AGENTIC_SOC_SECTIONS: readonly WorkspaceSectionMeta[] = [
   {
     id: "dns_security",
     title: "DNS Security",
     linkText: "Open DNS security searches",
-    href: "searchbase_canvas?category=Security&sub_category=DNS%20Security",
     icon: "globe",
   },
   {
     id: "firewall_security",
     title: "Firewall Threat Defense",
     linkText: "Open firewall threat searches",
-    href: "searchbase_canvas?category=Security&sub_category=Firewall%20Threat%20Defense",
     icon: "firewall",
   },
   {
     id: "network_detection",
     title: "Network Detection & Response",
     linkText: "Open network detection searches",
-    href: "searchbase_canvas?category=Security&sub_category=Network%20Detection%20%26%20Response",
     icon: "network",
   },
   {
     id: "unified_investigation",
     title: "Unified Detection & Investigation",
     linkText: "Open unified investigation searches",
-    href: "searchbase_canvas?category=Security&sub_category=Unified%20Detection%20%26%20Investigation",
     icon: "shield-check",
   },
 ] as const;

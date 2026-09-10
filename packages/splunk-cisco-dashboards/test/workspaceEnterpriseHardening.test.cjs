@@ -681,6 +681,11 @@ assert.match(
 );
 assert.match(
   userGuide,
+  /Agentic SOC section headers no longer expose actions[\s\S]*?development-only Searchbase Canvas/,
+  "The current in-app release notes must document removal of release-dead Canvas actions",
+);
+assert.match(
+  userGuide,
   /repository-root VERSION file[\s\S]*?Source app\.conf and[\s\S]*?app\.manifest retain placeholders[\s\S]*?allocate the next[\s\S]*?build automatically/,
   "The current in-app release notes must document VERSION-only release packaging",
 );

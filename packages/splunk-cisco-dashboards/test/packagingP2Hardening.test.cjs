@@ -54,6 +54,29 @@ const APP_MANIFEST_SOURCE = path.join(
   "splunk",
   "app.manifest",
 );
+const BUILD_PROFILE_MANIFEST_SOURCE = path.join(
+  PACKAGE_ROOT,
+  "config",
+  "build-profile-manifest.json",
+);
+const INSIGHTS_WORKSPACES_SOURCE = path.join(
+  PACKAGE_ROOT,
+  "src",
+  "main",
+  "webapp",
+  "common",
+  "config",
+  "insightsWorkspaces.ts",
+);
+const USER_GUIDE_SOURCE = path.join(
+  PACKAGE_ROOT,
+  "src",
+  "main",
+  "webapp",
+  "pages",
+  "user_guide",
+  "index.tsx",
+);
 
 function makeTempRoot(label) {
   return fs.mkdtempSync(path.join(os.tmpdir(), `scd-${label}-`));
@@ -72,6 +95,23 @@ function writeFile(filePath, contents, mode) {
 
 function sha256(filePath) {
   return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+}
+
+function exerciseExcludedViewLinkSafety() {
+  const manifest = JSON.parse(fs.readFileSync(BUILD_PROFILE_MANIFEST_SOURCE, "utf8"));
+  assert.ok(
+    manifest.developing.views.includes("searchbase_canvas"),
+    "Searchbase Canvas must remain excluded from the Splunkbase profile",
+  );
+
+  for (const sourcePath of [INSIGHTS_WORKSPACES_SOURCE, USER_GUIDE_SOURCE]) {
+    const source = fs.readFileSync(sourcePath, "utf8");
+    assert.doesNotMatch(
+      source,
+      /(?:href:\s*|appUrl\()\s*["']searchbase_canvas(?:[?"'])/,
+      `${path.relative(PACKAGE_ROOT, sourcePath)} must not link customers to the excluded Searchbase Canvas`,
+    );
+  }
 }
 
 function run(command, args, options = {}) {
@@ -1130,5 +1170,6 @@ exercisePostBuildSourceVerification();
 exerciseProductionVerifierCacheRejection();
 exerciseRootBuildArchiveResolution();
 exerciseLocalInstallProfileDefaults();
+exerciseExcludedViewLinkSafety();
 
 console.log("Packaging P2 hardening contracts passed.");

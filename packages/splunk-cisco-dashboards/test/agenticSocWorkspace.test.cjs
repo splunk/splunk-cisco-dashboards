@@ -104,6 +104,13 @@ assert.deepEqual(secureNetworkingIcons, [
   "column-arrows-left-right",
   "robot-face-sparkle",
 ]);
+for (const section of workspaceConfig.WORKSPACE_SOURCES.agentic_soc.sections) {
+  assert.equal(
+    section.href,
+    undefined,
+    `${section.id} must not link to the development-only Searchbase Canvas`,
+  );
+}
 for (const iconName of [
   "FingerprintNodes",
   "ServerBrackets",
