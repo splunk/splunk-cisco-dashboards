@@ -108,3 +108,4 @@ pip-delete-this-directory.txt
 /.tmp/
 /tmp/
 /site/
+/splunk-user-guide-builder
