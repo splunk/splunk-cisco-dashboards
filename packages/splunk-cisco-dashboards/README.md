@@ -10,6 +10,11 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Restored Executive Briefing to the legacy Overview composition: the IT,
+  security, and building sections now expose their original nine tiles in the
+  original order, including Inventory mix, and the Signal Rail again shows the
+  six Cisco feed-freshness indicators. The existing map configuration is
+  unchanged.
 - Kept the installed app version and build visible in the Insights workspace
   header, with direct access to app details and upgrades. Replaced the map's
   overlaid Leaflet attribution strip with a compact, keyboard-accessible Map

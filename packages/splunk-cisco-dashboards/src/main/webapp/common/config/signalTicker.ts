@@ -402,12 +402,12 @@ const WORKSPACE_SIGNAL_ITEM_IDS: Record<string, readonly string[]> = {
   ],
   agentic_security_operations_center: PACKAGED_AGENTIC_SOC_SIGNAL_ITEM_IDS,
   executive: [
-    "it_domain_score",
-    "security_domain_score",
-    "user_experience_score",
-    "building_domain_score",
-    "critical_network_issues",
-    "xdr_incidents",
+    "thousandeyes_stream_age",
+    "ftd_firewall_age",
+    "fmc_estreamer_age",
+    "ise_syslog_age",
+    "catalyst_center_age",
+    "spaces_firehose_age",
   ],
 };
 

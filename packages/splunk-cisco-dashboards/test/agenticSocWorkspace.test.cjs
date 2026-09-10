@@ -45,6 +45,17 @@ const field = (body, name) => {
   return match?.[1]?.trim();
 };
 
+const stanzaEntries = (source) => {
+  const headers = Array.from(source.matchAll(/^\[([^\]]+)\]$/gm));
+  return headers.map((header, index) => ({
+    id: header[1],
+    body: source.slice(
+      header.index + header[0].length + 1,
+      headers[index + 1]?.index ?? source.length,
+    ),
+  }));
+};
+
 const workspaceConfig = loadTypescriptModule(
   "src/main/webapp/common/config/insightsWorkspaces.ts",
 );
@@ -183,6 +194,151 @@ assert.equal(
   field(workspaceBody, "default_visible_sections"),
   "dns_security,firewall_security,network_detection,unified_investigation",
 );
+
+const executiveBody = stanza(workspacesConf, "workspace.executive");
+const executiveFallback = workspaceConfig.PACKAGED_WORKSPACE_FALLBACKS.find(
+  (candidate) => candidate.id === "executive",
+);
+assert.ok(executiveFallback, "Expected the packaged Executive fallback");
+assert.deepEqual(
+  executiveFallback.sections.map((section) => section.id),
+  ["it_health", "security", "building"],
+);
+assert.deepEqual(executiveFallback.defaultVisibleSections, [
+  "it_health",
+  "security",
+  "building",
+]);
+assert.equal(executiveFallback.maxVisibleSections, 3);
+assert.equal(executiveFallback.fallbackTileCount, 9);
+assert.equal(field(executiveBody, "sections"), "it_health,security,building");
+assert.equal(
+  field(executiveBody, "default_visible_sections"),
+  "it_health,security,building",
+);
+assert.equal(field(executiveBody, "max_visible_sections"), "3");
+assert.equal(field(executiveBody, "default_tile_count"), "9");
+assert.equal(field(executiveBody, "map_visible"), "1");
+assert.equal(field(executiveBody, "map_position"), "right");
+assert.equal(field(executiveBody, "regional_view"), "map");
+
+const legacyExecutiveSections = {
+  it_health: [
+    ["critical_website_availability", "Critical sites available"],
+    ["network_health", "Network health"],
+    ["device_health", "Device health"],
+    ["open_issues", "Open issues"],
+    ["device_inventory_by_type", "Inventory mix"],
+    ["syslog_severity", "Syslog severity"],
+    ["it_domain_score", "IT domain score"],
+    ["config_changes", "Config changes"],
+    ["compliance_rate", "Compliance rate"],
+  ],
+  security: [
+    ["fw_blocked", "FW blocked"],
+    ["threat_sources", "Threat sources"],
+    ["failed_auth", "Failed auth"],
+    ["rogue_devices", "Rogue devices"],
+    ["sec_score", "Security score"],
+    ["xdr_critical", "XDR critical"],
+    ["dns_blocked_queries", "DNS blocks"],
+    ["web_threats", "Web threats"],
+    ["email_threat_count", "Email threats"],
+  ],
+  building: [
+    ["active_devices", "Active devices"],
+    ["wifi_clients", "Wi-Fi clients"],
+    ["occupancy", "Occupancy"],
+    ["devices_to_review", "Devices to review"],
+    ["collab_devices", "Webex devices"],
+    ["ap_health", "AP health"],
+    ["environmental_health", "Environmental health"],
+    ["rooms_occupied", "Rooms occupied"],
+    ["water_leaks", "Water leaks"],
+  ],
+};
+
+const searchbaseEntries = stanzaEntries(searchbase);
+const executiveOverviewTiles = searchbaseEntries.flatMap(({ id, body }) => {
+  const rawVizOptions = field(body, "viz_options");
+  if (!rawVizOptions) return [];
+  const overview = JSON.parse(rawVizOptions).overview;
+  if (!Array.isArray(overview)) return [];
+  return overview.map((tile) => ({
+    ...tile,
+    stanzaId: id,
+    searchName: field(body, "search_name"),
+  }));
+});
+
+for (const [sectionId, expectedSectionTiles] of Object.entries(
+  legacyExecutiveSections,
+)) {
+  const layoutId = `layout.executive.${sectionId}`;
+  const layout = stanza(workspacesConf, layoutId);
+  assert.equal(
+    field(layout, "tiles"),
+    expectedSectionTiles.map(([tileId]) => tileId).join(","),
+    `${layoutId} must preserve the legacy tile order`,
+  );
+  assert.equal(
+    field(layout, "visible_count"),
+    "9",
+    `${layoutId} must expose all nine legacy tiles by default`,
+  );
+
+  for (const [tileId, label] of expectedSectionTiles) {
+    const matches = executiveOverviewTiles.filter(
+      (tile) =>
+        tile.tileId === tileId &&
+        tile.section === sectionId &&
+        (tile.workspace === undefined || tile.workspace === "executive"),
+    );
+    assert.equal(
+      matches.length,
+      1,
+      `${tileId} must resolve to exactly one current Executive Searchbase tile`,
+    );
+    assert.equal(matches[0].label, label, `${tileId} must keep its legacy label`);
+    assert.ok(matches[0].searchName, `${tileId} must resolve to a saved search`);
+  }
+}
+
+assert.doesNotMatch(
+  workspacesConf,
+  /^\[layout\.executive\.custom\]$/m,
+  "Executive Briefing must not retain an unreferenced fourth section layout",
+);
+
+const legacyExecutiveSignals = [
+  ["thousandeyes_stream_age", "TE stream age"],
+  ["ftd_firewall_age", "FTD feed age"],
+  ["fmc_estreamer_age", "FMC IPS age"],
+  ["ise_syslog_age", "ISE syslog age"],
+  ["catalyst_center_age", "Catalyst API age"],
+  ["spaces_firehose_age", "Spaces feed age"],
+];
+assert.equal(
+  field(stanza(workspacesConf, "signal_rail.executive"), "items"),
+  legacyExecutiveSignals.map(([itemId]) => itemId).join(","),
+);
+assert.deepEqual(
+  signalConfig
+    .getDefaultSignalTickerConfig("executive")
+    .items.map((item) => item.id),
+  legacyExecutiveSignals.map(([itemId]) => itemId),
+  "Executive factory reset must preserve the legacy feed-freshness rail",
+);
+for (const [itemId, label] of legacyExecutiveSignals) {
+  const signalItem = stanza(workspacesConf, `signal_item.${itemId}`);
+  assert.equal(field(signalItem, "label"), label);
+  const searchName = field(signalItem, "search_name");
+  assert.ok(searchName, `${itemId} must declare search_name`);
+  assert.ok(
+    searchbaseEntries.some(({ body }) => field(body, "search_name") === searchName),
+    `${itemId} must resolve to a current Searchbase saved search`,
+  );
+}
 
 const expectedTiles = {
   dns_security: [
@@ -911,4 +1067,6 @@ assert.equal(
 );
 assert.equal(metricValueFormat.formatMetricNumber(1_250, "%"), "1,250%");
 
-console.log("Agentic Security Operations Center workspace contract passed.");
+console.log(
+  "Agentic SOC and legacy Executive Briefing workspace contracts passed.",
+);
