@@ -535,20 +535,20 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
     return (
         <>
             <Modal
-            divider="both"
-            initialFocus="first"
-            onRequestClose={onClose}
-            open={open}
-            returnFocus={returnFocus}
-            style={{
-                width: `min(1040px, calc(100vw - ${variables.spacingXXLarge}))`,
-            }}
+                divider="both"
+                initialFocus="first"
+                onRequestClose={onClose}
+                open={open}
+                returnFocus={returnFocus}
+                style={{
+                    width: `min(1040px, calc(100vw - ${variables.spacingXXLarge}))`,
+                }}
             >
                 <Modal.Header
                     subtitle="Reusable customer demo views"
                     title="Insights workspaces"
                 />
-                <Modal.Body>
+                <Modal.Body className="scd-insights-layer-content">
                     <ManagerLayout>
                         <WorkspaceNavigation aria-label="Available workspaces">
                             <WorkspaceMenu

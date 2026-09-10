@@ -453,8 +453,17 @@ const networkDiagramCanvas = read(
 const topologyCanvas = read(
   "src/main/webapp/common/components/topology/TopologyCanvas.tsx",
 );
+const topologyPropertiesPanel = read(
+  "src/main/webapp/common/components/topology/PropertiesPanel.tsx",
+);
+const topologyCanvasPage = read(
+  "src/main/webapp/pages/topology_canvas_v1/index.tsx",
+);
 const diagramHeader = read(
   "src/main/webapp/common/components/diagram/DiagramHeader.tsx",
+);
+const regionGroupNode = read(
+  "src/main/webapp/common/components/diagram/RegionGroupNode.tsx",
 );
 const securityOperations = read(
   "src/main/webapp/pages/secure_operations_glass/index.tsx",
@@ -490,6 +499,9 @@ const buildScript = read("bin/build.js");
 const packageManifest = JSON.parse(read("package.json"));
 const m365Page = read(
   "src/main/webapp/pages/m365_activity_monitoring/index.tsx",
+);
+const macroIndexTuning = read(
+  "src/main/webapp/pages/macro_index_tuning/index.tsx",
 );
 const m365Data = read("src/main/webapp/pages/m365_activity_monitoring/data.ts");
 const userGuide = read("src/main/webapp/pages/user_guide/index.tsx");
@@ -659,6 +671,16 @@ assert.match(
 );
 assert.match(
   userGuide,
+  /Insights workspace editors, drawers, map controls,[\s\S]*?readable Splunk UI colors in both/,
+  "The current in-app release notes must document the appearance repair",
+);
+assert.match(
+  userGuide,
+  /Add search now opens and resets with only[\s\S]*?this app selected[\s\S]*?Entire catalogue remains[\s\S]*?available/,
+  "The current in-app release notes must document the Add search default repair",
+);
+assert.match(
+  userGuide,
   /repository-root VERSION file[\s\S]*?Source app\.conf and[\s\S]*?app\.manifest retain placeholders[\s\S]*?allocate the next[\s\S]*?build automatically/,
   "The current in-app release notes must document VERSION-only release packaging",
 );
@@ -803,6 +825,26 @@ assert.match(
   profile,
   /canManageWorkspace \? \([\s\S]*?<RadioBar[\s\S]*?: \([\s\S]*?<StaticContent>Add for me<\/StaticContent>/,
   "Regular users must see a static personal destination rather than a one-option selector",
+);
+assert.match(
+  profile,
+  /makeDefaultAddTileAppSelection = \([\s\S]*?new Set\(app \? \[app\] : \[\]\)/,
+  "The Add search drawer must default its app facet to the current app",
+);
+assert.match(
+  profile,
+  /const currentSearchbaseOwnerApp =[\s\S]*?\?\? APP_NAME/,
+  "The Add search drawer must retain the packaged app default while its catalogue loads",
+);
+assert.match(
+  profile,
+  /setSelectedApps\(makeDefaultAddTileAppSelection\(currentAppOwner\)\)/,
+  "Opening or clearing the Add search drawer must restore the current-app selection",
+);
+assert.match(
+  profile,
+  /isDefaultAddTileAppSelection\(selectedApps, currentAppOwner\)/,
+  "The current-app default must not be reported as an active filter",
 );
 assert.match(
   topology,
@@ -995,6 +1037,74 @@ for (const surface of ["page", "section", "popup", "transparent"]) {
     semanticThemeStyles,
     new RegExp(`:is\\(input, select, textarea\\)\\.sui-bg-${surface}`),
     `Native ${surface} controls must override Splunk Web legacy input colors with SUI tokens`,
+  );
+}
+assert.match(
+  semanticThemeStyles,
+  /\.scd-action-primary[\s\S]*?actionColorBackgroundPrimary[\s\S]*?actionColorContentPrimary/,
+  "Solid primary actions must keep the SUI action fill and foreground together",
+);
+assert.match(
+  semanticThemeStyles,
+  /\.scd-action-destructive[\s\S]*?actionColorBackgroundDestructive[\s\S]*?actionColorContentDestructive/,
+  "Solid destructive actions must keep the SUI action fill and foreground together",
+);
+assert.match(
+  semanticThemeStyles,
+  /\.scd-action-secondary[\s\S]*?actionColorBackgroundSecondary[\s\S]*?actionColorContentSecondary/,
+  "Contextual actions must use the complete SUI secondary action palette",
+);
+assert.match(
+  semanticThemeStyles,
+  /\.scd-action-destructive-secondary[\s\S]*?actionColorBackgroundDestructiveSecondary[\s\S]*?actionColorContentDestructiveSecondary/,
+  "Contextual destructive actions must use the complete SUI destructive-secondary palette",
+);
+assert.match(
+  semanticThemeStyles,
+  /\.scd-insights-layer-content[\s\S]*?input\[type="text"\][\s\S]*?background-color: transparent[\s\S]*?contentColorActive/,
+  "App-owned SUI layers must neutralize Splunk Web's legacy dark inner-input fill",
+);
+assert.match(
+  workspaceManager,
+  /<Modal\.Body className="scd-insights-layer-content">/,
+  "Workspace Manager custom content must carry the theme boundary inside the SUI modal",
+);
+assert.match(
+  picker,
+  /<Drawer\.Body[\s\S]{0,120}?className="scd-insights-layer-content"[\s\S]{0,120}?id="configure-tile-drawer"/,
+);
+assert.match(
+  executiveInsights,
+  /<Drawer\.Body className="scd-insights-layer-content">/,
+);
+for (const source of [workspaceManager, picker, executiveInsights]) {
+  assert.doesNotMatch(
+    source,
+    /<(?:Modal|StyledDrawer|Drawer)\s[^>]*className="scd-insights-layer-content"/,
+    "Custom theme boundaries must not override SUI Modal or Drawer chrome",
+  );
+}
+for (const source of [
+  topology,
+  signalTickerEditor,
+  executiveInsights,
+  topologyCanvas,
+  topologyPropertiesPanel,
+  topologyCanvasPage,
+  diagramHeader,
+  regionGroupNode,
+  m365Page,
+  macroIndexTuning,
+]) {
+  assert.doesNotMatch(
+    source,
+    /sui-bg-accent[^"\n]*sui-color-(?:active|info)|sui-color-(?:active|info)[^"\n]*sui-bg-accent/,
+    "Insights actions and badges must not pair the accent fill with a low-contrast foreground",
+  );
+  assert.doesNotMatch(
+    source,
+    /sui-bg-notification-(?:info|positive|negative|warning)[^"\n]*sui-color-(?:info|positive|negative|warning)|sui-color-(?:info|positive|negative|warning)[^"\n]*sui-bg-notification-(?:info|positive|negative|warning)/,
+    "Weak notification surfaces must use an AA foreground instead of same-hue content text",
   );
 }
 assert.match(

@@ -321,6 +321,107 @@ const borderStyles = css`
 `;
 
 /*
+ * Solid actions need the complete SUI action palette, not a status surface
+ * paired with same-hue text. Keeping the fill and foreground together also
+ * preserves contrast when the application switches between light and dark.
+ */
+const actionStyles = css`
+  :is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"]) {
+  .scd-action-primary {
+    background-color: ${variables.actionColorBackgroundPrimary};
+    border-color: ${variables.actionColorBackgroundPrimary};
+    color: ${variables.actionColorContentPrimary};
+  }
+  .scd-action-primary:hover {
+    background-color: ${variables.actionColorBackgroundPrimaryHover};
+    border-color: ${variables.actionColorBackgroundPrimaryHover};
+    color: ${variables.actionColorContentPrimary};
+  }
+  .scd-action-primary:active {
+    background-color: ${variables.actionColorBackgroundPrimaryActive};
+    border-color: ${variables.actionColorBackgroundPrimaryActive};
+    color: ${variables.actionColorContentPrimary};
+  }
+  .scd-action-primary:disabled,
+  .scd-action-primary[aria-disabled="true"] {
+    background-color: ${variables.actionColorBackgroundPrimaryDisabled};
+    border-color: ${variables.actionColorBackgroundPrimaryDisabled};
+    color: ${variables.actionColorContentPrimaryDisabled};
+  }
+
+  .scd-action-secondary {
+    background-color: ${variables.actionColorBackgroundSecondary};
+    border-color: ${variables.actionColorBorderSecondary};
+    border-style: solid;
+    border-width: ${variables.inputBorderWidth};
+    color: ${variables.actionColorContentSecondary};
+  }
+  .scd-action-secondary:hover {
+    background-color: ${variables.actionColorBackgroundSecondaryHover};
+    border-color: ${variables.actionColorBorderSecondaryHover};
+    color: ${variables.actionColorContentSecondary};
+  }
+  .scd-action-secondary:active {
+    background-color: ${variables.actionColorBackgroundSecondaryActive};
+    border-color: ${variables.actionColorBorderSecondaryActive};
+    color: ${variables.actionColorContentSecondary};
+  }
+  .scd-action-secondary:disabled,
+  .scd-action-secondary[aria-disabled="true"] {
+    background-color: ${variables.actionColorBackgroundSecondaryDisabled};
+    border-color: ${variables.actionColorBorderSecondaryDisabled};
+    color: ${variables.actionColorContentSecondaryDisabled};
+  }
+
+  .scd-action-destructive {
+    background-color: ${variables.actionColorBackgroundDestructive};
+    border-color: ${variables.actionColorBackgroundDestructive};
+    color: ${variables.actionColorContentDestructive};
+  }
+  .scd-action-destructive:hover {
+    background-color: ${variables.actionColorBackgroundDestructiveHover};
+    border-color: ${variables.actionColorBackgroundDestructiveHover};
+    color: ${variables.actionColorContentDestructive};
+  }
+  .scd-action-destructive:active {
+    background-color: ${variables.actionColorBackgroundDestructiveActive};
+    border-color: ${variables.actionColorBackgroundDestructiveActive};
+    color: ${variables.actionColorContentDestructive};
+  }
+  .scd-action-destructive:disabled,
+  .scd-action-destructive[aria-disabled="true"] {
+    background-color: ${variables.actionColorBackgroundDestructiveDisabled};
+    border-color: ${variables.actionColorBackgroundDestructiveDisabled};
+    color: ${variables.actionColorContentDestructiveDisabled};
+  }
+
+  .scd-action-destructive-secondary {
+    background-color: ${variables.actionColorBackgroundDestructiveSecondary};
+    border-color: ${variables.actionColorBorderDestructiveSecondary};
+    border-style: solid;
+    border-width: ${variables.inputBorderWidth};
+    color: ${variables.actionColorContentDestructiveSecondary};
+  }
+  .scd-action-destructive-secondary:hover {
+    background-color: ${variables.actionColorBackgroundDestructiveSecondaryHover};
+    border-color: ${variables.actionColorBorderDestructiveSecondaryHover};
+    color: ${variables.actionColorContentDestructiveSecondary};
+  }
+  .scd-action-destructive-secondary:active {
+    background-color: ${variables.actionColorBackgroundDestructiveSecondaryActive};
+    border-color: ${variables.actionColorBorderDestructiveSecondaryActive};
+    color: ${variables.actionColorContentDestructiveSecondary};
+  }
+  .scd-action-destructive-secondary:disabled,
+  .scd-action-destructive-secondary[aria-disabled="true"] {
+    background-color: ${variables.actionColorBackgroundDestructiveSecondaryDisabled};
+    border-color: ${variables.actionColorBorderDestructiveSecondaryDisabled};
+    color: ${variables.actionColorContentDestructiveSecondaryDisabled};
+  }
+  }
+`;
+
+/*
  * Splunk Web still ships legacy attribute selectors such as
  * `input[type="text"]`. Those selectors outrank a single semantic utility
  * class, which can leave dark native controls on an otherwise light React
@@ -329,35 +430,66 @@ const borderStyles = css`
  * general utilities above.
  */
 const nativeControlStyles = css`
-  :is(#scan-root, #configure-tile-drawer, [data-workspace-modal-portal="document"])
+  /* SUI Text and NumberInput render a transparent inner text input. Splunk
+   * Web's legacy input[type="text"] rule otherwise paints that inner element
+   * dark even when the app-owned modal or drawer is in light mode. */
+  .scd-insights-layer-content
+    :is(
+      input[type="email"],
+      input[type="number"],
+      input[type="password"],
+      input[type="search"],
+      input[type="tel"],
+      input[type="text"],
+      input[type="url"],
+      textarea
+    ) {
+    background-color: transparent;
+    color: ${variables.contentColorActive};
+  }
+  .scd-insights-layer-content
+    :is(
+      input[type="email"],
+      input[type="number"],
+      input[type="password"],
+      input[type="search"],
+      input[type="tel"],
+      input[type="text"],
+      input[type="url"],
+      textarea
+    ):disabled {
+    color: ${variables.contentColorDisabled};
+  }
+
+  :is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"])
     :is(input, select, textarea).sui-bg-page {
     background-color: ${variables.backgroundColorPage};
   }
-  :is(#scan-root, #configure-tile-drawer, [data-workspace-modal-portal="document"])
+  :is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"])
     :is(input, select, textarea).sui-bg-section {
     background-color: ${variables.backgroundColorSection};
   }
-  :is(#scan-root, #configure-tile-drawer, [data-workspace-modal-portal="document"])
+  :is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"])
     :is(input, select, textarea).sui-bg-popup {
     background-color: ${variables.backgroundColorPopup};
   }
-  :is(#scan-root, #configure-tile-drawer, [data-workspace-modal-portal="document"])
+  :is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"])
     :is(input, select, textarea).sui-bg-transparent {
     background-color: transparent;
   }
-  :is(#scan-root, #configure-tile-drawer, [data-workspace-modal-portal="document"])
+  :is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"])
     :is(input, select, textarea).sui-color-active {
     color: ${variables.contentColorActive};
   }
-  :is(#scan-root, #configure-tile-drawer, [data-workspace-modal-portal="document"])
+  :is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"])
     :is(input, select, textarea).sui-color-default {
     color: ${variables.contentColorDefault};
   }
-  :is(#scan-root, #configure-tile-drawer, [data-workspace-modal-portal="document"])
+  :is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"])
     :is(input, select, textarea).sui-border-default {
     border-color: ${variables.borderColor};
   }
-  :is(#scan-root, #configure-tile-drawer, [data-workspace-modal-portal="document"])
+  :is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"])
     :is(input, select, textarea).sui-border-weak {
     border-color: ${variables.borderColorWeak};
   }
@@ -496,8 +628,11 @@ const focusAndSvgStyles = css`
 `;
 
 const GlobalSemanticThemeStyles = createGlobalStyle`
-    :is(#scan-root, #configure-tile-drawer, [data-workspace-modal-portal="document"]) {
+    :is(#scan-root, [data-workspace-modal-portal="document"]) {
         background-color: ${variables.backgroundColorPage};
+    }
+
+    :is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"]) {
         color: ${variables.contentColorDefault};
         font-family: ${variables.fontFamily};
         font-size: ${variables.fontSize};
@@ -577,6 +712,7 @@ const GlobalSemanticThemeStyles = createGlobalStyle`
     ${stateStyles}
     ${backgroundStyles}
     ${borderStyles}
+    ${actionStyles}
     ${nativeControlStyles}
     ${focusAndSvgStyles}
 `;

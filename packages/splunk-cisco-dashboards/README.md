@@ -10,6 +10,12 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Restored readable light and dark appearance across Insights workspace
+  editors, drawers, map controls, Signal Rail controls, topology and diagram
+  actions, and related setup surfaces by keeping complete Splunk UI foreground,
+  background, border, and interaction token pairs together. The Add search
+  drawer now opens and resets with only this app selected while retaining the
+  Entire catalogue path for searches supplied by other installed apps.
 - Restored Executive Briefing to its three-section Overview composition. The
   workplace section is now named Smart Spaces and replaces the Meraki water
   leak tile with a Cisco Spaces active-user signal; the Signal Rail again shows

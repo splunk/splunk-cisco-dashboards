@@ -7204,7 +7204,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 setupScanInProgress ||
                 summariesOnlyBlocked
               }
-              className={`${lightButtonBase} sui-border-info sui-bg-accent sui-color-active sui-hover-bg-accent`}
+              className={`${lightButtonBase} scd-action-primary`}
             >
               {setupStatus.state === "saving" ? (
                 <Loader2 size={16} className="animate-spin" />
@@ -7266,7 +7266,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               <Check size={14} /> Validate add-ons
             </li>
             <li className="flex min-h-10 items-center gap-2 sui-bg-section px-4 sui-color-info">
-              <span className="grid h-5 w-5 place-items-center rounded-full sui-bg-accent text-xs sui-color-active">
+              <span className="grid h-5 w-5 place-items-center rounded-full sui-bg-notification-info text-xs sui-color-active">
                 3
               </span>
               Tune indexes
@@ -7312,7 +7312,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 isSavingAll ||
                 summariesOnlyBlocked
               }
-              className={`${lightButtonBase} sui-border-info sui-bg-accent sui-color-active sui-hover-bg-accent`}
+              className={`${lightButtonBase} scd-action-primary`}
             >
               {setupStatus.state === "saving" ? (
                 <Loader2 size={16} className="animate-spin" />
@@ -7359,7 +7359,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               type="button"
               onClick={runScan}
               disabled={isLoading}
-              className={`${lightButtonBase} sui-border-info sui-bg-accent sui-color-active sui-hover-bg-accent`}
+              className={`${lightButtonBase} scd-action-secondary`}
             >
               {isLoading ? (
                 <Loader2 size={16} className="animate-spin" />
@@ -7385,7 +7385,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               onClick={saveAll}
               title="Save dashboard and companion-app routing macros"
               disabled={!rowsToSave.length || isLoading || isSavingAll}
-              className={`${lightButtonBase} sui-border-info sui-bg-accent sui-color-active sui-hover-bg-accent`}
+              className={`${lightButtonBase} scd-action-primary`}
             >
               {isSavingAll ? (
                 <Loader2 size={16} className="animate-spin" />
@@ -7673,7 +7673,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               !adhocDefinition.trim() ||
               summariesOnlyBlocked
             }
-            className={`${lightButtonBase} sui-border-info sui-bg-accent sui-color-active sui-hover-bg-accent`}
+            className={`${lightButtonBase} scd-action-primary`}
           >
             {adhocStatus.state === "saving" ? (
               <Loader2 size={16} className="animate-spin" />
@@ -8183,7 +8183,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
               type="button"
               onClick={isCimLoading ? cancelCimDiscovery : runCimDiscovery}
               disabled={isCimBulkSaving}
-              className={`${lightButtonBase} sui-border-info sui-bg-accent sui-color-active sui-hover-bg-accent`}
+              className={`${lightButtonBase} scd-action-secondary`}
             >
               {isCimLoading ? (
                 <Loader2 size={16} className="animate-spin" />
@@ -8199,7 +8199,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 !cimRowsToSave.length || isCimLoading || isSavingCim
               }
               title="Save all loaded CIM definitions without description or iseval settings"
-              className={`${lightButtonBase} sui-border-info sui-bg-accent sui-color-active sui-hover-bg-accent`}
+              className={`${lightButtonBase} scd-action-primary`}
             >
               {isSavingCim ? (
                 <Loader2 size={16} className="animate-spin" />

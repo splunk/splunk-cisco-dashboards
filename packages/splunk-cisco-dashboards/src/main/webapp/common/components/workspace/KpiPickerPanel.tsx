@@ -574,7 +574,7 @@ const highlightMatch = (text: string, query: string): React.ReactNode => {
     re.test(part) ? (
       <mark
         key={idx}
-        className="sui-bg-info sui-bg-accent text-inherit rounded-sm px-0.5"
+        className="sui-bg-notification-info text-inherit rounded-sm px-0.5"
       >
         {part}
       </mark>
@@ -2025,7 +2025,6 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
   return (
     <>
       <StyledDrawer
-        id="configure-tile-drawer"
         divider="both"
         material="glass"
         onRequestClose={() => {
@@ -2042,7 +2041,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
           subtitle={context.defaultLabel}
         />
 
-        <Drawer.Body>
+        <Drawer.Body
+          className="scd-insights-layer-content"
+          id="configure-tile-drawer"
+        >
           <ControlGroup hideLabel label="Tile configuration view">
             <RadioBar
               onChange={(_event, { value }) => handleEditorViewChange(value)}

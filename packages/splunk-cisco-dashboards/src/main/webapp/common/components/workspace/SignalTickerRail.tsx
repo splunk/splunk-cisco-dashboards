@@ -93,23 +93,23 @@ const STATUS_DOT_CLASS = {
 };
 
 const STATUS_BG_CLASS = {
-    healthy: 'sui-bg-section  sui-bg-positive sui-hover-bg-positive',
-    warning: 'sui-bg-warning sui-hover-bg-warning',
-    critical: 'sui-bg-negative sui-hover-bg-negative',
+    healthy: 'sui-bg-notification-positive sui-hover-bg-notification-positive',
+    warning: 'sui-bg-notification-warning sui-hover-bg-notification-warning',
+    critical: 'sui-bg-notification-negative sui-hover-bg-notification-negative',
     unknown: 'sui-bg-section sui-hover-bg-section',
 };
 
 const STATUS_TEXT_CLASS = {
     healthy: 'sui-color-active',
-    warning: 'sui-color-warning',
-    critical: 'sui-color-negative',
+    warning: 'sui-color-active',
+    critical: 'sui-color-active',
     unknown: 'sui-color-active',
 };
 
 const STATUS_PILL_CLASS = {
-    healthy: 'sui-bg-positive sui-color-positive',
-    warning: 'sui-bg-warning sui-color-warning',
-    critical: 'sui-bg-negative sui-color-negative',
+    healthy: 'sui-bg-notification-positive sui-color-active',
+    warning: 'sui-bg-notification-warning sui-color-active',
+    critical: 'sui-bg-notification-negative sui-color-active',
     unknown: 'sui-bg-floating sui-color-default',
 };
 
@@ -1016,7 +1016,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
             <div className="flex max-h-[86vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border   shadow-2xl sui-border-weak sui-bg-page">
                 <div className="flex items-start justify-between gap-4 border-b  px-5 py-4 sui-border-weak">
                     <div className="flex min-w-0 items-start gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg sui-bg-accent sui-color-active shadow-sm">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg sui-bg-notification-info sui-color-active shadow-sm">
                             <Sparkles className="h-5 w-5" />
                         </div>
                         <div className="min-w-0">
@@ -1466,7 +1466,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                     />
                                     Filters
                                     {activeFilterCount > 0 && (
-                                        <span className="rounded-full sui-bg-accent px-1.5 py-0.5 text-xs sui-color-active">
+                                        <span className="rounded-full sui-bg-notification-info px-1.5 py-0.5 text-xs sui-color-active">
                                             {activeFilterCount}
                                         </span>
                                     )}
@@ -1652,7 +1652,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                                             return (
                                                                 <span
                                                                     key={tag}
-                                                                    className="inline-flex items-center gap-1 rounded-full sui-bg-accent py-0.5 pl-2 pr-1 text-xs font-bold uppercase tracking-wide sui-color-active"
+                                                                    className="inline-flex items-center gap-1 rounded-full sui-bg-notification-info py-0.5 pl-2 pr-1 text-xs font-bold uppercase tracking-wide sui-color-active"
                                                                 >
                                                                     {tag}
                                                                     {count > 0 && (
@@ -1670,7 +1670,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                                                         }}
                                                                         title={`Remove ${tag} filter`}
                                                                         aria-label={`Remove ${tag} filter`}
-                                                                        className="rounded-full p-0.5 sui-hover-bg-accent"
+                                                                        className="rounded-full p-0.5 sui-hover-bg-overlay"
                                                                     >
                                                                         <X className="h-2.5 w-2.5" />
                                                                     </button>
@@ -1890,7 +1890,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                                             'inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-black uppercase tracking-wide transition-colors focus:outline-none focus-visible:ring-2 sui-focus-visible-ring',
                                                             selected
                                                                 ? 'sui-bg-section sui-color-default'
-                                                                : 'sui-bg-accent sui-color-active sui-hover-bg-accent'
+                                                                : 'scd-action-secondary'
                                                         )}
                                                     >
                                                         <Plus className="h-3.5 w-3.5" />
@@ -1955,7 +1955,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="rounded-lg sui-bg-accent px-4 py-2 text-sm font-black sui-color-active shadow-sm transition-colors sui-hover-bg-accent focus:outline-none focus-visible:ring-2 sui-focus-visible-ring"
+                        className="rounded-lg px-4 py-2 text-sm font-black scd-action-primary shadow-sm transition-colors focus:outline-none focus-visible:ring-2 sui-focus-visible-ring"
                     >
                         Done
                     </button>

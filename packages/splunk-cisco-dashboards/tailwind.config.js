@@ -4,7 +4,7 @@ module.exports = {
     // (Preflight) and utility classes don't bleed into Splunk Web's own
     // chrome around the dashboard panel.
     important:
-        ':is(#scan-root, #configure-tile-drawer, [data-workspace-modal-portal="document"])',
+        ':is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"])',
     // Class-based dark mode. We toggle the `dark` class on the page-level
     // wrapper (still inside #scan-root), so Splunk Web's own chrome is
     // unaffected — only the dashboard surface flips between palettes.

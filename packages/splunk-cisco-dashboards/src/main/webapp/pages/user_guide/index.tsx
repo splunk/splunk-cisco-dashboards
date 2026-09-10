@@ -1939,6 +1939,12 @@ iseval = 0`}</CodeBlock>
                         now remain visible in the Insights header, and map
                         provider attribution is available from the compact Map
                         credits control instead of covering map content.
+                        Insights workspace editors, drawers, map controls,
+                        Signal Rail controls, and related topology and setup
+                        actions now retain readable Splunk UI colors in both
+                        appearances. Add search now opens and resets with only
+                        this app selected, while Entire catalogue remains
+                        available for searches from other installed apps.
                       </td>
                       <td className="px-3 py-3 sui-color-default">
                         Install the build through the supported app-management

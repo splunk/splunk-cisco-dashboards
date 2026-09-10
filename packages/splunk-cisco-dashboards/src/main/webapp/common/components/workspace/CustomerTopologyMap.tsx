@@ -5474,7 +5474,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
           onClick={() => zoomAtCenter(1 / COMMAND_ZOOM_STEP)}
           title="Zoom out"
           aria-label="Zoom out command topology"
-          className="rounded-md p-1.5 transition-colors sui-hover-bg-accent focus:outline-none focus-visible:ring-1 sui-focus-visible-ring disabled:cursor-not-allowed disabled:opacity-35"
+          className="rounded-md p-1.5 transition-colors sui-hover-bg-overlay focus:outline-none focus-visible:ring-1 sui-focus-visible-ring disabled:cursor-not-allowed disabled:opacity-35"
         >
           <ZoomOut className="h-4 w-4" />
         </button>
@@ -5491,7 +5491,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
           onClick={() => zoomAtCenter(COMMAND_ZOOM_STEP)}
           title="Zoom in"
           aria-label="Zoom in command topology"
-          className="rounded-md p-1.5 transition-colors sui-hover-bg-accent focus:outline-none focus-visible:ring-1 sui-focus-visible-ring disabled:cursor-not-allowed disabled:opacity-35"
+          className="rounded-md p-1.5 transition-colors sui-hover-bg-overlay focus:outline-none focus-visible:ring-1 sui-focus-visible-ring disabled:cursor-not-allowed disabled:opacity-35"
         >
           <ZoomIn className="h-4 w-4" />
         </button>
@@ -5506,7 +5506,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
           onClick={() => scheduleViewport(COMMAND_FIT_VIEWPORT)}
           title="Fit topology"
           aria-label="Fit command topology to view"
-          className="rounded-md p-1.5 transition-colors sui-hover-bg-accent focus:outline-none focus-visible:ring-1 sui-focus-visible-ring"
+          className="rounded-md p-1.5 transition-colors sui-hover-bg-overlay focus:outline-none focus-visible:ring-1 sui-focus-visible-ring"
         >
           <Maximize2 className="h-4 w-4" />
         </button>
@@ -7349,9 +7349,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
     <div
       className={cn(
         "space-y-2 rounded-md border-2 px-2.5 py-2.5",
-        isDark
-          ? "sui-border-info sui-bg-accent"
-          : "sui-border-info sui-bg-info",
+        "sui-border-info sui-bg-selected",
       )}
     >
       <div className="flex items-center justify-between gap-2">
@@ -7529,9 +7527,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                 }}
                 className={cn(
                   "inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-xs font-semibold transition-colors",
-                  isDark
-                    ? "sui-bg-accent sui-border-info sui-color-info sui-hover-bg-accent"
-                    : "sui-bg-info sui-border-info sui-color-info sui-hover-bg-info",
+                  "sui-bg-selected sui-border-info sui-color-info sui-hover-bg-overlay",
                 )}
                 title={`Remove tag filter: ${tag}`}
               >
@@ -7638,7 +7634,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                   isDark
                     ? "sui-border-weak sui-hover-bg-overlay"
                     : "sui-border-weak sui-hover-bg-info",
-                  isSelected && (isDark ? "sui-bg-accent" : "sui-bg-info"),
+                  isSelected && "sui-bg-selected",
                 )}
                 title={
                   entry.description
@@ -7694,9 +7690,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                         <span
                           className={cn(
                             "inline-flex rounded px-1 text-xs font-bold uppercase tracking-wider",
-                            isDark
-                              ? "sui-bg-accent sui-color-info"
-                              : "sui-bg-info sui-color-info",
+                            "sui-bg-selected sui-color-info",
                           )}
                           title={`This search is shaped for a topology ${label}`}
                         >
@@ -7747,9 +7741,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
               disabled={customDraft.trim() === (currentSearchName ?? "").trim()}
               className={cn(
                 "rounded-md border px-2 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors",
-                isDark
-                  ? "sui-bg-accent sui-border-info sui-color-info sui-hover-bg-accent disabled:opacity-40 disabled:cursor-not-allowed"
-                  : "sui-bg-info sui-border-info sui-color-info sui-hover-bg-info disabled:opacity-40 disabled:cursor-not-allowed",
+                "scd-action-secondary disabled:cursor-not-allowed",
               )}
               title="Apply this custom name as the search for this element"
             >
@@ -8128,9 +8120,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
               className={cn(
                 "inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
                 onOpenInSearch && selectedSpl
-                  ? isDark
-                    ? "sui-color-info sui-hover-color-info sui-bg-accent sui-hover-bg-accent cursor-pointer"
-                    : "sui-color-info sui-hover-color-info sui-bg-info sui-hover-bg-info cursor-pointer"
+                  ? "scd-action-secondary cursor-pointer"
                   : isDark
                     ? "sui-color-muted sui-bg-floating cursor-not-allowed"
                     : "sui-color-default sui-bg-section cursor-not-allowed",
@@ -9252,9 +9242,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                   title={`Copy current map view: ${currentMapView.center[0]}, ${currentMapView.center[1]} at zoom ${currentMapView.zoom}`}
                   className={cn(
                     "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
-                    isDark
-                      ? "sui-border-info sui-bg-accent sui-color-info sui-hover-bg-accent"
-                      : "sui-border-info sui-bg-info sui-color-info sui-hover-bg-info",
+                    "scd-action-secondary",
                   )}
                 >
                   <Crosshair className="h-3.5 w-3.5" />
@@ -9341,7 +9329,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                   type="button"
                   onClick={addSite}
                   title="Add site"
-                  className="inline-flex items-center gap-1 rounded-md sui-bg-accent px-2 py-1 text-xs font-black sui-color-active sui-hover-bg-accent focus:outline-none focus:ring-1 sui-focus-ring"
+                  className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-black scd-action-secondary focus:outline-none focus:ring-1 sui-focus-ring"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Add
@@ -9468,14 +9456,24 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 pickSiteId === site.id ? null : site.id,
                               )
                             }
-                            title="Click the map to set this site's lat/lng"
-                            className={cn(
-                              "p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
+                            aria-label={
                               pickSiteId === site.id
-                                ? "sui-bg-accent sui-color-active"
+                                ? `Stop choosing a map location for ${site.name}`
+                                : `Choose a map location for ${site.name}`
+                            }
+                            aria-pressed={pickSiteId === site.id}
+                            title={
+                              pickSiteId === site.id
+                                ? "Stop choosing this site's map location"
+                                : "Click the map to set this site's lat/lng"
+                            }
+                            className={cn(
+                              "rounded-md border p-1.5 transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
+                              pickSiteId === site.id
+                                ? "sui-border-info sui-bg-selected sui-color-active"
                                 : isDark
-                                  ? "sui-bg-popup sui-color-default sui-hover-bg-floating"
-                                  : "sui-bg-section sui-color-muted sui-hover-bg-section",
+                                  ? "sui-border-weak sui-bg-popup sui-color-default sui-hover-bg-floating"
+                                  : "sui-border-weak sui-bg-section sui-color-muted sui-hover-bg-section",
                             )}
                           >
                             <MousePointer2 className="w-3.5 h-3.5" />
@@ -9538,9 +9536,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 disabled={isPlacingSite}
                                 className={cn(
                                   "inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1.5 text-xs font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 sui-focus-ring disabled:cursor-wait disabled:opacity-60",
-                                  isDark
-                                    ? "sui-border-info sui-bg-accent sui-color-info sui-hover-bg-accent"
-                                    : "sui-border-info sui-bg-info sui-color-info sui-hover-bg-info",
+                                  "scd-action-secondary",
                                 )}
                               >
                                 {isPlacingSite && (
@@ -9883,7 +9879,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                   onClick={addLink}
                   disabled={topology.sites.length < 2}
                   title="Add connection"
-                  className="inline-flex items-center gap-1 rounded-md sui-bg-accent px-2 py-1 text-xs font-black sui-color-active  disabled:opacity-40 sui-hover-bg-accent focus:outline-none focus:ring-1 sui-focus-ring"
+                  className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-black scd-action-secondary disabled:opacity-40 focus:outline-none focus:ring-1 sui-focus-ring"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Add connection
@@ -10305,9 +10301,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                     title="Clear ThousandEyes binding"
                                     className={cn(
                                       "p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
-                                      isDark
-                                        ? "sui-bg-popup sui-color-negative sui-hover-bg-negative"
-                                        : "sui-bg-negative sui-color-negative sui-hover-bg-negative",
+                                      "sui-bg-section sui-color-negative sui-hover-bg-notification-negative",
                                     )}
                                   >
                                     <X className="w-3.5 h-3.5" />
@@ -10650,11 +10644,8 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
               disabled={isSaving}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-black transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
-                isSaving
-                  ? "cursor-not-allowed opacity-50"
-                  : isDark
-                    ? "sui-bg-section sui-color-negative sui-hover-bg-negative"
-                    : "sui-bg-negative sui-color-negative sui-hover-bg-negative",
+                "scd-action-destructive-secondary",
+                isSaving && "cursor-not-allowed opacity-50",
               )}
             >
               {isSaving ? (
@@ -10669,7 +10660,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
               onClick={onSave}
               disabled={isSaving}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-md sui-bg-accent px-3 py-1.5 text-xs font-black sui-color-active sui-hover-bg-accent focus:outline-none focus:ring-1 sui-focus-ring",
+                "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-black scd-action-primary focus:outline-none focus:ring-1 sui-focus-ring",
                 isSaving && "cursor-not-allowed opacity-60",
               )}
             >
@@ -10701,7 +10692,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
               pointerInteractionRef.current = null;
             }}
             onKeyDown={resizeEditorWithKeyboard}
-            className="absolute bottom-0 right-0 z-10 flex h-7 w-7 cursor-se-resize touch-none items-center justify-center rounded-tl-md sui-color-info sui-hover-bg-accent focus:outline-none focus:ring-1 focus:ring-inset sui-focus-ring"
+            className="absolute bottom-0 right-0 z-10 flex h-7 w-7 cursor-se-resize touch-none items-center justify-center rounded-tl-md sui-color-info sui-hover-bg-overlay focus:outline-none focus:ring-1 focus:ring-inset sui-focus-ring"
           >
             <span
               aria-hidden="true"
@@ -11165,9 +11156,7 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({
             rel="noopener noreferrer"
             className={cn(
               "mt-1 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-bold transition-colors",
-              isDark
-                ? "sui-bg-accent sui-color-info sui-hover-bg-accent"
-                : "sui-bg-info sui-color-info sui-hover-bg-info",
+              "scd-action-secondary",
             )}
           >
             <ExternalLink className="w-3 h-3" />

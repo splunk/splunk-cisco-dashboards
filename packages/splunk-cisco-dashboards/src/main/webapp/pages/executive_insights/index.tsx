@@ -2898,7 +2898,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   }, [searchbaseRefreshToken]);
 
   const currentSearchbaseOwnerApp =
-    searchbaseRecords?.find((record) => record.ownerApp)?.ownerApp ?? "";
+    searchbaseRecords?.find((record) => record.ownerApp)?.ownerApp ?? APP_NAME;
 
   const runtimeSearchbaseById = useMemo(() => {
     if (searchbaseById === null || allSearchbaseRecords === null) return null;
@@ -5102,7 +5102,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           )}
         >
           {effectiveLogoSrc ? (
-            <div className="w-9 h-9 sui-bg-accent rounded-lg flex items-center justify-center sui-color-active overflow-hidden p-1 flex-shrink-0">
+            <div className="w-9 h-9 sui-bg-notification-info rounded-lg flex items-center justify-center sui-color-active overflow-hidden p-1 flex-shrink-0">
               <img
                 src={effectiveLogoSrc}
                 alt="Dashboard logo"
@@ -5479,7 +5479,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               aria-label={`Open ${selectedPriorityDrilldown.title} in a new tab`}
               className="min-w-0 h-7 flex items-center gap-3 rounded-sm focus:outline-none focus-visible:ring-2 sui-focus-visible-ring"
             >
-              <div className="flex-shrink-0 w-7 h-7 rounded sui-bg-accent sui-color-active flex items-center justify-center shadow-sm">
+              <div className="flex-shrink-0 w-7 h-7 rounded sui-bg-notification-info sui-color-active flex items-center justify-center shadow-sm">
                 <ClipboardCheck className="w-4 h-4 sui-stroke-default" />
               </div>
               <span className="text-xs font-black  sui-color-info  tracking-[0.25em] whitespace-nowrap flex-shrink-0 hidden sm:inline w-[172px]">
@@ -5522,10 +5522,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 title={`Open ${selectedPriorityDrilldown.title} in a new tab`}
                 aria-label={`Open ${selectedPriorityDrilldown.title} in a new tab`}
                 data-testid="featured-report-cta"
-                className="h-7 flex-shrink-0 inline-flex items-center gap-1.5 px-3 rounded sui-bg-accent sui-group-hover-bg-accent sui-active-bg-accent sui-color-active text-xs font-bold tracking-wide  shadow-sm transition-colors focus:outline-none focus-visible:ring-2 sui-focus-visible-ring"
+                className="h-7 flex-shrink-0 inline-flex items-center gap-1.5 px-3 rounded scd-action-primary text-xs font-bold tracking-wide shadow-sm transition-colors focus:outline-none focus-visible:ring-2 sui-focus-visible-ring"
               >
                 {PRIORITY_DRILLDOWN_CTA}
-                <ArrowRight className="w-3.5 h-3.5 sui-stroke-default" />
+                <ArrowRight className="w-3.5 h-3.5 sui-stroke-current" />
               </a>
             </div>
           </div>
@@ -6382,11 +6382,23 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
 const ALL_ADD_TILE_CATEGORIES = "__all_add_tile_categories";
 const ALL_ADD_TILE_SUB_CATEGORIES = "__all_add_tile_sub_categories";
 
-const makeDefaultAddTileAppSelection = (): Set<string> => new Set();
+// Start the cross-app catalogue on this app. Operators can still add other
+// installed Searchbase providers from the App multiselect, while reopening or
+// clearing the drawer returns to the app-owned catalogue.
+const makeDefaultAddTileAppSelection = (
+  currentAppOwner: string,
+): Set<string> => {
+  const app = currentAppOwner.trim();
+  return new Set(app ? [app] : []);
+};
 
 const isDefaultAddTileAppSelection = (
   selection: ReadonlySet<string>,
-): boolean => selection.size === 0;
+  currentAppOwner: string,
+): boolean => {
+  const app = currentAppOwner.trim();
+  return app ? selection.size === 1 && selection.has(app) : selection.size === 0;
+};
 
 const recordMatchesAddTileAppSelection = (
   record: SearchbaseRecord,
@@ -6543,7 +6555,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     ALL_ADD_TILE_SUB_CATEGORIES,
   );
   const [selectedApps, setSelectedApps] = useState<Set<string>>(
-    makeDefaultAddTileAppSelection,
+    () => makeDefaultAddTileAppSelection(currentAppOwner),
   );
   const [includeHiddenSearches, setIncludeHiddenSearches] = useState(false);
   const [includeDrilldownSearches, setIncludeDrilldownSearches] =
@@ -6573,7 +6585,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     setQuery("");
     setSelectedCategory(ALL_ADD_TILE_CATEGORIES);
     setSelectedSubCategory(ALL_ADD_TILE_SUB_CATEGORIES);
-    setSelectedApps(makeDefaultAddTileAppSelection());
+    setSelectedApps(makeDefaultAddTileAppSelection(currentAppOwner));
     setIncludeHiddenSearches(false);
     setIncludeDrilldownSearches(false);
     setIncludeTableSearches(false);
@@ -6590,7 +6602,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     if (typeof window === "undefined") return;
     const id = window.setTimeout(() => searchInputRef.current?.focus(), 30);
     return () => window.clearTimeout(id);
-  }, [open, profile.id, section]);
+  }, [currentAppOwner, open, profile.id, section]);
 
   const handleAdd = async (record: SearchbaseRecord) => {
     setAddingRecordId(searchbaseRecordReference(record));
@@ -6781,7 +6793,9 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
 
   useEffect(() => {
     setSelectedApps((current) => {
-      if (current.size === 0) return current;
+      // Catalogue options can be temporarily empty while records are loading.
+      // Do not erase the explicit app default during that transition.
+      if (current.size === 0 || apps.length === 0) return current;
       const next = new Set([...current].filter((app) => apps.includes(app)));
       return next.size === current.size ? current : next;
     });
@@ -6948,7 +6962,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
 
   const activeFilterCount =
     (showEntireCatalogue && showScopeToggle ? 1 : 0) +
-    (!isDefaultAddTileAppSelection(selectedApps) ? 1 : 0) +
+    (!isDefaultAddTileAppSelection(selectedApps, currentAppOwner) ? 1 : 0) +
     (includeAddedSearches ? 1 : 0) +
     (includeHiddenSearches ? 1 : 0) +
     (includeDrilldownSearches ? 1 : 0) +
@@ -6963,7 +6977,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     : `${scopeLabel} · ${matchingAddableCount.toLocaleString()} to add`;
 
   const handleClearFacets = () => {
-    setSelectedApps(makeDefaultAddTileAppSelection());
+    setSelectedApps(makeDefaultAddTileAppSelection(currentAppOwner));
     setIncludeAddedSearches(false);
     setIncludeHiddenSearches(false);
     setIncludeDrilldownSearches(false);
@@ -6997,7 +7011,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
           subtitle={`${sectionTitle} · ${countLabel}`}
         />
 
-        <Drawer.Body>
+        <Drawer.Body className="scd-insights-layer-content">
           <div>
             <ControlGroup hideLabel label="Search">
               <StyledSearch
@@ -7640,8 +7654,8 @@ const MetricDetailTableStateRow: React.FC<MetricDetailTableStateRowProps> = ({
     kind === "loading" ? RefreshCw : kind === "error" ? AlertCircle : Search;
   const iconClasses =
     kind === "error"
-      ? "sui-border-negative sui-bg-negative sui-color-negative"
-      : "sui-border-info sui-bg-accent sui-color-info";
+      ? "sui-border-negative sui-bg-notification-negative sui-color-active"
+      : "sui-border-info sui-bg-notification-info sui-color-active";
 
   return (
     <tr>
@@ -7967,11 +7981,11 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
       headerMeta={
         activeIsTable && statusField ? (
           <>
-            <span className="inline-flex items-center gap-1 rounded-full sui-bg-positive px-2 py-1 text-xs font-semibold sui-color-positive">
+            <span className="inline-flex items-center gap-1 rounded-full sui-bg-notification-positive px-2 py-1 text-xs font-semibold sui-color-active">
               <CheckCircle2 className="h-3 w-3" />
               {availableCount} available
             </span>
-            <span className="inline-flex items-center gap-1 rounded-full sui-bg-negative px-2 py-1 text-xs font-semibold sui-color-negative">
+            <span className="inline-flex items-center gap-1 rounded-full sui-bg-notification-negative px-2 py-1 text-xs font-semibold sui-color-active">
               <AlertCircle className="h-3 w-3" />
               {unavailableCount} unavailable
             </span>
@@ -8145,9 +8159,9 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
                                 className={cn(
                                   "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold",
                                   statusIsAvailable
-                                    ? "sui-bg-positive sui-color-active"
+                                    ? "sui-bg-notification-positive sui-color-active"
                                     : statusIsUnavailable
-                                      ? "sui-bg-negative sui-color-active"
+                                      ? "sui-bg-notification-negative sui-color-active"
                                       : "sui-bg-popup sui-color-active",
                                 )}
                               >
@@ -8415,11 +8429,11 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
                         : `Show ${draft[section] || defaults[section]}`
                     }
                     className={cn(
-                      "inline-flex h-8 items-center gap-1.5 rounded px-2",
+                      "inline-flex h-8 items-center gap-1.5 rounded border px-2",
                       "text-sm font-bold transition-colors",
                       isVisible
-                        ? "sui-bg-section  sui-hover-color-active sui-bg-section sui-color-default"
-                        : "sui-bg-info sui-color-info sui-hover-bg-info",
+                        ? "sui-border-default sui-bg-section sui-color-default sui-hover-bg-overlay sui-hover-color-active"
+                        : "sui-border-info sui-bg-section sui-color-active sui-hover-bg-notification-info",
                       (isSaving || (isVisible ? !canHide : !canShow)) &&
                         "cursor-not-allowed opacity-50",
                     )}
@@ -8449,7 +8463,7 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
         {errorMessage && (
           <div
             role="alert"
-            className="flex items-start gap-2 rounded border px-3 py-2 text-sm font-semibold sui-border-negative sui-bg-negative sui-color-negative"
+            className="flex items-start gap-2 rounded border px-3 py-2 text-sm font-semibold sui-border-negative sui-bg-notification-negative sui-color-active"
           >
             <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
             <span className="min-w-0 break-words">{errorMessage}</span>
@@ -8494,8 +8508,8 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
             disabled={isSaving}
             className={cn(
               "inline-flex items-center gap-1.5 px-3 py-1.5",
-              "rounded sui-bg-accent text-sm font-bold sui-color-active",
-              "sui-hover-bg-accent transition-colors",
+              "rounded text-sm font-bold scd-action-primary",
+              "transition-colors",
               isSaving && "cursor-not-allowed opacity-60",
             )}
           >
@@ -8720,7 +8734,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
             Logo
           </span>
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 sui-bg-accent rounded-lg flex items-center justify-center sui-color-active overflow-hidden p-1 flex-shrink-0">
+            <div className="w-12 h-12 sui-bg-notification-info rounded-lg flex items-center justify-center sui-color-active overflow-hidden p-1 flex-shrink-0">
               {previewLogoSrc ? (
                 <img
                   src={previewLogoSrc}
@@ -8770,7 +8784,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
         {errorMessage ? (
           <div
             role="alert"
-            className="rounded border sui-border-negative sui-bg-negative px-3 py-2 text-sm sui-color-negative"
+            className="rounded border sui-border-negative sui-bg-notification-negative px-3 py-2 text-sm sui-color-active"
           >
             {errorMessage}
           </div>
@@ -8799,7 +8813,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
               void handleSave();
             }}
             disabled={isSaving}
-            className="rounded sui-bg-accent px-3 py-2 text-sm font-bold sui-color-active transition-colors sui-hover-bg-accent disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded px-3 py-2 text-sm font-bold scd-action-primary transition-colors disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSaving ? "Saving…" : "Save"}
           </button>

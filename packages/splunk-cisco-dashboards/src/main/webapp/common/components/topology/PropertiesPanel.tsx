@@ -847,14 +847,14 @@ const NodePropertiesForm: React.FC<{
                 <button
                     type="button"
                     onClick={handleApply}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium sui-bg-accent sui-hover-bg-accent sui-color-active shadow-sm"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium scd-action-primary shadow-sm"
                 >
                     <Save className="w-3.5 h-3.5" aria-hidden /> Apply
                 </button>
                 <button
                     type="button"
                     onClick={() => onDelete(node.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border  sui-border-negative  sui-color-negative  sui-hover-bg-negative"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border scd-action-destructive-secondary"
                 >
                     <Trash2 className="w-3.5 h-3.5" aria-hidden /> Remove
                 </button>
@@ -972,14 +972,14 @@ const RegionPropertiesForm: React.FC<{
                 <button
                     type="button"
                     onClick={handleApply}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium sui-bg-accent sui-hover-bg-accent sui-color-active shadow-sm"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium scd-action-primary shadow-sm"
                 >
                     <Save className="w-3.5 h-3.5" aria-hidden /> Apply
                 </button>
                 <button
                     type="button"
                     onClick={() => onDelete(node.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border  sui-border-negative  sui-color-negative  sui-hover-bg-negative"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border scd-action-destructive-secondary"
                 >
                     <Trash2 className="w-3.5 h-3.5" aria-hidden /> Remove
                 </button>
@@ -1151,7 +1151,7 @@ const TitlePropertiesForm: React.FC<{
                 <button
                     type="button"
                     onClick={handleApply}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium sui-bg-accent sui-hover-bg-accent sui-color-active shadow-sm"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium scd-action-primary shadow-sm"
                 >
                     <Save className="w-3.5 h-3.5" aria-hidden /> Apply
                 </button>
@@ -1448,14 +1448,14 @@ const TextBoxPropertiesForm: React.FC<{
                 <button
                     type="button"
                     onClick={handleApply}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium sui-bg-accent sui-hover-bg-accent sui-color-active shadow-sm"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium scd-action-primary shadow-sm"
                 >
                     <Save className="w-3.5 h-3.5" aria-hidden /> Apply
                 </button>
                 <button
                     type="button"
                     onClick={() => onDelete(node.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border  sui-border-negative  sui-color-negative  sui-hover-bg-negative"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium border scd-action-destructive-secondary"
                 >
                     <Trash2 className="w-3.5 h-3.5" aria-hidden /> Remove
                 </button>

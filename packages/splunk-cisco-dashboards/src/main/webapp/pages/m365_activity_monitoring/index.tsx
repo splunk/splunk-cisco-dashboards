@@ -285,7 +285,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
 const AppHeader: React.FC = () => (
     <header className="flex min-h-[72px] items-center justify-between border-b sui-border-weak sui-bg-section px-6 backdrop-blur">
         <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md border sui-border-info sui-bg-accent sui-color-info">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md border sui-border-info sui-bg-notification-info sui-color-active">
                 <Activity className="h-5 w-5" />
             </div>
             <div>
@@ -632,7 +632,7 @@ const About: React.FC = () => (
         <Panel className="sui-border-info bg-gradient-to-br sui-gradient-from-section sui-gradient-via-section sui-gradient-to-info">
             <div className="space-y-8 p-8">
                 <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg border sui-border-info sui-bg-accent sui-color-info">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg border sui-border-info sui-bg-notification-info sui-color-active">
                         <Shield className="h-7 w-7" />
                     </div>
                     <div>

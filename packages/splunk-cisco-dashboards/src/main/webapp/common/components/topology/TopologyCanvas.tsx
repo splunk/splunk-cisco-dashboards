@@ -624,7 +624,7 @@ const TopologyCanvasInner: React.FC<TopologyCanvasProps> = ({
                     onClick={handleSaveAll}
                     className={cn(
                         'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm',
-                        'sui-bg-accent sui-hover-bg-accent sui-color-active',
+                        'scd-action-primary',
                         'border sui-border-info',
                         'transition-colors'
                     )}
