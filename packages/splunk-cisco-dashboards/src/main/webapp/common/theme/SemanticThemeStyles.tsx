@@ -320,6 +320,49 @@ const borderStyles = css`
   }
 `;
 
+/*
+ * Splunk Web still ships legacy attribute selectors such as
+ * `input[type="text"]`. Those selectors outrank a single semantic utility
+ * class, which can leave dark native controls on an otherwise light React
+ * surface. Keep the override limited to controls that explicitly opt into a
+ * semantic surface/text/border class, and use the same SUI tokens as the
+ * general utilities above.
+ */
+const nativeControlStyles = css`
+  :is(#scan-root, #configure-tile-drawer, [data-workspace-modal-portal="document"])
+    :is(input, select, textarea).sui-bg-page {
+    background-color: ${variables.backgroundColorPage};
+  }
+  :is(#scan-root, #configure-tile-drawer, [data-workspace-modal-portal="document"])
+    :is(input, select, textarea).sui-bg-section {
+    background-color: ${variables.backgroundColorSection};
+  }
+  :is(#scan-root, #configure-tile-drawer, [data-workspace-modal-portal="document"])
+    :is(input, select, textarea).sui-bg-popup {
+    background-color: ${variables.backgroundColorPopup};
+  }
+  :is(#scan-root, #configure-tile-drawer, [data-workspace-modal-portal="document"])
+    :is(input, select, textarea).sui-bg-transparent {
+    background-color: transparent;
+  }
+  :is(#scan-root, #configure-tile-drawer, [data-workspace-modal-portal="document"])
+    :is(input, select, textarea).sui-color-active {
+    color: ${variables.contentColorActive};
+  }
+  :is(#scan-root, #configure-tile-drawer, [data-workspace-modal-portal="document"])
+    :is(input, select, textarea).sui-color-default {
+    color: ${variables.contentColorDefault};
+  }
+  :is(#scan-root, #configure-tile-drawer, [data-workspace-modal-portal="document"])
+    :is(input, select, textarea).sui-border-default {
+    border-color: ${variables.borderColor};
+  }
+  :is(#scan-root, #configure-tile-drawer, [data-workspace-modal-portal="document"])
+    :is(input, select, textarea).sui-border-weak {
+    border-color: ${variables.borderColorWeak};
+  }
+`;
+
 const focusAndSvgStyles = css`
   .sui-focus-ring:focus,
   .sui-focus-visible-ring:focus-visible,
@@ -453,7 +496,7 @@ const focusAndSvgStyles = css`
 `;
 
 const GlobalSemanticThemeStyles = createGlobalStyle`
-    #scan-root {
+    :is(#scan-root, #configure-tile-drawer, [data-workspace-modal-portal="document"]) {
         background-color: ${variables.backgroundColorPage};
         color: ${variables.contentColorDefault};
         font-family: ${variables.fontFamily};
@@ -534,6 +577,7 @@ const GlobalSemanticThemeStyles = createGlobalStyle`
     ${stateStyles}
     ${backgroundStyles}
     ${borderStyles}
+    ${nativeControlStyles}
     ${focusAndSvgStyles}
 `;
 

@@ -10,10 +10,10 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
-- Restored Executive Briefing to the legacy Overview composition: the IT,
-  security, and building sections now expose their original nine tiles in the
-  original order, including Inventory mix, and the Signal Rail again shows the
-  six Cisco feed-freshness indicators. The existing map configuration is
+- Restored Executive Briefing to its three-section Overview composition. The
+  workplace section is now named Smart Spaces and replaces the Meraki water
+  leak tile with a Cisco Spaces active-user signal; the Signal Rail again shows
+  the six Cisco feed-freshness indicators. The existing map configuration is
   unchanged.
 - Kept the installed app version and build visible in the Insights workspace
   header, with direct access to app details and upgrades. Replaced the map's

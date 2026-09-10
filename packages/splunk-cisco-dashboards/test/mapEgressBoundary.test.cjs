@@ -4,11 +4,30 @@ const assert = require("assert").strict;
 const fs = require("fs");
 const path = require("path");
 const test = require("node:test");
+const ts = require("typescript");
 
 const packageRoot = path.resolve(__dirname, "..");
 const sourceRoot = path.join(packageRoot, "src", "main");
 const read = (relativePath) =>
   fs.readFileSync(path.join(packageRoot, relativePath), "utf8");
+
+const loadTypescriptModule = (relativePath) => {
+  const sourcePath = path.join(packageRoot, relativePath);
+  const output = ts.transpileModule(fs.readFileSync(sourcePath, "utf8"), {
+    compilerOptions: {
+      module: ts.ModuleKind.CommonJS,
+      target: ts.ScriptTarget.ES2020,
+    },
+    fileName: sourcePath,
+  }).outputText;
+  const module = { exports: {} };
+  new Function("exports", "module", "require", output)(
+    module.exports,
+    module,
+    require,
+  );
+  return module.exports;
+};
 
 const collectTextFiles = (directory) =>
   fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -33,6 +52,9 @@ const workplaceSpaces = read(
   "src/main/resources/splunk/default/data/ui/views/workplace_spaces_intelligence.xml",
 );
 const mapTileStyles = read("src/main/webapp/common/maps/mapTileStyles.ts");
+const mapTileStyleModule = loadTypescriptModule(
+  "src/main/webapp/common/maps/mapTileStyles.ts",
+);
 const userGuide = read("src/main/webapp/pages/user_guide/index.tsx");
 
 test("shipped map surfaces never send placement text to public services", () => {
@@ -96,6 +118,23 @@ test("map styles use fixed keyless provider tiles with an offline option", () =>
       Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     );
   }
+});
+
+test("the default map follows appearance without replacing an explicit basemap", () => {
+  assert.equal(
+    mapTileStyleModule.mapTileStyleIdAfterThemeChange("dark-ops", true, false),
+    "terrain",
+  );
+  assert.equal(
+    mapTileStyleModule.mapTileStyleIdAfterThemeChange("terrain", false, true),
+    "dark-ops",
+  );
+  assert.equal(
+    mapTileStyleModule.mapTileStyleIdAfterThemeChange("satellite", true, false),
+    "satellite",
+  );
+  assert.match(customerTopology, /useAppThemeControls\(\)/);
+  assert.match(customerTopology, /mapTileStyleIdAfterThemeChange\(/);
 });
 
 test("site placement remains local and documents the offline boundary", () => {

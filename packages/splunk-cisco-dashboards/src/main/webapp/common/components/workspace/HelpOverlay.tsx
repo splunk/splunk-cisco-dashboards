@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowUpRight, Keyboard, Settings2, X } from '@/common/icons/SuiIcon';
+import { useModalFocusTrap } from '@/common/hooks/useModalFocusTrap';
 
 interface ShortcutRow {
     keys: string;
@@ -72,23 +73,25 @@ const CUSTOMIZATION_SCOPE: ScopeRow[] = [
 ];
 
 export const HelpOverlay = React.memo<HelpOverlayProps>(({ open, onClose, shortcuts }) => {
+    const dialogRef = React.useRef<HTMLDivElement | null>(null);
     const closeButtonRef = React.useRef<HTMLButtonElement | null>(null);
 
-    React.useEffect(() => {
-        if (!open) return undefined;
-        const frame = window.requestAnimationFrame(() => {
-            closeButtonRef.current?.focus({ preventScroll: true });
-        });
-        return () => window.cancelAnimationFrame(frame);
-    }, [open]);
+    useModalFocusTrap({
+        isOpen: open,
+        dialogRef,
+        onClose,
+        initialFocusRef: closeButtonRef,
+    });
 
     return (
         <AnimatePresence>
             {open && (
                 <motion.div
+                    ref={dialogRef}
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="help-overlay-title"
+                    tabIndex={-1}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}

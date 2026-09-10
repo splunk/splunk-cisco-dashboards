@@ -69,6 +69,9 @@ const workspacesConf = read(
   "src/main/resources/splunk/default/insights_workspaces.conf",
 );
 const searchbase = read("src/main/resources/splunk/default/searchbase.conf");
+const customerTopologyConf = read(
+  "src/main/resources/splunk/default/customer_topology.conf",
+);
 const macros = read("src/main/resources/splunk/default/macros.conf");
 const workspaceManager = read(
   "src/main/webapp/common/components/workspace/WorkspaceManager.tsx",
@@ -200,6 +203,23 @@ const executiveFallback = workspaceConfig.PACKAGED_WORKSPACE_FALLBACKS.find(
   (candidate) => candidate.id === "executive",
 );
 assert.ok(executiveFallback, "Expected the packaged Executive fallback");
+const smartSpacesSection = workspaceConfig.WORKSPACE_SOURCES.executive.sections.find(
+  (section) => section.id === "building",
+);
+assert.equal(smartSpacesSection?.title, "Smart Spaces");
+assert.equal(smartSpacesSection?.linkText, "Open Smart Spaces");
+const executiveTopology = stanza(
+  customerTopologyConf,
+  "overview_customer_connectivity",
+);
+assert.equal(
+  JSON.parse(field(executiveTopology, "section_titles")).building,
+  "Smart Spaces",
+);
+assert.equal(
+  JSON.parse(field(executiveTopology, "payload_json")).sectionTitles.building,
+  "Smart Spaces",
+);
 assert.deepEqual(
   executiveFallback.sections.map((section) => section.id),
   ["it_health", "security", "building"],
@@ -222,7 +242,7 @@ assert.equal(field(executiveBody, "map_visible"), "1");
 assert.equal(field(executiveBody, "map_position"), "right");
 assert.equal(field(executiveBody, "regional_view"), "map");
 
-const legacyExecutiveSections = {
+const executiveSections = {
   it_health: [
     ["critical_website_availability", "Critical sites available"],
     ["network_health", "Network health"],
@@ -254,7 +274,7 @@ const legacyExecutiveSections = {
     ["ap_health", "AP health"],
     ["environmental_health", "Environmental health"],
     ["rooms_occupied", "Rooms occupied"],
-    ["water_leaks", "Water leaks"],
+    ["active_users", "Active users"],
   ],
 };
 
@@ -272,19 +292,19 @@ const executiveOverviewTiles = searchbaseEntries.flatMap(({ id, body }) => {
 });
 
 for (const [sectionId, expectedSectionTiles] of Object.entries(
-  legacyExecutiveSections,
+  executiveSections,
 )) {
   const layoutId = `layout.executive.${sectionId}`;
   const layout = stanza(workspacesConf, layoutId);
   assert.equal(
     field(layout, "tiles"),
     expectedSectionTiles.map(([tileId]) => tileId).join(","),
-    `${layoutId} must preserve the legacy tile order`,
+    `${layoutId} must preserve the configured tile order`,
   );
   assert.equal(
     field(layout, "visible_count"),
     "9",
-    `${layoutId} must expose all nine legacy tiles by default`,
+    `${layoutId} must expose all nine configured tiles by default`,
   );
 
   for (const [tileId, label] of expectedSectionTiles) {
@@ -299,7 +319,7 @@ for (const [sectionId, expectedSectionTiles] of Object.entries(
       1,
       `${tileId} must resolve to exactly one current Executive Searchbase tile`,
     );
-    assert.equal(matches[0].label, label, `${tileId} must keep its legacy label`);
+    assert.equal(matches[0].label, label, `${tileId} must keep its configured label`);
     assert.ok(matches[0].searchName, `${tileId} must resolve to a saved search`);
   }
 }

@@ -76,3 +76,12 @@ export const MAP_TILE_STYLE_PRESETS: readonly MapTileStylePreset[] = [
 
 export const defaultMapTileStyleId = (isDark: boolean): MapTileStyleId =>
   isDark ? "dark-ops" : "terrain";
+
+export const mapTileStyleIdAfterThemeChange = (
+  current: MapTileStyleId,
+  previousIsDark: boolean,
+  nextIsDark: boolean,
+): MapTileStyleId =>
+  current === defaultMapTileStyleId(previousIsDark)
+    ? defaultMapTileStyleId(nextIsDark)
+    : current;

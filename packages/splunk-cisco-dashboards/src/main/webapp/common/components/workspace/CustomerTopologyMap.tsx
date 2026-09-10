@@ -67,8 +67,10 @@ import {
   ZoomOut,
 } from "@/common/icons/SuiIcon";
 import { cn } from "@/common/lib/utils";
+import { useAppThemeControls } from "@/common/theme/AppThemeProvider";
 import {
   defaultMapTileStyleId,
+  mapTileStyleIdAfterThemeChange,
   MAP_TILE_STYLE_PRESETS,
   type MapTileStyleId,
 } from "@/common/maps/mapTileStyles";
@@ -5581,7 +5583,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   onOpenInSearch,
   onSummaryMetricsChange,
 }) => {
-  const { colorScheme } = useSplunkTheme();
+  const { colorScheme } = useAppThemeControls();
   const isDark = colorScheme === "dark";
   const [selected, setSelected] = useState<SelectedTarget | null>(null);
   const [surfaceMode, setSurfaceMode] = useState<TopologySurfaceMode>("geo");
@@ -5616,6 +5618,17 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   const [tilePresetId, setTilePresetId] = useState<MapTileStyleId>(() =>
     defaultMapTileStyleId(isDark),
   );
+  const previousIsDarkRef = useRef(isDark);
+
+  useEffect(() => {
+    const previousIsDark = previousIsDarkRef.current;
+    if (previousIsDark === isDark) return;
+
+    setTilePresetId((current) =>
+      mapTileStyleIdAfterThemeChange(current, previousIsDark, isDark),
+    );
+    previousIsDarkRef.current = isDark;
+  }, [isDark]);
   const [catalogueByName, setCatalogueByName] = useState<Record<
     string,
     SearchbaseRecord
@@ -9606,11 +9619,6 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 style={{
                                   width: "100%",
                                   minHeight: 28,
-                                  borderColor: isDark ? "#334155" : "#e2e8f0",
-                                  backgroundColor: isDark
-                                    ? "#020617"
-                                    : "#ffffff",
-                                  color: isDark ? "#f1f5f9" : "#1e293b",
                                   fontSize: 12,
                                   fontWeight: 600,
                                 }}

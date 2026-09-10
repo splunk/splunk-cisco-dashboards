@@ -437,6 +437,13 @@ const dashboardBuilderStyles = read(
 const modalShell = read(
   "src/main/webapp/common/components/workspace/WorkspaceModalShell.tsx",
 );
+const appThemeProvider = read(
+  "src/main/webapp/common/theme/AppThemeProvider.tsx",
+);
+const semanticThemeStyles = read(
+  "src/main/webapp/common/theme/SemanticThemeStyles.tsx",
+);
+const tailwindConfig = read("tailwind.config.js");
 const signalTickerEditor = read(
   "src/main/webapp/common/components/workspace/SignalTickerRail.tsx",
 );
@@ -962,6 +969,35 @@ assert.doesNotMatch(
 
 assert.match(modalShell, /const previouslyFocused = document\.activeElement/);
 assert.match(
+  appThemeProvider,
+  /mountRoot\.dataset\.appColorScheme = colorScheme[\s\S]*?mountRoot\.style\.colorScheme = colorScheme/,
+  "The application appearance must reach native controls under the React mount root",
+);
+assert.match(
+  modalShell,
+  /data-workspace-modal-portal="document"[\s\S]*?data-app-color-scheme=\{colorScheme\}[\s\S]*?style=\{\{ colorScheme \}\}/,
+  "Body-portaled workspace dialogs must carry the selected appearance",
+);
+assert.doesNotMatch(
+  modalShell,
+  /<div id="scan-root"/,
+  "Body-portaled dialogs must not duplicate the React mount ID",
+);
+for (const source of [semanticThemeStyles, globalStyles, tailwindConfig]) {
+  assert.match(
+    source,
+    /\[data-workspace-modal-portal=["\\]document/,
+    "Every style boundary must include document-body workspace dialogs",
+  );
+}
+for (const surface of ["page", "section", "popup", "transparent"]) {
+  assert.match(
+    semanticThemeStyles,
+    new RegExp(`:is\\(input, select, textarea\\)\\.sui-bg-${surface}`),
+    `Native ${surface} controls must override Splunk Web legacy input colors with SUI tokens`,
+  );
+}
+assert.match(
   modalShell,
   /previouslyFocused\?\.isConnected[\s\S]*?focus\(\{ preventScroll: true \}\)/,
   "Shared workspace dialogs must restore the invoking control without scrolling",
@@ -975,8 +1011,13 @@ assert.match(
 );
 assert.match(
   helpOverlay,
-  /closeButtonRef\.current\?\.focus\(\{ preventScroll: true \}\)/,
-  "Help must move initial focus into its dialog",
+  /useModalFocusTrap\(\{[\s\S]*?initialFocusRef: closeButtonRef/,
+  "Help must move initial focus into its dialog and contain keyboard focus",
+);
+assert.match(
+  signalTickerEditor,
+  /useModalFocusTrap\(\{[\s\S]*?initialFocusRef: closeButtonRef/,
+  "Signal Rail must move initial focus into its dialog and contain keyboard focus",
 );
 
 for (const shell of [

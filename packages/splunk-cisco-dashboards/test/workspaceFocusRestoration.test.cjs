@@ -49,8 +49,8 @@ assert.match(
 );
 assert.match(
   helpOverlay,
-  /closeButtonRef\.current\?\.focus\(\{ preventScroll: true \}\)/,
-  "Help must move initial focus to its close button",
+  /useModalFocusTrap\(\{[\s\S]*?initialFocusRef: closeButtonRef/,
+  "Help must move initial focus to its close button and contain keyboard focus",
 );
 assert.match(
   insights,

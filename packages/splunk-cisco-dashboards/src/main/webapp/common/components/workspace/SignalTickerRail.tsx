@@ -18,6 +18,8 @@ import {
     X,
 } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
+import { useModalFocusTrap } from '@/common/hooks/useModalFocusTrap';
+import { useAppThemeControls } from '@/common/theme/AppThemeProvider';
 import { formatMetricNumber } from '@/common/lib/metricValueFormat';
 import { splunkSearchAppUrl } from '@/common/lib/splunkSearchUrl';
 import {
@@ -668,6 +670,9 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
     sharedCatalog = false,
     onClose,
 }) => {
+    const { colorScheme } = useAppThemeControls();
+    const dialogRef = useRef<HTMLDivElement | null>(null);
+    const closeButtonRef = useRef<HTMLButtonElement | null>(null);
     const [query, setQuery] = useState('');
     const [selectedApp, setSelectedApp] = useState(ALL_APPS);
     const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
@@ -883,16 +888,12 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         return () => document.removeEventListener('mousedown', handler);
     }, [open, tagDropdownOpen]);
 
-    useEffect(() => {
-        if (!open) return undefined;
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key !== 'Escape') return;
-            event.preventDefault();
-            onClose();
-        };
-        document.addEventListener('keydown', onKeyDown, true);
-        return () => document.removeEventListener('keydown', onKeyDown, true);
-    }, [open, onClose]);
+    useModalFocusTrap({
+        isOpen: open,
+        dialogRef,
+        onClose,
+        initialFocusRef: closeButtonRef,
+    });
 
     const addTag = (tag: string) => {
         setActiveTags((current) => {
@@ -1000,10 +1001,14 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
 
     return (
         <div
+            ref={dialogRef}
             className="fixed inset-0 z-[1800] flex items-center justify-center sui-bg-page p-4 backdrop-blur-sm"
             role="dialog"
             aria-modal="true"
             aria-label="Signal rail editor"
+            tabIndex={-1}
+            data-app-color-scheme={colorScheme}
+            style={{ colorScheme }}
             onMouseDown={(event) => {
                 if (event.target === event.currentTarget) onClose();
             }}
@@ -1036,6 +1041,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                         </div>
                     </div>
                     <button
+                        ref={closeButtonRef}
                         type="button"
                         onClick={onClose}
                         className="rounded-lg p-2  transition-colors   focus:outline-none focus-visible:ring-2 sui-focus-visible-ring sui-color-default sui-hover-bg-section sui-hover-color-active"

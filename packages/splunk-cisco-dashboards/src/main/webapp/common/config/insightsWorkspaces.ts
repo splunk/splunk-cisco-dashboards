@@ -188,8 +188,8 @@ const CROSS_DOMAIN_SECTIONS: readonly WorkspaceSectionMeta[] = [
   },
   {
     id: "building",
-    title: "Digital Experience",
-    linkText: "Open Digital Experience",
+    title: "Smart Spaces",
+    linkText: "Open Smart Spaces",
     href: "dashboard_manager#/workplace_building_intelligence",
     icon: "building",
   },
