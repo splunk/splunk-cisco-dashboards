@@ -1471,14 +1471,15 @@ iseval = 0`}</CodeBlock>
               <div className="grid gap-4 md:grid-cols-2">
                 <InfoCard title="Workspace-owned configuration">
                   A workspace stores its shared sections, tile membership and
-                  order, map configuration, and Signal Rail defaults. When
-                  adding a search, choose <strong> Add for me</strong> for a
-                  private tile or <strong> Add for everyone</strong> to add it
-                  to the shared workspace for every viewer; the shared choice
-                  is available only to workspace managers. Browser preferences
-                  are isolated by signed-in account, workspace, and browser.
-                  Private Signal Rail preferences also follow the account across
-                  browsers.
+                  order, map configuration, header branding, and Signal Rail
+                  KPIs. When adding a search, choose{" "}
+                  <strong> Add for me</strong> for a private tile or{" "}
+                  <strong> Add for everyone</strong> to add it to the shared
+                  workspace for every viewer; the shared choice is available
+                  only to workspace managers. Speed, density, and type size on
+                  the Signal Rail stay private to the signed-in account.
+                  Browser preferences are isolated by signed-in account,
+                  workspace, and browser.
                 </InfoCard>
                 <InfoCard title="Role-based change control">
                   Workspace access has three levels: personal changes, shared
@@ -2068,9 +2069,9 @@ iseval = 0`}</CodeBlock>
                   multi-target drill-down navigation with containment and
                   threat-intelligence views.
                   Signal Rail
-                  defaults are centrally managed, with
-                  private account-and-workspace overrides for each signed-in
-                  user. Headers prioritize the workspace title with compact
+                  KPIs are shared with every viewer of the workspace.
+                  Speed, density, and type size remain private display
+                  preferences for each signed-in user. Headers prioritize the workspace title with compact
                   range and refresh controls, responsive health status, and
                   clear globe and layers iconography without duplicating
                   Splunk Web&apos;s account control. Signal Rails default to

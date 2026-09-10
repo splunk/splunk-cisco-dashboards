@@ -190,6 +190,7 @@ import {
   readUserScopedStorageItem,
   rememberLastWorkspace,
   sectionIdsForWorkspace,
+  toWorkspaceDefinitionInput,
   userScopedStorageKey,
   type InsightsWorkspace,
   type WorkspaceId,
@@ -231,7 +232,9 @@ import {
 import {
   loadInsightsWorkspaces,
   resetBuiltInInsightsWorkspace,
+  saveInsightsWorkspace,
   saveWorkspaceLayout,
+  saveWorkspaceSignalRail,
   type InsightsWorkspaceBundle,
   type WorkspaceLayoutConfig,
 } from "@/common/services/insightsWorkspaceService";
@@ -2544,6 +2547,11 @@ interface InsightsWorkspaceRuntimeProps {
   layouts: Record<WorkspaceId, WorkspaceLayoutConfig>;
   signalRails: Record<WorkspaceId, SignalTickerConfig>;
   signalTickerDefault: SignalTickerConfig;
+  onWorkspaceUpdated?: (workspace: InsightsWorkspace) => void;
+  onSignalRailUpdated?: (
+    workspaceId: WorkspaceId,
+    config: SignalTickerConfig,
+  ) => void;
 }
 
 const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
@@ -2553,6 +2561,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   layouts,
   signalRails,
   signalTickerDefault,
+  onWorkspaceUpdated,
+  onSignalRailUpdated,
 }) => {
   // ------------------------------ Theme ------------------------------
   const { inputBorderWidth, inputHeight, spacingSmall, spacingXSmall } =
@@ -2660,21 +2670,46 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     [insightsWorkspace.id],
   );
 
+  // ------------------------------ Shared workspace authoring ------------------------------
+  const {
+    canManageWorkspaces: canManageWorkspaceConfig,
+    canManageSharedTopology,
+    canManageFactoryTileConfig: canManageFactoryConfig,
+  } = useInsightsWorkspacePermissions();
+  const persistWorkspacePatch = useCallback(
+    async (
+      patch: Parameters<typeof toWorkspaceDefinitionInput>[1],
+    ): Promise<InsightsWorkspace | null> => {
+      if (!canManageWorkspaceConfig) return null;
+      try {
+        const saved = await saveInsightsWorkspace(
+          toWorkspaceDefinitionInput(insightsWorkspace, patch),
+          undefined,
+          insightsWorkspace,
+        );
+        onWorkspaceUpdated?.(saved);
+        return saved;
+      } catch (error) {
+        console.error("[insights] failed to save shared workspace", error);
+        if (typeof window !== "undefined") {
+          window.alert(
+            error instanceof Error
+              ? error.message
+              : "Could not save this shared workspace.",
+          );
+        }
+        return null;
+      }
+    },
+    [canManageWorkspaceConfig, insightsWorkspace, onWorkspaceUpdated],
+  );
+
   // ------------------------------ Branding ------------------------------
   //
-  // Three layered defaults govern what the header chrome shows:
-  //
-  //   1. `brandingOverride` (per-user, localStorage) — values from
-  //      the header pencil → Edit branding panel. Highest priority.
-  //   2. Workspace configuration (`header_title` / `header_subtitle`) —
-  //      packaged defaults that Workspace Manager can update in
-  //      `insights_workspaces.conf`.
-  //   3. Workspace/hardcoded fallbacks (`insightsWorkspace.label`,
-  //      `DEFAULT_HEADER_TITLE_FALLBACK`,
-  //      `DEFAULT_HEADER_SUBTITLE`, `insightsWorkspace.defaultLogoSrc`,
-  //      `DEFAULT_LOGO_DATA_URI`) — what every fresh install ships
-  //      with. Workspaces may provide their own packaged logo, hide the
-  //      default logo entirely, or use the neutral network mark.
+  // Shared workspace configuration (`header_title` / `header_subtitle` /
+  // `default_logo_src`) is the source of truth for every viewer. The header
+  // pencil writes those fields through the workspace REST endpoint. Personal
+  // localStorage branding is no longer applied on top of the shared title.
   //
   // `effectiveTitle` / `effectiveSubtitle` / `effectiveLogoSrc`
   // (derived below) collapse those layers into the strings the
@@ -2688,33 +2723,39 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   const [appVersionLabel, setAppVersionLabel] =
     useState<string>(APP_VERSION_LABEL);
   const appCatalogUrl = secureNetworkingEssentialsCatalogUrl();
-  const {
-    override: brandingOverride,
-    setOverride: setBrandingOverride,
-    resetAll: resetBrandingOverride,
-  } = useBrandingOverride(insightsWorkspace.id);
+  const { resetAll: resetBrandingOverride } = useBrandingOverride(
+    insightsWorkspace.id,
+  );
   const [isBrandingEditorOpen, setBrandingEditorOpen] =
     useState<boolean>(false);
   const [isSectionTitlesEditorOpen, setSectionTitlesEditorOpen] =
     useState<boolean>(false);
 
   const effectiveTitle =
-    brandingOverride.title ||
     insightsWorkspace.headerTitle ||
     insightsWorkspace.label ||
     DEFAULT_HEADER_TITLE_FALLBACK;
   const effectiveSubtitle =
-    brandingOverride.subtitle ||
-    insightsWorkspace.headerSubtitle ||
-    DEFAULT_HEADER_SUBTITLE;
+    insightsWorkspace.headerSubtitle || DEFAULT_HEADER_SUBTITLE;
   // Logo precedence: explicit override (data URI from upload) →
   // current `logoSrc` (the workspace-specific packaged default, an
   // intentionally empty value, or the neutral built-in mark).
   // Header branding is intentionally independent from tile/layout
   // factory reset.
-  const effectiveLogoSrc =
-    normalizeSharedImageSource(brandingOverride.logoDataUri) ||
-    normalizeSharedImageSource(logoSrc);
+  const effectiveLogoSrc = normalizeSharedImageSource(logoSrc);
+
+  useEffect(() => {
+    setLogoSrc(
+      insightsWorkspace.hideDefaultLogo
+        ? ""
+        : normalizeSharedImageSource(insightsWorkspace.defaultLogoSrc) ||
+          DEFAULT_LOGO_DATA_URI,
+    );
+  }, [
+    insightsWorkspace.defaultLogoSrc,
+    insightsWorkspace.hideDefaultLogo,
+    insightsWorkspace.id,
+  ]);
 
   // ------------------------------ Time + refresh ------------------------------
   const [timeRange, setTimeRange] = useState<TimeRange>(
@@ -2890,11 +2931,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     workspaceId: insightsWorkspace.id,
     availableSections,
   });
-  const {
-    canManageWorkspaces: canManageWorkspaceConfig,
-    canManageSharedTopology,
-    canManageFactoryTileConfig: canManageFactoryConfig,
-  } = useInsightsWorkspacePermissions();
   const {
     isHidden: isSectionTileHidden,
     hideTile: hideSectionTile,
@@ -3347,9 +3383,21 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   }, []);
 
   // ------------------------------ Signal rail ------------------------------
-  // Shared defaults come from insights_workspaces.conf. The hook layers the
-  // authenticated user's sparse, workspace-specific preference over that
-  // baseline and migrates older browser settings once when necessary.
+  // Shared KPI membership lives in insights_workspaces.conf. Personal
+  // preferences only keep display speed, density, and type size.
+  const persistSharedSignalRail = useCallback(
+    async (config: SignalTickerConfig) => {
+      const sharedConfig: SignalTickerConfig = {
+        ...config,
+        speed: signalTickerDefault.speed,
+        density: signalTickerDefault.density,
+        fontSize: signalTickerDefault.fontSize,
+      };
+      await saveWorkspaceSignalRail(insightsWorkspace, sharedConfig);
+      onSignalRailUpdated?.(insightsWorkspace.id, sharedConfig);
+    },
+    [insightsWorkspace, onSignalRailUpdated, signalTickerDefault],
+  );
   const {
     config: signalTickerConfig,
     setConfig: setSignalTickerConfig,
@@ -3357,7 +3405,11 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     isWorkspaceDefault: signalTickerIsWorkspaceDefault,
     persistenceStatus: signalTickerPersistenceStatus,
     persistenceError: signalTickerPersistenceError,
-  } = usePersistedSignalTicker(insightsWorkspace.id, signalTickerDefault);
+  } = usePersistedSignalTicker(
+    insightsWorkspace.id,
+    signalTickerDefault,
+    canManageWorkspaceConfig ? persistSharedSignalRail : undefined,
+  );
   const [signalTickerEditorOpen, setSignalTickerEditorOpen] = useState(false);
   const searchbaseCatalogue = useMemo(() => {
     if (!visibleSearchbaseCatalogue) return [];
@@ -3422,53 +3474,21 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   // Persisted in localStorage so the operator's preference survives
   // reloads, cleared by the factory reset alongside the splitter
   // position.
+  // Map placement and visibility are workspace-owned so every viewer sees
+  // the layout an administrator publishes. Split percentage and map height
+  // remain personal view preferences.
+  const [mapPosition, setMapPosition] = useState<MapPosition>(
+    insightsWorkspace.mapPosition,
+  );
   const MAP_POS_KEY = userScopedStorageKey(
     `scd_overview_map_pos.${insightsWorkspace.id}`,
   );
-  const MAP_POS_DEFAULT: MapPosition = "right";
-  const [mapPosition, setMapPosition] = useState<MapPosition>(() => {
-    if (typeof window === "undefined") return insightsWorkspace.mapPosition;
-    try {
-      const saved = readUserScopedStorageItem(MAP_POS_KEY);
-      return saved === "right" || saved === "below" || saved === "above"
-        ? saved
-        : insightsWorkspace.mapPosition;
-    } catch {
-      return insightsWorkspace.mapPosition;
-    }
-  });
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      window.localStorage.setItem(MAP_POS_KEY, mapPosition);
-    } catch {
-      // localStorage may be disabled (private mode / quota);
-      // the choice still works for the session, we just can't
-      // persist it. Mirrors the split-percentage handling.
-    }
-  }, [mapPosition]);
   const MAP_VISIBILITY_KEY = userScopedStorageKey(
     `scd_overview_map_visible.${insightsWorkspace.id}`,
   );
-  const MAP_VISIBLE_DEFAULT = true;
-  const [mapVisible, setMapVisible] = useState<boolean>(() => {
-    if (typeof window === "undefined") return insightsWorkspace.mapVisible;
-    try {
-      const saved = readUserScopedStorageItem(MAP_VISIBILITY_KEY);
-      return saved === null ? insightsWorkspace.mapVisible : saved !== "false";
-    } catch {
-      return insightsWorkspace.mapVisible;
-    }
-  });
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      window.localStorage.setItem(MAP_VISIBILITY_KEY, String(mapVisible));
-    } catch {
-      // localStorage may be disabled; the toggle still applies
-      // for the current session.
-    }
-  }, [MAP_VISIBILITY_KEY, mapVisible]);
+  const [mapVisible, setMapVisible] = useState<boolean>(
+    insightsWorkspace.mapVisible,
+  );
   const MAP_HEIGHT_KEY = userScopedStorageKey(
     `scd_overview_map_height.${insightsWorkspace.id}`,
   );
@@ -3516,14 +3536,30 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   const activeMapPosition: MapPosition | "hidden" = mapVisible
     ? mapPosition
     : "hidden";
-  const updateMapLayout = useCallback((next: MapLayout) => {
-    if (next === "hidden") {
-      setMapVisible(false);
-      return;
-    }
-    setMapPosition(next);
-    setMapVisible(true);
-  }, []);
+  const updateMapLayout = useCallback(
+    (next: MapLayout) => {
+      const nextVisible = next !== "hidden";
+      const nextPosition = next === "hidden" ? mapPosition : next;
+      if (next === "hidden") {
+        setMapVisible(false);
+      } else {
+        setMapPosition(next);
+        setMapVisible(true);
+      }
+      void persistWorkspacePatch({
+        mapVisible: nextVisible,
+        mapPosition: nextPosition,
+      });
+    },
+    [mapPosition, persistWorkspacePatch],
+  );
+  const updateRegionalView = useCallback(
+    (next: RegionalView) => {
+      setRegionalView(next);
+      void persistWorkspacePatch({ regionalView: next });
+    },
+    [persistWorkspacePatch],
+  );
   // Convenience flag for the drag / keyboard handlers and the
   // splitter styling: `right` mode drags on the X axis, `below` /
   // `above` modes drag on the Y axis.
@@ -3550,7 +3586,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   // standard 1080p display, which is the bottom of "still useful".
   //
   // Default 66.67% (Build 83): metrics get 2/3 of the width, map
-  // gets 1/3. Pairs with `MAP_POS_DEFAULT = 'right'` to put the
+  // gets 1/3. Pairs with the shared workspace default of `right` to put the
   // headline KPI rails on the left and the topology map as the
   // anchor visual on the right at boot. Earlier revisions used
   // 58.33% (= 7/12, matching the legacy fixed grid), but that left
@@ -4660,13 +4696,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   //   • sectionTileOrder.v1           — drag-to-reorder preference
   //   • customerTopology.v4           — retired per-browser map payload
   //   • scd_overview_split_pct        — tiles ↔ map splitter position
-  //   • scd_overview_map_pos          — map position (right / below / above)
-  //   • scd_overview_map_visible      — topology map visibility
+  //   • scd_overview_map_pos          — leftover map-position localStorage
+  //   • scd_overview_map_visible      — leftover map-visibility localStorage
   //   • scd_overview_map_height       — map panel height (workspace / compact)
   //   • priorityDrilldown.v1          — pinned app-local drill-down target
-  //   • insights_workspace_preferences.conf — private Signal Rail delta;
-  //                                      retired signalTicker.v1 browser data
-  //                                      is cleared after migration
+  //   • insights_workspace_preferences.conf — private Signal Rail display
+  //                                      prefs; leftover item patches are
+  //                                      ignored after hydration
   //
   // What is intentionally NOT reset:
   //   • header branding (title / subtitle / logo) — identity, not
@@ -4697,8 +4733,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     clearCustomerTopologyStorage();
     setTopologyResetKey((n) => n + 1);
     setLeftPct(SPLIT_DEFAULT);
-    setMapPosition(MAP_POS_DEFAULT);
-    setMapVisible(MAP_VISIBLE_DEFAULT);
+    setMapPosition(insightsWorkspace.mapPosition);
+    setMapVisible(insightsWorkspace.mapVisible);
     setMapHeightMode(MAP_HEIGHT_DEFAULT);
     setSelectedPriorityDrilldownView(DEFAULT_PRIORITY_DRILLDOWN_VIEW);
     setFocusedSection(null);
@@ -4730,11 +4766,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     SPLIT_KEY,
     SPLIT_DEFAULT,
     setLeftPct,
+    insightsWorkspace,
     MAP_POS_KEY,
-    MAP_POS_DEFAULT,
     setMapPosition,
     MAP_VISIBILITY_KEY,
-    MAP_VISIBLE_DEFAULT,
     setMapVisible,
     MAP_HEIGHT_KEY,
     MAP_HEIGHT_DEFAULT,
@@ -4812,7 +4847,12 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       next[section] = {
         tiles: effectiveOrder,
         visibleCount,
-        searchbaseAdditions: workspaceLayout[section]?.searchbaseAdditions,
+        searchbaseAdditions: Array.from(
+          new Set([
+            ...(workspaceLayout[section]?.searchbaseAdditions ?? []),
+            ...(sectionTileAdditions[section] ?? []),
+          ]),
+        ),
       };
     }
 
@@ -4841,9 +4881,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     baseMetricConfig,
     getFactoryTileOrder,
     getSectionTileOrder,
+    insightsWorkspace,
+    sectionTileAdditions,
     sectionTileBounds.maxCount,
     sectionTileCounts,
-    insightsWorkspace.id,
     workspaceLayout,
   ]);
 
@@ -5073,10 +5114,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   // executive header. User-uploaded data URIs
                   // are self-contained and managed by the
                   // branding editor.
-                  if (
-                    !brandingOverride.logoDataUri &&
-                    logoSrc !== DEFAULT_LOGO_DATA_URI
-                  ) {
+                  if (logoSrc !== DEFAULT_LOGO_DATA_URI) {
                     setLogoSrc(DEFAULT_LOGO_DATA_URI);
                   }
                 }}
@@ -5142,6 +5180,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               {effectiveSubtitle}
             </p>
           </div>
+          {canManageWorkspaceConfig ? (
           <button
             type="button"
             onClick={() => setBrandingEditorOpen(true)}
@@ -5151,6 +5190,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           >
             <Edit3 className="w-3.5 h-3.5" />
           </button>
+          ) : null}
         </div>
 
         <div
@@ -5948,7 +5988,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   <div className="flex flex-shrink-0 items-center gap-2">
                     <RegionalViewToggle
                       value={regionalView}
-                      onChange={setRegionalView}
+                      onChange={updateRegionalView}
                     />
                   </div>
                 </div>
@@ -6251,6 +6291,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         isWorkspaceDefault={signalTickerIsWorkspaceDefault}
         persistenceStatus={signalTickerPersistenceStatus}
         persistenceError={signalTickerPersistenceError}
+        sharedCatalog={canManageWorkspaceConfig}
         onClose={() => setSignalTickerEditorOpen(false)}
       />
 
@@ -6266,7 +6307,11 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       <BrandingEditorModal
         isOpen={isBrandingEditorOpen}
         onClose={() => setBrandingEditorOpen(false)}
-        override={brandingOverride}
+        override={{
+          title: insightsWorkspace.headerTitle || insightsWorkspace.label,
+          subtitle: insightsWorkspace.headerSubtitle,
+          logoDataUri: insightsWorkspace.defaultLogoSrc,
+        }}
         titlePlaceholder={
           insightsWorkspace.headerTitle ||
           insightsWorkspace.label ||
@@ -6276,8 +6321,32 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           insightsWorkspace.headerSubtitle || DEFAULT_HEADER_SUBTITLE
         }
         logoFallbackSrc={logoSrc}
-        onSave={(next) => setBrandingOverride(next)}
+        onSave={async (next) => {
+          if (!canManageWorkspaceConfig) return false;
+          const saved = await persistWorkspacePatch({
+            headerTitle: next.title,
+            headerSubtitle: next.subtitle,
+            defaultLogoSrc:
+              next.logoDataUri ?? insightsWorkspace.defaultLogoSrc,
+            hideDefaultLogo: next.logoDataUri
+              ? false
+              : insightsWorkspace.hideDefaultLogo,
+          });
+          if (!saved) return false;
+          resetBrandingOverride();
+          return true;
+        }}
         onResetToDefaults={() => {
+          const packaged = PACKAGED_WORKSPACE_FALLBACKS.find(
+            (candidate) => candidate.id === insightsWorkspace.id,
+          );
+          void persistWorkspacePatch({
+            headerTitle: packaged?.headerTitle || insightsWorkspace.label,
+            headerSubtitle: packaged?.headerSubtitle,
+            defaultLogoSrc: packaged?.defaultLogoSrc,
+            hideDefaultLogo:
+              packaged?.hideDefaultLogo ?? insightsWorkspace.hideDefaultLogo,
+          });
           resetBrandingOverride();
           setBrandingEditorOpen(false);
         }}
@@ -6484,7 +6553,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [addDestination, setAddDestination] = useState<
     "personal" | "workspace"
-  >("personal");
+  >(canManageWorkspace ? "workspace" : "personal");
   const [addingRecordId, setAddingRecordId] = useState<string | null>(null);
   const [sharedRemovalRecord, setSharedRemovalRecord] =
     useState<SearchbaseRecord | null>(null);
@@ -8457,24 +8526,23 @@ interface BrandingEditorModalProps {
   /** Image src to display in the "current logo" preview when no
    * override logo is set. Lets the user see what they're replacing. */
   logoFallbackSrc: string;
-  onSave: (next: BrandingOverride) => boolean;
+  onSave: (next: BrandingOverride) => boolean | Promise<boolean>;
   onResetToDefaults: () => void;
 }
 
 /**
- * Centered modal for editing the per-user header branding override
- * (title, subtitle, logo). Title and subtitle are plain text inputs;
- * the logo is a file upload that's encoded to a `data:` URI and
- * stored in localStorage by the parent's `useBrandingOverride` hook.
+ * Centered modal for editing the shared workspace header (title,
+ * subtitle, logo). Title and subtitle are plain text inputs; the logo
+ * is a file upload encoded to a `data:` URI and saved on the workspace
+ * stanza so every viewer sees the same branding.
  *
  * Behaviour notes:
  *  - "Save" persists whatever's in the form fields. Empty strings
- *    are treated as "use the default" — the hook strips them so
- *    the live header re-derives from workspace configuration and packaged
- *    fallbacks. Returning `false` from `onSave` (e.g. logo too big)
- *    keeps the modal open with an inline error.
- *  - "Reset to defaults" wipes the override entirely (storage key
- *    removed) and closes the modal.
+ *    fall back to the workspace label and packaged subtitle.
+ *    Returning `false` from `onSave` (e.g. logo too big) keeps the
+ *    modal open with an inline error.
+ *  - "Reset to defaults" restores packaged header fields and closes
+ *    the modal.
  *  - "Cancel" / Esc / backdrop click discards local form changes.
  *  - The file input rejects anything outside the accepted MIME
  *    list, and the FileReader path enforces a 256 KiB cap on the
@@ -8503,6 +8571,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
     override.logoDataUri,
   );
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Re-sync the form when the modal is (re)opened — picks up any
@@ -8562,20 +8631,26 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (isSaving) return;
     const next: BrandingOverride = {
       title: titleField.trim() || undefined,
       subtitle: subtitleField.trim() || undefined,
       logoDataUri,
     };
-    const ok = onSave(next);
-    if (!ok) {
-      setErrorMessage(
-        "Could not save branding (logo may exceed the size limit). Please try a smaller image.",
-      );
-      return;
+    setIsSaving(true);
+    try {
+      const ok = await onSave(next);
+      if (!ok) {
+        setErrorMessage(
+          "Could not save branding (logo may exceed the size limit). Please try a smaller image.",
+        );
+        return;
+      }
+      onClose();
+    } finally {
+      setIsSaving(false);
     }
-    onClose();
   };
 
   const previewLogoSrc =
@@ -8688,7 +8763,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
           <p className="mt-1.5 text-sm leading-5 sui-color-muted">
             PNG, SVG, JPEG, WebP, or GIF. Max{" "}
             {Math.round(BRANDING_LOGO_DATA_URI_MAX_BYTES / 1024)} KB after
-            encoding. Stored in your browser only.
+            encoding. Saved on this workspace for every viewer.
           </p>
         </div>
 
@@ -8720,10 +8795,13 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
           </button>
           <button
             type="button"
-            onClick={handleSave}
-            className="rounded sui-bg-accent px-3 py-2 text-sm font-bold sui-color-active transition-colors sui-hover-bg-accent"
+            onClick={() => {
+              void handleSave();
+            }}
+            disabled={isSaving}
+            className="rounded sui-bg-accent px-3 py-2 text-sm font-bold sui-color-active transition-colors sui-hover-bg-accent disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Save
+            {isSaving ? "Saving…" : "Save"}
           </button>
         </div>
       </div>
@@ -8731,10 +8809,9 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
   );
 };
 
-// Map position relative to the metric tile column. Persisted to
-// `scd_overview_map_pos` in localStorage; cleared by the factory reset.
-// See the splitter / map-position useState block in the Overview page
-// for the wiring and the rationale on defaulting to `right` (Build 83).
+// Map position relative to the metric tile column. Shared workspace
+// configuration is authoritative; leftover localStorage keys are
+// cleared by the personal-customization reset.
 type MapPosition = "right" | "below" | "above";
 type MapHeightMode = "match-workspace" | "compact";
 
@@ -8890,6 +8967,31 @@ const InsightsWorkspacePage: React.FC = () => {
         bundle.signalRails[workspace.id] ??
         getDefaultSignalTickerConfig(workspace.id)
       }
+      onWorkspaceUpdated={(updated) => {
+        setBundle((current) =>
+          current
+            ? {
+                ...current,
+                workspaces: current.workspaces.map((candidate) =>
+                  candidate.id === updated.id ? updated : candidate,
+                ),
+              }
+            : current,
+        );
+      }}
+      onSignalRailUpdated={(workspaceId, config) => {
+        setBundle((current) =>
+          current
+            ? {
+                ...current,
+                signalRails: {
+                  ...current.signalRails,
+                  [workspaceId]: config,
+                },
+              }
+            : current,
+        );
+      }}
     />
   );
 };

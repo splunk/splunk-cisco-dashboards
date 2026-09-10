@@ -24,6 +24,7 @@ TOPOLOGY_CONF = "customer_topology"
 TEMPLATES_CONF = "templates"
 APP_NAME = "splunk-cisco-dashboards"
 MAX_SCALAR_BYTES = 4096
+MAX_LOGO_BYTES = 256 * 1024
 MAX_LIST_BYTES = 64 * 1024
 MAX_TOPOLOGY_PAYLOAD_BYTES = 128 * 1024
 MAX_TEMPLATE_BACKGROUND_DATA_BYTES = 3 * 1024 * 1024
@@ -263,6 +264,8 @@ def validate_settings(conf_name, stanza_name, raw_settings):
             if key == "payload_json"
             else MAX_TEMPLATE_BACKGROUND_DATA_BYTES
             if conf_name == TEMPLATES_CONF and key == "data"
+            else MAX_LOGO_BYTES
+            if key == "default_logo_src"
             else MAX_LIST_BYTES
             if key in _LONG_FIELDS
             else MAX_SCALAR_BYTES

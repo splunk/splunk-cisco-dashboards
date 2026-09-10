@@ -423,6 +423,28 @@ const layoutStanzaName = (
 const signalRailStanzaName = (workspaceId: WorkspaceId): string =>
   `${SIGNAL_RAIL_STANZA_PREFIX}${workspaceId}`;
 
+const signalItemStanzaName = (itemId: string): string =>
+  `${SIGNAL_ITEM_STANZA_PREFIX}${itemId}`;
+
+const signalItemFields = (item: SignalTickerItem): Record<string, string> => {
+  const fields: Record<string, string> = {
+    search_name: item.searchName,
+  };
+  if (item.label) fields.label = item.label;
+  if (item.valueField) fields.value_field = item.valueField;
+  if (item.thresholdWarning !== undefined) {
+    fields.threshold_warning = String(item.thresholdWarning);
+  }
+  if (item.thresholdCritical !== undefined) {
+    fields.threshold_critical = String(item.thresholdCritical);
+  }
+  if (item.thresholdDirection) {
+    fields.threshold_direction = item.thresholdDirection;
+  }
+  if (item.thresholdUnit) fields.threshold_unit = item.thresholdUnit;
+  return fields;
+};
+
 const upsertStanza = async (
   stanzaName: string,
   fields: Record<string, string>,
@@ -616,6 +638,9 @@ export const saveWorkspaceSignalRail = async (
   const sanitized = sanitizeSignalTickerConfig(config);
   if (!sanitized) {
     throw new Error("Signal Rail configuration is invalid.");
+  }
+  for (const item of sanitized.items) {
+    await upsertStanza(signalItemStanzaName(item.id), signalItemFields(item));
   }
   await upsertStanza(signalRailStanzaName(workspace.id), {
     enabled: sanitized.enabled ? "1" : "0",

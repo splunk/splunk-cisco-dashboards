@@ -193,7 +193,14 @@ class WorkspaceRestValidationTest(unittest.TestCase):
             with self.subTest(field=field), self.assertRaisesRegex(ValueError, "limit"):
                 handler.validate_settings(conf_name, stanza, {field: [value]})
 
-    def test_restricts_shared_workspace_image_sources(self):
+    def test_allows_bounded_shared_workspace_logos(self):
+        oversized = "data:image/png;base64," + "a" * (handler.MAX_LOGO_BYTES)
+        with self.assertRaisesRegex(ValueError, "limit"):
+            handler.validate_settings(
+                handler.WORKSPACE_CONF,
+                "workspace.delegated_ops",
+                {"default_logo_src": [oversized]},
+            )
         safe_sources = (
             "data:image/svg+xml;utf8,%3Csvg%2F%3E",
             "data:image/png;base64,iVBORw0KGgo=",

@@ -1052,6 +1052,42 @@ assert.match(
   "Factory reset caller must use the packaged source instead of an effective workspace override",
 );
 
+{
+  const base = signalConfig.getDefaultSignalTickerConfig("executive");
+  const personalSpeed = { ...base, speed: Math.max(base.speed - 5, 1) };
+  const extraItem = {
+    ...base,
+    items: [
+      ...base.items,
+      {
+        id: "shared_extra_kpi",
+        searchName: "extra_search",
+        label: "Extra",
+      },
+    ],
+  };
+  assert.equal(
+    signalConfig.sharedSignalTickerConfigsEqual(base, personalSpeed),
+    true,
+    "Personal speed must not count as a shared Signal Rail change",
+  );
+  assert.equal(
+    signalConfig.sharedSignalTickerConfigsEqual(base, extraItem),
+    false,
+    "Adding a KPI must count as a shared Signal Rail change",
+  );
+  assert.deepEqual(
+    signalConfig.createSignalTickerDisplayPreferencePatch(base, personalSpeed),
+    { speed: personalSpeed.speed },
+    "Personal Signal Rail prefs must persist only display fields",
+  );
+  assert.equal(
+    signalConfig.createSignalTickerDisplayPreferencePatch(base, extraItem),
+    null,
+    "Shared KPI membership must not be stored as a personal preference",
+  );
+}
+
 assert.equal(metricValueFormat.formatCompactMetricNumber(999), "999");
 assert.equal(metricValueFormat.formatCompactMetricNumber(1_000), "1K");
 assert.equal(metricValueFormat.formatCompactMetricNumber(1_000_000), "1M");

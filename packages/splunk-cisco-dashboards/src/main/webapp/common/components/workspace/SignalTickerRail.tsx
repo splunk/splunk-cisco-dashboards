@@ -611,6 +611,7 @@ interface SignalTickerEditorProps {
     isWorkspaceDefault?: boolean;
     persistenceStatus?: SignalTickerPersistenceStatus;
     persistenceError?: string;
+    sharedCatalog?: boolean;
     onClose: () => void;
 }
 
@@ -664,6 +665,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
     isWorkspaceDefault = false,
     persistenceStatus = 'account',
     persistenceError,
+    sharedCatalog = false,
     onClose,
 }) => {
     const [query, setQuery] = useState('');
@@ -947,9 +949,15 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
     if (!open) return null;
 
     const persistenceCopy: Record<SignalTickerPersistenceStatus, string> = {
-        loading: 'Loading your private workspace preferences…',
-        saving: 'Saving privately to your Splunk account…',
-        account: 'Private to your Splunk account and this workspace',
+        loading: sharedCatalog
+            ? 'Loading the shared Signal Rail…'
+            : 'Loading your private display preferences…',
+        saving: sharedCatalog
+            ? 'Saving Signal Rail KPIs for every viewer…'
+            : 'Saving privately to your Splunk account…',
+        account: sharedCatalog
+            ? 'KPIs are shared with every viewer. Speed and density stay private to you.'
+            : 'Private display preferences for this workspace',
         browser: 'Browser-only fallback — account storage is unavailable',
     };
 

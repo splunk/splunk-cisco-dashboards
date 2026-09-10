@@ -405,11 +405,18 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
     };
 
     const updateLabel = (label: string) => {
-        setDraft((current) => ({
-            ...current,
-            label,
-            id: idTouched ? current.id : slugifyWorkspaceId(label),
-        }));
+        setDraft((current) => {
+            const clonedOrMirroredHeader =
+                !current.headerTitle.trim() ||
+                current.headerTitle.trim() === current.label.trim() ||
+                / copy$/i.test(current.headerTitle.trim());
+            return {
+                ...current,
+                label,
+                headerTitle: clonedOrMirroredHeader ? label : current.headerTitle,
+                id: idTouched ? current.id : slugifyWorkspaceId(label),
+            };
+        });
     };
 
     const updateSource = (sourceWorkspace: WorkspaceSourceId) => {
@@ -604,6 +611,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                             <FieldsGrid>
                                 <ControlGroup
                                     label="Display name"
+                                    help="Shown in the workspace switcher. The dashboard header title is separate."
                                     required
                                     error={
                                         validationAttempted && missingDisplayName
@@ -777,7 +785,10 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                     </Checkbox>
                                 </ControlGroup>
                                 <FullWidth>
-                                    <ControlGroup label="Header title">
+                                    <ControlGroup
+                                        label="Header title"
+                                        help="Shown to every viewer in the workspace header."
+                                    >
                                         <Text
                                             value={draft.headerTitle}
                                             onChange={(_event, { value }) =>

@@ -483,6 +483,33 @@ export const createInsightsWorkspace = (
   };
 };
 
+export const toWorkspaceDefinitionInput = (
+  workspace: InsightsWorkspace,
+  patch: Partial<WorkspaceDefinitionInput> = {},
+): WorkspaceDefinitionInput => ({
+  id: workspace.id,
+  label: workspace.label,
+  sourceWorkspace: workspace.sourceWorkspace,
+  sectionIds: workspace.sections.map((section) => section.id),
+  defaultVisibleSections: workspace.defaultVisibleSections,
+  maxVisibleSections: workspace.maxVisibleSections,
+  minTileCount: workspace.minTileCount,
+  maxTileCount: workspace.maxTileCount,
+  fallbackTileCount: workspace.fallbackTileCount,
+  headerTitle: workspace.headerTitle,
+  headerSubtitle: workspace.headerSubtitle,
+  defaultLogoSrc: workspace.defaultLogoSrc,
+  hideDefaultLogo: workspace.hideDefaultLogo,
+  legacyViewNames: workspace.legacyViewNames,
+  isBuiltIn: workspace.isBuiltIn,
+  enabled: workspace.enabled,
+  sortOrder: workspace.sortOrder,
+  mapVisible: workspace.mapVisible,
+  mapPosition: workspace.mapPosition,
+  regionalView: workspace.regionalView,
+  ...patch,
+});
+
 export const PACKAGED_WORKSPACE_FALLBACKS: readonly InsightsWorkspace[] = [
   createInsightsWorkspace({
     id: "secure_networking",

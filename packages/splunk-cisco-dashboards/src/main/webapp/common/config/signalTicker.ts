@@ -737,6 +737,41 @@ export const signalTickerConfigsEqual = (
   left.fontSize === right.fontSize &&
   sameItems(left.items, right.items);
 
+export const sharedSignalTickerConfigsEqual = (
+  left: SignalTickerConfig,
+  right: SignalTickerConfig,
+): boolean =>
+  left.enabled === right.enabled &&
+  left.showPriorityDrilldown === right.showPriorityDrilldown &&
+  left.rows === right.rows &&
+  sameItems(left.items, right.items);
+
+export const createSignalTickerDisplayPreferencePatch = (
+  base: SignalTickerConfig,
+  current: SignalTickerConfig,
+): SignalTickerPreferencePatch | null => {
+  const patch: SignalTickerPreferencePatch = {};
+  if (current.speed !== base.speed) patch.speed = current.speed;
+  if (current.density !== base.density) patch.density = current.density;
+  if (current.fontSize !== base.fontSize) patch.fontSize = current.fontSize;
+  return Object.keys(patch).length > 0 ? patch : null;
+};
+
+export const applySignalTickerDisplayPreferencePatch = (
+  base: SignalTickerConfig,
+  patch: SignalTickerPreferencePatch | null,
+): SignalTickerConfig => {
+  if (!patch) return cloneSignalTickerConfig(base);
+  return (
+    sanitizeSignalTickerConfig({
+      ...base,
+      speed: patch.speed ?? base.speed,
+      density: patch.density ?? base.density,
+      fontSize: patch.fontSize ?? base.fontSize,
+    }) ?? cloneSignalTickerConfig(base)
+  );
+};
+
 export const createSignalTickerPreferencePatch = (
   base: SignalTickerConfig,
   current: SignalTickerConfig,

@@ -2,7 +2,8 @@
 
 Purpose:
   Stores app-wide Insights workspace definitions, layouts, Signal Rail items,
-  and Signal Rail defaults. Browser-personal preferences live elsewhere.
+  and Signal Rail defaults. Personal speed, density, and type-size overlays
+  live in insights_workspace_preferences.conf.
 
 Layering:
   - default/insights_workspaces.conf ships the factory definitions.

@@ -519,8 +519,8 @@ assert.match(
 );
 assert.match(
   insightsWorkspaceService,
-  /saveWorkspaceSignalRail[\s\S]*?signalRailStanzaName\(workspace\.id\)[\s\S]*?items: sanitized\.items\.map\(\(item\) => item\.id\)\.join\(","\)/,
-  "The cloned workspace must own an explicit Signal Rail stanza with the source item order",
+  /saveWorkspaceSignalRail[\s\S]*?signalItemStanzaName\(item\.id\)[\s\S]*?signalRailStanzaName\(workspace\.id\)[\s\S]*?items: sanitized\.items\.map\(\(item\) => item\.id\)\.join\(","\)/,
+  "Saving a Signal Rail must persist each KPI definition and the shared item order",
 );
 assert.match(
   insightsWorkspaceService,
@@ -675,6 +675,41 @@ assert.match(
   profile,
   /insightsWorkspace\.headerTitle\s*\|\|\s*insightsWorkspace\.label\s*\|\|\s*DEFAULT_HEADER_TITLE_FALLBACK/,
   "Workspace title fallback must use config and the packaged label",
+);
+assert.doesNotMatch(
+  profile,
+  /brandingOverride\.title\s*\|\|/,
+  "Header title must not prefer a per-browser branding overlay over the shared workspace",
+);
+assert.match(
+  profile,
+  /persistWorkspacePatch\(\{\s*headerTitle: next\.title/,
+  "The branding editor must write the header title to the shared workspace",
+);
+assert.match(
+  profile,
+  /Saved on this workspace for every viewer/,
+  "Branding logo help must describe shared workspace persistence",
+);
+assert.doesNotMatch(
+  profile,
+  /Stored in your browser only/,
+  "Branding logo help must not describe a per-browser overlay",
+);
+assert.match(
+  profile,
+  /canManageWorkspaceConfig \? persistSharedSignalRail/,
+  "Administrators must persist Signal Rail KPIs to the shared workspace",
+);
+assert.match(
+  profile,
+  /speed: signalTickerDefault\.speed[\s\S]*?density: signalTickerDefault\.density[\s\S]*?fontSize: signalTickerDefault\.fontSize/,
+  "Shared Signal Rail saves must keep personal speed and density off the workspace stanza",
+);
+assert.match(
+  profile,
+  /canManageWorkspace \? "workspace" : "personal"/,
+  "Workspace managers must default new section tiles to the shared workspace",
 );
 assert.match(
   profile,
@@ -860,6 +895,16 @@ assert.match(
   "Signal Rail status badges must use semantic SUI tokens with readable active text",
 );
 assert.match(profile, /description: "Configure Signal Rail"/);
+assert.match(
+  signalTickerEditor,
+  /KPIs are shared with every viewer\. Speed and density stay private to you\./,
+  "Administrators must see that Signal Rail KPIs are shared",
+);
+assert.match(
+  signalTickerEditor,
+  /Private display preferences for this workspace/,
+  "Viewers must keep Signal Rail speed and density private",
+);
 assert.doesNotMatch(
   profile,
   />\s*Configure signal rail\s*<\/Menu\.Item>/,
