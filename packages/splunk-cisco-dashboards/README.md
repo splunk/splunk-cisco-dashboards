@@ -10,6 +10,13 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Rebuilt the in-app User Guide around the complete Insights Workspaces
+  workflow: creating and duplicating workspaces, publishing shared layouts and
+  Signal Rail membership, adding private or shared searches, permissions, and
+  the exact server-, account-, browser-, and session-level persistence scopes.
+  Release history now uses accessible collapsible panels with expand and
+  collapse controls, and the intentionally unreleased Searchbase Canvas is no
+  longer linked from customer-facing guidance.
 - Restored readable light and dark appearance across Insights workspace
   editors, drawers, map controls, Signal Rail controls, topology and diagram
   actions, and related setup surfaces by keeping complete Splunk UI foreground,

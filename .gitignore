@@ -36,6 +36,7 @@
 !/packages/splunk-cisco-dashboards/test/secureNetworkingReactPillars.test.cjs
 !/packages/splunk-cisco-dashboards/test/workspaceDelegatedCapability.test.cjs
 !/packages/splunk-cisco-dashboards/test/workspaceEnterpriseHardening.test.cjs
+!/packages/splunk-cisco-dashboards/test/userGuideWorkspaceContract.test.cjs
 !/packages/splunk-cisco-dashboards/test/workspaceRestHandler.test.py
 !/packages/splunk-cisco-dashboards/test/netopsReadinessScore.test.cjs
 !/packages/splunk-cisco-dashboards/test/setupJourneyContract.test.cjs

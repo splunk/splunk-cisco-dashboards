@@ -121,6 +121,8 @@ const GUIDE_SECTIONS = GUIDE_GROUPS.flatMap((group) =>
   group.sections.map((section) => ({ ...section, group: group.label })),
 );
 
+const RELEASE_PANEL_IDS = ["current", "published-1-0-46"];
+
 const SEARCHABLE_SELECTOR = "h2, h3, p, li, td, th";
 
 const sectionNumber = (id: string): number =>
@@ -223,6 +225,39 @@ function InfoCard({
       <h3>{title}</h3>
       <div>{children}</div>
     </section>
+  );
+}
+
+function ReleasePanel({
+  children,
+  meta,
+  onToggle,
+  open,
+  title,
+}: {
+  children: React.ReactNode;
+  meta: string;
+  onToggle: (open: boolean) => void;
+  open: boolean;
+  title: string;
+}): JSX.Element {
+  return (
+    <details
+      className="scd-guide-release-panel"
+      onToggle={(event) => onToggle(event.currentTarget.open)}
+      open={open}
+    >
+      <summary className="scd-guide-release-summary">
+        <span className="scd-guide-release-indicator" aria-hidden="true">
+          ›
+        </span>
+        <span className="scd-guide-release-title-block">
+          <span className="scd-guide-release-title">{title}</span>
+          <span className="scd-guide-release-meta">{meta}</span>
+        </span>
+      </summary>
+      <div className="scd-guide-release-body">{children}</div>
+    </details>
   );
 }
 
@@ -389,11 +424,8 @@ function GuideContents({
         >
           Setup: Tune indexes →
         </a>
-        <a
-          href={appUrl("searchbase_canvas")}
-          className="scd-guide-toc-quicklink"
-        >
-          Searchbase Canvas →
+        <a href={appUrl("workspace_insights")} className="scd-guide-toc-quicklink">
+          Insights Workspaces →
         </a>
       </div>
     </nav>
@@ -723,6 +755,32 @@ export default function UserGuidePage(): JSX.Element {
   const [searchMatches, setSearchMatches] = useState(0);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
   const [appearanceMenuOpen, setAppearanceMenuOpen] = useState(false);
+  const [openReleasePanels, setOpenReleasePanels] = useState(
+    () => new Set(["current"]),
+  );
+
+  const setReleasePanelOpen = useCallback(
+    (panelId: string, open: boolean) => {
+      setOpenReleasePanels((current) => {
+        const next = new Set(current);
+        if (open) {
+          next.add(panelId);
+        } else {
+          next.delete(panelId);
+        }
+        return next;
+      });
+    },
+    [],
+  );
+
+  const setAllReleasePanelsOpen = useCallback((open: boolean) => {
+    setOpenReleasePanels(
+      open
+        ? new Set(RELEASE_PANEL_IDS)
+        : new Set(),
+    );
+  }, []);
 
   const closeAppearanceMenu = useCallback(() => {
     setAppearanceMenuOpen(false);
@@ -1468,51 +1526,227 @@ iseval = 0`}</CodeBlock>
               kicker="Create reusable, customer-ready views without changing the built-in Secure Networking workspace."
               icon={<Layers size={19} />}
             >
-              <div className="grid gap-4 md:grid-cols-2">
-                <InfoCard title="Workspace-owned configuration">
-                  A workspace stores its shared sections, tile membership and
-                  order, map configuration, header branding, and Signal Rail
-                  KPIs. When adding a search, choose{" "}
-                  <strong> Add for me</strong> for a private tile or{" "}
-                  <strong> Add for everyone</strong> to add it to the shared
-                  workspace for every viewer; the shared choice is available
-                  only to workspace managers. Speed, density, and type size on
-                  the Signal Rail stay private to the signed-in account.
-                  Browser preferences are isolated by signed-in account,
-                  workspace, and browser.
+              <div className="scd-guide-prose">
+                <p>
+                  An Insights workspace is a reusable view of Searchbase-backed
+                  KPIs. It combines a template, sections, default tiles, a
+                  Signal Rail, header branding, and an optional customer
+                  connectivity map. Built-in workspaces provide ready-to-use
+                  starting points; custom workspaces let teams create focused
+                  executive, operations, or customer-demo views without
+                  changing the built-in definitions.
+                </p>
+              </div>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-3">
+                <InfoCard title="Shared workspace defaults">
+                  Display name, sections, header branding, map placement and
+                  presentation, default tile order and count, shared tile
+                  additions, and Signal Rail membership are shared with every
+                  viewer. A workspace manager saves these settings through the
+                  app&apos;s protected server endpoints.
                 </InfoCard>
-                <InfoCard title="Role-based change control">
-                  Workspace access has three levels: personal changes, shared
-                  workspace changes, and factory tile changes. The app checks
-                  the signed-in user&apos;s Splunk roles and capabilities before
-                  it displays shared or administrative controls. Splunk object
-                  permissions enforce the corresponding writes on the server.
+                <InfoCard title="Personal view preferences">
+                  Each signed-in user can arrange their own view without
+                  changing the shared defaults. Personal choices include
+                  visible sections, tile order and count, hidden tiles, section
+                  height and collapsed state, private tile additions, chart
+                  display options, map split and height, search concurrency,
+                  and app appearance.
                 </InfoCard>
-                <InfoCard title="Start with a template, then make it yours">
-                  Templates are only a starting point for a new workspace.
-                  After creation, edit the workspace directly: add or remove
-                  sections, choose the tiles shown in each section, and tune
-                  the visible tile count for the audience.
+                <InfoCard title="Data access stays separate">
+                  Workspace permission does not grant access to indexed data.
+                  App access, the <InlineCode>search</InlineCode> capability,
+                  index permissions, and knowledge object permissions still
+                  determine which searches and results each user can open.
                 </InfoCard>
-                <InfoCard title="Use the right catalogue">
-                  Suggested searches match the active workspace section and
-                  hide searches that are already configured. Use Show added
-                  searches when you need to review the current roster. Entire
-                  catalogue expands the list to every addable search exposed by
-                  installed Searchbase providers, where the App filter narrows
-                  results by execution context. Cross-app additions retain their
-                  owning app so identically named stanzas remain distinct.
-                </InfoCard>
-                <InfoCard title="Present the same data differently">
-                  Use executive workspaces for a concise briefing and a deeper
-                  operational workspace for troubleshooting. The map can sit
-                  beside, above, or below the tile grid, or be hidden when it
-                  is not useful to the audience. Sections start expanded and
-                  can be collapsed to a KPI and health summary or focused to
-                  use the available metrics pane. Compact H1 sparklines keep
-                  the trend visible; focus restores full labels and chart
-                  detail without changing the shared factory layout.
-                </InfoCard>
+              </div>
+
+              <div className="mt-5">
+                <h3
+                  id="workspaces-create-a-workspace"
+                  className="m-0 text-base font-bold sui-color-active"
+                >
+                  Create a workspace
+                </h3>
+                <p className="mt-2 text-sm leading-6 sui-color-default">
+                  You need the{" "}
+                  <InlineCode>ssne_manage_insights_workspaces</InlineCode>{" "}
+                  capability to see the shared workspace editor and complete
+                  this procedure.
+                </p>
+                <ol className="scd-guide-task-list">
+                  <li>
+                    Open <strong>Insights Workspaces</strong>, select the
+                    workspace title, and select <strong>Edit workspaces</strong>.
+                  </li>
+                  <li>
+                    Select <strong>New</strong>. To start from an existing
+                    workspace instead, select it and select{" "}
+                    <strong>Duplicate</strong>.
+                  </li>
+                  <li>
+                    Enter a <strong>Display name</strong> and a unique{" "}
+                    <strong>Workspace ID</strong>. The ID must start with a
+                    letter and can contain lowercase letters, numbers, and
+                    underscores.
+                  </li>
+                  <li>
+                    Under <strong>Start from a template</strong>, choose the
+                    catalogue and initial content that best match the audience.
+                    The template is only a starting point.
+                  </li>
+                  <li>
+                    Set <strong>Default visible tiles per section</strong>, map
+                    placement and presentation, header title and subtitle, and
+                    at least one workspace section.
+                  </li>
+                  <li>
+                    Select <strong>Save workspace</strong>. The app opens the
+                    saved workspace so you can review it.
+                  </li>
+                  <li>
+                    Arrange the tiles and visible count in each section. To
+                    make those defaults available to every viewer, open{" "}
+                    <strong>Configure tile</strong> and select{" "}
+                    <strong>Publish workspace layout</strong>.
+                  </li>
+                  <li>
+                    Open <strong>Configure Signal Rail</strong> to choose the
+                    shared KPI membership. Speed, density, and type size remain
+                    private display preferences for each signed-in user.
+                  </li>
+                </ol>
+                <p className="scd-guide-note">
+                  <strong>Before publishing:</strong> test the workspace with a
+                  role that represents its intended audience. A manager can
+                  configure a search that another role cannot run because data
+                  and knowledge object permissions are evaluated separately.
+                </p>
+              </div>
+
+              <div className="mt-5">
+                <h3
+                  id="workspaces-add-and-publish-searches"
+                  className="m-0 text-base font-bold sui-color-active"
+                >
+                  Add and publish searches
+                </h3>
+                <div className="mt-3 grid gap-4 md:grid-cols-2">
+                  <InfoCard title="Add for me">
+                    Adds the search only to your browser-scoped workspace view.
+                    Use this option to evaluate a tile before changing the
+                    shared workspace. Removing or hiding it does not affect
+                    other viewers.
+                  </InfoCard>
+                  <InfoCard title="Add for everyone">
+                    Adds the search to the shared section layout in{" "}
+                    <InlineCode>insights_workspaces.conf</InlineCode>. This
+                    option appears only to workspace managers. Every viewer
+                    receives the new default, but personal visibility and
+                    ordering choices can still override the presentation.
+                  </InfoCard>
+                  <InfoCard title="Suggested catalogue">
+                    The Add search drawer starts with searches from this app
+                    that match the active section. It hides searches that are
+                    already configured unless you select{" "}
+                    <strong>Show added searches</strong>.
+                  </InfoCard>
+                  <InfoCard title="Entire catalogue">
+                    Select <strong>Entire catalogue</strong> to browse addable
+                    searches from other installed Searchbase providers. Use
+                    the <strong>App</strong> filter to narrow the execution
+                    context. App-qualified references keep identically named
+                    searches distinct.
+                  </InfoCard>
+                </div>
+              </div>
+
+              <div className="mt-5">
+                <h3
+                  id="workspaces-where-settings-are-saved"
+                  className="m-0 text-base font-bold sui-color-active"
+                >
+                  Where workspace settings are saved
+                </h3>
+                <p className="mt-2 text-sm leading-6 sui-color-default">
+                  The app uses three persistence scopes. Use this table to know
+                  whether a change follows the workspace, the Splunk account,
+                  or only the current browser profile.
+                </p>
+                <div className="scd-guide-table-wrap scd-guide-table-inner-spacing">
+                  <table aria-labelledby="workspaces-where-settings-are-saved">
+                    <thead>
+                      <tr>
+                        <th scope="col">Scope</th>
+                        <th scope="col">What is saved</th>
+                        <th scope="col">Location and behavior</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><strong>Shared workspace</strong></td>
+                        <td>
+                          Metadata, sections, header branding, map defaults,
+                          shared tile layout and additions, and shared Signal
+                          Rail KPI membership
+                        </td>
+                        <td>
+                          <InlineCode>local/insights_workspaces.conf</InlineCode>.
+                          Visible to every viewer and survives app upgrades.
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><strong>Shared topology</strong></td>
+                        <td>
+                          Customer sites, links, telemetry bindings, map view,
+                          and shared section titles
+                        </td>
+                        <td>
+                          <InlineCode>local/customer_topology.conf</InlineCode>.
+                          Visible to every viewer and saved through the protected
+                          topology endpoint.
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><strong>Account preference</strong></td>
+                        <td>Signal Rail speed, density, and type size</td>
+                        <td>
+                          <InlineCode>insights_workspace_preferences.conf</InlineCode>{" "}
+                          in the signed-in user&apos;s Splunk namespace. The
+                          preference follows that account; browser storage is
+                          used only as a fallback when the endpoint is
+                          unavailable.
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><strong>Browser preference</strong></td>
+                        <td>
+                          Personal sections, tile order and count, hidden tiles,
+                          private additions, section presentation, chart display,
+                          map split and height, search concurrency, appearance,
+                          and last selected workspace
+                        </td>
+                        <td>
+                          User-scoped browser local storage. These settings stay
+                          with the current account, workspace, browser profile,
+                          and Splunk Web origin. The last workspace also uses a
+                          first-party cookie fallback.
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><strong>Current session</strong></td>
+                        <td>
+                          Focused section, active tile page, Show all state, and
+                          unsaved editor changes
+                        </td>
+                        <td>
+                          Memory only. Reloading the page discards these states.
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
               <div className="mt-5">
                 <h3
@@ -1585,8 +1819,8 @@ iseval = 0`}</CodeBlock>
                       <tr className="border-b sui-border-weak align-top">
                         <td className="px-3 py-3 sui-color-default">
                           Personalize layout, tile order and visibility, chart
-                          display, branding, private searches, and Signal Rail
-                          preferences
+                          display, private searches, map proportions,
+                          appearance, and Signal Rail display preferences
                         </td>
                         <td className="px-3 py-3 sui-color-default">Allowed</td>
                         <td className="px-3 py-3 sui-color-default">Allowed</td>
@@ -1689,6 +1923,21 @@ iseval = 0`}</CodeBlock>
                   knowledge object permissions continue to control which data
                   each user can view.
                 </InfoCard>
+                <InfoCard title="Built-in and custom workspaces">
+                  Built-in workspaces are packaged with the app and cannot be
+                  deleted. Edit them when the shared default needs to change,
+                  or duplicate one before making a customer-specific variant.
+                  Custom workspaces can be edited, duplicated, or deleted by a
+                  workspace manager.
+                </InfoCard>
+                <InfoCard title="Reset behavior">
+                  <strong>Reset tile</strong> clears the current personal tile
+                  display change. <strong>Factory reset</strong> on a built-in
+                  workspace removes its app-local workspace and factory tile
+                  overrides, clears the current user&apos;s personal workspace
+                  preferences, and returns to packaged defaults. Other
+                  workspaces and indexed data are not changed.
+                </InfoCard>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 <GuideLink href={workspaceUrl}>
@@ -1733,6 +1982,11 @@ iseval = 0`}</CodeBlock>
                 ThousandEyes, allow metric events to arrive in Splunk, then
                 reopen the topology editor and select the discovered test.
               </div>
+              <div className="scd-guide-note">
+                <strong>Site placement stays private:</strong> the editor first
+                checks its offline city list. For an unmatched site, enter
+                explicit coordinates. Site names and coordinates are never sent to a public geocoder.
+              </div>
               <div className="mt-4">
                 <GuideLink href={secureNetworkingUrl}>
                   <MapIcon size={15} />
@@ -1756,12 +2010,6 @@ iseval = 0`}</CodeBlock>
                   or run a named search. Each entry can retain its source app
                   classification while opening locally in Splunk Secure
                   Networking Essentials.
-                </InfoCard>
-                <InfoCard title="Searchbase Canvas">
-                  Use the canvas to assemble a working view from catalogue
-                  searches. Filter tiles by app, working state, needs attention,
-                  or failed searches; the app filter adapts its counts to the
-                  other active filters.
                 </InfoCard>
                 <InfoCard title="site_topology_lookup">
                   The scheduled Site Topology Lookup Generator snapshots
@@ -1848,9 +2096,9 @@ iseval = 0`}</CodeBlock>
                   <GitBranch size={15} />
                   Site Lookup Check
                 </GuideLink>
-                <GuideLink href={appUrl("searchbase_canvas")}>
-                  <CheckCircle2 size={15} />
-                  Searchbase Canvas
+                <GuideLink href={workspaceUrl}>
+                  <Layers size={15} />
+                  Insights Workspaces
                 </GuideLink>
               </div>
             </Section>
@@ -1861,120 +2109,92 @@ iseval = 0`}</CodeBlock>
               kicker="A concise record of user-visible changes included with this version of the app."
               icon={<CheckCircle2 size={19} />}
             >
-              <div className="scd-guide-table-wrap">
-                <table className="min-w-full border-collapse text-left text-sm">
-                  <thead>
-                    <tr className="border-b sui-border-weak sui-bg-page text-xs uppercase tracking-wide sui-color-muted">
-                      <th className="px-3 py-2 font-bold">Version</th>
-                      <th className="px-3 py-2 font-bold">Release focus</th>
-                      <th className="px-3 py-2 font-bold">Administrator action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-b sui-border-weak align-top">
-                      <td className="px-3 py-3 sui-color-default">
-                        <InlineCode>{APP_VERSION_LABEL}</InlineCode>
-                      </td>
-                      <td className="px-3 py-3 sui-color-default">
-                        Agentic SOC live-conference visibility, six-card Secure
-                        Networking KPI stories, guided setup, workspace
-                        customization, Searchbase drilldowns, and
-                        site-connectivity improvements. IOS-XR anomaly searches
-                        are now self-contained, Open in Search accepts only
-                        dashboard-defined safe filter values, and shared
-                        workspace and bounded Dashboard Builder background
-                        management support narrow capability delegation. Cisco
-                        Spaces floor-plan images use the same safe shared-image
-                        boundary, so configured map artwork cannot fetch
-                        arbitrary network or local URLs from a viewer browser.
-                        Geographic views retain interactive Street, Terrain,
-                        Satellite, Dark Ops, Navigation, and Offline Grid map
-                        styles. Topology placement uses the offline city list or
-                        explicit coordinates, so operator-entered location text
-                        is never sent to a public geocoder. Online styles send
-                        only fixed, API-key-free tile requests to the attributed
-                        Esri provider.
-                        Topology palette items and key manager/KPI
-                        dialogs now support complete keyboard operation. Release
-                        metadata now follows the repository-root VERSION file
-                        as its single release input. Source app.conf and
-                        app.manifest retain placeholders; generated packages
-                        stamp the release version and date and allocate the next
-                        build automatically. Package filenames expose that
-                        version and build directly. The tarball is the only
-                        emitted package file and is validated internally during
-                        creation. Build, install, deploy,
-                        and remote workflows default to the released-resources-only
-                        SplunkBase profile; developer resources require an explicit
-                        developer or fast workflow. SplunkBase build, install,
-                        deploy, and remote-install workflows now share one
-                        clean-source packaging path; installation applies the
-                        exact release-eligible archive without changing its
-                        build allocation or provenance.
-                        Upgrade notifications are explicit,
-                        and React Router is on its supported security-maintenance
-                        line. Dashboard Manager now makes Edit visible from
-                        library cards and previews, while its Searchbase picker
-                        starts with compact search-name rows and can reveal full
-                        metadata on demand.
-                        New dashboards default to Shared in App, with Private
-                        retained as an explicit creation-time choice.
-                        CIM setup discovery now runs one bounded job per data
-                        model, two at a time, with visible progress,
-                        cancellation, partial-result preservation, and an exact
-                        index scope taken from Configure data. Setup also keeps
-                        successful saves out of subsequent retries and no
-                        longer blocks completion solely because an optional
-                        companion-app routing macro is unavailable; the exact
-                        companion setting remains visible for later follow-up.
-                        The final confirmation copy now remains readable in
-                        both light and dark modes, and the completion action
-                        clearly identifies the home dashboard destination.
-                        Custom Insights workspaces can now be created through
-                        the bounded persistence endpoint, and template choices
-                        retain circular radio controls in the workspace editor.
-                        Duplicated workspaces now keep their source Signal Rail
-                        and section layouts instead of expanding to every
-                        fallback signal. The installed app version and build
-                        now remain visible in the Insights header, and map
-                        provider attribution is available from the compact Map
-                        credits control instead of covering map content.
-                        Insights workspace editors, drawers, map controls,
-                        Signal Rail controls, and related topology and setup
-                        actions now retain readable Splunk UI colors in both
-                        appearances. Add search now opens and resets with only
-                        this app selected, while Entire catalogue remains
-                        available for searches from other installed apps.
-                      </td>
-                      <td className="px-3 py-3 sui-color-default">
-                        Install the build through the supported app-management
-                        workflow; no customer-managed Splunk restart is
-                        required. <InlineCode>build.sh --install</InlineCode>{" "}
-                        and <InlineCode>--deploy</InlineCode> use the SplunkBase
-                        profile by default. Pass <InlineCode>--developer</InlineCode>{" "}
-                        only when developing resources are intentionally needed;
-                        the explicit <InlineCode>--fast</InlineCode> workflow also
-                        remains developer-only. For a release,
-                        change and commit only the repository-root
-                        <InlineCode>VERSION</InlineCode> file; do not edit source
-                        <InlineCode>app.conf</InlineCode> or
-                        <InlineCode>app.manifest</InlineCode> version/build
-                        placeholders. A successful SplunkBase install creates
-                        one upload-ready archive and installs that exact file;
-                        the target&apos;s installed build does not affect package
-                        allocation. Release archives use one validated packaging
-                        path and preserve live
-                        development-local configuration. Existing workspaces keep their saved
-                        configuration; assign{" "}
-                        <InlineCode>ssne_manage_insights_workspaces</InlineCode>{" "}
-                        only to custom roles that should manage shared
-                        workspaces, topology, and shared Dashboard Builder
-                        backgrounds.
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div
+                className="scd-guide-release-controls scd-guide-no-print"
+                aria-label="Release note controls"
+              >
+                <button type="button" onClick={() => setAllReleasePanelsOpen(true)}>
+                  Expand all
+                </button>
+                <button type="button" onClick={() => setAllReleasePanelsOpen(false)}>
+                  Collapse all
+                </button>
               </div>
+
+              <ReleasePanel
+                meta={`September 2026 · ${APP_VERSION_LABEL}`}
+                onToggle={(open) => setReleasePanelOpen("current", open)}
+                open={openReleasePanels.has("current")}
+                title="Release Notes"
+              >
+                <h3>Current release at a glance</h3>
+                <ul className="scd-guide-release-highlights">
+                  <li>
+                    <strong>Workspace reliability:</strong> custom workspace
+                    creation, duplication, shared Signal Rail membership, map
+                    credits, and light and dark appearance now behave
+                    consistently.
+                  </li>
+                  <li>
+                    <strong>Faster setup:</strong> CIM discovery runs one
+                    bounded job per data model, with two jobs in flight,
+                    visible progress, cancellation, and completed-result
+                    preservation.
+                  </li>
+                  <li>
+                    <strong>Adaptive searches:</strong> operational timecharts
+                    follow the selected time range, while forecast and
+                    interval-dependent searches retain the fixed spans their
+                    calculations require.
+                  </li>
+                  <li>
+                    <strong>Data-model coverage:</strong> Cisco Security and
+                    Cisco Intersight readiness checks now complement CIM-first
+                    searches where the vendor models preserve required fields.
+                  </li>
+                  <li>
+                    <strong>Safer delivery:</strong> release builds come from
+                    one clean, committed source state and produce one validated,
+                    upload-ready Splunkbase archive.
+                  </li>
+                </ul>
+
+                <h3>Administrator action</h3>
+                <p>
+                  Install the app through the supported app-management workflow.
+                  Existing local workspace, topology, macro, and preference
+                  configuration remains in place across upgrades. After the
+                  upgrade, open Setup to verify package, routing, and optional
+                  data-model readiness before publishing shared workspaces.
+                </p>
+
+                <h3>Release integrity and access changes</h3>
+                <p>
+                  IOS-XR anomaly searches are now self-contained. Open in Search accepts only
+                  dashboard-defined safe filter values. Shared
+                  workspace and bounded Dashboard Builder background management
+                  support narrow capability delegation. Topology palette items and key manager/KPI
+                  dialogs now support complete keyboard operation. Custom Insights workspaces can now be created
+                  through the bounded persistence endpoint, and template choices
+                  retain circular radio controls in the workspace editor.
+                  Insights workspace editors, drawers, map controls, Signal Rail
+                  controls, and related topology and setup actions now retain
+                  readable Splunk UI colors in both appearances. Add search now opens and resets with only this app selected. Entire catalogue remains available for searches from other installed apps.
+                </p>
+                <p>
+                  <InlineCode>build.sh --install</InlineCode> and{" "}
+                  <InlineCode>--deploy</InlineCode> use the SplunkBase profile by
+                  default. Pass <InlineCode>--developer</InlineCode> only when
+                  developing resources are intentionally needed; the explicit{" "}
+                  <InlineCode>--fast</InlineCode> workflow remains developer-only.
+                  SplunkBase build, install, deploy, and remote-install workflows share one clean-source packaging path and apply the exact release-eligible archive.
+                  A successful SplunkBase install creates one upload-ready archive; the target&apos;s installed build does not affect package allocation. For a release,
+                  change and commit only the repository-root VERSION file.
+                  Source app.conf and app.manifest retain placeholders, and
+                  generated packages allocate the next build automatically.
+                </p>
+
+                <h3>Detailed changes</h3>
 
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <InfoCard title="Agentic Security Operations Center">
@@ -2002,9 +2222,10 @@ iseval = 0`}</CodeBlock>
                   initial canvas to six searches while details dispatch only
                   when opened. Dashboard Manager view mode still provides
                   Studio-style Display, zoom, JSON export, and clone controls.
-                  Dashboard Manager now honors same-tab edit-route changes
-                  immediately, opening the authoring toolbar without requiring
-                  users to expand the view toolbar and click Edit.
+                  Dashboard Manager now makes Edit visible immediately after
+                  same-tab edit-route changes, without requiring users to expand
+                  the view toolbar. Searchbase pickers start with compact rows
+                  and let users reveal full metadata on demand.
                   Secure Infrastructure Status now spans Meraki access points,
                   Catalyst Center issues, SD-WAN sites, Nexus health, Secure
                   Endpoint incidents, and FMC firewall activity. ZTNA access
@@ -2174,11 +2395,11 @@ iseval = 0`}</CodeBlock>
                   model artifacts, and they fail closed for undersampled or
                   zero-variance series while preserving existing saved-canvas
                   display identifiers.
-                  Searchbase Canvas distinguishes failed searches from other
-                  attention states and adds app filtering. Its catalogue now
-                  uses the same native Splunk UI filter pattern as Insights
-                  Workspace, with consistent app, visibility, category,
-                  visualization, tag, active-count, and clear controls.
+                  Searchbase catalogues distinguish failed searches from other
+                  attention states and support app filtering. The Insights
+                  Workspace catalogue uses native Splunk UI filters for app,
+                  visibility, category, visualization, tag, active-count, and
+                  clear actions.
                   Catalogue and tile pickers display friendly app labels with
                   the on-disk name available as hover detail. Insights
                   Workspace now hides configured searches by default, reports
@@ -2211,6 +2432,50 @@ iseval = 0`}</CodeBlock>
                 to confirm companion-package and data-model readiness before
                 publishing a workspace to users.
               </p>
+              </ReleasePanel>
+
+              <ReleasePanel
+                meta="August 27, 2026 · Version 1.0.46"
+                onToggle={(open) =>
+                  setReleasePanelOpen("published-1-0-46", open)
+                }
+                open={openReleasePanels.has("published-1-0-46")}
+                title="Release Notes"
+              >
+                <h3>Published package record</h3>
+                <p>
+                  The repository release ledger records version 1.0.46 on the
+                  public Splunkbase listing. That observation confirms the
+                  public version and release date, but not the exact source
+                  commit or embedded build of the downloaded archive.
+                </p>
+                <p>
+                  The following items are repository history from the 1.0.46
+                  development window. They are not a claim that every item was
+                  present in the exact public archive.
+                </p>
+                <ul>
+                  <li>
+                    Introduced the Agentic Security Operations Center workspace
+                    and accelerated network-data-model searches for its
+                    conference catalogue.
+                  </li>
+                  <li>
+                    Added the narrow{" "}
+                    <InlineCode>ssne_manage_insights_workspaces</InlineCode>{" "}
+                    capability for shared workspace and topology management.
+                  </li>
+                  <li>
+                    Strengthened package provenance, shared image boundaries,
+                    Dashboard Manager editing, and workspace accessibility.
+                  </li>
+                </ul>
+                <p className="scd-guide-note">
+                  For the authoritative public package description, use the
+                  release notes on the Splunkbase listing. This guide documents
+                  the behavior of the version currently installed in Splunk.
+                </p>
+              </ReleasePanel>
             </Section>
 
             <div className="grid gap-4 md:grid-cols-4">
