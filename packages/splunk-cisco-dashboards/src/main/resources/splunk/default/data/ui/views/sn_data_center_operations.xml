@@ -1,4 +1,4 @@
-<dashboard version="2" theme="dark" stylesheet="application.css">
+<dashboard version="2" theme="dark" stylesheet="application.css" isVisible="false">
     <label>Secure Data Center Operations</label>
     <description>Operate Cisco data center fabrics and cloud-native workloads through health, capacity, policy enforcement, runtime security, and change intelligence.</description>
     <definition><![CDATA[
@@ -11,16 +11,31 @@
                 "defaultValue": "-7d@d,now,auto",
                 "showAdvanced": true,
                 "selections": [
-                    { "value": "-4h,now,auto", "label": "4h" },
-                    { "value": "-24h,now,auto", "label": "24h" },
-                    { "value": "-48h,now,auto", "label": "48h" },
-                    { "value": "-7d@d,now,auto", "label": "7d" },
-                    { "value": "-30d@d,now,auto", "label": "30d" }
+                    {
+                        "value": "-4h,now,auto",
+                        "label": "4h"
+                    },
+                    {
+                        "value": "-24h,now,auto",
+                        "label": "24h"
+                    },
+                    {
+                        "value": "-48h,now,auto",
+                        "label": "48h"
+                    },
+                    {
+                        "value": "-7d@d,now,auto",
+                        "label": "7d"
+                    },
+                    {
+                        "value": "-30d@d,now,auto",
+                        "label": "30d"
+                    }
                 ],
                 "token": "time_tok"
             },
             "title": "Time range",
-            "type": "input.timerange"
+            "type": "input.simpleTimePicker"
         }
     },
     "defaults": {
@@ -38,132 +53,181 @@
             "showLastUpdated": false,
             "showProgressBar": false,
             "options": {
-                "backgroundColor": "#1c2738",
+                "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
                 "markdown": "# Secure Data Center Operations\nFabric health, capacity, policy enforcement, runtime security, and change intelligence for ACI, APIC, Nexus Dashboard, Secure Firewall, and Cisco Isovalent telemetry."
             }
         },
         "viz_fabric_health": {
             "type": "splunk.singlevalue",
-            "title": "ACI fabric health score",
-            "dataSources": { "primary": "ds_health" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_health"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "majorColor": "#16a34a",
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
                 "majorValue": "> primary | seriesByName(\"CurrentHealthScore\") | lastPoint()",
                 "sparklineDisplay": "area",
                 "sparklineValues": "> primary | seriesByName(\"health_score\")",
                 "trendDisplay": "off",
                 "unit": "%",
-                "unitPosition": "after"
-            }
+                "unitPosition": "after",
+                "majorFontSize": 44
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_critical_entities": {
             "type": "splunk.singlevalue",
-            "title": "Critical / major ACI faults",
-            "dataSources": { "primary": "ds_anomalies" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_anomalies"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "majorColor": "#f7782f",
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
                 "majorValue": "> primary | seriesByName(\"WindowCriticalFaults\") | lastPoint()",
                 "sparklineDisplay": "area",
                 "sparklineValues": "> primary | seriesByName(\"critical_faults\")",
-                "trendDisplay": "off"
-            }
+                "trendDisplay": "off",
+                "majorFontSize": 44
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_security_advisories": {
             "type": "splunk.singlevalue",
-            "title": "Critical security advisories",
-            "dataSources": { "primary": "ds_advisories" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_advisories"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "majorColor": "#f7782f",
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
                 "majorValue": "> primary | seriesByName(\"critical_count\") | lastPoint()",
                 "sparklineDisplay": "area",
                 "sparklineValues": "> primary | seriesByName(\"critical_count_trend\")",
-                "trendDisplay": "off"
-            }
+                "trendDisplay": "off",
+                "majorFontSize": 44
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_interface_anomalies": {
             "type": "splunk.singlevalue",
-            "title": "Interfaces with anomalies",
-            "dataSources": { "primary": "ds_interfaces" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_interfaces"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "majorColor": "#e2a811",
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
                 "majorValue": "> primary | seriesByName(\"WindowAnomalousInterfaces\") | lastPoint()",
                 "sparklineDisplay": "area",
                 "sparklineValues": "> primary | seriesByName(\"anomalous_interfaces\")",
-                "trendDisplay": "off"
-            }
+                "trendDisplay": "off",
+                "majorFontSize": 44
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_port_utilization": {
             "type": "splunk.singlevalue",
-            "title": "Peak ACI port utilization",
-            "dataSources": { "primary": "ds_port_utilization" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_port_utilization"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "majorColor": "#e2a811",
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
                 "majorValue": "> primary | seriesByName(\"WindowPeakPortUtilization\") | lastPoint()",
                 "sparklineDisplay": "area",
                 "sparklineValues": "> primary | seriesByName(\"peak_port_utilization\")",
                 "trendDisplay": "off",
                 "unit": "%",
-                "unitPosition": "after"
-            }
+                "unitPosition": "after",
+                "majorFontSize": 44
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_configuration_changes": {
             "type": "splunk.singlevalue",
-            "title": "ACI configuration changes",
-            "dataSources": { "primary": "ds_changes" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_changes"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "majorColor": "#649ef5",
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
                 "majorValue": "> primary | seriesByName(\"WindowChangeEvents\") | lastPoint()",
                 "sparklineDisplay": "area",
                 "sparklineValues": "> primary | seriesByName(\"configuration_changes\")",
-                "trendDisplay": "off"
-            }
+                "trendDisplay": "off",
+                "majorFontSize": 44
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_health_trend": {
             "type": "splunk.area",
-            "title": "ACI fabric health trend",
-            "dataSources": { "primary": "ds_health" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_health"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "seriesColors": ["#16a34a"],
+                "backgroundColor": "transparent",
+                "seriesColors": [
+                    "#16a34a"
+                ],
                 "legendDisplay": "off",
                 "lineWidth": 2,
                 "nullValueDisplay": "gaps",
                 "x": "> primary | seriesByName(\"_time\")",
                 "y": "> primary | seriesByName(\"health_score\")"
-            }
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_port_utilization_trend": {
             "type": "splunk.area",
-            "title": "ACI port utilization trend",
-            "dataSources": { "primary": "ds_port_utilization" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_port_utilization"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "seriesColors": ["#e2a811", "#649ef5"],
+                "backgroundColor": "transparent",
+                "seriesColors": [
+                    "#e2a811",
+                    "#649ef5"
+                ],
                 "legendDisplay": "bottom",
                 "lineWidth": 2,
                 "nullValueDisplay": "gaps",
                 "x": "> primary | seriesByName(\"_time\")",
                 "y": "> primary | seriesByName(\"peak_port_utilization\")"
-            }
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_change_trend": {
             "type": "splunk.column",
-            "title": "ACI configuration-change timeline",
-            "dataSources": { "primary": "ds_changes" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_changes"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "seriesColors": ["#649ef5"],
+                "backgroundColor": "transparent",
+                "seriesColors": [
+                    "#649ef5"
+                ],
                 "legendDisplay": "off",
                 "x": "> primary | seriesByName(\"_time\")",
                 "y": "> primary | seriesByName(\"configuration_changes\")"
-            }
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_security_header": {
             "type": "splunk.markdown",
@@ -171,89 +235,122 @@
             "showLastUpdated": false,
             "showProgressBar": false,
             "options": {
-                "backgroundColor": "#1c2738",
+                "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
                 "markdown": "## Data Center Security\nACI contract enforcement, APIC authentication, and Secure Firewall IPS activity from live telemetry."
             }
         },
         "viz_aci_denied_flows": {
             "type": "splunk.singlevalue",
-            "title": "ACI denied flows (last hour)",
-            "dataSources": { "primary": "ds_aci_denied_flows" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_aci_denied_flows"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "majorColor": "#dc2626",
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
                 "majorValue": "> primary | seriesByName(\"WindowDeniedFlows\") | lastPoint()",
                 "sparklineDisplay": "area",
                 "sparklineValues": "> primary | seriesByName(\"denied_flows\")",
-                "trendDisplay": "off"
-            }
+                "trendDisplay": "off",
+                "majorFontSize": 44
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_apic_failed_logins": {
             "type": "splunk.singlevalue",
-            "title": "APIC failed login sessions",
-            "dataSources": { "primary": "ds_apic_failed_logins" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_apic_failed_logins"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "majorColor": "#f7782f",
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
                 "majorValue": "> primary | seriesByName(\"WindowFailedLogins\") | lastPoint()",
                 "sparklineDisplay": "area",
                 "sparklineValues": "> primary | seriesByName(\"failed_logins\")",
-                "trendDisplay": "off"
-            }
+                "trendDisplay": "off",
+                "majorFontSize": 44
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_secure_firewall_ips": {
             "type": "splunk.singlevalue",
-            "title": "Critical / high Secure Firewall IPS",
-            "dataSources": { "primary": "ds_secure_firewall_ips" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_secure_firewall_ips"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "majorColor": "#dc2626",
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
                 "majorValue": "> primary | seriesByName(\"WindowCriticalHigh\") | lastPoint()",
                 "sparklineDisplay": "area",
                 "sparklineValues": "> primary | seriesByName(\"critical_high_detections\")",
-                "trendDisplay": "off"
-            }
+                "trendDisplay": "off",
+                "majorFontSize": 44
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_aci_denied_flow_trend": {
             "type": "splunk.area",
-            "title": "ACI denied-flow trend (last hour)",
-            "dataSources": { "primary": "ds_aci_denied_flows" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_aci_denied_flows"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "seriesColors": ["#dc2626"],
+                "backgroundColor": "transparent",
+                "seriesColors": [
+                    "#dc2626"
+                ],
                 "legendDisplay": "off",
                 "lineWidth": 2,
                 "nullValueDisplay": "gaps",
                 "x": "> primary | seriesByName(\"_time\")",
                 "y": "> primary | seriesByName(\"denied_flows\")"
-            }
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_apic_failed_login_trend": {
             "type": "splunk.column",
-            "title": "APIC failed-login trend",
-            "dataSources": { "primary": "ds_apic_failed_logins" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_apic_failed_logins"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "seriesColors": ["#f7782f"],
+                "backgroundColor": "transparent",
+                "seriesColors": [
+                    "#f7782f"
+                ],
                 "legendDisplay": "off",
                 "x": "> primary | seriesByName(\"_time\")",
                 "y": "> primary | seriesByName(\"failed_logins\")"
-            }
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_secure_firewall_ips_trend": {
             "type": "splunk.area",
-            "title": "Secure Firewall critical/high IPS trend",
-            "dataSources": { "primary": "ds_secure_firewall_ips" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_secure_firewall_ips"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "seriesColors": ["#dc2626"],
+                "backgroundColor": "transparent",
+                "seriesColors": [
+                    "#dc2626"
+                ],
                 "legendDisplay": "off",
                 "lineWidth": 2,
                 "nullValueDisplay": "gaps",
                 "x": "> primary | seriesByName(\"_time\")",
                 "y": "> primary | seriesByName(\"critical_high_detections\")"
-            }
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_isovalent_header": {
             "type": "splunk.markdown",
@@ -261,110 +358,151 @@
             "showLastUpdated": false,
             "showProgressBar": false,
             "options": {
-                "backgroundColor": "#1c2738",
+                "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
                 "markdown": "## Cisco Isovalent Runtime Security\nTetragon eBPF visibility across Kubernetes workloads and hosts. **Runtime detections** combine policy alerts and CVE-labelled policy events; they are not a vulnerability inventory. **Listener events** represent socket creation, and the process watchlist is a transparent investigation heuristic."
             }
         },
         "viz_isovalent_detections": {
             "type": "splunk.singlevalue",
-            "title": "Isovalent runtime detections",
-            "dataSources": { "primary": "ds_isovalent_overview" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_isovalent_overview"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "majorColor": "#dc2626",
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
                 "majorValue": "> primary | seriesByName(\"WindowDetections\") | lastPoint()",
                 "sparklineDisplay": "area",
                 "sparklineValues": "> primary | seriesByName(\"DetectionEvents\")",
-                "trendDisplay": "off"
-            }
+                "trendDisplay": "off",
+                "majorFontSize": 44
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_isovalent_nodes": {
             "type": "splunk.singlevalue",
-            "title": "Active Isovalent nodes",
-            "dataSources": { "primary": "ds_isovalent_overview" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_isovalent_overview"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "majorColor": "#2563eb",
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
                 "majorValue": "> primary | seriesByName(\"WindowNodes\") | lastPoint()",
                 "sparklineDisplay": "area",
                 "sparklineValues": "> primary | seriesByName(\"ActiveNodes\")",
-                "trendDisplay": "off"
-            }
+                "trendDisplay": "off",
+                "majorFontSize": 44
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_isovalent_namespaces": {
             "type": "splunk.singlevalue",
-            "title": "Observed namespaces",
-            "dataSources": { "primary": "ds_isovalent_overview" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_isovalent_overview"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "majorColor": "#7c3aed",
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
                 "majorValue": "> primary | seriesByName(\"WindowNamespaces\") | lastPoint()",
                 "sparklineDisplay": "area",
                 "sparklineValues": "> primary | seriesByName(\"ActiveNamespaces\")",
-                "trendDisplay": "off"
-            }
+                "trendDisplay": "off",
+                "majorFontSize": 44
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_isovalent_process_execs": {
             "type": "splunk.singlevalue",
-            "title": "Process executions observed",
-            "dataSources": { "primary": "ds_isovalent_overview" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_isovalent_overview"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "majorColor": "#0891b2",
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
                 "majorValue": "> primary | seriesByName(\"WindowProcessExecutions\") | lastPoint()",
                 "sparklineDisplay": "area",
                 "sparklineValues": "> primary | seriesByName(\"ProcessExecutions\")",
-                "trendDisplay": "off"
-            }
+                "trendDisplay": "off",
+                "majorFontSize": 44
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_isovalent_listeners": {
             "type": "splunk.singlevalue",
-            "title": "Listener creation events",
-            "dataSources": { "primary": "ds_isovalent_overview" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_isovalent_overview"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "majorColor": "#f59e0b",
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
                 "majorValue": "> primary | seriesByName(\"WindowListenerEvents\") | lastPoint()",
                 "sparklineDisplay": "area",
                 "sparklineValues": "> primary | seriesByName(\"ListenerEvents\")",
-                "trendDisplay": "off"
-            }
+                "trendDisplay": "off",
+                "majorFontSize": 44
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_isovalent_data_age": {
             "type": "splunk.singlevalue",
-            "title": "Telemetry age (minutes)",
-            "dataSources": { "primary": "ds_isovalent_overview" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_isovalent_overview"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "majorColor": "#16a34a",
+                "backgroundColor": "transparent",
+                "majorColor": "#ecf0f5",
                 "majorValue": "> primary | seriesByName(\"DataAgeMinutes\") | lastPoint()",
                 "sparklineDisplay": "off",
-                "trendDisplay": "off"
-            }
+                "trendDisplay": "off",
+                "majorFontSize": 44
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_isovalent_detection_trend": {
             "type": "splunk.area",
-            "title": "Isovalent policy detections over time",
-            "dataSources": { "primary": "ds_isovalent_detection_trend" },
+            "title": "",
+            "dataSources": {
+                "primary": "ds_isovalent_detection_trend"
+            },
             "options": {
-                "backgroundColor": "#131a23",
-                "seriesColors": ["#dc2626", "#f59e0b"],
+                "backgroundColor": "transparent",
+                "seriesColors": [
+                    "#dc2626",
+                    "#f59e0b"
+                ],
                 "legendDisplay": "bottom",
                 "lineWidth": 2,
                 "markerDisplay": "outlined",
                 "nullValueDisplay": "zero",
                 "showYMajorGridLines": true,
                 "x": "> primary | seriesByName(\"_time\")"
-            }
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false
         },
         "viz_isovalent_top_workloads": {
             "type": "splunk.bar",
             "title": "Top workloads by process execution volume",
-            "dataSources": { "primary": "ds_isovalent_workloads" },
+            "dataSources": {
+                "primary": "ds_isovalent_workloads"
+            },
             "options": {
                 "backgroundColor": "#131a23",
-                "seriesColors": ["#0891b2"],
+                "seriesColors": [
+                    "#0891b2"
+                ],
                 "legendDisplay": "off",
                 "stackMode": "unstacked",
                 "showYMajorGridLines": true,
@@ -377,10 +515,14 @@
         "viz_isovalent_watchlist": {
             "type": "splunk.bar",
             "title": "Process behavior watchlist (heuristic)",
-            "dataSources": { "primary": "ds_isovalent_watchlist" },
+            "dataSources": {
+                "primary": "ds_isovalent_watchlist"
+            },
             "options": {
                 "backgroundColor": "#131a23",
-                "seriesColors": ["#e11d48"],
+                "seriesColors": [
+                    "#e11d48"
+                ],
                 "legendDisplay": "off",
                 "stackMode": "unstacked",
                 "showYMajorGridLines": true,
@@ -393,7 +535,9 @@
         "viz_isovalent_detection_detail": {
             "type": "splunk.table",
             "title": "Isovalent detection policy activity",
-            "dataSources": { "primary": "ds_isovalent_detections" },
+            "dataSources": {
+                "primary": "ds_isovalent_detections"
+            },
             "options": {
                 "backgroundColor": "#131a23",
                 "count": 15,
@@ -408,7 +552,9 @@
         "viz_isovalent_listener_detail": {
             "type": "splunk.table",
             "title": "Isovalent listener exposure",
-            "dataSources": { "primary": "ds_isovalent_listener_detail" },
+            "dataSources": {
+                "primary": "ds_isovalent_listener_detail"
+            },
             "options": {
                 "backgroundColor": "#131a23",
                 "count": 15,
@@ -419,23 +565,990 @@
                     "headerColor": "#ecf0f5"
                 }
             }
+        },
+        "viz_header_bg": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#1c2738",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 10
+            }
+        },
+        "viz_header_icon": {
+            "type": "splunk.image",
+            "title": "Secure Data Center Operations",
+            "options": {
+                "preserveAspectRatio": true,
+                "src": "/static/app/splunk-cisco-dashboards/images/nav-icons/ServersWrench.svg"
+            }
+        },
+        "viz_card_fabric_health_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_fabric_health_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**ACI Fabric Health Score**"
+            }
+        },
+        "viz_card_fabric_health_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Fabric • Cisco ACI"
+            }
+        },
+        "viz_card_fabric_health_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Current fabric health with selected-window trend and operational context."
+            }
+        },
+        "viz_card_critical_entities_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_critical_entities_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Critical / Major ACI Faults**"
+            }
+        },
+        "viz_card_critical_entities_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Faults • Cisco ACI"
+            }
+        },
+        "viz_card_critical_entities_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Actionable critical and major fabric faults observed in the selected window."
+            }
+        },
+        "viz_card_critical_entities_trend": {
+            "type": "splunk.line",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_anomalies"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#f7782f"
+                ],
+                "lineWidth": 2,
+                "nullValueDisplay": "gaps",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"critical_faults\")"
+            }
+        },
+        "viz_card_security_advisories_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_security_advisories_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Critical Security Advisories**"
+            }
+        },
+        "viz_card_security_advisories_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Exposure • Nexus Dashboard"
+            }
+        },
+        "viz_card_security_advisories_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Critical advisories affecting observed data center platforms and software."
+            }
+        },
+        "viz_card_security_advisories_trend": {
+            "type": "splunk.line",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_advisories"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#f7782f"
+                ],
+                "lineWidth": 2,
+                "nullValueDisplay": "gaps",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"critical_count_trend\")"
+            }
+        },
+        "viz_card_interface_anomalies_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_interface_anomalies_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Interfaces with Anomalies**"
+            }
+        },
+        "viz_card_interface_anomalies_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Assurance • Nexus Dashboard"
+            }
+        },
+        "viz_card_interface_anomalies_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Interfaces departing from their learned operational baseline."
+            }
+        },
+        "viz_card_interface_anomalies_trend": {
+            "type": "splunk.line",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_interfaces"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#e2a811"
+                ],
+                "lineWidth": 2,
+                "nullValueDisplay": "gaps",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"anomalous_interfaces\")"
+            }
+        },
+        "viz_card_port_utilization_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_port_utilization_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Peak ACI Port Utilization**"
+            }
+        },
+        "viz_card_port_utilization_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Capacity • Cisco ACI"
+            }
+        },
+        "viz_card_port_utilization_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Peak interface utilization for identifying congestion and capacity risk."
+            }
+        },
+        "viz_card_configuration_changes_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_configuration_changes_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**ACI Configuration Changes**"
+            }
+        },
+        "viz_card_configuration_changes_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Change • Cisco APIC"
+            }
+        },
+        "viz_card_configuration_changes_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Configuration activity to correlate with health and traffic changes."
+            }
+        },
+        "viz_card_aci_denied_flows_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_aci_denied_flows_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**ACI Denied Flows**"
+            }
+        },
+        "viz_card_aci_denied_flows_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Enforcement • Cisco ACI"
+            }
+        },
+        "viz_card_aci_denied_flows_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Traffic denied by ACI contracts during the fixed latest-hour window."
+            }
+        },
+        "viz_card_apic_failed_logins_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_apic_failed_logins_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**APIC Failed Login Sessions**"
+            }
+        },
+        "viz_card_apic_failed_logins_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Identity • Cisco APIC"
+            }
+        },
+        "viz_card_apic_failed_logins_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Failed controller authentication sessions requiring identity review."
+            }
+        },
+        "viz_card_secure_firewall_ips_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_secure_firewall_ips_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Critical / High Firewall IPS**"
+            }
+        },
+        "viz_card_secure_firewall_ips_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Threats • Secure Firewall"
+            }
+        },
+        "viz_card_secure_firewall_ips_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Critical and high intrusion detections associated with data center traffic."
+            }
+        },
+        "viz_card_isovalent_detections_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_isovalent_detections_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Runtime Detections**"
+            }
+        },
+        "viz_card_isovalent_detections_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Runtime • Cisco Isovalent"
+            }
+        },
+        "viz_card_isovalent_detections_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Tetragon runtime alerts and CVE-labelled policy events."
+            }
+        },
+        "viz_card_isovalent_nodes_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_isovalent_nodes_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Active Isovalent Nodes**"
+            }
+        },
+        "viz_card_isovalent_nodes_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Coverage • Cisco Isovalent"
+            }
+        },
+        "viz_card_isovalent_nodes_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Distinct Kubernetes and host nodes represented in runtime telemetry."
+            }
+        },
+        "viz_card_isovalent_nodes_trend": {
+            "type": "splunk.line",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_isovalent_overview"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#649ef5"
+                ],
+                "lineWidth": 2,
+                "nullValueDisplay": "gaps",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"ActiveNodes\")"
+            }
+        },
+        "viz_card_isovalent_namespaces_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_isovalent_namespaces_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Observed Namespaces**"
+            }
+        },
+        "viz_card_isovalent_namespaces_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Coverage • Kubernetes"
+            }
+        },
+        "viz_card_isovalent_namespaces_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Distinct non-host namespaces represented in the selected window."
+            }
+        },
+        "viz_card_isovalent_namespaces_trend": {
+            "type": "splunk.line",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_isovalent_overview"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#7c3aed"
+                ],
+                "lineWidth": 2,
+                "nullValueDisplay": "gaps",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"ActiveNamespaces\")"
+            }
+        },
+        "viz_card_isovalent_process_execs_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_isovalent_process_execs_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Process Executions Observed**"
+            }
+        },
+        "viz_card_isovalent_process_execs_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Behavior • Tetragon"
+            }
+        },
+        "viz_card_isovalent_process_execs_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Process execution volume available for workload investigation."
+            }
+        },
+        "viz_card_isovalent_process_execs_trend": {
+            "type": "splunk.line",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_isovalent_overview"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#3abdfa"
+                ],
+                "lineWidth": 2,
+                "nullValueDisplay": "gaps",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"ProcessExecutions\")"
+            }
+        },
+        "viz_card_isovalent_listeners_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_isovalent_listeners_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Listener Creation Events**"
+            }
+        },
+        "viz_card_isovalent_listeners_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Exposure • Tetragon"
+            }
+        },
+        "viz_card_isovalent_listeners_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Socket-listener creation events observed across workloads and hosts."
+            }
+        },
+        "viz_card_isovalent_listeners_trend": {
+            "type": "splunk.line",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_isovalent_overview"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#e2a811"
+                ],
+                "lineWidth": 2,
+                "nullValueDisplay": "gaps",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"ListenerEvents\")"
+            }
+        },
+        "viz_card_isovalent_data_age_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_card_isovalent_data_age_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Telemetry Age**"
+            }
+        },
+        "viz_card_isovalent_data_age_metadata": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#649ef5",
+                "fontSize": "custom",
+                "customFontSize": 14,
+                "markdown": "Freshness • Cisco Isovalent"
+            }
+        },
+        "viz_card_isovalent_data_age_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 15,
+                "markdown": "Minutes since the most recent Isovalent runtime event."
+            }
+        },
+        "viz_card_isovalent_data_age_trend": {
+            "type": "splunk.line",
+            "title": "",
+            "dataSources": {
+                "primary": "ds_isovalent_overview"
+            },
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "legendDisplay": "off",
+                "seriesColors": [
+                    "#4cbf7f"
+                ],
+                "lineWidth": 2,
+                "nullValueDisplay": "gaps",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"DataAgeMinutes\")"
+            }
         }
     },
     "dataSources": {
-        "ds_health": { "type": "ds.searchbase", "name": "Secure Data Center - ACI Fabric Health Score", "options": { "ref": "secure_data_center_aci_fabric_health_score", "queryParameters": { "earliest": "$time_tok.earliest$", "latest": "$time_tok.latest$" } } },
-        "ds_anomalies": { "type": "ds.searchbase", "name": "Secure Data Center - ACI Critical and Major Fault Count", "options": { "ref": "secure_data_center_aci_critical_fault_count", "queryParameters": { "earliest": "$time_tok.earliest$", "latest": "$time_tok.latest$" } } },
-        "ds_advisories": { "type": "ds.searchbase", "name": "Secure Networking - DC Security Advisory Count", "options": { "ref": "secure_networking_dc_advisory_count", "queryParameters": { "earliest": "$time_tok.earliest$", "latest": "$time_tok.latest$" } } },
-        "ds_interfaces": { "type": "ds.searchbase", "name": "Secure Networking - DC Interface Anomaly Count", "options": { "ref": "secure_networking_dc_interface_anomaly_count", "queryParameters": { "earliest": "$time_tok.earliest$", "latest": "$time_tok.latest$" } } },
-        "ds_port_utilization": { "type": "ds.searchbase", "name": "Secure Data Center - ACI Peak Port Utilization", "options": { "ref": "secure_data_center_aci_port_utilization_trend", "queryParameters": { "earliest": "$time_tok.earliest$", "latest": "$time_tok.latest$" } } },
-        "ds_changes": { "type": "ds.searchbase", "name": "Secure Networking - DC ACI Configuration Change Count", "options": { "ref": "secure_networking_dc_aci_configuration_change_count", "queryParameters": { "earliest": "$time_tok.earliest$", "latest": "$time_tok.latest$" } } },
-        "ds_aci_denied_flows": { "type": "ds.searchbase", "name": "Secure Data Center - ACI Denied Flow Count", "options": { "ref": "secure_data_center_aci_denied_flow_count" } },
-        "ds_apic_failed_logins": { "type": "ds.searchbase", "name": "Secure Data Center - APIC Failed Login Sessions", "options": { "ref": "secure_data_center_apic_failed_login_count", "queryParameters": { "earliest": "$time_tok.earliest$", "latest": "$time_tok.latest$" } } },
-        "ds_secure_firewall_ips": { "type": "ds.searchbase", "name": "Secure Data Center - Secure Firewall IPS Detections", "options": { "ref": "secure_data_center_secure_firewall_ips_count", "queryParameters": { "earliest": "$time_tok.earliest$", "latest": "$time_tok.latest$" } } },
-        "ds_isovalent_base": {
+        "ds_health": {
             "type": "ds.searchbase",
+            "name": "Secure Data Center - ACI Fabric Health Score",
+            "options": {
+                "ref": "secure_data_center_aci_fabric_health_score",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            }
+        },
+        "ds_anomalies": {
+            "type": "ds.searchbase",
+            "name": "Secure Data Center - ACI Critical and Major Fault Count",
+            "options": {
+                "ref": "secure_data_center_aci_critical_fault_count",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            }
+        },
+        "ds_advisories": {
+            "type": "ds.searchbase",
+            "name": "Secure Networking - DC Security Advisory Count",
+            "options": {
+                "ref": "secure_networking_dc_advisory_count",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            }
+        },
+        "ds_interfaces": {
+            "type": "ds.searchbase",
+            "name": "Secure Networking - DC Interface Anomaly Count",
+            "options": {
+                "ref": "secure_networking_dc_interface_anomaly_count",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            }
+        },
+        "ds_port_utilization": {
+            "type": "ds.searchbase",
+            "name": "Secure Data Center - ACI Peak Port Utilization",
+            "options": {
+                "ref": "secure_data_center_aci_port_utilization_trend",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            }
+        },
+        "ds_changes": {
+            "type": "ds.searchbase",
+            "name": "Secure Networking - DC ACI Configuration Change Count",
+            "options": {
+                "ref": "secure_networking_dc_aci_configuration_change_count",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            }
+        },
+        "ds_aci_denied_flows": {
+            "type": "ds.searchbase",
+            "name": "Secure Data Center - ACI Denied Flow Count",
+            "options": {
+                "ref": "secure_data_center_aci_denied_flow_count"
+            }
+        },
+        "ds_apic_failed_logins": {
+            "type": "ds.searchbase",
+            "name": "Secure Data Center - APIC Failed Login Sessions",
+            "options": {
+                "ref": "secure_data_center_apic_failed_login_count",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            }
+        },
+        "ds_secure_firewall_ips": {
+            "type": "ds.searchbase",
+            "name": "Secure Data Center - Secure Firewall IPS Detections",
+            "options": {
+                "ref": "secure_data_center_secure_firewall_ips_count",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            }
+        },
+        "ds_isovalent_base": {
+            "type": "ds.search",
             "name": "Secure Data Center - Cisco Isovalent Runtime Security Base",
             "options": {
-                "ref": "secure_data_center_isovalent_runtime_security_base",
+                "query": "`index_security` (sourcetype=\"cisco:isovalent\" OR sourcetype=\"cisco:isovalent:*\")\n| eval IsovalentType=coalesce(event_sourcetype,sourcetype), IsProcessExec=if(match(coalesce(event_sourcetype,sourcetype),\"(?i)(processExec|telemetry:process)$\"),1,0), IsListener=if(match(coalesce(event_sourcetype,sourcetype),\"(?i)processListen$\"),1,0), IsRuntimeAlert=if(coalesce(event_sourcetype,sourcetype)=\"cisco:isovalent:alert\" OR event=\"csc_isovalent_alert\",1,0), IsCVEPolicyEvent=if(coalesce(event_sourcetype,sourcetype)=\"cve\" OR event=\"cve_alert\",1,0)\n| eval IsDetection=if(IsRuntimeAlert=1 OR IsCVEPolicyEvent=1,1,0), Node=coalesce(node_name,'event.node_name',\"Unknown\"), Namespace=coalesce('process_exec.process.pod.namespace','process_listen.process.pod.namespace','process_kprobe.process.pod.namespace','event.process.namespace','event.network_connect.source.namespace',\"Host\"), Workload=coalesce('process_exec.process.pod.workload','process_exec.process.pod.name','process_listen.process.pod.workload','process_listen.process.pod.name','process_kprobe.process.pod.workload','process_kprobe.process.pod.name','event.process.workload_name','event.network_connect.source.workload_name',\"Host process\")\n| eval Binary=coalesce('process_exec.process.binary','process_listen.process.binary','process_kprobe.process.binary','event.process.binary',\"Unknown\"), Arguments=coalesce('process_exec.process.arguments','process_listen.process.arguments','process_kprobe.process.arguments','event.process.arguments',\"\"), Policy=coalesce('rule.name','process_kprobe.policy_name',\"Unclassified\"), DetectionType=if(IsCVEPolicyEvent=1,\"CVE policy event\",if(IsRuntimeAlert=1,\"Runtime policy alert\",\"N/A\")), DetectionObject=coalesce(mvindex('process_kprobe.args{}.file_arg.path',0),'rule.message',\"Unknown\")\n| eval ListenIP=coalesce('process_listen.ip',\"Unknown\"), Port=coalesce('process_listen.port',\"Unknown\"), Protocol=upper(coalesce('process_listen.protocol',\"Unknown\")), Exposure=case(IsListener=0,\"N/A\",ListenIP IN (\"0.0.0.0\",\"::\",\"[::]\"),\"Any interface\",ListenIP=\"127.0.0.1\" OR ListenIP=\"::1\",\"Loopback\",1=1,\"Specific address\")\n| eval Indicator=case(IsProcessExec=0,\"N/A\",match(lower(Workload),\"malicious|attack|exploit|backdoor|crypto.?miner|reverse.?shell\"),\"Suspicious workload name\",match(lower(Arguments),\"/etc/(passwd|shadow)|/dev/tcp|base64.+(-d|--decode)|chmod\\s+777\"),\"Sensitive command\",match(lower(Binary),\"/(nc|ncat|netcat|socat|nmap)$\"),\"Dual-use network tool\",1=1,\"N/A\"), EventTime=_time\n| bin _time bins=48\n| stats count as EventCount latest(EventTime) as LastSeenEpoch latest(Arguments) as SampleArguments by _time IsovalentType IsProcessExec IsListener IsRuntimeAlert IsCVEPolicyEvent IsDetection Node Namespace Workload Binary Policy DetectionType DetectionObject ListenIP Port Protocol Exposure Indicator",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$"
@@ -492,40 +1605,1193 @@
         }
     },
     "layout": {
-        "type": "absolute",
-        "options": { "display": "auto-scale", "height": 2450, "width": 1440 },
-        "structure": [
-            { "item": "viz_header", "type": "block", "position": { "x": 20, "y": 0, "w": 1030, "h": 90 } },
-            { "item": "input_time_range", "type": "input", "position": { "x": 1080, "y": 8, "w": 320, "h": 72 } },
-            { "item": "viz_fabric_health", "type": "block", "position": { "x": 20, "y": 112, "w": 213, "h": 180 } },
-            { "item": "viz_critical_entities", "type": "block", "position": { "x": 254, "y": 112, "w": 213, "h": 180 } },
-            { "item": "viz_security_advisories", "type": "block", "position": { "x": 488, "y": 112, "w": 213, "h": 180 } },
-            { "item": "viz_interface_anomalies", "type": "block", "position": { "x": 722, "y": 112, "w": 213, "h": 180 } },
-            { "item": "viz_port_utilization", "type": "block", "position": { "x": 956, "y": 112, "w": 213, "h": 180 } },
-            { "item": "viz_configuration_changes", "type": "block", "position": { "x": 1190, "y": 112, "w": 213, "h": 180 } },
-            { "item": "viz_health_trend", "type": "block", "position": { "x": 20, "y": 320, "w": 445, "h": 360 } },
-            { "item": "viz_port_utilization_trend", "type": "block", "position": { "x": 488, "y": 320, "w": 445, "h": 360 } },
-            { "item": "viz_change_trend", "type": "block", "position": { "x": 956, "y": 320, "w": 447, "h": 360 } },
-            { "item": "viz_security_header", "type": "block", "position": { "x": 20, "y": 710, "w": 1383, "h": 76 } },
-            { "item": "viz_aci_denied_flows", "type": "block", "position": { "x": 20, "y": 808, "w": 445, "h": 180 } },
-            { "item": "viz_apic_failed_logins", "type": "block", "position": { "x": 488, "y": 808, "w": 445, "h": 180 } },
-            { "item": "viz_secure_firewall_ips", "type": "block", "position": { "x": 956, "y": 808, "w": 447, "h": 180 } },
-            { "item": "viz_aci_denied_flow_trend", "type": "block", "position": { "x": 20, "y": 1016, "w": 445, "h": 330 } },
-            { "item": "viz_apic_failed_login_trend", "type": "block", "position": { "x": 488, "y": 1016, "w": 445, "h": 330 } },
-            { "item": "viz_secure_firewall_ips_trend", "type": "block", "position": { "x": 956, "y": 1016, "w": 447, "h": 330 } },
-            { "item": "viz_isovalent_header", "type": "block", "position": { "x": 20, "y": 1378, "w": 1383, "h": 90 } },
-            { "item": "viz_isovalent_detections", "type": "block", "position": { "x": 20, "y": 1490, "w": 213, "h": 180 } },
-            { "item": "viz_isovalent_nodes", "type": "block", "position": { "x": 254, "y": 1490, "w": 213, "h": 180 } },
-            { "item": "viz_isovalent_namespaces", "type": "block", "position": { "x": 488, "y": 1490, "w": 213, "h": 180 } },
-            { "item": "viz_isovalent_process_execs", "type": "block", "position": { "x": 722, "y": 1490, "w": 213, "h": 180 } },
-            { "item": "viz_isovalent_listeners", "type": "block", "position": { "x": 956, "y": 1490, "w": 213, "h": 180 } },
-            { "item": "viz_isovalent_data_age", "type": "block", "position": { "x": 1190, "y": 1490, "w": 213, "h": 180 } },
-            { "item": "viz_isovalent_detection_trend", "type": "block", "position": { "x": 20, "y": 1698, "w": 445, "h": 340 } },
-            { "item": "viz_isovalent_top_workloads", "type": "block", "position": { "x": 488, "y": 1698, "w": 445, "h": 340 } },
-            { "item": "viz_isovalent_watchlist", "type": "block", "position": { "x": 956, "y": 1698, "w": 447, "h": 340 } },
-            { "item": "viz_isovalent_detection_detail", "type": "block", "position": { "x": 20, "y": 2066, "w": 680, "h": 360 } },
-            { "item": "viz_isovalent_listener_detail", "type": "block", "position": { "x": 722, "y": 2066, "w": 681, "h": 360 } }
-        ]
+        "globalInputs": [],
+        "layoutDefinitions": {
+            "layout_fabric": {
+                "type": "absolute",
+                "options": {
+                    "backgroundColor": "#0f1117",
+                    "display": "auto-scale",
+                    "height": 1024,
+                    "width": 1920
+                },
+                "structure": [
+                    {
+                        "item": "viz_header_bg",
+                        "position": {
+                            "x": 20,
+                            "y": 0,
+                            "w": 1880,
+                            "h": 96
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_header_icon",
+                        "position": {
+                            "x": 38,
+                            "y": 16,
+                            "w": 64,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_header",
+                        "position": {
+                            "x": 118,
+                            "y": 8,
+                            "w": 1366,
+                            "h": 80
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "input_time_range",
+                        "position": {
+                            "x": 1514,
+                            "y": 8,
+                            "w": 370,
+                            "h": 80
+                        },
+                        "type": "input"
+                    },
+                    {
+                        "item": "viz_card_fabric_health_background",
+                        "position": {
+                            "x": 20,
+                            "y": 112,
+                            "w": 613,
+                            "h": 440
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_fabric_health_title",
+                        "position": {
+                            "x": 36,
+                            "y": 124,
+                            "w": 565,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_fabric_health_metadata",
+                        "position": {
+                            "x": 36,
+                            "y": 160,
+                            "w": 581,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_fabric_health_description",
+                        "position": {
+                            "x": 36,
+                            "y": 188,
+                            "w": 581,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_fabric_health",
+                        "position": {
+                            "x": 36,
+                            "y": 260,
+                            "w": 581,
+                            "h": 80
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_health_trend",
+                        "position": {
+                            "x": 36,
+                            "y": 344,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_critical_entities_background",
+                        "position": {
+                            "x": 653,
+                            "y": 112,
+                            "w": 613,
+                            "h": 440
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_critical_entities_title",
+                        "position": {
+                            "x": 669,
+                            "y": 124,
+                            "w": 565,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_critical_entities_metadata",
+                        "position": {
+                            "x": 669,
+                            "y": 160,
+                            "w": 581,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_critical_entities_description",
+                        "position": {
+                            "x": 669,
+                            "y": 188,
+                            "w": 581,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_critical_entities",
+                        "position": {
+                            "x": 669,
+                            "y": 260,
+                            "w": 581,
+                            "h": 80
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_critical_entities_trend",
+                        "position": {
+                            "x": 669,
+                            "y": 344,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_security_advisories_background",
+                        "position": {
+                            "x": 1286,
+                            "y": 112,
+                            "w": 613,
+                            "h": 440
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_security_advisories_title",
+                        "position": {
+                            "x": 1302,
+                            "y": 124,
+                            "w": 565,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_security_advisories_metadata",
+                        "position": {
+                            "x": 1302,
+                            "y": 160,
+                            "w": 581,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_security_advisories_description",
+                        "position": {
+                            "x": 1302,
+                            "y": 188,
+                            "w": 581,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_security_advisories",
+                        "position": {
+                            "x": 1302,
+                            "y": 260,
+                            "w": 581,
+                            "h": 80
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_security_advisories_trend",
+                        "position": {
+                            "x": 1302,
+                            "y": 344,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_interface_anomalies_background",
+                        "position": {
+                            "x": 20,
+                            "y": 568,
+                            "w": 613,
+                            "h": 440
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_interface_anomalies_title",
+                        "position": {
+                            "x": 36,
+                            "y": 580,
+                            "w": 565,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_interface_anomalies_metadata",
+                        "position": {
+                            "x": 36,
+                            "y": 616,
+                            "w": 581,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_interface_anomalies_description",
+                        "position": {
+                            "x": 36,
+                            "y": 644,
+                            "w": 581,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_interface_anomalies",
+                        "position": {
+                            "x": 36,
+                            "y": 716,
+                            "w": 581,
+                            "h": 80
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_interface_anomalies_trend",
+                        "position": {
+                            "x": 36,
+                            "y": 800,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_port_utilization_background",
+                        "position": {
+                            "x": 653,
+                            "y": 568,
+                            "w": 613,
+                            "h": 440
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_port_utilization_title",
+                        "position": {
+                            "x": 669,
+                            "y": 580,
+                            "w": 565,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_port_utilization_metadata",
+                        "position": {
+                            "x": 669,
+                            "y": 616,
+                            "w": 581,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_port_utilization_description",
+                        "position": {
+                            "x": 669,
+                            "y": 644,
+                            "w": 581,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_port_utilization",
+                        "position": {
+                            "x": 669,
+                            "y": 716,
+                            "w": 581,
+                            "h": 80
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_port_utilization_trend",
+                        "position": {
+                            "x": 669,
+                            "y": 800,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_configuration_changes_background",
+                        "position": {
+                            "x": 1286,
+                            "y": 568,
+                            "w": 613,
+                            "h": 440
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_configuration_changes_title",
+                        "position": {
+                            "x": 1302,
+                            "y": 580,
+                            "w": 565,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_configuration_changes_metadata",
+                        "position": {
+                            "x": 1302,
+                            "y": 616,
+                            "w": 581,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_configuration_changes_description",
+                        "position": {
+                            "x": 1302,
+                            "y": 644,
+                            "w": 581,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_configuration_changes",
+                        "position": {
+                            "x": 1302,
+                            "y": 716,
+                            "w": 581,
+                            "h": 80
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_change_trend",
+                        "position": {
+                            "x": 1302,
+                            "y": 800,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    }
+                ]
+            },
+            "layout_security": {
+                "type": "absolute",
+                "options": {
+                    "backgroundColor": "#0f1117",
+                    "display": "auto-scale",
+                    "height": 1024,
+                    "width": 1920
+                },
+                "structure": [
+                    {
+                        "item": "viz_header_bg",
+                        "position": {
+                            "x": 20,
+                            "y": 0,
+                            "w": 1880,
+                            "h": 96
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_header_icon",
+                        "position": {
+                            "x": 38,
+                            "y": 16,
+                            "w": 64,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_security_header",
+                        "position": {
+                            "x": 118,
+                            "y": 8,
+                            "w": 1366,
+                            "h": 80
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "input_time_range",
+                        "position": {
+                            "x": 1514,
+                            "y": 8,
+                            "w": 370,
+                            "h": 80
+                        },
+                        "type": "input"
+                    },
+                    {
+                        "item": "viz_card_aci_denied_flows_background",
+                        "position": {
+                            "x": 20,
+                            "y": 112,
+                            "w": 613,
+                            "h": 440
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_aci_denied_flows_title",
+                        "position": {
+                            "x": 36,
+                            "y": 124,
+                            "w": 565,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_aci_denied_flows_metadata",
+                        "position": {
+                            "x": 36,
+                            "y": 160,
+                            "w": 581,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_aci_denied_flows_description",
+                        "position": {
+                            "x": 36,
+                            "y": 188,
+                            "w": 581,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_aci_denied_flows",
+                        "position": {
+                            "x": 36,
+                            "y": 260,
+                            "w": 581,
+                            "h": 80
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_aci_denied_flow_trend",
+                        "position": {
+                            "x": 36,
+                            "y": 344,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_apic_failed_logins_background",
+                        "position": {
+                            "x": 653,
+                            "y": 112,
+                            "w": 613,
+                            "h": 440
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_apic_failed_logins_title",
+                        "position": {
+                            "x": 669,
+                            "y": 124,
+                            "w": 565,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_apic_failed_logins_metadata",
+                        "position": {
+                            "x": 669,
+                            "y": 160,
+                            "w": 581,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_apic_failed_logins_description",
+                        "position": {
+                            "x": 669,
+                            "y": 188,
+                            "w": 581,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_apic_failed_logins",
+                        "position": {
+                            "x": 669,
+                            "y": 260,
+                            "w": 581,
+                            "h": 80
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_apic_failed_login_trend",
+                        "position": {
+                            "x": 669,
+                            "y": 344,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_secure_firewall_ips_background",
+                        "position": {
+                            "x": 1286,
+                            "y": 112,
+                            "w": 613,
+                            "h": 440
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_secure_firewall_ips_title",
+                        "position": {
+                            "x": 1302,
+                            "y": 124,
+                            "w": 565,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_secure_firewall_ips_metadata",
+                        "position": {
+                            "x": 1302,
+                            "y": 160,
+                            "w": 581,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_secure_firewall_ips_description",
+                        "position": {
+                            "x": 1302,
+                            "y": 188,
+                            "w": 581,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_secure_firewall_ips",
+                        "position": {
+                            "x": 1302,
+                            "y": 260,
+                            "w": 581,
+                            "h": 80
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_secure_firewall_ips_trend",
+                        "position": {
+                            "x": 1302,
+                            "y": 344,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    }
+                ]
+            },
+            "layout_runtime": {
+                "type": "absolute",
+                "options": {
+                    "backgroundColor": "#0f1117",
+                    "display": "auto-scale",
+                    "height": 1024,
+                    "width": 1920
+                },
+                "structure": [
+                    {
+                        "item": "viz_header_bg",
+                        "position": {
+                            "x": 20,
+                            "y": 0,
+                            "w": 1880,
+                            "h": 96
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_header_icon",
+                        "position": {
+                            "x": 38,
+                            "y": 16,
+                            "w": 64,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_isovalent_header",
+                        "position": {
+                            "x": 118,
+                            "y": 8,
+                            "w": 1366,
+                            "h": 80
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "input_time_range",
+                        "position": {
+                            "x": 1514,
+                            "y": 8,
+                            "w": 370,
+                            "h": 80
+                        },
+                        "type": "input"
+                    },
+                    {
+                        "item": "viz_card_isovalent_detections_background",
+                        "position": {
+                            "x": 20,
+                            "y": 112,
+                            "w": 613,
+                            "h": 440
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_detections_title",
+                        "position": {
+                            "x": 36,
+                            "y": 124,
+                            "w": 565,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_detections_metadata",
+                        "position": {
+                            "x": 36,
+                            "y": 160,
+                            "w": 581,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_detections_description",
+                        "position": {
+                            "x": 36,
+                            "y": 188,
+                            "w": 581,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_isovalent_detections",
+                        "position": {
+                            "x": 36,
+                            "y": 260,
+                            "w": 581,
+                            "h": 80
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_isovalent_detection_trend",
+                        "position": {
+                            "x": 36,
+                            "y": 344,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_nodes_background",
+                        "position": {
+                            "x": 653,
+                            "y": 112,
+                            "w": 613,
+                            "h": 440
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_nodes_title",
+                        "position": {
+                            "x": 669,
+                            "y": 124,
+                            "w": 565,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_nodes_metadata",
+                        "position": {
+                            "x": 669,
+                            "y": 160,
+                            "w": 581,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_nodes_description",
+                        "position": {
+                            "x": 669,
+                            "y": 188,
+                            "w": 581,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_isovalent_nodes",
+                        "position": {
+                            "x": 669,
+                            "y": 260,
+                            "w": 581,
+                            "h": 80
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_nodes_trend",
+                        "position": {
+                            "x": 669,
+                            "y": 344,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_namespaces_background",
+                        "position": {
+                            "x": 1286,
+                            "y": 112,
+                            "w": 613,
+                            "h": 440
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_namespaces_title",
+                        "position": {
+                            "x": 1302,
+                            "y": 124,
+                            "w": 565,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_namespaces_metadata",
+                        "position": {
+                            "x": 1302,
+                            "y": 160,
+                            "w": 581,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_namespaces_description",
+                        "position": {
+                            "x": 1302,
+                            "y": 188,
+                            "w": 581,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_isovalent_namespaces",
+                        "position": {
+                            "x": 1302,
+                            "y": 260,
+                            "w": 581,
+                            "h": 80
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_namespaces_trend",
+                        "position": {
+                            "x": 1302,
+                            "y": 344,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_process_execs_background",
+                        "position": {
+                            "x": 20,
+                            "y": 568,
+                            "w": 613,
+                            "h": 440
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_process_execs_title",
+                        "position": {
+                            "x": 36,
+                            "y": 580,
+                            "w": 565,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_process_execs_metadata",
+                        "position": {
+                            "x": 36,
+                            "y": 616,
+                            "w": 581,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_process_execs_description",
+                        "position": {
+                            "x": 36,
+                            "y": 644,
+                            "w": 581,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_isovalent_process_execs",
+                        "position": {
+                            "x": 36,
+                            "y": 716,
+                            "w": 581,
+                            "h": 80
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_process_execs_trend",
+                        "position": {
+                            "x": 36,
+                            "y": 800,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_listeners_background",
+                        "position": {
+                            "x": 653,
+                            "y": 568,
+                            "w": 613,
+                            "h": 440
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_listeners_title",
+                        "position": {
+                            "x": 669,
+                            "y": 580,
+                            "w": 565,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_listeners_metadata",
+                        "position": {
+                            "x": 669,
+                            "y": 616,
+                            "w": 581,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_listeners_description",
+                        "position": {
+                            "x": 669,
+                            "y": 644,
+                            "w": 581,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_isovalent_listeners",
+                        "position": {
+                            "x": 669,
+                            "y": 716,
+                            "w": 581,
+                            "h": 80
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_listeners_trend",
+                        "position": {
+                            "x": 669,
+                            "y": 800,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_data_age_background",
+                        "position": {
+                            "x": 1286,
+                            "y": 568,
+                            "w": 613,
+                            "h": 440
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_data_age_title",
+                        "position": {
+                            "x": 1302,
+                            "y": 580,
+                            "w": 565,
+                            "h": 34
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_data_age_metadata",
+                        "position": {
+                            "x": 1302,
+                            "y": 616,
+                            "w": 581,
+                            "h": 24
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_data_age_description",
+                        "position": {
+                            "x": 1302,
+                            "y": 644,
+                            "w": 581,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_isovalent_data_age",
+                        "position": {
+                            "x": 1302,
+                            "y": 716,
+                            "w": 581,
+                            "h": 80
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_data_age_trend",
+                        "position": {
+                            "x": 1302,
+                            "y": 800,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    }
+                ]
+            },
+            "layout_investigation": {
+                "type": "absolute",
+                "options": {
+                    "backgroundColor": "#0f1117",
+                    "display": "auto-scale",
+                    "height": 1024,
+                    "width": 1920
+                },
+                "structure": [
+                    {
+                        "item": "viz_header_bg",
+                        "position": {
+                            "x": 20,
+                            "y": 0,
+                            "w": 1880,
+                            "h": 96
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_header_icon",
+                        "position": {
+                            "x": 38,
+                            "y": 16,
+                            "w": 64,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_isovalent_header",
+                        "position": {
+                            "x": 118,
+                            "y": 8,
+                            "w": 1366,
+                            "h": 80
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "input_time_range",
+                        "position": {
+                            "x": 1514,
+                            "y": 8,
+                            "w": 370,
+                            "h": 80
+                        },
+                        "type": "input"
+                    },
+                    {
+                        "item": "viz_isovalent_top_workloads",
+                        "position": {
+                            "x": 20,
+                            "y": 112,
+                            "w": 613,
+                            "h": 420
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_isovalent_watchlist",
+                        "position": {
+                            "x": 653,
+                            "y": 112,
+                            "w": 613,
+                            "h": 420
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_isovalent_detection_trend",
+                        "position": {
+                            "x": 1286,
+                            "y": 112,
+                            "w": 614,
+                            "h": 420
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_isovalent_detection_detail",
+                        "position": {
+                            "x": 20,
+                            "y": 552,
+                            "w": 930,
+                            "h": 440
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_isovalent_listener_detail",
+                        "position": {
+                            "x": 970,
+                            "y": 552,
+                            "w": 930,
+                            "h": 440
+                        },
+                        "type": "block"
+                    }
+                ]
+            }
+        },
+        "options": {
+            "showTitleAndDescription": false,
+            "submitButton": false,
+            "submitOnDashboardLoad": true
+        },
+        "tabs": {
+            "items": [
+                {
+                    "label": "Fabric Operations",
+                    "layoutId": "layout_fabric"
+                },
+                {
+                    "label": "Data Center Security",
+                    "layoutId": "layout_security"
+                },
+                {
+                    "label": "Runtime Security",
+                    "layoutId": "layout_runtime"
+                },
+                {
+                    "label": "Runtime Investigation",
+                    "layoutId": "layout_investigation"
+                }
+            ]
+        }
+    },
+    "applicationProperties": {
+        "collapseNavigation": true,
+        "hideEdit": true,
+        "hideExport": false
     }
 }
     ]]></definition>

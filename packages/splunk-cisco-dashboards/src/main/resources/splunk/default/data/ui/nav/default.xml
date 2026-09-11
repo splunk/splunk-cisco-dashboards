@@ -25,11 +25,8 @@
         <a href="dashboard_manager#/sn_secure_infrastructure_posture">Infrastructure Posture</a>
         <divider />
         <a href="dashboard_manager#/sn_secure_infrastructure_status">Secure Infrastructure Status</a>
+        <a href="dashboard_manager#/sn_data_center_operations">Secure Data Center Operations</a>
         <a href="dashboard_manager#/sn_hmf_sdwan_network_health">SD-WAN and Network Health Monitoring</a>
-    </collection>
-
-    <collection label="Secure Data Center Operations" icon="ServersWrench">
-        <a href="dashboard_manager#/sn_data_center_operations">Data Center Operations</a>
     </collection>
 
     <collection label="Scalable Network Segmentation" icon="GlobeDivision">

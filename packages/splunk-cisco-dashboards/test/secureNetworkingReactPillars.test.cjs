@@ -629,6 +629,49 @@ assert.equal(
   "all visible Secure Networking trends must retain semantic color bindings",
 );
 
+const dataCenterSource = readSource(
+  "src/main/resources/splunk/default/data/ui/views/sn_data_center_operations.xml",
+);
+const dataCenterDefinition = JSON.parse(
+  dataCenterSource.match(/<!\[CDATA\[([\s\S]*?)\]\]>/)[1],
+);
+assert.deepEqual(
+  dataCenterDefinition.layout.tabs.items.map(({ label }) => label),
+  [
+    "Fabric Operations",
+    "Data Center Security",
+    "Runtime Security",
+    "Runtime Investigation",
+  ],
+  "Secure Data Center Operations must use the standard story-card dashboard journey",
+);
+for (const layout of Object.values(dataCenterDefinition.layout.layoutDefinitions)) {
+  assert.equal(layout.type, "absolute");
+  assert.equal(layout.options.width, 1920);
+  assert.equal(layout.options.height, 1024);
+  assert.equal(layout.options.backgroundColor, "#0f1117");
+}
+assert.equal(
+  dataCenterDefinition.dataSources.ds_isovalent_base.type,
+  "ds.search",
+  "Dashboard Studio chain searches require a chainable ds.search parent",
+);
+assert.match(
+  dataCenterDefinition.dataSources.ds_isovalent_base.options.query,
+  /^`index_security`/,
+  "the chainable Isovalent parent must retain the standard security index macro",
+);
+assert.match(
+  navSource,
+  /<collection label="Secure Infrastructure"[\s\S]*?sn_secure_infrastructure_status[\s\S]*?sn_data_center_operations[\s\S]*?sn_hmf_sdwan_network_health/,
+  "Secure Data Center Operations must sit in the Secure Infrastructure journey",
+);
+assert.doesNotMatch(
+  navSource,
+  /<collection label="Secure Data Center Operations"/,
+  "Secure Data Center Operations must not consume a top-level navigation pillar",
+);
+
 const studioViewsPath = path.join(
   packageRoot,
   "src/main/resources/splunk/default/data/ui/views",
