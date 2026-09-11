@@ -7,11 +7,13 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const vm = require('vm');
+const { readManifest } = require('./apply_build_profile.js');
 
 const APP_ROOT = path.resolve(__dirname, '..');
 const STAGE_DIR = process.argv[2]
     ? path.resolve(process.cwd(), process.argv[2])
     : path.join(APP_ROOT, 'stage');
+const APP_PROFILE = process.argv[3] || 'developer';
 const PAGES_DIR = path.join(STAGE_DIR, 'appserver', 'static', 'pages');
 const APACHE_LICENSE_SHA256 =
     'cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30';
@@ -29,6 +31,17 @@ const ENTRY_NAMES = [
     'secure_networking_pillars',
     'dashboardbuilder',
 ];
+const ALLOWED_PROFILES = new Set(['developer', 'splunkbase']);
+const DEVELOPING_ENTRY_NAMES = new Set(
+    readManifest().developing.staticAssets.flatMap((assetPath) => {
+        const match = assetPath.match(/^appserver\/static\/pages\/([^/]+)\.js$/);
+        return match ? [match[1]] : [];
+    })
+);
+const REQUIRED_ENTRY_NAMES = ENTRY_NAMES.filter(
+    (entryName) =>
+        APP_PROFILE !== 'splunkbase' || !DEVELOPING_ENTRY_NAMES.has(entryName)
+);
 
 const FORBIDDEN_SOURCE_EXTENSIONS = new Set(['.jsx', '.ts', '.tsx', '.map']);
 const FORBIDDEN_RUNTIME_FILE_EXTENSIONS = new Set(['.pyc', '.pyo']);
@@ -62,6 +75,10 @@ function fail(message, details = []) {
     console.error(`✗ ${message}`);
     details.forEach((detail) => console.error(`  - ${detail}`));
     process.exit(1);
+}
+
+if (!ALLOWED_PROFILES.has(APP_PROFILE)) {
+    fail(`Unknown app profile "${APP_PROFILE}"; expected developer or splunkbase.`);
 }
 
 if (!fs.existsSync(STAGE_DIR) || !fs.existsSync(PAGES_DIR)) {
@@ -135,7 +152,7 @@ const developmentEntries = [];
 const invalidEntries = [];
 const sourceMapDirectiveEntries = [];
 
-ENTRY_NAMES.forEach((entryName) => {
+REQUIRED_ENTRY_NAMES.forEach((entryName) => {
     const bundlePath = path.join(PAGES_DIR, `${entryName}.js`);
     if (!fs.existsSync(bundlePath) || fs.statSync(bundlePath).size === 0) {
         missingEntries.push(`${entryName}.js`);
@@ -161,6 +178,18 @@ ENTRY_NAMES.forEach((entryName) => {
     }
 });
 
+const leakedDevelopingEntries = [...DEVELOPING_ENTRY_NAMES]
+    .filter((entryName) => APP_PROFILE === 'splunkbase')
+    .filter((entryName) => fs.existsSync(path.join(PAGES_DIR, `${entryName}.js`)))
+    .map((entryName) => `${entryName}.js`);
+
+if (leakedDevelopingEntries.length > 0) {
+    fail(
+        'Splunkbase stage contains developing entry bundles.',
+        leakedDevelopingEntries
+    );
+}
+
 if (missingEntries.length > 0) {
     fail('Production entry bundles are missing or empty.', missingEntries);
 }
@@ -178,5 +207,5 @@ if (invalidEntries.length > 0) {
 }
 
 console.log(
-    `✓ Verified ${ENTRY_NAMES.length} production bundles: valid compiled JavaScript only, no source maps`
+    `✓ Verified ${REQUIRED_ENTRY_NAMES.length} ${APP_PROFILE} production bundles: valid compiled JavaScript only, no source maps`
 );

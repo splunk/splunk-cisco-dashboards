@@ -511,7 +511,8 @@ xattr -cr "${TMP_DIR}/${APP_NAME}" 2>/dev/null || true
 # Validate the exact directory that will be archived. This deliberately runs
 # after copying out of stage/ so a concurrent webpack --watch process cannot
 # replace the checked JavaScript between verification and packaging.
-node "${PKG_ROOT}/bin/verify_production_assets.js" "${TMP_DIR}/${APP_NAME}"
+node "${PKG_ROOT}/bin/verify_production_assets.js" \
+  "${TMP_DIR}/${APP_NAME}" "$APP_PROFILE"
 
 # Re-extract and verify the completed archive before publishing it. This catches
 # a future tar/file-list regression that the directory preflight cannot see,
@@ -528,7 +529,8 @@ verify_final_archive() {
     echo "ERROR: release archive did not contain the expected ${APP_NAME} directory." >&2
     return 1
   fi
-  node "${PKG_ROOT}/bin/verify_production_assets.js" "${archive_audit_dir}/${APP_NAME}"
+  node "${PKG_ROOT}/bin/verify_production_assets.js" \
+    "${archive_audit_dir}/${APP_NAME}" "$APP_PROFILE"
 }
 
 # Build the archive in dist/ so the final hard-link promotion is atomic on

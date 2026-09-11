@@ -551,6 +551,47 @@ function exerciseProductionVerifierCacheRejection() {
       /Production entry bundles contain source-map directives/,
       "The production verifier must reject inline or external source-map directives",
     );
+    writeFile(
+      path.join(stage, "appserver", "static", "pages", "executive_insights.js"),
+      "void 0;\n",
+    );
+    fs.rmSync(
+      path.join(stage, "appserver", "static", "pages", "searchbase_canvas.js"),
+    );
+    const developerMissingCanvasFailure = runExpectFailure(
+      "node",
+      [VERIFY_SCRIPT_SOURCE, stage, "developer"],
+      { cwd: root },
+    );
+    assert.match(
+      developerMissingCanvasFailure,
+      /searchbase_canvas\.js/,
+      "The developer verifier must still require the internal Canvas bundle",
+    );
+    const splunkbaseOutput = run(
+      "node",
+      [VERIFY_SCRIPT_SOURCE, stage, "splunkbase"],
+      { cwd: root },
+    );
+    assert.match(
+      splunkbaseOutput,
+      /Verified 10 splunkbase production bundles/,
+      "The Splunkbase verifier must accept the profile-filtered entry set",
+    );
+    writeFile(
+      path.join(stage, "appserver", "static", "pages", "searchbase_canvas.js"),
+      "void 0;\n",
+    );
+    const splunkbaseCanvasLeakFailure = runExpectFailure(
+      "node",
+      [VERIFY_SCRIPT_SOURCE, stage, "splunkbase"],
+      { cwd: root },
+    );
+    assert.match(
+      splunkbaseCanvasLeakFailure,
+      /Splunkbase stage contains developing entry bundles/,
+      "The Splunkbase verifier must reject a leaked Canvas bundle",
+    );
   } finally {
     removeTempRoot(root);
   }

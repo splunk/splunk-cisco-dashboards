@@ -2184,7 +2184,8 @@ iseval = 0`}</CodeBlock>
                   targeted the development-only Searchbase Canvas. SplunkBase
                   packages also omit the Canvas bundle, bootstrap, persistence
                   files, and config declarations; explicit developer builds
-                  retain the complete internal surface.
+                  retain the complete internal surface. Final package checks
+                  enforce the matching bundle set for each profile.
                 </p>
                 <p>
                   <InlineCode>build.sh --install</InlineCode> and{" "}

@@ -22,7 +22,9 @@ networking pillars and workplace scenarios.
   packages while no released section overview exists. The Splunkbase build
   profile now also removes the Canvas bundle, license fragment, bootstrap,
   persistence files, and reload/replication declarations; the complete surface
-  remains available only in explicit developer builds.
+  remains available only in explicit developer builds. Final bundle validation
+  follows the selected profile so it requires the Canvas in developer packages
+  and rejects it in Splunkbase packages.
 - Restored readable light and dark appearance across Insights workspace
   editors, drawers, map controls, Signal Rail controls, topology and diagram
   actions, and related setup surfaces by keeping complete Splunk UI foreground,
