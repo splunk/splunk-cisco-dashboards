@@ -8,34 +8,11 @@
     "inputs": {
         "input_time_range": {
             "options": {
-                "defaultValue": "-24h,now,1h",
-                "showAdvanced": true,
-                "selections": [
-                    {
-                        "value": "-4h,now,30m",
-                        "label": "4h"
-                    },
-                    {
-                        "value": "-24h,now,1h",
-                        "label": "24h"
-                    },
-                    {
-                        "value": "-48h,now,2h",
-                        "label": "48h"
-                    },
-                    {
-                        "value": "-7d@d,now,1d",
-                        "label": "7d"
-                    },
-                    {
-                        "value": "-30d@d,now,1d",
-                        "label": "30d"
-                    }
-                ],
+                "defaultValue": "-24h,now",
                 "token": "time_tok"
             },
             "title": "Time range",
-            "type": "input.simpleTimePicker"
+            "type": "input.timerange"
         }
     },
     "defaults": {
@@ -60,7 +37,7 @@
             "title": "Hybrid Mesh Enforcement",
             "options": {
                 "preserveAspectRatio": true,
-                "src": "/static/app/splunk-cisco-dashboards/images/nav-icons/ArrowsDoubleLeftRight.svg"
+                "src": "../../static/app/splunk-cisco-dashboards/images/nav-icons/ArrowsDoubleLeftRight.svg"
             }
         },
         "viz_header": {
@@ -691,7 +668,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Third\\-Party Policy Effectiveness**"
+                "markdown": "**SSE Cloud Firewall Enforcement**"
             }
         },
         "viz_card_05_metadata": {
@@ -717,7 +694,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Trends Palo Alto allow, block, and other traffic decisions carrying correlated Cisco ISE SGT context, with the SGT and firewall\\-rule effectiveness rollup available as drill\\-down detail\\."
+                "markdown": "Trends live SSE cloud\\-firewall Allowed, Blocked, and Other decisions over time\\."
             }
         },
         "viz_card_05_singlevalue": {
@@ -811,7 +788,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Third-Party%20Policy%20Effectiveness&target=Secure%20Networking%20-%20Palo%20Alto%20SGT%20Policy%20Effectiveness,Secure%20Networking%20-%20Palo%20Alto%20Traffic%20Correlated%20by%20SGT"
+                        "url": "/drilldown?origin=SSE%20Cloud%20Firewall%20Enforcement&target=Secure%20Networking%20-%20SSE%20Security%20Event%20Detail"
                     }
                 }
             ],
@@ -842,7 +819,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Data Protection Findings**"
+                "markdown": "**SSE Proxy DLP Outcomes**"
             }
         },
         "viz_card_06_metadata": {
@@ -868,7 +845,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks Secure Access DLP findings by severity over time and moves the full finding breakdown into the drill\\-down modal\\."
+                "markdown": "Tracks DLP\\-bearing Secure Access proxy events by normalized outcome over time\\."
             }
         },
         "viz_card_06_singlevalue": {
@@ -889,7 +866,7 @@
                 "trendDisplay": "percent",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"ElevatedFindings\")",
+                "sparklineValues": "> primary | seriesByName(\"BucketDLP\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "trendValue": "> sparklineValues | delta(-2)"
@@ -953,7 +930,7 @@
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"ElevatedFindings\")"
+                "y": "> primary | seriesByName(\"BucketDLP\")"
             }
         },
         "viz_card_06_drilldown_trigger": {
@@ -962,7 +939,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Data%20Protection%20Findings&target=Secure%20Networking%20-%20Secure%20Access%20DLP%20Findings"
+                        "url": "/drilldown?origin=SSE%20Proxy%20DLP%20Outcomes&target=Secure%20Networking%20-%20SSE%20Security%20Event%20Detail"
                     }
                 }
             ],
@@ -1022,9 +999,9 @@
             "type": "ds.searchbase"
         },
         "ds_story_05": {
-            "name": "Palo Alto SGT Policy Effectiveness Trend",
+            "name": "Secure Networking - SSE Cloud Firewall Enforcement Trend",
             "options": {
-                "ref": "secure_networking_sgt_palo_alto_policy_effectiveness_trend",
+                "ref": "secure_networking_sse_cloud_firewall_enforcement_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$"
@@ -1033,9 +1010,9 @@
             "type": "ds.searchbase"
         },
         "ds_story_06": {
-            "name": "Secure Networking - Secure Access DLP Findings Trend",
+            "name": "Secure Networking - SSE Proxy DLP Outcome Trend",
             "options": {
-                "ref": "secure_networking_secure_access_dlp_findings_trend",
+                "ref": "secure_networking_sse_proxy_dlp_outcome_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$"

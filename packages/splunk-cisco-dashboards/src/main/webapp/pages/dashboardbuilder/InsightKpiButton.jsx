@@ -7,6 +7,7 @@ import {
     getSearchbaseCatalogue,
     plainTextFromHtml,
 } from '../../common/services/searchbaseCatalogue';
+import { appStaticAssetUrl } from '../../common/lib/appStaticAssetUrl';
 import DropdownWithSearch from './DropdownWithSearch';
 import { getDashboardTimeQueryParameters } from './dashboardTimeUtils';
 
@@ -17,7 +18,7 @@ const MAX_KPI_WIDTH = 660;
 const DEFAULT_KPI_HEIGHT = 260;
 const SINGLE_VALUE_KPI_HEIGHT = 190;
 const TABLE_KPI_HEIGHT = 320;
-const SEARCHBASE_ICON_SRC = '/static/app/splunk-cisco-dashboards/searchbase-app-icon.png';
+const SEARCHBASE_ICON_SRC = appStaticAssetUrl('searchbase-app-icon.png');
 
 const generateRandomString = (length = 10) => {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';

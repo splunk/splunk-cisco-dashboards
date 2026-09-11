@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Create a .tar.gz package from stage/. Run from package root (e.g. yarn run package:app).
-# Ensures stage exists (runs clean:build if not), then creates a tar.gz with the
-# correct top-level directory name for Splunk installation.
+# Create Splunk packages from stage/. Run from package root (e.g. yarn run package:app).
+# Ensures stage exists (runs clean:build if not), then creates both a .tar.gz and
+# a .spl with the correct top-level directory name for Splunk installation.
 set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PKG_ROOT="${SCRIPT_DIR}/.."
@@ -84,9 +84,11 @@ mkdir -p "$DIST_DIR"
 if [[ "$DEVELOPER_PROFILE" -eq 1 ]]; then
   APP_PROFILE="developer"
   PKG_PATH="${DIST_DIR}/${APP_NAME}-${VERSION}-developer.tar.gz"
+  SPL_PATH="${DIST_DIR}/${APP_NAME}-${VERSION}-developer.spl"
 else
   APP_PROFILE="splunkbase"
   PKG_PATH="${DIST_DIR}/${APP_NAME}-${VERSION}.tar.gz"
+  SPL_PATH="${DIST_DIR}/${APP_NAME}-${VERSION}.spl"
 fi
 
 if [[ "$FROM_STAGE" -eq 1 ]]; then
@@ -198,14 +200,17 @@ fi
 
 # Bump [install] build in the packaged app.conf only. Source app.conf is
 # never modified. Counter climbs across runs: new = max(source_build, highest
-# build stamped in any existing dist/ tarball) + 1. The .tar.gz files in
-# dist/ act as the persistent counter — no state file needed.
+# build stamped in any existing dist/ package) + 1. Both .tar.gz and .spl
+# files participate so uniquely named upload artifacts keep the counter
+# monotonic — no separate state file is needed.
 PKG_APP_CONF="${TMP_DIR}/${APP_NAME}/default/app.conf"
 source_build=$(grep -E '^\s*build\s*=' "$APP_CONF" | head -1 | sed -E 's/.*=\s*//' | tr -d '[:space:]')
 highest_prev=0
-for prev_tar in "${DIST_DIR}"/${APP_NAME}-*.tar.gz; do
-  [[ -f "$prev_tar" ]] || continue
-  b=$(tar -xzOf "$prev_tar" "${APP_NAME}/default/app.conf" 2>/dev/null \
+for prev_package in \
+  "${DIST_DIR}"/${APP_NAME}-*.tar.gz \
+  "${DIST_DIR}"/${APP_NAME}-*.spl; do
+  [[ -f "$prev_package" ]] || continue
+  b=$(tar -xzOf "$prev_package" "${APP_NAME}/default/app.conf" 2>/dev/null \
       | grep -E '^\s*build\s*=' | head -1 | sed -E 's/.*=\s*//' | tr -d '[:space:]')
   if [[ "$b" =~ ^[0-9]+$ ]] && (( b > highest_prev )); then
     highest_prev=$b
@@ -253,5 +258,10 @@ node "${PKG_ROOT}/bin/verify_production_assets.js" "${TMP_DIR}/${APP_NAME}"
 cd "$TMP_DIR"
 # COPYFILE_DISABLE prevents macOS tar from embedding AppleDouble resource forks
 COPYFILE_DISABLE=1 tar czf "$PKG_PATH" "$APP_NAME"
-SIZE=$(du -h "$PKG_PATH" | cut -f1 | xargs)
+# Splunk .spl packages use the same gzip-compressed tar format; keep the
+# tar.gz artifact for the existing build/install helper and provide the .spl
+# extension for direct upload through Splunk Web or the Splunk CLI.
+cp "$PKG_PATH" "$SPL_PATH"
+SIZE=$(du -h "$SPL_PATH" | cut -f1 | xargs)
+echo "Created ${SPL_PATH} (${SIZE})"
 echo "Created ${PKG_PATH} (${SIZE})"

@@ -1471,7 +1471,9 @@ function scdSetupShowTuningStep(root) {
     return;
   }
   tunerRoot.dataset.loaded = "loading";
-  const assetUrl = `/static/app/${SCD_SETUP_APP}/pages/macro_index_tuning.js?v=${Date.now()}`;
+  const assetUrl = `${scdSetupLocalePrefix(
+    window.location.pathname,
+  )}/static/app/${SCD_SETUP_APP}/pages/macro_index_tuning.js?v=${Date.now()}`;
   if (typeof window.require !== "function") {
     tunerRoot.dataset.loaded = "error";
     tunerRoot.textContent = "The integrated macro tuner could not be loaded.";

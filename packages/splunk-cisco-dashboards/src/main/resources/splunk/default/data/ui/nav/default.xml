@@ -27,6 +27,10 @@
         <a href="dashboard_manager#/sn_secure_infrastructure_status">Secure Infrastructure Status</a>
     </collection>
 
+    <collection label="Secure Data Center Operations" icon="ServersWrench">
+        <a href="dashboard_manager#/sn_data_center_operations">Data Center Operations</a>
+    </collection>
+
     <collection label="Scalable Network Segmentation" icon="Globe">
         <a href="dashboard_manager#/sn_segmentation_readiness">Segmentation Readiness</a>
         <divider />

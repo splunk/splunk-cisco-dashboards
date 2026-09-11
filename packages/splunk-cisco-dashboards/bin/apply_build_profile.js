@@ -226,6 +226,87 @@ function filterConfStanzas(source, excludedIds) {
   );
 }
 
+function searchbaseQueriesById(source) {
+  return new Map(
+    parseConfStanzas(source).stanzas.map(({ id, text }) => {
+      const searchMarker = /^search = /m.exec(text);
+      if (!searchMarker) {
+        throw new Error(`Searchbase stanza "${id}" has no search field`);
+      }
+
+      const rawSearch = text
+        .slice(searchMarker.index + searchMarker[0].length)
+        .trim();
+      const search = rawSearch
+        .split(/\r?\n/)
+        .map((line) => line.replace(/\\\s*$/, ""))
+        .join("\n")
+        .trim();
+      if (!search) {
+        throw new Error(`Searchbase stanza "${id}" has an empty search field`);
+      }
+      return [id, search];
+    }),
+  );
+}
+
+function inlineSearchbaseDataSources(appViewsDir, searchbaseSource) {
+  const queries = searchbaseQueriesById(searchbaseSource);
+  const definitionPattern = /<definition><!\[CDATA\[([\s\S]*?)\]\]><\/definition>/;
+  let inlinedCount = 0;
+
+  for (const entry of fs.readdirSync(appViewsDir, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith(".xml")) continue;
+
+    const viewPath = path.join(appViewsDir, entry.name);
+    const viewSource = fs.readFileSync(viewPath, "utf8");
+    const definitionMatch = definitionPattern.exec(viewSource);
+    if (!definitionMatch) continue;
+
+    let definition;
+    try {
+      definition = JSON.parse(definitionMatch[1].trim());
+    } catch (error) {
+      throw new Error(
+        `Unable to parse Dashboard Studio definition in ${entry.name}: ${error.message}`,
+      );
+    }
+
+    let changed = false;
+    for (const [dataSourceId, dataSource] of Object.entries(
+      definition.dataSources || {},
+    )) {
+      if (dataSource?.type !== "ds.searchbase") continue;
+
+      const { ref, queryParameters } = dataSource.options || {};
+      if (typeof ref !== "string" || !queries.has(ref)) {
+        throw new Error(
+          `Dashboard ${entry.name} data source "${dataSourceId}" references missing Searchbase stanza "${ref}"`,
+        );
+      }
+
+      dataSource.type = "ds.search";
+      dataSource.options = {
+        query: queries.get(ref),
+        ...(queryParameters ? { queryParameters } : {}),
+      };
+      inlinedCount += 1;
+      changed = true;
+    }
+
+    if (changed) {
+      const serializedDefinition = JSON.stringify(definition, null, 4);
+      const replacement = `<definition><![CDATA[\n${serializedDefinition}\n    ]]></definition>`;
+      fs.writeFileSync(
+        viewPath,
+        viewSource.replace(definitionPattern, replacement),
+      );
+    }
+  }
+
+  return inlinedCount;
+}
+
 function applyBuildProfile(appRoot, profile, options = {}) {
   if (!ALLOWED_PROFILES.has(profile)) {
     throw new Error(
@@ -315,6 +396,10 @@ function applyBuildProfile(appRoot, profile, options = {}) {
   }
 
   const searchbaseSource = fs.readFileSync(appSearchbasePath, "utf8");
+  const inlinedSearchbaseDataSources = inlineSearchbaseDataSources(
+    appViewsDir,
+    searchbaseSource,
+  );
   fs.writeFileSync(
     appSearchbasePath,
     filterConfStanzas(
@@ -338,6 +423,7 @@ function applyBuildProfile(appRoot, profile, options = {}) {
     removedSearchbaseStanzaIds: developingSearchbaseStanzaIds,
     removedSavedSearchIds: developingSavedSearchIds,
     removedNavReferences,
+    inlinedSearchbaseDataSources,
   };
 }
 
@@ -366,7 +452,9 @@ function main() {
           `developing view(s), ${result.removedNavReferences} navigation ` +
           `reference(s), ${result.removedSearchbaseStanzaIds.length} ` +
           `developing Searchbase stanza(s), and ` +
-          `${result.removedSavedSearchIds.length} developing saved search(es)`,
+          `${result.removedSavedSearchIds.length} developing saved search(es); ` +
+          `inlined ${result.inlinedSearchbaseDataSources} Dashboard Studio ` +
+          `Searchbase data source(s) as native searches`,
       );
     }
   } catch (error) {
@@ -383,11 +471,13 @@ module.exports = {
   filterConfStanzas,
   filterNavigationNodes,
   hrefTargetsView,
+  inlineSearchbaseDataSources,
   listSourceSearchbaseStanzaIds,
   listSourceSavedSearchIds,
   listSourceViewIds,
   parseConfStanzas,
   readManifest,
+  searchbaseQueriesById,
   validateManifest,
   validateDevelopingResourceIds,
 };

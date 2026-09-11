@@ -240,6 +240,7 @@ function scdLoadExecutiveInsightsBundle() {
         'true'
     );
     scdExecutiveInsightsScript.src =
+        scdLocalePrefix(window.location.pathname) +
         '/static/app/splunk-cisco-dashboards/pages/executive_insights.js?v=' +
         scdAssetVersion;
     document.body.appendChild(scdExecutiveInsightsScript);

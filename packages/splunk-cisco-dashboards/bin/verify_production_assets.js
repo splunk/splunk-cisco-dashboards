@@ -13,6 +13,26 @@ const STAGE_DIR = process.argv[2]
     ? path.resolve(process.cwd(), process.argv[2])
     : path.join(APP_ROOT, 'stage');
 const PAGES_DIR = path.join(STAGE_DIR, 'appserver', 'static', 'pages');
+const DASHBOARD_MANAGER_VIEW = path.join(
+    STAGE_DIR,
+    'default',
+    'data',
+    'ui',
+    'views',
+    'dashboard_manager.xml'
+);
+const DASHBOARD_MANAGER_BOOTSTRAP = path.join(
+    STAGE_DIR,
+    'appserver',
+    'static',
+    'dashboard_manager_bootstrap.js'
+);
+const LEGACY_DASHBOARD_MANAGER_TEMPLATE = path.join(
+    STAGE_DIR,
+    'appserver',
+    'templates',
+    'dashboardbuilder.html'
+);
 const APACHE_LICENSE_SHA256 =
     'cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30';
 
@@ -36,6 +56,8 @@ const DEVELOPMENT_REACT_MARKERS = [
     'react-dom.development.js',
     'jsxDEV(',
 ];
+const ROOT_RELATIVE_APP_ASSET_PATTERN =
+    /(?:=|,|\[|\()\s*["'`]\/static\/app\/splunk-cisco-dashboards\//;
 
 function walkFiles(directory) {
     return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -91,6 +113,19 @@ if (leakedSourceFiles.length > 0) {
     );
 }
 
+const rootRelativeAppAssetFiles = stagedFiles
+    .filter((filePath) => ['.js', '.html'].includes(path.extname(filePath).toLowerCase()))
+    .filter((filePath) =>
+        ROOT_RELATIVE_APP_ASSET_PATTERN.test(fs.readFileSync(filePath, 'utf8'))
+    );
+
+if (rootRelativeAppAssetFiles.length > 0) {
+    fail(
+        'Production assets contain locale-unsafe root-relative /static/app URLs.',
+        rootRelativeAppAssetFiles.map((filePath) => path.relative(STAGE_DIR, filePath))
+    );
+}
+
 const missingEntries = [];
 const developmentEntries = [];
 const invalidEntries = [];
@@ -130,6 +165,76 @@ if (invalidEntries.length > 0) {
     fail('Production entry bundles contain invalid or truncated JavaScript.', invalidEntries);
 }
 
+if (
+    !fs.existsSync(DASHBOARD_MANAGER_VIEW) ||
+    !fs.statSync(DASHBOARD_MANAGER_VIEW).isFile() ||
+    !fs.existsSync(DASHBOARD_MANAGER_BOOTSTRAP) ||
+    !fs.statSync(DASHBOARD_MANAGER_BOOTSTRAP).isFile()
+) {
+    fail('Dashboard Manager restart-safe view assets are missing.');
+}
+
+const dashboardManagerView = fs.readFileSync(DASHBOARD_MANAGER_VIEW, 'utf8');
+const missingDashboardManagerViewContracts = [
+    '<dashboard version="1.1"',
+    'script="dashboard_manager_bootstrap.js"',
+    'id="scan-root"',
+].filter((contract) => !dashboardManagerView.includes(contract));
+const forbiddenDashboardManagerViewContracts = [
+    '<view',
+    'template=',
+    'dashboardbuilder.html',
+].filter((contract) => dashboardManagerView.includes(contract));
+
+if (
+    missingDashboardManagerViewContracts.length > 0 ||
+    forbiddenDashboardManagerViewContracts.length > 0
+) {
+    fail('Dashboard Manager must use the restart-safe Simple XML shell.', [
+        ...missingDashboardManagerViewContracts.map(
+            (contract) => `missing ${JSON.stringify(contract)}`
+        ),
+        ...forbiddenDashboardManagerViewContracts.map(
+            (contract) => `forbidden ${JSON.stringify(contract)}`
+        ),
+    ]);
+}
+
+const dashboardManagerBootstrap = fs.readFileSync(
+    DASHBOARD_MANAGER_BOOTSTRAP,
+    'utf8'
+);
+const missingDashboardManagerBootstrapContracts = [
+    'application.css',
+    'application.js',
+    'dashboard.js',
+    'pages/dashboardbuilder.js',
+    'scd-dashboard-manager-load-error',
+].filter((contract) => !dashboardManagerBootstrap.includes(contract));
+
+if (missingDashboardManagerBootstrapContracts.length > 0) {
+    fail('Dashboard Manager bootstrap is incomplete.', [
+        ...missingDashboardManagerBootstrapContracts.map(
+            (contract) => `missing ${JSON.stringify(contract)}`
+        ),
+    ]);
+}
+
+try {
+    new vm.Script(dashboardManagerBootstrap, {
+        filename: DASHBOARD_MANAGER_BOOTSTRAP,
+    });
+} catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    fail('Dashboard Manager bootstrap contains invalid JavaScript.', [detail]);
+}
+
+if (fs.existsSync(LEGACY_DASHBOARD_MANAGER_TEMPLATE)) {
+    fail(
+        'Restart-sensitive Dashboard Manager Mako template must not ship in production.'
+    );
+}
+
 console.log(
-    `✓ Verified ${ENTRY_NAMES.length} production bundles: valid compiled JavaScript only, no source maps`
+    `✓ Verified ${ENTRY_NAMES.length} production bundles and restart-safe Dashboard Manager assets: valid compiled JavaScript only, no source maps`
 );

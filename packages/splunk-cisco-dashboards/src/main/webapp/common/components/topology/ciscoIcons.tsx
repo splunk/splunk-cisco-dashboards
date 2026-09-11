@@ -93,6 +93,7 @@ import {
     type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/common/lib/utils';
+import { appStaticAssetUrl } from '@/common/lib/appStaticAssetUrl';
 
 interface IconProps {
     /** Tailwind size + optional colour override. Status callers can
@@ -578,8 +579,7 @@ export const CiscoUsersIcon = wrap(Users, COLOR.PINK);
 export const CiscoGenericIcon = wrap(Box, COLOR.SLATE);
 
 // Splunk platform
-const SPLUNK_SVA_ICON_BASE =
-    '/static/app/splunk-cisco-dashboards/images/splunk_sva';
+const SPLUNK_SVA_ICON_BASE = appStaticAssetUrl('images/splunk_sva');
 
 const svaRasterIcon = (
     filename: string,

@@ -8,34 +8,11 @@
     "inputs": {
         "input_time_range": {
             "options": {
-                "defaultValue": "-24h,now,1h",
-                "showAdvanced": true,
-                "selections": [
-                    {
-                        "value": "-4h,now,30m",
-                        "label": "4h"
-                    },
-                    {
-                        "value": "-24h,now,1h",
-                        "label": "24h"
-                    },
-                    {
-                        "value": "-48h,now,2h",
-                        "label": "48h"
-                    },
-                    {
-                        "value": "-7d@d,now,1d",
-                        "label": "7d"
-                    },
-                    {
-                        "value": "-30d@d,now,1d",
-                        "label": "30d"
-                    }
-                ],
+                "defaultValue": "-24h,now",
                 "token": "time_tok"
             },
             "title": "Time range",
-            "type": "input.simpleTimePicker"
+            "type": "input.timerange"
         }
     },
     "defaults": {
@@ -60,7 +37,7 @@
             "title": "Zero Trust Posture",
             "options": {
                 "preserveAspectRatio": true,
-                "src": "/static/app/splunk-cisco-dashboards/images/nav-icons/Fingerprint.svg"
+                "src": "../../static/app/splunk-cisco-dashboards/images/nav-icons/Fingerprint.svg"
             }
         },
         "viz_header": {
@@ -389,7 +366,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Private Access Status**"
+                "markdown": "**RaVPN Failure Reasons**"
             }
         },
         "viz_card_03_metadata": {
@@ -415,7 +392,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Hourly trend of Cisco SSE ZTNA connection statuses over time, enabling operators to track ZTNA adoption growth, detect access disruptions, and correlate denial spikes with policy or infrastructure changes\\."
+                "markdown": "Tracks live remote-access VPN failures and warnings by reason so recurring access blockers stand out\\."
             }
         },
         "viz_card_03_singlevalue": {
@@ -436,7 +413,7 @@
                 "trendDisplay": "percent",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketConnections\")",
+                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "trendValue": "> sparklineValues | delta(-2)"
@@ -495,7 +472,7 @@
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketConnections\")"
+                "y": "> primary | seriesByName(\"BucketTotal\")"
             }
         },
         "viz_card_03_drilldown_trigger": {
@@ -504,7 +481,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Private%20Access%20Status&target=Secure%20Networking%20-%20ZTA%20ZTNA%20Application%20Access%20Summary,Secure%20Networking%20-%20ZTA%20ZTNA%20Blocked%20Access%20Reasons"
+                        "url": "/drilldown?origin=RaVPN%20Failure%20Reasons&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Failure%20Reasons"
                     }
                 }
             ],
@@ -681,7 +658,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**MFA Outcomes**"
+                "markdown": "**RaVPN Profile Activity**"
             }
         },
         "viz_card_05_metadata": {
@@ -707,7 +684,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks Duo MFA authentication outcomes over time and keeps the application/factor breakdown as a drill\\-down table\\."
+                "markdown": "Shows live remote-access VPN activity by profile so demand shifts and profile-specific disruptions stand out\\."
             }
         },
         "viz_card_05_singlevalue": {
@@ -728,7 +705,7 @@
                 "trendDisplay": "percent",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"RiskyOutcomes\")",
+                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
                 "trendValue": "> sparklineValues | delta(-2)"
@@ -792,7 +769,7 @@
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"RiskyOutcomes\")"
+                "y": "> primary | seriesByName(\"BucketTotal\")"
             }
         },
         "viz_card_05_drilldown_trigger": {
@@ -801,7 +778,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=MFA%20Outcomes&target=Secure%20Networking%20-%20ZTA%20Duo%20Authentication%20Outcomes%20by%20Application,Secure%20Networking%20-%20Duo%20Blocked%20Posture%20and%20Identity%20Events"
+                        "url": "/drilldown?origin=RaVPN%20Profile%20Activity&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Sessions%20by%20Profile"
                     }
                 }
             ],
@@ -858,7 +835,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Compares user activity volume across ISE, ZTNA, and FMC over time, with cross\\-source identity correlation available in the drill\\-down modal\\."
+                "markdown": "Compares live activity volume across ISE, RaVPN, and FMC over time, with source-specific identity and security context in the drill\\-down modal\\."
             }
         },
         "viz_card_06_singlevalue": {
@@ -990,9 +967,9 @@
             "type": "ds.searchbase"
         },
         "ds_story_03": {
-            "name": "Secure Networking - ZTA ZTNA Connection Status Trend",
+            "name": "Secure Networking - ZTA RaVPN Failure Reason Trend",
             "options": {
-                "ref": "secure_networking_zta_ztna_connection_status_trend",
+                "ref": "secure_networking_zta_ravpn_failure_reason_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$"
@@ -1012,9 +989,9 @@
             "type": "ds.searchbase"
         },
         "ds_story_05": {
-            "name": "Secure Networking - ZTA Duo Authentication Outcomes Trend",
+            "name": "Secure Networking - ZTA RaVPN Profile Activity Trend",
             "options": {
-                "ref": "secure_networking_zta_duo_auth_outcomes_trend",
+                "ref": "secure_networking_zta_ravpn_profile_activity_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
                     "latest": "$time_tok.latest$"

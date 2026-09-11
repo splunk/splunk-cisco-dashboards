@@ -8,6 +8,10 @@
  * #scan-root inside the dashboard's HTML panel.
  */
 const scdAssetVersion = Date.now();
+const scdLocaleMatch = window.location.pathname.match(
+    /^\/([a-z]{2}-[A-Z]{2})(?:\/|$)/,
+);
+const scdLocalePrefix = `/${scdLocaleMatch ? scdLocaleMatch[1] : 'en-US'}`;
 if (/\/admin_macro_index_tuning\/?$/.test(window.location.pathname)) {
   window.location.replace(
         `${window.location.pathname.replace(
@@ -17,7 +21,7 @@ if (/\/admin_macro_index_tuning\/?$/.test(window.location.pathname)) {
     );
 } else {
     const tuningBundle =
-        `/static/app/splunk-cisco-dashboards/pages/macro_index_tuning.js?v=${scdAssetVersion}`;
+        `${scdLocalePrefix}/static/app/splunk-cisco-dashboards/pages/macro_index_tuning.js?v=${scdAssetVersion}`;
     require([
         tuningBundle,
     ], () => {
