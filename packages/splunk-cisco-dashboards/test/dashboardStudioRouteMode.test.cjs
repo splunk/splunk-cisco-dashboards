@@ -87,6 +87,10 @@ const searchbaseConf = fs.readFileSync(
   path.join(packageRoot, "src/main/resources/splunk/default/searchbase.conf"),
   "utf8",
 );
+const navigation = fs.readFileSync(
+  path.join(packageRoot, "src/main/resources/splunk/default/data/ui/nav/default.xml"),
+  "utf8",
+);
 const extractSetValues = (exportName) => {
   const match = managerScope.match(
     new RegExp(`export const ${exportName} = new Set\\(\\[([\\s\\S]*?)\\]\\);`),
@@ -101,6 +105,24 @@ const readDefinition = (viewName) => {
   assert.ok(definition, `${viewName} must contain a Dashboard Studio definition`);
   return JSON.parse(definition[1]);
 };
+
+for (const viewName of [
+  "admin_asset_inventory",
+  "netops_catalyst_health",
+  "netops_catalyst_operations",
+  "netops_critical_systems_health",
+  "netops_readiness",
+  "secops_resilience",
+  "workplace_building_intelligence",
+  "workplace_operations_overview",
+  "workplace_spaces_intelligence",
+]) {
+  assert.match(
+    navigation,
+    new RegExp(`href="dashboard_manager#/${viewName}"`),
+    `${viewName} must open through Dashboard Manager to preserve the styled app shell`,
+  );
+}
 
 assert.match(
   editor,
