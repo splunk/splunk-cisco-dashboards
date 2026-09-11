@@ -57,7 +57,7 @@ const mapTileStyles = read("src/main/webapp/common/maps/mapTileStyles.ts");
 const mapTileStyleModule = loadTypescriptModule(
   "src/main/webapp/common/maps/mapTileStyles.ts",
 );
-const userGuide = read("src/main/webapp/pages/user_guide/index.tsx");
+const userGuide = read("src/main/webapp/pages/user_guide/userGuide.md");
 
 test("shipped map surfaces never send placement text to public services", () => {
   for (const host of [

@@ -545,10 +545,12 @@ Push-to-Splunk options (mutually exclusive):
   --install              splunkd-managed install via REST mgmt port. Calls
                          \`splunk install app dist/<app>-<version>-<build>.tar.gz -update 1
                           -auth user:pass\`. Requires --auth.
-                         Fresh local installs use the Splunkbase profile unless
-                         --developer or --fast is explicitly selected. A
-                         successful Splunkbase install first creates one clean,
-                         release-eligible archive, then installs that exact file.
+                         Fresh local installs use the Splunkbase profile when
+                         the worktree is clean. Uncommitted changes automatically
+                         select the developer profile so --install can proceed
+                         before a commit. A successful --splunkbase install
+                         still creates one clean, release-eligible archive,
+                         then installs that exact file.
   --deploy               Filesystem swap into \$SPLUNK_HOME/etc/apps/<app>
                          through a prepared sibling replacement (preserves
                          local/ and runtime lookup CSVs). Faster than
@@ -580,9 +582,9 @@ Other options:
                          config/build-profile-manifest.json. Writes a clearly
                          labeled *-developer.tar.gz intended only for local testing.
   --splunkbase           Use the released-resources-only SplunkBase profile.
-                         This is the default for build, install, deploy, and
-                         remote-install workflows. Requires a clean committed
-                         worktree; use --developer or --fast for local changes.
+                         This is the default when the Git worktree is clean.
+                         Requires a clean committed worktree; uncommitted
+                         local builds select the developer profile instead.
   --lint-spl-antipatterns
                          Run the experimental Searchbase SPL anti-pattern
                          policy gate before packaging. Disabled by default
@@ -831,9 +833,11 @@ if [[ "$developer_profile_explicit" -eq 1 && "$splunkbase_profile_explicit" -eq 
     exit 2
 fi
 
-# The released-resources-only Splunkbase profile is the default for every
-# workflow. Developing resources require an explicit --developer selection or
-# the explicitly watcher-backed --fast/--from-stage path below.
+# The released-resources-only Splunkbase profile is the default for a clean
+# committed worktree. Uncommitted local work cannot produce an upload-ready
+# archive, so those builds select the developer profile unless the caller
+# passed --splunkbase. Developing resources also require --developer or the
+# watcher-backed --fast/--from-stage path.
 
 # --no-build only makes sense when paired with --install or --deploy.
 # On its own it would be a noop (build is already the default, and
@@ -864,6 +868,23 @@ if [[ "$from_stage" -eq 1 && "$splunkbase_profile_explicit" -eq 1 ]]; then
 fi
 if [[ "$from_stage" -eq 1 ]]; then
     developer_profile=1
+fi
+
+# ./build.sh --install must work before a commit. Detect uncommitted files at
+# the repository root the same way Splunkbase packaging does, then switch to
+# the developer profile unless the caller explicitly asked for --splunkbase.
+# --no-build reuses an existing archive and must not change profiles just
+# because the worktree later became dirty.
+worktree_has_uncommitted_changes() {
+    git -C "$ROOT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 || return 1
+    [[ -n "$(git -C "$ROOT_DIR" status --porcelain --untracked-files=all)" ]]
+}
+
+if [[ "$no_build" -eq 0 && "$splunkbase_profile_explicit" -eq 0 && "$developer_profile" -eq 0 ]] \
+    && worktree_has_uncommitted_changes; then
+    developer_profile=1
+    hdr "Uncommitted changes detected; using the developer profile so the build can proceed."
+    hdr "Pass --splunkbase from a clean committed worktree for an upload-ready archive."
 fi
 
 # Minification changes webpack output, so it cannot be applied to a stage/

@@ -39,7 +39,6 @@ const expectedRefs = [
   "secure_data_center_aci_fabric_health_score",
   "secure_data_center_aci_port_utilization_trend",
   "secure_data_center_apic_failed_login_count",
-  "secure_data_center_isovalent_runtime_security_base",
   "secure_data_center_secure_firewall_ips_count",
   "secure_networking_dc_aci_configuration_change_count",
   "secure_networking_dc_advisory_count",
@@ -50,6 +49,12 @@ const actualRefs = Object.values(definition.dataSources)
   .map(({ options }) => options.ref)
   .sort();
 assert.deepEqual(actualRefs, expectedRefs);
+assert.equal(definition.dataSources.ds_isovalent_base.type, "ds.search");
+assert.match(
+  definition.dataSources.ds_isovalent_base.options.query,
+  /^`index_security`/,
+  "the chainable Isovalent parent must use the standard security index macro",
+);
 
 assert.equal(
   definition.inputs.input_time_range.options.defaultValue,
@@ -90,7 +95,7 @@ assert.match(deniedFlowStanza[1], /This tile always reports the latest hour/);
 const nav = read("src/main/resources/splunk/default/data/ui/nav/default.xml");
 assert.match(
   nav,
-  /<collection label="Secure Data Center Operations" icon="ServersWrench">[\s\S]*?dashboard_manager#\/sn_data_center_operations/,
+  /<collection label="Secure Infrastructure"[\s\S]*?dashboard_manager#\/sn_secure_infrastructure_status[\s\S]*?dashboard_manager#\/sn_data_center_operations[\s\S]*?dashboard_manager#\/sn_hmf_sdwan_network_health/,
 );
 assert.ok(
   fs.existsSync(

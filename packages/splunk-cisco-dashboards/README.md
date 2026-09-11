@@ -10,6 +10,11 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Local `./build.sh --install` now proceeds with the developer profile when
+  the Git worktree has uncommitted changes; `--splunkbase` still requires a
+  clean committed source state for an upload-ready archive.
+- Kept the app on React 18.3.1, the latest 18.x line Splunk UI supports, and
+  pinned `@types/react` so styled-components types cannot pull React 19 typings.
 - Patched known npm advisories in the shipped JavaScript dependency tree,
   including a critical MapLibre GL JS XSS fix, and kept Splunk visualizations
   compiling against MapLibre 6's ESM-only package.
@@ -54,7 +59,9 @@ networking pillars and workplace scenarios.
 - Unified Splunkbase build and install packaging so a successful
   `--install --splunkbase` run creates one clean, release-eligible artifact and
   installs that exact tarball. The target's installed build no longer changes
-  package allocation; dirty local iterations use the developer profile.
+  package allocation; uncommitted `./build.sh --install` runs now select the
+  developer profile automatically, while `--splunkbase` still requires a
+  clean committed worktree.
 - Restored the Guided Setup finish-confirmation copy in light mode by using
   theme-aware Splunk UI paragraphs, preventing the no-change explanation from
   rendering white on the dialog's white background. The completion action now
@@ -445,8 +452,8 @@ packaging validates it internally, and the root build wrapper verifies its
 filename identity, gzip integrity, and release-eligible provenance before use.
 A successful `./build.sh --install --splunkbase --auth user:password` run
 installs the exact upload-ready tarball it creates. Splunkbase builds require a
-clean committed worktree; use `--developer` or `--fast` for uncommitted local
-iterations.
+clean committed worktree. Uncommitted `./build.sh --install` runs select the
+developer profile automatically so local iteration does not require a commit.
 
 Resource inclusion is controlled by `config/build-profile-manifest.json`.
 The complete workflow and local install command are documented in

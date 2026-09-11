@@ -226,10 +226,14 @@ const commonConfig = webpackMerge(baseConfig, {
                     'postcss-loader',
                 ],
             },
+            {
+                test: /\.md$/,
+                type: 'asset/source',
+            },
         ],
     },
     resolve: {
-        extensions: ['.ts', '.tsx', '.js', '.jsx'],
+        extensions: ['.ts', '.tsx', '.js', '.jsx', '.md'],
         alias: {
             '@': webappRoot,
             // Splunk visualizations still CJS-require maplibre-gl. 6.x is

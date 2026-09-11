@@ -77,4 +77,60 @@ assert.doesNotMatch(
   "the unsupported React Router 6 line must not remain in the lockfile",
 );
 
+const reactRange = appPackage.dependencies.react;
+const reactDomRange = appPackage.dependencies["react-dom"];
+const reactVersion = parseVersion(reactRange, "react");
+const reactDomVersion = parseVersion(reactDomRange, "react-dom");
+assert.deepEqual(
+  reactVersion,
+  [18, 3, 1],
+  "the app must stay on React 18.3.1, the latest 18.x Splunk UI supports",
+);
+assert.deepEqual(
+  reactDomVersion,
+  reactVersion,
+  "react-dom must stay on the same React 18.3.1 release as react",
+);
+assert.equal(
+  rootPackage.resolutions.react,
+  "18.3.1",
+  "the root resolution must pin a single React 18.3.1 copy",
+);
+assert.equal(
+  rootPackage.resolutions["react-dom"],
+  "18.3.1",
+  "the root resolution must pin a single react-dom 18.3.1 copy",
+);
+assert.equal(
+  rootPackage.resolutions["@types/react"],
+  "18.3.31",
+  "the root resolution must keep TypeScript on React 18 types",
+);
+assert.equal(
+  rootPackage.resolutions["@types/react-dom"],
+  "18.3.7",
+  "the root resolution must keep TypeScript on react-dom 18 types",
+);
+assert.match(
+  lockEntryFor("react", reactRange),
+  /\n  version "18\.3\.1"/,
+  "yarn.lock must resolve the declared React 18.3.1 release",
+);
+assert.match(
+  lockEntryFor("react-dom", reactDomRange),
+  /\n  version "18\.3\.1"/,
+  "yarn.lock must resolve the declared react-dom 18.3.1 release",
+);
+assert.doesNotMatch(
+  lockfile,
+  /^react(?:-dom)?@\^?19\./m,
+  "React 19 must not enter the lockfile while Splunk UI peers stop at 18",
+);
+assert.doesNotMatch(
+  lockfile,
+  /^"?@types\/react@[^"\n]*"?\n  version "19\./m,
+  "React 19 TypeScript types must not remain in the lockfile",
+);
+
 console.log("React Router resolves to the supported security-maintenance line.");
+console.log("React 18.3.1 and matching types stay pinned below Splunk UI's peer ceiling.");
