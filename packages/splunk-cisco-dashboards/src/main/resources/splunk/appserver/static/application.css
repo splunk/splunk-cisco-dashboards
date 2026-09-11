@@ -1,7 +1,7 @@
 /*
  * Splunk's navigation registry exposes ShieldKeyhole directly, but not the
  * other approved pillar icons available to the app through
- * @splunk/react-icons. Replace only those four shell fallbacks with one
+ * @splunk/react-icons. Replace only those shell fallbacks with one
  * unmodified copy of the matching outlined SUI vector at Splunk's native
  * 24px rendered size. Splunk still owns inactive, hover, and selected color.
  */
@@ -9,6 +9,7 @@
   [data-test="nav-item"][aria-haspopup="true"]:is(
     [title="Zero Trust Access"],
     [title="Secure Infrastructure"],
+    [title="Secure Data Center Operations"],
     [title="Scalable Network Segmentation"],
     [title="Hybrid Mesh Firewalling"],
     [title="Agentic Ops"]
@@ -23,6 +24,7 @@
   [data-test="nav-item"][aria-haspopup="true"]:is(
     [title="Zero Trust Access"],
     [title="Secure Infrastructure"],
+    [title="Secure Data Center Operations"],
     [title="Scalable Network Segmentation"],
     [title="Hybrid Mesh Firewalling"],
     [title="Agentic Ops"]
@@ -37,6 +39,7 @@
   [data-test="nav-item"][aria-haspopup="true"]:is(
     [title="Zero Trust Access"],
     [title="Secure Infrastructure"],
+    [title="Secure Data Center Operations"],
     [title="Scalable Network Segmentation"],
     [title="Hybrid Mesh Firewalling"],
     [title="Agentic Ops"]
@@ -59,6 +62,10 @@
 
 #root-nav-menu [title="Secure Infrastructure"] {
   --scd-pillar-icon: url("images/nav-icons/ServerBrackets.svg");
+}
+
+#root-nav-menu [title="Secure Data Center Operations"] {
+  --scd-pillar-icon: url("images/nav-icons/ServersWrench.svg");
 }
 
 #root-nav-menu [title="Scalable Network Segmentation"] {

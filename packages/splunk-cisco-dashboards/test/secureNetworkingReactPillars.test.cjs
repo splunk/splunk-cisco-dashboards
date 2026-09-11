@@ -574,7 +574,11 @@ const pillarViewNames = Array.from(
   pillarNavSource.matchAll(/dashboard_manager#\/([^"?]+)/g),
   (match) => match[1],
 );
-assert.equal(pillarViewNames.length, 17, "The five pillar collections must retain 17 Studio dashboards");
+assert.equal(
+  pillarViewNames.length,
+  18,
+  "The Secure Networking collections must retain 18 Studio dashboards",
+);
 let pillarVisibleTrendCount = 0;
 for (const viewName of pillarViewNames) {
   const source = readSource(
@@ -607,7 +611,12 @@ for (const viewName of pillarViewNames) {
       sparklineValues: options.sparklineValues,
     }));
   }
-  assert.equal(bindingSignatures.length, 6, `${viewName} must retain six KPI cards`);
+  const expectedKpiCount = viewName === "sn_data_center_operations" ? 15 : 6;
+  assert.equal(
+    bindingSignatures.length,
+    expectedKpiCount,
+    `${viewName} must retain ${expectedKpiCount} KPI cards`,
+  );
   assert.equal(
     new Set(bindingSignatures).size,
     bindingSignatures.length,
@@ -691,7 +700,7 @@ for (const fileName of studioViewFiles) {
 }
 assert.equal(
   studioViewFiles.length,
-  26,
+  27,
   "the color audit must cover every shipped Studio dashboard",
 );
 assert.equal(

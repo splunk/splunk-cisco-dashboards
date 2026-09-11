@@ -7,7 +7,7 @@
     />
 
     <!--
-        The five Secure Networking pillars are collections so each can grow
+        The Secure Networking pillars are collections so each can grow
         from one dashboard into a complete journey without changing the
         primary navigation structure.
     -->
@@ -26,6 +26,10 @@
         <divider />
         <a href="dashboard_manager#/sn_secure_infrastructure_status">Secure Infrastructure Status</a>
         <a href="dashboard_manager#/sn_hmf_sdwan_network_health">SD-WAN and Network Health Monitoring</a>
+    </collection>
+
+    <collection label="Secure Data Center Operations" icon="ServersWrench">
+        <a href="dashboard_manager#/sn_data_center_operations">Data Center Operations</a>
     </collection>
 
     <collection label="Scalable Network Segmentation" icon="GlobeDivision">

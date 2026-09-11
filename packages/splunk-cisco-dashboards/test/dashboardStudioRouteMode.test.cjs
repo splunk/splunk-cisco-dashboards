@@ -287,7 +287,7 @@ assert.match(
   "Help copy must use an explicit semantic foreground token",
 );
 
-assert.equal(frameworkViews.length, 17, "The rollout must cover 17 included dashboards");
+assert.equal(frameworkViews.length, 18, "The rollout must cover 18 included dashboards");
 assert.match(
   timeRangeUtils,
   /DEFAULT_SPAN = 'auto'/,
@@ -829,9 +829,9 @@ const assertHiddenYAxis = (viewName, trendId, options) => {
 };
 
 assert.deepEqual(
-  Object.keys(dashboardCardContracts).sort(),
+  [...Object.keys(dashboardCardContracts), "sn_data_center_operations"].sort(),
   frameworkViews,
-  "The semantic card contract must cover every managed dashboard",
+  "The semantic card contracts must cover every managed dashboard",
 );
 
 let rolloutCardCount = 0;
@@ -844,7 +844,12 @@ const rolloutTypeCounts = {
   "splunk.line": 0,
   "splunk.table": 0,
 };
-frameworkViews.forEach((viewName) => {
+// The Secure Data Center dashboard retains its purpose-built 15-KPI layout;
+// secureDataCenterDashboard.test.cjs owns that distinct semantic contract.
+const sixCardFrameworkViews = frameworkViews.filter(
+  (viewName) => viewName !== "sn_data_center_operations",
+);
+sixCardFrameworkViews.forEach((viewName) => {
   const definition = readDefinition(viewName);
   const overview = definition.layout.layoutDefinitions.layout_overview;
   const cardContracts = dashboardCardContracts[viewName];
@@ -1149,5 +1154,5 @@ assert.match(
 );
 
 console.log(
-  "Dashboard Studio route, Manager scope, help, and 17-dashboard rollout checks passed.",
+  "Dashboard Studio route, Manager scope, help, and 18-dashboard rollout checks passed.",
 );

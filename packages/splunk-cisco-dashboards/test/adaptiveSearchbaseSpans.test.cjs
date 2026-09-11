@@ -236,6 +236,7 @@ assert.deepEqual(numericSpanStanzas("timechart"), [
   "dashboard_spaces_intelligence_v1_visitor_daily",
   "it_health_composite_service_health_score",
   "network_iosxr_mltk_cpu_anomaly",
+  "secure_data_center_aci_denied_flow_count",
   "spaces_predict_camera_headcount_24h_forecast",
   "spaces_predict_desk_utilization_forecast",
   "spaces_predict_iot_temperature_forecast",

@@ -1,0 +1,532 @@
+<dashboard version="2" theme="dark" stylesheet="application.css">
+    <label>Secure Data Center Operations</label>
+    <description>Operate Cisco data center fabrics and cloud-native workloads through health, capacity, policy enforcement, runtime security, and change intelligence.</description>
+    <definition><![CDATA[
+{
+    "title": "Secure Data Center Operations",
+    "description": "Operate Cisco data center fabrics and cloud-native workloads through health, capacity, policy enforcement, runtime security, and change intelligence.",
+    "inputs": {
+        "input_time_range": {
+            "options": {
+                "defaultValue": "-7d@d,now,auto",
+                "showAdvanced": true,
+                "selections": [
+                    { "value": "-4h,now,auto", "label": "4h" },
+                    { "value": "-24h,now,auto", "label": "24h" },
+                    { "value": "-48h,now,auto", "label": "48h" },
+                    { "value": "-7d@d,now,auto", "label": "7d" },
+                    { "value": "-30d@d,now,auto", "label": "30d" }
+                ],
+                "token": "time_tok"
+            },
+            "title": "Time range",
+            "type": "input.timerange"
+        }
+    },
+    "defaults": {
+        "visualizations": {
+            "global": {
+                "showLastUpdated": true,
+                "showProgressBar": true
+            }
+        }
+    },
+    "visualizations": {
+        "viz_header": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "#1c2738",
+                "fontColor": "#ecf0f5",
+                "markdown": "# Secure Data Center Operations\nFabric health, capacity, policy enforcement, runtime security, and change intelligence for ACI, APIC, Nexus Dashboard, Secure Firewall, and Cisco Isovalent telemetry."
+            }
+        },
+        "viz_fabric_health": {
+            "type": "splunk.singlevalue",
+            "title": "ACI fabric health score",
+            "dataSources": { "primary": "ds_health" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "majorColor": "#16a34a",
+                "majorValue": "> primary | seriesByName(\"CurrentHealthScore\") | lastPoint()",
+                "sparklineDisplay": "area",
+                "sparklineValues": "> primary | seriesByName(\"health_score\")",
+                "trendDisplay": "off",
+                "unit": "%",
+                "unitPosition": "after"
+            }
+        },
+        "viz_critical_entities": {
+            "type": "splunk.singlevalue",
+            "title": "Critical / major ACI faults",
+            "dataSources": { "primary": "ds_anomalies" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "majorColor": "#f7782f",
+                "majorValue": "> primary | seriesByName(\"WindowCriticalFaults\") | lastPoint()",
+                "sparklineDisplay": "area",
+                "sparklineValues": "> primary | seriesByName(\"critical_faults\")",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_security_advisories": {
+            "type": "splunk.singlevalue",
+            "title": "Critical security advisories",
+            "dataSources": { "primary": "ds_advisories" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "majorColor": "#f7782f",
+                "majorValue": "> primary | seriesByName(\"critical_count\") | lastPoint()",
+                "sparklineDisplay": "area",
+                "sparklineValues": "> primary | seriesByName(\"critical_count_trend\")",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_interface_anomalies": {
+            "type": "splunk.singlevalue",
+            "title": "Interfaces with anomalies",
+            "dataSources": { "primary": "ds_interfaces" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "majorColor": "#e2a811",
+                "majorValue": "> primary | seriesByName(\"WindowAnomalousInterfaces\") | lastPoint()",
+                "sparklineDisplay": "area",
+                "sparklineValues": "> primary | seriesByName(\"anomalous_interfaces\")",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_port_utilization": {
+            "type": "splunk.singlevalue",
+            "title": "Peak ACI port utilization",
+            "dataSources": { "primary": "ds_port_utilization" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "majorColor": "#e2a811",
+                "majorValue": "> primary | seriesByName(\"WindowPeakPortUtilization\") | lastPoint()",
+                "sparklineDisplay": "area",
+                "sparklineValues": "> primary | seriesByName(\"peak_port_utilization\")",
+                "trendDisplay": "off",
+                "unit": "%",
+                "unitPosition": "after"
+            }
+        },
+        "viz_configuration_changes": {
+            "type": "splunk.singlevalue",
+            "title": "ACI configuration changes",
+            "dataSources": { "primary": "ds_changes" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "majorColor": "#649ef5",
+                "majorValue": "> primary | seriesByName(\"WindowChangeEvents\") | lastPoint()",
+                "sparklineDisplay": "area",
+                "sparklineValues": "> primary | seriesByName(\"configuration_changes\")",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_health_trend": {
+            "type": "splunk.area",
+            "title": "ACI fabric health trend",
+            "dataSources": { "primary": "ds_health" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "seriesColors": ["#16a34a"],
+                "legendDisplay": "off",
+                "lineWidth": 2,
+                "nullValueDisplay": "gaps",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"health_score\")"
+            }
+        },
+        "viz_port_utilization_trend": {
+            "type": "splunk.area",
+            "title": "ACI port utilization trend",
+            "dataSources": { "primary": "ds_port_utilization" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "seriesColors": ["#e2a811", "#649ef5"],
+                "legendDisplay": "bottom",
+                "lineWidth": 2,
+                "nullValueDisplay": "gaps",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"peak_port_utilization\")"
+            }
+        },
+        "viz_change_trend": {
+            "type": "splunk.column",
+            "title": "ACI configuration-change timeline",
+            "dataSources": { "primary": "ds_changes" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "seriesColors": ["#649ef5"],
+                "legendDisplay": "off",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"configuration_changes\")"
+            }
+        },
+        "viz_security_header": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "#1c2738",
+                "fontColor": "#ecf0f5",
+                "markdown": "## Data Center Security\nACI contract enforcement, APIC authentication, and Secure Firewall IPS activity from live telemetry."
+            }
+        },
+        "viz_aci_denied_flows": {
+            "type": "splunk.singlevalue",
+            "title": "ACI denied flows (last hour)",
+            "dataSources": { "primary": "ds_aci_denied_flows" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "majorColor": "#dc2626",
+                "majorValue": "> primary | seriesByName(\"WindowDeniedFlows\") | lastPoint()",
+                "sparklineDisplay": "area",
+                "sparklineValues": "> primary | seriesByName(\"denied_flows\")",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_apic_failed_logins": {
+            "type": "splunk.singlevalue",
+            "title": "APIC failed login sessions",
+            "dataSources": { "primary": "ds_apic_failed_logins" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "majorColor": "#f7782f",
+                "majorValue": "> primary | seriesByName(\"WindowFailedLogins\") | lastPoint()",
+                "sparklineDisplay": "area",
+                "sparklineValues": "> primary | seriesByName(\"failed_logins\")",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_secure_firewall_ips": {
+            "type": "splunk.singlevalue",
+            "title": "Critical / high Secure Firewall IPS",
+            "dataSources": { "primary": "ds_secure_firewall_ips" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "majorColor": "#dc2626",
+                "majorValue": "> primary | seriesByName(\"WindowCriticalHigh\") | lastPoint()",
+                "sparklineDisplay": "area",
+                "sparklineValues": "> primary | seriesByName(\"critical_high_detections\")",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_aci_denied_flow_trend": {
+            "type": "splunk.area",
+            "title": "ACI denied-flow trend (last hour)",
+            "dataSources": { "primary": "ds_aci_denied_flows" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "seriesColors": ["#dc2626"],
+                "legendDisplay": "off",
+                "lineWidth": 2,
+                "nullValueDisplay": "gaps",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"denied_flows\")"
+            }
+        },
+        "viz_apic_failed_login_trend": {
+            "type": "splunk.column",
+            "title": "APIC failed-login trend",
+            "dataSources": { "primary": "ds_apic_failed_logins" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "seriesColors": ["#f7782f"],
+                "legendDisplay": "off",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"failed_logins\")"
+            }
+        },
+        "viz_secure_firewall_ips_trend": {
+            "type": "splunk.area",
+            "title": "Secure Firewall critical/high IPS trend",
+            "dataSources": { "primary": "ds_secure_firewall_ips" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "seriesColors": ["#dc2626"],
+                "legendDisplay": "off",
+                "lineWidth": 2,
+                "nullValueDisplay": "gaps",
+                "x": "> primary | seriesByName(\"_time\")",
+                "y": "> primary | seriesByName(\"critical_high_detections\")"
+            }
+        },
+        "viz_isovalent_header": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "#1c2738",
+                "fontColor": "#ecf0f5",
+                "markdown": "## Cisco Isovalent Runtime Security\nTetragon eBPF visibility across Kubernetes workloads and hosts. **Runtime detections** combine policy alerts and CVE-labelled policy events; they are not a vulnerability inventory. **Listener events** represent socket creation, and the process watchlist is a transparent investigation heuristic."
+            }
+        },
+        "viz_isovalent_detections": {
+            "type": "splunk.singlevalue",
+            "title": "Isovalent runtime detections",
+            "dataSources": { "primary": "ds_isovalent_overview" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "majorColor": "#dc2626",
+                "majorValue": "> primary | seriesByName(\"WindowDetections\") | lastPoint()",
+                "sparklineDisplay": "area",
+                "sparklineValues": "> primary | seriesByName(\"DetectionEvents\")",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_isovalent_nodes": {
+            "type": "splunk.singlevalue",
+            "title": "Active Isovalent nodes",
+            "dataSources": { "primary": "ds_isovalent_overview" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "majorColor": "#2563eb",
+                "majorValue": "> primary | seriesByName(\"WindowNodes\") | lastPoint()",
+                "sparklineDisplay": "area",
+                "sparklineValues": "> primary | seriesByName(\"ActiveNodes\")",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_isovalent_namespaces": {
+            "type": "splunk.singlevalue",
+            "title": "Observed namespaces",
+            "dataSources": { "primary": "ds_isovalent_overview" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "majorColor": "#7c3aed",
+                "majorValue": "> primary | seriesByName(\"WindowNamespaces\") | lastPoint()",
+                "sparklineDisplay": "area",
+                "sparklineValues": "> primary | seriesByName(\"ActiveNamespaces\")",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_isovalent_process_execs": {
+            "type": "splunk.singlevalue",
+            "title": "Process executions observed",
+            "dataSources": { "primary": "ds_isovalent_overview" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "majorColor": "#0891b2",
+                "majorValue": "> primary | seriesByName(\"WindowProcessExecutions\") | lastPoint()",
+                "sparklineDisplay": "area",
+                "sparklineValues": "> primary | seriesByName(\"ProcessExecutions\")",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_isovalent_listeners": {
+            "type": "splunk.singlevalue",
+            "title": "Listener creation events",
+            "dataSources": { "primary": "ds_isovalent_overview" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "majorColor": "#f59e0b",
+                "majorValue": "> primary | seriesByName(\"WindowListenerEvents\") | lastPoint()",
+                "sparklineDisplay": "area",
+                "sparklineValues": "> primary | seriesByName(\"ListenerEvents\")",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_isovalent_data_age": {
+            "type": "splunk.singlevalue",
+            "title": "Telemetry age (minutes)",
+            "dataSources": { "primary": "ds_isovalent_overview" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "majorColor": "#16a34a",
+                "majorValue": "> primary | seriesByName(\"DataAgeMinutes\") | lastPoint()",
+                "sparklineDisplay": "off",
+                "trendDisplay": "off"
+            }
+        },
+        "viz_isovalent_detection_trend": {
+            "type": "splunk.area",
+            "title": "Isovalent policy detections over time",
+            "dataSources": { "primary": "ds_isovalent_detection_trend" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "seriesColors": ["#dc2626", "#f59e0b"],
+                "legendDisplay": "bottom",
+                "lineWidth": 2,
+                "markerDisplay": "outlined",
+                "nullValueDisplay": "zero",
+                "showYMajorGridLines": true,
+                "x": "> primary | seriesByName(\"_time\")"
+            }
+        },
+        "viz_isovalent_top_workloads": {
+            "type": "splunk.bar",
+            "title": "Top workloads by process execution volume",
+            "dataSources": { "primary": "ds_isovalent_workloads" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "seriesColors": ["#0891b2"],
+                "legendDisplay": "off",
+                "stackMode": "unstacked",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"Workload\")",
+                "y": "> primary | seriesByName(\"Executions\")"
+            }
+        },
+        "viz_isovalent_watchlist": {
+            "type": "splunk.bar",
+            "title": "Process behavior watchlist (heuristic)",
+            "dataSources": { "primary": "ds_isovalent_watchlist" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "seriesColors": ["#e11d48"],
+                "legendDisplay": "off",
+                "stackMode": "unstacked",
+                "showYMajorGridLines": true,
+                "xAxisTitleVisibility": "hide",
+                "yAxisTitleVisibility": "hide",
+                "x": "> primary | seriesByName(\"Behavior\")",
+                "y": "> primary | seriesByName(\"Executions\")"
+            }
+        },
+        "viz_isovalent_detection_detail": {
+            "type": "splunk.table",
+            "title": "Isovalent detection policy activity",
+            "dataSources": { "primary": "ds_isovalent_detections" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "count": 15,
+                "fontSize": "small",
+                "headerVisibility": "fixed",
+                "tableFormat": {
+                    "headerBackgroundColor": "#1c2738",
+                    "headerColor": "#ecf0f5"
+                }
+            }
+        },
+        "viz_isovalent_listener_detail": {
+            "type": "splunk.table",
+            "title": "Isovalent listener exposure",
+            "dataSources": { "primary": "ds_isovalent_listener_detail" },
+            "options": {
+                "backgroundColor": "#131a23",
+                "count": 15,
+                "fontSize": "small",
+                "headerVisibility": "fixed",
+                "tableFormat": {
+                    "headerBackgroundColor": "#1c2738",
+                    "headerColor": "#ecf0f5"
+                }
+            }
+        }
+    },
+    "dataSources": {
+        "ds_health": { "type": "ds.searchbase", "name": "Secure Data Center - ACI Fabric Health Score", "options": { "ref": "secure_data_center_aci_fabric_health_score", "queryParameters": { "earliest": "$time_tok.earliest$", "latest": "$time_tok.latest$" } } },
+        "ds_anomalies": { "type": "ds.searchbase", "name": "Secure Data Center - ACI Critical and Major Fault Count", "options": { "ref": "secure_data_center_aci_critical_fault_count", "queryParameters": { "earliest": "$time_tok.earliest$", "latest": "$time_tok.latest$" } } },
+        "ds_advisories": { "type": "ds.searchbase", "name": "Secure Networking - DC Security Advisory Count", "options": { "ref": "secure_networking_dc_advisory_count", "queryParameters": { "earliest": "$time_tok.earliest$", "latest": "$time_tok.latest$" } } },
+        "ds_interfaces": { "type": "ds.searchbase", "name": "Secure Networking - DC Interface Anomaly Count", "options": { "ref": "secure_networking_dc_interface_anomaly_count", "queryParameters": { "earliest": "$time_tok.earliest$", "latest": "$time_tok.latest$" } } },
+        "ds_port_utilization": { "type": "ds.searchbase", "name": "Secure Data Center - ACI Peak Port Utilization", "options": { "ref": "secure_data_center_aci_port_utilization_trend", "queryParameters": { "earliest": "$time_tok.earliest$", "latest": "$time_tok.latest$" } } },
+        "ds_changes": { "type": "ds.searchbase", "name": "Secure Networking - DC ACI Configuration Change Count", "options": { "ref": "secure_networking_dc_aci_configuration_change_count", "queryParameters": { "earliest": "$time_tok.earliest$", "latest": "$time_tok.latest$" } } },
+        "ds_aci_denied_flows": { "type": "ds.searchbase", "name": "Secure Data Center - ACI Denied Flow Count", "options": { "ref": "secure_data_center_aci_denied_flow_count" } },
+        "ds_apic_failed_logins": { "type": "ds.searchbase", "name": "Secure Data Center - APIC Failed Login Sessions", "options": { "ref": "secure_data_center_apic_failed_login_count", "queryParameters": { "earliest": "$time_tok.earliest$", "latest": "$time_tok.latest$" } } },
+        "ds_secure_firewall_ips": { "type": "ds.searchbase", "name": "Secure Data Center - Secure Firewall IPS Detections", "options": { "ref": "secure_data_center_secure_firewall_ips_count", "queryParameters": { "earliest": "$time_tok.earliest$", "latest": "$time_tok.latest$" } } },
+        "ds_isovalent_base": {
+            "type": "ds.searchbase",
+            "name": "Secure Data Center - Cisco Isovalent Runtime Security Base",
+            "options": {
+                "ref": "secure_data_center_isovalent_runtime_security_base",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$"
+                }
+            }
+        },
+        "ds_isovalent_overview": {
+            "type": "ds.chain",
+            "name": "Isovalent runtime-security overview",
+            "options": {
+                "extend": "ds_isovalent_base",
+                "query": "| eventstats dc(eval(if(Node!=\"Unknown\",Node,null()))) as WindowNodes dc(eval(if(Namespace!=\"Host\",Namespace,null()))) as WindowNamespaces max(LastSeenEpoch) as LatestEvent\n| stats sum(EventCount) as Telemetry sum(eval(if(IsProcessExec=1,EventCount,0))) as ProcessExecutions sum(eval(if(IsRuntimeAlert=1,EventCount,0))) as RuntimeAlerts sum(eval(if(IsCVEPolicyEvent=1,EventCount,0))) as CVEPolicyEvents sum(eval(if(IsListener=1,EventCount,0))) as ListenerEvents dc(eval(if(Node!=\"Unknown\",Node,null()))) as ActiveNodes dc(eval(if(Namespace!=\"Host\",Namespace,null()))) as ActiveNamespaces max(WindowNodes) as WindowNodes max(WindowNamespaces) as WindowNamespaces max(LatestEvent) as LatestEvent by _time\n| eval DetectionEvents=RuntimeAlerts+CVEPolicyEvents\n| eventstats sum(Telemetry) as WindowTelemetry sum(ProcessExecutions) as WindowProcessExecutions sum(DetectionEvents) as WindowDetections sum(ListenerEvents) as WindowListenerEvents\n| eval DataAgeMinutes=round((now()-LatestEvent)/60,1)\n| fillnull value=0 Telemetry ProcessExecutions RuntimeAlerts CVEPolicyEvents DetectionEvents ListenerEvents ActiveNodes ActiveNamespaces WindowNodes WindowNamespaces WindowTelemetry WindowProcessExecutions WindowDetections WindowListenerEvents\n| appendpipe [ stats count as _empty | where _empty=0 | eval _time=now(), Telemetry=0, ProcessExecutions=0, RuntimeAlerts=0, CVEPolicyEvents=0, DetectionEvents=0, ListenerEvents=0, ActiveNodes=0, ActiveNamespaces=0, WindowNodes=0, WindowNamespaces=0, WindowTelemetry=0, WindowProcessExecutions=0, WindowDetections=0, WindowListenerEvents=0, DataAgeMinutes=\"N/A\" | fields - _empty ]"
+            }
+        },
+        "ds_isovalent_detection_trend": {
+            "type": "ds.chain",
+            "name": "Isovalent policy-detection trend",
+            "options": {
+                "extend": "ds_isovalent_overview",
+                "query": "| fields _time RuntimeAlerts CVEPolicyEvents\n| rename RuntimeAlerts as \"Runtime policy alerts\", CVEPolicyEvents as \"CVE policy events\""
+            }
+        },
+        "ds_isovalent_workloads": {
+            "type": "ds.chain",
+            "name": "Isovalent top workloads by process executions",
+            "options": {
+                "extend": "ds_isovalent_base",
+                "query": "| where IsProcessExec=1\n| stats sum(EventCount) as Executions by Namespace Workload\n| eval Workload=Namespace.\" / \".Workload\n| sort -Executions\n| head 10\n| table Workload Executions"
+            }
+        },
+        "ds_isovalent_watchlist": {
+            "type": "ds.chain",
+            "name": "Isovalent process behavior watchlist",
+            "options": {
+                "extend": "ds_isovalent_base",
+                "query": "| where IsProcessExec=1 AND Indicator!=\"N/A\"\n| stats sum(EventCount) as Executions by Indicator Namespace Workload Binary\n| eval Behavior=Indicator.\" · \".Namespace.\" / \".Workload.\" · \".mvindex(split(Binary,\"/\"),-1)\n| sort -Executions\n| head 10\n| table Behavior Executions"
+            }
+        },
+        "ds_isovalent_detections": {
+            "type": "ds.chain",
+            "name": "Isovalent detection policy activity",
+            "options": {
+                "extend": "ds_isovalent_base",
+                "query": "| where IsDetection=1\n| stats sum(EventCount) as Detections dc(eval(if(Node!=\"Unknown\",Node,null()))) as Nodes values(Node) as NodeNames values(Binary) as Binaries values(DetectionObject) as Objects max(LastSeenEpoch) as LastSeenEpoch by DetectionType Policy\n| eval NodeNames=mvjoin(NodeNames,\", \"), Binaries=mvjoin(Binaries,\", \"), Objects=mvjoin(Objects,\", \"), LastSeen=strftime(LastSeenEpoch,\"%Y-%m-%d %H:%M:%S\")\n| rename DetectionType as \"Detection Type\", NodeNames as \"Node Names\", LastSeen as \"Last Seen\"\n| sort -Detections\n| head 15\n| table \"Detection Type\" Policy Detections Nodes \"Node Names\" Binaries Objects \"Last Seen\""
+            }
+        },
+        "ds_isovalent_listener_detail": {
+            "type": "ds.chain",
+            "name": "Isovalent listener exposure detail",
+            "options": {
+                "extend": "ds_isovalent_base",
+                "query": "| where IsListener=1\n| stats sum(EventCount) as Events values(Node) as Nodes max(LastSeenEpoch) as LastSeenEpoch by Exposure ListenIP Port Protocol Namespace Workload Binary\n| eval Nodes=mvjoin(Nodes,\", \"), Binary=mvindex(split(Binary,\"/\"),-1), LastSeen=strftime(LastSeenEpoch,\"%Y-%m-%d %H:%M:%S\")\n| rename ListenIP as \"Listen IP\", LastSeen as \"Last Seen\"\n| sort -Events\n| head 15\n| table Exposure \"Listen IP\" Port Protocol Namespace Workload Binary Events Nodes \"Last Seen\""
+            }
+        }
+    },
+    "layout": {
+        "type": "absolute",
+        "options": { "display": "auto-scale", "height": 2450, "width": 1440 },
+        "structure": [
+            { "item": "viz_header", "type": "block", "position": { "x": 20, "y": 0, "w": 1030, "h": 90 } },
+            { "item": "input_time_range", "type": "input", "position": { "x": 1080, "y": 8, "w": 320, "h": 72 } },
+            { "item": "viz_fabric_health", "type": "block", "position": { "x": 20, "y": 112, "w": 213, "h": 180 } },
+            { "item": "viz_critical_entities", "type": "block", "position": { "x": 254, "y": 112, "w": 213, "h": 180 } },
+            { "item": "viz_security_advisories", "type": "block", "position": { "x": 488, "y": 112, "w": 213, "h": 180 } },
+            { "item": "viz_interface_anomalies", "type": "block", "position": { "x": 722, "y": 112, "w": 213, "h": 180 } },
+            { "item": "viz_port_utilization", "type": "block", "position": { "x": 956, "y": 112, "w": 213, "h": 180 } },
+            { "item": "viz_configuration_changes", "type": "block", "position": { "x": 1190, "y": 112, "w": 213, "h": 180 } },
+            { "item": "viz_health_trend", "type": "block", "position": { "x": 20, "y": 320, "w": 445, "h": 360 } },
+            { "item": "viz_port_utilization_trend", "type": "block", "position": { "x": 488, "y": 320, "w": 445, "h": 360 } },
+            { "item": "viz_change_trend", "type": "block", "position": { "x": 956, "y": 320, "w": 447, "h": 360 } },
+            { "item": "viz_security_header", "type": "block", "position": { "x": 20, "y": 710, "w": 1383, "h": 76 } },
+            { "item": "viz_aci_denied_flows", "type": "block", "position": { "x": 20, "y": 808, "w": 445, "h": 180 } },
+            { "item": "viz_apic_failed_logins", "type": "block", "position": { "x": 488, "y": 808, "w": 445, "h": 180 } },
+            { "item": "viz_secure_firewall_ips", "type": "block", "position": { "x": 956, "y": 808, "w": 447, "h": 180 } },
+            { "item": "viz_aci_denied_flow_trend", "type": "block", "position": { "x": 20, "y": 1016, "w": 445, "h": 330 } },
+            { "item": "viz_apic_failed_login_trend", "type": "block", "position": { "x": 488, "y": 1016, "w": 445, "h": 330 } },
+            { "item": "viz_secure_firewall_ips_trend", "type": "block", "position": { "x": 956, "y": 1016, "w": 447, "h": 330 } },
+            { "item": "viz_isovalent_header", "type": "block", "position": { "x": 20, "y": 1378, "w": 1383, "h": 90 } },
+            { "item": "viz_isovalent_detections", "type": "block", "position": { "x": 20, "y": 1490, "w": 213, "h": 180 } },
+            { "item": "viz_isovalent_nodes", "type": "block", "position": { "x": 254, "y": 1490, "w": 213, "h": 180 } },
+            { "item": "viz_isovalent_namespaces", "type": "block", "position": { "x": 488, "y": 1490, "w": 213, "h": 180 } },
+            { "item": "viz_isovalent_process_execs", "type": "block", "position": { "x": 722, "y": 1490, "w": 213, "h": 180 } },
+            { "item": "viz_isovalent_listeners", "type": "block", "position": { "x": 956, "y": 1490, "w": 213, "h": 180 } },
+            { "item": "viz_isovalent_data_age", "type": "block", "position": { "x": 1190, "y": 1490, "w": 213, "h": 180 } },
+            { "item": "viz_isovalent_detection_trend", "type": "block", "position": { "x": 20, "y": 1698, "w": 445, "h": 340 } },
+            { "item": "viz_isovalent_top_workloads", "type": "block", "position": { "x": 488, "y": 1698, "w": 445, "h": 340 } },
+            { "item": "viz_isovalent_watchlist", "type": "block", "position": { "x": 956, "y": 1698, "w": 447, "h": 340 } },
+            { "item": "viz_isovalent_detection_detail", "type": "block", "position": { "x": 20, "y": 2066, "w": 680, "h": 360 } },
+            { "item": "viz_isovalent_listener_detail", "type": "block", "position": { "x": 722, "y": 2066, "w": 681, "h": 360 } }
+        ]
+    }
+}
+    ]]></definition>
+</dashboard>
