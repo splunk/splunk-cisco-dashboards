@@ -694,6 +694,11 @@ assert.match(
   /repository-root VERSION file[\s\S]*?Source app\.conf and[\s\S]*?app\.manifest retain placeholders[\s\S]*?allocate the next[\s\S]*?build automatically/,
   "The current in-app release notes must document VERSION-only release packaging",
 );
+assert.match(
+  userGuide,
+  /patched known npm[\s\S]*?advisories[\s\S]*?MapLibre GL JS XSS[\s\S]*?Splunk visualizations continue to compile/,
+  "The current in-app release notes must document the dependency security patches",
+);
 
 assert.match(profile, /useInsightsWorkspacePermissions\(\)/);
 assert.match(

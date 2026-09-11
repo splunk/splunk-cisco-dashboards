@@ -2163,6 +2163,11 @@ iseval = 0`}</CodeBlock>
                     one clean, committed source state and produce one validated,
                     upload-ready Splunkbase archive.
                   </li>
+                  <li>
+                    <strong>Dependency security:</strong> patched known npm
+                    advisories in the app bundle, including a MapLibre GL JS XSS
+                    fix, while keeping Splunk visualizations compiling.
+                  </li>
                 </ul>
 
                 <h3>Administrator action</h3>
@@ -2200,7 +2205,9 @@ iseval = 0`}</CodeBlock>
                   developing resources are intentionally needed; the explicit{" "}
                   <InlineCode>--fast</InlineCode> workflow remains developer-only.
                   SplunkBase build, install, deploy, and remote-install workflows share one clean-source packaging path and apply the exact release-eligible archive.
-                  A successful SplunkBase install creates one upload-ready archive; the target&apos;s installed build does not affect package allocation. For a release,
+                  A successful SplunkBase install creates one upload-ready archive; the target&apos;s installed build does not affect package allocation.
+                  Known npm advisories in the shipped JavaScript tree were patched, including a MapLibre GL JS XSS fix. Webpack loads MapLibre 6&apos;s ESM module so Splunk visualizations continue to compile.
+                  For a release,
                   change and commit only the repository-root VERSION file.
                   Source app.conf and app.manifest retain placeholders, and
                   generated packages allocate the next build automatically.

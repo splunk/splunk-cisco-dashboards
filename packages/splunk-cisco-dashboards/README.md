@@ -10,6 +10,9 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Patched known npm advisories in the shipped JavaScript dependency tree,
+  including a critical MapLibre GL JS XSS fix, and kept Splunk visualizations
+  compiling against MapLibre 6's ESM-only package.
 - Rebuilt the in-app User Guide around the complete Insights Workspaces
   workflow: creating and duplicating workspaces, publishing shared layouts and
   Signal Rail membership, adding private or shared searches, permissions, and
