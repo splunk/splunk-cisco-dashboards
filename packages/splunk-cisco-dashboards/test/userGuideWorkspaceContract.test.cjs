@@ -32,13 +32,25 @@ test("documents workspace permissions separately from data access", () => {
 });
 
 test("keeps accessible release history in Markdown", () => {
-  assert.match(parser, /<details class="scd-guide-release-panel">[\s\S]*?<summary class="scd-guide-release-summary">/);
+  assert.match(parser, /<details class="scd-guide-release-panel"[\s\S]*?<summary class="scd-guide-release-summary">/);
+  assert.match(parser, /scd-guide-release-indicator[\s\S]*?aria-hidden="true"/);
+  assert.match(parser, /data-release-action="expand"[\s\S]*?data-release-action="collapse"/);
+  assert.match(page, /handleReleaseControl[\s\S]*?querySelectorAll<HTMLDetailsElement>/);
+  assert.match(page, /openedForPrint[\s\S]*?panel\.setAttribute\("open", ""\)/);
   assert.match(css, /\.scd-guide-release-summary:focus-visible[\s\S]*?outline:/);
-  for (const version of ["1.0.35", "1.0.44", "1.0.45", "1.0.46"]) {
+  for (const version of ["1.0.35", "1.0.44", "1.0.45", "1.0.46", "1.0.49"]) {
     assert.match(markdown, new RegExp(`Version ${version.replaceAll(".", "\\.")}`));
   }
   assert.match(markdown, /Initial Alpha release[\s\S]*?Alpha release considerations/);
   assert.match(markdown, /Initial beta release[\s\S]*?Beta considerations/i);
+  assert.match(markdown, /Version 1\.0\.49[\s\S]*?Secure Data Center Operations[\s\S]*?Upgrade notes/);
+});
+
+test("documents the full setup, dashboard, and workspace operating model", () => {
+  assert.match(markdown, /Setup contains six stages[\s\S]*?Welcome[\s\S]*?Verify readiness[\s\S]*?Review packages[\s\S]*?Configure data[\s\S]*?Tune CIM models[\s\S]*?Review & finish/);
+  assert.match(markdown, /Secure-networking journeys[\s\S]*?Secure Data Center Operations[\s\S]*?Executive Assurance/);
+  assert.match(markdown, /Duplicate, edit, and delete a workspace[\s\S]*?Configure the Signal Rail[\s\S]*?Reset behavior/);
+  assert.match(markdown, /User-scoped browser local storage[\s\S]*?Memory only/);
 });
 
 test("does not link customers to the intentionally excluded Searchbase Canvas", () => {

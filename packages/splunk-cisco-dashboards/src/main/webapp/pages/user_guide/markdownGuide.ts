@@ -25,8 +25,13 @@ const renderInline = (value: string): string => {
 const splitRow = (line: string): string[] => line.trim().replace(/^\||\|$/g, "")
   .split("|").map((cell) => cell.trim());
 
-const releasePanel = (title: string, meta: string, body: string): string =>
-  `<details class="scd-guide-release-panel"><summary class="scd-guide-release-summary"><span class="scd-guide-release-title">${renderInline(title)}</span><span class="scd-guide-release-meta">${renderInline(meta)}</span></summary><div class="scd-guide-release-body">${body}</div></details>`;
+const releasePanel = (
+  title: string,
+  meta: string,
+  body: string,
+  open: boolean,
+): string =>
+  `<details class="scd-guide-release-panel"${open ? " open" : ""}><summary class="scd-guide-release-summary"><span class="scd-guide-release-indicator" aria-hidden="true">›</span><span class="scd-guide-release-title-block"><span class="scd-guide-release-title">${renderInline(title)}</span><span class="scd-guide-release-meta">${renderInline(meta)}</span></span></summary><div class="scd-guide-release-body">${body}</div></details>`;
 
 export function parseGuideMarkdown(markdown: string): {
   headings: GuideHeading[]; html: string; sections: GuideHeading[];
@@ -35,6 +40,8 @@ export function parseGuideMarkdown(markdown: string): {
     .replace(/\r\n?/g, "\n").split("\n");
   const headings: GuideHeading[] = [];
   const used = new Set<string>();
+  let releaseCount = 0;
+  let releaseControlsRendered = false;
   const uniqueId = (label: string): string => {
     const base = slugifyHeading(label);
     let id = base;
@@ -56,7 +63,12 @@ export function parseGuideMarkdown(markdown: string): {
         index += 1;
         while (index < blockLines.length && blockLines[index].trim() !== ":::") body.push(blockLines[index++]);
         index += 1;
-        out.push(releasePanel(directive[1], directive[2], render(body)));
+        if (!releaseControlsRendered) {
+          out.push('<div class="scd-guide-release-controls scd-guide-no-print" aria-label="Release note controls"><button type="button" data-release-action="expand">Expand all</button><button type="button" data-release-action="collapse">Collapse all</button></div>');
+          releaseControlsRendered = true;
+        }
+        out.push(releasePanel(directive[1], directive[2], render(body), releaseCount === 0));
+        releaseCount += 1;
         continue;
       }
       const heading = line.match(/^(#{2,6})\s+(.+)$/);

@@ -453,9 +453,20 @@ export default function UserGuidePage(): JSX.Element {
 
   const exportPdf = useCallback(() => {
     const previousTitle = document.title;
+    const openedForPrint = Array.from(
+      guideContentRef.current?.querySelectorAll<HTMLDetailsElement>("details") || [],
+    ).filter((panel) => !panel.open);
+    openedForPrint.forEach((panel) => {
+      panel.setAttribute("open", "");
+    });
     const cleanup = () => {
       document.body.classList.remove("scd-guide-printing");
       document.title = previousTitle;
+      openedForPrint.forEach((panel) => {
+        if (document.contains(panel)) {
+          panel.removeAttribute("open");
+        }
+      });
       window.removeEventListener("afterprint", cleanup);
     };
 
@@ -474,6 +485,37 @@ export default function UserGuidePage(): JSX.Element {
   }, [runSearch, searchQuery]);
 
   useEffect(() => () => clearSearchClasses(), [clearSearchClasses]);
+
+  useEffect(() => {
+    const guide = guideContentRef.current;
+    if (!guide) {
+      return undefined;
+    }
+    const handleReleaseControl = (event: MouseEvent) => {
+      const { target } = event;
+      if (!(target instanceof Element)) {
+        return;
+      }
+      const control = target.closest<HTMLButtonElement>(
+        "button[data-release-action]",
+      );
+      if (!control || !guide.contains(control)) {
+        return;
+      }
+      const releaseSection = control.closest<HTMLElement>(
+        '[data-guide-section="release-notes"]',
+      );
+      const { releaseAction } = control.dataset;
+      const expand = releaseAction === "expand";
+      releaseSection
+        ?.querySelectorAll<HTMLDetailsElement>(".scd-guide-release-panel")
+        .forEach((panel) => {
+          panel.toggleAttribute("open", expand);
+        });
+    };
+    guide.addEventListener("click", handleReleaseControl);
+    return () => guide.removeEventListener("click", handleReleaseControl);
+  }, []);
 
   useEffect(() => {
     const tocBySection = new Map();
