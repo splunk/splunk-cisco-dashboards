@@ -2153,6 +2153,12 @@ iseval = 0`}</CodeBlock>
                     searches where the vendor models preserve required fields.
                   </li>
                   <li>
+                    <strong>Secure Data Center Operations:</strong> a new
+                    dashboard brings ACI fabric health, capacity, policy
+                    enforcement, runtime security, and change intelligence into
+                    one focused operational view.
+                  </li>
+                  <li>
                     <strong>Safer delivery:</strong> release builds come from
                     one clean, committed source state and produce one validated,
                     upload-ready Splunkbase archive.
