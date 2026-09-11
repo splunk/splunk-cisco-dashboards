@@ -289,7 +289,10 @@ if [[ "$APP_PROFILE" == "splunkbase" ]]; then
   post_build_commit="$(resolve_clean_release_commit)"
   if [[ "$post_build_commit" != "$RELEASE_COMMIT" ]]; then
     echo "ERROR: Git HEAD changed while the Splunkbase package was building." >&2
+    echo "       Started at ${RELEASE_COMMIT}" >&2
+    echo "       Now at     ${post_build_commit}" >&2
     echo "       Re-run packaging from one stable committed source state." >&2
+    echo "       A merge, pull, or GitHub commit during the minified webpack will fail this gate." >&2
     exit 1
   fi
 fi

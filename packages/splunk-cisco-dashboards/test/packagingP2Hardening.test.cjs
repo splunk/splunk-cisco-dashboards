@@ -1258,6 +1258,11 @@ assert.match(
 );
 assert.match(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
+  /Git HEAD changed while the Splunkbase package was building\.[\s\S]*?Started at \$\{RELEASE_COMMIT\}[\s\S]*?Now at\s+\$\{post_build_commit\}/,
+  "A HEAD change during webpack must report both the starting and current commits",
+);
+assert.match(
+  fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
   /release-provenance\.json[\s\S]*?"git_commit"[\s\S]*?"source_tree_clean": %s[\s\S]*?"release_eligible": %s/,
   "Splunkbase packaging must emit source cleanliness and release eligibility provenance",
 );

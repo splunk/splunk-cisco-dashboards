@@ -10,6 +10,8 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Kept the app on React 18.3.1, the latest 18.x line Splunk UI supports, and
+  pinned `@types/react` so styled-components types cannot pull React 19 typings.
 - Patched known npm advisories in the shipped JavaScript dependency tree,
   including a critical MapLibre GL JS XSS fix, and kept Splunk visualizations
   compiling against MapLibre 6's ESM-only package.
