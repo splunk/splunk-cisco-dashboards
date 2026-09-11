@@ -396,9 +396,37 @@ const searchService = read(
 const topology = read(
   "src/main/webapp/common/components/workspace/CustomerTopologyMap.tsx",
 );
+const topologyPersistenceService = read(
+  "src/main/webapp/common/services/customerTopologyPersistenceService.ts",
+);
 assert.match(topology, /attributionControl=\{false\}/);
 assert.match(topology, /label="Map credits"/);
 assert.match(topology, /Map rendering: Leaflet\. Basemap:/);
+assert.match(
+  topology,
+  /persistedPayloadRef = useRef<SavedCustomerTopologyPayload \| null>\(null\)/,
+  "Topology editing must retain the exact payload last read from Splunk",
+);
+assert.match(
+  topology,
+  /if \(payload\) \{[\s\S]*?persistedPayloadRef\.current = payload;[\s\S]*?applyPayload\(payload\)/,
+  "Rendering normalization must not replace the canonical concurrency baseline",
+);
+assert.match(
+  topology,
+  /saveCustomerTopologyConfig\([\s\S]*?nextPayload,[\s\S]*?persistedPayloadRef\.current,[\s\S]*?\);[\s\S]*?persistedPayloadRef\.current = nextPayload;/,
+  "Successful topology writes must compare and advance the canonical payload baseline",
+);
+assert.match(
+  topologyPersistenceService,
+  /expectedPayload\?: SavedCustomerTopologyPayload \| null/,
+  "A null expected payload must represent a topology stanza absent at load time",
+);
+assert.match(
+  topologyPersistenceService,
+  /if \(expectedPayload !== undefined\)[\s\S]*?expectedMatchesCurrent[\s\S]*?currentPayload === null/,
+  "Optimistic concurrency must protect existing and initially absent topology stanzas",
+);
 const picker = read(
   "src/main/webapp/common/components/workspace/KpiPickerPanel.tsx",
 );

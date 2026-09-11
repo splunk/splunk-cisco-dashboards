@@ -99,6 +99,7 @@ import {
   loadCustomerTopologyConfig,
   saveCustomerTopologyConfig,
   sanitizeCustomerTopologySectionTitles,
+  type SavedCustomerTopologyPayload,
   type CustomerTopologySectionTitles,
 } from "@/common/services/customerTopologyPersistenceService";
 import { runSearch } from "@/common/services/splunkSearchService";
@@ -2533,18 +2534,6 @@ const sanitizeTopologyPayload = (
   ),
 });
 
-const writeSharedTopologyConfig = async (
-  topology: CustomerTopology,
-  sectionTitles: CustomerTopologySectionTitles,
-  expectedTopology: CustomerTopology,
-  expectedSectionTitles: CustomerTopologySectionTitles,
-): Promise<void> => {
-  await saveCustomerTopologyConfig(
-    buildTopologyPayload(topology, sectionTitles),
-    buildTopologyPayload(expectedTopology, expectedSectionTitles),
-  );
-};
-
 /**
  * Public-facing helper for the "Reset all customisations" flow on
  * the Overview page. As of the shared `customer_topology.conf`
@@ -2569,6 +2558,7 @@ export const usePersistedTopology = (
   );
   const [sectionTitles, setSectionTitles] =
     useState<CustomerTopologySectionTitles>(() => defaultSectionTitles);
+  const persistedPayloadRef = useRef<SavedCustomerTopologyPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -2590,8 +2580,15 @@ export const usePersistedTopology = (
     try {
       const payload = await loadCustomerTopologyConfig(fallback.id);
       if (payload) {
+        // Preserve the exact canonical payload that Splunk returned for the
+        // optimistic-concurrency check. `applyPayload` intentionally expands
+        // older payloads with current defaults for rendering; comparing that
+        // normalized topology with the stored payload creates a false
+        // conflict even when no other operator changed the topology.
+        persistedPayloadRef.current = payload;
         applyPayload(payload);
       } else {
+        persistedPayloadRef.current = null;
         const legacyTopology = readLegacyPersistedTopology(fallback);
         applyPayload(
           legacyTopology
@@ -2609,6 +2606,7 @@ export const usePersistedTopology = (
       }
       setError(null);
     } catch (err) {
+      persistedPayloadRef.current = null;
       const legacyTopology = readLegacyPersistedTopology(fallback);
       applyPayload(
         legacyTopology
@@ -2646,16 +2644,16 @@ export const usePersistedTopology = (
   const saveTopology = useCallback(
     async (next: CustomerTopology) => {
       const sanitized = sanitizeTopology(next, fallback);
+      const nextPayload = buildTopologyPayload(sanitized, sectionTitles);
       const previousTopology = topology;
       setTopology(sanitized);
       setError(null);
       try {
-        await writeSharedTopologyConfig(
-          sanitized,
-          sectionTitles,
-          topology,
-          sectionTitles,
+        await saveCustomerTopologyConfig(
+          nextPayload,
+          persistedPayloadRef.current,
         );
+        persistedPayloadRef.current = nextPayload;
         clearLegacyPersistedTopology();
         emitTopologyConfigChanged();
       } catch (err) {
@@ -2669,16 +2667,16 @@ export const usePersistedTopology = (
 
   const resetTopology = useCallback(async () => {
     const factory = cloneTopology(fallback);
+    const nextPayload = buildTopologyPayload(factory, sectionTitles);
     const previousTopology = topology;
     setTopology(factory);
     setError(null);
     try {
-      await writeSharedTopologyConfig(
-        factory,
-        sectionTitles,
-        topology,
-        sectionTitles,
+      await saveCustomerTopologyConfig(
+        nextPayload,
+        persistedPayloadRef.current,
       );
+      persistedPayloadRef.current = nextPayload;
       clearLegacyPersistedTopology();
       emitTopologyConfigChanged();
     } catch (err) {
@@ -2695,15 +2693,15 @@ export const usePersistedTopology = (
         defaultSectionTitles,
       );
       const previousSectionTitles = sectionTitles;
+      const nextPayload = buildTopologyPayload(topology, sanitized);
       setSectionTitles(sanitized);
       setError(null);
       try {
-        await writeSharedTopologyConfig(
-          topology,
-          sanitized,
-          topology,
-          sectionTitles,
+        await saveCustomerTopologyConfig(
+          nextPayload,
+          persistedPayloadRef.current,
         );
+        persistedPayloadRef.current = nextPayload;
         emitTopologyConfigChanged();
       } catch (err) {
         setSectionTitles(previousSectionTitles);

@@ -349,6 +349,7 @@ Version 1.0.49 expands secure-networking coverage, repairs workspace and setup r
 - Agentic SOC section headers no longer expose actions that targeted the development-only Searchbase Canvas. Splunkbase packages omit its customer-inaccessible resources, while explicit developer builds retain the internal surface.
 - Open in Search accepts only dashboard-defined safe filter values.
 - Custom Insights workspaces can now be created through the bounded persistence endpoint, and template choices retain circular radio controls.
+- Topology Searchbase bindings now save without false stale-edit conflicts and remain selected after reopening or reloading a workspace.
 - Insights workspace editors, drawers, map controls, Signal Rail controls, topology actions, and Setup retain readable Splunk UI colors in both appearances.
 
 ### Accessibility, security, and delivery
