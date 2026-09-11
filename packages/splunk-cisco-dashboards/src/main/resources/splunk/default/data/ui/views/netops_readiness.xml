@@ -1819,7 +1819,7 @@
 						"item": "viz_nrs_drisk",
 						"position": {
 							"h": 170,
-							"w": 320,
+							"w": 315,
 							"x": 1095,
 							"y": 380
 						},
@@ -1828,7 +1828,7 @@
 					{
 						"item": "viz_arq_legend",
 						"position": {
-							"h": 110,
+							"h": 105,
 							"w": 1380,
 							"x": 30,
 							"y": 570
@@ -2293,7 +2293,7 @@
 						"item": "viz_q5_saturation",
 						"position": {
 							"h": 320,
-							"w": 1070,
+							"w": 1060,
 							"x": 350,
 							"y": 900
 						},
@@ -2332,7 +2332,7 @@
 					{
 						"item": "viz_q6_occupancy_overlay",
 						"position": {
-							"h": 280,
+							"h": 270,
 							"w": 1380,
 							"x": 30,
 							"y": 1600
