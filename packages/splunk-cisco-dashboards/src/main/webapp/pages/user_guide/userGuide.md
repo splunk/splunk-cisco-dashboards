@@ -183,7 +183,7 @@ Release history is stored in this Markdown file so the in-product guide and futu
 - Insights workspace editors, drawers, map controls, fields, and buttons use readable Splunk UI colors in both light and dark modes.
 - Add search now opens and resets with only this app selected; the Entire catalogue remains available through the app filter.
 - Agentic SOC section headers no longer expose actions that lead to the development-only Searchbase Canvas.
-- **Secure Data Center Operations:** added ACI fabric health, infrastructure performance, runtime security, and change intelligence views.
+- **Secure Data Center Operations:** added ACI fabric health, infrastructure performance, runtime security, and change intelligence views, with Dashboard Manager info and investigation actions on every story card.
 - Release identity comes from the repository-root VERSION file. Source app.conf and app.manifest retain placeholders, while release packaging can allocate the next package build automatically.
 - patched known npm security advisories, including the MapLibre GL JS XSS advisory, while ensuring Splunk visualizations continue to compile.
 - Site placement uses an offline city list or explicit coordinates; customer site text is never sent to a public geocoder.

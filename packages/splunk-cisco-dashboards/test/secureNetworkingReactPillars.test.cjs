@@ -645,6 +645,119 @@ assert.deepEqual(
   ],
   "Secure Data Center Operations must use the standard story-card dashboard journey",
 );
+const dataCenterActionCards = [
+  {
+    base: "viz_card_fabric_health",
+    info: "secure_data_center_aci_fabric_health_score",
+    drilldown: "dc_networking_home_fabric_health_history",
+  },
+  {
+    base: "viz_card_critical_entities",
+    info: "secure_data_center_aci_critical_fault_count",
+    drilldown: "dc_networking_fault_report",
+  },
+  {
+    base: "viz_card_security_advisories",
+    info: "secure_networking_dc_advisory_count",
+    drilldown: "secure_networking_dc_security_advisory_detail",
+  },
+  {
+    base: "viz_card_interface_anomalies",
+    info: "secure_networking_dc_interface_anomaly_count",
+    drilldown: "dc_networking_interface_stats_top_10_anomalous_nodes",
+  },
+  {
+    base: "viz_card_port_utilization",
+    info: "secure_data_center_aci_port_utilization_trend",
+    drilldown: "dc_networking_fabric_details_leafs_port_utilization_and_thresholds",
+  },
+  {
+    base: "viz_card_configuration_changes",
+    info: "secure_networking_dc_aci_configuration_change_count",
+    drilldown: "dc_networking_authentication_user_audit_logs",
+  },
+  {
+    base: "viz_card_aci_denied_flows",
+    info: "secure_data_center_aci_denied_flow_count",
+    drilldown: "dc_networking_acl_logs_acl_l3_drop_pkts",
+  },
+  {
+    base: "viz_card_apic_failed_logins",
+    info: "secure_data_center_apic_failed_login_count",
+    drilldown: "dc_networking_authentication_failure_by_user",
+  },
+  {
+    base: "viz_card_secure_firewall_ips",
+    info: "secure_data_center_secure_firewall_ips_count",
+    drilldown: "security_resilience_firepower_event_correlation",
+  },
+  {
+    base: "viz_card_isovalent_detections",
+    info: "secure_data_center_isovalent_runtime_security_base",
+    drilldown: "secure_data_center_isovalent_runtime_security_base",
+  },
+  {
+    base: "viz_card_isovalent_nodes",
+    info: "secure_data_center_isovalent_runtime_security_base",
+    drilldown: "secure_data_center_isovalent_runtime_security_base",
+  },
+  {
+    base: "viz_card_isovalent_namespaces",
+    info: "secure_data_center_isovalent_runtime_security_base",
+    drilldown: "secure_data_center_isovalent_runtime_security_base",
+  },
+  {
+    base: "viz_card_isovalent_process_execs",
+    info: "secure_data_center_isovalent_runtime_security_base",
+    drilldown: "secure_data_center_isovalent_runtime_security_base",
+  },
+  {
+    base: "viz_card_isovalent_listeners",
+    info: "secure_data_center_isovalent_runtime_security_base",
+    drilldown: "secure_data_center_isovalent_runtime_security_base",
+  },
+  {
+    base: "viz_card_isovalent_data_age",
+    info: "secure_data_center_isovalent_runtime_security_base",
+    drilldown: "secure_data_center_isovalent_runtime_security_base",
+  },
+];
+const dataCenterLayoutItems = new Set(
+  Object.values(dataCenterDefinition.layout.layoutDefinitions).flatMap((layout) =>
+    layout.structure.map(({ item }) => item).filter(Boolean),
+  ),
+);
+for (const card of dataCenterActionCards) {
+  assert.ok(stanzaIds.has(card.info), `${card.base} info target must exist in Searchbase`);
+  assert.ok(
+    stanzaIds.has(card.drilldown),
+    `${card.base} drilldown target must exist in Searchbase`,
+  );
+  for (const action of ["info", "drilldown"]) {
+    const triggerId = `${card.base}_${action}_trigger`;
+    const trigger = dataCenterDefinition.visualizations[triggerId];
+    assert.equal(trigger?.type, "splunk.rectangle", `${triggerId} must be a click target`);
+    assert.equal(
+      trigger.eventHandlers?.[0]?.type,
+      "drilldown.customUrl",
+      `${triggerId} must navigate through Dashboard Studio custom URL drilldown`,
+    );
+    assert.ok(
+      trigger.eventHandlers[0].options.url.includes(
+        action === "info" ? "/metric-info?" : "/drilldown?",
+      ),
+      `${triggerId} must open the expected investigation surface`,
+    );
+    assert.equal(
+      new URL(trigger.eventHandlers[0].options.url, "https://localhost").searchParams.get(
+        "target",
+      ),
+      card[action],
+      `${triggerId} must target the configured Searchbase stanza`,
+    );
+    assert.ok(dataCenterLayoutItems.has(triggerId), `${triggerId} must be placed on a tab`);
+  }
+}
 for (const layout of Object.values(dataCenterDefinition.layout.layoutDefinitions)) {
   assert.equal(layout.type, "absolute");
   assert.equal(layout.options.width, 1920);

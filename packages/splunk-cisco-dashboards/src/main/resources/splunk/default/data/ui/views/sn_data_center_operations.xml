@@ -1446,6 +1446,576 @@
                 "x": "> primary | seriesByName(\"_time\")",
                 "y": "> primary | seriesByName(\"DataAgeMinutes\")"
             }
+        },
+        "viz_card_fabric_health_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=ACI%20Fabric%20Health%20Score&target=secure_data_center_aci_fabric_health_score"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_fabric_health_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=ACI%20Fabric%20Health%20Score&target=dc_networking_home_fabric_health_history"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_critical_entities_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Critical%20%2F%20Major%20ACI%20Faults&target=secure_data_center_aci_critical_fault_count"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_critical_entities_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Critical%20%2F%20Major%20ACI%20Faults&target=dc_networking_fault_report"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_security_advisories_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Critical%20Security%20Advisories&target=secure_networking_dc_advisory_count"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_security_advisories_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Critical%20Security%20Advisories&target=secure_networking_dc_security_advisory_detail"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_interface_anomalies_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Interfaces%20with%20Anomalies&target=secure_networking_dc_interface_anomaly_count"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_interface_anomalies_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Interfaces%20with%20Anomalies&target=dc_networking_interface_stats_top_10_anomalous_nodes"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_port_utilization_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Peak%20ACI%20Port%20Utilization&target=secure_data_center_aci_port_utilization_trend"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_port_utilization_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Peak%20ACI%20Port%20Utilization&target=dc_networking_fabric_details_leafs_port_utilization_and_thresholds"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_configuration_changes_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=ACI%20Configuration%20Changes&target=secure_networking_dc_aci_configuration_change_count"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_configuration_changes_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=ACI%20Configuration%20Changes&target=dc_networking_authentication_user_audit_logs"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_aci_denied_flows_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=ACI%20Denied%20Flows&target=secure_data_center_aci_denied_flow_count"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_aci_denied_flows_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=ACI%20Denied%20Flows&target=dc_networking_acl_logs_acl_l3_drop_pkts"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_apic_failed_logins_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=APIC%20Failed%20Login%20Sessions&target=secure_data_center_apic_failed_login_count"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_apic_failed_logins_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=APIC%20Failed%20Login%20Sessions&target=dc_networking_authentication_failure_by_user"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_secure_firewall_ips_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Critical%20%2F%20High%20Firewall%20IPS&target=secure_data_center_secure_firewall_ips_count"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_secure_firewall_ips_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Critical%20%2F%20High%20Firewall%20IPS&target=security_resilience_firepower_event_correlation"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_isovalent_detections_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Runtime%20Detections&target=secure_data_center_isovalent_runtime_security_base"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_isovalent_detections_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Runtime%20Detections&target=secure_data_center_isovalent_runtime_security_base"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_isovalent_nodes_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Active%20Isovalent%20Nodes&target=secure_data_center_isovalent_runtime_security_base"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_isovalent_nodes_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Active%20Isovalent%20Nodes&target=secure_data_center_isovalent_runtime_security_base"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_isovalent_namespaces_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Observed%20Namespaces&target=secure_data_center_isovalent_runtime_security_base"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_isovalent_namespaces_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Observed%20Namespaces&target=secure_data_center_isovalent_runtime_security_base"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_isovalent_process_execs_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Process%20Executions%20Observed&target=secure_data_center_isovalent_runtime_security_base"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_isovalent_process_execs_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Process%20Executions%20Observed&target=secure_data_center_isovalent_runtime_security_base"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_isovalent_listeners_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Listener%20Creation%20Events&target=secure_data_center_isovalent_runtime_security_base"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_isovalent_listeners_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Listener%20Creation%20Events&target=secure_data_center_isovalent_runtime_security_base"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_isovalent_data_age_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Telemetry%20Age&target=secure_data_center_isovalent_runtime_security_base"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_isovalent_data_age_drilldown_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Telemetry%20Age&target=secure_data_center_isovalent_runtime_security_base"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
         }
     },
     "dataSources": {
@@ -2015,6 +2585,126 @@
                             "h": 192
                         },
                         "type": "block"
+                    },
+                    {
+                        "item": "viz_card_fabric_health_info_trigger",
+                        "position": {
+                            "x": 534,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_fabric_health_drilldown_trigger",
+                        "position": {
+                            "x": 578,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_critical_entities_info_trigger",
+                        "position": {
+                            "x": 1167,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_critical_entities_drilldown_trigger",
+                        "position": {
+                            "x": 1211,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_security_advisories_info_trigger",
+                        "position": {
+                            "x": 1800,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_security_advisories_drilldown_trigger",
+                        "position": {
+                            "x": 1844,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_interface_anomalies_info_trigger",
+                        "position": {
+                            "x": 534,
+                            "y": 574,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_interface_anomalies_drilldown_trigger",
+                        "position": {
+                            "x": 578,
+                            "y": 574,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_port_utilization_info_trigger",
+                        "position": {
+                            "x": 1167,
+                            "y": 574,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_port_utilization_drilldown_trigger",
+                        "position": {
+                            "x": 1211,
+                            "y": 574,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_configuration_changes_info_trigger",
+                        "position": {
+                            "x": 1800,
+                            "y": 574,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_configuration_changes_drilldown_trigger",
+                        "position": {
+                            "x": 1844,
+                            "y": 574,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
                     }
                 ]
             },
@@ -2244,6 +2934,66 @@
                             "y": 344,
                             "w": 581,
                             "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_aci_denied_flows_info_trigger",
+                        "position": {
+                            "x": 534,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_aci_denied_flows_drilldown_trigger",
+                        "position": {
+                            "x": 578,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_apic_failed_logins_info_trigger",
+                        "position": {
+                            "x": 1167,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_apic_failed_logins_drilldown_trigger",
+                        "position": {
+                            "x": 1211,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_secure_firewall_ips_info_trigger",
+                        "position": {
+                            "x": 1800,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_secure_firewall_ips_drilldown_trigger",
+                        "position": {
+                            "x": 1844,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
                         },
                         "type": "block"
                     }
@@ -2655,6 +3405,126 @@
                             "y": 800,
                             "w": 581,
                             "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_detections_info_trigger",
+                        "position": {
+                            "x": 534,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_detections_drilldown_trigger",
+                        "position": {
+                            "x": 578,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_nodes_info_trigger",
+                        "position": {
+                            "x": 1167,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_nodes_drilldown_trigger",
+                        "position": {
+                            "x": 1211,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_namespaces_info_trigger",
+                        "position": {
+                            "x": 1800,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_namespaces_drilldown_trigger",
+                        "position": {
+                            "x": 1844,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_process_execs_info_trigger",
+                        "position": {
+                            "x": 534,
+                            "y": 574,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_process_execs_drilldown_trigger",
+                        "position": {
+                            "x": 578,
+                            "y": 574,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_listeners_info_trigger",
+                        "position": {
+                            "x": 1167,
+                            "y": 574,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_listeners_drilldown_trigger",
+                        "position": {
+                            "x": 1211,
+                            "y": 574,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_data_age_info_trigger",
+                        "position": {
+                            "x": 1800,
+                            "y": 574,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_isovalent_data_age_drilldown_trigger",
+                        "position": {
+                            "x": 1844,
+                            "y": 574,
+                            "w": 42,
+                            "h": 42
                         },
                         "type": "block"
                     }
