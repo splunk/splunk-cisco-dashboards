@@ -686,6 +686,11 @@ assert.match(
 );
 assert.match(
   userGuide,
+  /Secure Data Center Operations:[\s\S]*?ACI fabric health[\s\S]*?runtime security[\s\S]*?change intelligence/,
+  "The current in-app release notes must document the Secure Data Center Operations dashboard",
+);
+assert.match(
+  userGuide,
   /repository-root VERSION file[\s\S]*?Source app\.conf and[\s\S]*?app\.manifest retain placeholders[\s\S]*?allocate the next[\s\S]*?build automatically/,
   "The current in-app release notes must document VERSION-only release packaging",
 );
