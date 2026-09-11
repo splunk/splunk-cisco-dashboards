@@ -38,6 +38,8 @@ const collectTextFiles = (directory) =>
       : [];
   });
 
+const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const shippedSource = collectTextFiles(sourceRoot)
   .map((file) => fs.readFileSync(file, "utf8"))
   .join("\n");
@@ -64,7 +66,7 @@ test("shipped map surfaces never send placement text to public services", () => 
   ]) {
     assert.doesNotMatch(
       shippedSource,
-      new RegExp(host.replaceAll(".", "\\."), "i"),
+      new RegExp(escapeRegExp(host), "i"),
       `${host} must not be reachable from shipped browser code or view definitions`,
     );
   }
