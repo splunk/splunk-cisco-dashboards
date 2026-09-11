@@ -1191,6 +1191,75 @@ function exerciseLocalInstallProfileDefaults() {
   }
 }
 
+function exerciseDirtyDefaultInstallSelectsDeveloper() {
+  const fixture = makeRootBuildFixture();
+  try {
+    const splunkHome = path.join(fixture.root, "splunk");
+    const splunkLog = path.join(fixture.root, "splunk-install.log");
+    writeFile(
+      path.join(splunkHome, "bin", "splunk"),
+      [
+        "#!/usr/bin/env bash",
+        "set -euo pipefail",
+        'printf "%s\\n" "$*" >> "${SCD_FIXTURE_SPLUNK_LOG}"',
+        "",
+      ].join("\n"),
+      0o755,
+    );
+    const env = {
+      ...process.env,
+      SPLUNK_HOME: splunkHome,
+      SCD_FIXTURE_SPLUNK_LOG: splunkLog,
+    };
+    writeFile(path.join(fixture.root, ".gitignore"), "dist/\n");
+    run("git", ["init"], { cwd: fixture.root });
+    run("git", ["config", "user.email", "fixture@example.invalid"], { cwd: fixture.root });
+    run("git", ["config", "user.name", "Package Fixture"], { cwd: fixture.root });
+    run("git", ["add", "."], { cwd: fixture.root });
+    run("git", ["commit", "-m", "Fixture source"], { cwd: fixture.root });
+
+    const cleanOutput = run(
+      "bash",
+      [fixture.buildPath, "--install", "--auth", "fixture:password"],
+      { cwd: fixture.root, env },
+    );
+    assert.match(
+      cleanOutput,
+      /Profile:\s+Splunkbase \(released resources only\)/,
+      "A clean default install must still use the Splunkbase profile",
+    );
+    assert.doesNotMatch(
+      cleanOutput,
+      /Uncommitted changes detected/,
+      "A clean worktree must not switch to the developer profile",
+    );
+
+    writeFile(path.join(fixture.root, "uncommitted.txt"), "dirty\n");
+    const dirtyOutput = run(
+      "bash",
+      [fixture.buildPath, "--install", "--auth", "fixture:password"],
+      { cwd: fixture.root, env },
+    );
+    assert.match(
+      dirtyOutput,
+      /Uncommitted changes detected; using the developer profile so the build can proceed/,
+      "A dirty default install must explain the developer-profile fallback",
+    );
+    assert.match(
+      dirtyOutput,
+      /Profile:\s+developer \(released \+ developing resources\)/,
+      "Uncommitted ./build.sh --install must use the developer profile",
+    );
+    assert.match(
+      dirtyOutput,
+      /splunk-cisco-dashboards-1\.2\.3-2-developer\.tar\.gz/,
+      "A dirty default install must write a developer archive instead of a Splunkbase archive",
+    );
+  } finally {
+    removeTempRoot(fixture.root);
+  }
+}
+
 assert.doesNotMatch(
   fs.readFileSync(CLEAN_BUILD_SOURCE, "utf8"),
   /_scd_local_backup/,
@@ -1306,10 +1375,15 @@ assert.match(
   /from_stage.*?developer_profile=1/s,
   "The root build wrapper must make --fast imply the developer profile",
 );
-assert.doesNotMatch(
+assert.match(
   buildScript,
-  /do_install.*?do_deploy[\s\S]{0,300}?developer_profile=1/,
-  "Fresh local install and deploy workflows must not silently select the developer profile",
+  /worktree_has_uncommitted_changes\(\)[\s\S]*?developer_profile=1[\s\S]*?Uncommitted changes detected/,
+  "Uncommitted local packaging must select the developer profile unless --splunkbase is explicit",
+);
+assert.match(
+  buildScript,
+  /no_build" -eq 0 && "\$splunkbase_profile_explicit" -eq 0 && "\$developer_profile" -eq 0/,
+  "Dirty-tree developer selection must not apply to --no-build reuse or explicit Splunkbase requests",
 );
 assert.doesNotMatch(
   buildScript,
@@ -1356,6 +1430,7 @@ exercisePostBuildSourceVerification();
 exerciseProductionVerifierCacheRejection();
 exerciseRootBuildArchiveResolution();
 exerciseLocalInstallProfileDefaults();
+exerciseDirtyDefaultInstallSelectsDeveloper();
 exerciseExcludedViewLinkSafety();
 exerciseDevelopingStaticAssetExclusion();
 

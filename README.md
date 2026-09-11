@@ -76,9 +76,10 @@ file emitted. Packaging re-extracts and validates it before publication, and
 the root build wrapper verifies its filename identity and gzip integrity before
 use.
 A successful Splunkbase build always requires clean committed source and emits
-a release-eligible archive. Adding `--install` or `--deploy` applies that exact
-archive after packaging without changing its identity or provenance. Use
-`--developer` or `--fast` for intentional uncommitted local changes.
+a release-eligible archive. Adding `--install --splunkbase` or `--deploy --splunkbase`
+applies that exact archive after packaging without changing its identity or
+provenance. Uncommitted `./build.sh --install` runs select the developer
+profile automatically so local iteration can proceed before a commit.
 
 ## Usage
 

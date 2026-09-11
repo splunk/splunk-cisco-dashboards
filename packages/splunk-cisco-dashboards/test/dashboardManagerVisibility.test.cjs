@@ -27,7 +27,7 @@ const setupTuner = readSource(
   "src/main/webapp/pages/macro_index_tuning/index.tsx",
 );
 const commonStyles = readSource("src/main/webapp/common/styles/commonstyles.css");
-const userGuide = readSource("src/main/webapp/pages/user_guide/index.tsx");
+const userGuide = readSource("src/main/webapp/pages/user_guide/userGuide.md");
 const setupBootstrap = readSource(
   "src/main/resources/splunk/appserver/static/start_bootstrap.js",
 );

@@ -32,7 +32,7 @@ const searchbase = fs.readFileSync(
   "utf8",
 );
 const userGuide = fs.readFileSync(
-  path.join(packageRoot, "src/main/webapp/pages/user_guide/index.tsx"),
+  path.join(packageRoot, "src/main/webapp/pages/user_guide/userGuide.md"),
   "utf8",
 );
 const readme = fs.readFileSync(path.join(packageRoot, "README.md"), "utf8");
@@ -766,7 +766,7 @@ test("Intersight setup and diagnostics expose the model without hiding child cov
   assert.match(coverage, /No events match this model child/);
   assert.match(
     userGuide,
-    /folder: "Splunk_TA_Cisco_Intersight"[\s\S]*models: "Cisco_Intersight"/,
+    /Cisco Intersight Add-On[\s\S]*Splunk_TA_Cisco_Intersight[\s\S]*Cisco_Intersight/,
   );
 });
 

@@ -49,6 +49,8 @@
         <a href="dashboard_manager#/sn_agentic_ops_executive_assurance">Executive Assurance</a>
     </collection>
 
+    <view name="user_guide" label="User Guide" icon="organizernotebook"/>
+
     <collection label="More" icon="layout">
         <a href="dashboard_manager">Dashboard Manager</a>
         <divider />
@@ -86,9 +88,9 @@
             <a href="sn_topology_canvas">Topology Canvas</a>
         </collection>
 
-        <collection label="Help &amp; Resources">
+        <!-- <collection label="Help &amp; Resources">
             <a href="user_guide">User Guide</a>
-        </collection>
+        </collection> -->
 
         <collection label="Administration">
             <a href="dashboard_manager#/admin_asset_inventory">Asset Inventory</a>
