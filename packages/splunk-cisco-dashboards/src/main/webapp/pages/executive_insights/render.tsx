@@ -13,6 +13,5 @@ import "@/common/styles/tailwind.css";
 // Executive Briefing or Secure Networking profile inside Executive Insights;
 // Splunk Web supplies the shared #scan-root rendering boundary.
 mountPageRaw(ExecutiveInsightsPage, {
-  showCopyrightMark: false,
   allowColorSchemeChoice: true,
 });

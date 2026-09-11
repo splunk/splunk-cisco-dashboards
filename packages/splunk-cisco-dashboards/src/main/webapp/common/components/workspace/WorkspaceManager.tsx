@@ -23,6 +23,7 @@ import {
     type WorkspaceRegionalView,
     type WorkspaceSourceId,
 } from '@/common/config/insightsWorkspaces';
+import type { SignalTickerConfig } from '@/common/config/signalTicker';
 import {
     deleteInsightsWorkspace,
     saveInsightsWorkspace,
@@ -35,6 +36,7 @@ interface WorkspaceManagerProps {
     currentWorkspace: InsightsWorkspace;
     workspaces: readonly InsightsWorkspace[];
     layouts: Record<WorkspaceId, WorkspaceLayoutConfig>;
+    signalRails: Record<WorkspaceId, SignalTickerConfig>;
     onClose: () => void;
     onWorkspaceSaved: (workspaceId: WorkspaceId) => void;
     onWorkspaceDeleted: (workspaceId: WorkspaceId) => void;
@@ -54,6 +56,7 @@ interface WorkspaceDraft {
     regionalView: WorkspaceRegionalView;
     existingWorkspace?: InsightsWorkspace;
     layoutToCopy?: WorkspaceLayoutConfig;
+    signalRailToCopy?: SignalTickerConfig;
 }
 
 const slugifyWorkspaceId = (raw: string): string => {
@@ -104,6 +107,7 @@ const emptyDraft = (sourceWorkspace: WorkspaceSourceId): WorkspaceDraft => {
 const copyDraft = (
     workspace: InsightsWorkspace,
     layout?: WorkspaceLayoutConfig,
+    signalRail?: SignalTickerConfig,
 ): WorkspaceDraft => {
     const label = `${workspace.label} Copy`;
     return {
@@ -113,17 +117,26 @@ const copyDraft = (
         headerTitle: workspace.headerTitle ? `${workspace.headerTitle} Copy` : label,
         existingWorkspace: undefined,
         layoutToCopy: layout,
+        signalRailToCopy: signalRail,
         sortOrder: 100,
     };
 };
 
-const sourceLabel = (sourceWorkspace: WorkspaceSourceId): string =>
-    sourceWorkspace === 'secure_networking' ? 'Secure Networking' : 'Executive Briefing';
+const sourceLabel = (sourceWorkspace: WorkspaceSourceId): string => {
+    if (sourceWorkspace === 'secure_networking') return 'Secure Networking';
+    if (sourceWorkspace === 'agentic_soc') return 'Agentic Security Operations Center';
+    return 'Executive Briefing';
+};
 
-const sourceDescription = (sourceWorkspace: WorkspaceSourceId): string =>
-    sourceWorkspace === 'secure_networking'
-        ? 'Starts with access, infrastructure, segmentation, firewalling, and agentic operations.'
-        : 'Starts with IT operations, security operations, digital experience, and executive signals.';
+const sourceDescription = (sourceWorkspace: WorkspaceSourceId): string => {
+    if (sourceWorkspace === 'secure_networking') {
+        return 'Starts with access, infrastructure, segmentation, firewalling, and agentic operations.';
+    }
+    if (sourceWorkspace === 'agentic_soc') {
+        return 'Starts with live Umbrella DNS, Cisco Secure Firewall, Endace/Zeek network detection, and Splunk-led investigation.';
+    }
+    return 'Starts with IT operations, security operations, digital experience, and executive signals.';
+};
 
 const ManagerLayout = styled.div`
     display: grid;
@@ -221,6 +234,19 @@ const FullWidth = styled.div`
     grid-column: 1 / -1;
 `;
 
+const TemplateRadioList = styled(RadioList)`
+    && {
+        grid-template-columns: [input] 20px [label] minmax(0, 1fr);
+    }
+
+    && input[type='radio'] {
+        inline-size: 20px;
+        min-inline-size: 20px;
+        block-size: 20px;
+        min-block-size: 20px;
+    }
+`;
+
 const SectionFieldset = styled.fieldset`
     min-width: 0;
     margin: ${variables.spacingSmall} 0 0;
@@ -287,6 +313,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
     currentWorkspace,
     workspaces,
     layouts,
+    signalRails,
     onClose,
     onWorkspaceSaved,
     onWorkspaceDeleted,
@@ -364,7 +391,13 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
 
     const startCopy = () => {
         const selected = draft.existingWorkspace ?? currentWorkspace;
-        setDraft(copyDraft(selected, layouts[selected.id]));
+        setDraft(
+            copyDraft(
+                selected,
+                layouts[selected.id],
+                signalRails[selected.id],
+            ),
+        );
         setIdTouched(false);
         setErrorMessage('');
         setValidationAttempted(false);
@@ -372,11 +405,18 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
     };
 
     const updateLabel = (label: string) => {
-        setDraft((current) => ({
-            ...current,
-            label,
-            id: idTouched ? current.id : slugifyWorkspaceId(label),
-        }));
+        setDraft((current) => {
+            const clonedOrMirroredHeader =
+                !current.headerTitle.trim() ||
+                current.headerTitle.trim() === current.label.trim() ||
+                / copy$/i.test(current.headerTitle.trim());
+            return {
+                ...current,
+                label,
+                headerTitle: clonedOrMirroredHeader ? label : current.headerTitle,
+                id: idTouched ? current.id : slugifyWorkspaceId(label),
+            };
+        });
     };
 
     const updateSource = (sourceWorkspace: WorkspaceSourceId) => {
@@ -452,6 +492,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                 input,
                 draft.layoutToCopy,
                 draft.existingWorkspace,
+                draft.signalRailToCopy,
             );
             onWorkspaceSaved(draft.id);
         } catch (error) {
@@ -494,20 +535,20 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
     return (
         <>
             <Modal
-            divider="both"
-            initialFocus="first"
-            onRequestClose={onClose}
-            open={open}
-            returnFocus={returnFocus}
-            style={{
-                width: `min(1040px, calc(100vw - ${variables.spacingXXLarge}))`,
-            }}
+                divider="both"
+                initialFocus="first"
+                onRequestClose={onClose}
+                open={open}
+                returnFocus={returnFocus}
+                style={{
+                    width: `min(1040px, calc(100vw - ${variables.spacingXXLarge}))`,
+                }}
             >
                 <Modal.Header
                     subtitle="Reusable customer demo views"
                     title="Insights workspaces"
                 />
-                <Modal.Body>
+                <Modal.Body className="scd-insights-layer-content">
                     <ManagerLayout>
                         <WorkspaceNavigation aria-label="Available workspaces">
                             <WorkspaceMenu
@@ -570,6 +611,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                             <FieldsGrid>
                                 <ControlGroup
                                     label="Display name"
+                                    help="Shown in the workspace switcher. The dashboard header title is separate."
                                     required
                                     error={
                                         validationAttempted && missingDisplayName
@@ -639,7 +681,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                             label="Start from a template"
                                             help="Templates provide a useful first configuration. After creation, this workspace owns its sections, rail, map, theme, and layouts."
                                         >
-                                            <RadioList
+                                            <TemplateRadioList
                                                 value={draft.sourceWorkspace}
                                                 onChange={(_event, { value }) =>
                                                     updateSource(
@@ -676,7 +718,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                                         );
                                                     },
                                                 )}
-                                            </RadioList>
+                                            </TemplateRadioList>
                                         </ControlGroup>
                                     </FullWidth>
                                 )}
@@ -743,7 +785,10 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                                     </Checkbox>
                                 </ControlGroup>
                                 <FullWidth>
-                                    <ControlGroup label="Header title">
+                                    <ControlGroup
+                                        label="Header title"
+                                        help="Shown to every viewer in the workspace header."
+                                    >
                                         <Text
                                             value={draft.headerTitle}
                                             onChange={(_event, { value }) =>

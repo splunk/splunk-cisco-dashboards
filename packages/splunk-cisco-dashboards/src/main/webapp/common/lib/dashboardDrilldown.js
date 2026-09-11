@@ -1,10 +1,13 @@
 const DRILLDOWN_PATH = '/drilldown';
+const METRIC_INFO_PATH = '/metric-info';
 const DASHBOARD_DRILLDOWN_URL_LIMIT = 4096;
 const DASHBOARD_DRILLDOWN_TARGET_LIMIT = 24;
 const DASHBOARD_DRILLDOWN_TARGET_LENGTH_LIMIT = 256;
+export const DASHBOARD_DRILLDOWN_ACTION_TYPE = 'splunk.cisco_drilldown_action';
 const DASHBOARD_DRILLDOWN_VISUALIZATION_TYPES = new Set([
     'splunk.rectangle',
     'splunk.choropleth.svg',
+    'splunk.image',
 ]);
 const TIME_INPUT_TYPES = new Set(['input.timerange', 'input.simpleTimePicker']);
 
@@ -13,13 +16,10 @@ export const DEFAULT_DASHBOARD_DRILLDOWN_TIME_RANGE = {
     latest: 'now',
 };
 
-// Exact outlined paths from @splunk/react-icons/LayoutPanels, which is exposed
-// as PanelRightOpen by common/icons/SuiIcon and used by the home dashboard.
-export const DASHBOARD_DRILLDOWN_PANEL_ICON_SVG =
-    '<svg aria-label="Open details panel" role="img" data-icon="PanelRightOpen" height="32px" viewBox="0 0 24 24" width="32px" xmlns="http://www.w3.org/2000/svg" fill="#64748b"><path fill-rule="evenodd" clip-rule="evenodd" d="M19.5 4C20.3284 4 21 4.67157 21 5.5V9L3 9L3 5.5C3 4.67157 3.67157 4 4.5 4L19.5 4ZM19 6L5 6L5 7L19 7V6Z"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M3 11H14V20H4.5C3.67157 20 3 19.3284 3 18.5V11ZM5 13V18H12V13H5Z"></path><path fill-rule="evenodd" clip-rule="evenodd" d="M16 11H21V18.5C21 19.3284 20.3284 20 19.5 20H16V11ZM18 13V18H19V13H18Z"></path></svg>';
-export const DASHBOARD_DRILLDOWN_PANEL_ICON_DATA_URL = `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(
-    DASHBOARD_DRILLDOWN_PANEL_ICON_SVG,
-)}`;
+export const DASHBOARD_DRILLDOWN_ACCESSIBLE_TITLE = 'Investigate drivers';
+export const DASHBOARD_METRIC_INFO_ACCESSIBLE_TITLE = 'About this metric';
+export const DASHBOARD_ACTION_KIND_DRILLDOWN = 'drilldown';
+export const DASHBOARD_ACTION_KIND_METRIC_INFO = 'metric-info';
 
 const normalizeText = (value) => (typeof value === 'string' ? value.trim() : '');
 
@@ -47,12 +47,12 @@ const uniqueBoundedTargetIds = (target) => {
     return targetIds;
 };
 
-export const parseDashboardDrilldownUrl = (url) => {
+const parseDashboardActionUrl = (url, path) => {
     const normalizedUrl = normalizeText(url);
     if (
         !normalizedUrl ||
         normalizedUrl.length > DASHBOARD_DRILLDOWN_URL_LIMIT ||
-        !(normalizedUrl === DRILLDOWN_PATH || normalizedUrl.startsWith(`${DRILLDOWN_PATH}?`))
+        !(normalizedUrl === path || normalizedUrl.startsWith(`${path}?`))
     ) {
         return null;
     }
@@ -71,6 +71,12 @@ export const parseDashboardDrilldownUrl = (url) => {
     };
 };
 
+export const parseDashboardDrilldownUrl = (url) =>
+    parseDashboardActionUrl(url, DRILLDOWN_PATH);
+
+export const parseDashboardMetricInfoUrl = (url) =>
+    parseDashboardActionUrl(url, METRIC_INFO_PATH);
+
 export const buildDashboardDrilldownUrl = ({ origin, targetIds = [] }) => {
     const params = new URLSearchParams();
     const normalizedOrigin = normalizeText(origin);
@@ -86,11 +92,25 @@ export const buildDashboardDrilldownUrl = ({ origin, targetIds = [] }) => {
     return `${DRILLDOWN_PATH}?${params.toString()}`;
 };
 
+export const buildDashboardMetricInfoUrl = ({ origin, targetId }) => {
+    const params = new URLSearchParams();
+    const normalizedOrigin = normalizeText(origin);
+    const [normalizedTargetId] = uniqueBoundedTargetIds(targetId);
+
+    if (normalizedOrigin) {
+        params.set('origin', normalizedOrigin);
+    }
+    if (normalizedTargetId) {
+        params.set('target', normalizedTargetId);
+    }
+
+    return `${METRIC_INFO_PATH}?${params.toString()}`;
+};
+
 export const createDashboardDrilldownIconVisualization = ({ origin, targetIds }) => ({
-    type: 'splunk.image',
+    type: DASHBOARD_DRILLDOWN_ACTION_TYPE,
     options: {
-        preserveAspectRatio: true,
-        src: DASHBOARD_DRILLDOWN_PANEL_ICON_DATA_URL,
+        label: DASHBOARD_DRILLDOWN_ACCESSIBLE_TITLE,
     },
     eventHandlers: [
         {
@@ -102,11 +122,33 @@ export const createDashboardDrilldownIconVisualization = ({ origin, targetIds })
     ],
 });
 
-const getInternalDrilldown = (visualization) =>
-    (visualization?.eventHandlers || [])
+export const createDashboardMetricInfoIconVisualization = ({ origin, targetId }) => ({
+    type: DASHBOARD_DRILLDOWN_ACTION_TYPE,
+    options: {
+        action: DASHBOARD_ACTION_KIND_METRIC_INFO,
+        label: DASHBOARD_METRIC_INFO_ACCESSIBLE_TITLE,
+    },
+    eventHandlers: [
+        {
+            type: 'drilldown.customUrl',
+            options: {
+                url: buildDashboardMetricInfoUrl({ origin, targetId }),
+            },
+        },
+    ],
+});
+
+const getInternalDashboardAction = (visualization) => {
+    const urls = (visualization?.eventHandlers || [])
         .filter((handler) => handler?.type === 'drilldown.customUrl')
-        .map((handler) => parseDashboardDrilldownUrl(handler?.options?.url))
-        .find(Boolean);
+        .map((handler) => handler?.options?.url);
+    const metricInfo = urls.map(parseDashboardMetricInfoUrl).find(Boolean);
+    if (metricInfo) {
+        return { ...metricInfo, action: DASHBOARD_ACTION_KIND_METRIC_INFO };
+    }
+    const drilldown = urls.map(parseDashboardDrilldownUrl).find(Boolean);
+    return drilldown ? { ...drilldown, action: DASHBOARD_ACTION_KIND_DRILLDOWN } : null;
+};
 
 export const normalizeDashboardDrilldownIcons = (definition) => {
     if (!definition || typeof definition !== 'object') {
@@ -116,9 +158,10 @@ export const normalizeDashboardDrilldownIcons = (definition) => {
     let changed = false;
     const visualizations = Object.fromEntries(
         Object.entries(definition.visualizations || {}).map(([visualizationId, visualization]) => {
+            const dashboardAction = getInternalDashboardAction(visualization);
             if (
                 !DASHBOARD_DRILLDOWN_VISUALIZATION_TYPES.has(visualization?.type) ||
-                !getInternalDrilldown(visualization)
+                !dashboardAction
             ) {
                 return [visualizationId, visualization];
             }
@@ -129,10 +172,13 @@ export const normalizeDashboardDrilldownIcons = (definition) => {
                 visualizationId,
                 {
                     ...visualization,
-                    type: 'splunk.image',
+                    type: DASHBOARD_DRILLDOWN_ACTION_TYPE,
                     options: {
-                        preserveAspectRatio: true,
-                        src: DASHBOARD_DRILLDOWN_PANEL_ICON_DATA_URL,
+                        action: dashboardAction.action,
+                        label:
+                            dashboardAction.action === DASHBOARD_ACTION_KIND_METRIC_INFO
+                                ? DASHBOARD_METRIC_INFO_ACCESSIBLE_TITLE
+                                : DASHBOARD_DRILLDOWN_ACCESSIBLE_TITLE,
                     },
                 },
             ];
@@ -241,9 +287,84 @@ const parseVisualizationOptions = (value) => {
     }
 };
 
+const buildDrilldownLayout = ({ width = 1120, height }) => {
+    const canvasWidth = Number.isFinite(width) && width > 0 ? Math.floor(width) : 1120;
+    const canvasHeight = Number.isFinite(height) && height > 0 ? Math.floor(height) : 420;
+
+    return {
+        type: 'absolute',
+        options: {
+            width: canvasWidth,
+            height: canvasHeight,
+            display: 'actual-size',
+            showTitleAndDescription: false,
+        },
+        structure: [
+            {
+                item: 'viz_drilldown_result',
+                type: 'block',
+                position: {
+                    x: 0,
+                    y: 0,
+                    w: canvasWidth,
+                    h: canvasHeight,
+                },
+            },
+        ],
+    };
+};
+
+export const buildWorkspaceDrilldownDefinition = (
+    target,
+    timeRange = DEFAULT_DASHBOARD_DRILLDOWN_TIME_RANGE,
+    layoutDimensions = {},
+) => {
+    const searchName = normalizeText(target?.searchName) || 'Search details';
+    const visualizationType = safeVisualizationType(target?.defaultViz);
+    const visualizationOptions = parseVisualizationOptions(target?.vizOptions);
+    const dispatchContext = normalizeText(target?.dispatchContext);
+
+    return {
+        title: searchName,
+        description: '',
+        visualizations: {
+            viz_drilldown_result: {
+                type: visualizationType,
+                title: searchName,
+                options:
+                    visualizationType === 'splunk.table'
+                        ? {
+                              count: 50,
+                              showInternalFields: false,
+                              ...visualizationOptions,
+                          }
+                        : visualizationOptions,
+                dataSources: {
+                    primary: 'ds_drilldown_target',
+                },
+            },
+        },
+        dataSources: {
+            ds_drilldown_target: {
+                type: 'ds.search',
+                name: searchName,
+                options: {
+                    query: normalizeText(target?.search),
+                    queryParameters: parseDashboardDrilldownTimeRange(timeRange),
+                    ...(dispatchContext ? { app: dispatchContext } : {}),
+                },
+            },
+        },
+        defaults: {},
+        inputs: {},
+        layout: buildDrilldownLayout({ height: 420, ...layoutDimensions }),
+    };
+};
+
 export const buildDashboardDrilldownDefinition = (
     entry,
     timeRange = DEFAULT_DASHBOARD_DRILLDOWN_TIME_RANGE,
+    layoutDimensions = {},
 ) => {
     const stanzaId = normalizeText(entry?.name);
     const searchName = normalizeText(entry?.content?.search_name) || stanzaId || 'Search details';
@@ -283,26 +404,6 @@ export const buildDashboardDrilldownDefinition = (
         },
         defaults: {},
         inputs: {},
-        layout: {
-            type: 'absolute',
-            options: {
-                width: 1120,
-                height: 520,
-                display: 'fit-to-width',
-                showTitleAndDescription: false,
-            },
-            structure: [
-                {
-                    item: 'viz_drilldown_result',
-                    type: 'block',
-                    position: {
-                        x: 0,
-                        y: 0,
-                        w: 1120,
-                        h: 520,
-                    },
-                },
-            ],
-        },
+        layout: buildDrilldownLayout({ height: 520, ...layoutDimensions }),
     };
 };

@@ -1,158 +1,248 @@
-import React, { createContext, useContext } from 'react';
-import Button from '@splunk/react-ui/Button';
-import Dropdown from '@splunk/react-ui/Dropdown';
-import Menu from '@splunk/react-ui/Menu';
+import React, { createContext, useContext } from "react";
+import Button from "@splunk/react-ui/Button";
+import Dropdown from "@splunk/react-ui/Dropdown";
+import Menu from "@splunk/react-ui/Menu";
 import {
-    ExternalLink,
-    Maximize2,
-    MoreVertical,
-    PanelRightOpen,
-    Settings2,
-    EyeOff,
-    Trash2,
-} from '@/common/icons/SuiIcon';
+  Database,
+  ExternalLink,
+  Maximize2,
+  MoreVertical,
+  PanelRightOpen,
+  Settings2,
+  EyeOff,
+  Trash2,
+} from "@/common/icons/SuiIcon";
+import { splunkSearchbaseEditUrl } from "@/common/lib/splunkSearchUrl";
 
 export interface TileRemovalAction {
-    kind: 'hide' | 'remove';
-    label: string;
-    onClick: () => void;
+  kind: "hide" | "remove";
+  label: string;
+  onClick: () => void;
 }
 
-export const TileRemovalActionContext = createContext<TileRemovalAction | null>(null);
+export const TileRemovalActionContext = createContext<TileRemovalAction | null>(
+  null,
+);
 
 interface TileActionEnvironment {
-    announce: (message: string) => void;
-    returnFocus: () => void;
+  announce: (message: string) => void;
+  returnFocus: () => void;
 }
 
-export const TileActionEnvironmentContext = createContext<TileActionEnvironment | null>(null);
+export const TileActionEnvironmentContext =
+  createContext<TileActionEnvironment | null>(null);
 
 interface TileActionMenuProps {
-    label: string;
-    onOpenInSearch?: () => void;
-    onOpenDetailTable?: () => void;
-    detailTableTitle?: string;
-    onExpand?: () => void;
-    onConfigure?: (returnFocus?: HTMLElement | null) => void;
-    isCustomized?: boolean;
+  label: string;
+  /** Native link target for reliable popup-safe Search drilldowns. */
+  openInSearchHref?: string;
+  onOpenInSearch?: () => void;
+  searchbaseId?: string;
+  onExpand?: (returnFocus?: HTMLElement | null) => void;
+  onConfigure?: (returnFocus?: HTMLElement | null) => void;
+  isCustomized?: boolean;
+}
+
+interface TileDrilldownButtonProps {
+  label: string;
+  onOpenDetailTable?: () => void;
+  detailTableTitle?: string;
 }
 
 const ActionIcon: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <span aria-hidden="true" className="inline-flex h-4 w-4 items-center justify-center">
-        {children}
-    </span>
+  <span
+    aria-hidden="true"
+    className="inline-flex h-4 w-4 items-center justify-center"
+  >
+    {children}
+  </span>
 );
 
-export const TileActionMenu: React.FC<TileActionMenuProps> = ({
-    label,
-    onOpenInSearch,
-    onOpenDetailTable,
-    detailTableTitle,
-    onExpand,
-    onConfigure,
-    isCustomized = false,
+export const TileDrilldownButton: React.FC<TileDrilldownButtonProps> = ({
+  label,
+  onOpenDetailTable,
+  detailTableTitle,
 }) => {
-    const toggleRef = React.useRef<HTMLAnchorElement | HTMLButtonElement>(null);
-    const removalAction = useContext(TileRemovalActionContext);
-    const actionEnvironment = useContext(TileActionEnvironmentContext);
-    if (!onOpenInSearch && !onOpenDetailTable && !onExpand && !onConfigure && !removalAction) {
-        return null;
-    }
+  if (!onOpenDetailTable) {
+    return null;
+  }
 
-    const openInSearch = () => {
-        onOpenInSearch?.();
-        window.requestAnimationFrame(() => toggleRef.current?.focus());
-    };
+  return (
+    <Button
+      appearance="subtle"
+      data-tile-control="true"
+      hideLabel
+      icon={<PanelRightOpen aria-hidden="true" />}
+      label={detailTableTitle?.trim() || `View ${label} details`}
+      onClick={onOpenDetailTable}
+    />
+  );
+};
 
-    const configure = () => onConfigure?.(toggleRef.current);
+export const TileActionMenu: React.FC<TileActionMenuProps> = ({
+  label,
+  openInSearchHref,
+  onOpenInSearch,
+  searchbaseId,
+  onExpand,
+  onConfigure,
+  isCustomized = false,
+}) => {
+  const toggleRef = React.useRef<HTMLAnchorElement | HTMLButtonElement>(null);
+  const removalAction = useContext(TileRemovalActionContext);
+  const actionEnvironment = useContext(TileActionEnvironmentContext);
+  if (
+    !openInSearchHref &&
+    !onOpenInSearch &&
+    !searchbaseId &&
+    !onExpand &&
+    !onConfigure &&
+    !removalAction
+  ) {
+    return null;
+  }
 
-    const removeOrHide = () => {
-        if (!removalAction) return;
-        removalAction.onClick();
-        actionEnvironment?.announce(`${removalAction.label}.`);
-        window.requestAnimationFrame(() => actionEnvironment?.returnFocus());
-    };
+  const openInSearch = () => {
+    onOpenInSearch?.();
+    window.requestAnimationFrame(() => toggleRef.current?.focus());
+  };
 
-    return (
-        <Dropdown
-            focusToggleReasons={["escapeKey", "tabKey", "toggleClick"]}
-            toggle={
-                <Button
-                    appearance="subtle"
-                    data-tile-control="true"
-                    elementRef={toggleRef}
-                    hideLabel
-                    icon={<MoreVertical aria-hidden="true" />}
-                    label={`Actions for ${label}`}
-                />
-            }
-        >
-            <Menu>
-                <Menu.Heading title>Tile actions</Menu.Heading>
-                {onOpenInSearch && (
-                    <Menu.Item
-                        description="Opens new window"
-                        onClick={openInSearch}
-                        startAdornment={
-                            <ActionIcon>
-                                <ExternalLink />
-                            </ActionIcon>
-                        }
-                    >
-                        Open in Search
-                    </Menu.Item>
-                )}
-                {onOpenDetailTable && (
-                    <Menu.Item
-                        description={detailTableTitle}
-                        onClick={onOpenDetailTable}
-                        startAdornment={
-                            <ActionIcon>
-                                <PanelRightOpen />
-                            </ActionIcon>
-                        }
-                    >
-                        Open details
-                    </Menu.Item>
-                )}
-                {onExpand && (
-                    <Menu.Item
-                        onClick={onExpand}
-                        startAdornment={
-                            <ActionIcon>
-                                <Maximize2 />
-                            </ActionIcon>
-                        }
-                    >
-                        Expand visualization
-                    </Menu.Item>
-                )}
-                {onConfigure && (
-                    <Menu.Item
-                        description={isCustomized ? "Customized" : undefined}
-                        onClick={configure}
-                        startAdornment={
-                            <ActionIcon>
-                                <Settings2 />
-                            </ActionIcon>
-                        }
-                    >
-                        Configure tile
-                    </Menu.Item>
-                )}
-                {removalAction && (
-                    <Menu.Item
-                        onClick={removeOrHide}
-                        startAdornment={
-                            <ActionIcon>
-                                {removalAction.kind === 'hide' ? <EyeOff /> : <Trash2 />}
-                            </ActionIcon>
-                        }
-                    >
-                        {removalAction.label}
-                    </Menu.Item>
-                )}
-            </Menu>
-        </Dropdown>
+  const openInSearchbase = () => {
+    if (!searchbaseId) return;
+    window.open(
+      splunkSearchbaseEditUrl(searchbaseId),
+      "_blank",
+      "noopener,noreferrer",
     );
+    window.requestAnimationFrame(() => toggleRef.current?.focus());
+  };
+
+  const configure = () => onConfigure?.(toggleRef.current);
+  const expand = () => onExpand?.(toggleRef.current);
+
+  const removeOrHide = () => {
+    if (!removalAction) return;
+    removalAction.onClick();
+    actionEnvironment?.announce(`${removalAction.label}.`);
+    window.requestAnimationFrame(() => actionEnvironment?.returnFocus());
+  };
+
+  return (
+    <>
+      {openInSearchHref ? (
+        <Button
+          appearance="subtle"
+          data-tile-control="true"
+          hideLabel
+          icon={<ExternalLink aria-hidden="true" />}
+          label={`Open ${label} in Search`}
+          rel="noopener noreferrer"
+          target="_blank"
+          to={openInSearchHref}
+        />
+      ) : onOpenInSearch ? (
+        <Button
+          appearance="subtle"
+          data-tile-control="true"
+          hideLabel
+          icon={<ExternalLink aria-hidden="true" />}
+          label={`Open ${label} in Search`}
+          onClick={onOpenInSearch}
+        />
+      ) : null}
+      <Dropdown
+        focusToggleReasons={["escapeKey", "tabKey", "toggleClick"]}
+        toggle={
+          <Button
+            appearance="subtle"
+            data-tile-control="true"
+            elementRef={toggleRef}
+            hideLabel
+            icon={<MoreVertical aria-hidden="true" />}
+            label={`Actions for ${label}`}
+          />
+        }
+      >
+        <Menu>
+          <Menu.Heading title>Tile actions</Menu.Heading>
+          {openInSearchHref ? (
+            <Menu.Item
+              description="Opens new window"
+              openInNewContext
+              startAdornment={
+                <ActionIcon>
+                  <ExternalLink />
+                </ActionIcon>
+              }
+              to={openInSearchHref}
+            >
+              Open in Search
+            </Menu.Item>
+          ) : onOpenInSearch ? (
+            <Menu.Item
+              description="Opens new window"
+              onClick={openInSearch}
+              startAdornment={
+                <ActionIcon>
+                  <ExternalLink />
+                </ActionIcon>
+              }
+            >
+              Open in Search
+            </Menu.Item>
+          ) : null}
+          {searchbaseId && (
+            <Menu.Item
+              description="Opens new window"
+              onClick={openInSearchbase}
+              startAdornment={
+                <ActionIcon>
+                  <Database />
+                </ActionIcon>
+              }
+            >
+              Open in Searchbase
+            </Menu.Item>
+          )}
+          {onExpand && (
+            <Menu.Item
+              onClick={expand}
+              startAdornment={
+                <ActionIcon>
+                  <Maximize2 />
+                </ActionIcon>
+              }
+            >
+              Expand visualization
+            </Menu.Item>
+          )}
+          {onConfigure && (
+            <Menu.Item
+              description={isCustomized ? "Customized" : undefined}
+              onClick={configure}
+              startAdornment={
+                <ActionIcon>
+                  <Settings2 />
+                </ActionIcon>
+              }
+            >
+              Configure tile
+            </Menu.Item>
+          )}
+          {removalAction && (
+            <Menu.Item
+              onClick={removeOrHide}
+              startAdornment={
+                <ActionIcon>
+                  {removalAction.kind === "hide" ? <EyeOff /> : <Trash2 />}
+                </ActionIcon>
+              }
+            >
+              {removalAction.label}
+            </Menu.Item>
+          )}
+        </Menu>
+      </Dropdown>
+    </>
+  );
 };

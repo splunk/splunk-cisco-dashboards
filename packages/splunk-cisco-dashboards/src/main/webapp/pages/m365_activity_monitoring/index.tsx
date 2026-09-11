@@ -47,6 +47,7 @@ import {
 import { cn } from '@/common/lib/utils';
 import ThemeAwareSearch from '@/common/components/ThemeAwareSearch';
 import { C3_VISUALIZATION_COLORS } from '@/common/theme/c3VisualizationPalette';
+import { APP_VERSION_LABEL } from '@/common/lib/buildInfo';
 import {
     authTrend,
     clientActivity,
@@ -57,7 +58,6 @@ import {
     topClientIps,
     topOperations,
     topUsers,
-    versionInfo,
     workloadDistribution,
     type MetricData,
     type MetricTone,
@@ -65,6 +65,12 @@ import {
 } from './data';
 
 const VIEW_NAME = 'workplace_m365_activity_monitoring';
+const VERSION_INFO = [
+    { label: 'App package', value: APP_VERSION_LABEL },
+    { label: 'Data mode', value: 'Bundled sample dataset' },
+    { label: 'Owner', value: 'Splunk Field Solutions Team' },
+    { label: 'Compatibility', value: 'Splunk Enterprise and Splunk Cloud' },
+];
 
 type IconComponent = React.ComponentType<{ className?: string }>;
 
@@ -279,7 +285,7 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload, label })
 const AppHeader: React.FC = () => (
     <header className="flex min-h-[72px] items-center justify-between border-b sui-border-weak sui-bg-section px-6 backdrop-blur">
         <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md border sui-border-info sui-bg-accent sui-color-info">
+            <div className="flex h-9 w-9 items-center justify-center rounded-md border sui-border-info sui-bg-notification-info sui-color-active">
                 <Activity className="h-5 w-5" />
             </div>
             <div>
@@ -293,8 +299,8 @@ const AppHeader: React.FC = () => (
         </div>
         <div className="flex items-center gap-4 sui-color-default">
             <div className="inline-flex items-center gap-2 text-sm font-semibold">
-                <span className="h-2 w-2 animate-pulse rounded-full sui-bg-status-positive sui-shadow-overlay" />
-                Live Data
+                <span className="h-2 w-2 rounded-full sui-bg-status-info sui-shadow-overlay" />
+                Bundled sample data
             </div>
             <div className="h-6 w-px sui-bg-popup" />
             {[
@@ -626,7 +632,7 @@ const About: React.FC = () => (
         <Panel className="sui-border-info bg-gradient-to-br sui-gradient-from-section sui-gradient-via-section sui-gradient-to-info">
             <div className="space-y-8 p-8">
                 <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg border sui-border-info sui-bg-accent sui-color-info">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg border sui-border-info sui-bg-notification-info sui-color-active">
                         <Shield className="h-7 w-7" />
                     </div>
                     <div>
@@ -639,11 +645,10 @@ const About: React.FC = () => (
                     </div>
                 </div>
                 <p className="max-w-3xl text-lg leading-8 sui-color-default">
-                    This dashboard provides a comprehensive, modern view of Microsoft
-                    365 activity. It is designed to feel like a highly polished Splunk
-                    Dashboard Studio experience while using standard dashboard building
-                    blocks: single values, bar charts, area charts, line charts, and
-                    pie charts.
+                    This dashboard is a visual preview backed by a bundled sample
+                    dataset, not a live Microsoft 365 search. It demonstrates standard
+                    dashboard building blocks: single values, bar charts, area charts,
+                    line charts, and pie charts.
                 </p>
                 <div className="grid gap-6 md:grid-cols-2">
                     <InfoCard icon={Database} title="Data Sources">
@@ -672,7 +677,7 @@ const About: React.FC = () => (
                         Version Information
                     </h3>
                     <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                        {versionInfo.map((item) => (
+                        {VERSION_INFO.map((item) => (
                             <div key={item.label}>
                                 <div className="text-sm font-semibold sui-color-muted">
                                     {item.label}

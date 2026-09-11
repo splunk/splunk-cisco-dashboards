@@ -38,9 +38,8 @@ import Toaster, {
 import { TOAST_TYPES } from "@splunk/react-toast-notifications/ToastConstants";
 import ToastMessages from "@splunk/react-toast-notifications/ToastMessages";
 import TextArea from "@splunk/react-ui/TextArea";
+import Select from "@splunk/react-ui/Select";
 import Tooltip from "@splunk/react-ui/Tooltip";
-import CollapsiblePanel from "@splunk/react-ui/CollapsiblePanel";
-import Checkbox from "@splunk/react-ui/Checkbox";
 import CustomTooltip from "../../common/components/CustomTooltip/CustomTooltip";
 import ManagerPreviewModal from "../../common/components/ManagerPreviewModal";
 import { actionMenus } from "../../common/udf/presets";
@@ -56,7 +55,13 @@ import Plus from "@splunk/react-icons/Plus";
 import ArrowSquareTopRight from "@splunk/react-icons/ArrowSquareTopRight";
 import Magnifier from "@splunk/react-icons/Magnifier";
 import { initialDefinition } from "./DashboardStudioEditor";
+import DrilldownActionViz from "./DrilldownActionViz";
 import { INSIGHTS_APP_ID } from "../../common/lib/constants";
+import {
+  DASHBOARD_MANAGER_TAG,
+  getDashboardManagerScope,
+  getDashboardNamespaceApp,
+} from "../../common/config/managedStudioViews";
 
 const featureFlags = {
   enableCollapsibleToolbar: true,
@@ -81,26 +86,17 @@ export const customPresets = {
     "splunk.template_kpi": VizKpi,
     "splunk.template_other": VizOther,
     "splunk.cisco_spaces_space_manager": SpaceManagerViz,
+    "splunk.cisco_drilldown_action": DrilldownActionViz,
   },
 };
 
 const DASHBOARD_PAGE_SIZE = 20;
 const DASHBOARD_CARD_TITLE_LIMIT = 35;
 const DASHBOARD_CARD_DESCRIPTION_LIMIT = 140;
-const MANAGER_SUBTITLE_LIMIT = 140;
 const DASHBOARD_SCOPE_OPTIONS = [
-  { id: "all", label: "All" },
+  { id: "included", label: "Included" },
   { id: "yours", label: "Yours" },
-  { id: "app", label: "This App's" },
 ];
-
-const truncateManagerSubtitle = (subtitle) => {
-  if (!subtitle || subtitle.length <= MANAGER_SUBTITLE_LIMIT) {
-    return subtitle;
-  }
-
-  return `${subtitle.slice(0, MANAGER_SUBTITLE_LIMIT - 3).trimEnd()}...`;
-};
 
 const truncateDashboardTitle = (title) => {
   const normalizedTitle = title || "";
@@ -122,11 +118,6 @@ const truncateDashboardDescription = (description) => {
   return `${normalizedDescription.slice(0, DASHBOARD_CARD_DESCRIPTION_LIMIT).trimEnd()}...`;
 };
 
-const normalizeDashboardFilterValue = (value) =>
-  String(value || "")
-    .trim()
-    .toLowerCase();
-
 const buildDashboardSearchText = (dashboard) =>
   [
     dashboard.title,
@@ -141,35 +132,6 @@ const buildDashboardSearchText = (dashboard) =>
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
-
-const isTruthyFavoriteValue = (value) =>
-  value === true ||
-  value === 1 ||
-  ["1", "true", "yes", "favorite", "favourite"].includes(
-    normalizeDashboardFilterValue(value),
-  );
-
-const getDashboardAppFromServiceUri = (uri) => {
-  if (!uri || typeof uri !== "string") {
-    return "";
-  }
-
-  try {
-    const pathname = /^https?:\/\//i.test(uri) ? new URL(uri).pathname : uri;
-    const match = pathname.match(/\/servicesNS\/[^/]+\/([^/]+)\//);
-    return match?.[1] ? decodeURIComponent(match[1]) : "";
-  } catch (error) {
-    return "";
-  }
-};
-
-const getDashboardNamespaceApp = (entry) =>
-  entry?.acl?.app ||
-  entry?.content?.["eai:acl.app"] ||
-  getDashboardAppFromServiceUri(entry?.id) ||
-  getDashboardAppFromServiceUri(entry?.links?.alternate) ||
-  entry?.content?.["eai:appName"] ||
-  "";
 
 const getBootstrapSplunkUsername = () => {
   if (typeof window === "undefined") {
@@ -245,8 +207,7 @@ export default function DBHomePage() {
     "--dashboard-builder-modal-background": splunkTheme.backgroundColorPopup,
     "--dashboard-builder-modal-background-section":
       splunkTheme.backgroundColorSection,
-    "--dashboard-builder-modal-content-active":
-      splunkTheme.contentColorActive,
+    "--dashboard-builder-modal-content-active": splunkTheme.contentColorActive,
     "--dashboard-builder-modal-content-default":
       splunkTheme.contentColorDefault,
     "--dashboard-builder-modal-content-muted": splunkTheme.contentColorMuted,
@@ -266,13 +227,12 @@ export default function DBHomePage() {
   const [openCreateDashboard, setOpenCreateDashboard] = useState(false);
   const [dashboardTitle, setDashboardTitle] = useState("");
   const [dashboardDescription, setDashboardDescription] = useState("");
+  const [dashboardSharing, setDashboardSharing] = useState("app");
   const [gridLayout, setGridLayout] = useState("absolute");
   const [openDeleteDashboard, setOpenDeleteDashboard] = useState(false);
   const [DashboardToDelete, setDashboardToDelete] = useState();
   const [pageNum, setPageNum] = useState(1);
-  const [dashboardScope, setDashboardScope] = useState("all");
-  const [showOnlyFavoriteDashboards, setShowOnlyFavoriteDashboards] =
-    useState(false);
+  const [dashboardScope, setDashboardScope] = useState("yours");
   const [dashboardLibraryView, setDashboardLibraryView] = useState("cards");
   const [openDashboardMetadataEditor, setOpenDashboardMetadataEditor] =
     useState(false);
@@ -287,7 +247,7 @@ export default function DBHomePage() {
   );
 
   const dashboardManagerSubtitle =
-    "Turn predefined Cisco KPIs into actionable insights in seconds using the custom dashboard manager.";
+    "Dashboards in 60 Seconds combines Searchbase and Dashboard Studio so you can build Cisco dashboards from reusable searches and components without writing SPL or code. Dashboard Manager also adds guided drilldown wiring that is not available in Dashboard Studio alone.";
   const dashboardManagerIconSrc = useMemo(
     () => buildAppStaticAssetUrl("appIcon.png", currentSplunkUser),
     [currentSplunkUser],
@@ -295,7 +255,7 @@ export default function DBHomePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    document.title = "SASN | Dashboard Manager";
+    document.title = "SSNE | Dashboard Manager";
   }, []);
 
   useEffect(() => {
@@ -342,32 +302,22 @@ export default function DBHomePage() {
     setPageNum(page);
   };
 
+  const managerDashboards = useMemo(
+    () =>
+      dashboards
+        .filter((ds) => !ds.template)
+        .filter((ds) => getDashboardManagerScope(ds, currentSplunkUser)),
+    [currentSplunkUser, dashboards],
+  );
+
   const filteredDashboards = useMemo(() => {
     const normalizedSearchText = searchText.trim().toLowerCase();
-    const normalizedCurrentUser =
-      normalizeDashboardFilterValue(currentSplunkUser);
-    const normalizedAppId = normalizeDashboardFilterValue(INSIGHTS_APP_ID);
 
-    return dashboards
-      .filter((ds) => !ds.template)
-      .filter((ds) => {
-        if (dashboardScope === "app") {
-          return normalizeDashboardFilterValue(ds.app) === normalizedAppId;
-        }
-
-        if (dashboardScope === "yours") {
-          if (!normalizedCurrentUser) {
-            return true;
-          }
-
-          return [ds.owner, ds.author]
-            .map(normalizeDashboardFilterValue)
-            .some((owner) => owner === normalizedCurrentUser);
-        }
-
-        return true;
-      })
-      .filter((ds) => !showOnlyFavoriteDashboards || ds.isFavorite)
+    return managerDashboards
+      .filter(
+        (ds) =>
+          getDashboardManagerScope(ds, currentSplunkUser) === dashboardScope,
+      )
       .filter(
         (ds) =>
           normalizedSearchText === "" ||
@@ -375,10 +325,9 @@ export default function DBHomePage() {
       );
   }, [
     currentSplunkUser,
-    dashboards,
     dashboardScope,
+    managerDashboards,
     searchText,
-    showOnlyFavoriteDashboards,
   ]);
 
   const totalDashboardPages = Math.max(
@@ -413,17 +362,22 @@ export default function DBHomePage() {
       JSON.stringify(jsonDefinition),
       dashboardTitle,
       dashboardDescription,
-      "",
+      DASHBOARD_MANAGER_TAG,
       "dark",
       currentSplunkUser,
+      dashboardSharing,
     ).then((response) => {
       if (response.status >= 200 && response.status <= 299) {
         console.log(response);
         syncDashboardManagerNavigation([
-          ...dashboards,
+          ...managerDashboards,
           {
             title: dashid,
             label: dashboardTitle,
+            app: INSIGHTS_APP_ID,
+            owner: currentSplunkUser,
+            sharing: "user",
+            tag: DASHBOARD_MANAGER_TAG,
             definition: {
               title: dashboardTitle,
             },
@@ -476,13 +430,7 @@ export default function DBHomePage() {
               const author = r.content["eai:userName"];
               const owner = r.acl?.owner || author;
               const sharing = r.acl?.sharing || "app";
-              const isFavorite = [
-                r.content.isFavorite,
-                r.content.is_favorite,
-                r.content.favorite,
-                r.content["eai:favorite"],
-              ].some(isTruthyFavoriteValue);
-
+              const tag = jObj.dashboard.tag || r.content.tag || "";
               return {
                 data: r.content["eai:data"],
                 definition: data,
@@ -491,12 +439,12 @@ export default function DBHomePage() {
                 contentApp,
                 owner,
                 sharing,
+                tag,
                 deleteLink: r.links?.remove || r.links?.edit,
                 title: r.name,
                 label: r.content["label"],
                 description,
                 theme: normalizeDashboardTheme(jObj.dashboard.theme),
-                isFavorite,
                 searchText: buildDashboardSearchText({
                   title: r.name,
                   label: r.content["label"],
@@ -516,9 +464,6 @@ export default function DBHomePage() {
           .filter((c) => c != undefined);
 
         setDashboards(insightDash);
-        syncDashboardManagerNavigation(insightDash).catch((error) => {
-          console.warn("Unable to sync Dashboard Manager navigation.", error);
-        });
       } else {
       }
     });
@@ -527,6 +472,16 @@ export default function DBHomePage() {
   useEffect(() => {
     refreshDashboards();
   }, []);
+
+  useEffect(() => {
+    if (dashboards.length === 0) {
+      return;
+    }
+
+    syncDashboardManagerNavigation(managerDashboards).catch((error) => {
+      console.warn("Unable to sync Dashboard Manager navigation.", error);
+    });
+  }, [dashboards.length, managerDashboards]);
 
   const handleRequestClosePreview = () => {
     setPreviewOpen(false);
@@ -537,6 +492,7 @@ export default function DBHomePage() {
     setOpenCreateDashboard(false);
     setDashboardTitle("");
     setDashboardDescription("");
+    setDashboardSharing("app");
     setGridLayout("absolute");
   };
 
@@ -549,12 +505,39 @@ export default function DBHomePage() {
   const handleDashboardScopeKeyDown = (scope) => (event) => {
     if (event.key === "Enter" || event.key === " ") {
       handleDashboardScopeChange(scope)(event);
+      return;
     }
-  };
 
-  const handleFavoriteDashboardFilterChange = (event, { checked }) => {
-    setShowOnlyFavoriteDashboards(checked);
+    const currentIndex = DASHBOARD_SCOPE_OPTIONS.findIndex(
+      (option) => option.id === scope,
+    );
+    const isPreviousKey = event.key === "ArrowLeft" || event.key === "ArrowUp";
+    const isNextKey = event.key === "ArrowRight" || event.key === "ArrowDown";
+
+    if (
+      !isPreviousKey &&
+      !isNextKey &&
+      event.key !== "Home" &&
+      event.key !== "End"
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    let nextIndex;
+    if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = DASHBOARD_SCOPE_OPTIONS.length - 1;
+    } else {
+      nextIndex =
+        (currentIndex + (isPreviousKey ? -1 : 1) +
+          DASHBOARD_SCOPE_OPTIONS.length) % DASHBOARD_SCOPE_OPTIONS.length;
+    }
+    const nextScope = DASHBOARD_SCOPE_OPTIONS[nextIndex].id;
+    setDashboardScope(nextScope);
     setPageNum(1);
+    document.getElementById(`dashboard-manager-scope-${nextScope}`)?.focus();
   };
 
   const stopDashboardPanelAction = (event) => {
@@ -565,14 +548,6 @@ export default function DBHomePage() {
   const handleDashboardLibraryViewChange = (viewMode) => (event) => {
     stopDashboardPanelAction(event);
     setDashboardLibraryView(viewMode);
-  };
-
-  const handleDashboardLibraryViewKeyDown = (viewMode) => (event) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      stopDashboardPanelAction(event);
-      setDashboardLibraryView(viewMode);
-    }
   };
 
   const handlePreviewDashboard = (dash) => {
@@ -638,9 +613,10 @@ export default function DBHomePage() {
       dashboardMetadataTarget.definition,
       dashboardMetadataTitle.trim(),
       dashboardMetadataDescription.trim(),
-      "",
+      dashboardMetadataTarget.tag || DASHBOARD_MANAGER_TAG,
       dashboardMetadataTarget.theme,
       dashboardMetadataTarget.owner,
+      dashboardMetadataTarget.sharing,
     ).then((response) => {
       if (response.status >= 200 && response.status <= 299) {
         makeCreateToast(Toaster)({
@@ -799,6 +775,18 @@ export default function DBHomePage() {
                 ></TextArea>
               </SplunkControlGroup>
             </div>
+            <SplunkControlGroup
+              label={<span className="dashboard-builder-field-label">Permissions</span>}
+              labelPosition="top"
+            >
+              <Select
+                value={dashboardSharing}
+                onChange={(event, { value }) => setDashboardSharing(value)}
+              >
+                <Select.Option label="Shared in App — Visible to app users" value="app" />
+                <Select.Option label="Private — Visible only to you" value="user" />
+              </Select>
+            </SplunkControlGroup>
             <SplunkControlGroup
               className="dashboard-builder-mode-group"
               label={
@@ -1016,6 +1004,14 @@ export default function DBHomePage() {
             )}
             {selectedDash && (
               <Button
+                label="Edit Dashboard"
+                appearance="primary"
+                icon={<Pencil />}
+                onClick={() => handleEditDashboard(selectedDash)}
+              />
+            )}
+            {selectedDash && (
+              <Button
                 label="Edit Metadata"
                 appearance="secondary"
                 icon={<FileCharts />}
@@ -1071,29 +1067,38 @@ export default function DBHomePage() {
                         content={
                           <div className="default-tooltip-content">
                             <p>
-                              The <strong>Dashboard Manager</strong> helps you
-                              create, preview, organize, and edit the dashboards
-                              you build in Cisco Executive Insights.
+                              <strong>What it is:</strong> Dashboard Manager adds
+                              a custom preset and editor integration to Dashboard
+                              Studio.
                             </p>
                             <p>
-                              It is a <strong>custom component</strong>{" "}
-                              integrated into <strong>Dashboard Studio</strong>,
-                              giving you a guided way to turn your KPIs into
-                              dashboards while still using the flexibility of
-                              Splunk Dashboard Studio.
+                              <strong>Why it exists:</strong>{" "}
+                              <em>Dashboards in 60 Seconds</em> combines
+                              Searchbase and Dashboard Studio. Builders use
+                              reusable searches and Cisco components without
+                              writing SPL or code.
                             </p>
                             <p>
-                              Any dashboard you create here remains a normal
-                              Dashboard Studio definition in this Splunk app.
+                              <strong>What it adds:</strong> Dashboard Manager
+                              wires dashboard content to drilldown views, adding
+                              a workflow that is not available in Dashboard
+                              Studio alone.
+                            </p>
+                            <p>
+                              <strong>How it works:</strong> Dashboards remain
+                              Studio definitions, but opening them here loads the
+                              extensions and keeps shared SPL synchronized.
+                              Definitions that need those extensions are hidden
+                              from Splunk&apos;s standard Dashboards listing;
+                              native-only definitions remain available in
+                              regular Dashboard Studio.
                             </p>
                           </div>
                         }
                       ></Tooltip>
                     </div>
                   </div>
-                  <div className="sub-title" title={dashboardManagerSubtitle}>
-                    {truncateManagerSubtitle(dashboardManagerSubtitle)}
-                  </div>
+                  <div className="sub-title">{dashboardManagerSubtitle}</div>
                 </div>
                 <div className="col3">
                   <img
@@ -1127,143 +1132,123 @@ export default function DBHomePage() {
         </ColumnLayout.Row>
 
         <div className="dashboard-manager-panel-shell">
-          <div className="dashboard-manager-panel-switcher-slot">
-            <div
-              className="dashboard-manager-view-switcher"
-              onMouseDown={stopDashboardPanelAction}
-              onClick={stopDashboardPanelAction}
-            >
-              <span
-                role="button"
-                tabIndex={0}
-                className={`dashboard-manager-view-switcher-option ${
-                  dashboardLibraryView === "cards"
-                    ? "dashboard-manager-view-switcher-option-active"
-                    : ""
-                }`}
-                onClick={handleDashboardLibraryViewChange("cards")}
-                onKeyDown={handleDashboardLibraryViewKeyDown("cards")}
-              >
-                Card View
-              </span>
-              <span
-                role="button"
-                tabIndex={0}
-                className={`dashboard-manager-view-switcher-option ${
-                  dashboardLibraryView === "table"
-                    ? "dashboard-manager-view-switcher-option-active"
-                    : ""
-                }`}
-                onClick={handleDashboardLibraryViewChange("table")}
-                onKeyDown={handleDashboardLibraryViewKeyDown("table")}
-              >
-                Table View
-              </span>
-            </div>
-          </div>
-          <CollapsiblePanel
-            defaultOpen
-            open={true}
+          <section
             id="dashboard_manager_dashboards"
-            title={
+            className="dashboard-manager-library-panel"
+            aria-labelledby="dashboard-manager-library-title"
+          >
+            <header className="dashboard-manager-library-panel-header">
               <div className="dashboard-manager-panel-title">
                 <div className="dashboard-manager-panel-title-main">
-                  <span>{`Dashboards (${filteredDashboards.length})`}</span>
+                  <h2 id="dashboard-manager-library-title">
+                    {`Dashboard Manager Library (${filteredDashboards.length})`}
+                  </h2>
                   <div className="dashboard-manager-panel-tooltip">
                     <CustomTooltip
-                      width={450}
-                      height={430}
-                      delay="300"
+                      width={410}
+                      height={285}
+                      delay={200}
                       placement="right"
                       persistent
                       type="card"
-                      title="How Do I Use The Dashboard Manager?"
+                      title="Dashboard Manager basics"
                       description={
                         <span>
                           <p>
-                            Use Dashboard Manager to create, find, edit, and
-                            refine Cisco dashboards.
+                            <em>Dashboards in 60 Seconds</em> combines Searchbase
+                            and Dashboard Studio so you can build from reusable
+                            searches without writing SPL or code.
                           </p>
                           <ul>
                             <li>
-                              Click <strong>Create New</strong>, enter a
-                              <strong> Dashboard Title</strong>, then choose a
-                              layout mode.
+                              <strong>Included</strong> shows supported dashboards
+                              shipped with the app. <strong>Yours</strong> shows
+                              managed dashboards you create or copy.
                             </li>
                             <li>
-                              Use the <strong>Search</strong>, favorites, and
-                              ownership filters to narrow the list. Keep the
-                              existing cards for visual browsing, or switch to
-                              <strong> Table View</strong> when you need more
-                              list density.
+                              Use <strong>Create New</strong>, or a dashboard card
+                              action, to open the extended Studio editor, add
+                              Cisco components, and wire drilldowns.
                             </li>
                             <li>
-                              In Dashboard Studio, use the
-                              <strong> Cisco KPI Picker</strong> in the tools
-                              menu. It is the <strong>eyeball icon</strong>, and
-                              it lets you add Cisco KPI-based content to your
-                              dashboard.
-                            </li>
-                            <li>
-                              You can use KPIs shipped with Splunk, plus custom
-                              KPIs backed by your own Searchbase searches. If
-                              you want to build from custom KPIs, you will need
-                              Searchbase:{" "}
-                              <a
-                                href="https://splunkbase.splunk.com/app/7188"
-                                target="_blank"
-                              >
-                                Searchbase on Splunkbase
-                              </a>
-                              .
-                            </li>
-                            <li>
-                              You can also style dashboards with
-                              <strong> custom Splunk icons</strong> and
-                              <strong> backgrounds</strong>. These options
-                              appear as additional tools in the Dashboard Studio
-                              ribbon.
+                              Reopen managed dashboards from this library so
+                              their Searchbase and Cisco components load
+                              correctly. Ordinary Studio dashboards are
+                              intentionally not listed here. Manager-dependent
+                              definitions are kept out of Splunk&apos;s standard
+                              Dashboards listing to prevent unsupported opens;
+                              native-only dashboards remain available there.
                             </li>
                           </ul>
                         </span>
                       }
                     >
-                      <span className="custom-tooltip-block dashboard-manager-tooltip-trigger">
+                      <button
+                        type="button"
+                        className="custom-tooltip-block dashboard-manager-tooltip-trigger"
+                        aria-label="Dashboard Manager help"
+                      >
                         <QuestionCircle
                           className="icn-tooltip"
                           variant="filled"
                         />
-                      </span>
+                      </button>
                     </CustomTooltip>
                   </div>
                 </div>
               </div>
-            }
-          >
+              <div className="dashboard-manager-panel-switcher-slot">
+                <div
+                  className="dashboard-manager-view-switcher"
+                  role="group"
+                  aria-label="Dashboard Manager library view"
+                >
+                  <button
+                    type="button"
+                    aria-pressed={dashboardLibraryView === "cards"}
+                    className={`dashboard-manager-view-switcher-option ${
+                      dashboardLibraryView === "cards"
+                        ? "dashboard-manager-view-switcher-option-active"
+                        : ""
+                    }`}
+                    onClick={handleDashboardLibraryViewChange("cards")}
+                  >
+                    Card View
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={dashboardLibraryView === "table"}
+                    className={`dashboard-manager-view-switcher-option ${
+                      dashboardLibraryView === "table"
+                        ? "dashboard-manager-view-switcher-option-active"
+                        : ""
+                    }`}
+                    onClick={handleDashboardLibraryViewChange("table")}
+                  >
+                    Table View
+                  </button>
+                </div>
+              </div>
+            </header>
             <ColumnLayout.Row className="dashboard-manager-library-row">
               <ColumnLayout.Column
                 className="manager-search-dialog-container"
                 span={12}
               >
                 <div className="dashboard-manager-library-filters">
-                  <Checkbox
-                    className="dashboard-manager-favorite-filter"
-                    checked={showOnlyFavoriteDashboards}
-                    onChange={handleFavoriteDashboardFilterChange}
-                  >
-                    Show only favorites
-                  </Checkbox>
                   <div
                     className="dashboard-manager-scope-filter"
                     role="tablist"
-                    aria-label="Dashboard ownership filter"
+                    aria-label="Dashboard Manager library scope"
                   >
                     {DASHBOARD_SCOPE_OPTIONS.map((option) => (
                       <span
                         key={option.id}
+                        id={`dashboard-manager-scope-${option.id}`}
                         role="tab"
-                        tabIndex={0}
+                        tabIndex={dashboardScope === option.id ? 0 : -1}
                         aria-selected={dashboardScope === option.id}
+                        aria-controls="dashboard-manager-library-results"
                         className={`dashboard-manager-scope-filter-option ${
                           dashboardScope === option.id
                             ? "dashboard-manager-scope-filter-option-active"
@@ -1280,7 +1265,8 @@ export default function DBHomePage() {
                     <Text
                       className="dashboard-manager-library-search"
                       canClear
-                      placeholder="Filter dashboards, owners, or apps"
+                      aria-label="Filter Dashboard Manager library"
+                      placeholder="Filter managed or personal dashboards"
                       value={searchText}
                       onChange={(e, { value }) => {
                         setSearchText(value);
@@ -1308,7 +1294,11 @@ export default function DBHomePage() {
               </ColumnLayout.Column>
             </ColumnLayout.Row>
 
-            <ColumnLayout.Row>
+            <ColumnLayout.Row
+              id="dashboard-manager-library-results"
+              role="tabpanel"
+              aria-labelledby={`dashboard-manager-scope-${dashboardScope}`}
+            >
               <ColumnLayout.Column>
                 {dashboards.length == 0 && (
                   <WaitSpinner
@@ -1316,7 +1306,17 @@ export default function DBHomePage() {
                     style={{ margin: 30 }}
                   ></WaitSpinner>
                 )}
-                {dashboardLibraryView === "cards" ? (
+                <div
+                  className="dashboard-manager-library-status"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {dashboards.length > 0 && filteredDashboards.length === 0
+                    ? "No dashboards match the current filters."
+                    : ""}
+                </div>
+                {filteredDashboards.length > 0 &&
+                dashboardLibraryView === "cards" ? (
                   <CardLayout
                     gutterSize={20}
                     cardMaxWidth={350}
@@ -1382,8 +1382,9 @@ export default function DBHomePage() {
                                 </Tooltip>
                                 <Tooltip content="Edit dashboard">
                                   <Button
-                                    appearance="subtle"
+                                    appearance="primary"
                                     icon={<Pencil />}
+                                    label="Edit"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleEditDashboard(dash);
@@ -1428,7 +1429,7 @@ export default function DBHomePage() {
                       </Card>
                     ))}
                   </CardLayout>
-                ) : (
+                ) : filteredDashboards.length > 0 ? (
                   <div className="dashboard-manager-library-table-wrapper">
                     <Table className="dashboard-manager-library-table">
                       <Table.Head>
@@ -1497,10 +1498,10 @@ export default function DBHomePage() {
                       </Table.Body>
                     </Table>
                   </div>
-                )}
+                ) : null}
               </ColumnLayout.Column>
             </ColumnLayout.Row>
-          </CollapsiblePanel>
+          </section>
         </div>
       </ColumnLayout>
     </>

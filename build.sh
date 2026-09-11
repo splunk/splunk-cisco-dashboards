@@ -8,12 +8,13 @@
 # staged/package app.conf at package time.
 #
 # Default workflow:
-#   ./build.sh                                                # Splunkbase profile: released resources only
+#   ./build.sh                                                # Splunkbase profile: minified released resources only
 #   ./build.sh --developer                                    # developer profile: includes developing resources
 #
 # Install workflows (splunkd-managed; goes through REST mgmt port 8089):
-#   ./build.sh --install --auth admin:********                # build + `splunk install app` against the default Splunk
-#   SPLUNK_HOME=/opt/10 ./build.sh --install --auth admin:pw  # build + install against a non-default Splunk
+#   ./build.sh --install --auth admin:********                # Splunkbase build + `splunk install app` against the default Splunk
+#   SPLUNK_HOME=/opt/10 ./build.sh --install --auth admin:pw  # Splunkbase build + install against a non-default Splunk
+#   SPLUNK_HOME=/opt/10 ./build.sh --developer --install --auth admin:pw  # explicit developer-profile install
 #   ./build.sh --install --auth admin:pw --restart            # build + install + restart Splunk
 #   ./build.sh --remote-install splunk@host --ssh-port 10000
 #   ./build.sh --no-build --remote-install splunk@host --ssh-port 10000 --remote-auth-user admin
@@ -22,8 +23,9 @@
 #   ./build.sh --deploy                                       # filesystem swap (preserves local/ + live lookup CSVs)
 #   SPLUNK_HOME=/opt/10 ./build.sh --deploy --restart         # same against /opt/10, then `splunk restart`
 #
-# Install/deploy WITHOUT rebuilding (re-use the most recent dist/*.tar.gz).
-# Handy when you've built once and want to fan the same artifact out to
+# Install/deploy WITHOUT rebuilding (re-use the highest immutable dist artifact
+# whose package ID and version match VERSION for the selected profile).
+# Handy when you've built once and want to fan that same artifact out to
 # multiple local Splunk instances that each have their own admin password:
 #   ./build.sh                                                                # build once
 #   ./build.sh --no-build --install --auth admin:pw1                          # -> default Splunk
@@ -49,7 +51,7 @@
 #
 # Useful options:
 #   ./build.sh --splunk-bin /some/custom/path/splunk          # override the Splunk CLI path directly
-#   ./build.sh --minify                                       # slower, smaller release package
+#   ./build.sh --developer --minify                           # slower, smaller developer package
 #   ./build.sh --lint-spl-antipatterns                        # opt in to the experimental SPL policy gate
 #
 # Environment:
@@ -63,6 +65,11 @@
 
 set -euo pipefail
 
+# Repository Python helpers and tests must not write runtime bytecode into
+# release inputs or other source directories. The packaging path also
+# sanitizes known Python cache artifacts from its temporary archive copy.
+export PYTHONDONTWRITEBYTECODE=1
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_NAME="splunk-cisco-dashboards"
 APP_DIR="${ROOT_DIR}/packages/${APP_NAME}"
@@ -75,6 +82,8 @@ no_build=0
 from_stage=0
 minify=0
 developer_profile=0
+developer_profile_explicit=0
+splunkbase_profile_explicit=0
 lint_spl_antipatterns=0
 restart_after_install=0
 verbose=0
@@ -154,6 +163,145 @@ run_quietly() {
     err "---- end captured output ----"
     rm -f "$logfile"
     return "$rc"
+}
+
+archive_identity() {
+    local archive="$1"
+    tar -xzOf "$archive" "${APP_NAME}/default/app.conf" 2>/dev/null | awk '
+        /^\[/ { section=$0 }
+        section == "[id]" && /^[[:space:]]*name[[:space:]]*=/ {
+            sub(/^[^=]*=/, "")
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+            package_id=$0
+        }
+        section == "[id]" && /^[[:space:]]*version[[:space:]]*=/ {
+            sub(/^[^=]*=/, "")
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+            version=$0
+        }
+        section == "[install]" && /^[[:space:]]*build[[:space:]]*=/ {
+            sub(/^[^=]*=/, "")
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+            build=$0
+        }
+        END {
+            if (package_id != "" && version != "" && build != "") {
+                print package_id "\t" version "\t" build
+            }
+        }
+    '
+}
+
+find_release_archive() {
+    local expected_package_id="$1"
+    local expected_version="$2"
+    local expected_profile="$3"
+    local archive archive_name archive_profile profile_suffix identity archive_package_id archive_version archive_build expected_name
+    local match=""
+    local highest_build=0
+    local match_count=0
+
+    while IFS= read -r -d '' archive; do
+        archive_name="$(basename "$archive")"
+        archive_profile="splunkbase"
+        [[ "$archive" == *-developer.tar.gz ]] && archive_profile="developer"
+        [[ "$archive_profile" == "$expected_profile" ]] || continue
+
+        identity="$(archive_identity "$archive")"
+        [[ -n "$identity" ]] || continue
+        IFS=$'\t' read -r archive_package_id archive_version archive_build <<< "$identity"
+        if [[ "$archive_package_id" == "$expected_package_id" \
+            && "$archive_version" == "$expected_version" \
+            && "$archive_build" =~ ^[1-9][0-9]*$ ]]; then
+            profile_suffix=""
+            [[ "$archive_profile" == "developer" ]] && profile_suffix="-developer"
+            expected_name="${APP_NAME}-${archive_version}-${archive_build}${profile_suffix}.tar.gz"
+            [[ "$archive_name" == "$expected_name" ]] || continue
+            if (( archive_build > highest_build )); then
+                match="$archive"
+                highest_build="$archive_build"
+                match_count=1
+            elif (( archive_build < highest_build )); then
+                continue
+            else
+                match_count=$((match_count + 1))
+            fi
+        fi
+    done < <(find "$DIST_DIR" -maxdepth 1 -type f -name "${APP_NAME}-*.tar.gz" -print0)
+
+    if [[ "$match_count" -eq 0 ]]; then
+        err "ERROR: no immutable ${expected_profile} archive was found for package ${expected_package_id}, version ${expected_version}."
+        return 1
+    fi
+    if [[ "$expected_profile" != "developer" && "$match_count" -gt 1 ]]; then
+        err "ERROR: found ${match_count} immutable ${expected_profile} archives for package ${expected_package_id}, version ${expected_version}, build ${highest_build}; refusing an ambiguous install target."
+        return 1
+    fi
+
+    printf '%s\n' "$match"
+}
+
+verify_release_archive() {
+    local archive="$1"
+    local expected_profile="$2"
+    local archive_name identity archive_package_id archive_version archive_build profile_suffix expected_name provenance
+
+    if [[ ! -f "$archive" ]]; then
+        err "ERROR: release archive is missing: ${archive}"
+        return 1
+    fi
+    if ! gzip -t "$archive"; then
+        err "ERROR: release archive failed gzip integrity validation: ${archive}"
+        return 1
+    fi
+    archive_name="$(basename "$archive")"
+    identity="$(archive_identity "$archive")"
+    if [[ -z "$identity" ]]; then
+        err "ERROR: release archive does not contain a readable package/version/build identity: ${archive_name}"
+        return 1
+    fi
+    IFS=$'\t' read -r archive_package_id archive_version archive_build <<< "$identity"
+    if [[ "$archive_package_id" != "$APP_NAME" || ! "$archive_build" =~ ^[1-9][0-9]*$ ]]; then
+        err "ERROR: release archive contains an invalid package identity: ${archive_name}"
+        return 1
+    fi
+    profile_suffix=""
+    [[ "$archive_name" == *-developer.tar.gz ]] && profile_suffix="-developer"
+    expected_name="${APP_NAME}-${archive_version}-${archive_build}${profile_suffix}.tar.gz"
+    if [[ "$archive_name" != "$expected_name" ]]; then
+        err "ERROR: release archive filename must contain its version and build: ${expected_name}"
+        return 1
+    fi
+    if [[ "$expected_profile" == "splunkbase" ]]; then
+        if ! provenance="$(tar -xzOf "$archive" "${APP_NAME}/release-provenance.json" 2>/dev/null)"; then
+            err "ERROR: Splunkbase archive is missing release provenance: ${archive_name}"
+            return 1
+        fi
+        if ! printf '%s' "$provenance" | node -e '
+            const fs = require("fs");
+            const [expectedPackageId, expectedVersion, expectedBuild] = process.argv.slice(1);
+            let value;
+            try {
+                value = JSON.parse(fs.readFileSync(0, "utf8"));
+            } catch {
+                process.exit(1);
+            }
+            if (
+                value.package_id !== expectedPackageId ||
+                value.version !== expectedVersion ||
+                value.build !== Number(expectedBuild) ||
+                value.source_tree_clean !== true ||
+                value.release_eligible !== true ||
+                !/^[0-9a-f]{40}$/.test(value.git_commit || "")
+            ) {
+                process.exit(1);
+            }
+        ' "$archive_package_id" "$archive_version" "$archive_build"; then
+            err "ERROR: Splunkbase archive is not release-eligible: ${archive_name}"
+            err "       Build from one clean committed source state before upload or installation."
+            return 1
+        fi
+    fi
 }
 
 write_remote_rest_helper() {
@@ -395,37 +543,46 @@ Version is read from ./VERSION and stamped at package time.
 
 Push-to-Splunk options (mutually exclusive):
   --install              splunkd-managed install via REST mgmt port. Calls
-                         \`splunk install app dist/<app>.tar.gz -update 1
+                         \`splunk install app dist/<app>-<version>-<build>.tar.gz -update 1
                           -auth user:pass\`. Requires --auth.
+                         Fresh local installs use the Splunkbase profile unless
+                         --developer or --fast is explicitly selected. A
+                         successful Splunkbase install first creates one clean,
+                         release-eligible archive, then installs that exact file.
   --deploy               Filesystem swap into \$SPLUNK_HOME/etc/apps/<app>
-                         (rm -rf + cp -R, preserves local/ and runtime lookup
-                         CSVs). Faster than --install for dev iteration. No
-                         auth required.
+                         through a prepared sibling replacement (preserves
+                         local/ and runtime lookup CSVs). Faster than
+                         --install for dev iteration. No auth required.
   --remote-install USER@HOST
                          Upload and install on a remote Splunk host over SSH.
                          Direct OS login as splunk avoids sudo; other OS users
                          run the install as --remote-splunk-user via sudo.
 
 Other options:
-  --no-build             Skip the yarn package step and use the most
-                         recent dist/<app>-*.tar.gz instead. Requires
-                         --install or --deploy. Lets you fan one build
-                         out to multiple Splunk instances with different
-                         credentials without rebuilding each time.
+  --no-build             Skip the yarn package step and reuse the immutable
+                         dist/<app>-*.tar.gz whose package ID, version, and
+                         build match current source. Requires --install or
+                         --deploy. Lets you fan one build out to multiple
+                         Splunk instances without rebuilding each time.
   --fast, --from-stage   Package the current packages/<app>/stage directory
                          without running clean_build.sh or webpack. Designed
                          for use with a long-running 'yarn start' watcher.
                          Refreshes non-JavaScript Splunk resources from src/
                          before packaging; React bundles come from the watcher.
+                         Stage reuse automatically selects the developer
+                         profile; --developer may also be supplied explicitly.
                          Still creates a fresh tarball and can still use
                          --install, so splunkd remains the installer.
-  --minify               Enable JavaScript minification for this clean release
-                         build. Slower, but produces smaller browser bundles.
+  --minify               Enable JavaScript minification for a clean developer
+                         build. SplunkBase packages are always minified.
                          Not valid with --fast or --no-build.
   --developer            Include resources listed in the app's
-                         config/build-profile-manifest.json. Writes a
-                         *-developer.tar.gz intended only for local testing.
-                         Without this flag, packaging is Splunkbase-safe.
+                         config/build-profile-manifest.json. Writes a clearly
+                         labeled *-developer.tar.gz intended only for local testing.
+  --splunkbase           Use the released-resources-only SplunkBase profile.
+                         This is the default for build, install, deploy, and
+                         remote-install workflows. Requires a clean committed
+                         worktree; use --developer or --fast for local changes.
   --lint-spl-antipatterns
                          Run the experimental Searchbase SPL anti-pattern
                          policy gate before packaging. Disabled by default
@@ -455,13 +612,14 @@ Other options:
 Examples:
   ./build.sh                                                  # Splunkbase package (released resources only)
   ./build.sh --developer                                      # local developer package
-  ./build.sh --install --auth admin:********                  # build + splunkd install
+  ./build.sh --install --splunkbase --auth admin:********     # upload-ready package + exact local install
+  ./build.sh --developer --install --auth admin:********      # explicit developer-profile install
   SPLUNK_HOME=/opt/10 ./build.sh --developer --fast --install --auth admin:********
   SPLUNK_HOME=/opt/10 ./build.sh --install --auth admin:******** --restart
   ./build.sh --deploy                                         # build + filesystem swap
   SPLUNK_HOME=/opt/10 ./build.sh --deploy --restart           # ... against /opt/10 + restart
-  ./build.sh --minify                                         # minified release package
-  ./build.sh --minify --install --auth admin:********          # minify + install
+  ./build.sh                                                   # minified SplunkBase release package
+  ./build.sh --developer --minify                              # minified developer package
 
   # Build once, install to multiple instances:
   ./build.sh
@@ -517,8 +675,8 @@ while [[ $# -gt 0 ]]; do
         --remote-management-port=*) remote_options_set=1; remote_auth_options_set=1; remote_management_port="${1#--remote-management-port=}"; shift ;;
         --no-build|--skip-build)
             # --skip-build is an alias for muscle memory; both do the same
-            # thing: reuse the newest dist/<app>-*.tar.gz instead of running
-            # the yarn pipeline.
+            # thing: reuse the identity-matched dist archive instead of
+            # running the yarn pipeline.
             no_build=1
             shift
             ;;
@@ -532,6 +690,12 @@ while [[ $# -gt 0 ]]; do
             ;;
         --developer)
             developer_profile=1
+            developer_profile_explicit=1
+            shift
+            ;;
+        --splunkbase)
+            developer_profile=0
+            splunkbase_profile_explicit=1
             shift
             ;;
         --lint-spl-antipatterns)
@@ -662,6 +826,15 @@ if [[ "$restart_after_install" -eq 1 && "$remote_install" -eq 1 ]]; then
     exit 2
 fi
 
+if [[ "$developer_profile_explicit" -eq 1 && "$splunkbase_profile_explicit" -eq 1 ]]; then
+    echo "ERROR: --developer and --splunkbase are mutually exclusive." >&2
+    exit 2
+fi
+
+# The released-resources-only Splunkbase profile is the default for every
+# workflow. Developing resources require an explicit --developer selection or
+# the explicitly watcher-backed --fast/--from-stage path below.
+
 # --no-build only makes sense when paired with --install or --deploy.
 # On its own it would be a noop (build is already the default, and
 # we'd have nothing to push) -- catch that here rather than producing
@@ -677,8 +850,20 @@ fi
 if [[ "$from_stage" -eq 1 && "$no_build" -eq 1 ]]; then
     echo "ERROR: --from-stage and --no-build are mutually exclusive." >&2
     echo "       --from-stage creates a fresh tarball from stage/." >&2
-    echo "       --no-build reuses the newest tarball already in dist/." >&2
+    echo "       --no-build reuses an identity-matched tarball already in dist/." >&2
     exit 2
+fi
+
+# A watcher-built stage can contain developing resources and is not a clean
+# production build. Preserve the historical --fast behavior by making stage
+# reuse imply the developer profile unless the caller already selected it.
+if [[ "$from_stage" -eq 1 && "$splunkbase_profile_explicit" -eq 1 ]]; then
+    echo "ERROR: --splunkbase cannot be used with --fast/--from-stage." >&2
+    echo "       Watcher-built stage reuse is always a developer profile." >&2
+    exit 2
+fi
+if [[ "$from_stage" -eq 1 ]]; then
+    developer_profile=1
 fi
 
 # Minification changes webpack output, so it cannot be applied to a stage/
@@ -729,16 +914,36 @@ if [[ "$do_deploy" -eq 1 ]]; then
 fi
 
 build_version=""
+source_package_id=""
+source_app_conf="${APP_DIR}/src/main/resources/splunk/default/app.conf"
+if [[ ! -f "$VERSION_FILE" ]]; then
+    err "ERROR: VERSION file not found: ${VERSION_FILE}"
+    exit 1
+fi
+if [[ ! -f "$source_app_conf" ]]; then
+    err "ERROR: source app.conf not found: ${source_app_conf}"
+    exit 1
+fi
+build_version="$(tr -d '[:space:]' < "$VERSION_FILE")"
+if [[ -z "$build_version" ]]; then
+    err "ERROR: VERSION file is empty: ${VERSION_FILE}"
+    exit 1
+fi
+source_package_id="$(awk '
+    /^\[/ { in_id = ($0 == "[id]") }
+    in_id && /^[[:space:]]*name[[:space:]]*=/ {
+        sub(/^[^=]*=/, "")
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "")
+        print
+        exit
+    }
+' "$source_app_conf")"
+if [[ -z "$source_package_id" || "$source_package_id" != "$APP_NAME" ]]; then
+    err "ERROR: source app.conf [id] name must match package ID ${APP_NAME}."
+    exit 1
+fi
+
 if [[ "$no_build" -eq 0 ]]; then
-    if [[ ! -f "$VERSION_FILE" ]]; then
-        err "ERROR: VERSION file not found: ${VERSION_FILE}"
-        exit 1
-    fi
-    build_version="$(tr -d '[:space:]' < "$VERSION_FILE")"
-    if [[ -z "$build_version" ]]; then
-        err "ERROR: VERSION file is empty: ${VERSION_FILE}"
-        exit 1
-    fi
 
     # This policy linter is intentionally opt-in. Its broad rules are useful
     # during a focused catalogue audit, but are not accurate enough to block
@@ -780,7 +985,7 @@ else
         if [[ "$developer_profile" -eq 1 ]]; then
             hdr "Packaging ${APP_NAME} v${build_version} (developer profile)..."
         else
-            hdr "Packaging ${APP_NAME} v${build_version} (Splunkbase profile)..."
+            hdr "Packaging ${APP_NAME} v${build_version} (minified Splunkbase profile; required for release)..."
         fi
     fi
     # macOS ships Bash 3.2, where expanding an empty array under `set -u`
@@ -792,40 +997,26 @@ else
     fi
 fi
 
-if [[ "$no_build" -eq 1 ]]; then
-    if [[ "$developer_profile" -eq 1 ]]; then
-        package_glob="${APP_NAME}-*-developer.tar.gz"
-        package_path="$(
-            find "$DIST_DIR" -maxdepth 1 -type f -name "$package_glob" \
-                -print0 \
-                | xargs -0 ls -t 2>/dev/null \
-                | head -n 1
-        )"
-    else
-        package_glob="${APP_NAME}-*.tar.gz"
-        package_path="$(
-            find "$DIST_DIR" -maxdepth 1 -type f -name "$package_glob" \
-                ! -name "*-developer.tar.gz" \
-                -print0 \
-                | xargs -0 ls -t 2>/dev/null \
-                | head -n 1
-        )"
-    fi
+if [[ "$developer_profile" -eq 1 ]]; then
+    package_profile="developer"
 else
-    if [[ "$developer_profile" -eq 1 ]]; then
-        package_path="${DIST_DIR}/${APP_NAME}-${build_version}-developer.tar.gz"
-    else
-        package_path="${DIST_DIR}/${APP_NAME}-${build_version}.tar.gz"
-    fi
+    package_profile="splunkbase"
+fi
+if ! package_path="$(find_release_archive "$source_package_id" "$build_version" "$package_profile")"; then
+    exit 1
 fi
 
 if [[ -z "$package_path" ]]; then
     if [[ "$no_build" -eq 1 ]]; then
-        err "ERROR: --no-build requested but no ${APP_NAME}-*.tar.gz found under ${DIST_DIR}."
-        err "       Run ./build.sh once (without --no-build) to produce a package first."
+        err "ERROR: --no-build requested but no immutable archive matches VERSION ${build_version} and profile ${package_profile}."
+        err "       Run ./build.sh once (without --no-build) to create one."
     else
-        err "ERROR: Could not find ${APP_NAME}-*.tar.gz under ${DIST_DIR}."
+        err "ERROR: Could not find the immutable ${APP_NAME} archive produced by packaging."
     fi
+    exit 1
+fi
+
+if ! verify_release_archive "$package_path" "$package_profile"; then
     exit 1
 fi
 
@@ -873,9 +1064,9 @@ if [[ "$remote_install" -eq 1 ]]; then
     remote_install_archive "$package_path"
 fi
 
-# --deploy path: rm -rf + cp -R into etc/apps. Faster than --install for
-# dev iteration because splunkd doesn't have to extract anything, and
-# (more importantly) we don't go through the REST mgmt port at all. We
+# --deploy path: stage a complete replacement alongside the live app, then
+# promote it with same-filesystem renames. This avoids the old delete-then-copy
+# window, where a failed or slow copy left Splunk with no app at all. We
 # preserve $TARGET/local/ across the swap because that's where operator-edited
 # stanzas live. We also preserve live lookups/*.csv files: saved searches and
 # editors update those at runtime, while the package intentionally carries
@@ -885,6 +1076,43 @@ if [[ "$do_deploy" -eq 1 ]]; then
     APPS_DIR="${SPLUNK_HOME}/etc/apps"
     TARGET="${APPS_DIR}/${APP_NAME}"
     STATE_BACKUP="$(mktemp -d)"
+    UNPACK_DIR="$(mktemp -d)"
+    CANDIDATE_DIR=""
+    PREVIOUS_TARGET=""
+    target_moved_to_previous=0
+    candidate_promoted=0
+
+    deploy_cleanup() {
+        local status=$?
+        trap - EXIT
+
+        # A failed promotion must leave the previous app in place. Both
+        # renames occur inside APPS_DIR, so each individual move is atomic on
+        # normal POSIX/macOS filesystems. POSIX cannot atomically replace a
+        # non-empty directory in one rename, hence the guarded rollback.
+        if [[ "$target_moved_to_previous" -eq 1 && "$candidate_promoted" -eq 0 ]] \
+            && [[ -n "$PREVIOUS_TARGET" ]] \
+            && { [[ -e "$PREVIOUS_TARGET" ]] || [[ -L "$PREVIOUS_TARGET" ]]; } \
+            && [[ ! -e "$TARGET" && ! -L "$TARGET" ]]; then
+            err "WARNING: candidate promotion failed; restoring the previous app at ${TARGET} ..."
+            if ! mv "$PREVIOUS_TARGET" "$TARGET"; then
+                err "ERROR: automatic rollback failed; previous app remains at ${PREVIOUS_TARGET}"
+            fi
+        fi
+
+        if [[ -n "$CANDIDATE_DIR" ]] && { [[ -d "$CANDIDATE_DIR" ]] || [[ -L "$CANDIDATE_DIR" ]]; }; then
+            rm -rf "$CANDIDATE_DIR"
+        fi
+        if [[ -d "$UNPACK_DIR" ]]; then
+            rm -rf "$UNPACK_DIR"
+        fi
+        if [[ -d "$STATE_BACKUP" ]]; then
+            rm -rf "$STATE_BACKUP"
+        fi
+        exit "$status"
+    }
+    trap 'deploy_cleanup' EXIT
+
     preserved_lookup_count=0
     hdr "Deploying to ${TARGET} ..."
     if [[ -d "${TARGET}/local" ]]; then
@@ -902,10 +1130,6 @@ if [[ "$do_deploy" -eq 1 ]]; then
         fi
     fi
 
-    UNPACK_DIR="$(mktemp -d)"
-    # shellcheck disable=SC2064
-    trap "rm -rf '${UNPACK_DIR}' '${STATE_BACKUP}'" EXIT
-
     say "[build] Extracting ${package_path} -> ${UNPACK_DIR} ..."
     run_quietly tar xzf "$package_path" -C "$UNPACK_DIR"
     if [[ ! -d "${UNPACK_DIR}/${APP_NAME}" ]]; then
@@ -913,20 +1137,58 @@ if [[ "$do_deploy" -eq 1 ]]; then
         exit 1
     fi
 
-    say "[build] Swapping ${TARGET} ..."
-    rm -rf "$TARGET"
-    cp -R "${UNPACK_DIR}/${APP_NAME}" "$TARGET"
+    # Keep the candidate under etc/apps so its promotion is a same-filesystem
+    # rename. The dot prefix keeps the temporary sibling distinct from the
+    # live app name while its contents are assembled and validated.
+    CANDIDATE_DIR="$(mktemp -d "${APPS_DIR}/.${APP_NAME}.deploy.XXXXXX")"
+    say "[build] Preparing replacement alongside ${TARGET} ..."
+    cp -R "${UNPACK_DIR}/${APP_NAME}/." "$CANDIDATE_DIR/"
 
+    # Restore mutable state into the candidate before changing the live path.
+    # A copy failure here leaves TARGET untouched.
     if [[ -d "${STATE_BACKUP}/local" ]]; then
-        say "[build] Restoring local/ ..."
-        cp -R "${STATE_BACKUP}/local" "${TARGET}/local"
+        if [[ -e "${CANDIDATE_DIR}/local" || -L "${CANDIDATE_DIR}/local" ]]; then
+            err "ERROR: replacement archive unexpectedly contains local/; refusing to merge mutable state."
+            exit 1
+        fi
+        say "[build] Restoring local/ into replacement ..."
+        cp -R "${STATE_BACKUP}/local" "${CANDIDATE_DIR}/local"
     fi
     if [[ "$preserved_lookup_count" -gt 0 ]]; then
-        say "[build] Restoring ${preserved_lookup_count} live lookup CSV(s) ..."
-        mkdir -p "${TARGET}/lookups"
+        say "[build] Restoring ${preserved_lookup_count} live lookup CSV(s) into replacement ..."
+        mkdir -p "${CANDIDATE_DIR}/lookups"
         while IFS= read -r -d '' lookup_path; do
-            cp -p "$lookup_path" "${TARGET}/lookups/"
+            cp -p "$lookup_path" "${CANDIDATE_DIR}/lookups/"
         done < <(find "${STATE_BACKUP}/lookups" -maxdepth 1 -type f -name '*.csv' -print0)
+    fi
+
+    # Reserve a unique sibling path for the current app. `mv` needs a path
+    # that does not exist, so release the empty mktemp directory immediately.
+    PREVIOUS_TARGET="$(mktemp -d "${APPS_DIR}/.${APP_NAME}.previous.XXXXXX")"
+    rmdir "$PREVIOUS_TARGET"
+    if [[ -e "$TARGET" || -L "$TARGET" ]]; then
+        say "[build] Promoting replacement for ${TARGET} ..."
+        if ! mv "$TARGET" "$PREVIOUS_TARGET"; then
+            err "ERROR: could not move the existing app aside; live app was left unchanged."
+            exit 1
+        fi
+        target_moved_to_previous=1
+    fi
+    if ! mv "$CANDIDATE_DIR" "$TARGET"; then
+        err "ERROR: could not promote the prepared replacement."
+        exit 1
+    fi
+    candidate_promoted=1
+    CANDIDATE_DIR=""
+
+    # The replacement is live and has all mutable state. Remove the prior
+    # directory only now; if cleanup fails it remains as a recoverable sibling.
+    if [[ "$target_moved_to_previous" -eq 1 ]] && { [[ -e "$PREVIOUS_TARGET" ]] || [[ -L "$PREVIOUS_TARGET" ]]; }; then
+        if rm -rf "$PREVIOUS_TARGET"; then
+            PREVIOUS_TARGET=""
+        else
+            err "WARNING: deployed successfully, but the prior app remains at ${PREVIOUS_TARGET}"
+        fi
     fi
 fi
 
@@ -1000,3 +1262,8 @@ echo "================================================================"
 echo "  Mode:    ${mode_label}"
 echo "  Profile: ${app_profile_label}"
 echo "  Tarball: ${package_path}"
+if [[ "$package_profile" == "splunkbase" ]]; then
+    echo "  Upload:  ready for Splunkbase submission"
+else
+    echo "  Upload:  no (developer profile)"
+fi

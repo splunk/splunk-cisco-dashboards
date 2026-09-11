@@ -1,4 +1,4 @@
-<dashboard version="2" theme="dark" stylesheet="application.css">
+<dashboard version="2" theme="dark" stylesheet="application.css" isVisible="false">
     <label>Secure Infrastructure - Infrastructure Posture</label>
     <description>Unify infrastructure assurance, exposure, and operational control signals.</description>
     <definition><![CDATA[
@@ -8,11 +8,34 @@
     "inputs": {
         "input_time_range": {
             "options": {
-                "defaultValue": "-24h,now",
+                "defaultValue": "-24h,now,auto",
+                "showAdvanced": true,
+                "selections": [
+                    {
+                        "value": "-4h,now,auto",
+                        "label": "4h"
+                    },
+                    {
+                        "value": "-24h,now,auto",
+                        "label": "24h"
+                    },
+                    {
+                        "value": "-48h,now,auto",
+                        "label": "48h"
+                    },
+                    {
+                        "value": "-7d@d,now,auto",
+                        "label": "7d"
+                    },
+                    {
+                        "value": "-30d@d,now,auto",
+                        "label": "30d"
+                    }
+                ],
                 "token": "time_tok"
             },
             "title": "Time range",
-            "type": "input.timerange"
+            "type": "input.simpleTimePicker"
         }
     },
     "defaults": {
@@ -37,7 +60,7 @@
             "title": "Infrastructure Posture",
             "options": {
                 "preserveAspectRatio": true,
-                "src": "../../static/app/splunk-cisco-dashboards/images/nav-icons/NetworkDevices.svg"
+                "src": "/static/app/splunk-cisco-dashboards/images/nav-icons/ServerBrackets.svg"
             }
         },
         "viz_header": {
@@ -69,7 +92,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Data Center Health**"
+                "markdown": "**Data Center Signals**"
             }
         },
         "viz_card_01_metadata": {
@@ -95,7 +118,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Hourly trend combining Cisco Nexus Dashboard anomalies and security advisories as a unified DC health signal, enabling operators to correlate infrastructure health degradation with specific time windows\\."
+                "markdown": "Compares distinct Cisco Nexus Dashboard anomaly and advisory observations over time; the headline counts unique anomalies in the selected window\\."
             }
         },
         "viz_card_01_singlevalue": {
@@ -110,16 +133,18 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowUniqueAnomalies\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"Anomaly\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " unique anomalies",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -140,7 +165,7 @@
             }
         },
         "viz_card_01_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_01"
@@ -149,13 +174,18 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "Anomaly": "#e44273",
+                    "Advisory": "#e2a811",
+                    "Unknown": "#a9afda"
+                },
                 "seriesColors": [
-                    "#9b5ff4",
+                    "#e44273",
                     "#3abdfa",
                     "#0d8e97",
                     "#e2a811",
-                    "#e44273",
+                    "#9b5ff4",
                     "#a9afda",
                     "#d8580f",
                     "#f88ddc",
@@ -172,15 +202,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 3,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
-                "showYMajorGridLines": true,
+                "dataValuesDisplay": "off",
+                "showYMajorGridLines": false,
+                "showYMinorGridLines": false,
+                "stackMode": "stacked",
                 "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"Anomaly\")"
+                "y": "> primary | frameBySeriesNames(\"Anomaly\", \"Advisory\", \"Unknown\")",
+                "yAxisLabelVisibility": "hide",
+                "yAxisLineVisibility": "hide",
+                "yAxisMajorTickVisibility": "hide",
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide"
             }
         },
         "viz_card_01_drilldown_trigger": {
@@ -189,7 +222,26 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Data%20Center%20Health&target=Secure%20Networking%20-%20DC%20Fabric%20Anomalies%20by%20Severity,Secure%20Networking%20-%20Secure%20Infrastructure%20Status%20Rollup"
+                        "url": "/drilldown?origin=Data%20Center%20Signals&target=Secure%20Networking%20-%20DC%20Fabric%20Anomalies%20by%20Severity,Secure%20Networking%20-%20Secure%20Infrastructure%20Status%20Rollup"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_01_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Data%20Center%20Signals&target=secure_networking_dc_health_signals_trend"
                     }
                 }
             ],
@@ -220,7 +272,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Security Exposure**"
+                "markdown": "**Critical Advisories**"
             }
         },
         "viz_card_02_metadata": {
@@ -246,7 +298,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Count of active security advisories from Cisco Nexus Dashboard, including unique advisory IDs and critical\\-severity advisory count, providing the DC vulnerability posture KPI\\."
+                "markdown": "Distinct critical Cisco Nexus Dashboard security advisories observed in the selected window; this does not claim that each advisory is currently active\\."
             }
         },
         "viz_card_02_singlevalue": {
@@ -261,16 +313,18 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"critical_count\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"critical_count_trend\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " critical advisories",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -291,7 +345,7 @@
             }
         },
         "viz_card_02_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_02"
@@ -324,14 +378,19 @@
                     "#c69fff"
                 ],
                 "dataValuesDisplay": "minmax",
-                "lineWidth": 3,
+                "lineWidth": 2,
                 "markerDisplay": "outlined",
                 "nullValueDisplay": "connect",
-                "showYMajorGridLines": true,
+                "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"critical_count_trend\")"
+                "y": "> primary | seriesByName(\"critical_count_trend\")",
+                "showYMinorGridLines": false,
+                "yAxisLabelVisibility": "hide",
+                "yAxisLineVisibility": "hide",
+                "yAxisMajorTickVisibility": "hide",
+                "yAxisMinorTickVisibility": "hide"
             }
         },
         "viz_card_02_drilldown_trigger": {
@@ -340,7 +399,26 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Security%20Exposure&target=Secure%20Networking%20-%20DC%20Security%20Advisory%20Detail,Secure%20Networking%20-%20PSIRT%20Exposure%20by%20Site%20and%20Family,Secure%20Networking%20-%20Intersight%20Advisory%20Exposure"
+                        "url": "/drilldown?origin=Critical%20Advisories&target=Secure%20Networking%20-%20DC%20Security%20Advisory%20Detail,Secure%20Networking%20-%20PSIRT%20Exposure%20by%20Site%20and%20Family,Secure%20Networking%20-%20Intersight%20Advisory%20Exposure"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_02_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Critical%20Advisories&target=secure_networking_dc_advisory_count"
                     }
                 }
             ],
@@ -371,7 +449,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Managed Wireless Estate**"
+                "markdown": "**Reporting Access Points**"
             }
         },
         "viz_card_03_metadata": {
@@ -397,7 +475,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Total count of unique Cisco Meraki access points in the managed wireless infrastructure, providing the wireless footprint KPI\\."
+                "markdown": "Distinct Cisco Meraki access points observed reporting in the selected window; this is telemetry coverage, not configured wireless inventory\\."
             }
         },
         "viz_card_03_singlevalue": {
@@ -412,16 +490,18 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowReportingAPs\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"ap_count\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " access points",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -442,7 +522,7 @@
             }
         },
         "viz_card_03_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_03"
@@ -453,10 +533,10 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#9b5ff4",
+                    "#e2a811",
                     "#3abdfa",
                     "#0d8e97",
-                    "#e2a811",
+                    "#9b5ff4",
                     "#e44273",
                     "#a9afda",
                     "#d8580f",
@@ -475,14 +555,19 @@
                     "#c69fff"
                 ],
                 "dataValuesDisplay": "minmax",
-                "lineWidth": 3,
+                "lineWidth": 2,
                 "markerDisplay": "outlined",
                 "nullValueDisplay": "connect",
-                "showYMajorGridLines": true,
+                "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"ap_count\")"
+                "y": "> primary | seriesByName(\"ap_count\")",
+                "showYMinorGridLines": false,
+                "yAxisLabelVisibility": "hide",
+                "yAxisLineVisibility": "hide",
+                "yAxisMajorTickVisibility": "hide",
+                "yAxisMinorTickVisibility": "hide"
             }
         },
         "viz_card_03_drilldown_trigger": {
@@ -491,7 +576,26 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Managed%20Wireless%20Estate&target=Secure%20Networking%20-%20Meraki%20Access%20Point%20Inventory%20Detail"
+                        "url": "/drilldown?origin=Reporting%20Access%20Points&target=Secure%20Networking%20-%20Meraki%20Access%20Point%20Inventory%20Detail"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_03_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Reporting%20Access%20Points&target=secure_networking_meraki_ap_count"
                     }
                 }
             ],
@@ -563,16 +667,18 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowUncontainedAPs\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"Uncontained\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " uncontained APs",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -593,7 +699,7 @@
             }
         },
         "viz_card_04_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_04"
@@ -602,10 +708,14 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "Uncontained": "#e44273",
+                    "Contained": "#159352"
+                },
                 "seriesColors": [
-                    "#9b5ff4",
                     "#3abdfa",
+                    "#9b5ff4",
                     "#0d8e97",
                     "#e2a811",
                     "#e44273",
@@ -625,15 +735,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 3,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
-                "showYMajorGridLines": true,
+                "dataValuesDisplay": "off",
+                "showYMajorGridLines": false,
+                "showYMinorGridLines": false,
+                "stackMode": "stacked",
                 "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"Uncontained\")"
+                "y": "> primary | frameBySeriesNames(\"Contained\", \"Uncontained\")",
+                "yAxisLabelVisibility": "hide",
+                "yAxisLineVisibility": "hide",
+                "yAxisMajorTickVisibility": "hide",
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide"
             }
         },
         "viz_card_04_drilldown_trigger": {
@@ -643,6 +756,25 @@
                     "type": "drilldown.customUrl",
                     "options": {
                         "url": "/drilldown?origin=Wireless%20Containment&target=Secure%20Networking%20-%20Meraki%20Rogue%20AP%20Containment%20Status,Secure%20Networking%20-%20Meraki%20SSID%20Encryption%20Breakdown"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_04_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Wireless%20Containment&target=secure_networking_meraki_rogue_ap_containment_trend"
                     }
                 }
             ],
@@ -673,7 +805,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Wireless Client Demand**"
+                "markdown": "**Wireless Clients Observed**"
             }
         },
         "viz_card_05_metadata": {
@@ -699,7 +831,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Total count of unique wireless clients seen authenticating to Cisco Meraki access points, providing a real\\-time wireless endpoint population KPI\\."
+                "markdown": "Distinct wireless client MAC addresses observed authenticating to Cisco Meraki access points in the selected window\\."
             }
         },
         "viz_card_05_singlevalue": {
@@ -714,16 +846,18 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowUniqueClients\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"wireless_client_count\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " clients",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -739,7 +873,7 @@
             }
         },
         "viz_card_05_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_05"
@@ -750,7 +884,7 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#9b5ff4",
+                    "#159352",
                     "#3abdfa",
                     "#0d8e97",
                     "#e2a811",
@@ -758,7 +892,7 @@
                     "#a9afda",
                     "#d8580f",
                     "#f88ddc",
-                    "#159352",
+                    "#9b5ff4",
                     "#9abe2d",
                     "#6574f3",
                     "#ff9297",
@@ -772,14 +906,19 @@
                     "#c69fff"
                 ],
                 "dataValuesDisplay": "minmax",
-                "lineWidth": 3,
+                "lineWidth": 2,
                 "markerDisplay": "outlined",
                 "nullValueDisplay": "connect",
-                "showYMajorGridLines": true,
+                "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"wireless_client_count\")"
+                "y": "> primary | seriesByName(\"wireless_client_count\")",
+                "showYMinorGridLines": false,
+                "yAxisLabelVisibility": "hide",
+                "yAxisLineVisibility": "hide",
+                "yAxisMajorTickVisibility": "hide",
+                "yAxisMinorTickVisibility": "hide"
             }
         },
         "viz_card_05_drilldown_trigger": {
@@ -788,7 +927,26 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Wireless%20Client%20Demand&target=Secure%20Networking%20-%20Meraki%20Top%20Clients%20by%20Bandwidth%20Usage"
+                        "url": "/drilldown?origin=Wireless%20Clients%20Observed&target=Secure%20Networking%20-%20Meraki%20Top%20Clients%20by%20Bandwidth%20Usage"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_05_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Wireless%20Clients%20Observed&target=secure_networking_meraki_wireless_client_count"
                     }
                 }
             ],
@@ -819,7 +977,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**SD\\-WAN Site Coverage**"
+                "markdown": "**Reporting SD\\-WAN Sites**"
             }
         },
         "viz_card_06_metadata": {
@@ -845,7 +1003,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Trends Cisco Catalyst SD\\-WAN sites reporting health telemetry and keeps the distinct site population for the selected window as the headline value\\."
+                "markdown": "Distinct Cisco Catalyst SD\\-WAN sites observed reporting health telemetry, with per\\-interval collection context\\."
             }
         },
         "viz_card_06_singlevalue": {
@@ -860,16 +1018,18 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"total_sites\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"total_sites\")",
+                "sparklineValues": "> primary | seriesByName(\"reporting_sites\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " sites",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -885,7 +1045,7 @@
             }
         },
         "viz_card_06_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_06"
@@ -896,9 +1056,9 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
+                    "#0d8e97",
                     "#9b5ff4",
                     "#3abdfa",
-                    "#0d8e97",
                     "#e2a811",
                     "#e44273",
                     "#a9afda",
@@ -918,14 +1078,19 @@
                     "#c69fff"
                 ],
                 "dataValuesDisplay": "minmax",
-                "lineWidth": 3,
+                "lineWidth": 2,
                 "markerDisplay": "outlined",
                 "nullValueDisplay": "connect",
-                "showYMajorGridLines": true,
+                "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"reporting_sites\")"
+                "y": "> primary | seriesByName(\"reporting_sites\")",
+                "showYMinorGridLines": false,
+                "yAxisLabelVisibility": "hide",
+                "yAxisLineVisibility": "hide",
+                "yAxisMajorTickVisibility": "hide",
+                "yAxisMinorTickVisibility": "hide"
             }
         },
         "viz_card_06_drilldown_trigger": {
@@ -934,7 +1099,26 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=SD-WAN%20Site%20Coverage&target=Secure%20Networking%20-%20SD-WAN%20Site%20View,Secure%20Networking%20-%20SD-WAN%20Tunnel%20Health%20Status%20Log"
+                        "url": "/drilldown?origin=Reporting%20SD-WAN%20Sites&target=Secure%20Networking%20-%20SD-WAN%20Site%20View,Secure%20Networking%20-%20SD-WAN%20Tunnel%20Health%20Status%20Log"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_06_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Reporting%20SD-WAN%20Sites&target=secure_networking_sdwan_reporting_sites_trend"
                     }
                 }
             ],
@@ -955,7 +1139,8 @@
                 "ref": "secure_networking_dc_health_signals_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -966,7 +1151,8 @@
                 "ref": "secure_networking_dc_advisory_count",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -977,7 +1163,8 @@
                 "ref": "secure_networking_meraki_ap_count",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -988,7 +1175,8 @@
                 "ref": "secure_networking_meraki_rogue_ap_containment_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -999,7 +1187,8 @@
                 "ref": "secure_networking_meraki_wireless_client_count",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -1010,7 +1199,8 @@
                 "ref": "secure_networking_sdwan_reporting_sites_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -1029,8 +1219,8 @@
                         "y": 0
                     },
                     "display": "auto-scale",
-                    "height": 1128,
-                    "width": 1440
+                    "height": 1024,
+                    "width": 1920
                 },
                 "structure": [
                     {
@@ -1038,8 +1228,8 @@
                         "position": {
                             "x": 20,
                             "y": 0,
-                            "w": 1400,
-                            "h": 104
+                            "w": 1880,
+                            "h": 96
                         },
                         "type": "block"
                     },
@@ -1047,7 +1237,7 @@
                         "item": "viz_header_icon",
                         "position": {
                             "x": 38,
-                            "y": 18,
+                            "y": 16,
                             "w": 64,
                             "h": 64
                         },
@@ -1058,16 +1248,16 @@
                         "position": {
                             "x": 118,
                             "y": 8,
-                            "w": 886,
-                            "h": 88
+                            "w": 1366,
+                            "h": 80
                         },
                         "type": "block"
                     },
                     {
                         "item": "input_time_range",
                         "position": {
-                            "x": 1034,
-                            "y": 12,
+                            "x": 1514,
+                            "y": 8,
                             "w": 370,
                             "h": 80
                         },
@@ -1077,9 +1267,9 @@
                         "item": "viz_card_01_background",
                         "position": {
                             "x": 20,
-                            "y": 128,
-                            "w": 453,
-                            "h": 476
+                            "y": 112,
+                            "w": 613,
+                            "h": 440
                         },
                         "type": "block"
                     },
@@ -1087,8 +1277,8 @@
                         "item": "viz_card_01_title",
                         "position": {
                             "x": 36,
-                            "y": 140,
-                            "w": 377,
+                            "y": 124,
+                            "w": 482,
                             "h": 34
                         },
                         "type": "block"
@@ -1097,8 +1287,8 @@
                         "item": "viz_card_01_metadata",
                         "position": {
                             "x": 36,
-                            "y": 176,
-                            "w": 421,
+                            "y": 160,
+                            "w": 581,
                             "h": 24
                         },
                         "type": "block"
@@ -1107,9 +1297,9 @@
                         "item": "viz_card_01_description",
                         "position": {
                             "x": 36,
-                            "y": 204,
-                            "w": 421,
-                            "h": 68
+                            "y": 188,
+                            "w": 581,
+                            "h": 64
                         },
                         "type": "block"
                     },
@@ -1117,9 +1307,9 @@
                         "item": "viz_card_01_singlevalue",
                         "position": {
                             "x": 36,
-                            "y": 284,
-                            "w": 421,
-                            "h": 88
+                            "y": 260,
+                            "w": 581,
+                            "h": 80
                         },
                         "type": "block"
                     },
@@ -1127,17 +1317,27 @@
                         "item": "viz_card_01_trend",
                         "position": {
                             "x": 36,
-                            "y": 376,
-                            "w": 421,
-                            "h": 212
+                            "y": 344,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_info_trigger",
+                        "position": {
+                            "x": 534,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_01_drilldown_trigger",
                         "position": {
-                            "x": 418,
-                            "y": 134,
+                            "x": 578,
+                            "y": 118,
                             "w": 42,
                             "h": 42
                         },
@@ -1146,19 +1346,19 @@
                     {
                         "item": "viz_card_02_background",
                         "position": {
-                            "x": 493,
-                            "y": 128,
-                            "w": 453,
-                            "h": 476
+                            "x": 653,
+                            "y": 112,
+                            "w": 613,
+                            "h": 440
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_02_title",
                         "position": {
-                            "x": 509,
-                            "y": 140,
-                            "w": 377,
+                            "x": 669,
+                            "y": 124,
+                            "w": 482,
                             "h": 34
                         },
                         "type": "block"
@@ -1166,9 +1366,9 @@
                     {
                         "item": "viz_card_02_metadata",
                         "position": {
-                            "x": 509,
-                            "y": 176,
-                            "w": 421,
+                            "x": 669,
+                            "y": 160,
+                            "w": 581,
                             "h": 24
                         },
                         "type": "block"
@@ -1176,38 +1376,48 @@
                     {
                         "item": "viz_card_02_description",
                         "position": {
-                            "x": 509,
-                            "y": 204,
-                            "w": 421,
-                            "h": 68
+                            "x": 669,
+                            "y": 188,
+                            "w": 581,
+                            "h": 64
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_02_singlevalue",
                         "position": {
-                            "x": 509,
-                            "y": 284,
-                            "w": 421,
-                            "h": 88
+                            "x": 669,
+                            "y": 260,
+                            "w": 581,
+                            "h": 80
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_02_trend",
                         "position": {
-                            "x": 509,
-                            "y": 376,
-                            "w": 421,
-                            "h": 212
+                            "x": 669,
+                            "y": 344,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_info_trigger",
+                        "position": {
+                            "x": 1167,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_02_drilldown_trigger",
                         "position": {
-                            "x": 891,
-                            "y": 134,
+                            "x": 1211,
+                            "y": 118,
                             "w": 42,
                             "h": 42
                         },
@@ -1216,19 +1426,19 @@
                     {
                         "item": "viz_card_03_background",
                         "position": {
-                            "x": 966,
-                            "y": 128,
-                            "w": 453,
-                            "h": 476
+                            "x": 1286,
+                            "y": 112,
+                            "w": 613,
+                            "h": 440
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_03_title",
                         "position": {
-                            "x": 982,
-                            "y": 140,
-                            "w": 377,
+                            "x": 1302,
+                            "y": 124,
+                            "w": 482,
                             "h": 34
                         },
                         "type": "block"
@@ -1236,9 +1446,9 @@
                     {
                         "item": "viz_card_03_metadata",
                         "position": {
-                            "x": 982,
-                            "y": 176,
-                            "w": 421,
+                            "x": 1302,
+                            "y": 160,
+                            "w": 581,
                             "h": 24
                         },
                         "type": "block"
@@ -1246,38 +1456,48 @@
                     {
                         "item": "viz_card_03_description",
                         "position": {
-                            "x": 982,
-                            "y": 204,
-                            "w": 421,
-                            "h": 68
+                            "x": 1302,
+                            "y": 188,
+                            "w": 581,
+                            "h": 64
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_03_singlevalue",
                         "position": {
-                            "x": 982,
-                            "y": 284,
-                            "w": 421,
-                            "h": 88
+                            "x": 1302,
+                            "y": 260,
+                            "w": 581,
+                            "h": 80
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_03_trend",
                         "position": {
-                            "x": 982,
-                            "y": 376,
-                            "w": 421,
-                            "h": 212
+                            "x": 1302,
+                            "y": 344,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_info_trigger",
+                        "position": {
+                            "x": 1800,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_03_drilldown_trigger",
                         "position": {
-                            "x": 1364,
-                            "y": 134,
+                            "x": 1844,
+                            "y": 118,
                             "w": 42,
                             "h": 42
                         },
@@ -1287,9 +1507,9 @@
                         "item": "viz_card_04_background",
                         "position": {
                             "x": 20,
-                            "y": 624,
-                            "w": 453,
-                            "h": 476
+                            "y": 568,
+                            "w": 613,
+                            "h": 440
                         },
                         "type": "block"
                     },
@@ -1297,8 +1517,8 @@
                         "item": "viz_card_04_title",
                         "position": {
                             "x": 36,
-                            "y": 636,
-                            "w": 377,
+                            "y": 580,
+                            "w": 482,
                             "h": 34
                         },
                         "type": "block"
@@ -1307,8 +1527,8 @@
                         "item": "viz_card_04_metadata",
                         "position": {
                             "x": 36,
-                            "y": 672,
-                            "w": 421,
+                            "y": 616,
+                            "w": 581,
                             "h": 24
                         },
                         "type": "block"
@@ -1317,9 +1537,9 @@
                         "item": "viz_card_04_description",
                         "position": {
                             "x": 36,
-                            "y": 700,
-                            "w": 421,
-                            "h": 68
+                            "y": 644,
+                            "w": 581,
+                            "h": 64
                         },
                         "type": "block"
                     },
@@ -1327,9 +1547,9 @@
                         "item": "viz_card_04_singlevalue",
                         "position": {
                             "x": 36,
-                            "y": 780,
-                            "w": 421,
-                            "h": 88
+                            "y": 716,
+                            "w": 581,
+                            "h": 80
                         },
                         "type": "block"
                     },
@@ -1337,17 +1557,27 @@
                         "item": "viz_card_04_trend",
                         "position": {
                             "x": 36,
-                            "y": 872,
-                            "w": 421,
-                            "h": 212
+                            "y": 800,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_info_trigger",
+                        "position": {
+                            "x": 534,
+                            "y": 574,
+                            "w": 42,
+                            "h": 42
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_04_drilldown_trigger",
                         "position": {
-                            "x": 418,
-                            "y": 630,
+                            "x": 578,
+                            "y": 574,
                             "w": 42,
                             "h": 42
                         },
@@ -1356,19 +1586,19 @@
                     {
                         "item": "viz_card_05_background",
                         "position": {
-                            "x": 493,
-                            "y": 624,
-                            "w": 453,
-                            "h": 476
+                            "x": 653,
+                            "y": 568,
+                            "w": 613,
+                            "h": 440
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_05_title",
                         "position": {
-                            "x": 509,
-                            "y": 636,
-                            "w": 377,
+                            "x": 669,
+                            "y": 580,
+                            "w": 482,
                             "h": 34
                         },
                         "type": "block"
@@ -1376,9 +1606,9 @@
                     {
                         "item": "viz_card_05_metadata",
                         "position": {
-                            "x": 509,
-                            "y": 672,
-                            "w": 421,
+                            "x": 669,
+                            "y": 616,
+                            "w": 581,
                             "h": 24
                         },
                         "type": "block"
@@ -1386,38 +1616,48 @@
                     {
                         "item": "viz_card_05_description",
                         "position": {
-                            "x": 509,
-                            "y": 700,
-                            "w": 421,
-                            "h": 68
+                            "x": 669,
+                            "y": 644,
+                            "w": 581,
+                            "h": 64
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_05_singlevalue",
                         "position": {
-                            "x": 509,
-                            "y": 780,
-                            "w": 421,
-                            "h": 88
+                            "x": 669,
+                            "y": 716,
+                            "w": 581,
+                            "h": 80
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_05_trend",
                         "position": {
-                            "x": 509,
-                            "y": 872,
-                            "w": 421,
-                            "h": 212
+                            "x": 669,
+                            "y": 800,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_info_trigger",
+                        "position": {
+                            "x": 1167,
+                            "y": 574,
+                            "w": 42,
+                            "h": 42
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_05_drilldown_trigger",
                         "position": {
-                            "x": 891,
-                            "y": 630,
+                            "x": 1211,
+                            "y": 574,
                             "w": 42,
                             "h": 42
                         },
@@ -1426,19 +1666,19 @@
                     {
                         "item": "viz_card_06_background",
                         "position": {
-                            "x": 966,
-                            "y": 624,
-                            "w": 453,
-                            "h": 476
+                            "x": 1286,
+                            "y": 568,
+                            "w": 613,
+                            "h": 440
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_06_title",
                         "position": {
-                            "x": 982,
-                            "y": 636,
-                            "w": 377,
+                            "x": 1302,
+                            "y": 580,
+                            "w": 482,
                             "h": 34
                         },
                         "type": "block"
@@ -1446,9 +1686,9 @@
                     {
                         "item": "viz_card_06_metadata",
                         "position": {
-                            "x": 982,
-                            "y": 672,
-                            "w": 421,
+                            "x": 1302,
+                            "y": 616,
+                            "w": 581,
                             "h": 24
                         },
                         "type": "block"
@@ -1456,38 +1696,48 @@
                     {
                         "item": "viz_card_06_description",
                         "position": {
-                            "x": 982,
-                            "y": 700,
-                            "w": 421,
-                            "h": 68
+                            "x": 1302,
+                            "y": 644,
+                            "w": 581,
+                            "h": 64
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_06_singlevalue",
                         "position": {
-                            "x": 982,
-                            "y": 780,
-                            "w": 421,
-                            "h": 88
+                            "x": 1302,
+                            "y": 716,
+                            "w": 581,
+                            "h": 80
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_06_trend",
                         "position": {
-                            "x": 982,
-                            "y": 872,
-                            "w": 421,
-                            "h": 212
+                            "x": 1302,
+                            "y": 800,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_info_trigger",
+                        "position": {
+                            "x": 1800,
+                            "y": 574,
+                            "w": 42,
+                            "h": 42
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_06_drilldown_trigger",
                         "position": {
-                            "x": 1364,
-                            "y": 630,
+                            "x": 1844,
+                            "y": 574,
                             "w": 42,
                             "h": 42
                         },

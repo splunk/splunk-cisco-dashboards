@@ -103,6 +103,24 @@ export default function AppThemeProvider({
         [allowColorSchemeChoice, colorScheme, setColorScheme]
     );
 
+    useEffect(() => {
+        if (typeof document === 'undefined') return undefined;
+        const mountRoot = document.getElementById('scan-root');
+        if (!mountRoot) return undefined;
+
+        mountRoot.dataset.appColorScheme = colorScheme;
+        mountRoot.style.colorScheme = colorScheme;
+
+        return () => {
+            if (mountRoot.dataset.appColorScheme === colorScheme) {
+                delete mountRoot.dataset.appColorScheme;
+            }
+            if (mountRoot.style.colorScheme === colorScheme) {
+                mountRoot.style.removeProperty('color-scheme');
+            }
+        };
+    }, [colorScheme]);
+
     return (
         <AppThemeControlsContext.Provider value={controls}>
             <SplunkThemeProvider

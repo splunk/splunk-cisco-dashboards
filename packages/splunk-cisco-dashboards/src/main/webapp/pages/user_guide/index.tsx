@@ -1,5 +1,12 @@
 /* eslint-disable react/jsx-filename-extension */
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import Button from "@splunk/react-ui/Button";
+import Code from "@splunk/react-ui/Code";
+import Dropdown from "@splunk/react-ui/Dropdown";
+import Menu from "@splunk/react-ui/Menu";
+import Typography from "@splunk/react-ui/Typography";
+import { variables } from "@splunk/themes";
+import styled from "styled-components";
 import {
     Activity,
     AlertTriangle,
@@ -15,14 +22,18 @@ import {
     Layers,
     LifeBuoy,
     Map as MapIcon,
+    Moon,
     PlayCircle,
     Search,
     Settings,
     Shield,
     SlidersHorizontal,
+    Sun,
     Wifi,
 } from '@/common/icons/SuiIcon';
+import AppearanceMenuItems from "@/common/components/AppearanceMenuItems";
 import { APP_VERSION_LABEL } from "@/common/lib/buildInfo";
+import { useAppThemeControls } from "@/common/theme/AppThemeProvider";
 
 import "./user-guide.css";
 
@@ -45,8 +56,31 @@ const managerUrl = (app: string, page: string): string =>
 const searchUrl = (q: string): string =>
   `/${getSplunkLocale()}/app/${APP_NAME}/search?q=${encodeURIComponent(q)}`;
 
-const sectionLinkBase =
-  "inline-flex h-9 items-center gap-2 rounded border sui-border-default sui-bg-section px-3 text-sm font-semibold sui-color-default transition sui-hover-border-info sui-hover-color-info";
+const sectionLinkBase = "scd-guide-action-link";
+
+function InlineCodeTypography({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}): JSX.Element {
+  return (
+    <Typography as="code" className={className} color="active" variant="monoBody">
+      {children}
+    </Typography>
+  );
+}
+
+const InlineCodeText = styled(InlineCodeTypography)`
+  background: ${variables.backgroundColorPage};
+  border: 1px solid ${variables.borderColorWeak};
+  border-radius: ${variables.borderRadius};
+  box-decoration-break: clone;
+  overflow-wrap: anywhere;
+  padding: 1px ${variables.spacingXSmall};
+  white-space: break-spaces;
+`;
 
 const GUIDE_GROUPS = [
   {
@@ -87,6 +121,8 @@ const GUIDE_SECTIONS = GUIDE_GROUPS.flatMap((group) =>
   group.sections.map((section) => ({ ...section, group: group.label })),
 );
 
+const RELEASE_PANEL_IDS = ["current", "published-1-0-46"];
+
 const SEARCHABLE_SELECTOR = "h2, h3, p, li, td, th";
 
 const sectionNumber = (id: string): number =>
@@ -118,6 +154,31 @@ function GuideLink({
   );
 }
 
+function InlineCode({ children }: { children: React.ReactNode }): JSX.Element {
+  return <InlineCodeText>{children}</InlineCodeText>;
+}
+
+function FormattedCodeText({ value }: { value: string }): JSX.Element {
+  const parts = value.split("`");
+  let isCode = false;
+  let offset = 0;
+  return (
+    <>
+      {parts.map((part) => {
+        const key = `${offset}-${part}`;
+        const content = isCode ? (
+          <InlineCode key={key}>{part}</InlineCode>
+        ) : (
+          part
+        );
+        offset += part.length + 1;
+        isCode = !isCode;
+        return content;
+      })}
+    </>
+  );
+}
+
 function Section({
   id,
   title,
@@ -132,26 +193,22 @@ function Section({
   children: React.ReactNode;
 }): JSX.Element {
   return (
-    <section
-      id={id}
-      data-guide-section={id}
-      className="scd-guide-section scroll-mt-6 overflow-hidden rounded-xl border sui-border-weak sui-bg-section shadow-sm"
-    >
-      <div className="border-b sui-border-weak px-5 py-4">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border sui-border-notification-info sui-bg-notification-info sui-color-active">
+    <section id={id} data-guide-section={id} className="scd-guide-section">
+      <div className="scd-guide-section-header">
+        <div className="scd-guide-section-heading-row">
+          <div className="scd-guide-section-icon" aria-hidden="true">
             {icon}
           </div>
-          <div className="min-w-0">
-            <div className="mb-1 text-xs font-bold uppercase tracking-[0.12em] sui-color-info">
+          <div className="scd-guide-section-heading-copy">
+            <div className="scd-guide-section-number">
               Section {sectionNumber(id)}
             </div>
-            <h2 className="m-0 text-xl font-bold sui-color-active">{title}</h2>
-            {kicker && <p className="mt-1 text-sm sui-color-default">{kicker}</p>}
+            <h2>{title}</h2>
+            {kicker && <p>{kicker}</p>}
           </div>
         </div>
       </div>
-      <div className="px-5 py-5">{children}</div>
+      <div className="scd-guide-section-body">{children}</div>
     </section>
   );
 }
@@ -164,12 +221,43 @@ function InfoCard({
   children: React.ReactNode;
 }): JSX.Element {
   return (
-    <div className="border sui-border-weak sui-bg-page p-4">
-      <h3 className="m-0 text-sm font-bold uppercase tracking-wide sui-color-default">
-        {title}
-      </h3>
-      <div className="mt-3 text-sm leading-6 sui-color-default">{children}</div>
-    </div>
+    <section className="scd-guide-info-block">
+      <h3>{title}</h3>
+      <div>{children}</div>
+    </section>
+  );
+}
+
+function ReleasePanel({
+  children,
+  meta,
+  onToggle,
+  open,
+  title,
+}: {
+  children: React.ReactNode;
+  meta: string;
+  onToggle: (open: boolean) => void;
+  open: boolean;
+  title: string;
+}): JSX.Element {
+  return (
+    <details
+      className="scd-guide-release-panel"
+      onToggle={(event) => onToggle(event.currentTarget.open)}
+      open={open}
+    >
+      <summary className="scd-guide-release-summary">
+        <span className="scd-guide-release-indicator" aria-hidden="true">
+          ›
+        </span>
+        <span className="scd-guide-release-title-block">
+          <span className="scd-guide-release-title">{title}</span>
+          <span className="scd-guide-release-meta">{meta}</span>
+        </span>
+      </summary>
+      <div className="scd-guide-release-body">{children}</div>
+    </details>
   );
 }
 
@@ -195,23 +283,23 @@ function CodeBlock({ children }: { children: React.ReactNode }): JSX.Element {
   }, [code]);
 
   return (
-    <div className="overflow-hidden rounded-lg border sui-border-default sui-bg-page">
-      <div className="scd-guide-no-print flex items-center justify-between border-b sui-border-default sui-bg-section px-3 py-2">
-        <span className="text-xs font-bold uppercase tracking-wide sui-color-default">
-          Configuration example
-        </span>
-        <button
-          type="button"
+    <div className="scd-guide-code-block">
+      <div className="scd-guide-code-toolbar scd-guide-no-print">
+        <span>Configuration example</span>
+        <Button
+          appearance="subtle"
+          icon={copied ? <Check size={13} /> : <Copy size={13} />}
+          label={copied ? "Copied" : "Copy"}
           onClick={copyCode}
-          className="inline-flex items-center gap-1.5 rounded border sui-border-default sui-bg-popup px-2 py-1 text-xs font-semibold sui-color-active sui-hover-border-info sui-hover-color-active"
-        >
-          {copied ? <Check size={13} /> : <Copy size={13} />}
-          {copied ? "Copied" : "Copy"}
-        </button>
+        />
       </div>
-      <pre className="scd-guide-code-pre m-0 overflow-auto p-4 font-mono text-xs leading-6 sui-color-active">
-        {code}
-      </pre>
+      <Code
+        containerAppearance="section"
+        language="text"
+        lineWrap
+        showIndentGuide={false}
+        value={code}
+      />
     </div>
   );
 }
@@ -336,11 +424,8 @@ function GuideContents({
         >
           Setup: Tune indexes →
         </a>
-        <a
-          href={appUrl("searchbase_canvas")}
-          className="scd-guide-toc-quicklink"
-        >
-          Searchbase Canvas →
+        <a href={appUrl("workspace_insights")} className="scd-guide-toc-quicklink">
+          Insights Workspaces →
         </a>
       </div>
     </nav>
@@ -462,6 +547,12 @@ const macroFamilies = [
     note: "Used by the Cisco Security Cloud app data models.",
   },
   {
+    app: "Splunk_TA_Cisco_Intersight",
+    format: "index IN (idx1, idx2)",
+    examples: "cisco_intersight_index",
+    note: "Used by the Cisco Intersight data model and its tstats-backed diagnostics.",
+  },
+  {
     app: "ta_cisco_thousandeyes",
     format: "(index=idx1 OR index=idx2)",
     examples:
@@ -480,6 +571,15 @@ const dependencyApps = [
       "Required for Cisco Security Cloud data model macros and security model-backed content.",
   },
   {
+    name: "Cisco Intersight Add-On for Splunk",
+    folder: "Splunk_TA_Cisco_Intersight",
+    splunkbase:
+      "https://splunkbase.splunk.com/apps/#/search/Cisco%20Intersight%20Add-On/",
+    models: "Cisco_Intersight",
+    usage:
+      "Collects Intersight telemetry and provides the Cisco_Intersight model used for acceleration readiness and model-coverage diagnostics.",
+  },
+  {
     name: "Cisco ThousandEyes App for Splunk",
     folder: "ta_cisco_thousandeyes",
     splunkbase: "https://splunkbase.splunk.com/app/7719",
@@ -488,7 +588,7 @@ const dependencyApps = [
       "Required for ThousandEyes data model macros and tstats-backed ThousandEyes panels.",
   },
   {
-    name: "Cisco Enterprise Networking for Splunk Platform",
+    name: "Cisco Enterprise Networking App for Splunk",
     folder: "cisco-catalyst-app",
     splunkbase: "https://splunkbase.splunk.com/app/7539",
     models: "Cisco_Catalyst_App",
@@ -569,7 +669,7 @@ const dataSources = [
 const supportMacros = [
   [
     "`customer_name`",
-    "Controls the organization name shown in dashboard headers and report titles.",
+    "Deprecated compatibility macro for external/custom dashboards; Insights Workspace titles now come from workspace configuration and the branding editor.",
   ],
   [
     "`scd_summariesonly`",
@@ -629,6 +729,7 @@ const troubleshootingRows = [
 ];
 
 export default function UserGuidePage(): JSX.Element {
+  const { canChooseColorScheme, colorScheme } = useAppThemeControls();
   const setupUrl = `${appUrl("setup")}?setup=1`;
   const setupTuningUrl = `${setupUrl}#tune-indexes`;
   const setupCimTuningUrl = `${setupUrl}#tune-cim`;
@@ -639,6 +740,9 @@ export default function UserGuidePage(): JSX.Element {
   const guideContentRef = useRef<HTMLDivElement | null>(null);
   const matchesRef = useRef<HTMLElement[]>([]);
   const currentSearchIndexRef = useRef(-1);
+  const appearanceToggleRef = useRef<
+    HTMLAnchorElement | HTMLButtonElement
+  >(null);
   const [activeSection, setActiveSection] = useState<string>(
     GUIDE_SECTIONS[0].id,
   );
@@ -650,6 +754,38 @@ export default function UserGuidePage(): JSX.Element {
   const [searchStatus, setSearchStatus] = useState("");
   const [searchMatches, setSearchMatches] = useState(0);
   const [currentSearchIndex, setCurrentSearchIndex] = useState(-1);
+  const [appearanceMenuOpen, setAppearanceMenuOpen] = useState(false);
+  const [openReleasePanels, setOpenReleasePanels] = useState(
+    () => new Set(["current"]),
+  );
+
+  const setReleasePanelOpen = useCallback(
+    (panelId: string, open: boolean) => {
+      setOpenReleasePanels((current) => {
+        const next = new Set(current);
+        if (open) {
+          next.add(panelId);
+        } else {
+          next.delete(panelId);
+        }
+        return next;
+      });
+    },
+    [],
+  );
+
+  const setAllReleasePanelsOpen = useCallback((open: boolean) => {
+    setOpenReleasePanels(
+      open
+        ? new Set(RELEASE_PANEL_IDS)
+        : new Set(),
+    );
+  }, []);
+
+  const closeAppearanceMenu = useCallback(() => {
+    setAppearanceMenuOpen(false);
+    window.setTimeout(() => appearanceToggleRef.current?.focus(), 0);
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.add("scd-overview-active");
@@ -909,7 +1045,11 @@ export default function UserGuidePage(): JSX.Element {
 
   return (
     <main
-      className="scd-user-guide scd-overview-page scd-c3-surface scd-c3-atmosphere min-h-screen"
+      className={`scd-user-guide scd-overview-page scd-c3-surface min-h-screen${
+        colorScheme === "dark" ? " scd-c3-atmosphere" : ""
+      }`}
+      data-color-scheme={colorScheme}
+      style={{ colorScheme }}
     >
       <div className="scd-guide-layout">
         <GuideContents
@@ -924,46 +1064,69 @@ export default function UserGuidePage(): JSX.Element {
           setSearchQuery={setSearchQuery}
         />
 
-        <article className="scd-guide-document grid gap-5">
-          <header className="rounded-xl border sui-border-weak sui-bg-section p-6 shadow-sm sm:p-8">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <div className="mb-3 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] sui-color-info">
+        <article className="scd-guide-document">
+          <header className="scd-guide-hero">
+            <div className="scd-guide-hero-heading-row">
+              <div className="scd-guide-hero-heading-copy">
+                <div className="scd-guide-hero-eyebrow">
                   <LifeBuoy size={15} />
                   User Guide
                 </div>
-                <h1 className="m-0 text-3xl font-bold tracking-normal sui-color-active">
+                <h1>
                   Splunk Secure Networking Essentials
                 </h1>
               </div>
-              <div className="scd-guide-no-print flex items-center gap-2">
-                <button
-                  type="button"
+              <div className="scd-guide-hero-actions scd-guide-no-print">
+                {canChooseColorScheme ? (
+                  <Dropdown
+                    defaultPlacement="below"
+                    focusToggleReasons={["escapeKey", "tabKey", "toggleClick"]}
+                    open={appearanceMenuOpen}
+                    onRequestClose={() => setAppearanceMenuOpen(false)}
+                    onRequestOpen={() => setAppearanceMenuOpen(true)}
+                    toggle={
+                      <Button
+                        appearance="secondary"
+                        elementRef={appearanceToggleRef}
+                        icon={
+                          colorScheme === "light" ? (
+                            <Sun aria-hidden="true" size={17} />
+                          ) : (
+                            <Moon aria-hidden="true" size={17} />
+                          )
+                        }
+                        label="Appearance"
+                      />
+                    }
+                  >
+                    <Menu>
+                      <AppearanceMenuItems onSelect={closeAppearanceMenu} />
+                    </Menu>
+                  </Dropdown>
+                ) : null}
+                <Button
+                  appearance="secondary"
+                  icon={<Download size={17} />}
+                  label="Export PDF"
                   onClick={exportPdf}
-                  title="Open the browser print dialog to save this guide as PDF"
-                  className="inline-flex h-11 items-center gap-2 rounded-lg border sui-border-default sui-bg-section px-4 text-sm font-bold sui-color-info shadow-sm sui-hover-border-info sui-hover-bg-info"
-                >
-                  <Download size={17} />
-                  Export PDF
-                </button>
+                />
               </div>
             </div>
 
-            <p className="mt-5 max-w-4xl text-lg leading-8 sui-color-default">
+            <p className="scd-guide-hero-summary">
               Setup and operating guide for deploying the app, tuning macros,
               validating data sources, and keeping the executive dashboards
               useful after the first install.
             </p>
-            <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 border-t sui-border-weak pt-4 text-sm sui-color-default">
+            <div className="scd-guide-hero-metadata">
               <span>
-                <strong className="sui-color-active">Version:</strong>{" "}
-                {APP_VERSION_LABEL}
+                <strong>Version:</strong> {APP_VERSION_LABEL}
               </span>
               <span>
-                <strong className="sui-color-active">License:</strong> Apache-2.0
+                <strong>License:</strong> Apache-2.0
               </span>
             </div>
-            <div className="scd-guide-no-print mt-5 flex flex-wrap gap-2">
+            <div className="scd-guide-hero-links scd-guide-no-print">
               <GuideLink href={setupTuningUrl}>
                 <SlidersHorizontal size={15} />
                 Setup: Tune indexes
@@ -979,7 +1142,7 @@ export default function UserGuidePage(): JSX.Element {
             </div>
           </header>
 
-          <div ref={guideContentRef} className="grid gap-5">
+          <div ref={guideContentRef} className="scd-guide-content">
             <Section
               id="overview"
               title="What This App Provides"
@@ -1011,7 +1174,7 @@ export default function UserGuidePage(): JSX.Element {
               kicker="Install these apps and prepare their data models before tuning macros or validating data model-backed panels."
               icon={<GitBranch size={19} />}
             >
-              <div className="overflow-x-auto">
+              <div className="scd-guide-table-wrap">
                 <table className="min-w-[1180px] border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b sui-border-weak sui-bg-page text-xs uppercase tracking-wide sui-color-muted">
@@ -1028,7 +1191,7 @@ export default function UserGuidePage(): JSX.Element {
                         Data Model
                       </th>
                       <th className="w-[20%] px-3 py-2 font-bold">
-                        How SCD Uses It
+                        How SSNE Uses It
                       </th>
                     </tr>
                   </thead>
@@ -1041,22 +1204,22 @@ export default function UserGuidePage(): JSX.Element {
                         <td className="px-3 py-3 font-bold sui-color-active">
                           {app.name}
                         </td>
-                        <td className="px-3 py-3 font-mono text-xs sui-color-default">
-                          {app.folder}
+                        <td className="px-3 py-3 sui-color-default">
+                          <InlineCode>{app.folder}</InlineCode>
                         </td>
                         <td className="px-3 py-3">
                           <a
                             href={app.splunkbase}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 font-mono text-xs font-bold sui-color-info sui-hover-color-info"
+                            className="scd-guide-table-link"
                           >
                             {app.splunkbase}
                             <ExternalLink size={13} />
                           </a>
                         </td>
-                        <td className="px-3 py-3 font-mono text-xs sui-color-default">
-                          {app.models}
+                        <td className="px-3 py-3 sui-color-default">
+                          <InlineCode>{app.models}</InlineCode>
                         </td>
                         <td className="px-3 py-3 sui-color-default">
                           {app.usage}
@@ -1067,12 +1230,17 @@ export default function UserGuidePage(): JSX.Element {
                 </table>
               </div>
               <p className="mt-4 text-sm leading-6 sui-color-default">
-                Splunk Secure Networking Essentials currently uses the Cisco
-                Security Cloud and Cisco ThousandEyes data models, and will use
-                the Cisco_Catalyst_App data model from Cisco Enterprise
-                Networking for Splunk Platform. For best performance, the data
-                models in those three Cisco apps are expected to be accelerated
-                when you enable their related content.
+                Splunk Secure Networking Essentials uses the Cisco Security
+                Cloud, Cisco Intersight, Cisco ThousandEyes, and Cisco Enterprise
+                Networking data models. For best performance, accelerate each
+                applicable model when you enable its related content.
+              </p>
+              <p className="mt-3 text-sm leading-6 sui-color-default">
+                Search selection follows a portability-first order: use an
+                accelerated CIM model when it preserves the required meaning and
+                fields, use a Cisco app or add-on model for vendor-specific
+                coverage, and use raw indexed events only when neither model can
+                represent the search faithfully.
               </p>
             </Section>
 
@@ -1142,47 +1310,41 @@ export default function UserGuidePage(): JSX.Element {
               kicker="The most important setup step. It maps your real indexes to the macros the dashboards and data models use."
               icon={<SlidersHorizontal size={19} />}
             >
-              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-                <div className="space-y-4 text-sm leading-6 sui-color-default">
-                  <p className="m-0">
-                    <strong>Tune indexes</strong> is the third and final step of
-                    the Setup workflow. Its React interface is loaded directly
-                    inside Setup; the standalone{" "}
-                    <code className="rounded sui-bg-section px-1 py-0.5">
-                      admin_macro_index_tuning.xml
-                    </code>
-                    {" "}route redirects here so administrators have one setup
-                    destination. The fast scan uses the{" "}
-                    <code className="rounded sui-bg-section px-1 py-0.5">
-                      admin_macro_index_tuning
-                    </code>
-                    searchbase entry, which performs a tstats pass over known
-                    Cisco sourcetypes and generates macro definitions. The UI
-                    discovers every SCD macro whose name starts with{" "}
-                    <code className="rounded sui-bg-section px-1 py-0.5">
-                      index_
-                    </code>
-                    from this app at runtime, so newly added index macros appear
-                    in the scan without updating a hardcoded list. It also
-                    centralizes companion macro tuning, including Cisco Data
-                    Center Networking, Cisco Security Cloud, and ThousandEyes
-                    definitions, so their dashboards are ready when you open
-                    them.
-                  </p>
-                  <p className="m-0">
-                    CIM discovery is intentionally separate because it uses
-                    tag-based raw searches such as authentication and network
-                    communication tags. Keep that range short unless you are
-                    validating a new deployment.
-                  </p>
-                  <p className="m-0">
-                    The readiness panel reports acceleration independently of
-                    macro detection. Use its <strong>Open in Search</strong>{" "}
-                    link to review the REST-backed check, or an individual
-                    <strong> Accelerate data model</strong> link to open the
-                    matching Data Models manager page.
-                  </p>
-                  <CodeBlock>{`# SCD macro format
+              <div className="scd-guide-prose">
+                <p className="m-0">
+                  <strong>Tune indexes</strong> is the third and final step of
+                  the Setup workflow. Its React interface is loaded directly
+                  inside Setup; the standalone{" "}
+                  <InlineCode>admin_macro_index_tuning.xml</InlineCode> route
+                  redirects here so administrators have one setup destination.
+                  The fast scan uses the{" "}
+                  <InlineCode>admin_macro_index_tuning</InlineCode> Searchbase
+                  entry, which performs a tstats pass over known Cisco
+                  sourcetypes and generates macro definitions. The UI discovers
+                  every SSNE macro whose name starts with{" "}
+                  <InlineCode>index_</InlineCode> from this app at runtime, so
+                  newly added index macros appear in the scan without updating
+                  a hardcoded list. It also centralizes companion macro tuning,
+                  including Cisco Data Center Networking, Cisco Security Cloud,
+                  Cisco Intersight, and ThousandEyes definitions, so their
+                  dashboards are ready when you open them.
+                </p>
+                <p className="m-0">
+                  CIM discovery is intentionally separate because it uses
+                  tag-based raw searches such as authentication and network
+                  communication tags. Keep that range short unless you are
+                  validating a new deployment.
+                </p>
+                <p className="m-0">
+                  The readiness panel reports acceleration independently of
+                  macro detection. Use its <strong>Open in Search</strong> link
+                  to review the REST-backed check, or an individual
+                  <strong> Accelerate data model</strong> link to open the
+                  matching Data Models manager page.
+                </p>
+              </div>
+              <div className="scd-guide-reference-grid">
+                <CodeBlock>{`# SSNE macro format
 [index_catalyst]
 definition = index IN (cisco_catcenter, dnac)
 iseval = 0
@@ -1191,32 +1353,40 @@ iseval = 0
 [cim_Network_Traffic_indexes]
 definition = (index=net_firewall OR index=net_flow)
 iseval = 0`}</CodeBlock>
-                </div>
-                <div className="grid gap-3">
+                <div className="scd-guide-reference-column">
                   <InfoCard title="Where saves go">
                     <ul className="m-0 space-y-2 pl-4">
                       <li>
-                        SCD macros save to{" "}
-                        <code>splunk-cisco-dashboards/local/macros.conf</code>.
+                        SSNE macros save to{" "}
+                        <InlineCode>
+                          splunk-cisco-dashboards/local/macros.conf
+                        </InlineCode>
+                        .
                       </li>
                       <li>
                         CIM macros save to{" "}
-                        <code>Splunk_SA_CIM/local/macros.conf</code>.
+                        <InlineCode>Splunk_SA_CIM/local/macros.conf</InlineCode>.
                       </li>
                       <li>
                         Cisco Security macros save to{" "}
-                        <code>CiscoSecurityCloud/local/macros.conf</code>.
+                        <InlineCode>
+                          CiscoSecurityCloud/local/macros.conf
+                        </InlineCode>
+                        .
                       </li>
                       <li>
                         ThousandEyes macros save to{" "}
-                        <code>ta_cisco_thousandeyes/local/macros.conf</code>.
+                        <InlineCode>
+                          ta_cisco_thousandeyes/local/macros.conf
+                        </InlineCode>
+                        .
                       </li>
                     </ul>
                   </InfoCard>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="scd-guide-reference-links">
                     <GuideLink href={scdMacrosUrl}>
                       <Settings size={15} />
-                      SCD Macros
+                      SSNE Macros
                     </GuideLink>
                     <GuideLink href={cimMacrosUrl}>
                       <Settings size={15} />
@@ -1225,7 +1395,7 @@ iseval = 0`}</CodeBlock>
                   </div>
                 </div>
               </div>
-              <div className="mt-5 overflow-x-auto">
+              <div className="scd-guide-table-wrap scd-guide-table-spacing">
                 <table className="min-w-full border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b sui-border-weak sui-bg-page text-xs uppercase tracking-wide sui-color-muted">
@@ -1241,11 +1411,11 @@ iseval = 0`}</CodeBlock>
                         key={row.app}
                         className="border-b sui-border-weak align-top"
                       >
-                        <td className="px-3 py-3 font-mono text-xs sui-color-info">
-                          {row.app}
+                        <td className="px-3 py-3 sui-color-default">
+                          <InlineCode>{row.app}</InlineCode>
                         </td>
-                        <td className="px-3 py-3 font-mono text-xs sui-color-default">
-                          {row.format}
+                        <td className="px-3 py-3 sui-color-default">
+                          <InlineCode>{row.format}</InlineCode>
                         </td>
                         <td className="px-3 py-3 sui-color-default">
                           {row.examples}
@@ -1264,7 +1434,7 @@ iseval = 0`}</CodeBlock>
               kicker="The app expects normalized sourcetypes from Cisco add-ons, Splunk CIM, and supporting platform data."
               icon={<Database size={19} />}
             >
-              <div className="overflow-x-auto">
+              <div className="scd-guide-table-wrap">
                 <table className="min-w-[980px] border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b sui-border-weak sui-bg-page text-xs uppercase tracking-wide sui-color-muted">
@@ -1285,21 +1455,19 @@ iseval = 0`}</CodeBlock>
                           {area}
                         </td>
                         <td className="px-3 py-3 sui-color-default">
-                          {sourcetypes}
+                          <FormattedCodeText value={sourcetypes} />
                         </td>
-                        <td className="px-3 py-3 font-mono text-xs sui-color-info">
-                          {macro}
+                        <td className="px-3 py-3 sui-color-default">
+                          <FormattedCodeText value={macro} />
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <div className="mt-5 border sui-border-weak sui-bg-page p-4">
-                <h3 className="m-0 text-sm font-bold uppercase tracking-wide sui-color-default">
-                  Supporting Macros
-                </h3>
-                <div className="mt-3 overflow-x-auto">
+              <section className="scd-guide-supporting-table">
+                <h3>Supporting macros</h3>
+                <div className="scd-guide-table-wrap">
                   <table className="min-w-[720px] border-collapse text-left text-sm">
                     <tbody>
                       {supportMacros.map(([macro, purpose]) => (
@@ -1307,8 +1475,8 @@ iseval = 0`}</CodeBlock>
                           key={macro}
                           className="border-b sui-border-weak align-top last:border-b-0"
                         >
-                          <td className="w-[30%] px-3 py-3 font-mono text-xs sui-color-info">
-                            {macro}
+                          <td className="w-[30%] px-3 py-3 sui-color-default">
+                            <FormattedCodeText value={macro} />
                           </td>
                           <td className="px-3 py-3 sui-color-default">
                             {purpose}
@@ -1318,7 +1486,7 @@ iseval = 0`}</CodeBlock>
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </section>
             </Section>
 
             <Section
@@ -1332,7 +1500,7 @@ iseval = 0`}</CodeBlock>
                   <a
                     key={dashboard.view}
                     href={appUrl(dashboard.view)}
-                    className="group border sui-border-weak sui-bg-page p-4 sui-color-active transition sui-hover-border-info sui-hover-bg-info"
+                    className="scd-guide-dashboard-link"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <h3 className="m-0 text-base font-bold sui-color-active sui-group-hover-color-info">
@@ -1343,11 +1511,9 @@ iseval = 0`}</CodeBlock>
                         className="shrink-0 sui-color-default sui-group-hover-color-info"
                       />
                     </div>
-                    <p className="mt-2 text-sm leading-6 sui-color-default">
-                      {dashboard.summary}
-                    </p>
-                    <div className="mt-3 font-mono text-xs sui-color-info">
-                      {dashboard.view}
+                    <p>{dashboard.summary}</p>
+                    <div className="scd-guide-dashboard-route">
+                      <InlineCode>{dashboard.view}</InlineCode>
                     </div>
                   </a>
                 ))}
@@ -1360,51 +1526,417 @@ iseval = 0`}</CodeBlock>
               kicker="Create reusable, customer-ready views without changing the built-in Secure Networking workspace."
               icon={<Layers size={19} />}
             >
-              <div className="grid gap-4 md:grid-cols-2">
-                <InfoCard title="Workspace-owned configuration">
-                  A workspace stores its shared sections, tile membership and
-                  order, map configuration, and Signal Rail defaults. When
-                  adding a search, choose <strong> This browser</strong> for a
-                  private tile or <strong> Workspace default</strong> to show it
-                  to every viewer; the shared choice is available only to
-                  workspace managers. Browser preferences are isolated by
-                  signed-in account, workspace, and browser. Private Signal
-                  Rail preferences also follow the account across browsers.
+              <div className="scd-guide-prose">
+                <p>
+                  An Insights workspace is a reusable view of Searchbase-backed
+                  KPIs. It combines a template, sections, default tiles, a
+                  Signal Rail, header branding, and an optional customer
+                  connectivity map. Built-in workspaces provide ready-to-use
+                  starting points; custom workspaces let teams create focused
+                  executive, operations, or customer-demo views without
+                  changing the built-in definitions.
+                </p>
+              </div>
+
+              <div className="mt-5 grid gap-4 md:grid-cols-3">
+                <InfoCard title="Shared workspace defaults">
+                  Display name, sections, header branding, map placement and
+                  presentation, default tile order and count, shared tile
+                  additions, and Signal Rail membership are shared with every
+                  viewer. A workspace manager saves these settings through the
+                  app&apos;s protected server endpoints.
                 </InfoCard>
-                <InfoCard title="Role-based change control">
-                  Users with the <code> user</code> role can run workspaces,
-                  drill into results, and personalize their own browser view
-                  without changing another user&apos;s experience. Users with the
-                  <code> power</code>, <code> admin</code>, or
-                  <code> sc_admin</code> role can create and edit shared
-                  workspaces, change shared layouts and section titles, add or
-                  remove workspace default tiles, and edit the customer
-                  topology. Replacing the Searchbase behind a tile or changing
-                  factory tile thresholds, mappings, and drilldowns requires
-                  the <code> admin</code> or <code> sc_admin</code> role, or a
-                  delegated role with the <code> admin_all_objects</code>
-                  capability.
+                <InfoCard title="Personal view preferences">
+                  Each signed-in user can arrange their own view without
+                  changing the shared defaults. Personal choices include
+                  visible sections, tile order and count, hidden tiles, section
+                  height and collapsed state, private tile additions, chart
+                  display options, map split and height, search concurrency,
+                  and app appearance.
                 </InfoCard>
-                <InfoCard title="Start with a template, then make it yours">
-                  Templates are only a starting point for a new workspace.
-                  After creation, edit the workspace directly: add or remove
-                  sections, choose the tiles shown in each section, and tune
-                  the visible tile count for the audience.
+                <InfoCard title="Data access stays separate">
+                  Workspace permission does not grant access to indexed data.
+                  App access, the <InlineCode>search</InlineCode> capability,
+                  index permissions, and knowledge object permissions still
+                  determine which searches and results each user can open.
                 </InfoCard>
-                <InfoCard title="Use the right catalogue">
-                  The workspace source determines the safe tile catalogue. App
-                  labels are shown in the picker for readability; hover a label
-                  to see the Splunk app directory name when you need it.
+              </div>
+
+              <div className="mt-5">
+                <h3
+                  id="workspaces-create-a-workspace"
+                  className="m-0 text-base font-bold sui-color-active"
+                >
+                  Create a workspace
+                </h3>
+                <p className="mt-2 text-sm leading-6 sui-color-default">
+                  You need the{" "}
+                  <InlineCode>ssne_manage_insights_workspaces</InlineCode>{" "}
+                  capability to see the shared workspace editor and complete
+                  this procedure.
+                </p>
+                <ol className="scd-guide-task-list">
+                  <li>
+                    Open <strong>Insights Workspaces</strong>, select the
+                    workspace title, and select <strong>Edit workspaces</strong>.
+                  </li>
+                  <li>
+                    Select <strong>New</strong>. To start from an existing
+                    workspace instead, select it and select{" "}
+                    <strong>Duplicate</strong>.
+                  </li>
+                  <li>
+                    Enter a <strong>Display name</strong> and a unique{" "}
+                    <strong>Workspace ID</strong>. The ID must start with a
+                    letter and can contain lowercase letters, numbers, and
+                    underscores.
+                  </li>
+                  <li>
+                    Under <strong>Start from a template</strong>, choose the
+                    catalogue and initial content that best match the audience.
+                    The template is only a starting point.
+                  </li>
+                  <li>
+                    Set <strong>Default visible tiles per section</strong>, map
+                    placement and presentation, header title and subtitle, and
+                    at least one workspace section.
+                  </li>
+                  <li>
+                    Select <strong>Save workspace</strong>. The app opens the
+                    saved workspace so you can review it.
+                  </li>
+                  <li>
+                    Arrange the tiles and visible count in each section. To
+                    make those defaults available to every viewer, open{" "}
+                    <strong>Configure tile</strong> and select{" "}
+                    <strong>Publish workspace layout</strong>.
+                  </li>
+                  <li>
+                    Open <strong>Configure Signal Rail</strong> to choose the
+                    shared KPI membership. Speed, density, and type size remain
+                    private display preferences for each signed-in user.
+                  </li>
+                </ol>
+                <p className="scd-guide-note">
+                  <strong>Before publishing:</strong> test the workspace with a
+                  role that represents its intended audience. A manager can
+                  configure a search that another role cannot run because data
+                  and knowledge object permissions are evaluated separately.
+                </p>
+              </div>
+
+              <div className="mt-5">
+                <h3
+                  id="workspaces-add-and-publish-searches"
+                  className="m-0 text-base font-bold sui-color-active"
+                >
+                  Add and publish searches
+                </h3>
+                <div className="mt-3 grid gap-4 md:grid-cols-2">
+                  <InfoCard title="Add for me">
+                    Adds the search only to your browser-scoped workspace view.
+                    Use this option to evaluate a tile before changing the
+                    shared workspace. Removing or hiding it does not affect
+                    other viewers.
+                  </InfoCard>
+                  <InfoCard title="Add for everyone">
+                    Adds the search to the shared section layout in{" "}
+                    <InlineCode>insights_workspaces.conf</InlineCode>. This
+                    option appears only to workspace managers. Every viewer
+                    receives the new default, but personal visibility and
+                    ordering choices can still override the presentation.
+                  </InfoCard>
+                  <InfoCard title="Suggested catalogue">
+                    The Add search drawer starts with searches from this app
+                    that match the active section. It hides searches that are
+                    already configured unless you select{" "}
+                    <strong>Show added searches</strong>.
+                  </InfoCard>
+                  <InfoCard title="Entire catalogue">
+                    Select <strong>Entire catalogue</strong> to browse addable
+                    searches from other installed Searchbase providers. Use
+                    the <strong>App</strong> filter to narrow the execution
+                    context. App-qualified references keep identically named
+                    searches distinct.
+                  </InfoCard>
+                </div>
+              </div>
+
+              <div className="mt-5">
+                <h3
+                  id="workspaces-where-settings-are-saved"
+                  className="m-0 text-base font-bold sui-color-active"
+                >
+                  Where workspace settings are saved
+                </h3>
+                <p className="mt-2 text-sm leading-6 sui-color-default">
+                  The app uses three persistence scopes. Use this table to know
+                  whether a change follows the workspace, the Splunk account,
+                  or only the current browser profile.
+                </p>
+                <div className="scd-guide-table-wrap scd-guide-table-inner-spacing">
+                  <table aria-labelledby="workspaces-where-settings-are-saved">
+                    <thead>
+                      <tr>
+                        <th scope="col">Scope</th>
+                        <th scope="col">What is saved</th>
+                        <th scope="col">Location and behavior</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td><strong>Shared workspace</strong></td>
+                        <td>
+                          Metadata, sections, header branding, map defaults,
+                          shared tile layout and additions, and shared Signal
+                          Rail KPI membership
+                        </td>
+                        <td>
+                          <InlineCode>local/insights_workspaces.conf</InlineCode>.
+                          Visible to every viewer and survives app upgrades.
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><strong>Shared topology</strong></td>
+                        <td>
+                          Customer sites, links, telemetry bindings, map view,
+                          and shared section titles
+                        </td>
+                        <td>
+                          <InlineCode>local/customer_topology.conf</InlineCode>.
+                          Visible to every viewer and saved through the protected
+                          topology endpoint.
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><strong>Account preference</strong></td>
+                        <td>Signal Rail speed, density, and type size</td>
+                        <td>
+                          <InlineCode>insights_workspace_preferences.conf</InlineCode>{" "}
+                          in the signed-in user&apos;s Splunk namespace. The
+                          preference follows that account; browser storage is
+                          used only as a fallback when the endpoint is
+                          unavailable.
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><strong>Browser preference</strong></td>
+                        <td>
+                          Personal sections, tile order and count, hidden tiles,
+                          private additions, section presentation, chart display,
+                          map split and height, search concurrency, appearance,
+                          and last selected workspace
+                        </td>
+                        <td>
+                          User-scoped browser local storage. These settings stay
+                          with the current account, workspace, browser profile,
+                          and Splunk Web origin. The last workspace also uses a
+                          first-party cookie fallback.
+                        </td>
+                      </tr>
+                      <tr>
+                        <td><strong>Current session</strong></td>
+                        <td>
+                          Focused section, active tile page, Show all state, and
+                          unsaved editor changes
+                        </td>
+                        <td>
+                          Memory only. Reloading the page discards these states.
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className="mt-5">
+                <h3
+                  id="workspaces-workspace-permissions-by-role-and-capability"
+                  className="m-0 text-base font-bold sui-color-active"
+                >
+                  Workspace permissions by role and capability
+                </h3>
+                <p className="mt-2 text-sm leading-6 sui-color-default">
+                  The following table describes the effective access for the
+                  role names and capability that the app recognizes:
+                </p>
+                <div className="scd-guide-table-wrap scd-guide-table-inner-spacing">
+                  <table
+                    aria-labelledby="workspaces-workspace-permissions-by-role-and-capability"
+                    className="min-w-[1120px] border-collapse text-left text-sm"
+                  >
+                    <thead>
+                      <tr className="border-b sui-border-weak sui-bg-page text-xs uppercase tracking-wide sui-color-muted">
+                        <th
+                          scope="col"
+                          className="w-[30%] px-3 py-2 font-bold"
+                        >
+                          Action
+                        </th>
+                        <th
+                          scope="col"
+                          className="w-[14%] px-3 py-2 font-bold"
+                        >
+                          user or other role
+                        </th>
+                        <th
+                          scope="col"
+                          className="w-[14%] px-3 py-2 font-bold"
+                        >
+                          power
+                        </th>
+                        <th
+                          scope="col"
+                          className="w-[14%] px-3 py-2 font-bold"
+                        >
+                          delegated capability
+                        </th>
+                        <th
+                          scope="col"
+                          className="w-[14%] px-3 py-2 font-bold"
+                        >
+                          admin or sc_admin
+                        </th>
+                        <th
+                          scope="col"
+                          className="w-[14%] px-3 py-2 font-bold"
+                        >
+                          admin_all_objects
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b sui-border-weak align-top">
+                        <td className="px-3 py-3 sui-color-default">
+                          Open workspaces, run permitted searches, and drill
+                          into permitted results
+                        </td>
+                        <td className="px-3 py-3 sui-color-default">Allowed</td>
+                        <td className="px-3 py-3 sui-color-default">Allowed</td>
+                        <td className="px-3 py-3 sui-color-default">Allowed</td>
+                        <td className="px-3 py-3 sui-color-default">Allowed</td>
+                        <td className="px-3 py-3 sui-color-default">Allowed</td>
+                      </tr>
+                      <tr className="border-b sui-border-weak align-top">
+                        <td className="px-3 py-3 sui-color-default">
+                          Personalize layout, tile order and visibility, chart
+                          display, private searches, map proportions,
+                          appearance, and Signal Rail display preferences
+                        </td>
+                        <td className="px-3 py-3 sui-color-default">Allowed</td>
+                        <td className="px-3 py-3 sui-color-default">Allowed</td>
+                        <td className="px-3 py-3 sui-color-default">Allowed</td>
+                        <td className="px-3 py-3 sui-color-default">Allowed</td>
+                        <td className="px-3 py-3 sui-color-default">Allowed</td>
+                      </tr>
+                      <tr className="border-b sui-border-weak align-top">
+                        <td className="px-3 py-3 sui-color-default">
+                          Create, edit, or duplicate shared workspaces; publish
+                          shared layouts, section titles, and default tiles
+                        </td>
+                        <td className="px-3 py-3 sui-color-default">
+                          Not allowed
+                        </td>
+                        <td className="px-3 py-3 sui-color-default">
+                          Not allowed
+                        </td>
+                        <td className="px-3 py-3 sui-color-default">Allowed</td>
+                        <td className="px-3 py-3 sui-color-default">Allowed</td>
+                        <td className="px-3 py-3 sui-color-default">
+                          Requires delegated capability
+                        </td>
+                      </tr>
+                      <tr className="border-b sui-border-weak align-top">
+                        <td className="px-3 py-3 sui-color-default">
+                          Edit the shared customer topology
+                        </td>
+                        <td className="px-3 py-3 sui-color-default">
+                          Not allowed
+                        </td>
+                        <td className="px-3 py-3 sui-color-default">
+                          Not allowed
+                        </td>
+                        <td className="px-3 py-3 sui-color-default">Allowed</td>
+                        <td className="px-3 py-3 sui-color-default">Allowed</td>
+                        <td className="px-3 py-3 sui-color-default">
+                          Requires delegated capability
+                        </td>
+                      </tr>
+                      <tr className="border-b sui-border-weak align-top">
+                        <td className="px-3 py-3 sui-color-default">
+                          Replace a factory tile&apos;s Searchbase or change its
+                          shared thresholds, data mapping, and drilldown
+                        </td>
+                        <td className="px-3 py-3 sui-color-default">
+                          Not allowed
+                        </td>
+                        <td className="px-3 py-3 sui-color-default">
+                          Not allowed
+                        </td>
+                        <td className="px-3 py-3 sui-color-default">
+                          Not allowed
+                        </td>
+                        <td className="px-3 py-3 sui-color-default">Allowed</td>
+                        <td className="px-3 py-3 sui-color-default">Allowed</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <InfoCard title="How the capability check works">
+                  When the workspace opens, the app reads the current Splunk
+                  user context. The{" "}
+                  <InlineCode>ssne_manage_insights_workspaces</InlineCode>{" "}
+                  capability is required for shared workspace and topology
+                  management. The app grants it to the exact{" "}
+                  <InlineCode>admin</InlineCode> and{" "}
+                  <InlineCode>sc_admin</InlineCode> roles by default, but not to{" "}
+                  <InlineCode>user</InlineCode> or{" "}
+                  <InlineCode>power</InlineCode>. An exact{" "}
+                  <InlineCode>admin</InlineCode> or{" "}
+                  <InlineCode>sc_admin</InlineCode> role grants factory tile
+                  management. The <InlineCode>admin_all_objects</InlineCode>{" "}
+                  capability grants factory tile management but does not open
+                  Workspace Manager without the app capability. If the user
+                  context cannot be read, the app denies shared and factory
+                  changes.
                 </InfoCard>
-                <InfoCard title="Present the same data differently">
-                  Use executive workspaces for a concise briefing and a deeper
-                  operational workspace for troubleshooting. The map can sit
-                  beside, above, or below the tile grid, or be hidden when it
-                  is not useful to the audience. Sections start expanded and
-                  can be collapsed to a KPI and health summary or focused to
-                  use the available metrics pane. Compact H1 sparklines keep
-                  the trend visible; focus restores full labels and chart
-                  detail without changing the shared factory layout.
+                <InfoCard title="Custom roles and data access">
+                  Assign <InlineCode>ssne_manage_insights_workspaces</InlineCode>{" "}
+                  to a custom role when its members should create, edit,
+                  duplicate, or delete shared workspaces and edit the shared
+                  topology. The app&apos;s capability-protected REST handlers
+                  enforce those mutations on the server. No separate
+                  capability setup is required for the built-in{" "}
+                  <InlineCode>admin</InlineCode> or{" "}
+                  <InlineCode>sc_admin</InlineCode> roles because the app grants
+                  it to those roles. Built-in <InlineCode>user</InlineCode> and{" "}
+                  <InlineCode>power</InlineCode> roles cannot change shared
+                  configuration. Because{" "}
+                  <InlineCode>admin_all_objects</InlineCode> grants broad Splunk
+                  Enterprise access, do not assign it only to enable workspace
+                  editing; the app capability is still required to open the
+                  shared management workflow. The narrower capability does not
+                  permit factory <InlineCode>searchbase.conf</InlineCode>{" "}
+                  changes. App access, the <InlineCode>search</InlineCode>{" "}
+                  capability, index permissions, and
+                  knowledge object permissions continue to control which data
+                  each user can view.
+                </InfoCard>
+                <InfoCard title="Built-in and custom workspaces">
+                  Built-in workspaces are packaged with the app and cannot be
+                  deleted. Edit them when the shared default needs to change,
+                  or duplicate one before making a customer-specific variant.
+                  Custom workspaces can be edited, duplicated, or deleted by a
+                  workspace manager.
+                </InfoCard>
+                <InfoCard title="Reset behavior">
+                  <strong>Reset tile</strong> clears the current personal tile
+                  display change. <strong>Factory reset</strong> on a built-in
+                  workspace removes its app-local workspace and factory tile
+                  overrides, clears the current user&apos;s personal workspace
+                  preferences, and returns to packaged defaults. Other
+                  workspaces and indexed data are not changed.
                 </InfoCard>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
@@ -1444,11 +1976,16 @@ iseval = 0`}</CodeBlock>
                   investigation.
                 </InfoCard>
               </div>
-              <div className="mt-4 border sui-border-notification-warning sui-bg-notification-warning p-4 text-sm leading-6 sui-color-active">
+              <div className="scd-guide-note">
                 <strong>When no test is available:</strong> create an
                 agent-to-agent test between the two enterprise agents in
                 ThousandEyes, allow metric events to arrive in Splunk, then
                 reopen the topology editor and select the discovered test.
+              </div>
+              <div className="scd-guide-note">
+                <strong>Site placement stays private:</strong> the editor first
+                checks its offline city list. For an unmatched site, enter
+                explicit coordinates. Site names and coordinates are never sent to a public geocoder.
               </div>
               <div className="mt-4">
                 <GuideLink href={secureNetworkingUrl}>
@@ -1467,23 +2004,17 @@ iseval = 0`}</CodeBlock>
               <div className="grid gap-4 md:grid-cols-2">
                 <InfoCard title="searchbase.conf">
                   Search definitions live in{" "}
-                  <code>default/searchbase.conf</code> as the catalogue for
+                  <InlineCode>default/searchbase.conf</InlineCode> as the catalogue for
                   dashboard SPL, admin references, and helper tooling. React
                   utilities can read this catalogue when a page needs to expose
                   or run a named search. Each entry can retain its source app
                   classification while opening locally in Splunk Secure
                   Networking Essentials.
                 </InfoCard>
-                <InfoCard title="Searchbase Canvas">
-                  Use the canvas to assemble a working view from catalogue
-                  searches. Filter tiles by app, working state, needs attention,
-                  or failed searches; the app filter adapts its counts to the
-                  other active filters.
-                </InfoCard>
                 <InfoCard title="site_topology_lookup">
                   The scheduled Site Topology Lookup Generator snapshots
                   Catalyst Center site topology into{" "}
-                  <code>site_topology_lookup.csv</code> so client and device
+                  <InlineCode>site_topology_lookup.csv</InlineCode> so client and device
                   panels can turn site IDs into readable site names.
                 </InfoCard>
                 <InfoCard title="scd_summariesonly">
@@ -1528,7 +2059,7 @@ iseval = 0`}</CodeBlock>
               kicker="Start broad, then narrow to macro, sourcetype, field, and lookup issues."
               icon={<AlertTriangle size={19} />}
             >
-              <div className="overflow-x-auto">
+              <div className="scd-guide-table-wrap">
                 <table className="min-w-full border-collapse text-left text-sm">
                   <thead>
                     <tr className="border-b sui-border-weak sui-bg-page text-xs uppercase tracking-wide sui-color-muted">
@@ -1565,9 +2096,9 @@ iseval = 0`}</CodeBlock>
                   <GitBranch size={15} />
                   Site Lookup Check
                 </GuideLink>
-                <GuideLink href={appUrl("searchbase_canvas")}>
-                  <CheckCircle2 size={15} />
-                  Searchbase Canvas
+                <GuideLink href={workspaceUrl}>
+                  <Layers size={15} />
+                  Insights Workspaces
                 </GuideLink>
               </div>
             </Section>
@@ -1578,35 +2109,112 @@ iseval = 0`}</CodeBlock>
               kicker="A concise record of user-visible changes included with this version of the app."
               icon={<CheckCircle2 size={19} />}
             >
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse text-left text-sm">
-                  <thead>
-                    <tr className="border-b sui-border-weak sui-bg-page text-xs uppercase tracking-wide sui-color-muted">
-                      <th className="px-3 py-2 font-bold">Version</th>
-                      <th className="px-3 py-2 font-bold">Release focus</th>
-                      <th className="px-3 py-2 font-bold">Administrator action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="border-b sui-border-weak align-top">
-                      <td className="px-3 py-3 font-mono text-xs font-bold sui-color-info">
-                        {APP_VERSION_LABEL}
-                      </td>
-                      <td className="px-3 py-3 sui-color-default">
-                        Six-card Secure Networking KPI stories, guided setup,
-                        workspace customization, Searchbase drilldowns, and
-                        site-connectivity improvements.
-                      </td>
-                      <td className="px-3 py-3 sui-color-default">
-                        Review setup readiness after installing companion apps;
-                        existing workspaces keep their saved configuration.
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div
+                className="scd-guide-release-controls scd-guide-no-print"
+                aria-label="Release note controls"
+              >
+                <button type="button" onClick={() => setAllReleasePanelsOpen(true)}>
+                  Expand all
+                </button>
+                <button type="button" onClick={() => setAllReleasePanelsOpen(false)}>
+                  Collapse all
+                </button>
               </div>
 
+              <ReleasePanel
+                meta={`September 2026 · ${APP_VERSION_LABEL}`}
+                onToggle={(open) => setReleasePanelOpen("current", open)}
+                open={openReleasePanels.has("current")}
+                title="Release Notes"
+              >
+                <h3>Current release at a glance</h3>
+                <ul className="scd-guide-release-highlights">
+                  <li>
+                    <strong>Workspace reliability:</strong> custom workspace
+                    creation, duplication, shared Signal Rail membership, map
+                    credits, and light and dark appearance now behave
+                    consistently.
+                  </li>
+                  <li>
+                    <strong>Faster setup:</strong> CIM discovery runs one
+                    bounded job per data model, with two jobs in flight,
+                    visible progress, cancellation, and completed-result
+                    preservation.
+                  </li>
+                  <li>
+                    <strong>Adaptive searches:</strong> operational timecharts
+                    follow the selected time range, while forecast and
+                    interval-dependent searches retain the fixed spans their
+                    calculations require.
+                  </li>
+                  <li>
+                    <strong>Data-model coverage:</strong> Cisco Security and
+                    Cisco Intersight readiness checks now complement CIM-first
+                    searches where the vendor models preserve required fields.
+                  </li>
+                  <li>
+                    <strong>Safer delivery:</strong> release builds come from
+                    one clean, committed source state and produce one validated,
+                    upload-ready Splunkbase archive.
+                  </li>
+                </ul>
+
+                <h3>Administrator action</h3>
+                <p>
+                  Install the app through the supported app-management workflow.
+                  Existing local workspace, topology, macro, and preference
+                  configuration remains in place across upgrades. After the
+                  upgrade, open Setup to verify package, routing, and optional
+                  data-model readiness before publishing shared workspaces.
+                </p>
+
+                <h3>Release integrity and access changes</h3>
+                <p>
+                  IOS-XR anomaly searches are now self-contained. Open in Search accepts only
+                  dashboard-defined safe filter values. Shared
+                  workspace and bounded Dashboard Builder background management
+                  support narrow capability delegation. Topology palette items and key manager/KPI
+                  dialogs now support complete keyboard operation. Custom Insights workspaces can now be created
+                  through the bounded persistence endpoint, and template choices
+                  retain circular radio controls in the workspace editor.
+                  Insights workspace editors, drawers, map controls, Signal Rail
+                  controls, and related topology and setup actions now retain
+                  readable Splunk UI colors in both appearances. Add search now opens and resets with only this app selected. Entire catalogue remains available for searches from other installed apps.
+                  Agentic SOC section headers no longer expose actions that
+                  targeted the development-only Searchbase Canvas. SplunkBase
+                  packages also omit the Canvas bundle, bootstrap, persistence
+                  files, and config declarations; explicit developer builds
+                  retain the complete internal surface. Final package checks
+                  enforce the matching bundle set for each profile.
+                </p>
+                <p>
+                  <InlineCode>build.sh --install</InlineCode> and{" "}
+                  <InlineCode>--deploy</InlineCode> use the SplunkBase profile by
+                  default. Pass <InlineCode>--developer</InlineCode> only when
+                  developing resources are intentionally needed; the explicit{" "}
+                  <InlineCode>--fast</InlineCode> workflow remains developer-only.
+                  SplunkBase build, install, deploy, and remote-install workflows share one clean-source packaging path and apply the exact release-eligible archive.
+                  A successful SplunkBase install creates one upload-ready archive; the target&apos;s installed build does not affect package allocation. For a release,
+                  change and commit only the repository-root VERSION file.
+                  Source app.conf and app.manifest retain placeholders, and
+                  generated packages allocate the next build automatically.
+                </p>
+
+                <h3>Detailed changes</h3>
+
               <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <InfoCard title="Agentic Security Operations Center">
+                  A built-in conference workspace now organizes live Cisco
+                  Umbrella DNS, Secure Firewall, and Endace/Zeek telemetry into
+                  three focused sections. DNS Security covers unique domains,
+                  request and block trends, categories, and applications.
+                  Firewall Threat Defense covers intrusion detections, Security
+                  Intelligence matches, and destination countries. Network
+                  Detection &amp; Response covers protocols, traffic volume, and
+                  top conversations derived from packet visibility. Every tile
+                  uses the selected live time range and reports an honest
+                  no-data state when its source has not arrived.
+                </InfoCard>
                 <InfoCard title="Secure Networking dashboards">
                   All 16 Secure Networking Dashboard Studio views now use the
                   same clean dark three-by-two layout. Each dashboard tells a
@@ -1620,6 +2228,34 @@ iseval = 0`}</CodeBlock>
                   initial canvas to six searches while details dispatch only
                   when opened. Dashboard Manager view mode still provides
                   Studio-style Display, zoom, JSON export, and clone controls.
+                  Dashboard Manager now makes Edit visible immediately after
+                  same-tab edit-route changes, without requiring users to expand
+                  the view toolbar. Searchbase pickers start with compact rows
+                  and let users reveal full metadata on demand.
+                  Secure Infrastructure Status now spans Meraki access points,
+                  Catalyst Center issues, SD-WAN sites, Nexus health, Secure
+                  Endpoint incidents, and FMC firewall activity. ZTNA access
+                  details now distinguish event records from distinct sessions
+                  and identities, and ThousandEyes test-health details preserve
+                  the visible test name through aggregation.
+                  Across all five Secure Networking pillars, single-value cards
+                  now use valid Searchbase-backed headline series and absolute
+                  bucket-to-bucket changes when their source is chronological.
+                  Categorical summary cards intentionally omit trends rather
+                  than comparing unrelated rows. Numeric KPI and chart results
+                  across all five pillars cap fractional values at two decimal
+                  places while preserving whole-number counts. RaVPN cards now
+                  distinguish active profiles, active regions, explicit failure
+                  events, and posture-specific issues; generic connection failures
+                  no longer masquerade as posture outcomes. Segmentation Readiness
+                  now distinguishes endpoint-to-SGT assignments from the number of
+                  distinct security groups in use and replaces the low-signal wired-port
+                  exception metric with tagged SGT site activity. Command-map controls no longer
+                  overlap its topology summary, and map-footer
+                  KPI cards now expose Search and configuration actions.
+                  Native single-value trend coloring now initializes without
+                  emitting sparse-result range warnings while keeping
+                  directional increase and decrease meaning.
                 </InfoCard>
                 <InfoCard title="Guided setup and performance readiness">
                   Setup now brings package checks, index macro discovery, data
@@ -1627,7 +2263,18 @@ iseval = 0`}</CodeBlock>
                   the readiness query&apos;s Open in Search path into one flow.
                   It writes companion-app macros only when that app is enabled
                   and installed. Balanced mode remains available while
-                  recommended acceleration is completed.
+                  recommended acceleration is completed. Routing, CIM, and
+                  performance changes remain drafts until the final review,
+                  where administrators can compare current and proposed values
+                  by target app. Cancel and Save and finish both require
+                  confirmation, and long routing or CIM lists stay inside
+                  bounded review tables with focused multiselect editors.
+                  Routing index and sourcetype values now use native Splunk UI
+                  chips with keyboard-safe expansion controls that retain focus
+                  in both light and dark appearance.
+                  Setup regression coverage now protects additive CIM
+                  discovery, explicit model selection, failed-scan gating,
+                  rerun preservation, and bounded final-review tables.
                 </InfoCard>
                 <InfoCard title="Insights Workspaces">
                   Workspaces now own their layout and presentation choices,
@@ -1636,9 +2283,28 @@ iseval = 0`}</CodeBlock>
                   restrained operational palette and layered dark atmosphere
                   observed in Cisco Cloud Control, while Splunk&apos;s 1CD theme
                   customizer remains the component foundation. Signal Rail
-                  defaults are centrally managed, with
-                  private account-and-workspace overrides for each signed-in
-                  user. Headers prioritize the workspace title with compact
+                  One Cisco Glass styling now matches the original rectangular
+                  cards, full-size semantic values, filled status pills, and
+                  dark canvas without top accent strips. Configuration controls
+                  stay hidden until hover or focus, and omit
+                  the retired Cisco Blue Gradient option. Map-on-right layouts
+                  default to the compact height while retaining a Match
+                  workspace choice. The topology editor can now be moved and
+                  resized within the map with mouse, touch, pen, or keyboard
+                  controls, then returned to its default layout in one step.
+                  Tile paging removes redundant navigation at
+                  eight or all visible tiles; Configure Tile offers only the
+                  supported visualization choices in a dropdown; and Searchbase
+                  pickers use native disclosure chevrons with a direct View in
+                  Searchbase link on every result. Tile drilldowns now use a
+                  dedicated header icon beside the info control instead of an
+                  overflow-menu entry. Meraki Rogue AP Count now demonstrates
+                  multi-target drill-down navigation with containment and
+                  threat-intelligence views.
+                  Signal Rail
+                  KPIs are shared with every viewer of the workspace.
+                  Speed, density, and type size remain private display
+                  preferences for each signed-in user. Headers prioritize the workspace title with compact
                   range and refresh controls, responsive health status, and
                   clear globe and layers iconography without duplicating
                   Splunk Web&apos;s account control. Signal Rails default to
@@ -1655,21 +2321,63 @@ iseval = 0`}</CodeBlock>
                   dialog height to Searchbase guidance. Search and Searchbase
                   links sit together in detail headers, while Configure Tile
                   keeps View in Searchbase and Test in Search attached to the
-                  currently bound search.
+                  currently bound search. Add Search results also expose a
+                  direct View in Searchbase action without closing the drawer.
+                  The User Guide now includes an
+                  effective-access matrix for the <InlineCode>user</InlineCode>,{" "}
+                  <InlineCode>power</InlineCode>, <InlineCode>admin</InlineCode>,
+                  and <InlineCode>sc_admin</InlineCode> roles and the{" "}
+                  <InlineCode>admin_all_objects</InlineCode> capability,
+                  including fail-closed behavior and custom-role guidance.
+                  Built-in user and power roles are read-only for shared
+                  workspace, topology, and background configuration.
+                  A new capability-protected server endpoint lets custom roles
+                  holding{" "}
+                  <InlineCode>ssne_manage_insights_workspaces</InlineCode>{" "}
+                  manage shared workspaces, customer topology, and bounded
+                  Dashboard Builder backgrounds without gaining factory
+                  Searchbase write access.
+                  Workspace Help now points to the tile action menu for
+                  Configure tile and to the explicit top-right section link for
+                  drill-down navigation.
+                  Workspace layers return keyboard focus to the control that
+                  opened them; clearing Configure tile filters returns focus to
+                  the persistent Filters toggle without moving the drawer; and
+                  the optional legacy rail speed now uses the same keyboard- and
+                  pointer-safe Splunk UI slider as topology connector motion.
+                  Agentic Security Operations Center now stages accelerated
+                  Signal Rail and section searches in priority order, defaults
+                  to two concurrent Splunk searches with a per-workspace 1–4
+                  control, and does not dispatch tiles from collapsed sections.
+                  Its conference catalogue uses 36 accelerated DNS, firewall,
+                  Zeek, and DHCP searches backed by the three available
+                  network data models. The guide also uses a
+                  quieter documentation layout with
+                  neutral inline code, consistent configuration blocks, wider
+                  reading space, and simpler reference tables.
                 </InfoCard>
                 <InfoCard title="Dashboard Studio editing">
+                  React preview pages now use dark-matched Splunk shells,
+                  restrained semantic minimaps, readable topology zoom limits,
+                  explicit selected-tab semantics, and collision-free metric
+                  actions. The M365 visual preview is now clearly labeled as a
+                  bundled sample dataset and reports the installed app build
+                  instead of claiming live data or a hard-coded version.
+                  Dashboard pages no longer show the fixed Splunk Inc.
+                  copyright badge in the lower-right corner.
                   Dashboard Manager confirmation dialogs now use the edited
                   app&apos;s fixed dark SUI theme, including portal-rendered dialogs.
                   Dashboard creation, cloning, and generation now save into the
                   authenticated Splunk user&apos;s private namespace instead of
-                  attempting an app-shared write as <code>nobody</code>. Shared
+                  attempting an app-shared write as <InlineCode>nobody</InlineCode>.
+                  Shared
                   factory dashboards keep their existing permissions, while
                   personal dashboards remain editable by their owner.
                   Internal Dashboard Studio drilldown links now open supporting
                   Searchbase searches inside Dashboard Manager with the active
                   dashboard time range. Their triggers use the same
                   open-details-panel icon as the home dashboard, and
-                  multi-target links use Back/Forward navigation while
+                  multi-target links use Previous/Next navigation while
                   dispatching only the visible search. Each detail includes
                   the active search&apos;s category, sub-category, description,
                   explanation, solution, related information, and available
@@ -1679,13 +2387,33 @@ iseval = 0`}</CodeBlock>
                   reusable searches instead of visualizations.
                 </InfoCard>
                 <InfoCard title="Searchbase and tile selection">
-                  Searchbase Canvas distinguishes failed searches from other
-                  attention states and adds app filtering. Its catalogue now
-                  uses the same native Splunk UI filter pattern as Insights
-                  Workspace, with consistent app, visibility, category,
-                  visualization, tag, active-count, and clear controls.
+                  Cisco Security model coverage now includes FTD total-event,
+                  connection-application, file-versus-malware, advanced-logging,
+                  and DNS query-type summaries. Guided Setup detects Intersight
+                  sourcetypes, includes <InlineCode>Cisco_Intersight</InlineCode>{" "}
+                  in acceleration readiness, and provides a root-versus-child
+                  coverage diagnostic. Field-dependent Intersight panels remain
+                  raw when their model children cannot preserve the required
+                  fields.
+                  The IOS-XR CPU and interface-error anomaly searches now use
+                  native sample-count, mean, standard-deviation, and z-score
+                  baselines. They no longer require Splunk MLTK or pre-trained
+                  model artifacts, and they fail closed for undersampled or
+                  zero-variance series while preserving existing saved-canvas
+                  display identifiers.
+                  Searchbase catalogues distinguish failed searches from other
+                  attention states and support app filtering. The Insights
+                  Workspace catalogue uses native Splunk UI filters for app,
+                  visibility, category, visualization, tag, active-count, and
+                  clear actions.
                   Catalogue and tile pickers display friendly app labels with
-                  the on-disk name available as hover detail.
+                  the on-disk name available as hover detail. Insights
+                  Workspace now hides configured searches by default, reports
+                  visible and configured tile counts separately, and labels its
+                  current-app, section-matched suggestions distinctly from the
+                  all-app catalogue. The restored App filter spans installed
+                  Searchbase providers, and the picker uses Add for me and Add
+                  for everyone to distinguish private and shared tiles.
                 </InfoCard>
                 <InfoCard title="Contextual empty results">
                   Searchbase-backed Secure Networking panels now explain when no
@@ -1693,7 +2421,10 @@ iseval = 0`}</CodeBlock>
                   when the monitored condition may simply not have occurred. The
                   searches used by every Secure Networking Studio dashboard also
                   emit visualization-compatible fallback rows, so the guidance is
-                  preserved outside Dashboard Manager.
+                  preserved outside Dashboard Manager. RadSec activity cards now
+                  chart total authenticated activity instead of only failures,
+                  and Security Exposure normalizes Nexus Dashboard advisory fields
+                  while displaying the selected-window critical-advisory count.
                 </InfoCard>
                 <InfoCard title="Site connectivity">
                   The topology workflow can discover ThousandEyes agent-to-agent
@@ -1707,25 +2438,69 @@ iseval = 0`}</CodeBlock>
                 to confirm companion-package and data-model readiness before
                 publishing a workspace to users.
               </p>
+              </ReleasePanel>
+
+              <ReleasePanel
+                meta="August 27, 2026 · Version 1.0.46"
+                onToggle={(open) =>
+                  setReleasePanelOpen("published-1-0-46", open)
+                }
+                open={openReleasePanels.has("published-1-0-46")}
+                title="Release Notes"
+              >
+                <h3>Published package record</h3>
+                <p>
+                  The repository release ledger records version 1.0.46 on the
+                  public Splunkbase listing. That observation confirms the
+                  public version and release date, but not the exact source
+                  commit or embedded build of the downloaded archive.
+                </p>
+                <p>
+                  The following items are repository history from the 1.0.46
+                  development window. They are not a claim that every item was
+                  present in the exact public archive.
+                </p>
+                <ul>
+                  <li>
+                    Introduced the Agentic Security Operations Center workspace
+                    and accelerated network-data-model searches for its
+                    conference catalogue.
+                  </li>
+                  <li>
+                    Added the narrow{" "}
+                    <InlineCode>ssne_manage_insights_workspaces</InlineCode>{" "}
+                    capability for shared workspace and topology management.
+                  </li>
+                  <li>
+                    Strengthened package provenance, shared image boundaries,
+                    Dashboard Manager editing, and workspace accessibility.
+                  </li>
+                </ul>
+                <p className="scd-guide-note">
+                  For the authoritative public package description, use the
+                  release notes on the Splunkbase listing. This guide documents
+                  the behavior of the version currently installed in Splunk.
+                </p>
+              </ReleasePanel>
             </Section>
 
             <div className="grid gap-4 md:grid-cols-4">
               <InfoCard title="Network">
-                <Wifi size={18} className="mb-2 sui-color-info" />
+                <Wifi size={18} className="scd-guide-topic-icon" />
                 Catalyst, SD-WAN, Zeek, Meraki, NVM, F5, and data center views.
               </InfoCard>
               <InfoCard title="Security">
-                <Shield size={18} className="mb-2 sui-color-negative" />
+                <Shield size={18} className="scd-guide-topic-icon" />
                 Firewall, identity, endpoint, DNS, web, email, and incident
                 views.
               </InfoCard>
               <InfoCard title="Experience">
-                <Gauge size={18} className="mb-2 sui-color-positive" />
+                <Gauge size={18} className="scd-guide-topic-icon" />
                 Client health, ThousandEyes, site readiness, and operations
                 reporting.
               </InfoCard>
               <InfoCard title="Setup">
-                <Settings size={18} className="mb-2 sui-color-default" />
+                <Settings size={18} className="scd-guide-topic-icon" />
                 Macro tuning, lookup health, and searchbase reference tooling.
               </InfoCard>
             </div>

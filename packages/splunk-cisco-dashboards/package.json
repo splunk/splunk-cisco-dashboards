@@ -8,7 +8,7 @@
         "clean:build": "bash bin/clean_build.sh && node bin/build.js build",
         "package:app": "bash bin/package_app.sh",
         "package:app:developer": "bash bin/package_app.sh --developer",
-        "pack:app": "node bin/build.js pack",
+        "pack:app": "bash bin/package_app.sh",
         "link:app": "node bin/build.js link",
         "unlink:app": "node bin/build.js unlink",
         "start": "node bin/build.js watch",
@@ -42,7 +42,7 @@
         "@splunk/datasource-utils": "29.8.0",
         "@splunk/datasources": "29.8.0",
         "@splunk/moment": "^0.7.0",
-        "@splunk/react-icons": "5.14.0",
+        "@splunk/react-icons": "5.15.0",
         "@splunk/react-page": "^8.3.1",
         "@splunk/react-search": "^7.0.1",
         "@splunk/react-time-range": "^11.3.0",
@@ -82,7 +82,7 @@
         "react-dom": "^18.3.1",
         "react-is": "^18.3.1",
         "react-leaflet": "^4.2.1",
-        "react-router-dom": "^6.30.4",
+        "react-router-dom": "^7.18.2",
         "recharts": "^2.12.7",
         "rxjs": "^5.5.12",
         "styled-components": "^5.3.10",
@@ -125,6 +125,6 @@
         "webpack-merge": "^5.10.0"
     },
     "engines": {
-        "node": ">=14"
+        "node": ">=20"
     }
 }

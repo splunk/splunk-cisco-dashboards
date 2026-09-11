@@ -5,8 +5,7 @@ export type SignalTickerRows = 1 | 2;
 export type SignalTickerDensity = "compact" | "comfortable";
 export type SignalTickerFontSize = "small" | "standard" | "large";
 export type SignalTickerThresholdDirection =
-  | "higher_is_better"
-  | "lower_is_better";
+  "higher_is_better" | "lower_is_better";
 
 export interface SignalTickerItem {
   id: string;
@@ -305,8 +304,68 @@ export const DEFAULT_SIGNAL_TICKER_CONFIG: SignalTickerConfig = {
       thresholdCritical: 5,
       thresholdDirection: "lower_is_better",
     },
+    {
+      id: "soc_dns_requests",
+      searchName: "Agentic SOC - Umbrella DNS Request Trend",
+      label: "DNS requests",
+      valueField: "WindowRequests",
+      thresholdCritical: 1,
+      thresholdDirection: "higher_is_better",
+    },
+    {
+      id: "soc_dns_blocks",
+      searchName: "Agentic SOC - Umbrella DNS Request Trend",
+      label: "DNS failure rate",
+      valueField: "WindowFailureRatePct",
+      thresholdWarning: 5,
+      thresholdCritical: 15,
+      thresholdDirection: "lower_is_better",
+      thresholdUnit: "%",
+    },
+    {
+      id: "soc_intrusion_threats",
+      searchName: "Agentic SOC - Firewall Event Volume Trend",
+      label: "FTD activity",
+      valueField: "WindowEvents",
+      thresholdCritical: 1,
+      thresholdDirection: "higher_is_better",
+    },
+    {
+      id: "soc_security_intelligence",
+      searchName: "Agentic SOC - Firewall Event Volume Trend",
+      label: "FTD reporting devices",
+      valueField: "ReportingDevices",
+      thresholdCritical: 1,
+      thresholdDirection: "higher_is_better",
+    },
+    {
+      id: "soc_zeek_sessions",
+      searchName: "Agentic SOC - Zeek Traffic Volume Trend",
+      label: "Zeek sessions",
+      valueField: "WindowSessions",
+      thresholdCritical: 1,
+      thresholdDirection: "higher_is_better",
+    },
+    {
+      id: "soc_zeek_bytes",
+      searchName: "Agentic SOC - Zeek Traffic Volume Trend",
+      label: "Zeek observed bytes",
+      valueField: "WindowBytes",
+      thresholdCritical: 1,
+      thresholdDirection: "higher_is_better",
+      thresholdUnit: "B",
+    },
   ],
 };
+
+export const PACKAGED_AGENTIC_SOC_SIGNAL_ITEM_IDS = [
+  "soc_dns_requests",
+  "soc_dns_blocks",
+  "soc_intrusion_threats",
+  "soc_security_intelligence",
+  "soc_zeek_sessions",
+  "soc_zeek_bytes",
+] as const;
 
 const WORKSPACE_SIGNAL_ITEM_IDS: Record<string, readonly string[]> = {
   secure_networking: [
@@ -341,13 +400,14 @@ const WORKSPACE_SIGNAL_ITEM_IDS: Record<string, readonly string[]> = {
     "dc_critical_advisories",
     "palo_alto_sgt_blocks",
   ],
+  agentic_security_operations_center: PACKAGED_AGENTIC_SOC_SIGNAL_ITEM_IDS,
   executive: [
-    "it_domain_score",
-    "security_domain_score",
-    "user_experience_score",
-    "building_domain_score",
-    "critical_network_issues",
-    "xdr_incidents",
+    "thousandeyes_stream_age",
+    "ftd_firewall_age",
+    "fmc_estreamer_age",
+    "ise_syslog_age",
+    "catalyst_center_age",
+    "spaces_firehose_age",
   ],
 };
 
@@ -676,6 +736,41 @@ export const signalTickerConfigsEqual = (
   left.density === right.density &&
   left.fontSize === right.fontSize &&
   sameItems(left.items, right.items);
+
+export const sharedSignalTickerConfigsEqual = (
+  left: SignalTickerConfig,
+  right: SignalTickerConfig,
+): boolean =>
+  left.enabled === right.enabled &&
+  left.showPriorityDrilldown === right.showPriorityDrilldown &&
+  left.rows === right.rows &&
+  sameItems(left.items, right.items);
+
+export const createSignalTickerDisplayPreferencePatch = (
+  base: SignalTickerConfig,
+  current: SignalTickerConfig,
+): SignalTickerPreferencePatch | null => {
+  const patch: SignalTickerPreferencePatch = {};
+  if (current.speed !== base.speed) patch.speed = current.speed;
+  if (current.density !== base.density) patch.density = current.density;
+  if (current.fontSize !== base.fontSize) patch.fontSize = current.fontSize;
+  return Object.keys(patch).length > 0 ? patch : null;
+};
+
+export const applySignalTickerDisplayPreferencePatch = (
+  base: SignalTickerConfig,
+  patch: SignalTickerPreferencePatch | null,
+): SignalTickerConfig => {
+  if (!patch) return cloneSignalTickerConfig(base);
+  return (
+    sanitizeSignalTickerConfig({
+      ...base,
+      speed: patch.speed ?? base.speed,
+      density: patch.density ?? base.density,
+      fontSize: patch.fontSize ?? base.fontSize,
+    }) ?? cloneSignalTickerConfig(base)
+  );
+};
 
 export const createSignalTickerPreferencePatch = (
   base: SignalTickerConfig,

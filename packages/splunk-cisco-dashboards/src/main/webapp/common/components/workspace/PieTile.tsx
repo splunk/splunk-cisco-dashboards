@@ -12,7 +12,7 @@
 import React, { useMemo, useState } from 'react';
 import { ChartFocusDialog } from './ChartFocusDialog';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
-import { TileActionMenu } from './TileActionMenu';
+import { TileActionMenu, TileDrilldownButton } from './TileActionMenu';
 import { cn } from '@/common/lib/utils';
 import { C3_SERIES_PALETTE } from '@/common/theme/c3VisualizationPalette';
 import type { DataSource, NoDataReason } from '@/common/hooks/useMetric';
@@ -30,6 +30,7 @@ interface PieTileProps {
     seriesColors?: ReadonlyArray<string>;
     source?: DataSource;
     onOpenInSearch?: () => void;
+    searchbaseId?: string;
     onOpenDetailTable?: () => void;
     detailTableTitle?: string;
     onConfigure?: () => void;
@@ -108,6 +109,7 @@ export const PieTile: React.FC<PieTileProps> = ({
     seriesColors,
     source,
     onOpenInSearch,
+    searchbaseId,
     onOpenDetailTable,
     detailTableTitle,
     onConfigure,
@@ -248,11 +250,15 @@ export const PieTile: React.FC<PieTileProps> = ({
                                 iconAriaLabel={`What does ${label} measure?`}
                             />
                         )}
+                        <TileDrilldownButton
+                            label={label}
+                            onOpenDetailTable={onOpenDetailTable}
+                            detailTableTitle={detailTableTitle}
+                        />
                         <TileActionMenu
                             label={label}
                             onOpenInSearch={onOpenInSearch}
-                            onOpenDetailTable={onOpenDetailTable}
-                            detailTableTitle={detailTableTitle}
+                            searchbaseId={searchbaseId}
                             onExpand={hasData ? () => setIsFocusOpen(true) : undefined}
                             onConfigure={onConfigure}
                             isCustomized={isCustomized}

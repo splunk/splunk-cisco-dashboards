@@ -5,11 +5,7 @@
  */
 (function scdLoadSetupAssets() {
   const assetVersion = Date.now();
-  const localeMatch = window.location.pathname.match(
-    /^\/([a-z]{2}-[A-Z]{2})(?:\/|$)/,
-  );
-  const localePrefix = `/${localeMatch ? localeMatch[1] : "en-US"}`;
-  const assetBase = `${localePrefix}/static/app/splunk-cisco-dashboards/`;
+  const assetBase = "/static/app/splunk-cisco-dashboards/";
 
   const stylesheet = document.createElement("link");
   stylesheet.rel = "stylesheet";

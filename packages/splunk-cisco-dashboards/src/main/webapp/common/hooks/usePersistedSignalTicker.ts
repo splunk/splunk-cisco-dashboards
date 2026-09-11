@@ -7,11 +7,13 @@ import {
     type WorkspaceId,
 } from '@/common/config/insightsWorkspaces';
 import {
+    applySignalTickerDisplayPreferencePatch,
     applySignalTickerPreferencePatch,
-    createSignalTickerPreferencePatch,
+    createSignalTickerDisplayPreferencePatch,
     getDefaultSignalTickerConfig,
     migrateSignalTickerConfig,
     sanitizeSignalTickerConfig,
+    sharedSignalTickerConfigsEqual,
     signalTickerConfigsEqual,
     type SignalTickerConfig,
 } from '@/common/config/signalTicker';
@@ -154,7 +156,8 @@ export interface UsePersistedSignalTickerResult {
 
 export const usePersistedSignalTicker = (
     workspaceId: WorkspaceId = EXECUTIVE_WORKSPACE_SOURCE_ID,
-    workspaceDefault?: SignalTickerConfig
+    workspaceDefault?: SignalTickerConfig,
+    persistSharedConfig?: (config: SignalTickerConfig) => Promise<void>
 ): UsePersistedSignalTickerResult => {
     const legacyStorageKey = legacyStorageKeyForWorkspace(workspaceId);
     const userStorageKey = browserStorageKey(legacyStorageKey);
@@ -187,10 +190,13 @@ export const usePersistedSignalTicker = (
         (nextConfig: SignalTickerConfig) => {
             const generation = saveGenerationRef.current + 1;
             saveGenerationRef.current = generation;
-            const patch = createSignalTickerPreferencePatch(
+            const displayPatch = createSignalTickerDisplayPreferencePatch(
                 defaultConfig,
                 nextConfig
             );
+            const shouldPersistShared =
+                typeof persistSharedConfig === 'function' &&
+                !sharedSignalTickerConfigsEqual(defaultConfig, nextConfig);
             if (activeRef.current) {
                 setPersistenceStatus('saving');
                 setPersistenceError(undefined);
@@ -200,8 +206,14 @@ export const usePersistedSignalTicker = (
                 .catch(() => undefined)
                 .then(async () => {
                     try {
-                        const saved = patch
-                            ? await saveSignalTickerPreference(workspaceId, patch)
+                        if (shouldPersistShared && persistSharedConfig) {
+                            await persistSharedConfig(nextConfig);
+                        }
+                        const saved = displayPatch
+                            ? await saveSignalTickerPreference(
+                                  workspaceId,
+                                  displayPatch
+                              )
                             : await deleteSignalTickerPreference(workspaceId);
                         if (!saved) {
                             throw new Error(
@@ -233,7 +245,13 @@ export const usePersistedSignalTicker = (
                     }
                 });
         },
-        [defaultConfig, legacyStorageKey, userStorageKey, workspaceId]
+        [
+            defaultConfig,
+            legacyStorageKey,
+            persistSharedConfig,
+            userStorageKey,
+            workspaceId,
+        ]
     );
 
     const flushPending = useCallback(() => {
@@ -301,12 +319,30 @@ export const usePersistedSignalTicker = (
                 }
 
                 if (result.patch) {
-                    const next = applySignalTickerPreferencePatch(
+                    const merged = applySignalTickerPreferencePatch(
                         defaultConfig,
                         result.patch
                     );
-                    configRef.current = next;
-                    setConfigState(next);
+                    const displayNext =
+                        applySignalTickerDisplayPreferencePatch(
+                            defaultConfig,
+                            result.patch
+                        );
+                    const shouldPromoteSharedItems =
+                        typeof persistSharedConfig === 'function' &&
+                        Array.isArray(result.patch.items) &&
+                        !sharedSignalTickerConfigsEqual(merged, defaultConfig);
+                    if (shouldPromoteSharedItems) {
+                        configRef.current = merged;
+                        setConfigState(merged);
+                        dirtySinceLoadRef.current = true;
+                        clearBrowserStorage(userStorageKey, legacyStorageKey);
+                        setPersistenceStatus('saving');
+                        schedulePersist(merged);
+                        return;
+                    }
+                    configRef.current = displayNext;
+                    setConfigState(displayNext);
                     clearBrowserStorage(userStorageKey, legacyStorageKey);
                     setPersistenceStatus('account');
                     return;
@@ -355,6 +391,7 @@ export const usePersistedSignalTicker = (
         defaultConfig,
         flushPending,
         legacyStorageKey,
+        persistSharedConfig,
         schedulePersist,
         userStorageKey,
         workspaceId,

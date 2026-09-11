@@ -219,10 +219,3 @@ export const topClientIps: OperationPoint[] = [
     { name: '198.51.100.8', value: 1580 },
     { name: '45.22.19.100', value: 920 },
 ];
-
-export const versionInfo = [
-    { label: 'App Version', value: 'v3.2.0' },
-    { label: 'Last Updated', value: 'May 25, 2026' },
-    { label: 'Author', value: 'Security Eng Team' },
-    { label: 'Compatibility', value: 'Splunk Cloud 9.x+' },
-];

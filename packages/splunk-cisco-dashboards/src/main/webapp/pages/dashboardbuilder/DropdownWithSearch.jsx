@@ -1,10 +1,12 @@
-import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useId, useLayoutEffect, useRef, useState } from 'react';
 import '../../common/styles/commonstyles.css';
 import Button from '@splunk/react-ui/Button';
 import Select from '@splunk/react-ui/Select';
 import Multiselect from '@splunk/react-ui/Multiselect';
 import Checkbox from '@splunk/react-ui/Checkbox';
+import Link from '@splunk/react-ui/Link';
 import Text from '@splunk/react-ui/Text';
+import ChevronRight from '@splunk/react-icons/ChevronRight';
 import ChartSingleValue from '@splunk/react-icons/ChartSingleValue';
 import ChartPie from '@splunk/react-icons/ChartPie';
 import ChartLine from '@splunk/react-icons/ChartLine';
@@ -66,6 +68,13 @@ const sortedUnique = (values) =>
     [...new Set(values.filter(Boolean))].sort((left, right) => left.localeCompare(right));
 
 const normalizeSearchKey = (value) => String(value || '').trim().toLowerCase();
+
+const splunkSearchbaseEditUrl = (stanzaId) => {
+    const path = typeof window !== 'undefined' ? window.location.pathname : '/en-US';
+    const localeMatch = path.match(/^\/([a-z]{2}-[A-Z]{2})\//);
+    const locale = localeMatch ? localeMatch[1] : 'en-US';
+    return `/${locale}/app/searchbase/start#/edit/${encodeURIComponent(stanzaId)}#search-spl`;
+};
 
 const isTableSearch = (search) => normalizeSearchKey(search.defaultViz) === 'splunk.table';
 
@@ -130,6 +139,8 @@ export default function DropdownWithSearch({
     const [includeHiddenSearches, setIncludeHiddenSearches] = useState(false);
     const [includeDrilldownSearches, setIncludeDrilldownSearches] = useState(false);
     const [includeTableSearches, setIncludeTableSearches] = useState(false);
+    const [compactResults, setCompactResults] = useState(true);
+    const compactResultsToggleId = useId();
     const [filtersOpen, setFiltersOpen] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const [menuPosition, setMenuPosition] = useState(undefined);
@@ -423,8 +434,13 @@ export default function DropdownWithSearch({
                                 aria-expanded={filtersOpen}
                                 onClick={() => setFiltersOpen((open) => !open)}
                             >
-                                <span className="dropdown-kpi-filter-caret">
-                                    {filtersOpen ? '^' : 'v'}
+                                <span
+                                    className={`dropdown-kpi-filter-caret${
+                                        filtersOpen ? ' is-open' : ''
+                                    }`}
+                                    aria-hidden="true"
+                                >
+                                    <ChevronRight width={12} height={12} />
                                 </span>
                                 <span>Filters</span>
                                 {activeFilterCount > 0 && (
@@ -580,15 +596,31 @@ export default function DropdownWithSearch({
                                 <span>
                                     {sortedSearches.length} of {searches.length} KPIs
                                 </span>
-                                {hasActiveFilters && (
-                                    <button
-                                        type="button"
-                                        className="dropdown-kpi-clear-button"
-                                        onClick={resetFilters}
+                                <div className="dropdown-kpi-filter-summary-actions">
+                                    <label
+                                        className="dropdown-kpi-compact-toggle"
+                                        htmlFor={compactResultsToggleId}
                                     >
-                                        Clear filters
-                                    </button>
-                                )}
+                                        <input
+                                            id={compactResultsToggleId}
+                                            type="checkbox"
+                                            checked={compactResults}
+                                            onChange={(event) =>
+                                                setCompactResults(event.target.checked)
+                                            }
+                                        />
+                                        <span>Compact rows</span>
+                                    </label>
+                                    {hasActiveFilters && (
+                                        <button
+                                            type="button"
+                                            className="dropdown-kpi-clear-button"
+                                            onClick={resetFilters}
+                                        >
+                                            Clear filters
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -649,6 +681,8 @@ export default function DropdownWithSearch({
                                         app={search.catalogueApp}
                                         tags={search.tags || []}
                                         icon={getVizIcon(search.defaultViz)}
+                                        searchbaseUrl={splunkSearchbaseEditUrl(search.id)}
+                                        compact={compactResults}
                                         updateSelection={updateSelection}
                                         selection={selection}
                                     />
@@ -677,34 +711,64 @@ export function DropdownItem({
     subCategory,
     app,
     tags = [],
+    searchbaseUrl,
+    compact = false,
 }) {
     return (
         <li
-            className="dropdown-item dropdown-kpi-item"
-            onClick={() => {
-                updateSelection(value);
-            }}
+            className={`dropdown-item dropdown-kpi-item${
+                compact ? ' dropdown-kpi-item-compact' : ''
+            }`}
         >
-            <div style={{ display: 'flex' }}>
-                <Checkbox checked={selection.includes(value)} style={{ marginRight: 10 }} />
-                {icon && <span className="dropdown-icon">{icon}</span>}
-                <div className="dropdown-kpi-item-copy">
-                    <span className="dropdown-kpi-item-title">{label}</span>
-                    <span className="dropdown-kpi-item-id">{value}</span>
-                    <span className="dropdown-kpi-item-meta">
-                        {[category, subCategory, app].filter(Boolean).join(' / ')}
-                    </span>
-                    {tags.length > 0 && (
-                        <span className="dropdown-kpi-row-tags">
-                            {tags.slice(0, 4).map((tag) => (
-                                <span key={`${value}-${tag}`} className="dropdown-kpi-row-tag">
-                                    {tag}
+            <div className="dropdown-kpi-item-main">
+                <Checkbox
+                    aria-label={`Select ${label}`}
+                    checked={selection.includes(value)}
+                    onChange={() => updateSelection(value)}
+                    style={{ marginRight: 10 }}
+                />
+                <button
+                    type="button"
+                    className="dropdown-kpi-item-select-button"
+                    onClick={() => updateSelection(value)}
+                >
+                    {icon && <span className="dropdown-icon">{icon}</span>}
+                    <span className="dropdown-kpi-item-copy">
+                        <span className="dropdown-kpi-item-title">{label}</span>
+                        {!compact && (
+                            <>
+                                <span className="dropdown-kpi-item-id">{value}</span>
+                                <span className="dropdown-kpi-item-meta">
+                                    {[category, subCategory, app].filter(Boolean).join(' / ')}
                                 </span>
-                            ))}
-                        </span>
-                    )}
-                </div>
+                                {tags.length > 0 && (
+                                    <span className="dropdown-kpi-row-tags">
+                                        {tags.slice(0, 4).map((tag) => (
+                                            <span
+                                                key={`${value}-${tag}`}
+                                                className="dropdown-kpi-row-tag"
+                                            >
+                                                {tag}
+                                            </span>
+                                        ))}
+                                    </span>
+                                )}
+                            </>
+                        )}
+                    </span>
+                </button>
             </div>
+            <Link
+                aria-label={`View in Searchbase: ${label}`}
+                appearance="standalone"
+                className="dropdown-kpi-item-searchbase-link"
+                openInNewContext
+                to={searchbaseUrl}
+                onClick={(event) => event.stopPropagation()}
+                onPointerDown={(event) => event.stopPropagation()}
+            >
+                View in Searchbase
+            </Link>
         </li>
     );
 }

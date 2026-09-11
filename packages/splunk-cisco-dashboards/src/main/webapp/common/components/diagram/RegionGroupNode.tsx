@@ -100,7 +100,7 @@ const accentClasses = (
             return {
                 border: 'sui-border-info',
                 tint: 'sui-bg-notification-info',
-                pill: 'sui-bg-accent  sui-color-info',
+                pill: 'sui-bg-notification-info sui-color-active',
             };
         case 'emerald-500':
             return {
@@ -124,7 +124,7 @@ const accentClasses = (
             return {
                 border: 'sui-border-info',
                 tint: 'sui-bg-notification-info',
-                pill: 'sui-bg-accent  sui-color-info',
+                pill: 'sui-bg-notification-info sui-color-active',
             };
         case 'slate-500':
         default:

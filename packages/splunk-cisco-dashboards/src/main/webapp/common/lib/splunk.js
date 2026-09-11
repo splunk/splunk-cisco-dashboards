@@ -1,5 +1,8 @@
 import { getDefaultFetchInit } from '@splunk/splunk-utils/fetch';
 import { INSIGHTS_APP_ID } from './constants';
+import { requiresDashboardManagerRuntime } from '../config/managedStudioViews';
+import { isAllowedDashboardBackgroundUpload } from './imageSource';
+import { escapeCdata } from './xmlCdata';
 
 const jsonParams = new URLSearchParams({ output_mode: 'json' });
 const jsonCountParams = new URLSearchParams({ output_mode: 'json', count: '0' });
@@ -134,6 +137,7 @@ export async function addDash(
     dashTag = '',
     dashTheme = 'light',
     owner = undefined,
+    sharing = 'user',
 ) {
     const namespaceOwner = await resolveDashboardOwner(owner);
     if (!namespaceOwner) {
@@ -149,10 +153,13 @@ export async function addDash(
     }
 
     const dashboardTheme = normalizeDashboardTheme(dashTheme, 'light');
-    const definition = `<dashboard version="2" theme="${dashboardTheme}">
+    const visibilityAttribute = requiresDashboardManagerRuntime(jsonDefinition)
+        ? ' isVisible="false"'
+        : '';
+    const definition = `<dashboard version="2" theme="${dashboardTheme}"${visibilityAttribute}>
    <label>${escapeXml(dashLabel || dashName)}</label>
    <description>${escapeXml(dashDescription)}</description>
-   <definition><![CDATA[${jsonDefinition}]]></definition>
+   <definition><![CDATA[${escapeCdata(jsonDefinition)}]]></definition>
    <tag>${escapeXml(dashTag)}</tag>
    <meta type="hiddenElements"><![CDATA[
         {
@@ -173,14 +180,30 @@ export async function addDash(
         body: createBody.toString(),
     });
 
-    if (response.status !== 409) {
-        return response;
+    const savedResponse =
+        response.status !== 409
+            ? response
+            : await requestJson(`${dashboardUrl(namespaceOwner, dashName)}?${jsonParams.toString()}`, {
+                  method: 'POST',
+                  body: new URLSearchParams({ 'eai:data': definition }).toString(),
+              });
+
+    if (savedResponse.status < 200 || savedResponse.status > 299 || sharing !== 'app') {
+        return savedResponse;
     }
 
-    return requestJson(`${dashboardUrl(namespaceOwner, dashName)}?${jsonParams.toString()}`, {
+    const aclResponse = await requestJson(`${dashboardUrl(namespaceOwner, dashName)}/acl?${jsonParams.toString()}`, {
         method: 'POST',
-        body: new URLSearchParams({ 'eai:data': definition }).toString(),
+        body: new URLSearchParams({
+            owner: 'nobody',
+            sharing: 'app',
+            'perms.read': '*',
+        }).toString(),
     });
+
+    return aclResponse.status >= 200 && aclResponse.status <= 299
+        ? savedResponse
+        : aclResponse;
 }
 
 export async function syncDashboardManagerNavigation(dashboards = []) {
@@ -199,6 +222,7 @@ export async function updateDashMetadata(
     dashTag = '',
     dashTheme = 'light',
     owner = undefined,
+    sharing = 'user',
 ) {
     const updatedDefinition = {
         ...dashboardDefinition,
@@ -215,6 +239,7 @@ export async function updateDashMetadata(
         dashTag,
         dashTheme,
         owner,
+        sharing,
     );
 }
 
@@ -293,7 +318,18 @@ export async function getBackgrounds() {
 }
 
 export async function addBackgrounds(image) {
-    const name = `background://bg_${Date.now()}`;
+    if (!isAllowedDashboardBackgroundUpload(image)) {
+        return {
+            status: 400,
+            messages: [
+                {
+                    type: 'ERROR',
+                    text: 'Background uploads must be bounded PNG, JPEG, GIF, or WebP images.',
+                },
+            ],
+        };
+    }
+    const name = `background://bg_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
     const body = new URLSearchParams({
         name,
         data: image,
@@ -302,7 +338,7 @@ export async function addBackgrounds(image) {
     return requestJson(
         `/en-US/splunkd/__raw/servicesNS/nobody/${encodeURIComponent(
             INSIGHTS_APP_ID,
-        )}/configs/conf-templates?${jsonParams.toString()}`,
+        )}/scd_dashboard_backgrounds?${jsonParams.toString()}`,
         {
             method: 'POST',
             body: body.toString(),

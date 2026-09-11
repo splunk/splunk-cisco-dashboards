@@ -1,4 +1,4 @@
-<dashboard version="2" theme="dark" stylesheet="application.css">
+<dashboard version="2" theme="dark" stylesheet="application.css" isVisible="false">
     <label>Hybrid Mesh Firewalling - DLP and Cloud Native Security</label>
     <description>Expose data-loss risk and cloud-native workload controls in one operational view.</description>
     <definition><![CDATA[
@@ -8,11 +8,34 @@
     "inputs": {
         "input_time_range": {
             "options": {
-                "defaultValue": "-24h,now",
+                "defaultValue": "-24h,now,auto",
+                "showAdvanced": true,
+                "selections": [
+                    {
+                        "value": "-4h,now,auto",
+                        "label": "4h"
+                    },
+                    {
+                        "value": "-24h,now,auto",
+                        "label": "24h"
+                    },
+                    {
+                        "value": "-48h,now,auto",
+                        "label": "48h"
+                    },
+                    {
+                        "value": "-7d@d,now,auto",
+                        "label": "7d"
+                    },
+                    {
+                        "value": "-30d@d,now,auto",
+                        "label": "30d"
+                    }
+                ],
                 "token": "time_tok"
             },
             "title": "Time range",
-            "type": "input.timerange"
+            "type": "input.simpleTimePicker"
         }
     },
     "defaults": {
@@ -37,7 +60,7 @@
             "title": "DLP and Cloud Native Security",
             "options": {
                 "preserveAspectRatio": true,
-                "src": "../../static/app/splunk-cisco-dashboards/images/nav-icons/ArrowsDoubleLeftRight.svg"
+                "src": "/static/app/splunk-cisco-dashboards/images/nav-icons/ArrowsDoubleLeftRight.svg"
             }
         },
         "viz_header": {
@@ -110,16 +133,18 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowElevatedFindings\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"ElevatedFindings\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " findings",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -140,7 +165,7 @@
             }
         },
         "viz_card_01_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_01"
@@ -149,13 +174,20 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "CRITICAL": "#e44273",
+                    "HIGH": "#d8580f",
+                    "MEDIUM": "#e2a811",
+                    "LOW": "#3abdfa",
+                    "UNKNOWN": "#a9afda"
+                },
                 "seriesColors": [
-                    "#9b5ff4",
+                    "#e44273",
                     "#3abdfa",
                     "#0d8e97",
                     "#e2a811",
-                    "#e44273",
+                    "#9b5ff4",
                     "#a9afda",
                     "#d8580f",
                     "#f88ddc",
@@ -172,15 +204,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 3,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
-                "showYMajorGridLines": true,
+                "dataValuesDisplay": "off",
+                "showYMajorGridLines": false,
+                "showYMinorGridLines": false,
+                "stackMode": "stacked",
                 "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"ElevatedFindings\")"
+                "y": "> primary | frameWithoutSeriesNames(\"ElevatedFindings\", \"WindowElevatedFindings\")",
+                "yAxisLabelVisibility": "hide",
+                "yAxisLineVisibility": "hide",
+                "yAxisMajorTickVisibility": "hide",
+                "yAxisMinorTickVisibility": "hide",
+                "yAxisTitleVisibility": "hide"
             }
         },
         "viz_card_01_drilldown_trigger": {
@@ -190,6 +225,25 @@
                     "type": "drilldown.customUrl",
                     "options": {
                         "url": "/drilldown?origin=Data%20Loss%20Findings&target=Secure%20Networking%20-%20Secure%20Access%20DLP%20Findings"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_01_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Data%20Loss%20Findings&target=secure_networking_secure_access_dlp_findings_trend"
                     }
                 }
             ],
@@ -261,28 +315,14 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
                 "sparklineValues": "> primary | seriesByName(\"Alerts\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
-            },
-            "context": {
-                "trendColorEditorConfig": [
-                    {
-                        "value": "#049fd9",
-                        "to": 0
-                    },
-                    {
-                        "value": "#049fd9",
-                        "from": 0
-                    }
-                ]
+                "unit": " alerts",
+                "unitPosition": "after"
             }
         },
         "viz_card_02_trend": {
@@ -295,7 +335,7 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "right",
+                "legendDisplay": "off",
                 "seriesColors": [
                     "#9b5ff4",
                     "#3abdfa",
@@ -318,12 +358,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "showYMajorGridLines": true,
+                "dataValuesDisplay": "all",
+                "showYMajorGridLines": false,
+                "showYMinorGridLines": false,
                 "stackMode": "unstacked",
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"Alert Category\")",
-                "y": "> primary | seriesByName(\"Alerts\")"
+                "y": "> primary | seriesByName(\"Alerts\")",
+                "yAxisLabelVisibility": "hide",
+                "yAxisLineVisibility": "hide",
+                "yAxisMajorTickVisibility": "hide",
+                "yAxisMinorTickVisibility": "hide"
             }
         },
         "viz_card_02_drilldown_trigger": {
@@ -333,6 +379,25 @@
                     "type": "drilldown.customUrl",
                     "options": {
                         "url": "/drilldown?origin=Workload%20Alert%20Pressure&target=Secure%20Networking%20-%20Segmentation%20Secure%20Workload%20Alerts%20by%20Type"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_02_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Workload%20Alert%20Pressure&target=security_microseg_tetration_alerts_by_severity_type"
                     }
                 }
             ],
@@ -404,16 +469,18 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowDenyPct\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"deny_pct\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " %",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -429,7 +496,7 @@
             }
         },
         "viz_card_03_trend": {
-            "type": "splunk.area",
+            "type": "splunk.line",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_03"
@@ -440,10 +507,10 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#9b5ff4",
+                    "#e2a811",
                     "#3abdfa",
                     "#0d8e97",
-                    "#e2a811",
+                    "#9b5ff4",
                     "#e44273",
                     "#a9afda",
                     "#d8580f",
@@ -462,14 +529,19 @@
                     "#c69fff"
                 ],
                 "dataValuesDisplay": "minmax",
-                "lineWidth": 3,
+                "lineWidth": 2,
                 "markerDisplay": "outlined",
                 "nullValueDisplay": "connect",
-                "showYMajorGridLines": true,
+                "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"deny_pct\")"
+                "y": "> primary | seriesByName(\"deny_pct\")",
+                "showYMinorGridLines": false,
+                "yAxisLabelVisibility": "hide",
+                "yAxisLineVisibility": "hide",
+                "yAxisMajorTickVisibility": "hide",
+                "yAxisMinorTickVisibility": "hide"
             }
         },
         "viz_card_03_drilldown_trigger": {
@@ -479,6 +551,25 @@
                     "type": "drilldown.customUrl",
                     "options": {
                         "url": "/drilldown?origin=Cloud%20Enforcement%20Rate&target=Security%20-%20Cloud%20Security%20-%20Multicloud%20Defense%20Recent%20WAF%20Findings,Security%20-%20Cloud%20Security%20-%20Multicloud%20Defense%20Gateway%20Health"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_03_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Cloud%20Enforcement%20Rate&target=security_multicloud_defense_action_breakdown_kpi"
                     }
                 }
             ],
@@ -550,32 +641,18 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
                 "sparklineValues": "> primary | seriesByName(\"Alerts\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
-            },
-            "context": {
-                "trendColorEditorConfig": [
-                    {
-                        "value": "#049fd9",
-                        "to": 0
-                    },
-                    {
-                        "value": "#049fd9",
-                        "from": 0
-                    }
-                ]
+                "unit": " alerts",
+                "unitPosition": "after"
             }
         },
         "viz_card_04_trend": {
-            "type": "splunk.bar",
+            "type": "splunk.table",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_04"
@@ -583,36 +660,24 @@
             "showLastUpdated": false,
             "showProgressBar": false,
             "options": {
-                "backgroundColor": "transparent",
-                "legendDisplay": "right",
-                "seriesColors": [
-                    "#9b5ff4",
-                    "#3abdfa",
-                    "#0d8e97",
-                    "#e2a811",
-                    "#e44273",
-                    "#a9afda",
-                    "#d8580f",
-                    "#f88ddc",
-                    "#159352",
-                    "#9abe2d",
-                    "#6574f3",
-                    "#ff9297",
-                    "#d14baf",
-                    "#24c4c9",
-                    "#bb6e04",
-                    "#6ec641",
-                    "#777daf",
-                    "#ff9755",
-                    "#698c07",
-                    "#c69fff"
-                ],
-                "showYMajorGridLines": true,
-                "stackMode": "unstacked",
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"Severity\")",
-                "y": "> primary | seriesByName(\"Alerts\")"
+                "backgroundColor": "#131a23",
+                "columnFormat": {
+                    "Severity": {
+                        "width": 220
+                    },
+                    "Alerts": {
+                        "width": 120
+                    }
+                },
+                "count": 5,
+                "fontSize": "small",
+                "headerVisibility": "fixed",
+                "showInternalFields": false,
+                "showRowNumbers": false,
+                "tableFormat": {
+                    "headerBackgroundColor": "#1c2738",
+                    "headerColor": "#ecf0f5"
+                }
             }
         },
         "viz_card_04_drilldown_trigger": {
@@ -622,6 +687,25 @@
                     "type": "drilldown.customUrl",
                     "options": {
                         "url": "/drilldown?origin=Runtime%20Detection%20Severity&target=Security%20-%20eBPF%20Observability%20-%20Cisco%20Isovalent%20Top%20Detection%20Rules"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_04_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Runtime%20Detection%20Severity&target=security_isovalent_alerts_by_severity"
                     }
                 }
             ],
@@ -678,7 +762,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Summarizes perimeter decisions into Blocked versus Allowed volumes using both normalized action fields and raw syslog cues so mixed Cisco firewall feeds still aggregate cleanly\\."
+                "markdown": "Compares Blocked and Allowed traffic decisions from the accelerated Network Traffic data model across the selected window\\."
             }
         },
         "viz_card_05_singlevalue": {
@@ -693,28 +777,14 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
                 "sparklineValues": "> primary | seriesByName(\"Connections\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
-            },
-            "context": {
-                "trendColorEditorConfig": [
-                    {
-                        "value": "#049fd9",
-                        "to": 0
-                    },
-                    {
-                        "value": "#049fd9",
-                        "from": 0
-                    }
-                ]
+                "unit": " connections",
+                "unitPosition": "after"
             }
         },
         "viz_card_05_trend": {
@@ -727,9 +797,9 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "right",
+                "legendDisplay": "off",
                 "seriesColors": [
-                    "#9b5ff4",
+                    "#159352",
                     "#3abdfa",
                     "#0d8e97",
                     "#e2a811",
@@ -737,7 +807,7 @@
                     "#a9afda",
                     "#d8580f",
                     "#f88ddc",
-                    "#159352",
+                    "#9b5ff4",
                     "#9abe2d",
                     "#6574f3",
                     "#ff9297",
@@ -750,12 +820,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "showYMajorGridLines": true,
+                "dataValuesDisplay": "all",
+                "showYMajorGridLines": false,
                 "stackMode": "unstacked",
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"Decision\")",
-                "y": "> primary | seriesByName(\"Connections\")"
+                "y": "> primary | seriesByName(\"Connections\")",
+                "showYMinorGridLines": false,
+                "yAxisLabelVisibility": "hide",
+                "yAxisLineVisibility": "hide",
+                "yAxisMajorTickVisibility": "hide",
+                "yAxisMinorTickVisibility": "hide"
             }
         },
         "viz_card_05_drilldown_trigger": {
@@ -765,6 +841,25 @@
                     "type": "drilldown.customUrl",
                     "options": {
                         "url": "/drilldown?origin=Network%20Security%20Decisions&target=Security%20Resilience%20-%20Firewall%20Base%20Search"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_05_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Network%20Security%20Decisions&target=network_intelligence_blocked_vs_allowed"
                     }
                 }
             ],
@@ -836,32 +931,18 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
                 "sparklineValues": "> primary | seriesByName(\"Events\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
-            },
-            "context": {
-                "trendColorEditorConfig": [
-                    {
-                        "value": "#049fd9",
-                        "to": 0
-                    },
-                    {
-                        "value": "#049fd9",
-                        "from": 0
-                    }
-                ]
+                "unit": " events",
+                "unitPosition": "after"
             }
         },
         "viz_card_06_trend": {
-            "type": "splunk.bar",
+            "type": "splunk.table",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_06"
@@ -869,36 +950,33 @@
             "showLastUpdated": false,
             "showProgressBar": false,
             "options": {
-                "backgroundColor": "transparent",
-                "legendDisplay": "right",
-                "seriesColors": [
-                    "#9b5ff4",
-                    "#3abdfa",
-                    "#0d8e97",
-                    "#e2a811",
-                    "#e44273",
-                    "#a9afda",
-                    "#d8580f",
-                    "#f88ddc",
-                    "#159352",
-                    "#9abe2d",
-                    "#6574f3",
-                    "#ff9297",
-                    "#d14baf",
-                    "#24c4c9",
-                    "#bb6e04",
-                    "#6ec641",
-                    "#777daf",
-                    "#ff9755",
-                    "#698c07",
-                    "#c69fff"
-                ],
-                "showYMajorGridLines": true,
-                "stackMode": "unstacked",
-                "xAxisTitleVisibility": "hide",
-                "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"Provider\")",
-                "y": "> primary | seriesByName(\"Events\")"
+                "backgroundColor": "#131a23",
+                "columnFormat": {
+                    "Provider": {
+                        "width": 95
+                    },
+                    "Sourcetype": {
+                        "width": 260
+                    },
+                    "Events": {
+                        "width": 100
+                    },
+                    "First Seen": {
+                        "width": 165
+                    },
+                    "Last Seen": {
+                        "width": 165
+                    }
+                },
+                "count": 5,
+                "fontSize": "small",
+                "headerVisibility": "fixed",
+                "showInternalFields": false,
+                "showRowNumbers": false,
+                "tableFormat": {
+                    "headerBackgroundColor": "#1c2738",
+                    "headerColor": "#ecf0f5"
+                }
             }
         },
         "viz_card_06_drilldown_trigger": {
@@ -919,6 +997,25 @@
             "containerOptions": {},
             "showProgressBar": false,
             "showLastUpdated": false
+        },
+        "viz_card_06_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Cloud%20Security%20Activity&target=secure_networking_cloud_native_security_activity"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
         }
     },
     "dataSources": {
@@ -928,7 +1025,8 @@
                 "ref": "secure_networking_secure_access_dlp_findings_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -939,7 +1037,8 @@
                 "ref": "security_microseg_tetration_alerts_by_severity_type",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -950,7 +1049,8 @@
                 "ref": "security_multicloud_defense_action_breakdown_kpi",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -961,7 +1061,8 @@
                 "ref": "security_isovalent_alerts_by_severity",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -972,7 +1073,8 @@
                 "ref": "network_intelligence_blocked_vs_allowed",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -983,7 +1085,8 @@
                 "ref": "secure_networking_cloud_native_security_activity",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -1002,8 +1105,8 @@
                         "y": 0
                     },
                     "display": "auto-scale",
-                    "height": 1128,
-                    "width": 1440
+                    "height": 1024,
+                    "width": 1920
                 },
                 "structure": [
                     {
@@ -1011,8 +1114,8 @@
                         "position": {
                             "x": 20,
                             "y": 0,
-                            "w": 1400,
-                            "h": 104
+                            "w": 1880,
+                            "h": 96
                         },
                         "type": "block"
                     },
@@ -1020,7 +1123,7 @@
                         "item": "viz_header_icon",
                         "position": {
                             "x": 38,
-                            "y": 18,
+                            "y": 16,
                             "w": 64,
                             "h": 64
                         },
@@ -1031,16 +1134,16 @@
                         "position": {
                             "x": 118,
                             "y": 8,
-                            "w": 886,
-                            "h": 88
+                            "w": 1366,
+                            "h": 80
                         },
                         "type": "block"
                     },
                     {
                         "item": "input_time_range",
                         "position": {
-                            "x": 1034,
-                            "y": 12,
+                            "x": 1514,
+                            "y": 8,
                             "w": 370,
                             "h": 80
                         },
@@ -1050,9 +1153,9 @@
                         "item": "viz_card_01_background",
                         "position": {
                             "x": 20,
-                            "y": 128,
-                            "w": 453,
-                            "h": 476
+                            "y": 112,
+                            "w": 613,
+                            "h": 440
                         },
                         "type": "block"
                     },
@@ -1060,8 +1163,8 @@
                         "item": "viz_card_01_title",
                         "position": {
                             "x": 36,
-                            "y": 140,
-                            "w": 377,
+                            "y": 124,
+                            "w": 482,
                             "h": 34
                         },
                         "type": "block"
@@ -1070,8 +1173,8 @@
                         "item": "viz_card_01_metadata",
                         "position": {
                             "x": 36,
-                            "y": 176,
-                            "w": 421,
+                            "y": 160,
+                            "w": 581,
                             "h": 24
                         },
                         "type": "block"
@@ -1080,9 +1183,9 @@
                         "item": "viz_card_01_description",
                         "position": {
                             "x": 36,
-                            "y": 204,
-                            "w": 421,
-                            "h": 68
+                            "y": 188,
+                            "w": 581,
+                            "h": 64
                         },
                         "type": "block"
                     },
@@ -1090,9 +1193,9 @@
                         "item": "viz_card_01_singlevalue",
                         "position": {
                             "x": 36,
-                            "y": 284,
-                            "w": 421,
-                            "h": 88
+                            "y": 260,
+                            "w": 581,
+                            "h": 80
                         },
                         "type": "block"
                     },
@@ -1100,17 +1203,27 @@
                         "item": "viz_card_01_trend",
                         "position": {
                             "x": 36,
-                            "y": 376,
-                            "w": 421,
-                            "h": 212
+                            "y": 344,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_info_trigger",
+                        "position": {
+                            "x": 534,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_01_drilldown_trigger",
                         "position": {
-                            "x": 418,
-                            "y": 134,
+                            "x": 578,
+                            "y": 118,
                             "w": 42,
                             "h": 42
                         },
@@ -1119,19 +1232,19 @@
                     {
                         "item": "viz_card_02_background",
                         "position": {
-                            "x": 493,
-                            "y": 128,
-                            "w": 453,
-                            "h": 476
+                            "x": 653,
+                            "y": 112,
+                            "w": 613,
+                            "h": 440
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_02_title",
                         "position": {
-                            "x": 509,
-                            "y": 140,
-                            "w": 377,
+                            "x": 669,
+                            "y": 124,
+                            "w": 482,
                             "h": 34
                         },
                         "type": "block"
@@ -1139,9 +1252,9 @@
                     {
                         "item": "viz_card_02_metadata",
                         "position": {
-                            "x": 509,
-                            "y": 176,
-                            "w": 421,
+                            "x": 669,
+                            "y": 160,
+                            "w": 581,
                             "h": 24
                         },
                         "type": "block"
@@ -1149,38 +1262,48 @@
                     {
                         "item": "viz_card_02_description",
                         "position": {
-                            "x": 509,
-                            "y": 204,
-                            "w": 421,
-                            "h": 68
+                            "x": 669,
+                            "y": 188,
+                            "w": 581,
+                            "h": 64
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_02_singlevalue",
                         "position": {
-                            "x": 509,
-                            "y": 284,
-                            "w": 421,
-                            "h": 88
+                            "x": 669,
+                            "y": 260,
+                            "w": 581,
+                            "h": 80
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_02_trend",
                         "position": {
-                            "x": 509,
-                            "y": 376,
-                            "w": 421,
-                            "h": 212
+                            "x": 669,
+                            "y": 344,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_info_trigger",
+                        "position": {
+                            "x": 1167,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_02_drilldown_trigger",
                         "position": {
-                            "x": 891,
-                            "y": 134,
+                            "x": 1211,
+                            "y": 118,
                             "w": 42,
                             "h": 42
                         },
@@ -1189,19 +1312,19 @@
                     {
                         "item": "viz_card_03_background",
                         "position": {
-                            "x": 966,
-                            "y": 128,
-                            "w": 453,
-                            "h": 476
+                            "x": 1286,
+                            "y": 112,
+                            "w": 613,
+                            "h": 440
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_03_title",
                         "position": {
-                            "x": 982,
-                            "y": 140,
-                            "w": 377,
+                            "x": 1302,
+                            "y": 124,
+                            "w": 482,
                             "h": 34
                         },
                         "type": "block"
@@ -1209,9 +1332,9 @@
                     {
                         "item": "viz_card_03_metadata",
                         "position": {
-                            "x": 982,
-                            "y": 176,
-                            "w": 421,
+                            "x": 1302,
+                            "y": 160,
+                            "w": 581,
                             "h": 24
                         },
                         "type": "block"
@@ -1219,38 +1342,48 @@
                     {
                         "item": "viz_card_03_description",
                         "position": {
-                            "x": 982,
-                            "y": 204,
-                            "w": 421,
-                            "h": 68
+                            "x": 1302,
+                            "y": 188,
+                            "w": 581,
+                            "h": 64
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_03_singlevalue",
                         "position": {
-                            "x": 982,
-                            "y": 284,
-                            "w": 421,
-                            "h": 88
+                            "x": 1302,
+                            "y": 260,
+                            "w": 581,
+                            "h": 80
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_03_trend",
                         "position": {
-                            "x": 982,
-                            "y": 376,
-                            "w": 421,
-                            "h": 212
+                            "x": 1302,
+                            "y": 344,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_info_trigger",
+                        "position": {
+                            "x": 1800,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_03_drilldown_trigger",
                         "position": {
-                            "x": 1364,
-                            "y": 134,
+                            "x": 1844,
+                            "y": 118,
                             "w": 42,
                             "h": 42
                         },
@@ -1260,9 +1393,9 @@
                         "item": "viz_card_04_background",
                         "position": {
                             "x": 20,
-                            "y": 624,
-                            "w": 453,
-                            "h": 476
+                            "y": 568,
+                            "w": 613,
+                            "h": 440
                         },
                         "type": "block"
                     },
@@ -1270,8 +1403,8 @@
                         "item": "viz_card_04_title",
                         "position": {
                             "x": 36,
-                            "y": 636,
-                            "w": 377,
+                            "y": 580,
+                            "w": 482,
                             "h": 34
                         },
                         "type": "block"
@@ -1280,8 +1413,8 @@
                         "item": "viz_card_04_metadata",
                         "position": {
                             "x": 36,
-                            "y": 672,
-                            "w": 421,
+                            "y": 616,
+                            "w": 581,
                             "h": 24
                         },
                         "type": "block"
@@ -1290,9 +1423,9 @@
                         "item": "viz_card_04_description",
                         "position": {
                             "x": 36,
-                            "y": 700,
-                            "w": 421,
-                            "h": 68
+                            "y": 644,
+                            "w": 581,
+                            "h": 64
                         },
                         "type": "block"
                     },
@@ -1300,9 +1433,9 @@
                         "item": "viz_card_04_singlevalue",
                         "position": {
                             "x": 36,
-                            "y": 780,
-                            "w": 421,
-                            "h": 88
+                            "y": 716,
+                            "w": 581,
+                            "h": 80
                         },
                         "type": "block"
                     },
@@ -1310,17 +1443,27 @@
                         "item": "viz_card_04_trend",
                         "position": {
                             "x": 36,
-                            "y": 872,
-                            "w": 421,
-                            "h": 212
+                            "y": 800,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_info_trigger",
+                        "position": {
+                            "x": 534,
+                            "y": 574,
+                            "w": 42,
+                            "h": 42
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_04_drilldown_trigger",
                         "position": {
-                            "x": 418,
-                            "y": 630,
+                            "x": 578,
+                            "y": 574,
                             "w": 42,
                             "h": 42
                         },
@@ -1329,19 +1472,19 @@
                     {
                         "item": "viz_card_05_background",
                         "position": {
-                            "x": 493,
-                            "y": 624,
-                            "w": 453,
-                            "h": 476
+                            "x": 653,
+                            "y": 568,
+                            "w": 613,
+                            "h": 440
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_05_title",
                         "position": {
-                            "x": 509,
-                            "y": 636,
-                            "w": 377,
+                            "x": 669,
+                            "y": 580,
+                            "w": 482,
                             "h": 34
                         },
                         "type": "block"
@@ -1349,9 +1492,9 @@
                     {
                         "item": "viz_card_05_metadata",
                         "position": {
-                            "x": 509,
-                            "y": 672,
-                            "w": 421,
+                            "x": 669,
+                            "y": 616,
+                            "w": 581,
                             "h": 24
                         },
                         "type": "block"
@@ -1359,38 +1502,48 @@
                     {
                         "item": "viz_card_05_description",
                         "position": {
-                            "x": 509,
-                            "y": 700,
-                            "w": 421,
-                            "h": 68
+                            "x": 669,
+                            "y": 644,
+                            "w": 581,
+                            "h": 64
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_05_singlevalue",
                         "position": {
-                            "x": 509,
-                            "y": 780,
-                            "w": 421,
-                            "h": 88
+                            "x": 669,
+                            "y": 716,
+                            "w": 581,
+                            "h": 80
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_05_trend",
                         "position": {
-                            "x": 509,
-                            "y": 872,
-                            "w": 421,
-                            "h": 212
+                            "x": 669,
+                            "y": 800,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_info_trigger",
+                        "position": {
+                            "x": 1167,
+                            "y": 574,
+                            "w": 42,
+                            "h": 42
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_05_drilldown_trigger",
                         "position": {
-                            "x": 891,
-                            "y": 630,
+                            "x": 1211,
+                            "y": 574,
                             "w": 42,
                             "h": 42
                         },
@@ -1399,19 +1552,19 @@
                     {
                         "item": "viz_card_06_background",
                         "position": {
-                            "x": 966,
-                            "y": 624,
-                            "w": 453,
-                            "h": 476
+                            "x": 1286,
+                            "y": 568,
+                            "w": 613,
+                            "h": 440
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_06_title",
                         "position": {
-                            "x": 982,
-                            "y": 636,
-                            "w": 377,
+                            "x": 1302,
+                            "y": 580,
+                            "w": 482,
                             "h": 34
                         },
                         "type": "block"
@@ -1419,9 +1572,9 @@
                     {
                         "item": "viz_card_06_metadata",
                         "position": {
-                            "x": 982,
-                            "y": 672,
-                            "w": 421,
+                            "x": 1302,
+                            "y": 616,
+                            "w": 581,
                             "h": 24
                         },
                         "type": "block"
@@ -1429,38 +1582,48 @@
                     {
                         "item": "viz_card_06_description",
                         "position": {
-                            "x": 982,
-                            "y": 700,
-                            "w": 421,
-                            "h": 68
+                            "x": 1302,
+                            "y": 644,
+                            "w": 581,
+                            "h": 64
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_06_singlevalue",
                         "position": {
-                            "x": 982,
-                            "y": 780,
-                            "w": 421,
-                            "h": 88
+                            "x": 1302,
+                            "y": 716,
+                            "w": 581,
+                            "h": 80
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_06_trend",
                         "position": {
-                            "x": 982,
-                            "y": 872,
-                            "w": 421,
-                            "h": 212
+                            "x": 1302,
+                            "y": 800,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_info_trigger",
+                        "position": {
+                            "x": 1800,
+                            "y": 574,
+                            "w": 42,
+                            "h": 42
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_06_drilldown_trigger",
                         "position": {
-                            "x": 1364,
-                            "y": 630,
+                            "x": 1844,
+                            "y": 574,
                             "w": 42,
                             "h": 42
                         },

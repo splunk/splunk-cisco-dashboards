@@ -16,7 +16,7 @@
 
 import React from 'react';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
-import { TileActionMenu } from './TileActionMenu';
+import { TileActionMenu, TileDrilldownButton } from './TileActionMenu';
 import { cn } from '@/common/lib/utils';
 import type { DataSource } from '@/common/hooks/useMetric';
 
@@ -39,6 +39,7 @@ export interface CanvasScalarTileChromeProps {
     infoAnchor?: InfoTooltipAnchor;
     source?: DataSource;
     onOpenInSearch?: () => void;
+    searchbaseId?: string;
     onConfigure?: () => void;
     onOpenDetailTable?: () => void;
     detailTableTitle?: string;
@@ -57,6 +58,7 @@ export const CanvasScalarTileChrome: React.FC<CanvasScalarTileChromeProps> = ({
     infoAnchor = 'auto',
     source,
     onOpenInSearch,
+    searchbaseId,
     onConfigure,
     onOpenDetailTable,
     detailTableTitle,
@@ -97,11 +99,15 @@ export const CanvasScalarTileChrome: React.FC<CanvasScalarTileChromeProps> = ({
                             iconAriaLabel={`What does ${label} measure?`}
                         />
                     )}
+                    <TileDrilldownButton
+                        label={label}
+                        onOpenDetailTable={onOpenDetailTable}
+                        detailTableTitle={detailTableTitle}
+                    />
                     <TileActionMenu
                         label={label}
                         onOpenInSearch={onOpenInSearch}
-                        onOpenDetailTable={onOpenDetailTable}
-                        detailTableTitle={detailTableTitle}
+                        searchbaseId={searchbaseId}
                         onConfigure={onConfigure}
                         isCustomized={isCustomized}
                     />

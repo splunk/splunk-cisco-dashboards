@@ -8,6 +8,13 @@ const path = require("path");
 const { XMLBuilder, XMLParser } = require("fast-xml-parser");
 
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
+const SOURCE_RESOURCES_DIR = path.join(
+  PACKAGE_ROOT,
+  "src",
+  "main",
+  "resources",
+  "splunk",
+);
 const MANIFEST_PATH = path.join(
   PACKAGE_ROOT,
   "config",
@@ -23,6 +30,18 @@ const SOURCE_VIEWS_DIR = path.join(
   "data",
   "ui",
   "views",
+);
+const SOURCE_NAV_PATH = path.join(
+  PACKAGE_ROOT,
+  "src",
+  "main",
+  "resources",
+  "splunk",
+  "default",
+  "data",
+  "ui",
+  "nav",
+  "default.xml",
 );
 const SOURCE_SEARCHBASE_PATH = path.join(
   PACKAGE_ROOT,
@@ -62,6 +81,9 @@ function readManifest(manifestPath = MANIFEST_PATH) {
   if (
     manifest.schemaVersion !== 1 ||
     !Array.isArray(manifest.developing?.views) ||
+    !Array.isArray(manifest.developing?.staticAssets) ||
+    !Array.isArray(manifest.developing?.configFiles) ||
+    !Array.isArray(manifest.developing?.confSettings) ||
     !Array.isArray(manifest.developing?.searchbaseStanzas) ||
     !Array.isArray(manifest.developing?.savedSearches)
   ) {
@@ -70,6 +92,114 @@ function readManifest(manifestPath = MANIFEST_PATH) {
     );
   }
   return manifest;
+}
+
+function validateDevelopingStaticAssets(staticAssets) {
+  const duplicates = staticAssets.filter(
+    (assetPath, index) => staticAssets.indexOf(assetPath) !== index,
+  );
+  const invalid = staticAssets.filter((assetPath) => {
+    if (typeof assetPath !== "string" || assetPath.trim().length === 0) {
+      return true;
+    }
+    const normalized = path.posix.normalize(assetPath);
+    return (
+      path.posix.isAbsolute(assetPath) ||
+      normalized !== assetPath ||
+      normalized.startsWith("../") ||
+      !normalized.startsWith("appserver/static/")
+    );
+  });
+
+  if (invalid.length > 0) {
+    throw new Error("Invalid developing static asset path in manifest");
+  }
+  if (duplicates.length > 0) {
+    throw new Error(
+      `Developing static asset manifest has duplicates: ${[
+        ...new Set(duplicates),
+      ].join(", ")}`,
+    );
+  }
+}
+
+function validateDevelopingConfigFiles(configFiles) {
+  const duplicates = configFiles.filter(
+    (filePath, index) => configFiles.indexOf(filePath) !== index,
+  );
+  const invalid = configFiles.filter((filePath) => {
+    if (typeof filePath !== "string" || filePath.trim().length === 0) {
+      return true;
+    }
+    const normalized = path.posix.normalize(filePath);
+    return (
+      path.posix.isAbsolute(filePath) ||
+      normalized !== filePath ||
+      normalized.startsWith("../") ||
+      (!normalized.startsWith("default/") &&
+        !normalized.startsWith("README/"))
+    );
+  });
+
+  if (invalid.length > 0) {
+    throw new Error("Invalid developing config file path in manifest");
+  }
+  if (duplicates.length > 0) {
+    throw new Error(
+      `Developing config file manifest has duplicates: ${[
+        ...new Set(duplicates),
+      ].join(", ")}`,
+    );
+  }
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function validateDevelopingConfSettings(
+  confSettings,
+  sourceResourcesDir = SOURCE_RESOURCES_DIR,
+) {
+  const invalid = confSettings.filter(
+    (setting) =>
+      !setting ||
+      typeof setting !== "object" ||
+      typeof setting.file !== "string" ||
+      !/^default\/[^/]+\.conf$/.test(setting.file) ||
+      typeof setting.stanza !== "string" ||
+      setting.stanza.trim().length === 0 ||
+      typeof setting.key !== "string" ||
+      setting.key.trim().length === 0,
+  );
+  if (invalid.length > 0) {
+    throw new Error("Invalid developing conf setting in manifest");
+  }
+
+  const identities = confSettings.map(
+    ({ file, stanza, key }) => `${file}\u0000${stanza}\u0000${key}`,
+  );
+  const duplicates = identities.filter(
+    (identity, index) => identities.indexOf(identity) !== index,
+  );
+  if (duplicates.length > 0) {
+    throw new Error("Developing conf setting manifest has duplicates");
+  }
+
+  for (const { file, stanza, key } of confSettings) {
+    const sourcePath = path.join(sourceResourcesDir, ...file.split("/"));
+    if (!fs.existsSync(sourcePath)) {
+      throw new Error(`Developing conf setting file is missing: ${sourcePath}`);
+    }
+    const parsed = parseConfStanzas(fs.readFileSync(sourcePath, "utf8"));
+    const sourceStanza = parsed.stanzas.find((entry) => entry.id === stanza);
+    const keyPattern = new RegExp(`^[ \\t]*${escapeRegExp(key)}[ \\t]*=`, "m");
+    if (!sourceStanza || !keyPattern.test(sourceStanza.text)) {
+      throw new Error(
+        `Developing conf setting is missing from source: ${file} [${stanza}] ${key}`,
+      );
+    }
+  }
 }
 
 function listSourceViewIds(sourceViewsDir = SOURCE_VIEWS_DIR) {
@@ -94,6 +224,33 @@ function parseConfStanzas(source) {
     preamble: matches.length > 0 ? source.slice(0, matches[0].index) : source,
     stanzas,
   };
+}
+
+function filterConfSettings(source, settings) {
+  const settingsByStanza = new Map();
+  for (const { stanza, key } of settings) {
+    if (!settingsByStanza.has(stanza)) {
+      settingsByStanza.set(stanza, []);
+    }
+    settingsByStanza.get(stanza).push(key);
+  }
+
+  const parsed = parseConfStanzas(source);
+  const filteredStanzas = parsed.stanzas.map(({ id, text }) => {
+    const keys = settingsByStanza.get(id) || [];
+    return keys.reduce(
+      (filtered, key) =>
+        filtered.replace(
+          new RegExp(
+            `^[ \\t]*${escapeRegExp(key)}[ \\t]*=.*(?:\\r?\\n|$)`,
+            "gm",
+          ),
+          "",
+        ),
+      text,
+    );
+  });
+  return `${parsed.preamble}${filteredStanzas.join("")}`;
 }
 
 function listSourceSearchbaseStanzaIds(
@@ -140,16 +297,36 @@ function validateDevelopingResourceIds(developingIds, sourceIds, label) {
   }
 }
 
+function listFivePillarViewIds(sourceNavPath = SOURCE_NAV_PATH) {
+  const navXml = fs.readFileSync(sourceNavPath, "utf8");
+  const collections = [
+    ...navXml.matchAll(/<collection label="([^"]+)"[^>]*>([\s\S]*?)<\/collection>/g),
+  ].slice(0, 5);
+
+  return collections.flatMap((collection) =>
+    [...collection[2].matchAll(/dashboard_manager#\/([^"?]+)/g)].map(
+      (match) => match[1],
+    ),
+  );
+}
+
 function validateManifest(
   manifest = readManifest(),
   sourceViewsDir = SOURCE_VIEWS_DIR,
   sourceSearchbasePath = SOURCE_SEARCHBASE_PATH,
   sourceSavedSearchesPath = SOURCE_SAVEDSEARCHES_PATH,
+  sourceResourcesDir = SOURCE_RESOURCES_DIR,
 ) {
   validateDevelopingResourceIds(
     manifest.developing.views,
     listSourceViewIds(sourceViewsDir),
     "view",
+  );
+  validateDevelopingStaticAssets(manifest.developing.staticAssets);
+  validateDevelopingConfigFiles(manifest.developing.configFiles);
+  validateDevelopingConfSettings(
+    manifest.developing.confSettings,
+    sourceResourcesDir,
   );
   validateDevelopingResourceIds(
     manifest.developing.searchbaseStanzas,
@@ -161,6 +338,16 @@ function validateManifest(
     listSourceSavedSearchIds(sourceSavedSearchesPath),
     "saved search",
   );
+
+  const fivePillarViewIds = new Set(listFivePillarViewIds());
+  const excludedPillarViews = manifest.developing.views.filter((viewId) =>
+    fivePillarViewIds.has(viewId),
+  );
+  if (excludedPillarViews.length > 0) {
+    throw new Error(
+      `Five-pillar menu views cannot be developing-only: ${excludedPillarViews.join(", ")}`,
+    );
+  }
 
   return manifest;
 }
@@ -226,87 +413,6 @@ function filterConfStanzas(source, excludedIds) {
   );
 }
 
-function searchbaseQueriesById(source) {
-  return new Map(
-    parseConfStanzas(source).stanzas.map(({ id, text }) => {
-      const searchMarker = /^search = /m.exec(text);
-      if (!searchMarker) {
-        throw new Error(`Searchbase stanza "${id}" has no search field`);
-      }
-
-      const rawSearch = text
-        .slice(searchMarker.index + searchMarker[0].length)
-        .trim();
-      const search = rawSearch
-        .split(/\r?\n/)
-        .map((line) => line.replace(/\\\s*$/, ""))
-        .join("\n")
-        .trim();
-      if (!search) {
-        throw new Error(`Searchbase stanza "${id}" has an empty search field`);
-      }
-      return [id, search];
-    }),
-  );
-}
-
-function inlineSearchbaseDataSources(appViewsDir, searchbaseSource) {
-  const queries = searchbaseQueriesById(searchbaseSource);
-  const definitionPattern = /<definition><!\[CDATA\[([\s\S]*?)\]\]><\/definition>/;
-  let inlinedCount = 0;
-
-  for (const entry of fs.readdirSync(appViewsDir, { withFileTypes: true })) {
-    if (!entry.isFile() || !entry.name.endsWith(".xml")) continue;
-
-    const viewPath = path.join(appViewsDir, entry.name);
-    const viewSource = fs.readFileSync(viewPath, "utf8");
-    const definitionMatch = definitionPattern.exec(viewSource);
-    if (!definitionMatch) continue;
-
-    let definition;
-    try {
-      definition = JSON.parse(definitionMatch[1].trim());
-    } catch (error) {
-      throw new Error(
-        `Unable to parse Dashboard Studio definition in ${entry.name}: ${error.message}`,
-      );
-    }
-
-    let changed = false;
-    for (const [dataSourceId, dataSource] of Object.entries(
-      definition.dataSources || {},
-    )) {
-      if (dataSource?.type !== "ds.searchbase") continue;
-
-      const { ref, queryParameters } = dataSource.options || {};
-      if (typeof ref !== "string" || !queries.has(ref)) {
-        throw new Error(
-          `Dashboard ${entry.name} data source "${dataSourceId}" references missing Searchbase stanza "${ref}"`,
-        );
-      }
-
-      dataSource.type = "ds.search";
-      dataSource.options = {
-        query: queries.get(ref),
-        ...(queryParameters ? { queryParameters } : {}),
-      };
-      inlinedCount += 1;
-      changed = true;
-    }
-
-    if (changed) {
-      const serializedDefinition = JSON.stringify(definition, null, 4);
-      const replacement = `<definition><![CDATA[\n${serializedDefinition}\n    ]]></definition>`;
-      fs.writeFileSync(
-        viewPath,
-        viewSource.replace(definitionPattern, replacement),
-      );
-    }
-  }
-
-  return inlinedCount;
-}
-
 function applyBuildProfile(appRoot, profile, options = {}) {
   if (!ALLOWED_PROFILES.has(profile)) {
     throw new Error(
@@ -319,6 +425,7 @@ function applyBuildProfile(appRoot, profile, options = {}) {
     options.sourceViewsDir || SOURCE_VIEWS_DIR,
     options.sourceSearchbasePath || SOURCE_SEARCHBASE_PATH,
     options.sourceSavedSearchesPath || SOURCE_SAVEDSEARCHES_PATH,
+    options.sourceResourcesDir || SOURCE_RESOURCES_DIR,
   );
   const appViewsDir = path.join(appRoot, "default", "data", "ui", "views");
   const appNavPath = path.join(
@@ -336,6 +443,14 @@ function applyBuildProfile(appRoot, profile, options = {}) {
     "savedsearches.conf",
   );
   const developingViewIds = [...manifest.developing.views].sort();
+  const developingStaticAssets = [...manifest.developing.staticAssets].sort();
+  const developingConfigFiles = [...manifest.developing.configFiles].sort();
+  const developingConfSettings = [...manifest.developing.confSettings].sort(
+    (left, right) =>
+      `${left.file}\u0000${left.stanza}\u0000${left.key}`.localeCompare(
+        `${right.file}\u0000${right.stanza}\u0000${right.key}`,
+      ),
+  );
   const developingSearchbaseStanzaIds = [
     ...manifest.developing.searchbaseStanzas,
   ].sort();
@@ -363,9 +478,15 @@ function applyBuildProfile(appRoot, profile, options = {}) {
     return {
       profile,
       developingViewIds,
+      developingStaticAssets,
+      developingConfigFiles,
+      developingConfSettings,
       developingSearchbaseStanzaIds,
       developingSavedSearchIds,
       removedViewIds: [],
+      removedStaticAssets: [],
+      removedConfigFiles: [],
+      removedConfSettings: [],
       removedSearchbaseStanzaIds: [],
       removedSavedSearchIds: [],
       removedNavReferences: 0,
@@ -395,11 +516,43 @@ function applyBuildProfile(appRoot, profile, options = {}) {
     fs.unlinkSync(path.join(appViewsDir, `${viewId}.xml`));
   }
 
+  for (const assetPath of developingStaticAssets) {
+    const absoluteAssetPath = path.join(appRoot, ...assetPath.split("/"));
+    if (!fs.existsSync(absoluteAssetPath)) {
+      throw new Error(`Staged app is missing manifest static asset: ${absoluteAssetPath}`);
+    }
+    fs.unlinkSync(absoluteAssetPath);
+  }
+
+  for (const configPath of developingConfigFiles) {
+    const absoluteConfigPath = path.join(appRoot, ...configPath.split("/"));
+    if (!fs.existsSync(absoluteConfigPath)) {
+      throw new Error(
+        `Staged app is missing manifest config file: ${absoluteConfigPath}`,
+      );
+    }
+    fs.unlinkSync(absoluteConfigPath);
+  }
+
+  const settingsByFile = new Map();
+  for (const setting of developingConfSettings) {
+    if (!settingsByFile.has(setting.file)) {
+      settingsByFile.set(setting.file, []);
+    }
+    settingsByFile.get(setting.file).push(setting);
+  }
+  for (const [file, settings] of settingsByFile) {
+    const absoluteConfPath = path.join(appRoot, ...file.split("/"));
+    if (!fs.existsSync(absoluteConfPath)) {
+      throw new Error(
+        `Staged app is missing manifest conf file: ${absoluteConfPath}`,
+      );
+    }
+    const source = fs.readFileSync(absoluteConfPath, "utf8");
+    fs.writeFileSync(absoluteConfPath, filterConfSettings(source, settings));
+  }
+
   const searchbaseSource = fs.readFileSync(appSearchbasePath, "utf8");
-  const inlinedSearchbaseDataSources = inlineSearchbaseDataSources(
-    appViewsDir,
-    searchbaseSource,
-  );
   fs.writeFileSync(
     appSearchbasePath,
     filterConfStanzas(
@@ -417,13 +570,18 @@ function applyBuildProfile(appRoot, profile, options = {}) {
   return {
     profile,
     developingViewIds,
+    developingStaticAssets,
+    developingConfigFiles,
+    developingConfSettings,
     developingSearchbaseStanzaIds,
     developingSavedSearchIds,
     removedViewIds: developingViewIds,
+    removedStaticAssets: developingStaticAssets,
+    removedConfigFiles: developingConfigFiles,
+    removedConfSettings: developingConfSettings,
     removedSearchbaseStanzaIds: developingSearchbaseStanzaIds,
     removedSavedSearchIds: developingSavedSearchIds,
     removedNavReferences,
-    inlinedSearchbaseDataSources,
   };
 }
 
@@ -442,7 +600,10 @@ function main() {
     if (profile === "developer") {
       console.log(
         `[build-profile] developer: included ${result.developingViewIds.length} ` +
-          `developing view(s), ${result.developingSearchbaseStanzaIds.length} ` +
+          `developing view(s), ${result.developingStaticAssets.length} static ` +
+          `asset(s), ${result.developingConfigFiles.length} config file(s), ` +
+          `${result.developingConfSettings.length} config setting(s), ` +
+          `${result.developingSearchbaseStanzaIds.length} ` +
           `developing Searchbase stanza(s), and ` +
           `${result.developingSavedSearchIds.length} developing saved search(es)`,
       );
@@ -450,11 +611,12 @@ function main() {
       console.log(
         `[build-profile] splunkbase: excluded ${result.removedViewIds.length} ` +
           `developing view(s), ${result.removedNavReferences} navigation ` +
-          `reference(s), ${result.removedSearchbaseStanzaIds.length} ` +
+          `reference(s), ${result.removedStaticAssets.length} static asset(s), ` +
+          `${result.removedConfigFiles.length} config file(s), ` +
+          `${result.removedConfSettings.length} config setting(s), ` +
+          `${result.removedSearchbaseStanzaIds.length} ` +
           `developing Searchbase stanza(s), and ` +
-          `${result.removedSavedSearchIds.length} developing saved search(es); ` +
-          `inlined ${result.inlinedSearchbaseDataSources} Dashboard Studio ` +
-          `Searchbase data source(s) as native searches`,
+          `${result.removedSavedSearchIds.length} developing saved search(es)`,
       );
     }
   } catch (error) {
@@ -471,13 +633,15 @@ module.exports = {
   filterConfStanzas,
   filterNavigationNodes,
   hrefTargetsView,
-  inlineSearchbaseDataSources,
   listSourceSearchbaseStanzaIds,
   listSourceSavedSearchIds,
   listSourceViewIds,
   parseConfStanzas,
+  filterConfSettings,
   readManifest,
-  searchbaseQueriesById,
   validateManifest,
+  validateDevelopingConfigFiles,
+  validateDevelopingConfSettings,
+  validateDevelopingStaticAssets,
   validateDevelopingResourceIds,
 };

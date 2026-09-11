@@ -1,4 +1,4 @@
-<dashboard version="2" theme="dark" stylesheet="application.css">
+<dashboard version="2" theme="dark" stylesheet="application.css" isVisible="false">
     <label>Scalable Network Segmentation - Segmentation Operations</label>
     <description>Summarize segment health, policy alignment, and areas needing investigation.</description>
     <definition><![CDATA[
@@ -8,11 +8,34 @@
     "inputs": {
         "input_time_range": {
             "options": {
-                "defaultValue": "-24h,now",
+                "defaultValue": "-24h,now,auto",
+                "showAdvanced": true,
+                "selections": [
+                    {
+                        "value": "-4h,now,auto",
+                        "label": "4h"
+                    },
+                    {
+                        "value": "-24h,now,auto",
+                        "label": "24h"
+                    },
+                    {
+                        "value": "-48h,now,auto",
+                        "label": "48h"
+                    },
+                    {
+                        "value": "-7d@d,now,auto",
+                        "label": "7d"
+                    },
+                    {
+                        "value": "-30d@d,now,auto",
+                        "label": "30d"
+                    }
+                ],
                 "token": "time_tok"
             },
             "title": "Time range",
-            "type": "input.timerange"
+            "type": "input.simpleTimePicker"
         }
     },
     "defaults": {
@@ -37,7 +60,7 @@
             "title": "Segmentation Operations",
             "options": {
                 "preserveAspectRatio": true,
-                "src": "../../static/app/splunk-cisco-dashboards/images/nav-icons/Globe.svg"
+                "src": "/static/app/splunk-cisco-dashboards/images/nav-icons/Globe.svg"
             }
         },
         "viz_header": {
@@ -69,7 +92,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**SGT Activity by Site**"
+                "markdown": "**Tagged Authentication Events by Location**"
             }
         },
         "viz_card_01_metadata": {
@@ -95,7 +118,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks TrustSec\\-tagged ISE authentication activity by site over time and retains the SGT/site rollup as drill\\-down detail\\."
+                "markdown": "Ranks observed TrustSec\\-tagged ISE authentication events by the best available site, reporting device, or ISE node context\\."
             }
         },
         "viz_card_01_singlevalue": {
@@ -110,16 +133,13 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowEvents\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "unit": " events",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -140,7 +160,7 @@
             }
         },
         "viz_card_01_trend": {
-            "type": "splunk.area",
+            "type": "splunk.bar",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_01"
@@ -151,11 +171,11 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#9b5ff4",
+                    "#e44273",
                     "#3abdfa",
                     "#0d8e97",
                     "#e2a811",
-                    "#e44273",
+                    "#9b5ff4",
                     "#a9afda",
                     "#d8580f",
                     "#f88ddc",
@@ -172,15 +192,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 3,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
-                "showYMajorGridLines": true,
+                "dataValuesDisplay": "all",
+                "stackMode": "unstacked",
+                "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")"
+                "x": "> primary | seriesByName(\"Location Context\")",
+                "y": "> primary | seriesByName(\"Events\")",
+                "showYMinorGridLines": false,
+                "yAxisLabelVisibility": "hide",
+                "yAxisLineVisibility": "hide",
+                "yAxisMajorTickVisibility": "hide",
+                "yAxisMinorTickVisibility": "hide"
             }
         },
         "viz_card_01_drilldown_trigger": {
@@ -189,7 +212,26 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=SGT%20Activity%20by%20Site&target=Secure%20Networking%20-%20SGT%20by%20Site"
+                        "url": "/drilldown?origin=Tagged%20Authentication%20Events%20by%20Location&target=Secure%20Networking%20-%20SGT%20by%20Site"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_01_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Tagged%20Authentication%20Events%20by%20Location&target=secure_networking_sgt_site_activity_summary"
                     }
                 }
             ],
@@ -220,7 +262,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**SGT Activity by Device**"
+                "markdown": "**Tagged Endpoints by Reporting Device**"
             }
         },
         "viz_card_02_metadata": {
@@ -246,7 +288,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Trends distinct TrustSec\\-tagged endpoints by network device, with the site/device/SGT distribution available in the drill\\-down modal\\."
+                "markdown": "Ranks distinct TrustSec\\-tagged endpoints by the Cisco ISE reporting network device observed in the selected window\\."
             }
         },
         "viz_card_02_singlevalue": {
@@ -261,16 +303,13 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowTaggedEndpoints\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "unit": " endpoints",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -291,7 +330,7 @@
             }
         },
         "viz_card_02_trend": {
-            "type": "splunk.area",
+            "type": "splunk.bar",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_02"
@@ -323,15 +362,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 3,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
-                "showYMajorGridLines": true,
+                "dataValuesDisplay": "all",
+                "stackMode": "unstacked",
+                "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")"
+                "x": "> primary | seriesByName(\"Network Device\")",
+                "y": "> primary | seriesByName(\"Tagged Endpoints\")",
+                "showYMinorGridLines": false,
+                "yAxisLabelVisibility": "hide",
+                "yAxisLineVisibility": "hide",
+                "yAxisMajorTickVisibility": "hide",
+                "yAxisMinorTickVisibility": "hide"
             }
         },
         "viz_card_02_drilldown_trigger": {
@@ -340,7 +382,26 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=SGT%20Activity%20by%20Device&target=Secure%20Networking%20-%20SGT%20Distribution%20by%20Site%20and%20Device"
+                        "url": "/drilldown?origin=Tagged%20Endpoints%20by%20Reporting%20Device&target=Secure%20Networking%20-%20SGT%20Distribution%20by%20Site%20and%20Device"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_02_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Tagged%20Endpoints%20by%20Reporting%20Device&target=secure_networking_sgt_device_activity_summary"
                     }
                 }
             ],
@@ -371,7 +432,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**IP\\-SGT Binding Activity**"
+                "markdown": "**Observed IP\\-SGT Bindings**"
             }
         },
         "viz_card_03_metadata": {
@@ -397,7 +458,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks distinct IP prefixes bound to each SGT over time and retains the full binding inventory as drill\\-down detail\\."
+                "markdown": "Ranks distinct IP prefixes observed for each Security Group Tag and retains the full binding inventory as investigation detail\\."
             }
         },
         "viz_card_03_singlevalue": {
@@ -412,16 +473,13 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowBoundPrefixes\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "unit": " prefixes",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -442,7 +500,7 @@
             }
         },
         "viz_card_03_trend": {
-            "type": "splunk.area",
+            "type": "splunk.bar",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_03"
@@ -453,10 +511,10 @@
                 "backgroundColor": "transparent",
                 "legendDisplay": "off",
                 "seriesColors": [
-                    "#9b5ff4",
+                    "#e2a811",
                     "#3abdfa",
                     "#0d8e97",
-                    "#e2a811",
+                    "#9b5ff4",
                     "#e44273",
                     "#a9afda",
                     "#d8580f",
@@ -474,15 +532,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 3,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
-                "showYMajorGridLines": true,
+                "dataValuesDisplay": "all",
+                "stackMode": "unstacked",
+                "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")"
+                "x": "> primary | seriesByName(\"Security Group\")",
+                "y": "> primary | seriesByName(\"Bound Prefixes\")",
+                "showYMinorGridLines": false,
+                "yAxisLabelVisibility": "hide",
+                "yAxisLineVisibility": "hide",
+                "yAxisMajorTickVisibility": "hide",
+                "yAxisMinorTickVisibility": "hide"
             }
         },
         "viz_card_03_drilldown_trigger": {
@@ -491,7 +552,26 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=IP-SGT%20Binding%20Activity&target=Secure%20Networking%20-%20SGT%20Binding%20Inventory,Secure%20Networking%20-%20IP-SGT%20Bindings%20by%20Security%20Group"
+                        "url": "/drilldown?origin=Observed%20IP-SGT%20Bindings&target=Secure%20Networking%20-%20SGT%20Binding%20Inventory,Secure%20Networking%20-%20IP-SGT%20Bindings%20by%20Security%20Group"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_03_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Observed%20IP-SGT%20Bindings&target=secure_networking_sgt_binding_activity_summary"
                     }
                 }
             ],
@@ -522,7 +602,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**SGACL Enforcement**"
+                "markdown": "**Observed SGACL Decisions**"
             }
         },
         "viz_card_04_metadata": {
@@ -548,7 +628,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Hourly trend of TrustSec SGACL enforcement events from the Catalyst data model, split by permit/deny \\(and other\\) actions - the primary “is role\\-based policy doing work over time?” signal for scalable segmentation\\."
+                "markdown": "Shows observed TrustSec SGACL permit, deny, and other enforcement decisions over time from the Catalyst data model\\."
             }
         },
         "viz_card_04_singlevalue": {
@@ -563,16 +643,18 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " events",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -593,7 +675,7 @@
             }
         },
         "viz_card_04_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_04"
@@ -602,10 +684,16 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
+                "seriesColorsByField": {
+                    "Deny": "#e44273",
+                    "Other": "#a9afda",
+                    "Permit": "#159352",
+                    "Unknown": "#a9afda"
+                },
                 "seriesColors": [
-                    "#9b5ff4",
                     "#3abdfa",
+                    "#9b5ff4",
                     "#0d8e97",
                     "#e2a811",
                     "#e44273",
@@ -625,15 +713,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 3,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
-                "showYMajorGridLines": true,
+                "dataValuesDisplay": "off",
+                "stackMode": "stacked",
+                "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")"
+                "y": "> primary | frameWithoutSeriesNames(\"BucketTotal\", \"WindowTotal\")",
+                "showYMinorGridLines": false,
+                "yAxisLabelVisibility": "hide",
+                "yAxisLineVisibility": "hide",
+                "yAxisMajorTickVisibility": "hide",
+                "yAxisMinorTickVisibility": "hide"
             }
         },
         "viz_card_04_drilldown_trigger": {
@@ -642,7 +733,26 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=SGACL%20Enforcement&target=Secure%20Networking%20-%20SGACL%20Deny%20Pairs%20by%20SGT,Secure%20Networking%20-%20SGT%20Policy%20Activity%20and%20SGACL%20Matrix%20Hits"
+                        "url": "/drilldown?origin=Observed%20SGACL%20Decisions&target=secure_networking_sgacl_policy_matrix,secure_networking_fmc_sgt_correlated_events,secure_networking_sgt_distribution_by_site_device"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_04_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Observed%20SGACL%20Decisions&target=secure_networking_sgacl_enforcement_activity_trend"
                     }
                 }
             ],
@@ -673,7 +783,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Segmentation Feature Evidence**"
+                "markdown": "**Observed Segmentation Feature Events**"
             }
         },
         "viz_card_05_metadata": {
@@ -699,7 +809,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Trends observed Cisco IOS VRF, VLAN, VXLAN, VPN, and SGT/TrustSec events over time\\."
+                "markdown": "Breaks down observed Cisco IOS VRF, VLAN, VXLAN, VPN, and SGT/TrustSec event volume over time\\."
             }
         },
         "viz_card_05_singlevalue": {
@@ -714,16 +824,18 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowTotal\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
+                "trendDisplay": "absolute",
                 "shouldAbbreviateTrendValue": true,
                 "showTrendIndicator": true,
                 "sparklineValues": "> primary | seriesByName(\"BucketTotal\")",
                 "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
                 "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendValue": "> sparklineValues | delta(-2)",
+                "unit": " events",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -739,7 +851,7 @@
             }
         },
         "viz_card_05_trend": {
-            "type": "splunk.area",
+            "type": "splunk.column",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_05"
@@ -748,9 +860,9 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "off",
+                "legendDisplay": "bottom",
                 "seriesColors": [
-                    "#9b5ff4",
+                    "#159352",
                     "#3abdfa",
                     "#0d8e97",
                     "#e2a811",
@@ -758,7 +870,7 @@
                     "#a9afda",
                     "#d8580f",
                     "#f88ddc",
-                    "#159352",
+                    "#9b5ff4",
                     "#9abe2d",
                     "#6574f3",
                     "#ff9297",
@@ -771,15 +883,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "dataValuesDisplay": "minmax",
-                "lineWidth": 3,
-                "markerDisplay": "outlined",
-                "nullValueDisplay": "connect",
-                "showYMajorGridLines": true,
+                "dataValuesDisplay": "off",
+                "stackMode": "stacked",
+                "showYMajorGridLines": false,
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
                 "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"BucketTotal\")"
+                "y": "> primary | frameBySeriesNames(\"VXLAN / VNI\", \"VLAN / 802.1Q\", \"VRF\", \"SGT / TrustSec\", \"VPN\")",
+                "showYMinorGridLines": false,
+                "yAxisLabelVisibility": "hide",
+                "yAxisLineVisibility": "hide",
+                "yAxisMajorTickVisibility": "hide",
+                "yAxisMinorTickVisibility": "hide"
             }
         },
         "viz_card_05_drilldown_trigger": {
@@ -788,7 +903,26 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Segmentation%20Feature%20Evidence&target=Secure%20Networking%20-%20Router%20Segmentation%20Feature%20Evidence"
+                        "url": "/drilldown?origin=Observed%20Segmentation%20Feature%20Events&target=Secure%20Networking%20-%20Router%20Segmentation%20Feature%20Evidence"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_05_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Observed%20Segmentation%20Feature%20Events&target=secure_networking_router_segmentation_feature_trend"
                     }
                 }
             ],
@@ -819,7 +953,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**SGT\\-Enforced Blocks**"
+                "markdown": "**FMC Blocks by SGT Context**"
             }
         },
         "viz_card_06_metadata": {
@@ -845,7 +979,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Trend of FMC block decisions correlated with Security Group Tags, showing enforcement volume across the selected time window\\."
+                "markdown": "Ranks FMC block decisions by resolved Security Group Tag context, including an explicit unclassified telemetry category\\."
             }
         },
         "viz_card_06_singlevalue": {
@@ -860,16 +994,13 @@
                 "backgroundColor": "transparent",
                 "majorColor": "#ecf0f5",
                 "majorFontSize": 44,
-                "majorValue": "> sparklineValues | lastPoint()",
+                "majorValue": "> primary | seriesByName(\"WindowBlocks\") | lastPoint() | divideBy(0.999999999999)",
                 "shouldAbbreviateMajorValue": true,
                 "sparklineDisplay": "off",
-                "trendDisplay": "percent",
-                "shouldAbbreviateTrendValue": true,
-                "showTrendIndicator": true,
-                "sparklineValues": "> primary | seriesByName(\"blocks_trend\")",
-                "trendColor": "> trendValue | rangeValue(trendColorEditorConfig)",
-                "trendFontSize": 28,
-                "trendValue": "> sparklineValues | delta(-2)"
+                "trendDisplay": "off",
+                "showTrendIndicator": false,
+                "unit": " blocks",
+                "unitPosition": "after"
             },
             "context": {
                 "trendColorEditorConfig": [
@@ -890,7 +1021,7 @@
             }
         },
         "viz_card_06_trend": {
-            "type": "splunk.column",
+            "type": "splunk.bar",
             "title": "",
             "dataSources": {
                 "primary": "ds_story_06"
@@ -899,11 +1030,11 @@
             "showProgressBar": false,
             "options": {
                 "backgroundColor": "transparent",
-                "legendDisplay": "right",
+                "legendDisplay": "off",
                 "seriesColors": [
+                    "#0d8e97",
                     "#9b5ff4",
                     "#3abdfa",
-                    "#0d8e97",
                     "#e2a811",
                     "#e44273",
                     "#a9afda",
@@ -922,12 +1053,18 @@
                     "#698c07",
                     "#c69fff"
                 ],
-                "showYMajorGridLines": true,
+                "dataValuesDisplay": "all",
+                "showYMajorGridLines": false,
                 "stackMode": "unstacked",
                 "xAxisTitleVisibility": "hide",
                 "yAxisTitleVisibility": "hide",
-                "x": "> primary | seriesByName(\"_time\")",
-                "y": "> primary | seriesByName(\"blocks_trend\")"
+                "x": "> primary | seriesByName(\"SGT Context\")",
+                "y": "> primary | seriesByName(\"Blocks\")",
+                "showYMinorGridLines": false,
+                "yAxisLabelVisibility": "hide",
+                "yAxisLineVisibility": "hide",
+                "yAxisMajorTickVisibility": "hide",
+                "yAxisMinorTickVisibility": "hide"
             }
         },
         "viz_card_06_drilldown_trigger": {
@@ -936,7 +1073,26 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=SGT-Enforced%20Blocks&target=Secure%20Networking%20-%20FMC%20Events%20Correlated%20by%20SGT"
+                        "url": "/drilldown?origin=FMC%20Blocks%20by%20SGT%20Context&target=Secure%20Networking%20-%20FMC%20Events%20Correlated%20by%20SGT"
+                    }
+                }
+            ],
+            "options": {
+                "fillColor": "transparent",
+                "strokeColor": "transparent"
+            },
+            "context": {},
+            "containerOptions": {},
+            "showProgressBar": false,
+            "showLastUpdated": false
+        },
+        "viz_card_06_info_trigger": {
+            "type": "splunk.rectangle",
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=FMC%20Blocks%20by%20SGT%20Context&target=secure_networking_sgt_fmc_blocks_by_sgt_summary"
                     }
                 }
             ],
@@ -954,10 +1110,11 @@
         "ds_story_01": {
             "name": "Secure Networking - SGT Site Activity Trend",
             "options": {
-                "ref": "secure_networking_sgt_site_activity_trend",
+                "ref": "secure_networking_sgt_site_activity_summary",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -965,10 +1122,11 @@
         "ds_story_02": {
             "name": "Secure Networking - SGT Network Device Activity Trend",
             "options": {
-                "ref": "secure_networking_sgt_device_activity_trend",
+                "ref": "secure_networking_sgt_device_activity_summary",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -976,10 +1134,11 @@
         "ds_story_03": {
             "name": "Secure Networking - SGT Binding Activity Trend",
             "options": {
-                "ref": "secure_networking_sgt_binding_activity_trend",
+                "ref": "secure_networking_sgt_binding_activity_summary",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -990,7 +1149,8 @@
                 "ref": "secure_networking_sgacl_enforcement_activity_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -1001,7 +1161,8 @@
                 "ref": "secure_networking_router_segmentation_feature_trend",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -1009,10 +1170,11 @@
         "ds_story_06": {
             "name": "Secure Networking - SGT-Classified FMC Blocks by Tag",
             "options": {
-                "ref": "secure_networking_sgt_fmc_blocks_by_sgt",
+                "ref": "secure_networking_sgt_fmc_blocks_by_sgt_summary",
                 "queryParameters": {
                     "earliest": "$time_tok.earliest$",
-                    "latest": "$time_tok.latest$"
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
                 }
             },
             "type": "ds.searchbase"
@@ -1031,8 +1193,8 @@
                         "y": 0
                     },
                     "display": "auto-scale",
-                    "height": 1128,
-                    "width": 1440
+                    "height": 1024,
+                    "width": 1920
                 },
                 "structure": [
                     {
@@ -1040,8 +1202,8 @@
                         "position": {
                             "x": 20,
                             "y": 0,
-                            "w": 1400,
-                            "h": 104
+                            "w": 1880,
+                            "h": 96
                         },
                         "type": "block"
                     },
@@ -1049,7 +1211,7 @@
                         "item": "viz_header_icon",
                         "position": {
                             "x": 38,
-                            "y": 18,
+                            "y": 16,
                             "w": 64,
                             "h": 64
                         },
@@ -1060,16 +1222,16 @@
                         "position": {
                             "x": 118,
                             "y": 8,
-                            "w": 886,
-                            "h": 88
+                            "w": 1366,
+                            "h": 80
                         },
                         "type": "block"
                     },
                     {
                         "item": "input_time_range",
                         "position": {
-                            "x": 1034,
-                            "y": 12,
+                            "x": 1514,
+                            "y": 8,
                             "w": 370,
                             "h": 80
                         },
@@ -1079,9 +1241,9 @@
                         "item": "viz_card_01_background",
                         "position": {
                             "x": 20,
-                            "y": 128,
-                            "w": 453,
-                            "h": 476
+                            "y": 112,
+                            "w": 613,
+                            "h": 440
                         },
                         "type": "block"
                     },
@@ -1089,8 +1251,8 @@
                         "item": "viz_card_01_title",
                         "position": {
                             "x": 36,
-                            "y": 140,
-                            "w": 377,
+                            "y": 124,
+                            "w": 482,
                             "h": 34
                         },
                         "type": "block"
@@ -1099,8 +1261,8 @@
                         "item": "viz_card_01_metadata",
                         "position": {
                             "x": 36,
-                            "y": 176,
-                            "w": 421,
+                            "y": 160,
+                            "w": 581,
                             "h": 24
                         },
                         "type": "block"
@@ -1109,9 +1271,9 @@
                         "item": "viz_card_01_description",
                         "position": {
                             "x": 36,
-                            "y": 204,
-                            "w": 421,
-                            "h": 68
+                            "y": 188,
+                            "w": 581,
+                            "h": 64
                         },
                         "type": "block"
                     },
@@ -1119,9 +1281,9 @@
                         "item": "viz_card_01_singlevalue",
                         "position": {
                             "x": 36,
-                            "y": 284,
-                            "w": 421,
-                            "h": 88
+                            "y": 260,
+                            "w": 581,
+                            "h": 80
                         },
                         "type": "block"
                     },
@@ -1129,17 +1291,27 @@
                         "item": "viz_card_01_trend",
                         "position": {
                             "x": 36,
-                            "y": 376,
-                            "w": 421,
-                            "h": 212
+                            "y": 344,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_01_info_trigger",
+                        "position": {
+                            "x": 534,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_01_drilldown_trigger",
                         "position": {
-                            "x": 418,
-                            "y": 134,
+                            "x": 578,
+                            "y": 118,
                             "w": 42,
                             "h": 42
                         },
@@ -1148,19 +1320,19 @@
                     {
                         "item": "viz_card_02_background",
                         "position": {
-                            "x": 493,
-                            "y": 128,
-                            "w": 453,
-                            "h": 476
+                            "x": 653,
+                            "y": 112,
+                            "w": 613,
+                            "h": 440
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_02_title",
                         "position": {
-                            "x": 509,
-                            "y": 140,
-                            "w": 377,
+                            "x": 669,
+                            "y": 124,
+                            "w": 482,
                             "h": 34
                         },
                         "type": "block"
@@ -1168,9 +1340,9 @@
                     {
                         "item": "viz_card_02_metadata",
                         "position": {
-                            "x": 509,
-                            "y": 176,
-                            "w": 421,
+                            "x": 669,
+                            "y": 160,
+                            "w": 581,
                             "h": 24
                         },
                         "type": "block"
@@ -1178,38 +1350,48 @@
                     {
                         "item": "viz_card_02_description",
                         "position": {
-                            "x": 509,
-                            "y": 204,
-                            "w": 421,
-                            "h": 68
+                            "x": 669,
+                            "y": 188,
+                            "w": 581,
+                            "h": 64
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_02_singlevalue",
                         "position": {
-                            "x": 509,
-                            "y": 284,
-                            "w": 421,
-                            "h": 88
+                            "x": 669,
+                            "y": 260,
+                            "w": 581,
+                            "h": 80
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_02_trend",
                         "position": {
-                            "x": 509,
-                            "y": 376,
-                            "w": 421,
-                            "h": 212
+                            "x": 669,
+                            "y": 344,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_02_info_trigger",
+                        "position": {
+                            "x": 1167,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_02_drilldown_trigger",
                         "position": {
-                            "x": 891,
-                            "y": 134,
+                            "x": 1211,
+                            "y": 118,
                             "w": 42,
                             "h": 42
                         },
@@ -1218,19 +1400,19 @@
                     {
                         "item": "viz_card_03_background",
                         "position": {
-                            "x": 966,
-                            "y": 128,
-                            "w": 453,
-                            "h": 476
+                            "x": 1286,
+                            "y": 112,
+                            "w": 613,
+                            "h": 440
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_03_title",
                         "position": {
-                            "x": 982,
-                            "y": 140,
-                            "w": 377,
+                            "x": 1302,
+                            "y": 124,
+                            "w": 482,
                             "h": 34
                         },
                         "type": "block"
@@ -1238,9 +1420,9 @@
                     {
                         "item": "viz_card_03_metadata",
                         "position": {
-                            "x": 982,
-                            "y": 176,
-                            "w": 421,
+                            "x": 1302,
+                            "y": 160,
+                            "w": 581,
                             "h": 24
                         },
                         "type": "block"
@@ -1248,38 +1430,48 @@
                     {
                         "item": "viz_card_03_description",
                         "position": {
-                            "x": 982,
-                            "y": 204,
-                            "w": 421,
-                            "h": 68
+                            "x": 1302,
+                            "y": 188,
+                            "w": 581,
+                            "h": 64
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_03_singlevalue",
                         "position": {
-                            "x": 982,
-                            "y": 284,
-                            "w": 421,
-                            "h": 88
+                            "x": 1302,
+                            "y": 260,
+                            "w": 581,
+                            "h": 80
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_03_trend",
                         "position": {
-                            "x": 982,
-                            "y": 376,
-                            "w": 421,
-                            "h": 212
+                            "x": 1302,
+                            "y": 344,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_03_info_trigger",
+                        "position": {
+                            "x": 1800,
+                            "y": 118,
+                            "w": 42,
+                            "h": 42
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_03_drilldown_trigger",
                         "position": {
-                            "x": 1364,
-                            "y": 134,
+                            "x": 1844,
+                            "y": 118,
                             "w": 42,
                             "h": 42
                         },
@@ -1289,9 +1481,9 @@
                         "item": "viz_card_04_background",
                         "position": {
                             "x": 20,
-                            "y": 624,
-                            "w": 453,
-                            "h": 476
+                            "y": 568,
+                            "w": 613,
+                            "h": 440
                         },
                         "type": "block"
                     },
@@ -1299,8 +1491,8 @@
                         "item": "viz_card_04_title",
                         "position": {
                             "x": 36,
-                            "y": 636,
-                            "w": 377,
+                            "y": 580,
+                            "w": 482,
                             "h": 34
                         },
                         "type": "block"
@@ -1309,8 +1501,8 @@
                         "item": "viz_card_04_metadata",
                         "position": {
                             "x": 36,
-                            "y": 672,
-                            "w": 421,
+                            "y": 616,
+                            "w": 581,
                             "h": 24
                         },
                         "type": "block"
@@ -1319,9 +1511,9 @@
                         "item": "viz_card_04_description",
                         "position": {
                             "x": 36,
-                            "y": 700,
-                            "w": 421,
-                            "h": 68
+                            "y": 644,
+                            "w": 581,
+                            "h": 64
                         },
                         "type": "block"
                     },
@@ -1329,9 +1521,9 @@
                         "item": "viz_card_04_singlevalue",
                         "position": {
                             "x": 36,
-                            "y": 780,
-                            "w": 421,
-                            "h": 88
+                            "y": 716,
+                            "w": 581,
+                            "h": 80
                         },
                         "type": "block"
                     },
@@ -1339,17 +1531,27 @@
                         "item": "viz_card_04_trend",
                         "position": {
                             "x": 36,
-                            "y": 872,
-                            "w": 421,
-                            "h": 212
+                            "y": 800,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_04_info_trigger",
+                        "position": {
+                            "x": 534,
+                            "y": 574,
+                            "w": 42,
+                            "h": 42
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_04_drilldown_trigger",
                         "position": {
-                            "x": 418,
-                            "y": 630,
+                            "x": 578,
+                            "y": 574,
                             "w": 42,
                             "h": 42
                         },
@@ -1358,19 +1560,19 @@
                     {
                         "item": "viz_card_05_background",
                         "position": {
-                            "x": 493,
-                            "y": 624,
-                            "w": 453,
-                            "h": 476
+                            "x": 653,
+                            "y": 568,
+                            "w": 613,
+                            "h": 440
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_05_title",
                         "position": {
-                            "x": 509,
-                            "y": 636,
-                            "w": 377,
+                            "x": 669,
+                            "y": 580,
+                            "w": 482,
                             "h": 34
                         },
                         "type": "block"
@@ -1378,9 +1580,9 @@
                     {
                         "item": "viz_card_05_metadata",
                         "position": {
-                            "x": 509,
-                            "y": 672,
-                            "w": 421,
+                            "x": 669,
+                            "y": 616,
+                            "w": 581,
                             "h": 24
                         },
                         "type": "block"
@@ -1388,38 +1590,48 @@
                     {
                         "item": "viz_card_05_description",
                         "position": {
-                            "x": 509,
-                            "y": 700,
-                            "w": 421,
-                            "h": 68
+                            "x": 669,
+                            "y": 644,
+                            "w": 581,
+                            "h": 64
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_05_singlevalue",
                         "position": {
-                            "x": 509,
-                            "y": 780,
-                            "w": 421,
-                            "h": 88
+                            "x": 669,
+                            "y": 716,
+                            "w": 581,
+                            "h": 80
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_05_trend",
                         "position": {
-                            "x": 509,
-                            "y": 872,
-                            "w": 421,
-                            "h": 212
+                            "x": 669,
+                            "y": 800,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_05_info_trigger",
+                        "position": {
+                            "x": 1167,
+                            "y": 574,
+                            "w": 42,
+                            "h": 42
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_05_drilldown_trigger",
                         "position": {
-                            "x": 891,
-                            "y": 630,
+                            "x": 1211,
+                            "y": 574,
                             "w": 42,
                             "h": 42
                         },
@@ -1428,19 +1640,19 @@
                     {
                         "item": "viz_card_06_background",
                         "position": {
-                            "x": 966,
-                            "y": 624,
-                            "w": 453,
-                            "h": 476
+                            "x": 1286,
+                            "y": 568,
+                            "w": 613,
+                            "h": 440
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_06_title",
                         "position": {
-                            "x": 982,
-                            "y": 636,
-                            "w": 377,
+                            "x": 1302,
+                            "y": 580,
+                            "w": 482,
                             "h": 34
                         },
                         "type": "block"
@@ -1448,9 +1660,9 @@
                     {
                         "item": "viz_card_06_metadata",
                         "position": {
-                            "x": 982,
-                            "y": 672,
-                            "w": 421,
+                            "x": 1302,
+                            "y": 616,
+                            "w": 581,
                             "h": 24
                         },
                         "type": "block"
@@ -1458,38 +1670,48 @@
                     {
                         "item": "viz_card_06_description",
                         "position": {
-                            "x": 982,
-                            "y": 700,
-                            "w": 421,
-                            "h": 68
+                            "x": 1302,
+                            "y": 644,
+                            "w": 581,
+                            "h": 64
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_06_singlevalue",
                         "position": {
-                            "x": 982,
-                            "y": 780,
-                            "w": 421,
-                            "h": 88
+                            "x": 1302,
+                            "y": 716,
+                            "w": 581,
+                            "h": 80
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_06_trend",
                         "position": {
-                            "x": 982,
-                            "y": 872,
-                            "w": 421,
-                            "h": 212
+                            "x": 1302,
+                            "y": 800,
+                            "w": 581,
+                            "h": 192
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_card_06_info_trigger",
+                        "position": {
+                            "x": 1800,
+                            "y": 574,
+                            "w": 42,
+                            "h": 42
                         },
                         "type": "block"
                     },
                     {
                         "item": "viz_card_06_drilldown_trigger",
                         "position": {
-                            "x": 1364,
-                            "y": 630,
+                            "x": 1844,
+                            "y": 574,
                             "w": 42,
                             "h": 42
                         },

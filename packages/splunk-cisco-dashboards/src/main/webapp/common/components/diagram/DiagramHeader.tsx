@@ -308,12 +308,12 @@ export const DiagramHeader: React.FC<DiagramHeaderProps> = ({
         <>
         <header className="flex items-center justify-between gap-5 px-7 py-4 border-b  sui-border-weak  sui-bg-section relative">
             <div className="flex items-center gap-3 min-w-0 flex-1">
-                <div className="flex items-center justify-center w-11 h-11 rounded-xl sui-bg-accent  sui-color-info flex-shrink-0">
+                <div className="flex items-center justify-center w-11 h-11 rounded-xl sui-bg-notification-info sui-color-active flex-shrink-0">
                     <Network className="w-5 h-5" aria-hidden />
                 </div>
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                        <h1 className="text-xl leading-7 font-semibold tracking-tight truncate">
+                        <h1 className="flex-shrink-0 whitespace-nowrap text-xl leading-7 font-semibold tracking-tight">
                             Network Diagram
                         </h1>
                     </div>
@@ -945,11 +945,11 @@ const HeaderButton: React.FC<HeaderButtonProps> = ({
             'flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs leading-none font-medium border transition-colors',
             'whitespace-nowrap',
             'disabled:opacity-50 disabled:cursor-not-allowed',
-            !disabled && accent
-                ? 'sui-bg-accent sui-hover-bg-accent sui-color-active sui-border-info'
-                : !disabled && danger
-                  ? 'sui-bg-section  sui-color-negative  sui-border-negative  sui-hover-bg-negative'
-                  : 'sui-bg-section  sui-color-active  sui-border-default  sui-hover-border-default'
+            accent
+                ? 'scd-action-primary'
+                : danger
+                  ? 'scd-action-destructive-secondary'
+                  : 'scd-action-secondary'
         )}
     >
         <Icon className="w-4 h-4" aria-hidden />

@@ -66,6 +66,10 @@ import {
 
 import type { SearchbaseRecord } from '@/common/services/searchbaseCatalogue';
 import { splunkSearchAppUrl } from '@/common/lib/splunkSearchUrl';
+import {
+    MAP_TILE_STYLE_PRESETS,
+    type MapTileStyleId,
+} from '@/common/maps/mapTileStyles';
 import { C3_SERIES_PALETTE } from '@/common/theme/c3VisualizationPalette';
 import {
     asNumber,
@@ -101,8 +105,6 @@ type ChartKind = 'line' | 'area' | 'bar' | 'pie';
 type Tone = 'default' | 'good' | 'warning' | 'critical' | 'info';
 type StatusTone = 'good' | 'warning' | 'critical' | 'info' | 'neutral';
 type TrendDirection = 'up' | 'down' | 'flat';
-type SiteMapStyle = 'terrain' | 'street' | 'satellite';
-
 interface PageContext {
     catalogue: Map<string, SearchbaseRecord> | null;
     earliest: string;
@@ -1368,44 +1370,16 @@ const siteCoordinateForRow = (row: SearchRow): [number, number] | null => {
     return [latitude, longitude];
 };
 
-interface SiteMapStylePreset {
-    id: SiteMapStyle;
-    label: string;
-    lightUrl: string;
-    darkUrl: string;
-    attribution: string;
-}
-
-const SITE_MAP_STYLE_PRESETS: SiteMapStylePreset[] = [
-    {
-        id: 'terrain',
-        label: 'Terrain',
-        lightUrl:
-            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
-        darkUrl:
-            'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-        attribution: 'Tiles &copy; Esri',
-    },
-    {
-        id: 'street',
-        label: 'Street',
-        lightUrl:
-            'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-        darkUrl:
-            'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-        attribution:
-            '&copy; OpenStreetMap contributors &copy; CARTO',
-    },
-    {
-        id: 'satellite',
-        label: 'Satellite',
-        lightUrl:
-            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        darkUrl:
-            'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        attribution: 'Tiles &copy; Esri',
-    },
+const SITE_MAP_STYLE_IDS: readonly MapTileStyleId[] = [
+    'terrain',
+    'street',
+    'satellite',
+    'offline',
 ];
+
+const SITE_MAP_STYLE_PRESETS = MAP_TILE_STYLE_PRESETS.filter((preset) =>
+    SITE_MAP_STYLE_IDS.includes(preset.id)
+);
 
 const escapeMapText = (value: string): string =>
     value.replace(/[&<>"']/g, (character) => {
@@ -1533,7 +1507,7 @@ const SiteHealthPanel = ({
         count: 100,
     });
     const [selectedSite, setSelectedSite] = useState('');
-    const [mapStyle, setMapStyle] = useState<SiteMapStyle>('terrain');
+    const [mapStyle, setMapStyle] = useState<MapTileStyleId>('terrain');
     const visibleSites = sites.rows.slice(0, 8);
     const selectedRow = visibleSites.find(
         (row, index) => siteNameForRow(row, index) === selectedSite
@@ -1561,8 +1535,6 @@ const SiteHealthPanel = ({
     const selectedMapStyle =
         SITE_MAP_STYLE_PRESETS.find((preset) => preset.id === mapStyle) ??
         SITE_MAP_STYLE_PRESETS[0];
-    const tileUrl = selectedMapStyle.darkUrl;
-
     const chooseSite = (name: string): void => {
         setSelectedSite(name);
         setFilter('location', name);
@@ -1621,7 +1593,7 @@ const SiteHealthPanel = ({
                                     <TileLayer
                                         key={`dark-${selectedMapStyle.id}`}
                                         attribution={selectedMapStyle.attribution}
-                                        url={tileUrl}
+                                        url={selectedMapStyle.darkUrl}
                                     />
                                     <SiteMapViewport
                                         coordinateKey={mappableSites
@@ -1676,6 +1648,8 @@ const SiteHealthPanel = ({
                                                     ? 'is-active'
                                                     : undefined
                                             }
+                                            aria-pressed={mapStyle === preset.id}
+                                            title={`Use ${preset.label} map style`}
                                             onClick={() => setMapStyle(preset.id)}
                                         >
                                             {preset.label}
@@ -2466,7 +2440,11 @@ const SecureOperationsGlassPage = (): JSX.Element => {
                     />
                 </div>
             </header>
-            <nav className="scd-glass-tabs" aria-label="Dashboard sections">
+            <div
+                className="scd-glass-tabs"
+                aria-label="Dashboard sections"
+                role="tablist"
+            >
                 {TABS.map((tab) => {
                     const Icon = tab.icon;
                     return (
@@ -2475,13 +2453,17 @@ const SecureOperationsGlassPage = (): JSX.Element => {
                             key={tab.id}
                             className={activeTab === tab.id ? 'is-active' : ''}
                             onClick={() => setActiveTab(tab.id)}
+                            role="tab"
+                            id={`scd-glass-tab-${tab.id}`}
+                            aria-selected={activeTab === tab.id}
+                            aria-controls={`scd-glass-panel-${tab.id}`}
                         >
                             <Icon size={16} />
                             <span>{tab.label}</span>
                         </button>
                     );
                 })}
-            </nav>
+            </div>
             {activeFilters.length > 0 ? (
                 <div className="scd-glass-active-filters">
                     <Filter size={15} />
@@ -2517,7 +2499,13 @@ const SecureOperationsGlassPage = (): JSX.Element => {
                     sidebarOpen ? 'has-sidebar' : ''
                 }`}
             >
-                <main>{renderTab()}</main>
+                <main
+                    id={`scd-glass-panel-${activeTab}`}
+                    role="tabpanel"
+                    aria-labelledby={`scd-glass-tab-${activeTab}`}
+                >
+                    {renderTab()}
+                </main>
                 {sidebarOpen ? (
                     <FilterSidebar
                         context={context}

@@ -20,6 +20,8 @@ interface SearchbaseDrilldownGuidanceProps {
     metadata: SearchbaseDrilldownMetadata;
     appearance?: 'manager' | 'workspace';
     defaultExpanded?: boolean;
+    heading?: string;
+    summary?: string;
 }
 
 interface MetadataBlockProps {
@@ -86,6 +88,8 @@ export const SearchbaseDrilldownGuidance: React.FC<SearchbaseDrilldownGuidancePr
     metadata,
     appearance = 'workspace',
     defaultExpanded = true,
+    heading = 'Search guidance',
+    summary = 'Description, explanation, remediation, and references',
 }) => {
     const [expanded, setExpanded] = React.useState(defaultExpanded);
     const guidanceId = React.useId();
@@ -164,10 +168,10 @@ export const SearchbaseDrilldownGuidance: React.FC<SearchbaseDrilldownGuidancePr
                 className="flex min-h-12 w-full flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-left transition-colors sui-hover-bg-section focus:outline-none focus-visible:ring-2 focus-visible:ring-inset sui-focus-visible-ring"
             >
                 <span className="m-0 text-sm font-black uppercase tracking-[0.1em] sui-color-default">
-                    Search guidance
+                    {heading}
                 </span>
                 <span className="text-sm sui-color-muted">
-                    Description, explanation, remediation, and references
+                    {summary}
                 </span>
                 <span className="ml-auto">
                     <Badge label={`${sectionCount} sections`} />

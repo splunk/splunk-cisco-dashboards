@@ -2,7 +2,7 @@
 <dashboard version="1.1" theme="dark" isVisible="false" hideEdit="true" hideExport="true" hideTitle="true"
            script="macro_index_tuning_bootstrap.js">
     <label>Macro Index Tuning</label>
-    <description>Discover SCD index_* macros, scan known Cisco sourcetypes, and generate index and sourcetype routing definitions for splunk-cisco-dashboards and related apps.</description>
+    <description>Discover SSNE index_* macros, scan known Cisco sourcetypes, and generate index and sourcetype routing definitions for splunk-cisco-dashboards and related apps.</description>
     <row>
         <panel>
             <html>

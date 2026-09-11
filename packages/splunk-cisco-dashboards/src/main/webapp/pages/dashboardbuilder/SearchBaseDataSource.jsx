@@ -65,6 +65,49 @@ const paramsMapping = {
     sampleRatio: 'sample_ratio',
 };
 
+const VALID_SPAN_PATTERN = /^[1-9]\d*(?:s|m|h|d|w|mon|qtr|y)$/i;
+
+const normalizeSpanOverride = (span) => {
+    if (typeof span !== 'string') {
+        return '';
+    }
+
+    const normalizedSpan = span.trim();
+    return normalizedSpan.toLowerCase() !== 'auto' && VALID_SPAN_PATTERN.test(normalizedSpan)
+        ? normalizedSpan
+        : '';
+};
+
+const applySpanOverride = (search, span) => {
+    const spanOverride = normalizeSpanOverride(span);
+    if (!spanOverride || typeof search !== 'string') {
+        return search;
+    }
+
+    const timechartSearch = search.replace(/(\|\s*timechart\b)([^|\r\n]*)/gi, (command) => {
+        if (/\bspan\s*=\s*[^\s,]+/i.test(command)) {
+            return command.replace(/\bspan\s*=\s*[^\s,]+/i, `span=${spanOverride}`);
+        }
+        if (/\bbins\s*=\s*\d+/i.test(command)) {
+            return command.replace(/\bbins\s*=\s*\d+/i, `span=${spanOverride}`);
+        }
+        return command.replace(/\btimechart\b/i, `timechart span=${spanOverride}`);
+    });
+
+    return timechartSearch.replace(/(\|\s*tstats\b)([^|\r\n]*)/gi, (command) => {
+        if (!/\bby\b[^|\r\n]*\b_time\b/i.test(command)) {
+            return command;
+        }
+        if (/\b_time\b\s+span\s*=\s*[^\s,]+/i.test(command)) {
+            return command.replace(
+                /(\b_time\b\s+span\s*=\s*)[^\s,]+/i,
+                `$1${spanOverride}`,
+            );
+        }
+        return command.replace(/\b_time\b/i, `_time span=${spanOverride}`);
+    });
+};
+
 const parseQueryParameters = (options) => ({
     ...defaultParams,
     ...mapKeys(options.queryParameters, (_value, key) => {
@@ -224,10 +267,12 @@ class SearchBaseSearch extends DataSource {
         }
 
         const { ownerApp, ...searchbaseOptions } = options;
+        const { span, ...queryParameters } = searchbaseOptions.queryParameters || {};
         this.ownerApp = ownerApp;
+        this.spanOverride = normalizeSpanOverride(span);
         this.context = getEnterpriseSearchContext(this.context);
         this.options = {
-            ...parseQueryParameters(searchbaseOptions),
+            ...parseQueryParameters({ ...searchbaseOptions, queryParameters }),
             ref: searchbaseOptions.ref,
             check_risky_command: searchbaseOptions.checkRiskyCommand,
             label: this.context.id,
@@ -261,7 +306,7 @@ class SearchBaseSearch extends DataSource {
                 this.emptyResultMessage = getEmptyResultMessage(content, this.options.ref);
                 this.options = {
                     ...this.options,
-                    search: content.search,
+                    search: applySpanOverride(content.search, this.spanOverride),
                 };
 
                 const dispatchContext = normalizeDispatchContext(content);

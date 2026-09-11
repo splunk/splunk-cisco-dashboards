@@ -10,7 +10,7 @@
  *             webpack's CopyPlugin lays out the app under ./stage
  *   watch   — runs webpack watch with the same production environment
  *   clean   — wipes ./stage
- *   pack    — builds, then creates a Splunk-packaged tarball
+ *   pack    — delegates to the canonical Splunk package script
  *   link    — symlinks $SPLUNK_HOME/etc/apps/splunk-cisco-dashboards
  *             into ./stage (matches splunk-cisco-app-navigator pattern)
  *   unlink  — removes the symlink (only if it points back into this repo)
@@ -33,8 +33,7 @@ const { spawnSync } = require("child_process");
 const REPO_ROOT = path.resolve(__dirname, "..");
 const STAGE_DIR = path.join(REPO_ROOT, "stage");
 const APP_DIR_NAME = "splunk-cisco-dashboards";
-const TARBALL = path.join(REPO_ROOT, `${APP_DIR_NAME}.tar.gz`);
-const SPL_PACKAGE = path.join(REPO_ROOT, `${APP_DIR_NAME}.spl`);
+const LEGACY_TARBALL = path.join(REPO_ROOT, `${APP_DIR_NAME}.tar.gz`);
 
 const ALLOWED_COMMANDS = new Set([
   "build",
@@ -67,8 +66,9 @@ function rimraf(target) {
 function clean() {
   console.log("› Cleaning stage/");
   rimraf(STAGE_DIR);
-  rimraf(TARBALL);
-  rimraf(SPL_PACKAGE);
+  // Remove archives written by the pre-canonical pack command so a stale,
+  // unsafe artifact cannot be mistaken for a release candidate.
+  rimraf(LEGACY_TARBALL);
 }
 
 function build({ minify = false } = {}) {
@@ -122,12 +122,10 @@ function watch() {
 }
 
 function pack({ minify = false } = {}) {
-  build({ minify });
-  console.log("› Packaging Splunk app tarball");
-  run("tar", ["-czf", TARBALL, "--exclude=.DS_Store", "-C", STAGE_DIR, "."]);
-  fs.copyFileSync(TARBALL, SPL_PACKAGE);
-  console.log(`✓ Wrote ${path.relative(REPO_ROOT, TARBALL)}`);
-  console.log(`✓ Wrote ${path.relative(REPO_ROOT, SPL_PACKAGE)}`);
+  console.log("› Delegating to the canonical Splunk package script");
+  const packageArgs = ["bin/package_app.sh"];
+  if (minify) packageArgs.push("--minify");
+  run("bash", packageArgs);
 }
 
 function resolveSplunkHome() {

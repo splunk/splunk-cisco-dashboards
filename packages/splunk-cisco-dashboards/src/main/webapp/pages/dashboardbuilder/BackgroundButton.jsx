@@ -7,6 +7,12 @@ import Modal from '@splunk/react-ui/Modal';
 import Picture from '@splunk/react-icons/Picture';
 import '../../common/styles/commonstyles.css';
 import { getBackgrounds, addBackgrounds } from '../../common/lib/splunk';
+import {
+    isAllowedDashboardBackgroundFile,
+    isAllowedDashboardBackgroundUpload,
+    normalizeDashboardBackgroundSource,
+} from '../../common/lib/imageSource';
+import { useCanManageInsightsWorkspaces } from '../../common/hooks/useCanManageInsightsWorkspaces';
 import CardLayout from '@splunk/react-ui/CardLayout';
 import Card from '@splunk/react-ui/Card';
 import { cloneDeep, isEqual } from 'lodash-es';
@@ -64,15 +70,21 @@ export const prepareBackgroundChoices = (entries = []) => {
                 background?.content?.data &&
                 !RETIRED_BACKGROUND_NAMES.has(background.name),
         )
-        .map((background) => ({
-            ...background,
-            content: {
-                ...background.content,
-                name:
-                    background.content.name ||
-                    `Custom Background — ${background.name.replace('background://', '')}`,
-            },
-        }))
+        .map((background) => {
+            const source = normalizeDashboardBackgroundSource(background.content.data);
+            if (!source) return undefined;
+            return {
+                ...background,
+                content: {
+                    ...background.content,
+                    data: source,
+                    name:
+                        background.content.name ||
+                        `Custom Background — ${background.name.replace('background://', '')}`,
+                },
+            };
+        })
+        .filter(Boolean)
         .filter((background) => {
             if (seenNames.has(background.name) || seenImages.has(background.content.data)) {
                 return false;
@@ -83,7 +95,7 @@ export const prepareBackgroundChoices = (entries = []) => {
         });
 };
 
-export function ImageBase64Encoder({ setNewBG }) {
+export function ImageBase64Encoder({ setNewBG, setDisplayError }) {
     const [base64, setBase64] = useState(undefined);
     const [dragActive, setDragActive] = useState(false);
 
@@ -100,10 +112,24 @@ export function ImageBase64Encoder({ setNewBG }) {
     // --- Handle file upload ---
     const handleFiles = async (files) => {
         const file = files[0];
-        if (file) {
+        if (!isAllowedDashboardBackgroundFile(file?.type, file?.size)) {
+            setBase64(undefined);
+            setNewBG(undefined);
+            setDisplayError(true);
+            return;
+        }
+        try {
             const encoded = await encodeToBase64(file);
+            if (!isAllowedDashboardBackgroundUpload(encoded)) {
+                throw new Error('Unsupported image data');
+            }
             setBase64(encoded);
             setNewBG(encoded);
+            setDisplayError(false);
+        } catch {
+            setBase64(undefined);
+            setNewBG(undefined);
+            setDisplayError(true);
         }
     };
 
@@ -134,7 +160,7 @@ export function ImageBase64Encoder({ setNewBG }) {
                 <p>Drag & drop your image here, or click to upload</p>
                 <input
                     type="file"
-                    accept="image/*"
+                    accept="image/png,image/jpeg,image/gif,image/webp"
                     onChange={(e) => handleFiles(e.target.files)}
                     id="fileInput"
                     className="file-input"
@@ -155,6 +181,7 @@ export function ImageBase64Encoder({ setNewBG }) {
 }
 
 const BackgroundButton = (props) => {
+    const { canManage: canManageSharedBackgrounds } = useCanManageInsightsWorkspaces();
     const [openBackgroundModal, setOpenBackgroundModal] = useState(false);
     const [openChangeBackgroundModal, setOpenChangeBackgroundModal] = useState(false);
     const [newBG, setNewBG] = useState(undefined);
@@ -187,6 +214,10 @@ const BackgroundButton = (props) => {
     };
 
     const handleUploadBG = () => {
+        if (!isAllowedDashboardBackgroundUpload(newBG)) {
+            setDisplayError(true);
+            return;
+        }
         addBackgrounds(newBG).then((response) => {
             if (response.status >= 200 && response.status <= 299) {
                 setOpenBackgroundModal(false);
@@ -287,19 +318,23 @@ const BackgroundButton = (props) => {
                     <div
                         style={{
                             display: 'flex',
-                            justifyContent: 'space-between',
+                            justifyContent: canManageSharedBackgrounds
+                                ? 'space-between'
+                                : 'flex-end',
                             alignItems: 'center',
                             width: 850,
                         }}
                     >
-                        <Button
-                            label="Add new background"
-                            onClick={() => {
-                                setDisplayError(false);
-                                setOpenBackgroundModal(true);
-                            }}
-                            style={{ maxWidth: 160 }}
-                        ></Button>
+                        {canManageSharedBackgrounds && (
+                            <Button
+                                label="Add new background"
+                                onClick={() => {
+                                    setDisplayError(false);
+                                    setOpenBackgroundModal(true);
+                                }}
+                                style={{ maxWidth: 160 }}
+                            ></Button>
+                        )}
                         <div style={{ display: 'flex', gap: '10px' }}>
                             <Button
                                 label="Select"
@@ -319,47 +354,51 @@ const BackgroundButton = (props) => {
                     </div>
                 </Modal.Footer>
             </Modal>
-            <Modal
-                open={openBackgroundModal}
-                style={{ width: '500px' }}
-                onRequestClose={handleRequestCloseModal}
-            >
-                <Modal.Header
-                    title="Upload New Backgrounds"
-                    icon={<Picture style={{ width: 30, height: 30 }}></Picture>}
-                />
+            {canManageSharedBackgrounds && (
+                <Modal
+                    open={openBackgroundModal}
+                    style={{ width: '500px' }}
+                    onRequestClose={handleRequestCloseModal}
+                >
+                    <Modal.Header
+                        title="Upload New Backgrounds"
+                        icon={<Picture style={{ width: 30, height: 30 }}></Picture>}
+                    />
 
-                <Modal.Body>
-                    <span>
-                        Upload your company’s corporate background image to streamline dashboard
-                        design aligned with your brand’s visual identity.
-                    </span>
-                    <ImageBase64Encoder setNewBG={setNewBG}></ImageBase64Encoder>
-                    {displayError && (
-                        <span style={{ color: '#FF0000' }}>
-                            An error occurred while trying to upload the new background. Please
-                            check the browser console logs for more details.
+                    <Modal.Body>
+                        <span>
+                            Upload your company’s corporate background image to streamline
+                            dashboard design aligned with your brand’s visual identity.
                         </span>
-                    )}
-                </Modal.Body>
-                <Modal.Footer>
-                    <Button
-                        label="Upload"
-                        onClick={() => {
-                            handleUploadBG();
-                        }}
-                        appearance="primary"
-                        disabled={newBG == undefined || newBG == '' || newBG == false}
-                    ></Button>
-                    <Button
-                        label="Cancel"
-                        onClick={() => {
-                            setOpenBackgroundModal(false);
-                            setNewBG(undefined);
-                        }}
-                    ></Button>
-                </Modal.Footer>
-            </Modal>
+                        <ImageBase64Encoder
+                            setNewBG={setNewBG}
+                            setDisplayError={setDisplayError}
+                        ></ImageBase64Encoder>
+                        {displayError && (
+                            <span style={{ color: '#FF0000' }}>
+                                Use a PNG, JPEG, GIF, or WebP image no larger than 2 MB.
+                            </span>
+                        )}
+                    </Modal.Body>
+                    <Modal.Footer>
+                        <Button
+                            label="Upload"
+                            onClick={() => {
+                                handleUploadBG();
+                            }}
+                            appearance="primary"
+                            disabled={newBG == undefined || newBG == '' || newBG == false}
+                        ></Button>
+                        <Button
+                            label="Cancel"
+                            onClick={() => {
+                                setOpenBackgroundModal(false);
+                                setNewBG(undefined);
+                            }}
+                        ></Button>
+                    </Modal.Footer>
+                </Modal>
+            )}
             <Tooltip content="Cisco extension: choose dashboard background/theme">
                 <Button
                     style={{ maxWidth: 32 }}

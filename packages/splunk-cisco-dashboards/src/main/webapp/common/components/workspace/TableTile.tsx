@@ -17,7 +17,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown } from '@/common/icons/SuiIcon';
 import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
-import { TileActionMenu } from './TileActionMenu';
+import { TileActionMenu, TileDrilldownButton } from './TileActionMenu';
 import { cn } from '@/common/lib/utils';
 import type {
     DataSource,
@@ -51,6 +51,8 @@ interface TableTileProps {
     totalRowCount?: number;
     source?: DataSource;
     onOpenInSearch?: () => void;
+    openInSearchHref?: string;
+    searchbaseId?: string;
     onOpenDetailTable?: () => void;
     detailTableTitle?: string;
     onConfigure?: () => void;
@@ -169,6 +171,8 @@ export const TableTile: React.FC<TableTileProps> = ({
     totalRowCount,
     source,
     onOpenInSearch,
+    openInSearchHref,
+    searchbaseId,
     onOpenDetailTable,
     detailTableTitle,
     onConfigure,
@@ -284,11 +288,16 @@ export const TableTile: React.FC<TableTileProps> = ({
                                 iconAriaLabel={`What does ${label} measure?`}
                             />
                         )}
-                        <TileActionMenu
+                        <TileDrilldownButton
                             label={label}
-                            onOpenInSearch={onOpenInSearch}
                             onOpenDetailTable={onOpenDetailTable}
                             detailTableTitle={detailTableTitle}
+                        />
+                            <TileActionMenu
+                                label={label}
+                                openInSearchHref={openInSearchHref}
+                                onOpenInSearch={onOpenInSearch}
+                            searchbaseId={searchbaseId}
                             onConfigure={onConfigure}
                             isCustomized={isCustomized}
                         />
@@ -319,7 +328,10 @@ export const TableTile: React.FC<TableTileProps> = ({
                         className="overflow-y-auto overflow-x-auto rounded border  sui-border-default"
                         style={{ maxHeight: `${bodyHeightPx}px` }}
                     >
-                        <table className="w-full text-xs leading-tight border-collapse">
+                        <table
+                            aria-label={`${label} results`}
+                            className="w-full text-xs leading-tight border-collapse"
+                        >
                             <thead className="sui-bg-page sui-bg-popup sticky top-0 z-10">
                                 <tr>
                                     {columns.map((col, idx) => {
@@ -386,7 +398,7 @@ export const TableTile: React.FC<TableTileProps> = ({
                                 {displayRows.map((row, rowIdx) => (
                                     <tr
                                         key={rowIdx}
-                                        className="border-t  sui-border-weak  sui-hover-bg-overlay transition-colors"
+                                        className="border-t sui-border-weak"
                                     >
                                         {columns.map((col, colIdx) => {
                                             const raw = row[col];

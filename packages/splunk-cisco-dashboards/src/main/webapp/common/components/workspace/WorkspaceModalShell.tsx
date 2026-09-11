@@ -7,6 +7,7 @@ import {
 } from '@/common/config/insightsWorkspaces';
 
 import { cn } from '@/common/lib/utils';
+import { useAppThemeControls } from '@/common/theme/AppThemeProvider';
 
 export type WorkspaceModalVariant = 'metric' | 'chart' | 'detail' | 'form';
 
@@ -26,6 +27,7 @@ interface WorkspaceModalShellProps {
     wide?: boolean;
     renderInDocumentBody?: boolean;
     contentClassName?: string;
+    dialogClassName?: string;
     closeOnBackdrop?: boolean;
     children: React.ReactNode;
 }
@@ -121,7 +123,7 @@ const ACTION_CLASS =
     'inline-flex h-8 items-center justify-center gap-1.5 rounded-[6px] border sui-border-default sui-bg-section px-3 text-xs font-bold sui-color-default transition-colors sui-hover-border-info sui-hover-bg-section sui-hover-color-active focus:outline-none focus:ring-2 sui-focus-ring';
 
 /**
- * Shared dark-mode shell for Insights Workspace focus and drill-down dialogs.
+ * Shared themed shell for Insights Workspace focus and drill-down dialogs.
  *
  * The content determines the semantic size variant, while the shell owns the
  * common backdrop, header, action order, keyboard handling, focus trapping,
@@ -144,9 +146,11 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
     wide = false,
     renderInDocumentBody = false,
     contentClassName,
+    dialogClassName,
     closeOnBackdrop = true,
     children,
 }) => {
+    const { colorScheme } = useAppThemeControls();
     const generatedTitleId = React.useId();
     const generatedSubtitleId = React.useId();
     const generatedBackdropOpacityId = React.useId();
@@ -447,6 +451,7 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                     'relative z-10 flex w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[4px] border sui-border-weak sui-bg-section sui-color-active sui-shadow-overlay backdrop-blur-[75px] outline-none',
                     VARIANT_CLASS[variant],
                     variant === 'detail' && wide && 'max-w-[1320px]',
+                    dialogClassName,
                     'max-[719px]:h-[calc(100vh-1rem)] max-[719px]:max-h-[calc(100vh-1rem)] max-[719px]:w-full max-[719px]:max-w-none max-[719px]:rounded-b-none max-[719px]:rounded-t-2xl'
                 )}
             >
@@ -575,7 +580,11 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
 
     return createPortal(
         renderInDocumentBody ? (
-            <div id="scan-root" data-workspace-modal-portal="document">
+            <div
+                data-workspace-modal-portal="document"
+                data-app-color-scheme={colorScheme}
+                style={{ colorScheme }}
+            >
                 {modalLayer}
             </div>
         ) : (

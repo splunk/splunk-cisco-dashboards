@@ -1,6 +1,12 @@
 /* eslint-disable react/prop-types */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Button from '@splunk/react-ui/Button';
+import React, {
+    useCallback,
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import Message from '@splunk/react-ui/Message';
 import Paginator from '@splunk/react-ui/Paginator';
 import ScreenReaderContent from '@splunk/react-ui/ScreenReaderContent';
@@ -13,9 +19,8 @@ import styled from 'styled-components';
 import SearchbaseDrilldownGuidance from '../../common/components/workspace/SearchbaseDrilldownGuidance';
 import { WorkspaceModalShell } from '../../common/components/workspace/WorkspaceModalShell';
 import {
-    ChevronLeft,
-    ChevronRight,
     ExternalLink,
+    Info,
     Search,
 } from '../../common/icons/SuiIcon';
 import { addDash } from '../../common/lib/splunk';
@@ -36,7 +41,7 @@ const metadataHtmlToText = (value) =>
 const isTruthyConfValue = (value) =>
     ['1', 'true', 'yes', 'on'].includes(String(value || '').trim().toLowerCase());
 
-const DRILLDOWN_RESULT_HEIGHT = '340px';
+const DRILLDOWN_RESULT_HEIGHT = 340;
 
 const DrilldownWorkflow = styled.div`
     display: flex;
@@ -46,22 +51,6 @@ const DrilldownWorkflow = styled.div`
     padding: ${variables.spacingSmall} ${variables.spacingMedium};
     border-bottom: 1px solid ${variables.borderColorWeak};
     background: ${variables.backgroundColorPage};
-`;
-
-const DrilldownArrow = styled(Button)`
-    position: absolute;
-    top: 50%;
-    z-index: 2;
-    margin: 0;
-    transform: translateY(-50%);
-`;
-
-const DrilldownArrowBack = styled(DrilldownArrow)`
-    left: ${variables.spacingSmall};
-`;
-
-const DrilldownArrowForward = styled(DrilldownArrow)`
-    right: ${variables.spacingSmall};
 `;
 
 const splunkSearchbaseEditUrl = (stanzaId) => {
@@ -90,13 +79,17 @@ const DashboardStudioDrilldownModal = ({
     iconRegistry,
     timezone,
     colorScheme,
+    mode = 'drilldown',
     onRequestClose,
 }) => {
+    const isMetricInfo = mode === 'metric-info';
     const [searchEntries, setSearchEntries] = useState(null);
     const [loadError, setLoadError] = useState('');
     const [activeIndex, setActiveIndex] = useState(0);
     const [generationState, setGenerationState] = useState({ type: '', message: '' });
+    const [resultWidth, setResultWidth] = useState(0);
     const catalogueRequestRef = useRef(null);
+    const resultContainerRef = useRef(null);
     const targetKey = targetIds.join('\u0000');
 
     useEffect(() => {
@@ -156,20 +149,48 @@ const DashboardStudioDrilldownModal = ({
     const activeSearch = resolvedSearches[activeIndex] || resolvedSearches[0];
     const activeDefinition = useMemo(
         () =>
-            activeSearch
-                ? buildDashboardDrilldownDefinition(activeSearch, timeRange)
+            activeSearch && !isMetricInfo
+                ? buildDashboardDrilldownDefinition(activeSearch, timeRange, {
+                      width: resultWidth,
+                      height: DRILLDOWN_RESULT_HEIGHT,
+                  })
                 : undefined,
-        [activeSearch, timeRange],
+        [activeSearch, isMetricInfo, resultWidth, timeRange],
     );
     const activeMetadata = useMemo(
         () => getDashboardDrilldownMetadata(activeSearch),
         [activeSearch],
     );
+
+    useLayoutEffect(() => {
+        const container = resultContainerRef.current;
+        if (!open || isMetricInfo || !activeSearch || !container) {
+            setResultWidth(0);
+            return undefined;
+        }
+
+        const updateResultWidth = () => {
+            const nextWidth = Math.floor(container.getBoundingClientRect().width);
+            if (nextWidth > 0) {
+                setResultWidth(nextWidth);
+            }
+        };
+
+        updateResultWidth();
+        if (typeof ResizeObserver === 'undefined') {
+            return undefined;
+        }
+
+        const observer = new ResizeObserver(updateResultWidth);
+        observer.observe(container);
+        return () => observer.disconnect();
+    }, [activeSearch, isMetricInfo, open]);
+
     const activeClassification = [activeMetadata.category, activeMetadata.subCategory].filter(
         Boolean,
     );
     const dashboardKey = activeSearch
-        ? `${activeSearch.name}:${timeRange.earliest}:${timeRange.latest}`
+        ? `${activeSearch.name}:${timeRange.earliest}:${timeRange.latest}:${resultWidth}`
         : 'dashboard-drilldown-empty';
     const activeSearchUrl = activeSearch?.content?.search
         ? splunkSearchAppUrl(
@@ -178,19 +199,6 @@ const DashboardStudioDrilldownModal = ({
               getSearchApp(activeSearch, ownerApp),
           )
         : '';
-    const canGoBack = activeIndex > 0;
-    const canGoForward = activeIndex < resolvedSearches.length - 1;
-
-    const showPrevious = useCallback(() => {
-        setGenerationState({ type: '', message: '' });
-        setActiveIndex((index) => Math.max(0, index - 1));
-    }, []);
-
-    const showNext = useCallback(() => {
-        setGenerationState({ type: '', message: '' });
-        setActiveIndex((index) => Math.min(resolvedSearches.length - 1, index + 1));
-    }, [resolvedSearches.length]);
-
     const generateDashboard = useCallback(async () => {
         if (!activeSearch || !activeDefinition || generationState.type === 'loading') {
             return;
@@ -216,6 +224,8 @@ const DashboardStudioDrilldownModal = ({
                 dashboardDescription,
                 '',
                 colorScheme,
+                undefined,
+                'app',
             );
             if (response.status < 200 || response.status > 299) {
                 throw new Error(`Dashboard creation failed (${response.status}).`);
@@ -248,20 +258,33 @@ const DashboardStudioDrilldownModal = ({
         <WorkspaceModalShell
             isOpen={open}
             variant="detail"
-            title={`Drill down: ${origin || 'Dashboard details'}`}
-            subtitle="Supporting Searchbase results and guidance for the dashboard selection."
+            title={
+                isMetricInfo
+                    ? `About ${origin || 'this metric'}`
+                    : `Investigate ${origin || 'dashboard activity'}`
+            }
+            subtitle={
+                isMetricInfo
+                    ? 'Primary metric definition, calculation, interpretation, and source.'
+                    : 'Searchbase evidence that helps explain what changed and what drove it.'
+            }
             onClose={onRequestClose}
             openInSearchHref={activeSearchUrl || undefined}
             openInSearchbaseHref={
                 activeSearch ? splunkSearchbaseEditUrl(activeSearch.name) : undefined
             }
             renderInDocumentBody
+            dialogClassName="dashboard-builder-drilldown-modal"
             contentClassName="dashboard-builder-drilldown-shell flex min-h-0 flex-1 flex-col overflow-hidden sui-bg-page"
         >
             {loadError && (
                 <div className="dashboard-builder-drilldown-status">
                     <Message type="error" appearance="fill">
-                        <Message.Title>Unable to open drilldown</Message.Title>
+                        <Message.Title>
+                            {isMetricInfo
+                                ? 'Unable to open metric information'
+                                : 'Unable to open investigation'}
+                        </Message.Title>
                         {loadError}
                     </Message>
                 </div>
@@ -276,16 +299,20 @@ const DashboardStudioDrilldownModal = ({
             {!loadError && searchEntries !== null && resolvedSearches.length === 0 && (
                 <div className="dashboard-builder-drilldown-status">
                     <Message type="warning" appearance="fill">
-                        <Message.Title>No drilldown searches were found</Message.Title>
-                        None of the configured targets exist in this app&apos;s Searchbase catalogue.
+                        <Message.Title>
+                            {isMetricInfo
+                                ? 'The primary metric search was not found'
+                                : 'No investigation searches were found'}
+                        </Message.Title>
+                        The configured target does not exist in this app&apos;s Searchbase catalogue.
                     </Message>
                 </div>
             )}
 
-            {resolvedSearches.length > 1 && (
+            {!isMetricInfo && resolvedSearches.length > 1 && (
                 <DrilldownWorkflow>
                     <Paginator.Compact
-                        aria-label="Drilldown search navigation"
+                        aria-label="Investigation search navigation"
                         current={activeIndex + 1}
                         onChange={(_event, { page }) => {
                             if (page === undefined) {
@@ -300,7 +327,7 @@ const DashboardStudioDrilldownModal = ({
                         totalPages={resolvedSearches.length}
                     />
                     <ScreenReaderContent aria-live="polite">
-                        Showing {activeMetadata.title}, search {activeIndex + 1} of{' '}
+                        Showing {activeMetadata.title}, investigation {activeIndex + 1} of{' '}
                         {resolvedSearches.length}
                     </ScreenReaderContent>
                 </DrilldownWorkflow>
@@ -309,16 +336,20 @@ const DashboardStudioDrilldownModal = ({
             {missingTargetIds.length > 0 && searchEntries !== null && (
                 <div className="dashboard-builder-drilldown-status dashboard-builder-drilldown-warning">
                     <Message type="warning" appearance="fill">
-                        <Message.Title>Some drilldown searches are unavailable</Message.Title>
+                        <Message.Title>Some investigation searches are unavailable</Message.Title>
                         {missingTargetIds.join(', ')}
                     </Message>
                 </div>
             )}
 
-            {activeDefinition && (
+            {activeSearch && (
                 <article className="dashboard-builder-drilldown-slide dashboard-builder-drilldown-workspace">
                         <div className="dashboard-builder-drilldown-search-title">
-                            <Search size={20} aria-hidden="true" />
+                            {isMetricInfo ? (
+                                <Info size={20} aria-hidden="true" />
+                            ) : (
+                                <Search size={20} aria-hidden="true" />
+                            )}
                             <h2>{activeMetadata.title}</h2>
                             {activeClassification.length > 0 && (
                                 <span
@@ -340,54 +371,58 @@ const DashboardStudioDrilldownModal = ({
                             )}
                         </div>
 
-                        <div className="dashboard-builder-drilldown-result-shell">
-                            {resolvedSearches.length > 1 && (
-                                <DrilldownArrowBack
-                                    appearance="secondary"
-                                    disabled={!canGoBack}
-                                    hideLabel
-                                    icon={<ChevronLeft size={20} aria-hidden="true" />}
-                                    label="Previous search"
-                                    onClick={showPrevious}
-                                />
-                            )}
-                            <div className="dashboard-builder-drilldown-dashboard">
-                                <DashboardContextProvider
-                                    key={dashboardKey}
-                                    preset={preset}
-                                    featureFlags={featureFlags}
-                                    iconRegistry={iconRegistry}
-                                    timezone={timezone}
-                                    initialDefinition={activeDefinition}
-                                    initialMode="view"
+                        {!isMetricInfo && (
+                            <div className="dashboard-builder-drilldown-result-shell">
+                                <div
+                                    ref={resultContainerRef}
+                                    className="dashboard-builder-drilldown-dashboard"
+                                    aria-busy={resultWidth <= 0}
                                 >
-                                    <DashboardCore width="100%" height={DRILLDOWN_RESULT_HEIGHT} />
-                                </DashboardContextProvider>
+                                    {resultWidth > 0 ? (
+                                        <DashboardContextProvider
+                                            key={dashboardKey}
+                                            preset={preset}
+                                            featureFlags={featureFlags}
+                                            iconRegistry={iconRegistry}
+                                            timezone={timezone}
+                                            initialDefinition={activeDefinition}
+                                            initialMode="view"
+                                        >
+                                            <DashboardCore
+                                                width={resultWidth}
+                                                height={DRILLDOWN_RESULT_HEIGHT}
+                                            />
+                                        </DashboardContextProvider>
+                                    ) : (
+                                        <div
+                                            role="status"
+                                            className="dashboard-builder-drilldown-loading"
+                                        >
+                                            <WaitSpinner size="large" />
+                                            <ScreenReaderContent>
+                                                Preparing drill-down visualization…
+                                            </ScreenReaderContent>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                            {resolvedSearches.length > 1 && (
-                                <DrilldownArrowForward
-                                    appearance="secondary"
-                                    disabled={!canGoForward}
-                                    hideLabel
-                                    icon={<ChevronRight size={20} aria-hidden="true" />}
-                                    label="Next search"
-                                    onClick={showNext}
-                                />
-                            )}
-                        </div>
+                        )}
 
-                        <div className="dashboard-builder-drilldown-actions">
-                            <button
-                                type="button"
-                                className="dashboard-builder-drilldown-link-button"
-                                disabled={generationState.type === 'loading'}
-                                onClick={generateDashboard}
-                            >
-                                Generate a Dashboard <ExternalLink size={14} aria-hidden="true" />
-                            </button>
-                        </div>
+                        {!isMetricInfo && (
+                            <div className="dashboard-builder-drilldown-actions">
+                                <button
+                                    type="button"
+                                    className="dashboard-builder-drilldown-link-button"
+                                    disabled={generationState.type === 'loading'}
+                                    onClick={generateDashboard}
+                                >
+                                    Generate a Dashboard{' '}
+                                    <ExternalLink size={14} aria-hidden="true" />
+                                </button>
+                            </div>
+                        )}
 
-                        {generationState.message && (
+                        {!isMetricInfo && generationState.message && (
                             <div className="dashboard-builder-drilldown-status dashboard-builder-drilldown-generation-status">
                                 <Message
                                     type={generationState.type === 'error' ? 'error' : 'info'}
@@ -401,6 +436,12 @@ const DashboardStudioDrilldownModal = ({
                         <SearchbaseDrilldownGuidance
                             metadata={activeMetadata}
                             appearance="workspace"
+                            heading={isMetricInfo ? 'About this metric' : undefined}
+                            summary={
+                                isMetricInfo
+                                    ? 'What it measures, how it is calculated, and how to interpret it'
+                                    : undefined
+                            }
                         />
                 </article>
             )}

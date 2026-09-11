@@ -1,21 +1,20 @@
 const fs = require('fs');
 const path = require('path');
+const { spawnSync } = require('child_process');
 const webpack = require('webpack');
 const { merge: webpackMerge } = require('webpack-merge');
 const baseConfig = require('@splunk/webpack-configs').default;
 const CopyPlugin = require('copy-webpack-plugin');
 
 /**
- * Build 115.21 — read the canonical `build = NNNN` from
- * `default/app.conf` and the app version from the repo-root
- * `VERSION` file at webpack compile time, then inject them as
- * `process.env.APP_BUILD` and `process.env.APP_VERSION` for
- * the React bundles to read.
+ * Inject the app version from the repo-root VERSION file and a unique build
+ * marker for the React bundles to read. Packaging replaces that marker only in
+ * its temporary archive copy after allocating the final [install] build.
  *
  * Why version comes from VERSION (not package.json or app.conf):
  *   • VERSION is the single source of truth for releases —
  *     package_app.sh stamps it into staged app.conf at package
- *     time, matching splunk-cisco-app-navigator.
+ *     time, matching the packaged Splunk app identity.
  *   • package.json's `version` field belongs to the npm
  *     workspace ("0.1.0" today) and intentionally isn't kept
  *     in lock-step with the Splunk app version.
@@ -28,10 +27,8 @@ const CopyPlugin = require('copy-webpack-plugin');
  *     whole point of surfacing the build tag is to detect
  *     exactly that mismatch (see Build 115.20 follow-up).
  *
- * Build 115.22 — fallbacks remain ('unknown' / '0.0.0') for
- * the unreachable case where app.conf is malformed; both keys
- * are required, so a missing match is a hard developer bug,
- * but a sane fallback beats a webpack crash.
+ * VERSION falls back to the source app.conf template only when the root file
+ * cannot be read; that template intentionally remains 0.0.0.
  */
 const readAppConfField = (key) => {
     try {
@@ -60,7 +57,10 @@ const readBuildVersion = () => {
     }
     return readAppConfField('version') || '0.0.0';
 };
-const APP_BUILD = readAppConfField('build') || 'unknown';
+// Packaging replaces this unique marker with the allocated package build.
+// Reading source app.conf here would make watcher output look release-ready
+// before packaging has validated the identity and copied the bundle.
+const APP_BUILD = process.env.SCD_APP_BUILD || '__SCD_PACKAGE_BUILD__';
 const APP_VERSION = readBuildVersion();
 const MEBIBYTE = 1024 * 1024;
 const FAST_UNMINIFIED_BUILD = process.argv.includes('--no-optimization-minimize');
@@ -87,7 +87,58 @@ const splunkRoot = path.join(__dirname, 'src/main/resources/splunk');
 const stageRoot = path.join(__dirname, 'stage');
 const workspaceRoot = path.resolve(__dirname, '..', '..');
 
+const SOURCE_MAP_DIRECTIVE_PATTERN = /^[ \t]*(?:\/\/|\/\*)[#@]\s*sourceMappingURL\s*=[^\r\n]*(?:\*\/)?(?:\r?\n|$)/gm;
+
+class StripSourceMapDirectivesPlugin {
+    apply(compiler) {
+        compiler.hooks.thisCompilation.tap('StripSourceMapDirectivesPlugin', (compilation) => {
+            compilation.hooks.processAssets.tap(
+                {
+                    name: 'StripSourceMapDirectivesPlugin',
+                    stage: webpack.Compilation.PROCESS_ASSETS_STAGE_REPORT,
+                },
+                (assets) => {
+                    Object.keys(assets)
+                        .filter((assetName) => assetName.endsWith('.js'))
+                        .forEach((assetName) => {
+                            const asset = compilation.getAsset(assetName);
+                            const source = asset.source.source().toString();
+                            const stripped = source.replace(SOURCE_MAP_DIRECTIVE_PATTERN, '');
+                            if (stripped !== source) {
+                                compilation.updateAsset(assetName, new webpack.sources.RawSource(stripped));
+                            }
+                        });
+                },
+            );
+        });
+    }
+}
+
+class StampSplunkMetadataPlugin {
+    apply(compiler) {
+        compiler.hooks.afterEmit.tap('StampSplunkMetadataPlugin', () => {
+            const result = spawnSync(
+                'bash',
+                [path.join(__dirname, 'bin/stamp_version.sh'), stageRoot],
+                {
+                    cwd: __dirname,
+                    encoding: 'utf8',
+                }
+            );
+            if (result.stdout) process.stdout.write(result.stdout);
+            if (result.status !== 0) {
+                throw new Error(
+                    result.stderr || 'Could not stamp VERSION into staged Splunk metadata.'
+                );
+            }
+        });
+    }
+}
+
 const commonConfig = webpackMerge(baseConfig, {
+    // SplunkBase archives must not expose source maps. Keep this explicit so a
+    // future inherited webpack-default change cannot silently publish them.
+    devtool: false,
     entry: {
         executive_insights: path.join(
             webappRoot,
@@ -121,6 +172,10 @@ const commonConfig = webpackMerge(baseConfig, {
         secure_operations_glass: path.join(
             webappRoot,
             'pages/secure_operations_glass/render.tsx'
+        ),
+        secure_networking_pillars: path.join(
+            webappRoot,
+            'pages/secure_networking_pillars/render.tsx'
         ),
         dashboardbuilder: path.join(webappRoot, 'pages/dashboardbuilder/index.jsx'),
     },
@@ -180,13 +235,30 @@ const commonConfig = webpackMerge(baseConfig, {
         },
     },
     plugins: [
+        new StripSourceMapDirectivesPlugin(),
+        new StampSplunkMetadataPlugin(),
         new CopyPlugin({
             patterns: [
                 {
                     from: splunkRoot,
                     to: stageRoot,
                     globOptions: {
-                        ignore: ['**/.DS_Store', '**/__pycache__/**', '**/*.pyc'],
+                        // Keep common local-secret artifacts out of every staged app,
+                        // including watcher-linked development installs. SplunkBase
+                        // packaging independently rejects *all* ignored source inputs
+                        // below src/main/resources/splunk so a clean Git status cannot
+                        // mask an archive-only secret.
+                        ignore: [
+                            '**/.DS_Store',
+                            '**/__pycache__/**',
+                            '**/*.pyc',
+                            '**/.env',
+                            '**/.env.*',
+                            '**/*.key',
+                            '**/*.pem',
+                            '**/*.p12',
+                            '**/*.pfx',
+                        ],
                     },
                 },
                 {

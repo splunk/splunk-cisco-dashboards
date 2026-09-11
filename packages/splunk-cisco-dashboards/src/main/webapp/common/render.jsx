@@ -1,7 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import layout from '@splunk/react-page/18';
-import CopyrightMark from './components/CopyrightMark';
 import AppThemeProvider from './theme/AppThemeProvider';
 
 /**
@@ -33,10 +32,7 @@ export default function mountPage(PageComponent) {
         }
         reactRoot.render(
             <AppThemeProvider>
-                <>
-                    <PageComponent />
-                    <CopyrightMark />
-                </>
+                <PageComponent />
             </AppThemeProvider>
         );
     };
@@ -54,10 +50,7 @@ export function renderAsPage(pageElement, options = {}) {
 
     layout(
         <AppThemeProvider>
-            <>
-                {pageElement}
-                <CopyrightMark />
-            </>
+            {pageElement}
         </AppThemeProvider>,
         {
             ...layoutOptions,

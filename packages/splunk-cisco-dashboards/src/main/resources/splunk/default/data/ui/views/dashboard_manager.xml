@@ -1,23 +1,8 @@
 <?xml version="1.0"?>
-<!--
-    Dashboard Manager uses a restart-safe Simple XML shell. Custom Mako
-    templates are registered when Splunk Web starts, so an app installed from
-    the UI can otherwise return HTTP 500 until Splunk Web is restarted.
-
-    dashboard_manager_bootstrap.js loads the setup gate and the compiled React
-    bundle, which mounts into #scan-root.
--->
-<dashboard version="1.1" theme="dark" hideEdit="true" hideExport="true" hideTitle="true"
-           script="dashboard_manager_bootstrap.js">
+<view
+    template="splunk-cisco-dashboards:/templates/dashboardbuilder.html"
+    type="html"
+    isDashboard="False"
+>
     <label>Dashboard Manager</label>
-    <description>Create, preview, organize, and edit Cisco Dashboard Studio dashboards.</description>
-    <row>
-        <panel>
-            <html>
-                <div id="scan-root" aria-live="polite">
-                    <div style="min-height: 240px; padding: 32px; color: #a6adb6; background: #0f1117;">Loading Dashboard Manager...</div>
-                </div>
-            </html>
-        </panel>
-    </row>
-</dashboard>
+</view>

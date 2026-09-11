@@ -9,7 +9,7 @@ import Button from "@splunk/react-ui/Button";
 import Dropdown from "@splunk/react-ui/Dropdown";
 import Menu from "@splunk/react-ui/Menu";
 import { variables } from "@splunk/themes";
-import styled from "styled-components";
+import styled, { css, keyframes } from "styled-components";
 import {
   ExternalLink,
   Palette,
@@ -36,7 +36,6 @@ export type SignalRailVariant =
   | "one-cisco-glass"
   | "original"
   | "bloomberg"
-  | "cisco-blue-gradient"
   | "minimal-enterprise"
   | "telemetry-constellation";
 
@@ -79,49 +78,30 @@ const VARIANT_OPTIONS: Array<{
   {
     id: "original",
     label: "Original",
-    description: "White KPI cards with status badges",
+    description: "Classic KPI cards with semantic status accents",
   },
   {
     id: "bloomberg",
     label: "Bloomberg Terminal",
-    description: "Dark monospace feed with glowing dots",
-  },
-  {
-    id: "cisco-blue-gradient",
-    label: "Cisco Blue Gradient",
-    description: "Brand gradient with scan lines",
+    description: "Dense mono feed with semantic signal colors",
   },
   {
     id: "minimal-enterprise",
     label: "Minimal Enterprise",
-    description: "Light chip cards with accent bars",
+    description: "Theme-aware chip cards with status bars",
   },
   {
     id: "telemetry-constellation",
     label: "Telemetry Constellation",
-    description: "Orbital glass rail with live signal paths",
+    description: "1CD glass rail with live signal paths",
   },
 ];
 
-const VARIANT_SWATCH_BACKGROUND = {
-  "one-cisco-glass": `linear-gradient(135deg, ${variables.backgroundColorSection}, ${variables.interactiveColorBorder})`,
-  original: variables.backgroundColorSection,
-  bloomberg: variables.backgroundColorPage,
-  "cisco-blue-gradient": `linear-gradient(135deg, ${variables.interactiveColorBorder}, ${variables.backgroundColorSection})`,
-  "minimal-enterprise": variables.backgroundColorSection,
-  "telemetry-constellation": `linear-gradient(135deg, ${variables.backgroundColorPage}, ${variables.interactiveColorBorder})`,
-};
-
-const VARIANT_SWATCH_BORDER = {
-  "one-cisco-glass": variables.interactiveColorBorder,
-  original: variables.severityColorNormal,
-  bloomberg: variables.borderColorStrong,
-  "cisco-blue-gradient": variables.interactiveColorBorder,
-  "minimal-enterprise": variables.borderColorWeak,
-  "telemetry-constellation": variables.interactiveColorBorder,
-};
-
 const SignalRailControls = styled.div`
+  position: absolute;
+  top: 50%;
+  right: ${variables.spacingSmall};
+  z-index: 2;
   display: flex;
   flex: 0 0 auto;
   align-items: center;
@@ -131,6 +111,36 @@ const SignalRailControls = styled.div`
   border-radius: ${variables.borderRadius};
   background-color: ${variables.backgroundColorPopup};
   box-shadow: ${variables.overlayShadow};
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(${variables.spacingSmall}, -50%);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+
+  .scd-signal-rail-ticker:hover &,
+  .scd-signal-rail-ticker:focus-within & {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(0, -50%);
+  }
+
+  @media (any-hover: none), (any-pointer: coarse) {
+    position: static;
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transform: translate(0, -50%);
+    transition: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) and (any-hover: none),
+    (prefers-reduced-motion: reduce) and (any-pointer: coarse) {
+    transform: none;
+  }
 `;
 
 const SignalRailStyleMenu = styled(Menu)`
@@ -142,96 +152,192 @@ const SignalRailStyleSwatch = styled.span<{ $variant: SignalRailVariant }>`
   width: ${variables.spacingXXLarge};
   height: ${variables.spacingXLarge};
   flex: 0 0 auto;
-  border: 1px solid ${({ $variant }) => VARIANT_SWATCH_BORDER[$variant]};
   border-radius: ${variables.borderRadius};
-  background: ${({ $variant }) => VARIANT_SWATCH_BACKGROUND[$variant]};
+  ${({ $variant }) => {
+    switch ($variant) {
+      case "one-cisco-glass":
+        return css`
+          border: 1px solid ${variables.interactiveColorBorder};
+          background: linear-gradient(
+            135deg,
+            ${variables.backgroundColorSection},
+            ${variables.interactiveColorBorder}
+          );
+        `;
+      case "original":
+        return css`
+          border: 1px solid ${variables.severityColorNormal};
+          background: linear-gradient(
+            135deg,
+            ${variables.backgroundColorSection} 0 74%,
+            ${variables.severityColorNormal} 74% 100%
+          );
+        `;
+      case "bloomberg":
+        return css`
+          border: 1px solid ${variables.borderColorStrong};
+          background: linear-gradient(
+            135deg,
+            ${variables.backgroundColorPage},
+            ${variables.backgroundColorSection}
+          );
+        `;
+      case "minimal-enterprise":
+        return css`
+          border: 1px solid ${variables.borderColor};
+          background: linear-gradient(
+            135deg,
+            ${variables.backgroundColorSection} 0 82%,
+            ${variables.severityColorInfo} 82% 100%
+          );
+        `;
+      case "telemetry-constellation":
+        return css`
+          border: 1px solid ${variables.severityColorInfo};
+          background:
+            radial-gradient(
+              circle at 30% 38%,
+              ${variables.uiColorAccent} 0 14%,
+              transparent 15%
+            ),
+            linear-gradient(
+              135deg,
+              ${variables.backgroundColorPage},
+              ${variables.uiColorAccentComplement}
+            );
+        `;
+      default:
+        return undefined;
+    }
+  }}
 `;
 
-const signalRailTickerCss = `
-@keyframes scd-signal-rail-marquee {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
-}
-.scd-signal-rail-marquee-track {
+const signalRailMarquee = keyframes`
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+`;
+
+const SignalRailShell = styled.section`
+  .scd-signal-rail-marquee-track {
     width: max-content;
-    will-change: transform;
-    animation-name: scd-signal-rail-marquee;
+    animation-name: ${signalRailMarquee};
     animation-timing-function: linear;
     animation-iteration-count: infinite;
-}
-.scd-signal-rail-marquee-track[data-paused='true'] {
+    will-change: transform;
+  }
+
+  .scd-signal-rail-marquee-track[data-paused="true"] {
     animation-play-state: paused;
-}
-@media (prefers-reduced-motion: reduce) {
-    .scd-signal-rail-marquee-track {
-        animation: none !important;
-        transform: none !important;
-    }
-}
-.scd-signal-rail-cisco {
-    background: linear-gradient(135deg, #0d2b5e 0%, #1749a0 52%, #0d4f8a 100%);
-}
-.scd-signal-rail-cisco::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background-image: repeating-linear-gradient(
-        0deg,
-        rgba(255, 255, 255, 0.08) 0,
-        rgba(255, 255, 255, 0.08) 1px,
-        transparent 1px,
-        transparent 5px
-    );
-    opacity: 0.45;
-    mix-blend-mode: screen;
-}
-.scd-signal-rail-constellation {
+  }
+
+  &.scd-signal-rail-constellation {
     background:
-        radial-gradient(circle at 12% 35%, rgba(34, 211, 238, 0.28), transparent 28%),
-        radial-gradient(circle at 88% 42%, rgba(168, 85, 247, 0.24), transparent 32%),
-        linear-gradient(100deg, #020617 0%, #07142d 42%, #0c1f3d 100%);
-}
-.scd-signal-rail-constellation::before {
-    content: "";
+      radial-gradient(
+        circle at 12% 35%,
+        color-mix(in srgb, ${variables.uiColorAccent} 26%, transparent),
+        transparent 28%
+      ),
+      radial-gradient(
+        circle at 88% 42%,
+        color-mix(
+          in srgb,
+          ${variables.uiColorAccentComplement} 22%,
+          transparent
+        ),
+        transparent 32%
+      ),
+      linear-gradient(
+        100deg,
+        ${variables.backgroundColorPage} 0%,
+        color-mix(
+            in srgb,
+            ${variables.backgroundColorPage} 88%,
+            ${variables.uiColorAccent}
+          )
+          42%,
+        ${variables.backgroundColorSection} 100%
+      );
+  }
+
+  &.scd-signal-rail-constellation::before {
     position: absolute;
     inset: 0;
-    pointer-events: none;
     background-image:
-        linear-gradient(rgba(125, 211, 252, 0.09) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(125, 211, 252, 0.08) 1px, transparent 1px);
+      linear-gradient(
+        color-mix(
+            in srgb,
+            ${variables.severityColorInfo} 10%,
+            transparent
+          )
+          1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, ${variables.severityColorInfo} 9%, transparent) 1px,
+        transparent 1px
+      );
     background-size: 28px 28px;
-    mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent);
-}
-.scd-signal-rail-constellation::after {
     content: "";
+    mask-image: linear-gradient(
+      90deg,
+      transparent,
+      ${variables.backgroundColorPage} 10%,
+      ${variables.backgroundColorPage} 90%,
+      transparent
+    );
+    pointer-events: none;
+  }
+
+  &.scd-signal-rail-constellation::after {
     position: absolute;
     inset: 0;
-    pointer-events: none;
-    background: linear-gradient(90deg, transparent, rgba(103, 232, 249, 0.16), transparent);
-    mix-blend-mode: screen;
-}
-.scd-signal-rail-constellation-card::before {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, ${variables.uiColorAccent} 18%, transparent),
+      transparent
+    );
     content: "";
+    pointer-events: none;
+  }
+
+  .scd-signal-rail-constellation-card::before {
     position: absolute;
     inset: 5px;
+    border: 1px solid
+      color-mix(in srgb, ${variables.severityColorInfo} 16%, transparent);
     border-radius: 999px;
-    border: 1px solid rgba(125, 211, 252, 0.12);
-    pointer-events: none;
-}
-.scd-signal-rail-constellation-card::after {
     content: "";
+    pointer-events: none;
+  }
+
+  .scd-signal-rail-constellation-card::after {
     position: absolute;
-    right: 18px;
     top: 50%;
+    right: 18px;
     width: 54px;
     height: 54px;
     transform: translateY(-50%);
+    border: 1px dashed
+      color-mix(in srgb, ${variables.uiColorAccent} 28%, transparent);
     border-radius: 999px;
-    border: 1px dashed rgba(103, 232, 249, 0.25);
+    content: "";
     opacity: 0.7;
     pointer-events: none;
-}
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scd-signal-rail-marquee-track {
+      animation: none !important;
+      transform: none !important;
+    }
+  }
 `;
 
 const STATUS_LABEL: Record<SignalRailStatus, string> = {
@@ -247,8 +353,6 @@ const STATUS_COLOR = {
     border: "sui-border-positive",
     text: "sui-color-positive",
     textOnDark: "sui-color-positive",
-    soft: "sui-bg-positive sui-color-positive sui-border-positive",
-    softOnDark: "sui-bg-positive sui-color-positive sui-border-positive",
     glow: "sui-bg-positive sui-shadow-overlay",
   },
   warning: {
@@ -256,8 +360,6 @@ const STATUS_COLOR = {
     border: "sui-border-warning",
     text: "sui-color-warning",
     textOnDark: "sui-color-warning",
-    soft: "sui-bg-warning sui-color-warning sui-border-warning",
-    softOnDark: "sui-bg-warning sui-color-warning sui-border-warning",
     glow: "sui-bg-warning sui-shadow-overlay",
   },
   critical: {
@@ -265,8 +367,6 @@ const STATUS_COLOR = {
     border: "sui-border-negative",
     text: "sui-color-negative",
     textOnDark: "sui-color-negative",
-    soft: "sui-bg-negative sui-color-negative sui-border-negative",
-    softOnDark: "sui-bg-negative sui-color-negative sui-border-negative",
     glow: "sui-bg-negative sui-shadow-overlay",
   },
   unknown: {
@@ -274,16 +374,14 @@ const STATUS_COLOR = {
     border: "sui-border-default",
     text: "sui-color-muted sui-color-default",
     textOnDark: "sui-color-active",
-    soft: "sui-bg-floating sui-color-active sui-border-default",
-    softOnDark: "sui-bg-floating sui-color-active sui-border-weak",
     glow: "sui-bg-floating sui-shadow-overlay",
   },
 } satisfies Record<SignalRailStatus, Record<string, string>>;
 
 const STATUS_PILL_TOKENS = {
   healthy: variables.severityColorNormal,
-  warning: variables.severityColorNotice, // INTENTIONALLY DIFFERENT TO MATCH FIGMA MOCKUP
-  critical: variables.severityColorAlert, // INTENTIONALLY DIFFERENT TO MATCH FIGMA MOCKUP
+  warning: variables.severityColorNotice,
+  critical: variables.severityColorAlert,
   unknown: variables.severityColorUnknown,
 };
 
@@ -329,64 +427,12 @@ const MetricValue = styled.span<{ $status: SignalRailStatus }>`
   white-space: nowrap;
 `;
 
-const SignalGlassCard = styled(OneCdGlassCard)`
-  transition:
-    background-color 140ms ease,
-    border-color 140ms ease;
-
-  &::after {
-    position: absolute;
-    top: 0;
-    right: 0;
-    left: 0;
-    height: 2px;
-    border-radius: ${variables.borderRadius} ${variables.borderRadius} 0 0;
-    content: "";
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  &[data-status="warning"]::after {
-    background-color: ${variables.severityColorNotice};
-    opacity: 0.78;
-  }
-
-  &[data-status="critical"]::after {
-    background-color: ${variables.severityColorAlert};
-    opacity: 0.92;
-  }
-
-  &[data-status="healthy"] ${MetricValue} {
-    color: ${variables.contentColorDefault};
-    font-size: 2.35rem;
-  }
-
-  &[data-status="healthy"] ${StatusPill} {
-    opacity: 0.72;
-  }
-
-  &[data-status="healthy"]:hover ${MetricValue},
-  &[data-status="healthy"]:focus-within ${MetricValue} {
-    color: ${variables.severityColorNormal};
-  }
-
-  &[data-status="healthy"]:hover ${StatusPill},
-  &[data-status="healthy"]:focus-within ${StatusPill} {
-    opacity: 1;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    transition: none;
-  }
-`;
-
 const isSignalRailVariant = (
   value: string | null,
 ): value is SignalRailVariant =>
   value === "one-cisco-glass" ||
   value === "original" ||
   value === "bloomberg" ||
-  value === "cisco-blue-gradient" ||
   value === "minimal-enterprise" ||
   value === "telemetry-constellation";
 
@@ -462,7 +508,6 @@ const passClass = (
     "flex shrink-0",
     density === "compact" ? "gap-3" : "gap-4",
     variant === "bloomberg" && "gap-0",
-    variant === "cisco-blue-gradient" && "gap-0",
     variant === "telemetry-constellation" && "gap-4",
     variant === "original" && "gap-3",
     variant === "minimal-enterprise" && "gap-4",
@@ -480,11 +525,6 @@ const itemSizeClass = (
     return density === "compact"
       ? "h-[62px] min-w-[280px] px-7"
       : "h-[76px] min-w-[320px] px-8";
-  }
-  if (variant === "cisco-blue-gradient") {
-    return density === "compact"
-      ? "h-[62px] min-w-[300px] px-8"
-      : "h-[76px] min-w-[340px] px-9";
   }
   if (variant === "minimal-enterprise") {
     return density === "compact"
@@ -550,7 +590,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
 
   if (variant === "one-cisco-glass") {
     return (
-      <SignalGlassCard
+      <OneCdGlassCard
         tag="article"
         className={cn(
           "scd-signal-rail-item flex flex-col gap-0 overflow-hidden",
@@ -588,7 +628,7 @@ const KpiItem: React.FC<KpiItemProps> = ({
           <MetricValue $status={kpi.status}>{valueText(kpi)}</MetricValue>
           <StatusPill $status={kpi.status} label={STATUS_LABEL[kpi.status]} />
         </MetricContent>
-      </SignalGlassCard>
+      </OneCdGlassCard>
     );
   }
 
@@ -648,77 +688,6 @@ const KpiItem: React.FC<KpiItemProps> = ({
             </span>
           </span>
         </span>
-        {openLink}
-      </div>
-    );
-  }
-
-  if (variant === "cisco-blue-gradient") {
-    return (
-      <div
-        className={cn(
-          "scd-signal-rail-item flex items-center border-r sui-border-weak sui-color-active",
-          itemSizeClass(variant, density),
-        )}
-        data-status={kpi.status}
-      >
-        <div className="min-w-0 flex-1">
-          <span
-            className={cn(
-              "block truncate font-black uppercase tracking-[0.2em] sui-color-muted",
-              fontSizeClass(
-                fontSize,
-                "sui-color-default",
-                "text-xs",
-                "sui-color-default",
-              ),
-            )}
-          >
-            {category}
-          </span>
-          <span className="mt-1 flex min-w-0 items-center gap-4">
-            <span
-              className={cn(
-                "truncate font-black uppercase tracking-[0.08em] sui-color-active",
-                fontSizeClass(
-                  fontSize,
-                  "sui-color-default",
-                  "sui-color-default",
-                  "sui-color-default",
-                ),
-              )}
-            >
-              {label}
-            </span>
-            <span
-              className={cn(
-                "shrink-0 font-black leading-none sui-color-active",
-                fontSizeClass(
-                  fontSize,
-                  "sui-color-default",
-                  "sui-color-default",
-                  "sui-color-default",
-                ),
-              )}
-            >
-              {valueText(kpi)}
-            </span>
-            <span
-              className={cn(
-                "shrink-0 rounded-full border px-3 py-1 font-black uppercase tracking-[0.12em] sui-shadow-overlay",
-                fontSizeClass(
-                  fontSize,
-                  "sui-color-default",
-                  "text-xs",
-                  "sui-color-default",
-                ),
-                status.softOnDark,
-              )}
-            >
-              {STATUS_LABEL[kpi.status]}
-            </span>
-          </span>
-        </div>
         {openLink}
       </div>
     );
@@ -921,20 +890,12 @@ const KpiItem: React.FC<KpiItemProps> = ({
           </span>
         </span>
         <span className="flex shrink-0 items-center gap-0.5">
-          <span
-            className={cn(
-              "rounded-full px-1.5 py-0.5 font-black uppercase tracking-[0.12em]",
-              fontSizeClass(
-                fontSize,
-                "sui-color-default",
-                "text-xs",
-                "sui-color-default",
-              ),
-              status.soft,
-            )}
-          >
-            {STATUS_LABEL[kpi.status]}
-          </span>
+          <StatusPill
+            $status={kpi.status}
+            backgroundColor={variables.backgroundColorPopup}
+            foregroundColor={STATUS_PILL_TOKENS[kpi.status]}
+            label={STATUS_LABEL[kpi.status]}
+          />
           {openLink}
         </span>
       </span>
@@ -1026,7 +987,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
   if (kpis.length === 0) return null;
 
   return (
-    <section
+    <SignalRailShell
       className={cn(
         "scd-signal-rail-ticker group/signal-rail relative z-40 flex w-full min-w-0 max-w-full flex-shrink-0 flex-col overflow-visible border-b",
         variant === "one-cisco-glass" &&
@@ -1035,8 +996,6 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
           "sui-border-weak  px-1.5 py-1 sui-border-weak sui-bg-page",
         variant === "bloomberg" &&
           "sui-border-default sui-bg-section px-1.5 py-1 sui-color-active",
-        variant === "cisco-blue-gradient" &&
-          "scd-signal-rail-cisco sui-border-info px-1.5 py-1 sui-color-active",
         variant === "minimal-enterprise" &&
           "sui-border-weak  px-1.5 py-2  sui-border-weak sui-bg-page sui-color-active",
         variant === "telemetry-constellation" &&
@@ -1060,7 +1019,6 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
         setInteractionPaused(false);
       }}
     >
-      <style>{signalRailTickerCss}</style>
       <span
         className="sr-only"
         role="status"
@@ -1193,12 +1151,6 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
           Signal Rail · Live · {kpis.length} KPIs Monitored
         </div>
       )}
-      {variant === "cisco-blue-gradient" && (
-        <div className="relative z-10 border-t sui-border-weak sui-bg-section px-8 py-2 text-xs font-black uppercase tracking-[0.16em] sui-color-muted">
-          <span className="mr-2 inline-block h-2 w-2 rounded-full sui-bg-positive sui-shadow-overlay" />
-          Signal Rail · Live Feed · All Systems Nominal
-        </div>
-      )}
       {variant === "minimal-enterprise" && (
         <div className="relative z-0 flex items-center justify-between border-t  px-8 py-2 text-xs font-black uppercase tracking-[0.12em]  sui-border-weak sui-bg-page sui-color-muted">
           <span>Signal Rail · {kpis.length} KPIs</span>
@@ -1227,7 +1179,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
           </span>
         </div>
       )}
-    </section>
+    </SignalRailShell>
   );
 };
 

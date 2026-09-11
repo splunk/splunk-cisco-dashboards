@@ -7,8 +7,11 @@ import React, {
   useState,
 } from "react";
 import styled from "styled-components";
+import { DashboardContextProvider } from "@splunk/dashboard-context";
+import { DashboardCore } from "@splunk/dashboard-core";
+import EnterpriseViewOnlyPreset from "@splunk/dashboard-presets/EnterpriseViewOnlyPreset";
 import DotsThreeVertical from "@splunk/react-icons/DotsThreeVertical";
-import { createURL } from "@splunk/splunk-utils/url";
+import TimeRangeDropdown from "@splunk/react-time-range/Dropdown";
 import Badge from "@splunk/react-ui/Badge";
 import Button from "@splunk/react-ui/Button";
 import Card from "@splunk/react-ui/Card";
@@ -25,6 +28,7 @@ import Menu from "@splunk/react-ui/Menu";
 import Message from "@splunk/react-ui/Message";
 import Modal from "@splunk/react-ui/Modal";
 import Multiselect from "@splunk/react-ui/Multiselect";
+import Paginator from "@splunk/react-ui/Paginator";
 import RadioBar from "@splunk/react-ui/RadioBar";
 import SearchInput from "@splunk/react-ui/Search";
 import ScreenReaderContent from "@splunk/react-ui/ScreenReaderContent";
@@ -41,15 +45,12 @@ import {
   Keyboard,
   RotateCcw,
   Settings2,
-  ExternalLink,
   Edit3,
   Upload,
   X,
   Check,
   CheckCircle2,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   AlertCircle,
   ClipboardCheck,
   ArrowRight,
@@ -68,20 +69,30 @@ import {
   PanelRightClose,
   PanelTop,
   Sparkles,
-  Sun,
-  Moon,
+  Globe,
+  FingerprintNodes,
+  ServerBrackets,
+  GlobeDivision,
+  ColumnArrowsLeftRight,
+  RobotFaceSparkle,
   Servers,
-  ServerCog,
   NodeModel,
   WallBricks,
   RobotFaceWrench,
   Building2,
+  Maximize2,
+  Minimize2,
   type SuiIcon,
 } from "@/common/icons/SuiIcon";
 import { useAppThemeControls } from "@/common/theme/AppThemeProvider";
+import AppearanceMenuItems from "@/common/components/AppearanceMenuItems";
+import { secureNetworkingEssentialsCatalogUrl } from "@/common/lib/appCatalogUrl";
+import { buildWorkspaceDrilldownDefinition } from "@/common/lib/dashboardDrilldown";
+import { normalizeSharedImageSource } from "@/common/lib/imageSource";
 import { DashboardSection } from "@/common/components/workspace/DashboardSection";
 import { OneCdRadioBar } from "@/common/components/workspace/OneCdPrimitives";
 import { MetricItem } from "@/common/components/workspace/MetricItem";
+import { TileActionMenu } from "@/common/components/workspace/TileActionMenu";
 import { WorkspaceModalShell } from "@/common/components/workspace/WorkspaceModalShell";
 import SearchbaseDrilldownGuidance, {
   type SearchbaseDrilldownMetadata,
@@ -110,6 +121,7 @@ import {
   usePersistedTopology,
 } from "@/common/components/workspace/CustomerTopologyMap";
 import { getWorkspaceTopology } from "@/common/config/workspaceTopologies";
+import { MANAGER_ROUTED_STUDIO_VIEW_NAMES } from "@/common/config/managedStudioViews";
 import {
   DEFAULT_CUSTOMER_TOPOLOGY_SECTION_TITLES,
   type CustomerTopologySectionTitles,
@@ -162,6 +174,8 @@ import { usePersistedSectionLayout } from "@/common/hooks/usePersistedSectionLay
 import { usePersistedSectionTileOrder } from "@/common/hooks/usePersistedSectionTileOrder";
 import { usePersistedSectionHeights } from "@/common/hooks/usePersistedSectionHeights";
 import { usePersistedSectionPresentation } from "@/common/hooks/usePersistedSectionPresentation";
+import { usePersistedSearchConcurrency } from "@/common/hooks/usePersistedSearchConcurrency";
+import timeParser from "../dashboardbuilder/custominput/timeparser";
 import {
   getDefaultSignalTickerConfig,
   usePersistedSignalTicker,
@@ -174,7 +188,9 @@ import {
   getWorkspaceSectionSource,
   isWorkspaceSourceId,
   readUserScopedStorageItem,
+  rememberLastWorkspace,
   sectionIdsForWorkspace,
+  toWorkspaceDefinitionInput,
   userScopedStorageKey,
   type InsightsWorkspace,
   type WorkspaceId,
@@ -215,11 +231,17 @@ import {
 } from "@/common/services/searchbaseCatalogue";
 import {
   loadInsightsWorkspaces,
+  resetBuiltInInsightsWorkspace,
+  saveInsightsWorkspace,
   saveWorkspaceLayout,
+  saveWorkspaceSignalRail,
   type InsightsWorkspaceBundle,
   type WorkspaceLayoutConfig,
 } from "@/common/services/insightsWorkspaceService";
-import { saveFactoryTileConfig } from "@/common/services/searchbaseTileConfigService";
+import {
+  resetInsightsWorkspaceTileConfig,
+  saveFactoryTileConfig,
+} from "@/common/services/searchbaseTileConfigService";
 import { useInsightsWorkspacePermissions } from "@/common/hooks/useInsightsWorkspacePermissions";
 import { cn } from "@/common/lib/utils";
 
@@ -228,12 +250,10 @@ import { cn } from "@/common/lib/utils";
 // =============================================================================
 
 const APP_NAME = "splunk-cisco-dashboards";
-const APP_CATALOG_SEARCH_NAME = "Splunk Secure Networking Essentials";
 const WORKSPACE_MENU_WIDTH_PX = 200;
-const HEADER_TIME_RANGE_WIDTH_PX = 130;
 const HEADER_REFRESH_RATE_WIDTH_PX = 140;
 
-// Default subtitle shown beneath the customer name when no per-user
+// Default subtitle shown beneath the workspace title when no per-user
 // override is set in localStorage. Operators can change the visible
 // text per-user via the header pencil → Edit branding panel
 // (`scd_overview_branding`); this constant only defines the
@@ -251,9 +271,6 @@ const DEFAULT_LOGO_DATA_URI =
       '<path d="M7 8.2 10.2 10.7M16.9 8.2 13.8 10.7M7 15.8 10.2 13.3M16.9 15.8 13.8 13.3"/>' +
       '<path d="M4 12h3M17 12h3"/></svg>',
   );
-
-const CUSTOMER_NAME_SPL =
-  "| makeresults | eval customer_name = `customer_name` | fields customer_name";
 
 const splunkLocalePrefix = (): string => {
   if (typeof window === "undefined") return "/en-US";
@@ -281,6 +298,17 @@ const VERTICAL_MAP_COMPACT_MIN_HEIGHT_PX = 360;
 const VERTICAL_METRICS_MIN_HEIGHT_PX = 220;
 const VERTICAL_METRICS_COMPACT_MIN_HEIGHT_PX = 180;
 const VERTICAL_SPLIT_CHROME_ALLOWANCE_PX = 32;
+
+const meaningfulTilePageCount = (
+  total: number,
+  pageSize: number,
+  minimumPageSize: number,
+): number => {
+  if (pageSize <= 0 || total <= pageSize) return 1;
+  const fullPages = Math.floor(total / pageSize);
+  const remainder = total % pageSize;
+  return Math.max(1, fullPages + (remainder >= minimumPageSize ? 1 : 0));
+};
 
 const useAvailableDashboardHeight = (): number | null => {
   const [height, setHeight] = useState<number | null>(null);
@@ -359,6 +387,12 @@ const TIME_RANGE_OPTIONS: TimeRange[] = [
     spanSeconds: 24 * 3600,
   },
   {
+    earliest: "-48h@h",
+    latest: "now",
+    label: "Last 48 hours",
+    spanSeconds: 48 * 3600,
+  },
+  {
     earliest: "-7d@d",
     latest: "now",
     label: "Last 7 days",
@@ -370,14 +404,213 @@ const TIME_RANGE_OPTIONS: TimeRange[] = [
     label: "Last 30 days",
     spanSeconds: 30 * 86400,
   },
-  {
-    earliest: "-90d@d",
-    latest: "now",
-    label: "Last 90 days",
-    spanSeconds: 90 * 86400,
-  },
 ];
 const DEFAULT_TIME_RANGE_LABEL = "Last 24 hours";
+const TIME_RANGE_PRESETS = [
+  { label: "Today", earliest: "@d", latest: "now" },
+  { label: "Week to date", earliest: "@w0", latest: "now" },
+  { label: "Business week to date", earliest: "@w1", latest: "now" },
+  { label: "Month to date", earliest: "@mon", latest: "now" },
+  { label: "Year to date", earliest: "@y", latest: "now" },
+  { label: "Yesterday", earliest: "-1d@d", latest: "@d" },
+  { label: "Previous week", earliest: "-7d@w0", latest: "@w0" },
+  {
+    label: "Previous business week",
+    earliest: "-6d@w1",
+    latest: "-1d@w6",
+  },
+  { label: "Previous month", earliest: "-1mon@mon", latest: "@mon" },
+  { label: "Previous year", earliest: "-1y@y", latest: "@y" },
+  { label: "Last 15 minutes", earliest: "-15m", latest: "now" },
+  { label: "Last 60 minutes", earliest: "-60m@m", latest: "now" },
+  { label: "Last 4 hours", earliest: "-4h@m", latest: "now" },
+  { label: "Last 24 hours", earliest: "-24h@h", latest: "now" },
+  { label: "Last 7 days", earliest: "-7d@h", latest: "now" },
+  { label: "Last 30 days", earliest: "-30d@d", latest: "now" },
+  { label: "All time", earliest: "0", latest: "" },
+  // Keep the existing workspace shortcut available in the native preset panel.
+  { label: "Last 48 hours", earliest: "-48h@h", latest: "now" },
+] as const;
+
+interface TimeRangeChange {
+  earliest?: string | null;
+  latest?: string | null;
+}
+
+interface TimeParseResult {
+  error?: Record<string, unknown>;
+  iso?: string;
+  time?: string;
+  displayValue?: string;
+}
+
+const normalizeTimeParseResult = (
+  result: TimeParseResult,
+  fallbackTime: string,
+): TimeParseResult => ({
+  error: result.error
+    ? { message: String(result.error.message || result.error) }
+    : undefined,
+  iso: result.iso,
+  time: result.time || fallbackTime,
+  displayValue: result.displayValue,
+});
+
+const useTimeRangeParser = (): {
+  parseEarliest: TimeParseResult | undefined;
+  parseLatest: TimeParseResult | undefined;
+  handleRequestParseEarliest: (time: string) => void;
+  handleRequestParseLatest: (time: string) => void;
+} => {
+  const [parseEarliest, setParseEarliest] = useState<TimeParseResult>();
+  const [parseLatest, setParseLatest] = useState<TimeParseResult>();
+  const mountedRef = useRef(true);
+  const earliestRequestRef = useRef(0);
+  const latestRequestRef = useRef(0);
+
+  useEffect(() => () => {
+    mountedRef.current = false;
+  }, []);
+
+  const handleRequestParseEarliest = useCallback((time: string) => {
+    const requestId = earliestRequestRef.current + 1;
+    earliestRequestRef.current = requestId;
+    void timeParser(time, "en_US")
+      .then((result: TimeParseResult) => {
+        if (mountedRef.current && requestId === earliestRequestRef.current) {
+          setParseEarliest(normalizeTimeParseResult(result, time));
+        }
+      })
+      .catch(() => {
+        if (mountedRef.current && requestId === earliestRequestRef.current) {
+          setParseEarliest({
+            error: { message: "The time string could not be parsed" },
+            time,
+          });
+        }
+      });
+  }, []);
+
+  const handleRequestParseLatest = useCallback((time: string) => {
+    const requestId = latestRequestRef.current + 1;
+    latestRequestRef.current = requestId;
+    void timeParser(time || "now", "en_US")
+      .then((result: TimeParseResult) => {
+        if (mountedRef.current && requestId === latestRequestRef.current) {
+          setParseLatest(normalizeTimeParseResult(result, time));
+        }
+      })
+      .catch(() => {
+        if (mountedRef.current && requestId === latestRequestRef.current) {
+          setParseLatest({
+            error: { message: "The time string could not be parsed" },
+            time,
+          });
+        }
+      });
+  }, []);
+
+  return {
+    parseEarliest,
+    parseLatest,
+    handleRequestParseEarliest,
+    handleRequestParseLatest,
+  };
+};
+
+const relativeRangeSpanSeconds = (
+  earliest: string,
+  fallback: number,
+): number => {
+  const match = earliest.trim().match(
+  /^-(\d+(?:\.\d+)?)(s|m|h|d|w|mon|qtr|y)(?:@[A-Za-z0-9]+)?$/i,
+  );
+  if (!match) return fallback;
+  const unitSeconds: Record<string, number> = {
+    s: 1,
+    m: 60,
+    h: 3600,
+    d: 86400,
+    w: 604800,
+    mon: 30 * 86400,
+    qtr: 90 * 86400,
+    y: 365 * 86400,
+  };
+  return Math.max(1, Math.round(Number(match[1]) * unitSeconds[match[2].toLowerCase()]));
+};
+
+const spanSecondsForTimeRange = (
+  earliest: string,
+  latest: string,
+  fallback: number,
+): number => {
+  const start = new Date(earliest).getTime();
+  const end = new Date(latest).getTime();
+  if (Number.isFinite(start) && Number.isFinite(end) && end > start) {
+    return Math.max(1, Math.round((end - start) / 1000));
+  }
+  return relativeRangeSpanSeconds(earliest, fallback);
+};
+
+const timeRangeFromChange = (
+  current: TimeRange,
+  data?: TimeRangeChange,
+): TimeRange => {
+  const earliest = data?.earliest ?? current.earliest;
+  const latest = data?.latest ?? current.latest;
+  const preset = TIME_RANGE_OPTIONS.find(
+    (option) => option.earliest === earliest && option.latest === latest,
+  );
+  if (preset) return preset;
+  const nativePreset = TIME_RANGE_PRESETS.find(
+    (option) => option.earliest === earliest && option.latest === latest,
+  );
+  return {
+    earliest,
+    latest,
+    label: nativePreset?.label ?? "Custom range",
+    spanSeconds: spanSecondsForTimeRange(
+      earliest,
+      latest,
+      current.spanSeconds,
+    ),
+  };
+};
+
+interface TimeRangeControlProps {
+  range: TimeRange;
+  onChange: (range: TimeRange) => void;
+}
+
+const TimeRangeControl: React.FC<TimeRangeControlProps> = ({
+  range,
+  onChange,
+}) => {
+  const timeRangeParser = useTimeRangeParser();
+  const handleChange = useCallback(
+    (_event: React.SyntheticEvent, data?: TimeRangeChange): void => {
+      onChange(timeRangeFromChange(range, data));
+    },
+    [onChange, range],
+  );
+
+  return (
+    <TimeRangeDropdown
+      aria-label="Dashboard time range"
+      earliest={range.earliest}
+      inline
+      latest={range.latest}
+      labelMaxChars={30}
+      onChange={handleChange}
+      onRequestParseEarliest={timeRangeParser.handleRequestParseEarliest}
+      onRequestParseLatest={timeRangeParser.handleRequestParseLatest}
+      parseEarliest={timeRangeParser.parseEarliest}
+      parseLatest={timeRangeParser.parseLatest}
+      presets={[...TIME_RANGE_PRESETS]}
+      realTimeDisabled
+    />
+  );
+};
 
 // =============================================================================
 // Auto-refresh
@@ -612,8 +845,39 @@ const discoverProfileDefinitionFromRecord = (
 interface OverviewMetricBuildOptions {
   tileId?: string;
   section?: SectionId;
+  searchbaseId?: string;
   suppressMockOnEmpty?: boolean;
 }
+
+const buildOverviewDescription = (
+  record: SearchbaseRecord,
+  definition: Record<string, unknown>,
+): string | undefined => {
+  const explicit = readOverviewString(definition, "description", 4000);
+  const description = explicit ?? plainTextFromHtml(record.description);
+  const explanation = plainTextFromHtml(record.explanation);
+  const solution = plainTextFromHtml(record.solution);
+  const relatedInfo = plainTextFromHtml(record.relatedInfo);
+  const normalized = new Set<string>();
+  const parts: string[] = [];
+  const append = (label: string | null, value: string | undefined) => {
+    const trimmed = value?.replace(/\s+/g, " ").trim();
+    if (!trimmed) return;
+    const key = trimmed.toLowerCase();
+    if (normalized.has(key)) return;
+    normalized.add(key);
+    parts.push(label ? `${label}: ${trimmed}` : trimmed);
+  };
+
+  // Searchbase metadata is authored as four complementary fields. Surface all
+  // four in the tile's info popover so operators see meaning, mechanics, next
+  // action, and source context without opening the catalogue editor.
+  append(null, description ?? explanation);
+  append("How it works", explanation);
+  append("Operator action", solution);
+  append("Data source and context", relatedInfo);
+  return parts.length > 0 ? parts.join(" ").slice(0, 4000) : undefined;
+};
 
 const buildOverviewMetricFromDefinition = (
   record: SearchbaseRecord,
@@ -626,10 +890,7 @@ const buildOverviewMetricFromDefinition = (
     options.section ?? parseOverviewSection(definition.section, profile);
   if (!id || !section) return null;
 
-  const description =
-    readOverviewString(definition, "description", 4000) ??
-    plainTextFromHtml(record.explanation) ??
-    plainTextFromHtml(record.description);
+  const description = buildOverviewDescription(record, definition);
   const color =
     readOverviewString(definition, "color", 32) ??
     readFirstSeriesColor(record.vizOptions);
@@ -644,7 +905,7 @@ const buildOverviewMetricFromDefinition = (
       record.subCategory ??
       record.category,
     description,
-    searchbaseId: record.id,
+    searchbaseId: options.searchbaseId ?? record.id,
     savedSearch: record.searchName,
     spl: undefined,
     dispatchContext: record.dispatchContext,
@@ -712,6 +973,37 @@ const shortStableHash = (raw: string): string => {
   return hash.toString(36).slice(0, 7);
 };
 
+const SEARCHBASE_RECORD_REFERENCE_SEPARATOR = "::";
+
+const searchbaseRecordReference = (record: SearchbaseRecord): string =>
+  `${record.ownerApp}${SEARCHBASE_RECORD_REFERENCE_SEPARATOR}${record.id}`;
+
+const searchbaseRecordReferenceFromParts = (
+  ownerApp: string,
+  recordId: string,
+): string => `${ownerApp}${SEARCHBASE_RECORD_REFERENCE_SEPARATOR}${recordId}`;
+
+const searchbaseRecordNameReference = (
+  ownerApp: string,
+  searchName: string,
+): string => `${ownerApp}${SEARCHBASE_RECORD_REFERENCE_SEPARATOR}${searchName}`;
+
+const searchbaseReferenceMatchesRecord = (
+  reference: string | undefined,
+  record: SearchbaseRecord,
+  currentAppOwner: string,
+): boolean =>
+  reference === searchbaseRecordReference(record) ||
+  (record.ownerApp === currentAppOwner && reference === record.id);
+
+const searchbaseReferenceSetHasRecord = (
+  references: ReadonlySet<string>,
+  record: SearchbaseRecord,
+  currentAppOwner: string,
+): boolean =>
+  references.has(searchbaseRecordReference(record)) ||
+  (record.ownerApp === currentAppOwner && references.has(record.id));
+
 const overviewAdditionTileId = (
   section: SectionId,
   searchbaseId: string,
@@ -727,29 +1019,50 @@ const overviewAdditionTileId = (
 };
 
 const buildAddedOverviewMetricConfig = (
-  records: SearchbaseRecord[] | null,
+  currentAppRecords: SearchbaseRecord[] | null,
+  catalogueRecords: SearchbaseRecord[] | null,
   additions: SectionTileAdditionMap,
   profile: InsightsWorkspace,
   existingMetrics: MetricConfig[],
 ): MetricConfig[] => {
-  if (records === null) return [];
+  if (currentAppRecords === null || catalogueRecords === null) return [];
 
-  const recordsById = new Map(records.map((record) => [record.id, record]));
+  const currentAppRecordsById = new Map(
+    currentAppRecords.map((record) => [record.id, record]),
+  );
+  const recordsByReference = new Map(
+    catalogueRecords.map((record) => [
+      searchbaseRecordReference(record),
+      record,
+    ]),
+  );
   const existingIds = new Set(existingMetrics.map((metric) => metric.id));
   const existingSearchesBySection = new Set(
     existingMetrics
       .filter((metric) => metric.searchbaseId)
-      .map((metric) => `${metric.section}:${metric.searchbaseId}`),
+      .map((metric) => {
+        const searchbaseId = metric.searchbaseId as string;
+        const currentRecord = currentAppRecordsById.get(searchbaseId);
+        const reference = currentRecord
+          ? searchbaseRecordReference(currentRecord)
+          : searchbaseId;
+        return `${metric.section}:${reference}`;
+      }),
   );
   const out: MetricConfig[] = [];
 
   for (const section of sectionIdsForWorkspace(profile)) {
-    const searchbaseIds = additions[section] ?? [];
-    for (const searchbaseId of searchbaseIds) {
-      if (existingSearchesBySection.has(`${section}:${searchbaseId}`)) continue;
-      const record = recordsById.get(searchbaseId);
+    const searchbaseReferences = additions[section] ?? [];
+    for (const searchbaseReference of searchbaseReferences) {
+      const record =
+        recordsByReference.get(searchbaseReference) ??
+        currentAppRecordsById.get(searchbaseReference);
       if (!record?.searchName || !record.search) continue;
-      const tileId = overviewAdditionTileId(section, searchbaseId);
+      const canonicalReference = searchbaseRecordReference(record);
+      if (existingSearchesBySection.has(`${section}:${canonicalReference}`)) {
+        continue;
+      }
+      const tileId = overviewAdditionTileId(section, searchbaseReference);
       if (existingIds.has(tileId)) continue;
 
       const definitions = overviewDefinitionsFromRecord(record).filter(
@@ -767,13 +1080,14 @@ const buildAddedOverviewMetricConfig = (
         {
           tileId,
           section,
+          searchbaseId: searchbaseReference,
           suppressMockOnEmpty: true,
         },
       );
       if (!metric) continue;
       out.push(metric);
       existingIds.add(tileId);
-      existingSearchesBySection.add(`${section}:${searchbaseId}`);
+      existingSearchesBySection.add(`${section}:${canonicalReference}`);
     }
   }
 
@@ -782,10 +1096,14 @@ const buildAddedOverviewMetricConfig = (
 
 const MAP_FOOTER_SLOTS = ["primary", "secondary"] as const;
 type MapFooterSlot = (typeof MAP_FOOTER_SLOTS)[number];
-type MapFooterKpiConfig = KpiConfig & { thresholds?: MetricThresholds };
+type MapFooterKpiConfig = KpiConfig & {
+  slot: MapFooterSlot;
+  thresholds?: MetricThresholds;
+};
 
 const DISABLED_MAP_FOOTER_KPI_CONFIG: MapFooterKpiConfig = {
   id: "__map_footer_unavailable",
+  slot: "primary",
   label: "",
   valueField: "value",
   mockValue: "",
@@ -814,6 +1132,7 @@ const buildOverviewMapFooterConfig = (
     const id = readOverviewString(raw, "id", 128) ?? `map_${slot}`;
     discovered.set(slot, {
       id,
+      slot,
       searchbaseId: record.id,
       savedSearch: record.searchName,
       spl: undefined,
@@ -858,10 +1177,16 @@ const SECTION_ICON_COMPONENTS: Record<WorkspaceSectionIcon, SuiIcon> = {
   "node-model": NodeModel,
   "wall-bricks": WallBricks,
   "robot-face-wrench": RobotFaceWrench,
+  "fingerprint-nodes": FingerprintNodes,
+  "server-brackets": ServerBrackets,
+  "globe-division": GlobeDivision,
+  "column-arrows-left-right": ColumnArrowsLeftRight,
+  "robot-face-sparkle": RobotFaceSparkle,
   "shield-check": ShieldKeyhole,
-  "server-cog": ServerCog,
+  "server-cog": Servers,
   network: NodeModel,
   firewall: WallBricks,
+  globe: Globe,
   bot: RobotFaceWrench,
 };
 
@@ -1015,21 +1340,6 @@ const clearPriorityDrilldownView = (): void => {
 // Splunk Search drilldown URL builder
 // =============================================================================
 
-// Native Dashboard Studio does not load this app's CSS. Keep those dashboards
-// inside Dashboard Manager so the approved navigation icons and managed Studio
-// presentation remain available. Other sibling views continue to use their
-// normal app route.
-const MANAGED_STUDIO_VIEW_NAMES = new Set([
-  "admin_asset_inventory",
-  "netops_catalyst_health",
-  "netops_critical_systems_health",
-  "netops_readiness",
-  "secops_resilience",
-  "workplace_building_intelligence",
-  "workplace_operations_overview",
-  "workplace_spaces_intelligence",
-]);
-
 // Locale-aware URL builder for a sibling Splunk view inside this app. Mirrors
 // splunkSearchAppUrl's locale detection so the URL stays valid in non-en-US
 // Splunk installs.
@@ -1042,7 +1352,7 @@ const splunkViewAppUrl = (
     typeof window !== "undefined" ? window.location.pathname : "/en-US";
   const localeMatch = path.match(/^\/([a-z]{2}-[A-Z]{2})\//);
   const locale = localeMatch ? localeMatch[1] : "en-US";
-  const isManagedStudioView = MANAGED_STUDIO_VIEW_NAMES.has(viewName);
+  const isManagedStudioView = MANAGER_ROUTED_STUDIO_VIEW_NAMES.has(viewName);
   const baseUrl = `/${locale}/app/${APP_NAME}/${
     isManagedStudioView ? "dashboard_manager" : viewName
   }`;
@@ -1102,6 +1412,8 @@ interface MetricDetailTableColumn {
 
 interface MetricDetailTableTargetConfig {
   searchbaseId: string;
+  defaultViz?: string;
+  vizOptions?: Record<string, unknown>;
   metadata: SearchbaseDrilldownMetadata;
   subtitle: (range: TimeRange) => string;
   spl: string;
@@ -1264,11 +1576,19 @@ const buildMetricDetailTableConfig = (
   // for existing local/searchbase.conf and browser-persisted overrides.
   const seen = new Set<string>();
   const details = drilldownNames
-    .map(
-      (drilldownName) =>
+    .map((drilldownName) => {
+      const ownerApp = source.ownerApp;
+      return (
+        searchbaseById?.get(
+          searchbaseRecordReferenceFromParts(ownerApp, drilldownName),
+        ) ??
+        searchbaseByName?.get(
+          searchbaseRecordNameReference(ownerApp, drilldownName),
+        ) ??
         searchbaseById?.get(drilldownName) ??
-        searchbaseByName?.get(drilldownName),
-    )
+        searchbaseByName?.get(drilldownName)
+      );
+    })
     .filter((detail): detail is SearchbaseRecord => {
       if (!detail?.search || seen.has(detail.id)) return false;
       seen.add(detail.id);
@@ -1296,6 +1616,8 @@ const buildMetricDetailTableConfig = (
       );
       return {
         searchbaseId: detail.id,
+        defaultViz: detail.defaultViz,
+        vizOptions: detail.vizOptions,
         metadata: {
           title: detail.searchName,
           category: detail.category,
@@ -1353,6 +1675,8 @@ const resolveSearchbaseRecordForConfig = (
 
 interface MetricCardProps {
   cfg: MetricConfig;
+  /** Staged dispatch group: rail=0, then sections=10/20/30/40. */
+  dispatchPriority: number;
   range: TimeRange;
   refreshToken: number;
   onStatus: (id: string, status: MetricStatus) => void;
@@ -1473,6 +1797,7 @@ const seriesColorsFromVizOptions = (
 
 const MetricCard: React.FC<MetricCardProps> = ({
   cfg,
+  dispatchPriority,
   range,
   refreshToken,
   onStatus,
@@ -1511,14 +1836,15 @@ const MetricCard: React.FC<MetricCardProps> = ({
   // tiles must be searchbase-backed only; a missing stanza should
   // render as demo/empty state until the binding is corrected.
   const dispatchedConfig = useMemo<typeof effective>(() => {
-    if (!effective.savedSearch && !effective.searchbaseId) return effective;
+    const prioritized = { ...effective, dispatchPriority };
+    if (!effective.savedSearch && !effective.searchbaseId) return prioritized;
     if (
       searchbaseByName === null ||
       searchbaseByName === undefined ||
       searchbaseById === null ||
       searchbaseById === undefined
     ) {
-      return { ...effective, savedSearch: undefined, spl: undefined };
+      return { ...prioritized, savedSearch: undefined, spl: undefined };
     }
     const sb = resolveSearchbaseRecordForConfig(
       effective,
@@ -1527,14 +1853,14 @@ const MetricCard: React.FC<MetricCardProps> = ({
     );
     if (sb && sb.search) {
       return {
-        ...effective,
+        ...prioritized,
         spl: sb.search,
         savedSearch: undefined,
         dispatchContext: sb.dispatchContext,
       };
     }
-    return { ...effective, savedSearch: undefined, spl: undefined };
-  }, [effective, searchbaseById, searchbaseByName]);
+    return { ...prioritized, savedSearch: undefined, spl: undefined };
+  }, [dispatchPriority, effective, searchbaseById, searchbaseByName]);
 
   // Resolve the conf record (if any) so we can pull viz hints from it.
   // The picker preview, drilldown, and tile renderer must all agree
@@ -1598,6 +1924,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
       <TableCardLeaf
         effective={effective}
         dispatchedConfig={dispatchedConfig}
+        searchbaseId={sbRecord?.id}
         range={range}
         refreshToken={refreshToken}
         onStatus={onStatus}
@@ -1614,6 +1941,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
       <BarBreakdownCardLeaf
         effective={effective}
         dispatchedConfig={dispatchedConfig}
+        searchbaseId={sbRecord?.id}
         range={range}
         refreshToken={refreshToken}
         onStatus={onStatus}
@@ -1631,6 +1959,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
         effective={effective}
         dispatchedConfig={dispatchedConfig}
         sbRecord={sbRecord}
+        searchbaseId={sbRecord?.id}
         range={range}
         refreshToken={refreshToken}
         onStatus={onStatus}
@@ -1648,6 +1977,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
         effective={effective}
         dispatchedConfig={dispatchedConfig}
         sbRecord={sbRecord}
+        searchbaseId={sbRecord?.id}
         variant={
           showSingleValueRadial
             ? "singlevalueradial"
@@ -1672,6 +2002,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
       effective={effective}
       dispatchedConfig={dispatchedConfig}
       sbRecord={sbRecord}
+      searchbaseId={sbRecord?.id}
       range={range}
       refreshToken={refreshToken}
       onStatus={onStatus}
@@ -1692,6 +2023,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
 interface CommonLeafProps {
   effective: MetricConfig;
   dispatchedConfig: MetricConfig;
+  searchbaseId?: string;
   range: TimeRange;
   refreshToken: number;
   onStatus: (id: string, status: MetricStatus) => void;
@@ -1745,6 +2077,7 @@ interface MetricCardLeafProps extends CommonLeafProps {
 const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
   effective,
   dispatchedConfig,
+  searchbaseId,
   sbRecord,
   range,
   refreshToken,
@@ -1827,16 +2160,13 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
   // SPL so the action remains available even when the result set is
   // empty, mocked, or still loading.
   const drilldownSpl = dispatchedConfig.spl ?? result.spl;
-
-  const handleClick = useCallback(() => {
-    if (!drilldownSpl) return;
-    const url = splunkSearchAppUrl(
+  const drilldownHref = useMemo(() => {
+    if (!drilldownSpl) return undefined;
+    return splunkSearchAppUrl(
       drilldownSpl,
       range,
       dispatchedConfig.dispatchContext,
     );
-    if (typeof window !== "undefined")
-      window.open(url, "_blank", "noopener,noreferrer");
   }, [dispatchedConfig.dispatchContext, drilldownSpl, range]);
 
   // Threshold rows are derived from the same `MetricThresholds` the
@@ -1864,11 +2194,7 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
       // dump it into a hover popover too.
       descriptionFootnote={undefined}
       thresholdLines={thresholdLines}
-      thresholdNote={
-        effective.thresholds?.enabled === false
-          ? undefined
-          : effective.thresholdNote
-      }
+      thresholdNote={effective.thresholdNote}
       infoAnchor={infoAnchor}
       // `displayValue` (string broadcast from the search) wins
       // over the numeric `value` when present. Status, threshold,
@@ -1914,7 +2240,8 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
       sparklineDensity={compactDensity ? "compact" : "detailed"}
       status={result.status}
       source={result.source}
-      onOpenInSearch={drilldownSpl ? handleClick : undefined}
+      openInSearchHref={drilldownHref}
+      searchbaseId={searchbaseId}
       onOpenDetailTable={onOpenDetailTable}
       detailTableTitle={detailTableTitle}
       onConfigure={onConfigure}
@@ -1943,6 +2270,7 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
 const TableCardLeaf: React.FC<CommonLeafProps> = ({
   effective,
   dispatchedConfig,
+  searchbaseId,
   range,
   refreshToken,
   onStatus,
@@ -1959,15 +2287,13 @@ const TableCardLeaf: React.FC<CommonLeafProps> = ({
   }, [effective.id, onStatus]);
 
   const drilldownSpl = dispatchedConfig.spl ?? result.spl;
-  const handleClick = useCallback(() => {
-    if (!drilldownSpl) return;
-    const url = splunkSearchAppUrl(
+  const drilldownHref = useMemo(() => {
+    if (!drilldownSpl) return undefined;
+    return splunkSearchAppUrl(
       drilldownSpl,
       range,
       dispatchedConfig.dispatchContext,
     );
-    if (typeof window !== "undefined")
-      window.open(url, "_blank", "noopener,noreferrer");
   }, [dispatchedConfig.dispatchContext, drilldownSpl, range]);
 
   return (
@@ -1982,7 +2308,8 @@ const TableCardLeaf: React.FC<CommonLeafProps> = ({
       columns={result.columns}
       totalRowCount={result.totalRowCount}
       source={result.source}
-      onOpenInSearch={drilldownSpl ? handleClick : undefined}
+      openInSearchHref={drilldownHref}
+      searchbaseId={searchbaseId}
       onOpenDetailTable={onOpenDetailTable}
       detailTableTitle={detailTableTitle}
       onConfigure={onConfigure}
@@ -2006,6 +2333,7 @@ const TableCardLeaf: React.FC<CommonLeafProps> = ({
 const BarBreakdownCardLeaf: React.FC<CommonLeafProps> = ({
   effective,
   dispatchedConfig,
+  searchbaseId,
   range,
   refreshToken,
   onStatus,
@@ -2022,15 +2350,13 @@ const BarBreakdownCardLeaf: React.FC<CommonLeafProps> = ({
   }, [effective.id, onStatus]);
 
   const drilldownSpl = dispatchedConfig.spl ?? result.spl;
-  const handleClick = useCallback(() => {
-    if (!drilldownSpl) return;
-    const url = splunkSearchAppUrl(
+  const drilldownHref = useMemo(() => {
+    if (!drilldownSpl) return undefined;
+    return splunkSearchAppUrl(
       drilldownSpl,
       range,
       dispatchedConfig.dispatchContext,
     );
-    if (typeof window !== "undefined")
-      window.open(url, "_blank", "noopener,noreferrer");
   }, [dispatchedConfig.dispatchContext, drilldownSpl, range]);
 
   return (
@@ -2044,7 +2370,8 @@ const BarBreakdownCardLeaf: React.FC<CommonLeafProps> = ({
       rows={result.rows}
       columns={result.columns}
       source={result.source}
-      onOpenInSearch={drilldownSpl ? handleClick : undefined}
+      openInSearchHref={drilldownHref}
+      searchbaseId={searchbaseId}
       onOpenDetailTable={onOpenDetailTable}
       detailTableTitle={detailTableTitle}
       onConfigure={onConfigure}
@@ -2068,6 +2395,7 @@ const PieCardLeaf: React.FC<PieCardLeafProps> = ({
   effective,
   dispatchedConfig,
   sbRecord,
+  searchbaseId,
   range,
   refreshToken,
   onStatus,
@@ -2108,6 +2436,7 @@ const PieCardLeaf: React.FC<PieCardLeafProps> = ({
       seriesColors={seriesColorsFromVizOptions(sbRecord?.vizOptions)}
       source={result.source}
       onOpenInSearch={drilldownSpl ? handleClick : undefined}
+      searchbaseId={searchbaseId}
       onOpenDetailTable={onOpenDetailTable}
       detailTableTitle={detailTableTitle}
       onConfigure={onConfigure}
@@ -2134,6 +2463,7 @@ const ScalarGaugeCardLeaf: React.FC<ScalarGaugeCardLeafProps> = ({
   effective,
   dispatchedConfig,
   sbRecord,
+  searchbaseId,
   variant,
   range,
   refreshToken,
@@ -2183,6 +2513,7 @@ const ScalarGaugeCardLeaf: React.FC<ScalarGaugeCardLeafProps> = ({
     vizOptions: sbRecord?.vizOptions,
     source: result.source,
     onOpenInSearch: drilldownSpl ? handleClick : undefined,
+    searchbaseId,
     onConfigure,
     onOpenDetailTable,
     detailTableTitle,
@@ -2214,7 +2545,13 @@ interface InsightsWorkspaceRuntimeProps {
   workspaces: readonly InsightsWorkspace[];
   initialLayout: WorkspaceLayoutConfig;
   layouts: Record<WorkspaceId, WorkspaceLayoutConfig>;
+  signalRails: Record<WorkspaceId, SignalTickerConfig>;
   signalTickerDefault: SignalTickerConfig;
+  onWorkspaceUpdated?: (workspace: InsightsWorkspace) => void;
+  onSignalRailUpdated?: (
+    workspaceId: WorkspaceId,
+    config: SignalTickerConfig,
+  ) => void;
 }
 
 const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
@@ -2222,20 +2559,15 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   workspaces,
   initialLayout,
   layouts,
+  signalRails,
   signalTickerDefault,
+  onWorkspaceUpdated,
+  onSignalRailUpdated,
 }) => {
   // ------------------------------ Theme ------------------------------
-  const {
-    inputBorderWidth,
-    inputHeight,
-    spacingSmall,
-    spacingXSmall,
-  } = useSplunkTheme();
-  const {
-    colorScheme,
-    canChooseColorScheme,
-    setColorScheme,
-  } = useAppThemeControls();
+  const { inputBorderWidth, inputHeight, spacingSmall, spacingXSmall } =
+    useSplunkTheme();
+  const { colorScheme, canChooseColorScheme } = useAppThemeControls();
   const tilePagerHeight =
     Number.parseFloat(inputHeight) +
     Number.parseFloat(spacingXSmall) * 2 +
@@ -2251,6 +2583,57 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       document.body.classList.remove("scd-overview-active");
     };
   }, []);
+  const [presentationMode, setPresentationMode] = useState(false);
+  const togglePresentationMode = useCallback(() => {
+    if (presentationMode) {
+      setPresentationMode(false);
+      if (document.fullscreenElement) {
+        try {
+          void document.exitFullscreen?.();
+        } catch {
+          // The CSS presentation fallback still exits immediately.
+        }
+      }
+      return;
+    }
+
+    setPresentationMode(true);
+    const root = document.getElementById("scan-root");
+    if (!root) return;
+    const requestFullscreen =
+      root.requestFullscreen ??
+      (
+        root as HTMLElement & {
+          webkitRequestFullscreen?: () => Promise<void>;
+        }
+      ).webkitRequestFullscreen;
+    if (!requestFullscreen) return;
+    try {
+      const request = requestFullscreen.call(root);
+      request?.catch(() => {
+        // The fixed-position CSS fallback still hides Splunk chrome.
+      });
+    } catch {
+      // The fixed-position CSS fallback still hides Splunk chrome.
+    }
+  }, [presentationMode]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle(
+      "scd-presentation-mode",
+      presentationMode,
+    );
+    document.body.classList.toggle("scd-presentation-mode", presentationMode);
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement) setPresentationMode(false);
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFullscreenChange);
+      document.documentElement.classList.remove("scd-presentation-mode");
+      document.body.classList.remove("scd-presentation-mode");
+    };
+  }, [presentationMode]);
   const availableDashboardHeight = useAvailableDashboardHeight();
   const compactDensity =
     availableDashboardHeight !== null &&
@@ -2258,12 +2641,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   const dashboardShellStyle = useMemo<React.CSSProperties>(
     () => ({
       colorScheme,
-      height:
-        availableDashboardHeight !== null
+      height: presentationMode
+        ? "100vh"
+        : availableDashboardHeight !== null
           ? `${availableDashboardHeight}px`
           : "100vh",
     }),
-    [availableDashboardHeight, colorScheme],
+    [availableDashboardHeight, colorScheme, presentationMode],
   );
   const workspaceSectionIds = useMemo(
     () => sectionIdsForWorkspace(insightsWorkspace),
@@ -2286,62 +2670,92 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     [insightsWorkspace.id],
   );
 
+  // ------------------------------ Shared workspace authoring ------------------------------
+  const {
+    canManageWorkspaces: canManageWorkspaceConfig,
+    canManageSharedTopology,
+    canManageFactoryTileConfig: canManageFactoryConfig,
+  } = useInsightsWorkspacePermissions();
+  const persistWorkspacePatch = useCallback(
+    async (
+      patch: Parameters<typeof toWorkspaceDefinitionInput>[1],
+    ): Promise<InsightsWorkspace | null> => {
+      if (!canManageWorkspaceConfig) return null;
+      try {
+        const saved = await saveInsightsWorkspace(
+          toWorkspaceDefinitionInput(insightsWorkspace, patch),
+          undefined,
+          insightsWorkspace,
+        );
+        onWorkspaceUpdated?.(saved);
+        return saved;
+      } catch (error) {
+        console.error("[insights] failed to save shared workspace", error);
+        if (typeof window !== "undefined") {
+          window.alert(
+            error instanceof Error
+              ? error.message
+              : "Could not save this shared workspace.",
+          );
+        }
+        return null;
+      }
+    },
+    [canManageWorkspaceConfig, insightsWorkspace, onWorkspaceUpdated],
+  );
+
   // ------------------------------ Branding ------------------------------
   //
-  // Three layered defaults govern what the header chrome shows:
-  //
-  //   1. `brandingOverride` (per-user, localStorage) — values from
-  //      the header pencil → Edit branding panel. Highest priority.
-  //   2. `customerName` (per-deployment, Splunk macro) — the
-  //      `[customer_name]` macro value fetched at mount. Operator-
-  //      controlled via `local/macros.conf`.
-  //   3. Workspace/hardcoded fallbacks (`DEFAULT_HEADER_TITLE_FALLBACK`,
-  //      `DEFAULT_HEADER_SUBTITLE`, `insightsWorkspace.defaultLogoSrc`,
-  //      `DEFAULT_LOGO_DATA_URI`) — what every fresh install ships
-  //      with. Workspaces may provide their own packaged logo, hide the
-  //      default logo entirely, or use the neutral network mark.
+  // Shared workspace configuration (`header_title` / `header_subtitle` /
+  // `default_logo_src`) is the source of truth for every viewer. The header
+  // pencil writes those fields through the workspace REST endpoint. Personal
+  // localStorage branding is no longer applied on top of the shared title.
   //
   // `effectiveTitle` / `effectiveSubtitle` / `effectiveLogoSrc`
   // (derived below) collapse those layers into the strings the
   // JSX actually renders.
-  const [customerName, setCustomerName] = useState<string>("");
-  const [logoSrc, setLogoSrc] = useState<string>(
+  const [logoSrc, setLogoSrc] = useState<string>(() =>
     insightsWorkspace.hideDefaultLogo
       ? ""
-      : insightsWorkspace.defaultLogoSrc || DEFAULT_LOGO_DATA_URI,
+      : normalizeSharedImageSource(insightsWorkspace.defaultLogoSrc) ||
+        DEFAULT_LOGO_DATA_URI,
   );
   const [appVersionLabel, setAppVersionLabel] =
     useState<string>(APP_VERSION_LABEL);
-  const appCatalogUrl = createURL("/manager/launcher/appsremote", {
-    order: "relevance",
-    query: APP_CATALOG_SEARCH_NAME,
-    offset: 0,
-  });
-  const {
-    override: brandingOverride,
-    setOverride: setBrandingOverride,
-    resetAll: resetBrandingOverride,
-  } = useBrandingOverride(insightsWorkspace.id);
+  const appCatalogUrl = secureNetworkingEssentialsCatalogUrl();
+  const { resetAll: resetBrandingOverride } = useBrandingOverride(
+    insightsWorkspace.id,
+  );
   const [isBrandingEditorOpen, setBrandingEditorOpen] =
     useState<boolean>(false);
   const [isSectionTitlesEditorOpen, setSectionTitlesEditorOpen] =
     useState<boolean>(false);
 
   const effectiveTitle =
-    brandingOverride.title ||
     insightsWorkspace.headerTitle ||
-    customerName ||
+    insightsWorkspace.label ||
     DEFAULT_HEADER_TITLE_FALLBACK;
   const effectiveSubtitle =
-    brandingOverride.subtitle ||
-    insightsWorkspace.headerSubtitle ||
-    DEFAULT_HEADER_SUBTITLE;
+    insightsWorkspace.headerSubtitle || DEFAULT_HEADER_SUBTITLE;
   // Logo precedence: explicit override (data URI from upload) →
   // current `logoSrc` (the workspace-specific packaged default, an
   // intentionally empty value, or the neutral built-in mark).
   // Header branding is intentionally independent from tile/layout
   // factory reset.
-  const effectiveLogoSrc = brandingOverride.logoDataUri || logoSrc;
+  const effectiveLogoSrc = normalizeSharedImageSource(logoSrc);
+
+  useEffect(() => {
+    setLogoSrc(
+      insightsWorkspace.hideDefaultLogo
+        ? ""
+        : normalizeSharedImageSource(insightsWorkspace.defaultLogoSrc) ||
+          DEFAULT_LOGO_DATA_URI,
+    );
+  }, [
+    insightsWorkspace.defaultLogoSrc,
+    insightsWorkspace.hideDefaultLogo,
+    insightsWorkspace.id,
+  ]);
 
   // ------------------------------ Time + refresh ------------------------------
   const [timeRange, setTimeRange] = useState<TimeRange>(
@@ -2424,6 +2838,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     string,
     SearchbaseRecord
   > | null>(null);
+  const [allSearchbaseRecords, setAllSearchbaseRecords] = useState<
+    SearchbaseRecord[] | null
+  >(null);
 
   // Bumped after an admin saves a Thresholds / Data Mapping /
   // Drilldown change (`searchbaseTileConfigService`) so the catalogue
@@ -2462,6 +2879,48 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     };
   }, [searchbaseRefreshToken]);
 
+  // The factory workspace remains bound to this app's catalogue, while the
+  // add-search drawer can browse every installed Searchbase provider. Added
+  // records are persisted with an app-qualified reference so same-named
+  // stanzas from different apps never collide.
+  useEffect(() => {
+    let cancelled = false;
+    getSearchbaseCatalogue({ allApps: true, includeHidden: true })
+      .then((list) => {
+        if (!cancelled) setAllSearchbaseRecords(list);
+      })
+      .catch(() => {
+        if (!cancelled) setAllSearchbaseRecords([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [searchbaseRefreshToken]);
+
+  const currentSearchbaseOwnerApp =
+    searchbaseRecords?.find((record) => record.ownerApp)?.ownerApp ?? APP_NAME;
+
+  const runtimeSearchbaseById = useMemo(() => {
+    if (searchbaseById === null || allSearchbaseRecords === null) return null;
+    const map = new Map(searchbaseById);
+    for (const record of allSearchbaseRecords) {
+      map.set(searchbaseRecordReference(record), record);
+    }
+    return map;
+  }, [allSearchbaseRecords, searchbaseById]);
+
+  const runtimeSearchbaseByName = useMemo(() => {
+    if (searchbaseByName === null || allSearchbaseRecords === null) return null;
+    const map = new Map(searchbaseByName);
+    for (const record of allSearchbaseRecords) {
+      map.set(
+        searchbaseRecordNameReference(record.ownerApp, record.searchName),
+        record,
+      );
+    }
+    return map;
+  }, [allSearchbaseRecords, searchbaseByName]);
+
   const {
     additions: sectionTileAdditions,
     getAdditions: getSectionTileAdditions,
@@ -2472,11 +2931,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     workspaceId: insightsWorkspace.id,
     availableSections,
   });
-  const {
-    canManageWorkspaces: canManageWorkspaceConfig,
-    canManageSharedTopology,
-    canManageFactoryTileConfig: canManageFactoryConfig,
-  } = useInsightsWorkspacePermissions();
   const {
     isHidden: isSectionTileHidden,
     hideTile: hideSectionTile,
@@ -2522,12 +2976,14 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     () =>
       buildAddedOverviewMetricConfig(
         searchbaseRecords,
+        allSearchbaseRecords,
         effectiveSectionTileAdditions,
         insightsWorkspace,
         baseMetricConfig,
       ),
     [
       baseMetricConfig,
+      allSearchbaseRecords,
       insightsWorkspace,
       searchbaseRecords,
       effectiveSectionTileAdditions,
@@ -2656,6 +3112,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     workspaceId: insightsWorkspace.id,
     availableSections,
   });
+  const {
+    concurrency: searchConcurrency,
+    setConcurrency: setSearchConcurrency,
+  } = usePersistedSearchConcurrency(insightsWorkspace.id);
   const [focusedSection, setFocusedSection] = useState<SectionId | null>(null);
   const [sectionTilePages, setSectionTilePages] = useState<
     Partial<Record<SectionId, number>>
@@ -2670,15 +3130,12 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     setShowAllTileSections({});
   }, [insightsWorkspace.id]);
 
-  const setSectionTilePage = useCallback(
-    (section: SectionId, page: number) => {
-      setSectionTilePages((current) => ({
-        ...current,
-        [section]: Math.max(0, Math.round(page)),
-      }));
-    },
-    [],
-  );
+  const setSectionTilePage = useCallback((section: SectionId, page: number) => {
+    setSectionTilePages((current) => ({
+      ...current,
+      [section]: Math.max(0, Math.round(page)),
+    }));
+  }, []);
 
   const toggleSectionShowAllTiles = useCallback((section: SectionId) => {
     setShowAllTileSections((current) => ({
@@ -2796,14 +3253,12 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         sectionMaxAvailable,
       );
       if (visibleCount <= 0) continue;
-      const pageCount = Math.max(
-        1,
-        Math.ceil(sectionMaxAvailable / visibleCount),
+      const pageCount = meaningfulTilePageCount(
+        sectionMaxAvailable,
+        visibleCount,
+        Math.min(sectionTileBounds.minCount, sectionMaxAvailable),
       );
-      const page = Math.min(
-        sectionTilePages[section] ?? 0,
-        pageCount - 1,
-      );
+      const page = Math.min(sectionTilePages[section] ?? 0, pageCount - 1);
       const showingAll = Boolean(showAllTileSections[section]);
       const start = showingAll ? 0 : page * visibleCount;
       const visible = showingAll
@@ -2853,6 +3308,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
 
   // ------------------------------ Help overlay ------------------------------
   const [helpOpen, setHelpOpen] = useState(false);
+  const helpReturnFocusRef = useRef<HTMLElement | null>(null);
   const [headerActionsOpen, setHeaderActionsOpen] = useState(false);
   const headerActionsToggleRef = useRef<HTMLAnchorElement | HTMLButtonElement>(
     null,
@@ -2927,18 +3383,33 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   }, []);
 
   // ------------------------------ Signal rail ------------------------------
-  // Shared defaults come from insights_workspaces.conf. The hook layers the
-  // authenticated user's sparse, workspace-specific preference over that
-  // baseline and migrates older browser settings once when necessary.
+  // Shared KPI membership lives in insights_workspaces.conf. Personal
+  // preferences only keep display speed, density, and type size.
+  const persistSharedSignalRail = useCallback(
+    async (config: SignalTickerConfig) => {
+      const sharedConfig: SignalTickerConfig = {
+        ...config,
+        speed: signalTickerDefault.speed,
+        density: signalTickerDefault.density,
+        fontSize: signalTickerDefault.fontSize,
+      };
+      await saveWorkspaceSignalRail(insightsWorkspace, sharedConfig);
+      onSignalRailUpdated?.(insightsWorkspace.id, sharedConfig);
+    },
+    [insightsWorkspace, onSignalRailUpdated, signalTickerDefault],
+  );
   const {
     config: signalTickerConfig,
     setConfig: setSignalTickerConfig,
     resetAll: resetSignalTickerConfig,
     isWorkspaceDefault: signalTickerIsWorkspaceDefault,
-    itemCount: signalTickerItemCount,
     persistenceStatus: signalTickerPersistenceStatus,
     persistenceError: signalTickerPersistenceError,
-  } = usePersistedSignalTicker(insightsWorkspace.id, signalTickerDefault);
+  } = usePersistedSignalTicker(
+    insightsWorkspace.id,
+    signalTickerDefault,
+    canManageWorkspaceConfig ? persistSharedSignalRail : undefined,
+  );
   const [signalTickerEditorOpen, setSignalTickerEditorOpen] = useState(false);
   const searchbaseCatalogue = useMemo(() => {
     if (!visibleSearchbaseCatalogue) return [];
@@ -3003,53 +3474,55 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   // Persisted in localStorage so the operator's preference survives
   // reloads, cleared by the factory reset alongside the splitter
   // position.
+  // Map placement and visibility are workspace-owned so every viewer sees
+  // the layout an administrator publishes. Split percentage and map height
+  // remain personal view preferences.
+  const [mapPosition, setMapPosition] = useState<MapPosition>(
+    insightsWorkspace.mapPosition,
+  );
   const MAP_POS_KEY = userScopedStorageKey(
     `scd_overview_map_pos.${insightsWorkspace.id}`,
   );
-  const MAP_POS_DEFAULT: MapPosition = "right";
-  const [mapPosition, setMapPosition] = useState<MapPosition>(() => {
-    if (typeof window === "undefined") return insightsWorkspace.mapPosition;
-    try {
-      const saved = readUserScopedStorageItem(MAP_POS_KEY);
-      return saved === "right" || saved === "below" || saved === "above"
-        ? saved
-        : insightsWorkspace.mapPosition;
-    } catch {
-      return insightsWorkspace.mapPosition;
-    }
-  });
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      window.localStorage.setItem(MAP_POS_KEY, mapPosition);
-    } catch {
-      // localStorage may be disabled (private mode / quota);
-      // the choice still works for the session, we just can't
-      // persist it. Mirrors the split-percentage handling.
-    }
-  }, [mapPosition]);
   const MAP_VISIBILITY_KEY = userScopedStorageKey(
     `scd_overview_map_visible.${insightsWorkspace.id}`,
   );
-  const MAP_VISIBLE_DEFAULT = true;
-  const [mapVisible, setMapVisible] = useState<boolean>(() => {
-    if (typeof window === "undefined") return insightsWorkspace.mapVisible;
+  const [mapVisible, setMapVisible] = useState<boolean>(
+    insightsWorkspace.mapVisible,
+  );
+  const MAP_HEIGHT_KEY = userScopedStorageKey(
+    `scd_overview_map_height.${insightsWorkspace.id}`,
+  );
+  const MAP_HEIGHT_DEFAULT: MapHeightMode = "compact";
+  const [mapHeightMode, setMapHeightMode] = useState<MapHeightMode>(() => {
+    if (typeof window === "undefined") return MAP_HEIGHT_DEFAULT;
     try {
-      const saved = readUserScopedStorageItem(MAP_VISIBILITY_KEY);
-      return saved === null ? insightsWorkspace.mapVisible : saved !== "false";
+      const saved = readUserScopedStorageItem(MAP_HEIGHT_KEY);
+      return saved === "match-workspace" || saved === "compact"
+        ? saved
+        : MAP_HEIGHT_DEFAULT;
     } catch {
-      return insightsWorkspace.mapVisible;
+      return MAP_HEIGHT_DEFAULT;
     }
   });
+  const mapHeightStorageKeyRef = useRef(MAP_HEIGHT_KEY);
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
-      window.localStorage.setItem(MAP_VISIBILITY_KEY, String(mapVisible));
+      if (mapHeightStorageKeyRef.current !== MAP_HEIGHT_KEY) {
+        mapHeightStorageKeyRef.current = MAP_HEIGHT_KEY;
+        const saved = readUserScopedStorageItem(MAP_HEIGHT_KEY);
+        setMapHeightMode(
+          saved === "match-workspace" || saved === "compact"
+            ? saved
+            : MAP_HEIGHT_DEFAULT,
+        );
+        return;
+      }
+      window.localStorage.setItem(MAP_HEIGHT_KEY, mapHeightMode);
     } catch {
-      // localStorage may be disabled; the toggle still applies
-      // for the current session.
+      // Storage unavailable; the height choice still applies for this session.
     }
-  }, [MAP_VISIBILITY_KEY, mapVisible]);
+  }, [MAP_HEIGHT_KEY, mapHeightMode]);
   useEffect(() => {
     setRegionalView(insightsWorkspace.regionalView);
     setMapPosition(insightsWorkspace.mapPosition);
@@ -3063,14 +3536,30 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   const activeMapPosition: MapPosition | "hidden" = mapVisible
     ? mapPosition
     : "hidden";
-  const updateMapLayout = useCallback((next: MapLayout) => {
-    if (next === "hidden") {
-      setMapVisible(false);
-      return;
-    }
-    setMapPosition(next);
-    setMapVisible(true);
-  }, []);
+  const updateMapLayout = useCallback(
+    (next: MapLayout) => {
+      const nextVisible = next !== "hidden";
+      const nextPosition = next === "hidden" ? mapPosition : next;
+      if (next === "hidden") {
+        setMapVisible(false);
+      } else {
+        setMapPosition(next);
+        setMapVisible(true);
+      }
+      void persistWorkspacePatch({
+        mapVisible: nextVisible,
+        mapPosition: nextPosition,
+      });
+    },
+    [mapPosition, persistWorkspacePatch],
+  );
+  const updateRegionalView = useCallback(
+    (next: RegionalView) => {
+      setRegionalView(next);
+      void persistWorkspacePatch({ regionalView: next });
+    },
+    [persistWorkspacePatch],
+  );
   // Convenience flag for the drag / keyboard handlers and the
   // splitter styling: `right` mode drags on the X axis, `below` /
   // `above` modes drag on the Y axis.
@@ -3097,7 +3586,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   // standard 1080p display, which is the bottom of "still useful".
   //
   // Default 66.67% (Build 83): metrics get 2/3 of the width, map
-  // gets 1/3. Pairs with `MAP_POS_DEFAULT = 'right'` to put the
+  // gets 1/3. Pairs with the shared workspace default of `right` to put the
   // headline KPI rails on the left and the topology map as the
   // anchor visual on the right at boot. Earlier revisions used
   // 58.33% (= 7/12, matching the legacy fixed grid), but that left
@@ -3273,9 +3762,17 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       sectionTileCounts[section],
       sectionMaxAvailable,
     );
-    const renderedTileCount = showAllTileSections[section]
+    const isShowingAllTiles =
+      Boolean(showAllTileSections[section]) &&
+      sectionMaxAvailable > visibleCount;
+    const renderedTileCount = isShowingAllTiles
       ? sectionMaxAvailable
       : visibleCount;
+    const pageCount = meaningfulTilePageCount(
+      sectionMaxAvailable,
+      visibleCount,
+      Math.min(sectionTileBounds.minCount, sectionMaxAvailable),
+    );
     const estimatedTileRows =
       renderedTileCount >= SECTION_WRAP_TILE_COUNT
         ? Math.ceil(renderedTileCount / SECTION_WRAPPED_TILE_COLUMNS)
@@ -3296,7 +3793,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       baseMinHeight +
         (heightLevel - sectionHeightBounds.minLevel) * SECTION_HEIGHT_STEP_PX +
         (estimatedTileRows - 1) * wrappedRowStep +
-        (sectionMaxAvailable > visibleCount ? tilePagerHeight : 0),
+        (isShowingAllTiles || pageCount > 1 ? tilePagerHeight : 0),
     );
   }, [
     compactDensity,
@@ -3347,30 +3844,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     }, autoRefreshSeconds * 1000);
     return () => window.clearInterval(id);
   }, [autoRefreshSeconds, refreshNow]);
-
-  // ------------------------------ Customer name fetch ------------------------------
-  useEffect(() => {
-    let cancelled = false;
-    runSearch({
-      spl: CUSTOMER_NAME_SPL,
-      earliestTime: "-1m",
-      latestTime: "now",
-      tag: "customer_name",
-    })
-      .then((res) => {
-        if (cancelled) return;
-        const rows = (res?.results ?? []) as Array<Record<string, unknown>>;
-        const raw = rows[0]?.customer_name;
-        const name = typeof raw === "string" ? raw.trim() : "";
-        setCustomerName(name);
-      })
-      .catch(() => {
-        if (!cancelled) setCustomerName("");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshToken]);
 
   // ------------------------------ Installed app identity fetch ------------------------------
   // The package step stamps the release build into the installed app.conf
@@ -3481,6 +3954,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       destination: "personal" | "workspace",
     ) => {
       if (!record.id) return;
+      const recordReference = searchbaseRecordReference(record);
       if (destination === "workspace" && !canManageWorkspaceConfig) {
         window.alert(
           "You do not have permission to change this shared workspace.",
@@ -3491,21 +3965,47 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       const visibleSectionMetrics = renderMetricConfig.filter(
         (m) => m.section === section,
       );
+      const canonicalIds = getFactoryTileOrder(section, visibleSectionMetrics);
+      const orderedIds = getSectionTileOrder(section, canonicalIds);
+      const sectionMaxAvailable = Math.min(
+        sectionTileBounds.maxCount,
+        orderedIds.length,
+      );
+      const configuredMetricIds = new Set(
+        orderedIds.slice(0, sectionMaxAvailable),
+      );
       const currentSearchbaseIds = new Set(
-        sectionMetrics
+        visibleSectionMetrics
+          .filter((metric) => configuredMetricIds.has(metric.id))
           .map((metric) => metric.searchbaseId)
           .filter((id): id is string => Boolean(id)),
       );
-      if (currentSearchbaseIds.has(record.id)) return;
+      if (
+        Array.from(currentSearchbaseIds).some((reference) =>
+          searchbaseReferenceMatchesRecord(
+            reference,
+            record,
+            currentSearchbaseOwnerApp,
+          ),
+        )
+      ) {
+        return;
+      }
 
       const currentVisibleCount = Math.min(
         sectionTileCounts[section],
         Math.min(sectionTileBounds.maxCount, visibleSectionMetrics.length),
       );
 
-      const newTileId = overviewAdditionTileId(section, record.id);
-      const canonicalIds = getFactoryTileOrder(section, visibleSectionMetrics);
-      const orderedIds = getSectionTileOrder(section, canonicalIds);
+      const existingMetric = sectionMetrics.find((metric) =>
+        searchbaseReferenceMatchesRecord(
+          metric.searchbaseId,
+          record,
+          currentSearchbaseOwnerApp,
+        ),
+      );
+      const newTileId =
+        existingMetric?.id ?? overviewAdditionTileId(section, recordReference);
       const nextOrder = orderedIds.filter((id) => id !== newTileId);
       const insertAt =
         currentVisibleCount >= sectionTileBounds.maxCount
@@ -3516,7 +4016,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       const nextVisibleCount = Math.min(
         sectionTileBounds.maxCount,
         currentVisibleCount + 1,
-        visibleSectionMetrics.length + 1,
+        visibleSectionMetrics.length + (existingMetric ? 0 : 1),
       );
       const applyPersonalViewState = () => {
         setSectionTileOrder(section, nextOrder);
@@ -3524,7 +4024,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       };
       if (destination === "personal") {
         applyPersonalViewState();
-        addSectionTile(section, record.id);
+        if (!existingMetric) addSectionTile(section, recordReference);
         return;
       }
 
@@ -3535,7 +4035,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         tiles: nextOrder,
         visibleCount: nextVisibleCount,
         searchbaseAdditions: Array.from(
-          new Set([...currentSharedAdditions, record.id]),
+          new Set([
+            ...currentSharedAdditions,
+            ...(existingMetric ? [] : [recordReference]),
+          ]),
         ),
       };
       const nextLayout: WorkspaceLayoutConfig = {
@@ -3544,9 +4047,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       };
       setWorkspaceLayoutStatus("saving");
       try {
-        await saveWorkspaceLayout(insightsWorkspace, {
-          [section]: nextSectionLayout,
-        }, workspaceLayout);
+        await saveWorkspaceLayout(
+          insightsWorkspace,
+          {
+            [section]: nextSectionLayout,
+          },
+          workspaceLayout,
+        );
         setWorkspaceLayout(nextLayout);
         applyPersonalViewState();
         setWorkspaceLayoutStatus("saved");
@@ -3565,6 +4072,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     [
       addSectionTile,
       canManageWorkspaceConfig,
+      currentSearchbaseOwnerApp,
       getFactoryTileOrder,
       getSectionTileOrder,
       insightsWorkspace,
@@ -3613,9 +4121,23 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
 
   const handleRemoveAddedSearchFromSection = useCallback(
     (section: SectionId, record: SearchbaseRecord) => {
-      removeAddedSearchbaseIdFromSection(section, record.id);
+      const persistedReference = getSectionTileAdditions(section).find(
+        (reference) =>
+          searchbaseReferenceMatchesRecord(
+            reference,
+            record,
+            currentSearchbaseOwnerApp,
+          ),
+      );
+      if (persistedReference) {
+        removeAddedSearchbaseIdFromSection(section, persistedReference);
+      }
     },
-    [removeAddedSearchbaseIdFromSection],
+    [
+      currentSearchbaseOwnerApp,
+      getSectionTileAdditions,
+      removeAddedSearchbaseIdFromSection,
+    ],
   );
 
   const handleRemoveSharedSearchFromSection = useCallback(
@@ -3627,17 +4149,23 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       }
       const currentSectionLayout = workspaceLayout[section];
       if (!currentSectionLayout) return;
-      const nextAdditions = (
-        currentSectionLayout.searchbaseAdditions ?? []
-      ).filter((id) => id !== record.id);
-      if (
-        nextAdditions.length ===
-        (currentSectionLayout.searchbaseAdditions ?? []).length
-      ) {
+      const currentAdditions = currentSectionLayout.searchbaseAdditions ?? [];
+      const persistedReference = currentAdditions.find((reference) =>
+        searchbaseReferenceMatchesRecord(
+          reference,
+          record,
+          currentSearchbaseOwnerApp,
+        ),
+      );
+      if (!persistedReference) return;
+      const nextAdditions = currentAdditions.filter(
+        (reference) => reference !== persistedReference,
+      );
+      if (nextAdditions.length === currentAdditions.length) {
         return;
       }
 
-      const tileId = overviewAdditionTileId(section, record.id);
+      const tileId = overviewAdditionTileId(section, persistedReference);
       const nextTiles = currentSectionLayout.tiles.filter(
         (id) => id !== tileId,
       );
@@ -3650,9 +4178,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         ),
         searchbaseAdditions: nextAdditions,
       };
-      await saveWorkspaceLayout(insightsWorkspace, {
-        [section]: nextSectionLayout,
-      }, workspaceLayout);
+      await saveWorkspaceLayout(
+        insightsWorkspace,
+        {
+          [section]: nextSectionLayout,
+        },
+        workspaceLayout,
+      );
       setWorkspaceLayout((current) => ({
         ...current,
         [section]: nextSectionLayout,
@@ -3663,6 +4195,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     [
       canManageWorkspaceConfig,
       clearOverride,
+      currentSearchbaseOwnerApp,
       insightsWorkspace,
       showSectionTile,
       workspaceLayout,
@@ -3688,8 +4221,11 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       const sectionMetrics = metricConfig.filter((m) => m.section === section);
       const target = sectionMetrics.find(
         (metric) =>
-          metric.searchbaseId === record.id &&
-          isSectionTileHidden(section, metric.id),
+          searchbaseReferenceMatchesRecord(
+            metric.searchbaseId,
+            record,
+            currentSearchbaseOwnerApp,
+          ) && isSectionTileHidden(section, metric.id),
       );
       if (!target) return;
 
@@ -3727,6 +4263,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     [
       getFactoryTileOrder,
       getSectionTileOrder,
+      currentSearchbaseOwnerApp,
       isSectionTileHidden,
       metricConfig,
       renderMetricConfig,
@@ -3833,8 +4370,20 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     const visibleSectionMetrics = renderMetricConfig.filter(
       (m) => m.section === pickerSection,
     );
+    const canonicalIds = getFactoryTileOrder(
+      pickerSection,
+      visibleSectionMetrics,
+    );
+    const orderedIds = getSectionTileOrder(pickerSection, canonicalIds);
+    const configuredMetricIds = new Set(
+      orderedIds.slice(
+        0,
+        Math.min(sectionTileBounds.maxCount, orderedIds.length),
+      ),
+    );
     const currentSearchbaseIds = new Set(
-      sectionMetrics
+      visibleSectionMetrics
+        .filter((metric) => configuredMetricIds.has(metric.id))
         .map((metric) => metric.searchbaseId)
         .filter((id): id is string => Boolean(id)),
     );
@@ -3860,11 +4409,14 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         workspaceLayout[pickerSection]?.searchbaseAdditions ?? [],
       ),
       currentVisibleCount,
+      currentConfiguredCount: configuredMetricIds.size,
     };
   }, [
     addTileSection,
     effectiveSectionMeta,
     getSectionTileAdditions,
+    getFactoryTileOrder,
+    getSectionTileOrder,
     isSectionTileHidden,
     lastAddTileSection,
     metricConfig,
@@ -3926,6 +4478,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
          * other behaviour changes.
          */
         section?: SectionId;
+        allowPersonalDisplayControls?: boolean;
       },
       returnFocus?: HTMLElement | null,
     ) => {
@@ -3950,6 +4503,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         currentHidePeak: ov?.hidePeak,
         currentHideDelta: ov?.hideDelta,
         currentHideOverlay: ov?.hideOverlay,
+        allowPersonalDisplayControls: current?.allowPersonalDisplayControls,
         sectionId: current?.section,
         sectionLabel: current?.section
           ? effectiveSectionMeta[current.section]?.title
@@ -3979,6 +4533,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   const [factoryTileConfigStatus, setFactoryTileConfigStatus] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
+  const [factoryResetStatus, setFactoryResetStatus] = useState<
+    "idle" | "resetting" | "error"
+  >("idle");
 
   const handleSaveFactoryTileConfig = useCallback(
     async (patch: FactoryTileConfigApplyPatch) => {
@@ -4003,6 +4560,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         );
         return;
       }
+      const mapFooter = mapFooterKpiConfig.find(
+        (candidate) => candidate.id === patch.tileId,
+      );
 
       setFactoryTileConfigStatus("saving");
       try {
@@ -4013,6 +4573,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             pickerContext?.sectionId ??
             insightsWorkspace.defaultVisibleSections[0] ??
             "custom",
+          target: mapFooter
+            ? { kind: "mapFooter", slot: mapFooter.slot }
+            : { kind: "overview" },
           fromStanzaId,
           thresholds: patch.thresholds,
           dataMapping: patch.dataMapping,
@@ -4038,7 +4601,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         }
       }
     },
-    [insightsWorkspace, pickerContext, searchbaseByName],
+    [insightsWorkspace, mapFooterKpiConfig, pickerContext, searchbaseByName],
   );
 
   // Drilldown edits now go through `handleSaveFactoryTileConfig`
@@ -4133,12 +4696,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   //   • sectionTileOrder.v1           — drag-to-reorder preference
   //   • customerTopology.v4           — retired per-browser map payload
   //   • scd_overview_split_pct        — tiles ↔ map splitter position
-  //   • scd_overview_map_pos          — map position (right / below / above)
-  //   • scd_overview_map_visible      — topology map visibility
+  //   • scd_overview_map_pos          — leftover map-position localStorage
+  //   • scd_overview_map_visible      — leftover map-visibility localStorage
+  //   • scd_overview_map_height       — map panel height (workspace / compact)
   //   • priorityDrilldown.v1          — pinned app-local drill-down target
-  //   • insights_workspace_preferences.conf — private Signal Rail delta;
-  //                                      retired signalTicker.v1 browser data
-  //                                      is cleared after migration
+  //   • insights_workspace_preferences.conf — private Signal Rail display
+  //                                      prefs; leftover item patches are
+  //                                      ignored after hydration
   //
   // What is intentionally NOT reset:
   //   • header branding (title / subtitle / logo) — identity, not
@@ -4169,8 +4733,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     clearCustomerTopologyStorage();
     setTopologyResetKey((n) => n + 1);
     setLeftPct(SPLIT_DEFAULT);
-    setMapPosition(MAP_POS_DEFAULT);
-    setMapVisible(MAP_VISIBLE_DEFAULT);
+    setMapPosition(insightsWorkspace.mapPosition);
+    setMapVisible(insightsWorkspace.mapVisible);
+    setMapHeightMode(MAP_HEIGHT_DEFAULT);
     setSelectedPriorityDrilldownView(DEFAULT_PRIORITY_DRILLDOWN_VIEW);
     setFocusedSection(null);
     clearPriorityDrilldownView();
@@ -4180,6 +4745,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         window.localStorage.removeItem(SPLIT_KEY);
         window.localStorage.removeItem(MAP_POS_KEY);
         window.localStorage.removeItem(MAP_VISIBILITY_KEY);
+        window.localStorage.removeItem(MAP_HEIGHT_KEY);
       } catch {
         // Storage unavailable; the in-memory state resets
         // above are authoritative for this session anyway.
@@ -4200,12 +4766,67 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     SPLIT_KEY,
     SPLIT_DEFAULT,
     setLeftPct,
+    insightsWorkspace,
     MAP_POS_KEY,
-    MAP_POS_DEFAULT,
     setMapPosition,
     MAP_VISIBILITY_KEY,
-    MAP_VISIBLE_DEFAULT,
     setMapVisible,
+    MAP_HEIGHT_KEY,
+    MAP_HEIGHT_DEFAULT,
+    setMapHeightMode,
+  ]);
+
+  const handleResetWorkspaceToFactory = useCallback(async () => {
+    if (!insightsWorkspace.isBuiltIn || factoryResetStatus === "resetting") {
+      return;
+    }
+    const confirmed =
+      typeof window === "undefined" ||
+      window.confirm(
+        `Reset ${insightsWorkspace.label} to packaged factory defaults?\n\n` +
+          "This permanently removes app-local insights_workspaces.conf and " +
+          "searchbase.conf overrides for this workspace, plus your personal " +
+          "tile, section, Signal Rail, and map preferences. Other workspaces " +
+          "and indexed data are not changed. This cannot be undone.",
+      );
+    if (!confirmed) return;
+
+    setFactoryResetStatus("resetting");
+    try {
+      const packagedWorkspace = PACKAGED_WORKSPACE_FALLBACKS.find(
+        (candidate) => candidate.id === insightsWorkspace.id,
+      );
+      if (!packagedWorkspace?.isBuiltIn) {
+        throw new Error(
+          "Only built-in workspaces can be reset to packaged defaults.",
+        );
+      }
+      await resetInsightsWorkspaceTileConfig(
+        baseMetricConfig.map((metric) => metric.searchbaseId),
+        packagedWorkspace.sourceWorkspace,
+      );
+      await resetBuiltInInsightsWorkspace(insightsWorkspace);
+      handleResetAllCustomizations();
+      window.location.reload();
+    } catch (error) {
+      console.error(
+        "[insights] failed to reset workspace to factory defaults",
+        error,
+      );
+      setFactoryResetStatus("error");
+      if (typeof window !== "undefined") {
+        window.alert(
+          error instanceof Error
+            ? error.message
+            : "Could not reset this workspace to factory defaults.",
+        );
+      }
+    }
+  }, [
+    baseMetricConfig,
+    factoryResetStatus,
+    handleResetAllCustomizations,
+    insightsWorkspace,
   ]);
 
   const handlePublishWorkspaceLayout = useCallback(async () => {
@@ -4226,7 +4847,12 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       next[section] = {
         tiles: effectiveOrder,
         visibleCount,
-        searchbaseAdditions: workspaceLayout[section]?.searchbaseAdditions,
+        searchbaseAdditions: Array.from(
+          new Set([
+            ...(workspaceLayout[section]?.searchbaseAdditions ?? []),
+            ...(sectionTileAdditions[section] ?? []),
+          ]),
+        ),
       };
     }
 
@@ -4255,9 +4881,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     baseMetricConfig,
     getFactoryTileOrder,
     getSectionTileOrder,
+    insightsWorkspace,
+    sectionTileAdditions,
     sectionTileBounds.maxCount,
     sectionTileCounts,
-    insightsWorkspace.id,
     workspaceLayout,
   ]);
 
@@ -4344,7 +4971,21 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   }, []);
   const closeHelp = useCallback(() => {
     setHelpOpen(false);
+    window.requestAnimationFrame(() => {
+      if (helpReturnFocusRef.current?.isConnected) {
+        helpReturnFocusRef.current.focus({ preventScroll: true });
+      }
+      helpReturnFocusRef.current = null;
+    });
   }, []);
+  const toggleHelp = useCallback(() => {
+    if (helpOpen) {
+      closeHelp();
+      return;
+    }
+    helpReturnFocusRef.current = document.activeElement as HTMLElement | null;
+    setHelpOpen(true);
+  }, [closeHelp, helpOpen]);
 
   const SHORTCUTS = useMemo<
     { keys: string; description: string; handler: () => void }[]
@@ -4387,7 +5028,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       {
         keys: "?",
         description: "Toggle this help overlay",
-        handler: () => setHelpOpen((o) => !o),
+        handler: toggleHelp,
       },
     ];
   }, [
@@ -4397,6 +5038,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     openDrilldown,
     openSignalTickerEditor,
     refreshNow,
+    toggleHelp,
     visibleSections,
   ]);
   const helpShortcutRows = useMemo(
@@ -4460,7 +5102,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           )}
         >
           {effectiveLogoSrc ? (
-            <div className="w-9 h-9 sui-bg-accent rounded-lg flex items-center justify-center sui-color-active overflow-hidden p-1 flex-shrink-0">
+            <div className="w-9 h-9 sui-bg-notification-info rounded-lg flex items-center justify-center sui-color-active overflow-hidden p-1 flex-shrink-0">
               <img
                 src={effectiveLogoSrc}
                 alt="Dashboard logo"
@@ -4472,10 +5114,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   // executive header. User-uploaded data URIs
                   // are self-contained and managed by the
                   // branding editor.
-                  if (
-                    !brandingOverride.logoDataUri &&
-                    logoSrc !== DEFAULT_LOGO_DATA_URI
-                  ) {
+                  if (logoSrc !== DEFAULT_LOGO_DATA_URI) {
                     setLogoSrc(DEFAULT_LOGO_DATA_URI);
                   }
                 }}
@@ -4511,6 +5150,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   {workspaces.map((workspace) => (
                     <Menu.Item
                       key={workspace.id}
+                      onClick={() =>
+                        rememberLastWorkspace(workspace.id, workspaces)
+                      }
                       to={`${splunkViewAppUrl("workspace_insights")}?workspace=${encodeURIComponent(
                         workspace.id,
                       )}`}
@@ -4538,6 +5180,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               {effectiveSubtitle}
             </p>
           </div>
+          {canManageWorkspaceConfig ? (
           <button
             type="button"
             onClick={() => setBrandingEditorOpen(true)}
@@ -4547,6 +5190,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           >
             <Edit3 className="w-3.5 h-3.5" />
           </button>
+          ) : null}
         </div>
 
         <div
@@ -4559,28 +5203,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               onChange={updateMapLayout}
             />
           </div>
-          <Select
-            appearance="subtle"
-            data-shortcut-search
-            inline
-            labelText="Dashboard time range"
-            onChange={(_event, { value }) => {
-              const next = TIME_RANGE_OPTIONS.find(
-                (option) => option.label === String(value),
-              );
-              if (next) setTimeRange(next);
-            }}
-            style={{ width: HEADER_TIME_RANGE_WIDTH_PX }}
-            value={timeRange.label}
-          >
-            {TIME_RANGE_OPTIONS.map((option) => (
-              <Select.Option
-                key={option.label}
-                label={option.label}
-                value={option.label}
-              />
-            ))}
-          </Select>
+          <TimeRangeControl range={timeRange} onChange={setTimeRange} />
           <Select
             appearance="subtle"
             className="scd-header-refresh-rate"
@@ -4613,6 +5236,32 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               { hour: "2-digit", minute: "2-digit" },
             )}`}
             onClick={refreshNow}
+          />
+          <Button
+            appearance="subtle"
+            hideLabel
+            icon={
+              presentationMode ? (
+                <Minimize2 aria-hidden="true" />
+              ) : (
+                <Maximize2 aria-hidden="true" />
+              )
+            }
+            label={
+              presentationMode
+                ? "Exit full screen"
+                : "Enter full screen presentation mode"
+            }
+            onClick={togglePresentationMode}
+          />
+          <Button
+            appearance="subtle"
+            className="scd-header-app-version"
+            label={appVersionLabel}
+            openInNewContext
+            title={`App details and upgrades — ${appVersionLabel} (opens in new window)`}
+            aria-label={`App details and upgrades, ${appVersionLabel} (opens in new window)`}
+            to={appCatalogUrl}
           />
           <Dropdown
             defaultPlacement="below"
@@ -4670,6 +5319,33 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   {option.ariaLabel}
                 </Menu.Item>
               ))}
+              {mapVisible && (
+                <>
+                  <Menu.Heading>Map height</Menu.Heading>
+                  <Menu.Item
+                    onClick={() => {
+                      setMapHeightMode("match-workspace");
+                      closeHeaderActions();
+                    }}
+                    selectable
+                    selected={mapHeightMode === "match-workspace"}
+                    startAdornment={<Maximize2 aria-hidden="true" />}
+                  >
+                    Match workspace
+                  </Menu.Item>
+                  <Menu.Item
+                    onClick={() => {
+                      setMapHeightMode("compact");
+                      closeHeaderActions();
+                    }}
+                    selectable
+                    selected={mapHeightMode === "compact"}
+                    startAdornment={<Minimize2 aria-hidden="true" />}
+                  >
+                    Compact
+                  </Menu.Item>
+                </>
+              )}
               <Menu.Heading>Refresh rate</Menu.Heading>
               {AUTO_REFRESH_OPTIONS.map((option) => (
                 <Menu.Item
@@ -4684,32 +5360,30 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   {option.label}
                 </Menu.Item>
               ))}
+              <Menu.Heading>Search loading</Menu.Heading>
+              {[1, 2, 3, 4].map((concurrency) => (
+                <Menu.Item
+                  key={concurrency}
+                  description={
+                    concurrency === 1
+                      ? "Lowest stack pressure"
+                      : concurrency === 4
+                        ? "Fastest on high-capacity stacks"
+                        : undefined
+                  }
+                  onClick={() => {
+                    setSearchConcurrency(concurrency);
+                    closeHeaderActions();
+                  }}
+                  selectable
+                  selected={searchConcurrency === concurrency}
+                >
+                  {concurrency} simultaneous search
+                  {concurrency === 1 ? "" : "es"}
+                </Menu.Item>
+              ))}
               {canChooseColorScheme && (
-                <>
-                  <Menu.Heading>Appearance</Menu.Heading>
-                  <Menu.Item
-                    onClick={() => {
-                      setColorScheme("light");
-                      closeHeaderActions();
-                    }}
-                    selectable
-                    selected={colorScheme === "light"}
-                    startAdornment={<Sun aria-hidden="true" />}
-                  >
-                    Light
-                  </Menu.Item>
-                  <Menu.Item
-                    onClick={() => {
-                      setColorScheme("dark");
-                      closeHeaderActions();
-                    }}
-                    selectable
-                    selected={colorScheme === "dark"}
-                    startAdornment={<Moon aria-hidden="true" />}
-                  >
-                    Dark
-                  </Menu.Item>
-                </>
+                <AppearanceMenuItems onSelect={() => closeHeaderActions()} />
               )}
               {overrideCount > 0 && (
                 <Menu.Item
@@ -4732,35 +5406,32 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   Reset customised tiles
                 </Menu.Item>
               )}
+              {canManageWorkspaceConfig &&
+                canManageFactoryConfig &&
+                insightsWorkspace.isBuiltIn && (
+                  <Menu.Item
+                    description="Removes local config overrides and personal layout settings"
+                    disabled={factoryResetStatus === "resetting"}
+                    onClick={() => {
+                      closeHeaderActions();
+                      void handleResetWorkspaceToFactory();
+                    }}
+                    startAdornment={<RotateCcw aria-hidden="true" />}
+                  >
+                    {factoryResetStatus === "resetting"
+                      ? "Resetting workspace"
+                      : "Reset workspace to factory defaults"}
+                  </Menu.Item>
+                )}
               <Menu.Item
-                description={`${signalTickerItemCount} KPI${
-                  signalTickerItemCount === 1 ? "" : "s"
-                }`}
                 onClick={() => {
-                  closeHeaderActions();
-                  setSignalTickerEditorOpen(true);
-                }}
-                startAdornment={<Sparkles aria-hidden="true" />}
-              >
-                Configure signal rail
-              </Menu.Item>
-              <Menu.Item
-                onClick={() => {
+                  helpReturnFocusRef.current = headerActionsToggleRef.current;
                   closeHeaderActions();
                   setHelpOpen(true);
                 }}
                 startAdornment={<Keyboard aria-hidden="true" />}
               >
-                Help and reference
-              </Menu.Item>
-              <Menu.Divider />
-              <Menu.Item
-                description={appVersionLabel}
-                onClick={() => closeHeaderActions()}
-                openInNewContext
-                to={appCatalogUrl}
-              >
-                App details and upgrades
+                Keyboard shortcuts
               </Menu.Item>
             </Menu>
           </Dropdown>
@@ -4769,7 +5440,11 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
 
       <SignalTickerRail
         config={signalTickerConfig}
-        catalogueByName={searchbaseByName}
+        catalogueByName={
+          signalTickerPersistenceStatus === "loading"
+            ? null
+            : searchbaseByName
+        }
         metricDefaultsBySearchName={signalTickerMetricDefaults}
         range={timeRange}
         refreshToken={refreshToken}
@@ -4804,7 +5479,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               aria-label={`Open ${selectedPriorityDrilldown.title} in a new tab`}
               className="min-w-0 h-7 flex items-center gap-3 rounded-sm focus:outline-none focus-visible:ring-2 sui-focus-visible-ring"
             >
-              <div className="flex-shrink-0 w-7 h-7 rounded sui-bg-accent sui-color-active flex items-center justify-center shadow-sm">
+              <div className="flex-shrink-0 w-7 h-7 rounded sui-bg-notification-info sui-color-active flex items-center justify-center shadow-sm">
                 <ClipboardCheck className="w-4 h-4 sui-stroke-default" />
               </div>
               <span className="text-xs font-black  sui-color-info  tracking-[0.25em] whitespace-nowrap flex-shrink-0 hidden sm:inline w-[172px]">
@@ -4847,10 +5522,10 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 title={`Open ${selectedPriorityDrilldown.title} in a new tab`}
                 aria-label={`Open ${selectedPriorityDrilldown.title} in a new tab`}
                 data-testid="featured-report-cta"
-                className="h-7 flex-shrink-0 inline-flex items-center gap-1.5 px-3 rounded sui-bg-accent sui-group-hover-bg-accent sui-active-bg-accent sui-color-active text-xs font-bold tracking-wide  shadow-sm transition-colors focus:outline-none focus-visible:ring-2 sui-focus-visible-ring"
+                className="h-7 flex-shrink-0 inline-flex items-center gap-1.5 px-3 rounded scd-action-primary text-xs font-bold tracking-wide shadow-sm transition-colors focus:outline-none focus-visible:ring-2 sui-focus-visible-ring"
               >
                 {PRIORITY_DRILLDOWN_CTA}
-                <ArrowRight className="w-3.5 h-3.5 sui-stroke-default" />
+                <ArrowRight className="w-3.5 h-3.5 sui-stroke-current" />
               </a>
             </div>
           </div>
@@ -4946,7 +5621,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             data-map-position={activeMapPosition}
             style={verticalMetricsStyle}
           >
-            {visibleSections.map((section) => {
+            {visibleSections.map((section, sectionIndex) => {
               const meta = effectiveSectionMeta[section];
               const allSectionMetrics = renderMetricConfig.filter(
                 (m) => m.section === section,
@@ -4976,9 +5651,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 : visibleCount;
               const wrapTiles = renderedTileCount >= SECTION_WRAP_TILE_COUNT;
               const estimatedTileRows = wrapTiles
-                ? Math.ceil(
-                    renderedTileCount / SECTION_WRAPPED_TILE_COLUMNS,
-                  )
+                ? Math.ceil(renderedTileCount / SECTION_WRAPPED_TILE_COLUMNS)
                 : 1;
               const isSectionFocused = focusedSection === section;
               const isSectionCollapsed = isSectionFocused
@@ -4997,12 +5670,17 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               const wrappedRowStep = renderCompactHeight
                 ? SECTION_WRAPPED_H1_TILE_ROW_STEP_PX
                 : SECTION_WRAPPED_TILE_ROW_STEP_PX;
+              const tilePageCount = meaningfulTilePageCount(
+                sectionMaxAvailable,
+                visibleCount,
+                Math.min(sectionTileBounds.minCount, sectionMaxAvailable),
+              );
               const sectionMinHeight =
                 baseMinHeight +
                 (heightLevel - sectionHeightBounds.minLevel) *
                   SECTION_HEIGHT_STEP_PX +
                 (estimatedTileRows - 1) * wrappedRowStep +
-                (sectionMaxAvailable > visibleCount ? tilePagerHeight : 0);
+                (isShowingAllTiles || tilePageCount > 1 ? tilePagerHeight : 0);
 
               // Apply the user's drag-reorder
               // preference (if any) to the canonical
@@ -5018,10 +5696,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
               );
               const orderedIds = getSectionTileOrder(section, canonicalIds);
               const catalogueIds = orderedIds.slice(0, sectionMaxAvailable);
-              const tilePageCount = Math.max(
-                1,
-                Math.ceil(sectionMaxAvailable / Math.max(visibleCount, 1)),
-              );
               const tilePage = Math.min(
                 sectionTilePages[section] ?? 0,
                 tilePageCount - 1,
@@ -5135,97 +5809,110 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                       : undefined
                   }
                 >
-                  <DndContext
-                    sensors={dndSensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEnd}
-                  >
-                    <SortableContext
-                      items={visibleIds}
-                      strategy={
-                        wrapTiles
-                          ? rectSortingStrategy
-                          : horizontalListSortingStrategy
-                      }
+                  {!isSectionCollapsed && (
+                    <DndContext
+                      sensors={dndSensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleDragEnd}
                     >
-                      {visibleIds.length === 0 && (
-                        <div className="flex flex-1 items-center justify-center rounded-md border border-dashed   px-4 text-center text-xs font-semibold  sui-border-default sui-bg-popup sui-color-muted">
-                          No tiles configured.
-                        </div>
-                      )}
-                      {visibleIds.map((id, idx) => {
-                        const cfg = byId.get(id);
-                        if (!cfg) return null;
-                        const isLocalAddition = cfg.searchbaseId
-                          ? locallyAddedSearchbaseIds.has(cfg.searchbaseId) &&
-                            cfg.id ===
-                              overviewAdditionTileId(section, cfg.searchbaseId)
-                          : false;
-                        return (
-                          <SortableMetricCard
-                            key={cfg.id}
-                            id={cfg.id}
-                            ariaLabel={cfg.label}
-                            tileAction={{
-                              kind: isLocalAddition ? "remove" : "hide",
-                              label: isLocalAddition
-                                ? `Remove ${cfg.label}`
-                                : `Hide ${cfg.label}`,
-                              onClick: () =>
-                                isLocalAddition && cfg.searchbaseId
-                                  ? removeAddedSearchbaseIdFromSection(
-                                      section,
-                                      cfg.searchbaseId,
+                      <SortableContext
+                        items={visibleIds}
+                        strategy={
+                          wrapTiles
+                            ? rectSortingStrategy
+                            : horizontalListSortingStrategy
+                        }
+                      >
+                        {visibleIds.length === 0 && (
+                          <div className="flex flex-1 items-center justify-center rounded-md border border-dashed   px-4 text-center text-xs font-semibold  sui-border-default sui-bg-popup sui-color-muted">
+                            No tiles configured.
+                          </div>
+                        )}
+                        {visibleIds.map((id, idx) => {
+                          const cfg = byId.get(id);
+                          if (!cfg) return null;
+                          const isLocalAddition = cfg.searchbaseId
+                            ? locallyAddedSearchbaseIds.has(cfg.searchbaseId) &&
+                              cfg.id ===
+                                overviewAdditionTileId(
+                                  section,
+                                  cfg.searchbaseId,
+                                )
+                            : false;
+                          return (
+                            <SortableMetricCard
+                              key={cfg.id}
+                              id={cfg.id}
+                              ariaLabel={cfg.label}
+                              tileAction={{
+                                kind: isLocalAddition ? "remove" : "hide",
+                                label: isLocalAddition
+                                  ? `Remove ${cfg.label}`
+                                  : `Hide ${cfg.label}`,
+                                onClick: () =>
+                                  isLocalAddition && cfg.searchbaseId
+                                    ? removeAddedSearchbaseIdFromSection(
+                                        section,
+                                        cfg.searchbaseId,
+                                      )
+                                    : handleHideTileFromSection(cfg),
+                              }}
+                              className={
+                                wrapTiles
+                                  ? cn(
+                                      "min-w-[240px] md:min-w-[250px]",
+                                      renderCompactHeight
+                                        ? "min-h-[124px]"
+                                        : "min-h-[148px]",
                                     )
-                                  : handleHideTileFromSection(cfg),
-                            }}
-                            className={
-                              wrapTiles
-                                ? cn(
-                                    "min-w-[240px] md:min-w-[250px]",
-                                    renderCompactHeight
-                                      ? "min-h-[124px]"
-                                      : "min-h-[148px]",
+                                  : undefined
+                              }
+                            >
+                              <MetricCard
+                                cfg={cfg}
+                                dispatchPriority={10 + sectionIndex * 10}
+                                range={timeRange}
+                                refreshToken={refreshToken}
+                                onStatus={reportStatus}
+                                // Anchor the tooltip to the right
+                                // edge for the last metric so the
+                                // popover stays inside the section
+                                // card instead of overflowing.
+                                infoAnchor={
+                                  idx === visibleIds.length - 1
+                                    ? "right"
+                                    : "auto"
+                                }
+                                override={overrides[cfg.id]}
+                                searchbaseByName={runtimeSearchbaseByName}
+                                searchbaseById={runtimeSearchbaseById}
+                                searchbaseDrilldowns={searchbaseDrilldowns}
+                                compactDensity={
+                                  !isSectionFocused &&
+                                  (compactDensity || renderCompactHeight)
+                                }
+                                onOpenDetailTable={setActiveDetailTable}
+                                onConfigure={(returnFocus) =>
+                                  openPicker(
+                                    cfg.id,
+                                    cfg.label,
+                                    {
+                                      savedSearch: cfg.savedSearch,
+                                      valueField: cfg.valueField,
+                                      defaultThresholds: cfg.thresholds,
+                                      unit: cfg.unit,
+                                      section: cfg.section,
+                                    },
+                                    returnFocus,
                                   )
-                                : undefined
-                            }
-                          >
-                            <MetricCard
-                              cfg={cfg}
-                              range={timeRange}
-                              refreshToken={refreshToken}
-                              onStatus={reportStatus}
-                              // Anchor the tooltip to the right
-                              // edge for the last metric so the
-                              // popover stays inside the section
-                              // card instead of overflowing.
-                              infoAnchor={
-                                idx === visibleIds.length - 1 ? "right" : "auto"
-                              }
-                              override={overrides[cfg.id]}
-                              searchbaseByName={searchbaseByName}
-                              searchbaseById={searchbaseById}
-                              searchbaseDrilldowns={searchbaseDrilldowns}
-                              compactDensity={
-                                !isSectionFocused &&
-                                (compactDensity || renderCompactHeight)
-                              }
-                              onOpenDetailTable={setActiveDetailTable}
-                              onConfigure={(returnFocus) =>
-                                openPicker(cfg.id, cfg.label, {
-                                  savedSearch: cfg.savedSearch,
-                                  valueField: cfg.valueField,
-                                  defaultThresholds: cfg.thresholds,
-                                  unit: cfg.unit,
-                                  section: cfg.section,
-                                }, returnFocus)
-                              }
-                            />
-                          </SortableMetricCard>
-                        );
-                      })}
-                    </SortableContext>
-                  </DndContext>
+                                }
+                              />
+                            </SortableMetricCard>
+                          );
+                        })}
+                      </SortableContext>
+                    </DndContext>
+                  )}
                 </DashboardSection>
               );
             })}
@@ -5276,9 +5963,15 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                 mapPosition === "right" ? "xl:flex-1" : "flex-1",
               )}
               data-map-position={mapPosition}
+              data-map-height={mapHeightMode}
               style={verticalMapStyle}
             >
-              <div className="scd-c3-panel sui-bg-section rounded-lg border sui-border-weak p-3 shadow-sm flex flex-col">
+              <div
+                className={cn(
+                  "scd-c3-panel sui-bg-section rounded-lg border sui-border-weak p-3 shadow-sm flex flex-col",
+                  mapHeightMode === "match-workspace" && "flex-1 min-h-0",
+                )}
+              >
                 <div className="mb-2 flex flex-shrink-0 flex-wrap items-start justify-between gap-2">
                   <div className="min-w-[12rem] flex-1">
                     <Heading
@@ -5295,7 +5988,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   <div className="flex flex-shrink-0 items-center gap-2">
                     <RegionalViewToggle
                       value={regionalView}
-                      onChange={setRegionalView}
+                      onChange={updateRegionalView}
                     />
                   </div>
                 </div>
@@ -5360,20 +6053,101 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                       <KpiCard
                         label={effectiveMapPrimaryCfg.label}
                         value={mapPrimary.value}
+                        searchbaseId={
+                          resolveSearchbaseRecordForConfig(
+                            effectiveMapPrimaryCfg,
+                            runtimeSearchbaseById,
+                            runtimeSearchbaseByName,
+                          )?.id
+                        }
                         status={mapFooterStatus(
                           mapPrimary.value,
                           effectiveMapPrimaryCfg.thresholds,
                         )}
+                        onOpenInSearch={
+                          effectiveMapPrimaryCfg.spl
+                            ? () =>
+                                window.open(
+                                  splunkSearchAppUrl(
+                                    effectiveMapPrimaryCfg.spl as string,
+                                    timeRange,
+                                    effectiveMapPrimaryCfg.dispatchContext,
+                                  ),
+                                  "_blank",
+                                  "noopener,noreferrer",
+                                )
+                            : undefined
+                        }
+                        onConfigure={
+                          canManageFactoryConfig
+                            ? (returnFocus) =>
+                                openPicker(
+                                  mapPrimaryBaseCfg.id,
+                                  effectiveMapPrimaryCfg.label,
+                                  {
+                                    savedSearch: mapPrimaryBaseCfg.savedSearch,
+                                    valueField:
+                                      effectiveMapPrimaryCfg.valueField,
+                                    defaultThresholds:
+                                      effectiveMapPrimaryCfg.thresholds,
+                                    unit: effectiveMapPrimaryCfg.unit,
+                                    allowPersonalDisplayControls: false,
+                                  },
+                                  returnFocus,
+                                )
+                            : undefined
+                        }
                       />
                     ) : null}
                     {mapSecondaryBaseCfg ? (
                       <KpiCard
                         label={effectiveMapSecondaryCfg.label}
                         value={mapSecondary.value}
+                        searchbaseId={
+                          resolveSearchbaseRecordForConfig(
+                            effectiveMapSecondaryCfg,
+                            runtimeSearchbaseById,
+                            runtimeSearchbaseByName,
+                          )?.id
+                        }
                         status={mapFooterStatus(
                           mapSecondary.value,
                           effectiveMapSecondaryCfg.thresholds,
                         )}
+                        onOpenInSearch={
+                          effectiveMapSecondaryCfg.spl
+                            ? () =>
+                                window.open(
+                                  splunkSearchAppUrl(
+                                    effectiveMapSecondaryCfg.spl as string,
+                                    timeRange,
+                                    effectiveMapSecondaryCfg.dispatchContext,
+                                  ),
+                                  "_blank",
+                                  "noopener,noreferrer",
+                                )
+                            : undefined
+                        }
+                        onConfigure={
+                          canManageFactoryConfig
+                            ? (returnFocus) =>
+                                openPicker(
+                                  mapSecondaryBaseCfg.id,
+                                  effectiveMapSecondaryCfg.label,
+                                  {
+                                    savedSearch:
+                                      mapSecondaryBaseCfg.savedSearch,
+                                    valueField:
+                                      effectiveMapSecondaryCfg.valueField,
+                                    defaultThresholds:
+                                      effectiveMapSecondaryCfg.thresholds,
+                                    unit: effectiveMapSecondaryCfg.unit,
+                                    allowPersonalDisplayControls: false,
+                                  },
+                                  returnFocus,
+                                )
+                            : undefined
+                        }
                       />
                     ) : null}
                   </div>
@@ -5396,6 +6170,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         currentWorkspace={insightsWorkspace}
         workspaces={workspaces}
         layouts={layouts}
+        signalRails={signalRails}
         onClose={() => setWorkspaceManagerOpen(false)}
         onWorkspaceSaved={(workspaceId) => {
           if (workspaceId === insightsWorkspace.id) {
@@ -5419,8 +6194,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           profile={insightsWorkspace}
           section={addTilePickerState.section}
           sectionTitle={addTilePickerState.sectionTitle}
-          records={searchbaseRecords ?? []}
-          loading={searchbaseRecords === null}
+          records={allSearchbaseRecords ?? []}
+          loading={searchbaseRecords === null || allSearchbaseRecords === null}
+          currentAppOwner={currentSearchbaseOwnerApp}
           currentSearchbaseIds={addTilePickerState.currentSearchbaseIds}
           hiddenSearchbaseIds={addTilePickerState.hiddenSearchbaseIds}
           locallyAddedSearchbaseIds={
@@ -5430,7 +6206,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             addTilePickerState.workspaceAddedSearchbaseIds
           }
           currentVisibleCount={addTilePickerState.currentVisibleCount}
-          maxTileCount={sectionTileBounds.maxCount}
+          currentConfiguredCount={addTilePickerState.currentConfiguredCount}
           canManageWorkspace={canManageWorkspaceConfig}
           returnFocus={addTileReturnFocusRef}
           onAdd={(record, destination) =>
@@ -5515,6 +6291,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         isWorkspaceDefault={signalTickerIsWorkspaceDefault}
         persistenceStatus={signalTickerPersistenceStatus}
         persistenceError={signalTickerPersistenceError}
+        sharedCatalog={canManageWorkspaceConfig}
         onClose={() => setSignalTickerEditorOpen(false)}
       />
 
@@ -5530,18 +6307,46 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       <BrandingEditorModal
         isOpen={isBrandingEditorOpen}
         onClose={() => setBrandingEditorOpen(false)}
-        override={brandingOverride}
+        override={{
+          title: insightsWorkspace.headerTitle || insightsWorkspace.label,
+          subtitle: insightsWorkspace.headerSubtitle,
+          logoDataUri: insightsWorkspace.defaultLogoSrc,
+        }}
         titlePlaceholder={
           insightsWorkspace.headerTitle ||
-          customerName ||
+          insightsWorkspace.label ||
           DEFAULT_HEADER_TITLE_FALLBACK
         }
         subtitlePlaceholder={
           insightsWorkspace.headerSubtitle || DEFAULT_HEADER_SUBTITLE
         }
         logoFallbackSrc={logoSrc}
-        onSave={(next) => setBrandingOverride(next)}
+        onSave={async (next) => {
+          if (!canManageWorkspaceConfig) return false;
+          const saved = await persistWorkspacePatch({
+            headerTitle: next.title,
+            headerSubtitle: next.subtitle,
+            defaultLogoSrc:
+              next.logoDataUri ?? insightsWorkspace.defaultLogoSrc,
+            hideDefaultLogo: next.logoDataUri
+              ? false
+              : insightsWorkspace.hideDefaultLogo,
+          });
+          if (!saved) return false;
+          resetBrandingOverride();
+          return true;
+        }}
         onResetToDefaults={() => {
+          const packaged = PACKAGED_WORKSPACE_FALLBACKS.find(
+            (candidate) => candidate.id === insightsWorkspace.id,
+          );
+          void persistWorkspacePatch({
+            headerTitle: packaged?.headerTitle || insightsWorkspace.label,
+            headerSubtitle: packaged?.headerSubtitle,
+            defaultLogoSrc: packaged?.defaultLogoSrc,
+            hideDefaultLogo:
+              packaged?.hideDefaultLogo ?? insightsWorkspace.hideDefaultLogo,
+          });
           resetBrandingOverride();
           setBrandingEditorOpen(false);
         }}
@@ -5577,11 +6382,23 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
 const ALL_ADD_TILE_CATEGORIES = "__all_add_tile_categories";
 const ALL_ADD_TILE_SUB_CATEGORIES = "__all_add_tile_sub_categories";
 
-const makeDefaultAddTileAppSelection = (): Set<string> => new Set();
+// Start the cross-app catalogue on this app. Operators can still add other
+// installed Searchbase providers from the App multiselect, while reopening or
+// clearing the drawer returns to the app-owned catalogue.
+const makeDefaultAddTileAppSelection = (
+  currentAppOwner: string,
+): Set<string> => {
+  const app = currentAppOwner.trim();
+  return new Set(app ? [app] : []);
+};
 
 const isDefaultAddTileAppSelection = (
   selection: ReadonlySet<string>,
-): boolean => selection.size === 0;
+  currentAppOwner: string,
+): boolean => {
+  const app = currentAppOwner.trim();
+  return app ? selection.size === 1 && selection.has(app) : selection.size === 0;
+};
 
 const recordMatchesAddTileAppSelection = (
   record: SearchbaseRecord,
@@ -5681,12 +6498,13 @@ interface OverviewAddTilePanelProps {
   sectionTitle: string;
   records: SearchbaseRecord[];
   loading: boolean;
+  currentAppOwner: string;
   currentSearchbaseIds: ReadonlySet<string>;
   hiddenSearchbaseIds: ReadonlySet<string>;
   locallyAddedSearchbaseIds: ReadonlySet<string>;
   workspaceAddedSearchbaseIds: ReadonlySet<string>;
   currentVisibleCount: number;
-  maxTileCount: number;
+  currentConfiguredCount: number;
   canManageWorkspace: boolean;
   returnFocus: React.MutableRefObject<HTMLElement | null>;
   onAdd: (
@@ -5713,12 +6531,13 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   sectionTitle,
   records,
   loading,
+  currentAppOwner,
   currentSearchbaseIds,
   hiddenSearchbaseIds,
   locallyAddedSearchbaseIds,
   workspaceAddedSearchbaseIds,
   currentVisibleCount,
-  maxTileCount,
+  currentConfiguredCount,
   canManageWorkspace,
   returnFocus,
   onAdd,
@@ -5736,7 +6555,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     ALL_ADD_TILE_SUB_CATEGORIES,
   );
   const [selectedApps, setSelectedApps] = useState<Set<string>>(
-    makeDefaultAddTileAppSelection,
+    () => makeDefaultAddTileAppSelection(currentAppOwner),
   );
   const [includeHiddenSearches, setIncludeHiddenSearches] = useState(false);
   const [includeDrilldownSearches, setIncludeDrilldownSearches] =
@@ -5746,7 +6565,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [addDestination, setAddDestination] = useState<
     "personal" | "workspace"
-  >("personal");
+  >(canManageWorkspace ? "workspace" : "personal");
   const [addingRecordId, setAddingRecordId] = useState<string | null>(null);
   const [sharedRemovalRecord, setSharedRemovalRecord] =
     useState<SearchbaseRecord | null>(null);
@@ -5756,7 +6575,8 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   const [sharedRemovalSaving, setSharedRemovalSaving] = useState(false);
   const [sharedRemovalAnnouncement, setSharedRemovalAnnouncement] =
     useState("");
-  const [showAllProfileSearches, setShowAllProfileSearches] = useState(false);
+  const [showEntireCatalogue, setShowEntireCatalogue] = useState(false);
+  const [includeAddedSearches, setIncludeAddedSearches] = useState(false);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const sharedRemovalReturnFocusRef = useRef<HTMLElement | null>(null);
 
@@ -5765,7 +6585,7 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     setQuery("");
     setSelectedCategory(ALL_ADD_TILE_CATEGORIES);
     setSelectedSubCategory(ALL_ADD_TILE_SUB_CATEGORIES);
-    setSelectedApps(makeDefaultAddTileAppSelection());
+    setSelectedApps(makeDefaultAddTileAppSelection(currentAppOwner));
     setIncludeHiddenSearches(false);
     setIncludeDrilldownSearches(false);
     setIncludeTableSearches(false);
@@ -5777,14 +6597,15 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     setSharedRemovalError(null);
     setSharedRemovalSaving(false);
     setSharedRemovalAnnouncement("");
-    setShowAllProfileSearches(false);
+    setShowEntireCatalogue(false);
+    setIncludeAddedSearches(false);
     if (typeof window === "undefined") return;
     const id = window.setTimeout(() => searchInputRef.current?.focus(), 30);
     return () => window.clearTimeout(id);
-  }, [open, profile.id, section]);
+  }, [currentAppOwner, open, profile.id, section]);
 
   const handleAdd = async (record: SearchbaseRecord) => {
-    setAddingRecordId(record.id);
+    setAddingRecordId(searchbaseRecordReference(record));
     try {
       await onAdd(record, addDestination);
     } finally {
@@ -5797,20 +6618,16 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     const recordName = sharedRemovalRecord.searchName;
     setSharedRemovalSaving(true);
     setSharedRemovalError(null);
-    setSharedRemovalAnnouncement(
-      `Removing ${recordName} from the workspace default.`,
-    );
+    setSharedRemovalAnnouncement(`Removing ${recordName} for everyone.`);
     try {
       await onRemoveWorkspace(sharedRemovalRecord);
       setSharedRemovalRecord(null);
-      setSharedRemovalAnnouncement(
-        `Removed ${recordName} from the workspace default.`,
-      );
+      setSharedRemovalAnnouncement(`Removed ${recordName} for everyone.`);
     } catch (error) {
       setSharedRemovalError(
         error instanceof Error
           ? error.message
-          : "Could not remove the workspace default tile.",
+          : "Could not remove the tile for everyone.",
       );
       setSharedRemovalAnnouncement("");
     } finally {
@@ -5832,10 +6649,12 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
 
   const profileRecords = useMemo(
     () =>
-      addableRecords.filter((record) =>
-        recordMatchesProfileScope(record, profile),
+      addableRecords.filter(
+        (record) =>
+          record.ownerApp === currentAppOwner &&
+          recordMatchesProfileScope(record, profile),
       ),
-    [addableRecords, profile],
+    [addableRecords, currentAppOwner, profile],
   );
 
   const drilldownSearchNames = useMemo(() => {
@@ -5857,10 +6676,13 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     [profile, profileRecords, section],
   );
 
+  // Suggestions stay focused on the current app and workspace section. The
+  // entire catalogue spans installed Searchbase providers; additions use an
+  // app-qualified reference so identical stanza ids remain unambiguous.
   const suggestedRecords =
     sectionRecords.length > 0 ? sectionRecords : profileRecords;
   const browsingEntireCatalogue =
-    showAllProfileSearches || suggestedRecords.length === 0;
+    showEntireCatalogue || suggestedRecords.length === 0;
   const browseRecords = browsingEntireCatalogue
     ? addableRecords
     : suggestedRecords;
@@ -5868,15 +6690,46 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     suggestedRecords.length > 0 &&
     addableRecords.length > suggestedRecords.length;
 
-  const browseVisibleRecords = useMemo(() => {
+  const addedSearchbaseIds = useMemo(
+    () =>
+      new Set([
+        ...currentSearchbaseIds,
+        ...locallyAddedSearchbaseIds,
+        ...workspaceAddedSearchbaseIds,
+      ]),
+    [
+      currentSearchbaseIds,
+      locallyAddedSearchbaseIds,
+      workspaceAddedSearchbaseIds,
+    ],
+  );
+
+  const isAddedSearchbaseRecord = useCallback(
+    (record: SearchbaseRecord) =>
+      searchbaseReferenceSetHasRecord(
+        addedSearchbaseIds,
+        record,
+        currentAppOwner,
+      ),
+    [addedSearchbaseIds, currentAppOwner],
+  );
+
+  const isHiddenSearchbaseRecord = useCallback(
+    (record: SearchbaseRecord) =>
+      searchbaseReferenceSetHasRecord(
+        hiddenSearchbaseIds,
+        record,
+        currentAppOwner,
+      ),
+    [currentAppOwner, hiddenSearchbaseIds],
+  );
+
+  const browseVisibilityRecords = useMemo(() => {
     return browseRecords.filter((record) => {
       if (
         !includeHiddenSearches &&
-        (record.searchHidden || hiddenSearchbaseIds.has(record.id))
+        (record.searchHidden || isHiddenSearchbaseRecord(record))
       ) {
-        return false;
-      }
-      if (!recordMatchesAddTileAppSelection(record, selectedApps)) {
         return false;
       }
       return recordMatchesAddTileVisibility(
@@ -5889,34 +6742,33 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
   }, [
     browseRecords,
     drilldownSearchNames,
-    hiddenSearchbaseIds,
     includeDrilldownSearches,
     includeHiddenSearches,
     includeTableSearches,
-    selectedApps,
+    isHiddenSearchbaseRecord,
   ]);
+
+  const browseEligibleRecords = useMemo(
+    () =>
+      browseVisibilityRecords.filter((record) =>
+        recordMatchesAddTileAppSelection(record, selectedApps),
+      ),
+    [browseVisibilityRecords, selectedApps],
+  );
+
+  const browseVisibleRecords = useMemo(() => {
+    if (includeAddedSearches) return browseEligibleRecords;
+    return browseEligibleRecords.filter(
+      (record) => !isAddedSearchbaseRecord(record),
+    );
+  }, [browseEligibleRecords, includeAddedSearches, isAddedSearchbaseRecord]);
 
   const appFacetRecords = useMemo(
     () =>
-      browseRecords.filter(
-        (record) =>
-          (includeHiddenSearches ||
-            !(record.searchHidden || hiddenSearchbaseIds.has(record.id))) &&
-          recordMatchesAddTileVisibility(
-            record,
-            drilldownSearchNames,
-            includeDrilldownSearches,
-            includeTableSearches,
-          ),
+      browseVisibilityRecords.filter(
+        (record) => includeAddedSearches || !isAddedSearchbaseRecord(record),
       ),
-    [
-      browseRecords,
-      drilldownSearchNames,
-      hiddenSearchbaseIds,
-      includeDrilldownSearches,
-      includeHiddenSearches,
-      includeTableSearches,
-    ],
+    [browseVisibilityRecords, includeAddedSearches, isAddedSearchbaseRecord],
   );
 
   const apps = useMemo(() => {
@@ -5941,7 +6793,9 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
 
   useEffect(() => {
     setSelectedApps((current) => {
-      if (current.size === 0) return current;
+      // Catalogue options can be temporarily empty while records are loading.
+      // Do not erase the explicit app default during that transition.
+      if (current.size === 0 || apps.length === 0) return current;
       const next = new Set([...current].filter((app) => apps.includes(app)));
       return next.size === current.size ? current : next;
     });
@@ -6066,9 +6920,50 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     selectedSubCategory,
   ]);
 
+  const matchingAddedCount = useMemo(() => {
+    if (!includeAddedSearches) {
+      return browseEligibleRecords.filter((record) => {
+        if (!isAddedSearchbaseRecord(record)) return false;
+        if (
+          selectedCategory !== ALL_ADD_TILE_CATEGORIES &&
+          record.category !== selectedCategory
+        ) {
+          return false;
+        }
+        if (
+          selectedSubCategory !== ALL_ADD_TILE_SUB_CATEGORIES &&
+          record.subCategory !== selectedSubCategory
+        ) {
+          return false;
+        }
+        if (activeTags.size > 0) {
+          for (const tag of activeTags) {
+            if (!record.tags.includes(tag)) return false;
+          }
+        }
+        return recordMatchesAddTileQuery(record, query);
+      }).length;
+    }
+    return filteredRecords.filter(isAddedSearchbaseRecord).length;
+  }, [
+    activeTags,
+    browseEligibleRecords,
+    filteredRecords,
+    includeAddedSearches,
+    isAddedSearchbaseRecord,
+    query,
+    selectedCategory,
+    selectedSubCategory,
+  ]);
+
+  const matchingAddableCount = includeAddedSearches
+    ? filteredRecords.length - matchingAddedCount
+    : filteredRecords.length;
+
   const activeFilterCount =
-    (showAllProfileSearches && showScopeToggle ? 1 : 0) +
-    (!isDefaultAddTileAppSelection(selectedApps) ? 1 : 0) +
+    (showEntireCatalogue && showScopeToggle ? 1 : 0) +
+    (!isDefaultAddTileAppSelection(selectedApps, currentAppOwner) ? 1 : 0) +
+    (includeAddedSearches ? 1 : 0) +
     (includeHiddenSearches ? 1 : 0) +
     (includeDrilldownSearches ? 1 : 0) +
     (includeTableSearches ? 1 : 0) +
@@ -6076,21 +6971,21 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     (selectedSubCategory !== ALL_ADD_TILE_SUB_CATEGORIES ? 1 : 0) +
     activeTags.size;
   const facetsActive = activeFilterCount > 0;
-  const availableSearchLabel = `${
-    browsingEntireCatalogue ? "Entire catalogue" : "Suggested"
-  } · ${filteredRecords.length.toLocaleString()} ${
-    filteredRecords.length === 1 ? "search" : "searches"
-  } available`;
+  const scopeLabel = browsingEntireCatalogue ? "Entire catalogue" : "Suggested";
+  const availableSearchLabel = includeAddedSearches
+    ? `${scopeLabel} · ${matchingAddableCount.toLocaleString()} to add · ${matchingAddedCount.toLocaleString()} added`
+    : `${scopeLabel} · ${matchingAddableCount.toLocaleString()} to add`;
 
   const handleClearFacets = () => {
-    setSelectedApps(makeDefaultAddTileAppSelection());
+    setSelectedApps(makeDefaultAddTileAppSelection(currentAppOwner));
+    setIncludeAddedSearches(false);
     setIncludeHiddenSearches(false);
     setIncludeDrilldownSearches(false);
     setIncludeTableSearches(false);
     setSelectedCategory(ALL_ADD_TILE_CATEGORIES);
     setSelectedSubCategory(ALL_ADD_TILE_SUB_CATEGORIES);
     setActiveTags(new Set());
-    setShowAllProfileSearches(false);
+    setShowEntireCatalogue(false);
   };
 
   const handleDrawerClose = () => {
@@ -6098,377 +6993,430 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
     onClose();
   };
 
-  const countLabel = `${currentVisibleCount}/${maxTileCount} visible`;
+  const countLabel = `${currentVisibleCount} visible · ${currentConfiguredCount} configured`;
 
   return (
     <>
       <Drawer
-      divider="header"
-      material="glass"
-      onRequestClose={handleDrawerClose}
-      open={open}
-      position="page"
-      returnFocus={returnFocus}
-      width="650px"
-    >
-      <Drawer.Header
-        title="Add search"
-        subtitle={`${sectionTitle} · ${countLabel}`}
-      />
+        divider="header"
+        material="glass"
+        onRequestClose={handleDrawerClose}
+        open={open}
+        position="page"
+        returnFocus={returnFocus}
+        width="650px"
+      >
+        <Drawer.Header
+          title="Add search"
+          subtitle={`${sectionTitle} · ${countLabel}`}
+        />
 
-      <Drawer.Body>
-        <div>
-          <ControlGroup hideLabel label="Search">
-            <StyledSearch
-              aria-controls="overview-add-search-results"
-              inputRef={searchInputRef}
-              onChange={(_event, { value }) => setQuery(value)}
-              placeholder="Search by name, description, or tag"
-              value={query}
-            />
-          </ControlGroup>
+        <Drawer.Body className="scd-insights-layer-content">
+          <div>
+            <ControlGroup hideLabel label="Search">
+              <StyledSearch
+                aria-controls="overview-add-search-results"
+                inputRef={searchInputRef}
+                onChange={(_event, { value }) => setQuery(value)}
+                placeholder="Search by name, description, or tag"
+                value={query}
+              />
+            </ControlGroup>
 
-          <ControlGroup
-            controlsLayout="none"
-            help={
-              addDestination === "workspace"
-                ? "Every viewer of this workspace will see the tile."
-                : "Only you will see the tile in this browser."
-            }
-            label="Add to"
-          >
-            {canManageWorkspace ? (
-              <RadioBar
-                onChange={(_event, { value }) =>
-                  setAddDestination(value as "personal" | "workspace")
-                }
-                value={addDestination}
-              >
-                <RadioBar.Option label="This browser" value="personal" />
-                <RadioBar.Option
-                  label="Workspace default"
-                  value="workspace"
-                />
-              </RadioBar>
-            ) : (
-              <StaticContent>This browser</StaticContent>
-            )}
-          </ControlGroup>
-
-          <CollapsiblePanel
-            actions={
-              facetsActive ? (
-                <Button
-                  appearance="subtle"
-                  label="Clear filters"
-                  onClick={handleClearFacets}
-                />
-              ) : null
-            }
-            appearance="subtle"
-            description={availableSearchLabel}
-            inset
-            onChange={(_event, { action }) => setFiltersOpen(action === "open")}
-            open={filtersOpen}
-            title={
-              activeFilterCount > 0
-                ? `Advanced filters (${activeFilterCount} active)`
-                : "Advanced filters"
-            }
-          >
-            {showScopeToggle && (
-              <ControlGroup controlsLayout="none" label="Scope">
+            <ControlGroup
+              controlsLayout="none"
+              help={
+                addDestination === "workspace"
+                  ? "Adds the tile to the shared workspace for every viewer. Viewers can still personalize their view."
+                  : "Only you will see the tile in this workspace and browser."
+              }
+              label="Visibility"
+            >
+              {canManageWorkspace ? (
                 <RadioBar
                   onChange={(_event, { value }) =>
-                    setShowAllProfileSearches(value === "all")
+                    setAddDestination(value as "personal" | "workspace")
                   }
-                  value={showAllProfileSearches ? "all" : "suggested"}
+                  value={addDestination}
                 >
-                  <RadioBar.Option label="Suggested" value="suggested" />
-                  <RadioBar.Option label="Entire catalogue" value="all" />
+                  <RadioBar.Option label="Add for me" value="personal" />
+                  <RadioBar.Option label="Add for everyone" value="workspace" />
                 </RadioBar>
-              </ControlGroup>
-            )}
+              ) : (
+                <StaticContent>Add for me</StaticContent>
+              )}
+            </ControlGroup>
 
-            <ControlGroup label="App">
-              <Multiselect
-                compact
-                filter
-                onChange={(_event, { values }) =>
-                  setSelectedApps(new Set(values.map(String)))
-                }
-                placeholder={`All apps (${apps.length})`}
-                showSelectedValuesFirst="nextOpen"
-                values={Array.from(selectedApps)}
-              >
-                {apps.map((app) => (
-                  <Multiselect.Option
-                    description={`${appCountByName.get(app) ?? 0} searches`}
-                    descriptionPosition="right"
-                    key={app}
-                    label={app}
-                    value={app}
+            <CollapsiblePanel
+              actions={
+                facetsActive ? (
+                  <Button
+                    appearance="subtle"
+                    label="Clear filters"
+                    onClick={handleClearFacets}
                   />
-                ))}
-              </Multiselect>
-            </ControlGroup>
-
-            <ControlGroup controlsLayout="stack" label="Visibility">
-              <Checkbox
-                checked={includeHiddenSearches}
-                onChange={(_event, { checked }) =>
-                  setIncludeHiddenSearches(checked)
-                }
-              >
-                Show hidden searches
-              </Checkbox>
-              <Checkbox
-                checked={includeDrilldownSearches}
-                onChange={(_event, { checked }) =>
-                  setIncludeDrilldownSearches(checked)
-                }
-              >
-                Show drill-down searches
-              </Checkbox>
-              <Checkbox
-                checked={includeTableSearches}
-                onChange={(_event, { checked }) =>
-                  setIncludeTableSearches(checked)
-                }
-              >
-                Show table searches
-              </Checkbox>
-            </ControlGroup>
-
-            {categories.length > 0 && (
-              <ControlGroup label="Category">
-                <Select
-                  onChange={(_event, { value }) =>
-                    setSelectedCategory(String(value))
-                  }
-                  value={selectedCategory}
+                ) : null
+              }
+              appearance="subtle"
+              description={availableSearchLabel}
+              inset
+              onChange={(_event, { action }) =>
+                setFiltersOpen(action === "open")
+              }
+              open={filtersOpen}
+              title={
+                activeFilterCount > 0
+                  ? `Advanced filters (${activeFilterCount} active)`
+                  : "Advanced filters"
+              }
+            >
+              {showScopeToggle && (
+                <ControlGroup
+                  controlsLayout="none"
+                  help="Suggested matches this workspace section using searches from this app. Entire catalogue includes addable searches from every installed Searchbase provider."
+                  label="Scope"
                 >
-                  <Select.Option
-                    label="All categories"
-                    value={ALL_ADD_TILE_CATEGORIES}
-                  />
-                  {categories.map((category) => (
-                    <Select.Option
-                      key={category}
-                      label={category}
-                      value={category}
-                    />
-                  ))}
-                </Select>
-              </ControlGroup>
-            )}
+                  <RadioBar
+                    onChange={(_event, { value }) =>
+                      setShowEntireCatalogue(value === "all")
+                    }
+                    value={showEntireCatalogue ? "all" : "suggested"}
+                  >
+                    <RadioBar.Option label="Suggested" value="suggested" />
+                    <RadioBar.Option label="Entire catalogue" value="all" />
+                  </RadioBar>
+                </ControlGroup>
+              )}
 
-            {selectedCategory !== ALL_ADD_TILE_CATEGORIES &&
-              subCategories.length > 0 && (
-                <ControlGroup label="Subcategory">
+              <ControlGroup
+                help={
+                  browsingEntireCatalogue
+                    ? "Narrows the installed-app catalogue by the search execution app."
+                    : "Suggested searches are already limited to this app. Choose Entire catalogue to filter other apps."
+                }
+                label="App"
+              >
+                {browsingEntireCatalogue ? (
+                  <Multiselect
+                    compact
+                    filter
+                    onChange={(_event, { values }) =>
+                      setSelectedApps(new Set(values.map(String)))
+                    }
+                    placeholder={`All apps (${apps.length})`}
+                    showSelectedValuesFirst="nextOpen"
+                    values={Array.from(selectedApps)}
+                  >
+                    {apps.map((app) => (
+                      <Multiselect.Option
+                        description={`${appCountByName.get(app) ?? 0} searches`}
+                        descriptionPosition="right"
+                        key={app}
+                        label={app}
+                        value={app}
+                      />
+                    ))}
+                  </Multiselect>
+                ) : (
+                  <StaticContent>This app</StaticContent>
+                )}
+              </ControlGroup>
+
+              <ControlGroup controlsLayout="stack" label="Visibility">
+                <Checkbox
+                  checked={includeAddedSearches}
+                  onChange={(_event, { checked }) =>
+                    setIncludeAddedSearches(checked)
+                  }
+                >
+                  Show added searches
+                </Checkbox>
+                <Checkbox
+                  checked={includeHiddenSearches}
+                  onChange={(_event, { checked }) =>
+                    setIncludeHiddenSearches(checked)
+                  }
+                >
+                  Show hidden searches
+                </Checkbox>
+                <Checkbox
+                  checked={includeDrilldownSearches}
+                  onChange={(_event, { checked }) =>
+                    setIncludeDrilldownSearches(checked)
+                  }
+                >
+                  Show drill-down searches
+                </Checkbox>
+                <Checkbox
+                  checked={includeTableSearches}
+                  onChange={(_event, { checked }) =>
+                    setIncludeTableSearches(checked)
+                  }
+                >
+                  Show table searches
+                </Checkbox>
+              </ControlGroup>
+
+              {categories.length > 0 && (
+                <ControlGroup label="Category">
                   <Select
                     onChange={(_event, { value }) =>
-                      setSelectedSubCategory(String(value))
+                      setSelectedCategory(String(value))
                     }
-                    value={selectedSubCategory}
+                    value={selectedCategory}
                   >
                     <Select.Option
-                      label={`All subcategories (${subCategories.length})`}
-                      value={ALL_ADD_TILE_SUB_CATEGORIES}
+                      label="All categories"
+                      value={ALL_ADD_TILE_CATEGORIES}
                     />
-                    {subCategories.map((subCategory) => (
+                    {categories.map((category) => (
                       <Select.Option
-                        key={subCategory}
-                        label={subCategory}
-                        value={subCategory}
+                        key={category}
+                        label={category}
+                        value={category}
                       />
                     ))}
                   </Select>
                 </ControlGroup>
               )}
 
-            {(allTagsWithCounts.length > 0 || activeTags.size > 0) && (
-              <ControlGroup
-                help="Selected tags are combined with AND."
-                label="Tags"
-              >
-                <Multiselect
-                  compact
-                  filter
-                  onChange={(_event, { values }) =>
-                    setActiveTags(new Set(values.map(String)))
-                  }
-                  placeholder={`All tags (${allTagsWithCounts.length})`}
-                  showSelectedValuesFirst="nextOpen"
-                  values={Array.from(activeTags)}
-                >
-                  {allTagsWithCounts.map(([tag, count]) => (
-                    <Multiselect.Option
-                      description={`${count} searches`}
-                      descriptionPosition="right"
-                      key={tag}
-                      label={tag}
-                      value={tag}
-                    />
-                  ))}
-                </Multiselect>
-              </ControlGroup>
-            )}
-          </CollapsiblePanel>
-        </div>
+              {selectedCategory !== ALL_ADD_TILE_CATEGORIES &&
+                subCategories.length > 0 && (
+                  <ControlGroup label="Subcategory">
+                    <Select
+                      onChange={(_event, { value }) =>
+                        setSelectedSubCategory(String(value))
+                      }
+                      value={selectedSubCategory}
+                    >
+                      <Select.Option
+                        label={`All subcategories (${subCategories.length})`}
+                        value={ALL_ADD_TILE_SUB_CATEGORIES}
+                      />
+                      {subCategories.map((subCategory) => (
+                        <Select.Option
+                          key={subCategory}
+                          label={subCategory}
+                          value={subCategory}
+                        />
+                      ))}
+                    </Select>
+                  </ControlGroup>
+                )}
 
-        <div id="overview-add-search-results">
-          <ScreenReaderContent role="status">
-            {availableSearchLabel}
-          </ScreenReaderContent>
-          {loading && (
-            <Layout>
-              <WaitSpinner size="medium" screenReaderText={null} />
-              <span>Loading searches</span>
-            </Layout>
-          )}
-          {!loading && filteredRecords.length === 0 && (
-            <Message type="info">
-              No searches match the current filters.
-            </Message>
-          )}
-          {!loading && filteredRecords.length > 0 && (
-            <CardLayout
-              cardWidth="100%"
-              gutterSize={Number.parseFloat(theme.spacingMedium)}
-            >
-              {filteredRecords.map((record) => {
-                const alreadyInSection = currentSearchbaseIds.has(record.id);
-                const hiddenInSection = hiddenSearchbaseIds.has(record.id);
-                const locallyAdded = locallyAddedSearchbaseIds.has(record.id);
-                const workspaceAdded =
-                  workspaceAddedSearchbaseIds.has(record.id);
-                const disabled = alreadyInSection && !hiddenInSection;
-                const description =
-                  plainTextFromHtml(record.explanation) ??
-                  plainTextFromHtml(record.description);
-                const tags = record.tags.slice(0, 3);
-                const isAdding = addingRecordId === record.id;
-                let addActionLabel = "Added";
-                if (!alreadyInSection && addDestination === "workspace") {
-                  addActionLabel = isAdding
-                    ? "Adding as workspace default"
-                    : "Add as workspace default";
-                } else if (!alreadyInSection) {
-                  addActionLabel = isAdding
-                    ? "Adding to this browser"
-                    : "Add to this browser";
-                }
-                const action = hiddenInSection ? (
-                  <Button
-                    aria-label={`Show ${record.searchName} in ${sectionTitle}`}
-                    appearance="secondary"
-                    icon={<Eye aria-hidden="true" />}
-                    label="Show"
-                    onClick={() => onUnhide(record)}
-                  />
-                ) : locallyAdded ? (
-                  <Button
-                    aria-label={`Remove ${record.searchName} from ${sectionTitle}`}
-                    appearance="destructiveSecondary"
-                    icon={<Trash2 aria-hidden="true" />}
-                    label="Remove"
-                    onClick={() => onRemove(record)}
-                  />
-                ) : workspaceAdded && canManageWorkspace ? (
-                  <Button
-                    aria-label={`Remove default: ${record.searchName} from ${sectionTitle}`}
-                    appearance="destructiveSecondary"
-                    icon={<Trash2 aria-hidden="true" />}
-                    label="Remove default"
-                    onClick={(event) => {
-                      sharedRemovalReturnFocusRef.current = event.currentTarget;
-                      setSharedRemovalError(null);
-                      setSharedRemovalRecord(record);
-                    }}
-                  />
-                ) : (
-                  <Button
-                    aria-label={
-                      alreadyInSection
-                        ? `Added: ${record.searchName} in ${sectionTitle}`
-                        : `${addActionLabel}: ${record.searchName} to ${sectionTitle}`
+              {(allTagsWithCounts.length > 0 || activeTags.size > 0) && (
+                <ControlGroup
+                  help="Selected tags are combined with AND."
+                  label="Tags"
+                >
+                  <Multiselect
+                    compact
+                    filter
+                    onChange={(_event, { values }) =>
+                      setActiveTags(new Set(values.map(String)))
                     }
-                    aria-busy={isAdding}
-                    appearance="standalone"
-                    disabled={disabled || isAdding}
-                    icon={
-                      isAdding ? (
-                        <WaitSpinner screenReaderText={null} />
-                      ) : (
-                        <Plus aria-hidden="true" />
-                      )
-                    }
-                    label={addActionLabel}
-                    onClick={() => void handleAdd(record)}
-                  />
-                );
-                return (
-                  <Card key={record.id} tag="article">
-                    <Card.Header
-                      actions={() => action}
-                      subtitle={
-                        [record.category, record.subCategory]
-                          .filter(Boolean)
-                          .join(" / ") || record.id
-                      }
-                      truncateTitle={false}
-                      title={
-                        <>
-                          {record.searchName}
-                          {hiddenInSection && (
-                            <>
-                              {" "}
-                              <Badge label="Hidden in section" />
-                            </>
-                          )}
-                          {!hiddenInSection && workspaceAdded && (
-                            <>
-                              {" "}
-                              <Badge label="Workspace default" />
-                            </>
-                          )}
-                          {!hiddenInSection &&
-                            alreadyInSection &&
-                            !workspaceAdded && (
-                            <>
-                              {" "}
-                              <Badge label="Added" />
-                            </>
-                            )}
-                          {record.searchHidden && (
-                            <>
-                              {" "}
-                              <Badge label="Hidden search" />
-                            </>
-                          )}
-                        </>
-                      }
+                    placeholder={`All tags (${allTagsWithCounts.length})`}
+                    showSelectedValuesFirst="nextOpen"
+                    values={Array.from(activeTags)}
+                  >
+                    {allTagsWithCounts.map(([tag, count]) => (
+                      <Multiselect.Option
+                        description={`${count} searches`}
+                        descriptionPosition="right"
+                        key={tag}
+                        label={tag}
+                        value={tag}
+                      />
+                    ))}
+                  </Multiselect>
+                </ControlGroup>
+              )}
+            </CollapsiblePanel>
+          </div>
+
+          <div id="overview-add-search-results">
+            <ScreenReaderContent role="status">
+              {availableSearchLabel}
+            </ScreenReaderContent>
+            {loading && (
+              <Layout>
+                <WaitSpinner size="medium" screenReaderText={null} />
+                <span>Loading searches</span>
+              </Layout>
+            )}
+            {!loading && filteredRecords.length === 0 && (
+              <Message type="info">
+                {!includeAddedSearches && matchingAddedCount > 0
+                  ? `All matching searches are already configured in ${sectionTitle}. Turn on Show added searches to review them.`
+                  : "No searches match the current filters."}
+              </Message>
+            )}
+            {!loading && filteredRecords.length > 0 && (
+              <CardLayout
+                cardWidth="100%"
+                gutterSize={Number.parseFloat(theme.spacingMedium)}
+              >
+                {filteredRecords.map((record) => {
+                  const alreadyInSection = searchbaseReferenceSetHasRecord(
+                    currentSearchbaseIds,
+                    record,
+                    currentAppOwner,
+                  );
+                  const hiddenInSection = isHiddenSearchbaseRecord(record);
+                  const locallyAdded = searchbaseReferenceSetHasRecord(
+                    locallyAddedSearchbaseIds,
+                    record,
+                    currentAppOwner,
+                  );
+                  const workspaceAdded = searchbaseReferenceSetHasRecord(
+                    workspaceAddedSearchbaseIds,
+                    record,
+                    currentAppOwner,
+                  );
+                  const alreadyAdded =
+                    alreadyInSection || locallyAdded || workspaceAdded;
+                  const disabled = alreadyAdded && !hiddenInSection;
+                  const description =
+                    plainTextFromHtml(record.explanation) ??
+                    plainTextFromHtml(record.description);
+                  const tags = Array.from(
+                    new Set(
+                      [record.catalogueApp, ...record.tags].filter(Boolean),
+                    ),
+                  ).slice(0, 3);
+                  const isAdding =
+                    addingRecordId === searchbaseRecordReference(record);
+                  const searchbaseUrl = splunkSearchbaseEditUrl(record.id);
+                  let addActionLabel = "Added";
+                  if (!alreadyAdded && addDestination === "workspace") {
+                    addActionLabel = isAdding
+                      ? "Adding for everyone"
+                      : "Add for everyone";
+                  } else if (!alreadyAdded) {
+                    addActionLabel = isAdding ? "Adding for me" : "Add for me";
+                  }
+                  const action = hiddenInSection ? (
+                    <Button
+                      aria-label={`Show ${record.searchName} in ${sectionTitle}`}
+                      appearance="secondary"
+                      icon={<Eye aria-hidden="true" />}
+                      label="Show"
+                      onClick={() => onUnhide(record)}
                     />
-                    {(description || tags.length > 0) && (
-                      <Card.Body>
-                        {description && <p>{description}</p>}
-                        {tags.length > 0 && (
+                  ) : locallyAdded ? (
+                    <Button
+                      aria-label={`Remove ${record.searchName} from ${sectionTitle}`}
+                      appearance="destructiveSecondary"
+                      icon={<Trash2 aria-hidden="true" />}
+                      label="Remove"
+                      onClick={() => onRemove(record)}
+                    />
+                  ) : workspaceAdded && canManageWorkspace ? (
+                    <Button
+                      aria-label={`Remove default: ${record.searchName} from ${sectionTitle}`}
+                      appearance="destructiveSecondary"
+                      icon={<Trash2 aria-hidden="true" />}
+                      label="Remove default"
+                      onClick={(event) => {
+                        sharedRemovalReturnFocusRef.current =
+                          event.currentTarget;
+                        setSharedRemovalError(null);
+                        setSharedRemovalRecord(record);
+                      }}
+                    />
+                  ) : (
+                    <Button
+                      aria-label={
+                        alreadyAdded
+                          ? `Added: ${record.searchName} in ${sectionTitle}`
+                          : `${addActionLabel}: ${record.searchName} to ${sectionTitle}`
+                      }
+                      aria-busy={isAdding}
+                      appearance="standalone"
+                      disabled={disabled || isAdding}
+                      icon={
+                        isAdding ? (
+                          <WaitSpinner screenReaderText={null} />
+                        ) : (
+                          <Plus aria-hidden="true" />
+                        )
+                      }
+                      label={addActionLabel}
+                      onClick={() => void handleAdd(record)}
+                    />
+                  );
+                  return (
+                    <Card key={searchbaseRecordReference(record)} tag="article">
+                      <Card.Header
+                        actions={() => (
                           <Layout>
-                            {tags.map((tag) => (
-                              <Chip key={tag}>{tag}</Chip>
-                            ))}
+                            <Button
+                              aria-label={`View in Searchbase: ${record.searchName}`}
+                              appearance="standalone"
+                              label="View in Searchbase"
+                              openInNewContext
+                              to={searchbaseUrl}
+                            />
+                            {action}
                           </Layout>
                         )}
-                      </Card.Body>
-                    )}
-                  </Card>
-                );
-              })}
-            </CardLayout>
-          )}
-        </div>
-      </Drawer.Body>
+                        subtitle={
+                          [record.category, record.subCategory]
+                            .filter(Boolean)
+                            .join(" / ") || record.id
+                        }
+                        truncateTitle={false}
+                        title={
+                          <>
+                            {record.searchName}
+                            {hiddenInSection && (
+                              <>
+                                {" "}
+                                <Badge label="Hidden in section" />
+                              </>
+                            )}
+                            {!hiddenInSection && workspaceAdded && (
+                              <>
+                                {" "}
+                                <Badge label="Added for everyone" />
+                              </>
+                            )}
+                            {!hiddenInSection &&
+                              alreadyAdded &&
+                              !workspaceAdded && (
+                                <>
+                                  {" "}
+                                  <Badge label="Added" />
+                                </>
+                              )}
+                            {record.searchHidden && (
+                              <>
+                                {" "}
+                                <Badge label="Hidden search" />
+                              </>
+                            )}
+                          </>
+                        }
+                      />
+                      {(description || tags.length > 0) && (
+                        <Card.Body>
+                          {description && <p>{description}</p>}
+                          {tags.length > 0 && (
+                            <Layout>
+                              {tags.map((tag) => (
+                                <Chip key={tag}>{tag}</Chip>
+                              ))}
+                            </Layout>
+                          )}
+                        </Card.Body>
+                      )}
+                    </Card>
+                  );
+                })}
+              </CardLayout>
+            )}
+          </div>
+        </Drawer.Body>
       </Drawer>
       <div aria-live="polite" role="status">
         <ScreenReaderContent>{sharedRemovalAnnouncement}</ScreenReaderContent>
@@ -6485,12 +7433,12 @@ const OverviewAddTilePanel: React.FC<OverviewAddTilePanelProps> = ({
         }}
         style={{ maxWidth: "calc(100vw - 32px)", width: "440px" }}
       >
-        <Modal.Header title="Remove workspace default tile?" />
+        <Modal.Header title="Remove tile for everyone?" />
         <Modal.Body>
           <p>
-            {sharedRemovalRecord?.searchName} will be removed from the shared
-            workspace default. Every viewer will lose this tile unless they
-            added it separately to their browser.
+            {sharedRemovalRecord?.searchName} will no longer appear for everyone
+            who views this workspace. People who added it for themselves will
+            keep it.
           </p>
           {sharedRemovalError && (
             <div role="alert">
@@ -6576,6 +7524,9 @@ interface KpiCardProps {
   label: string;
   value: string;
   status: MetricStatus;
+  onOpenInSearch?: () => void;
+  searchbaseId?: string;
+  onConfigure?: (returnFocus?: HTMLElement | null) => void;
 }
 
 const formatMapKpiValue = (value: string): string => {
@@ -6703,8 +7654,8 @@ const MetricDetailTableStateRow: React.FC<MetricDetailTableStateRowProps> = ({
     kind === "loading" ? RefreshCw : kind === "error" ? AlertCircle : Search;
   const iconClasses =
     kind === "error"
-      ? "sui-border-negative sui-bg-negative sui-color-negative"
-      : "sui-border-info sui-bg-accent sui-color-info";
+      ? "sui-border-negative sui-bg-notification-negative sui-color-active"
+      : "sui-border-info sui-bg-notification-info sui-color-active";
 
   return (
     <tr>
@@ -6851,6 +7802,23 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
   const [sortState, setSortState] = useState<MetricDetailSortState | null>(
     null,
   );
+  const activeIsTable = isTableViz(activeConfig.defaultViz);
+  const activeDefinition = useMemo(
+    () =>
+      activeIsTable
+        ? null
+        : buildWorkspaceDrilldownDefinition(
+            {
+              searchName: activeConfig.metadata.title,
+              search: activeConfig.spl,
+              defaultViz: activeConfig.defaultViz,
+              vizOptions: activeConfig.vizOptions,
+              dispatchContext: activeConfig.dispatchContext,
+            },
+            range,
+          ),
+    [activeConfig, activeIsTable, range],
+  );
 
   useEffect(() => {
     setActiveIndex(0);
@@ -6861,6 +7829,15 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
   }, [activeIndex, config.targets.length]);
 
   useEffect(() => {
+    if (!activeIsTable) {
+      setLoading(false);
+      setRows([]);
+      setTableColumns(activeConfig.columns);
+      setErrorMessage("");
+      setSortState(null);
+      return undefined;
+    }
+
     let cancelled = false;
     const controller = new AbortController();
     setLoading(true);
@@ -6920,7 +7897,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
       cancelled = true;
       controller.abort();
     };
-  }, [activeConfig, range.earliest, range.latest, refreshToken]);
+  }, [activeConfig, activeIsTable, range.earliest, range.latest, refreshToken]);
 
   const availableStatus = activeConfig.availableStatus ?? "Available";
   const unavailableStatus = activeConfig.unavailableStatus ?? "Unavailable";
@@ -6972,8 +7949,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
     activeConfig.metadata.category,
     activeConfig.metadata.subCategory,
   ].filter(Boolean);
-  const canGoBack = activeIndex > 0;
-  const canGoForward = activeIndex < config.targets.length - 1;
+  const resultTitleId = `${activeConfig.tag}-results-title`;
   const showTarget = (nextIndex: number) => {
     const boundedIndex = Math.max(
       0,
@@ -6990,8 +7966,6 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
     setLoading(true);
     setActiveIndex(boundedIndex);
   };
-  const showPrevious = () => showTarget(activeIndex - 1);
-  const showNext = () => showTarget(activeIndex + 1);
 
   return (
     <WorkspaceModalShell
@@ -7002,16 +7976,16 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
       onClose={onClose}
       openInSearchHref={searchUrl}
       openInSearchbaseHref={searchbaseUrl}
-      wide={displayColumns.length > 5}
+      wide={!activeIsTable || displayColumns.length > 5}
       contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden sui-bg-page"
       headerMeta={
-        statusField ? (
+        activeIsTable && statusField ? (
           <>
-            <span className="inline-flex items-center gap-1 rounded-full sui-bg-positive px-2 py-1 text-xs font-semibold sui-color-positive">
+            <span className="inline-flex items-center gap-1 rounded-full sui-bg-notification-positive px-2 py-1 text-xs font-semibold sui-color-active">
               <CheckCircle2 className="h-3 w-3" />
               {availableCount} available
             </span>
-            <span className="inline-flex items-center gap-1 rounded-full sui-bg-negative px-2 py-1 text-xs font-semibold sui-color-negative">
+            <span className="inline-flex items-center gap-1 rounded-full sui-bg-notification-negative px-2 py-1 text-xs font-semibold sui-color-active">
               <AlertCircle className="h-3 w-3" />
               {unavailableCount} unavailable
             </span>
@@ -7024,7 +7998,10 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
         data-detail-search-summary="true"
       >
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-bold sui-color-default">
+          <div
+            id={resultTitleId}
+            className="truncate text-sm font-bold sui-color-default"
+          >
             {activeConfig.metadata.title}
           </div>
           {activeClassification.length > 0 && (
@@ -7034,184 +8011,204 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
           )}
         </div>
         {config.targets.length > 1 && (
-          <nav
-            className="ml-4 inline-flex flex-shrink-0 items-center gap-2"
-            aria-label="Drilldown search navigation"
-          >
-            <button
-              type="button"
-              disabled={!canGoBack}
-              onClick={showPrevious}
-              className="inline-flex items-center gap-1 rounded border sui-border-weak sui-bg-section px-2 py-1 text-xs font-bold sui-color-active transition-colors sui-hover-border-info sui-hover-color-info focus:outline-none focus:ring-2 sui-focus-ring disabled:cursor-not-allowed disabled:opacity-35"
-            >
-              <ChevronLeft className="h-3 w-3" aria-hidden="true" />
-              Back
-            </button>
-            <span
-              className="min-w-[4.5rem] text-center text-xs font-bold tabular-nums sui-color-default"
-              aria-live="polite"
-            >
-              {activeIndex + 1} / {config.targets.length}
-            </span>
-            <button
-              type="button"
-              disabled={!canGoForward}
-              onClick={showNext}
-              className="inline-flex items-center gap-1 rounded border sui-border-weak sui-bg-section px-2 py-1 text-xs font-bold sui-color-active transition-colors sui-hover-border-info sui-hover-color-info focus:outline-none focus:ring-2 sui-focus-ring disabled:cursor-not-allowed disabled:opacity-35"
-            >
-              Forward
-              <ChevronRight className="h-3 w-3" aria-hidden="true" />
-            </button>
-          </nav>
+          <div className="ml-4 flex-shrink-0">
+            <Paginator.Compact
+              aria-label="Drill-down search navigation"
+              current={activeIndex + 1}
+              onChange={(_event, { page }) => {
+                if (page !== undefined) showTarget(page - 1);
+              }}
+              renderLabel={({ current, totalPages }) =>
+                `${current ?? 1} / ${totalPages ?? config.targets.length}`
+              }
+              totalPages={config.targets.length}
+            />
+            <ScreenReaderContent aria-live="polite">
+              Showing {activeConfig.metadata.title}, search {activeIndex + 1} of{" "}
+              {config.targets.length}
+            </ScreenReaderContent>
+          </div>
         )}
       </div>
       <div
         className="min-h-[154px] max-h-[min(46vh,520px)] shrink overflow-auto overscroll-contain"
         data-detail-results-region="content-aware"
       >
-        <table className="w-full min-w-[860px] sui-bg-transparent text-sm">
-          <thead className="sticky top-0 z-10 border-b sui-border-weak sui-bg-page backdrop-blur-xl">
-            <tr className="text-left text-xs font-bold sui-color-default">
-              {displayColumns.map((column, index) => {
-                const isSorted = sortState?.field === column.field;
-                const SortIcon = isSorted
-                  ? sortState.direction === "asc"
-                    ? ArrowUp
-                    : ArrowDown
-                  : ArrowUpDown;
-                return (
-                  <th
-                    key={column.field}
-                    scope="col"
-                    aria-sort={
-                      isSorted
-                        ? sortState.direction === "asc"
-                          ? "ascending"
-                          : "descending"
-                        : "none"
-                    }
-                    className={cn(
-                      index === 0 ? "px-5" : "px-4",
-                      "py-3",
-                      column.align === "right" && "text-right",
-                    )}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleSortColumn(column.field)}
-                      title={`Sort by ${column.label}`}
+        {activeIsTable ? (
+          <table
+            aria-labelledby={resultTitleId}
+            className="w-full min-w-[860px] sui-bg-transparent text-sm"
+          >
+            <thead className="sticky top-0 z-10 border-b sui-border-weak sui-bg-page backdrop-blur-xl">
+              <tr className="text-left text-xs font-bold sui-color-default">
+                {displayColumns.map((column, index) => {
+                  const isSorted = sortState?.field === column.field;
+                  const SortIcon = isSorted
+                    ? sortState.direction === "asc"
+                      ? ArrowUp
+                      : ArrowDown
+                    : ArrowUpDown;
+                  return (
+                    <th
+                      key={column.field}
+                      scope="col"
+                      aria-sort={
+                        isSorted
+                          ? sortState.direction === "asc"
+                            ? "ascending"
+                            : "descending"
+                          : "none"
+                      }
                       className={cn(
-                        "group inline-flex w-full items-center gap-1.5 rounded px-1 py-0.5 -mx-1 text-left transition-colors  sui-hover-color-info focus:outline-none focus:ring-2 sui-focus-ring",
-                        column.align === "right"
-                          ? "justify-end"
-                          : "justify-start",
-                        isSorted && "sui-color-info",
+                        index === 0 ? "px-5" : "px-4",
+                        "py-3",
+                        column.align === "right" && "text-right",
                       )}
                     >
-                      <span>{column.label}</span>
-                      <SortIcon
+                      <button
+                        type="button"
+                        onClick={() => handleSortColumn(column.field)}
+                        title={`Sort by ${column.label}`}
                         className={cn(
-                          "h-3 w-3 flex-shrink-0",
-                          isSorted
-                            ? "opacity-100"
-                            : "opacity-35 group-hover:opacity-80",
+                          "group inline-flex w-full items-center gap-1.5 rounded px-1 py-0.5 -mx-1 text-left transition-colors  sui-hover-color-info focus:outline-none focus:ring-2 sui-focus-ring",
+                          column.align === "right"
+                            ? "justify-end"
+                            : "justify-start",
+                          isSorted && "sui-color-info",
                         )}
-                        aria-hidden="true"
-                      />
-                    </button>
-                  </th>
-                );
-              })}
-            </tr>
-          </thead>
-          <tbody className="divide-y sui-divide-weak">
-            {loading ? (
-              <MetricDetailTableStateRow
-                columnCount={columnCount}
-                kind="loading"
-                title="Loading details"
-                message={`Running ${activeConfig.metadata.title.toLowerCase()} for the selected time range.`}
-              />
-            ) : errorMessage ? (
-              <MetricDetailTableStateRow
-                columnCount={columnCount}
-                kind="error"
-                title="Details unavailable"
-                message={`${errorMessage} Open the query in Search to inspect the failure.`}
-              />
-            ) : rows.length === 0 ? (
-              <MetricDetailTableStateRow
-                columnCount={columnCount}
-                kind="empty"
-                title="No results in this time range"
-                message={`${activeConfig.emptyMessage} Try a wider range or open the query in Search.`}
-              />
-            ) : (
-              sortedRows.map((row, rowIndex) => {
-                const rowStatus = statusField ? row[statusField] : "";
-                const rowIsAvailable = rowStatus === availableStatus;
-                const rowKey =
-                  (activeConfig.rowKeyField && row[activeConfig.rowKeyField]) ||
-                  displayColumns.map((column) => row[column.field]).join("|") ||
-                  "detail-row";
-                return (
-                  <tr
-                    key={`${rowKey}-${rowIndex}`}
-                    className="sui-bg-section transition-colors sui-hover-bg-overlay"
-                  >
-                    {displayColumns.map((column, index) => {
-                      const value = row[column.field];
-                      const isStatusColumn = column.kind === "status";
-                      const statusIsAvailable = value === availableStatus;
-                      const statusIsUnavailable = value === unavailableStatus;
-                      return (
-                        <td
-                          key={column.field}
+                      >
+                        <span>{column.label}</span>
+                        <SortIcon
                           className={cn(
-                            index === 0
-                              ? "px-5 font-medium sui-color-default"
-                              : "px-4 sui-color-default",
-                            "py-3",
-                            column.align === "right" &&
-                              "text-right tabular-nums",
-                            column.truncate && "max-w-xs truncate",
-                            column.kind === "metric" &&
-                              statusField &&
-                              (rowIsAvailable
-                                ? "font-medium  sui-color-positive"
-                                : "font-medium  sui-color-negative"),
+                            "h-3 w-3 flex-shrink-0",
+                            isSorted
+                              ? "opacity-100"
+                              : "opacity-35 group-hover:opacity-80",
                           )}
-                        >
-                          {isStatusColumn ? (
-                            <span
-                              className={cn(
-                                "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold",
-                                statusIsAvailable
-                                  ? "sui-bg-positive sui-color-active"
-                                  : statusIsUnavailable
-                                    ? "sui-bg-negative sui-color-active"
-                                    : "sui-bg-popup sui-color-active",
-                              )}
-                            >
-                              {statusIsAvailable ? (
-                                <CheckCircle2 className="w-3 h-3" />
-                              ) : (
-                                <AlertCircle className="w-3 h-3" />
-                              )}
-                              {value}
-                            </span>
-                          ) : (
-                            value
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                          aria-hidden="true"
+                        />
+                      </button>
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody className="divide-y sui-divide-weak">
+              {loading ? (
+                <MetricDetailTableStateRow
+                  columnCount={columnCount}
+                  kind="loading"
+                  title="Loading details"
+                  message={`Running ${activeConfig.metadata.title.toLowerCase()} for the selected time range.`}
+                />
+              ) : errorMessage ? (
+                <MetricDetailTableStateRow
+                  columnCount={columnCount}
+                  kind="error"
+                  title="Details unavailable"
+                  message={`${errorMessage} Open the query in Search to inspect the failure.`}
+                />
+              ) : rows.length === 0 ? (
+                <MetricDetailTableStateRow
+                  columnCount={columnCount}
+                  kind="empty"
+                  title="No results in this time range"
+                  message={`${activeConfig.emptyMessage} Try a wider range or open the query in Search.`}
+                />
+              ) : (
+                sortedRows.map((row, rowIndex) => {
+                  const rowStatus = statusField ? row[statusField] : "";
+                  const rowIsAvailable = rowStatus === availableStatus;
+                  const rowKey =
+                    (activeConfig.rowKeyField &&
+                      row[activeConfig.rowKeyField]) ||
+                    displayColumns
+                      .map((column) => row[column.field])
+                      .join("|") ||
+                    "detail-row";
+                  return (
+                    <tr
+                      key={`${rowKey}-${rowIndex}`}
+                      className="sui-bg-section"
+                    >
+                      {displayColumns.map((column, index) => {
+                        const value = row[column.field];
+                        const isStatusColumn = column.kind === "status";
+                        const statusIsAvailable = value === availableStatus;
+                        const statusIsUnavailable = value === unavailableStatus;
+                        return (
+                          <td
+                            key={column.field}
+                            className={cn(
+                              index === 0
+                                ? "px-5 font-medium sui-color-default"
+                                : "px-4 sui-color-default",
+                              "py-3",
+                              column.align === "right" &&
+                                "text-right tabular-nums",
+                              column.truncate && "max-w-xs truncate",
+                              column.kind === "metric" &&
+                                statusField &&
+                                (rowIsAvailable
+                                  ? "font-medium  sui-color-positive"
+                                  : "font-medium  sui-color-negative"),
+                            )}
+                          >
+                            {isStatusColumn ? (
+                              <span
+                                className={cn(
+                                  "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold",
+                                  statusIsAvailable
+                                    ? "sui-bg-notification-positive sui-color-active"
+                                    : statusIsUnavailable
+                                      ? "sui-bg-notification-negative sui-color-active"
+                                      : "sui-bg-popup sui-color-active",
+                                )}
+                              >
+                                {statusIsAvailable ? (
+                                  <CheckCircle2 className="w-3 h-3" />
+                                ) : (
+                                  <AlertCircle className="w-3 h-3" />
+                                )}
+                                {value}
+                              </span>
+                            ) : (
+                              value
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        ) : (
+          activeDefinition && (
+            <div
+              className="min-h-[420px] w-full sui-bg-page"
+              aria-labelledby={resultTitleId}
+              role="region"
+              data-detail-visualization={
+                activeConfig.defaultViz ?? "splunk.table"
+              }
+            >
+              <DashboardContextProvider
+                key={`${activeConfig.searchbaseId}:${range.earliest}:${range.latest}:${refreshToken}`}
+                preset={EnterpriseViewOnlyPreset}
+                initialDefinition={
+                  activeDefinition as unknown as React.ComponentProps<
+                    typeof DashboardContextProvider
+                  >["initialDefinition"]
+                }
+                initialMode="view"
+              >
+                <DashboardCore width="100%" height="420px" />
+              </DashboardContextProvider>
+            </div>
+          )
+        )}
       </div>
       <SearchbaseDrilldownGuidance
         metadata={activeConfig.metadata}
@@ -7367,157 +8364,160 @@ const SectionTitlesEditorModal: React.FC<SectionTitlesEditorModalProps> = ({
       renderInDocumentBody
       contentClassName="overflow-y-auto"
     >
-        <div className="space-y-5 px-5 py-5">
-          <div className="flex items-center justify-between gap-3">
-            <div className="text-sm font-semibold sui-color-default">
-              {layoutDraft.length} of {maxSections} visible
-            </div>
-            <button
-              type="button"
-              onClick={addSection}
-              disabled={!canAddSection || isSaving}
-              className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded",
-                "border sui-border-info sui-bg-section text-sm font-bold",
-                "sui-color-info sui-hover-bg-info",
-                (!canAddSection || isSaving) && "cursor-not-allowed opacity-50",
-              )}
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Add section
-            </button>
+      <div className="space-y-5 px-5 py-5">
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-sm font-semibold sui-color-default">
+            {layoutDraft.length} of {maxSections} visible
           </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            {editorSections.map((section) => {
-              const isVisible = activeSet.has(section);
-              const visibleIndex = layoutDraft.indexOf(section);
-              const canShow = !isVisible && layoutDraft.length < maxSections;
-              const canHide = isVisible && layoutDraft.length > 1;
-              const sectionKeyLabel = section
-                .replace(/_/g, " ")
-                .replace(/\b\w/g, (letter) => letter.toUpperCase());
-              return (
-                <div
-                  key={section}
-                  className={cn(
-                    "rounded-lg border p-3 transition-colors",
-                    isVisible
-                      ? "sui-border-info sui-bg-section"
-                      : "sui-border-weak sui-bg-page",
-                  )}
-                >
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <label
-                      htmlFor={`section-title-${section}`}
-                      className={cn(labelClass, "mb-0")}
-                    >
-                      {isVisible
-                        ? `Section ${visibleIndex + 1}`
-                        : "Hidden section"}
-                      <span className="ml-2 text-xs font-black  sui-color-muted">
-                        {sectionKeyLabel}
-                      </span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        isVisible ? hideSection(section) : showSection(section)
-                      }
-                      disabled={isSaving || (isVisible ? !canHide : !canShow)}
-                      title={isVisible ? "Hide section" : "Show section"}
-                      aria-label={
-                        isVisible
-                          ? `Hide ${draft[section] || defaults[section]}`
-                          : `Show ${draft[section] || defaults[section]}`
-                      }
-                      className={cn(
-                        "inline-flex h-8 items-center gap-1.5 rounded px-2",
-                        "text-sm font-bold transition-colors",
-                        isVisible
-                          ? "sui-bg-section  sui-hover-color-active sui-bg-section sui-color-default"
-                          : "sui-bg-info sui-color-info sui-hover-bg-info",
-                        (isSaving || (isVisible ? !canHide : !canShow)) &&
-                          "cursor-not-allowed opacity-50",
-                      )}
-                    >
-                      {isVisible ? (
-                        <EyeOff className="h-3.5 w-3.5" />
-                      ) : (
-                        <Eye className="h-3.5 w-3.5" />
-                      )}
-                      {isVisible ? "Hide" : "Show"}
-                    </button>
-                  </div>
-                  <input
-                    id={`section-title-${section}`}
-                    type="text"
-                    value={draft[section]}
-                    onChange={(e) => setTitle(section, e.target.value)}
-                    placeholder={defaults[section]}
-                    maxLength={48}
-                    className={inputClass}
-                  />
-                </div>
-              );
-            })}
-          </div>
-
-          {errorMessage && (
-            <div role="alert" className="flex items-start gap-2 rounded border px-3 py-2 text-sm font-semibold sui-border-negative sui-bg-negative sui-color-negative">
-              <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-              <span className="min-w-0 break-words">{errorMessage}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="sticky bottom-0 flex items-center justify-between gap-2 border-t sui-border-weak sui-bg-section px-5 py-4">
           <button
             type="button"
-            onClick={reset}
+            onClick={addSection}
+            disabled={!canAddSection || isSaving}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded",
+              "border sui-border-info sui-bg-section text-sm font-bold",
+              "sui-color-info sui-hover-bg-info",
+              (!canAddSection || isSaving) && "cursor-not-allowed opacity-50",
+            )}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add section
+          </button>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {editorSections.map((section) => {
+            const isVisible = activeSet.has(section);
+            const visibleIndex = layoutDraft.indexOf(section);
+            const canShow = !isVisible && layoutDraft.length < maxSections;
+            const canHide = isVisible && layoutDraft.length > 1;
+            const sectionKeyLabel = section
+              .replace(/_/g, " ")
+              .replace(/\b\w/g, (letter) => letter.toUpperCase());
+            return (
+              <div
+                key={section}
+                className={cn(
+                  "rounded-lg border p-3 transition-colors",
+                  isVisible
+                    ? "sui-border-info sui-bg-section"
+                    : "sui-border-weak sui-bg-page",
+                )}
+              >
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <label
+                    htmlFor={`section-title-${section}`}
+                    className={cn(labelClass, "mb-0")}
+                  >
+                    {isVisible
+                      ? `Section ${visibleIndex + 1}`
+                      : "Hidden section"}
+                    <span className="ml-2 text-xs font-black  sui-color-muted">
+                      {sectionKeyLabel}
+                    </span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      isVisible ? hideSection(section) : showSection(section)
+                    }
+                    disabled={isSaving || (isVisible ? !canHide : !canShow)}
+                    title={isVisible ? "Hide section" : "Show section"}
+                    aria-label={
+                      isVisible
+                        ? `Hide ${draft[section] || defaults[section]}`
+                        : `Show ${draft[section] || defaults[section]}`
+                    }
+                    className={cn(
+                      "inline-flex h-8 items-center gap-1.5 rounded border px-2",
+                      "text-sm font-bold transition-colors",
+                      isVisible
+                        ? "sui-border-default sui-bg-section sui-color-default sui-hover-bg-overlay sui-hover-color-active"
+                        : "sui-border-info sui-bg-section sui-color-active sui-hover-bg-notification-info",
+                      (isSaving || (isVisible ? !canHide : !canShow)) &&
+                        "cursor-not-allowed opacity-50",
+                    )}
+                  >
+                    {isVisible ? (
+                      <EyeOff className="h-3.5 w-3.5" />
+                    ) : (
+                      <Eye className="h-3.5 w-3.5" />
+                    )}
+                    {isVisible ? "Hide" : "Show"}
+                  </button>
+                </div>
+                <input
+                  id={`section-title-${section}`}
+                  type="text"
+                  value={draft[section]}
+                  onChange={(e) => setTitle(section, e.target.value)}
+                  placeholder={defaults[section]}
+                  maxLength={48}
+                  className={inputClass}
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        {errorMessage && (
+          <div
+            role="alert"
+            className="flex items-start gap-2 rounded border px-3 py-2 text-sm font-semibold sui-border-negative sui-bg-notification-negative sui-color-active"
+          >
+            <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+            <span className="min-w-0 break-words">{errorMessage}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="sticky bottom-0 flex items-center justify-between gap-2 border-t sui-border-weak sui-bg-section px-5 py-4">
+        <button
+          type="button"
+          onClick={reset}
+          disabled={isSaving}
+          className={cn(
+            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded border",
+            "sui-border-default text-sm font-bold",
+            "sui-color-default sui-color-active sui-hover-bg-page",
+            "sui-hover-bg-overlay transition-colors",
+            isSaving && "cursor-not-allowed opacity-50",
+          )}
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+          Reset
+        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onClose}
             disabled={isSaving}
             className={cn(
-              "inline-flex items-center gap-1.5 px-3 py-1.5 rounded border",
-              "sui-border-default text-sm font-bold",
-              "sui-color-default sui-color-active sui-hover-bg-page",
+              "px-3 py-1.5 rounded border sui-border-default",
+              "sui-border-default text-sm font-bold sui-color-default",
+              "sui-color-active sui-hover-bg-page",
               "sui-hover-bg-overlay transition-colors",
               isSaving && "cursor-not-allowed opacity-50",
             )}
           >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Reset
+            Cancel
           </button>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSaving}
-              className={cn(
-                "px-3 py-1.5 rounded border sui-border-default",
-                "sui-border-default text-sm font-bold sui-color-default",
-                "sui-color-active sui-hover-bg-page",
-                "sui-hover-bg-overlay transition-colors",
-                isSaving && "cursor-not-allowed opacity-50",
-              )}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={save}
-              disabled={isSaving}
-              className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-1.5",
-                "rounded sui-bg-accent text-sm font-bold sui-color-active",
-                "sui-hover-bg-accent transition-colors",
-                isSaving && "cursor-not-allowed opacity-60",
-              )}
-            >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              Save
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={save}
+            disabled={isSaving}
+            className={cn(
+              "inline-flex items-center gap-1.5 px-3 py-1.5",
+              "rounded text-sm font-bold scd-action-primary",
+              "transition-colors",
+              isSaving && "cursor-not-allowed opacity-60",
+            )}
+          >
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            Save
+          </button>
         </div>
+      </div>
     </WorkspaceModalShell>
   );
 };
@@ -7531,8 +8531,8 @@ interface BrandingEditorModalProps {
   onClose: () => void;
   override: BrandingOverride;
   /** Placeholder text shown in the title input when no override is set.
-   * Falls back through `customerName` (macro) → hardcoded fallback,
-   * matching the precedence rules in the live header. */
+   * Falls back through the configured workspace title/label → hardcoded
+   * fallback, matching the precedence rules in the live header. */
   titlePlaceholder: string;
   /** Placeholder text for the subtitle input. Always the
    * out-of-the-box default ("Splunk Secure Networking Essentials"). */
@@ -7540,24 +8540,23 @@ interface BrandingEditorModalProps {
   /** Image src to display in the "current logo" preview when no
    * override logo is set. Lets the user see what they're replacing. */
   logoFallbackSrc: string;
-  onSave: (next: BrandingOverride) => boolean;
+  onSave: (next: BrandingOverride) => boolean | Promise<boolean>;
   onResetToDefaults: () => void;
 }
 
 /**
- * Centered modal for editing the per-user header branding override
- * (title, subtitle, logo). Title and subtitle are plain text inputs;
- * the logo is a file upload that's encoded to a `data:` URI and
- * stored in localStorage by the parent's `useBrandingOverride` hook.
+ * Centered modal for editing the shared workspace header (title,
+ * subtitle, logo). Title and subtitle are plain text inputs; the logo
+ * is a file upload encoded to a `data:` URI and saved on the workspace
+ * stanza so every viewer sees the same branding.
  *
  * Behaviour notes:
  *  - "Save" persists whatever's in the form fields. Empty strings
- *    are treated as "use the default" — the hook strips them so
- *    the live header re-derives from the macro / hardcoded
- *    constants. Returning `false` from `onSave` (e.g. logo too big)
- *    keeps the modal open with an inline error.
- *  - "Reset to defaults" wipes the override entirely (storage key
- *    removed) and closes the modal.
+ *    fall back to the workspace label and packaged subtitle.
+ *    Returning `false` from `onSave` (e.g. logo too big) keeps the
+ *    modal open with an inline error.
+ *  - "Reset to defaults" restores packaged header fields and closes
+ *    the modal.
  *  - "Cancel" / Esc / backdrop click discards local form changes.
  *  - The file input rejects anything outside the accepted MIME
  *    list, and the FileReader path enforces a 256 KiB cap on the
@@ -7586,6 +8585,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
     override.logoDataUri,
   );
   const [errorMessage, setErrorMessage] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Re-sync the form when the modal is (re)opened — picks up any
@@ -7645,23 +8645,31 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (isSaving) return;
     const next: BrandingOverride = {
       title: titleField.trim() || undefined,
       subtitle: subtitleField.trim() || undefined,
       logoDataUri,
     };
-    const ok = onSave(next);
-    if (!ok) {
-      setErrorMessage(
-        "Could not save branding (logo may exceed the size limit). Please try a smaller image.",
-      );
-      return;
+    setIsSaving(true);
+    try {
+      const ok = await onSave(next);
+      if (!ok) {
+        setErrorMessage(
+          "Could not save branding (logo may exceed the size limit). Please try a smaller image.",
+        );
+        return;
+      }
+      onClose();
+    } finally {
+      setIsSaving(false);
     }
-    onClose();
   };
 
-  const previewLogoSrc = logoDataUri || logoFallbackSrc;
+  const previewLogoSrc =
+    normalizeSharedImageSource(logoDataUri) ||
+    normalizeSharedImageSource(logoFallbackSrc);
   const acceptList = BRANDING_ACCEPTED_LOGO_MIME_TYPES.join(",");
 
   return (
@@ -7675,152 +8683,151 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
       renderInDocumentBody
       contentClassName="overflow-y-auto"
     >
-        <div className="space-y-5 px-5 py-5">
-          {/* Title */}
-          <div>
-            <label
-              htmlFor="branding-title-input"
-              className="mb-1.5 block text-sm font-bold sui-color-default"
-            >
-              Title
-            </label>
-            <input
-              id="branding-title-input"
-              type="text"
-              value={titleField}
-              onChange={(e) => setTitleField(e.target.value)}
-              placeholder={titlePlaceholder}
-              maxLength={120}
-              className="w-full px-2 py-1.5 text-sm  sui-bg-popup border  sui-border-default rounded  sui-color-active sui-placeholder-muted focus:outline-none focus:ring-1 sui-focus-ring"
-            />
-            <p className="mt-1.5 text-sm leading-5 sui-color-muted">
-              Leave blank to use the value from the
-              <code className="mx-1 px-1 py-0.5  sui-bg-popup rounded">
-                [customer_name]
-              </code>
-              macro.
-            </p>
-          </div>
+      <div className="space-y-5 px-5 py-5">
+        {/* Title */}
+        <div>
+          <label
+            htmlFor="branding-title-input"
+            className="mb-1.5 block text-sm font-bold sui-color-default"
+          >
+            Title
+          </label>
+          <input
+            id="branding-title-input"
+            type="text"
+            value={titleField}
+            onChange={(e) => setTitleField(e.target.value)}
+            placeholder={titlePlaceholder}
+            maxLength={120}
+            className="w-full px-2 py-1.5 text-sm  sui-bg-popup border  sui-border-default rounded  sui-color-active sui-placeholder-muted focus:outline-none focus:ring-1 sui-focus-ring"
+          />
+          <p className="mt-1.5 text-sm leading-5 sui-color-muted">
+            Leave blank to use the title configured for this workspace.
+          </p>
+        </div>
 
-          {/* Subtitle */}
-          <div>
-            <label
-              htmlFor="branding-subtitle-input"
-              className="mb-1.5 block text-sm font-bold sui-color-default"
-            >
-              Subtitle
-            </label>
-            <input
-              id="branding-subtitle-input"
-              type="text"
-              value={subtitleField}
-              onChange={(e) => setSubtitleField(e.target.value)}
-              placeholder={subtitlePlaceholder}
-              maxLength={120}
-              className="w-full px-2 py-1.5 text-sm  sui-bg-popup border  sui-border-default rounded  sui-color-active sui-placeholder-muted focus:outline-none focus:ring-1 sui-focus-ring"
-            />
-            <p className="mt-1.5 text-sm leading-5 sui-color-muted">
-              Leave blank for the default (&ldquo;{subtitlePlaceholder}&rdquo;).
-            </p>
-          </div>
+        {/* Subtitle */}
+        <div>
+          <label
+            htmlFor="branding-subtitle-input"
+            className="mb-1.5 block text-sm font-bold sui-color-default"
+          >
+            Subtitle
+          </label>
+          <input
+            id="branding-subtitle-input"
+            type="text"
+            value={subtitleField}
+            onChange={(e) => setSubtitleField(e.target.value)}
+            placeholder={subtitlePlaceholder}
+            maxLength={120}
+            className="w-full px-2 py-1.5 text-sm  sui-bg-popup border  sui-border-default rounded  sui-color-active sui-placeholder-muted focus:outline-none focus:ring-1 sui-focus-ring"
+          />
+          <p className="mt-1.5 text-sm leading-5 sui-color-muted">
+            Leave blank for the default (&ldquo;{subtitlePlaceholder}&rdquo;).
+          </p>
+        </div>
 
-          {/* Logo */}
-          <div>
-            <span className="mb-1.5 block text-sm font-bold sui-color-default">
-              Logo
-            </span>
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 sui-bg-accent rounded-lg flex items-center justify-center sui-color-active overflow-hidden p-1 flex-shrink-0">
-                {previewLogoSrc ? (
-                  <img
-                    src={previewLogoSrc}
-                    alt="Logo preview"
-                    className="w-full h-full object-contain"
-                  />
-                ) : (
-                  <span className="text-center text-xs font-bold leading-tight">
-                    No logo
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-col gap-1.5">
+        {/* Logo */}
+        <div>
+          <span className="mb-1.5 block text-sm font-bold sui-color-default">
+            Logo
+          </span>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 sui-bg-notification-info rounded-lg flex items-center justify-center sui-color-active overflow-hidden p-1 flex-shrink-0">
+              {previewLogoSrc ? (
+                <img
+                  src={previewLogoSrc}
+                  alt="Logo preview"
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <span className="text-center text-xs font-bold leading-tight">
+                  No logo
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex min-h-9 items-center gap-1.5 rounded border sui-border-info sui-bg-section px-3 text-sm font-bold sui-color-info transition-colors sui-hover-bg-info"
+              >
+                <Upload className="w-3 h-3" />
+                {logoDataUri ? "Replace logo" : "Upload logo"}
+              </button>
+              {logoDataUri ? (
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex min-h-9 items-center gap-1.5 rounded border sui-border-info sui-bg-section px-3 text-sm font-bold sui-color-info transition-colors sui-hover-bg-info"
+                  onClick={handleClearLogo}
+                  className="text-sm sui-color-default underline sui-hover-color-active"
                 >
-                  <Upload className="w-3 h-3" />
-                  {logoDataUri ? "Replace logo" : "Upload logo"}
+                  Clear (use default)
                 </button>
-                {logoDataUri ? (
-                  <button
-                    type="button"
-                    onClick={handleClearLogo}
-                    className="text-sm sui-color-default underline sui-hover-color-active"
-                  >
-                    Clear (use default)
-                  </button>
-                ) : null}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept={acceptList}
-                  onChange={handleLogoUpload}
-                  className="hidden"
-                />
-              </div>
+              ) : null}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept={acceptList}
+                onChange={handleLogoUpload}
+                className="hidden"
+              />
             </div>
-            <p className="mt-1.5 text-sm leading-5 sui-color-muted">
-              PNG, SVG, JPEG, WebP, or GIF. Max{" "}
-              {Math.round(BRANDING_LOGO_DATA_URI_MAX_BYTES / 1024)} KB after
-              encoding. Stored in your browser only.
-            </p>
           </div>
-
-          {errorMessage ? (
-            <div
-              role="alert"
-              className="rounded border sui-border-negative sui-bg-negative px-3 py-2 text-sm sui-color-negative"
-            >
-              {errorMessage}
-            </div>
-          ) : null}
+          <p className="mt-1.5 text-sm leading-5 sui-color-muted">
+            PNG, SVG, JPEG, WebP, or GIF. Max{" "}
+            {Math.round(BRANDING_LOGO_DATA_URI_MAX_BYTES / 1024)} KB after
+            encoding. Saved on this workspace for every viewer.
+          </p>
         </div>
 
-        <div className="sticky bottom-0 flex items-center justify-between gap-2 border-t sui-border-weak sui-bg-section px-5 py-4">
+        {errorMessage ? (
+          <div
+            role="alert"
+            className="rounded border sui-border-negative sui-bg-notification-negative px-3 py-2 text-sm sui-color-active"
+          >
+            {errorMessage}
+          </div>
+        ) : null}
+      </div>
+
+      <div className="sticky bottom-0 flex items-center justify-between gap-2 border-t sui-border-weak sui-bg-section px-5 py-4">
+        <button
+          type="button"
+          onClick={onResetToDefaults}
+          className="text-sm font-bold sui-color-default underline sui-hover-color-negative"
+        >
+          Reset to defaults
+        </button>
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={onResetToDefaults}
-            className="text-sm font-bold sui-color-default underline sui-hover-color-negative"
+            onClick={onClose}
+            className="rounded border sui-border-default sui-bg-page px-3 py-2 text-sm font-bold sui-color-default transition-colors sui-hover-bg-overlay"
           >
-            Reset to defaults
+            Cancel
           </button>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded border sui-border-default sui-bg-page px-3 py-2 text-sm font-bold sui-color-default transition-colors sui-hover-bg-overlay"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              className="rounded sui-bg-accent px-3 py-2 text-sm font-bold sui-color-active transition-colors sui-hover-bg-accent"
-            >
-              Save
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => {
+              void handleSave();
+            }}
+            disabled={isSaving}
+            className="rounded px-3 py-2 text-sm font-bold scd-action-primary transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSaving ? "Saving…" : "Save"}
+          </button>
         </div>
+      </div>
     </WorkspaceModalShell>
   );
 };
 
-// Map position relative to the metric tile column. Persisted to
-// `scd_overview_map_pos` in localStorage; cleared by the factory reset.
-// See the splitter / map-position useState block in the Overview page
-// for the wiring and the rationale on defaulting to `right` (Build 83).
+// Map position relative to the metric tile column. Shared workspace
+// configuration is authoritative; leftover localStorage keys are
+// cleared by the personal-customization reset.
 type MapPosition = "right" | "below" | "above";
+type MapHeightMode = "match-workspace" | "compact";
 
 type MapLayout = MapPosition | "hidden";
 
@@ -7864,7 +8871,14 @@ const MapLayoutRadioBar: React.FC<MapLayoutRadioBarProps> = ({
   />
 );
 
-const KpiCard: React.FC<KpiCardProps> = ({ label, value, status }) => {
+const KpiCard: React.FC<KpiCardProps> = ({
+  label,
+  value,
+  status,
+  onOpenInSearch,
+  searchbaseId,
+  onConfigure,
+}) => {
   const theme = useSplunkTheme();
   const displayValue = formatMapKpiValue(value);
   const statusColor = {
@@ -7877,6 +8891,14 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, value, status }) => {
   return (
     <Card>
       <Card.Header
+        actions={() => (
+          <TileActionMenu
+            label={label}
+            onOpenInSearch={onOpenInSearch}
+            searchbaseId={searchbaseId}
+            onConfigure={onConfigure}
+          />
+        )}
         title={
           <Heading level={3} data-sui-heading-variant="title3">
             {label}
@@ -7932,7 +8954,14 @@ const InsightsWorkspacePage: React.FC = () => {
     };
   }, []);
 
-  if (!bundle) {
+  const workspace = bundle ? getWorkspaceFromLocation(bundle.workspaces) : null;
+
+  useEffect(() => {
+    if (!bundle || !workspace) return;
+    rememberLastWorkspace(workspace.id, bundle.workspaces);
+  }, [bundle, workspace?.id]);
+
+  if (!bundle || !workspace) {
     return (
       <div className="flex min-h-screen items-center justify-center  text-sm font-semibold  sui-bg-page sui-color-default">
         Loading Insights workspaces…
@@ -7940,7 +8969,6 @@ const InsightsWorkspacePage: React.FC = () => {
     );
   }
 
-  const workspace = getWorkspaceFromLocation(bundle.workspaces);
   return (
     <InsightsWorkspaceRuntime
       key={workspace.id}
@@ -7948,10 +8976,36 @@ const InsightsWorkspacePage: React.FC = () => {
       workspaces={bundle.workspaces}
       initialLayout={bundle.layouts[workspace.id] ?? {}}
       layouts={bundle.layouts}
+      signalRails={bundle.signalRails}
       signalTickerDefault={
         bundle.signalRails[workspace.id] ??
         getDefaultSignalTickerConfig(workspace.id)
       }
+      onWorkspaceUpdated={(updated) => {
+        setBundle((current) =>
+          current
+            ? {
+                ...current,
+                workspaces: current.workspaces.map((candidate) =>
+                  candidate.id === updated.id ? updated : candidate,
+                ),
+              }
+            : current,
+        );
+      }}
+      onSignalRailUpdated={(workspaceId, config) => {
+        setBundle((current) =>
+          current
+            ? {
+                ...current,
+                signalRails: {
+                  ...current.signalRails,
+                  [workspaceId]: config,
+                },
+              }
+            : current,
+        );
+      }}
     />
   );
 };

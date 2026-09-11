@@ -14,12 +14,12 @@
 @tailwind components;
 @tailwind utilities;
 
-:is(#scan-root, #configure-tile-drawer),
-:is(#scan-root, #configure-tile-drawer) * {
+:is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"]),
+:is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"]) * {
   box-sizing: border-box;
 }
 
-#scan-root {
+:is(#scan-root, [data-workspace-modal-portal="document"]) {
   width: 100%;
   max-width: 100%;
   min-width: 0;
@@ -32,7 +32,7 @@
   font-size: var(--sui-font-size-default);
 }
 
-#configure-tile-drawer {
+.scd-insights-layer-content {
   color: var(--sui-content-default);
   font-family: var(--sui-font-family);
   font-size: var(--sui-font-size-default);
@@ -40,7 +40,7 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-:is(#scan-root, #configure-tile-drawer) :where(h1, h2, h3, h4, h5, h6) {
+:is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"]) :where(h1, h2, h3, h4, h5, h6) {
   color: var(--sui-content-active);
   font-family: var(--sui-font-family-title);
 }
@@ -48,7 +48,7 @@
 /* Native controls still use Tailwind for layout. SUI components supply their
  * own focus treatment; this tokenized fallback protects custom controls that
  * intentionally suppress the browser outline. */
-:is(#scan-root, #configure-tile-drawer)
+:is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"])
   :where(button, a[href], input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--sui-focus-color);
   outline-offset: 2px;
@@ -72,12 +72,12 @@
 #scan-root [data-section-density="compact"] .min-h-\[118px\] {
   min-height: 92px;
 }
-:is(#scan-root, #configure-tile-drawer) button:has(> svg:only-child) {
+:is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"]) button:has(> svg:only-child) {
   min-height: 28px;
   min-width: 28px;
 }
 
-:is(#scan-root, #configure-tile-drawer) :where(button, input, select, textarea):disabled {
+:is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"]) :where(button, input, select, textarea):disabled {
   cursor: not-allowed;
 }
 
@@ -95,6 +95,24 @@ body.scd-overview-active {
   max-width: 100%;
   min-width: 0;
   overflow-x: hidden;
+}
+
+/* Presentation mode keeps only the React dashboard visible. Native browser
+ * fullscreen is requested when available; this fixed overlay is the reliable
+ * fallback when enterprise browser policy blocks the Fullscreen API. */
+html.scd-presentation-mode,
+body.scd-presentation-mode {
+  overflow: hidden !important;
+}
+
+body.scd-presentation-mode #scan-root {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483000 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
 }
 
 body.scd-overview-active .dashboard,
@@ -143,7 +161,7 @@ body.scd-overview-active .panel-body,
 
 #scan-root .scd-c3-atmosphere {
   background-color: #0b1118 !important;
-  background-image: url("../../static/app/splunk-cisco-dashboards/c3-atmosphere.svg") !important;
+  background-image: url("/static/app/splunk-cisco-dashboards/c3-atmosphere.svg") !important;
   background-position: center top !important;
   background-repeat: no-repeat !important;
   background-size: cover !important;
@@ -173,26 +191,6 @@ body.scd-overview-active .panel-body,
 
 #scan-root .scd-c3-surface .scd-c3-panel {
   background: transparent;
-}
-
-#scan-root .scd-c3-surface .scd-signal-rail-ticker {
-  background: linear-gradient(
-    180deg,
-    rgb(19 26 35 / 97%),
-    rgb(15 17 23 / 94%)
-  ) !important;
-  border-color: var(--scd-c3-toolbar-border) !important;
-  box-shadow: 0 3px 8px rgb(0 0 0 / 8%);
-  backdrop-filter: blur(8px) saturate(106%);
-}
-
-#scan-root
-  .scd-c3-surface
-  .scd-signal-rail-ticker[data-variant="one-cisco-glass"] {
-  background: transparent !important;
-  border-color: transparent !important;
-  box-shadow: none;
-  backdrop-filter: none;
 }
 
 /* C3 uses sentence-case page and card hierarchy. Preserve customer-supplied
@@ -278,17 +276,17 @@ body.scd-overview-active .panel-body,
   }
 }
 
-:is(#scan-root, #configure-tile-drawer) h1,
-:is(#scan-root, #configure-tile-drawer) h2,
-:is(#scan-root, #configure-tile-drawer) h3,
-:is(#scan-root, #configure-tile-drawer) h4,
-:is(#scan-root, #configure-tile-drawer) h5,
-:is(#scan-root, #configure-tile-drawer) h6,
-:is(#scan-root, #configure-tile-drawer) p {
+:is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"]) h1,
+:is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"]) h2,
+:is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"]) h3,
+:is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"]) h4,
+:is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"]) h5,
+:is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"]) h6,
+:is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"]) p {
   margin: 0;
 }
 
-:where(#scan-root, #configure-tile-drawer)
+:where(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"])
   :where(
     button:not([data-test="button"]):not([data-test="select"]):not(
         [data-test="multiselect"]
@@ -305,22 +303,22 @@ body.scd-overview-active .panel-body,
   color: inherit;
 }
 
-:is(#scan-root, #configure-tile-drawer) input {
+:is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"]) input {
   font-family: inherit;
 }
 
-:is(#scan-root, #configure-tile-drawer) select,
-:is(#scan-root, #configure-tile-drawer) textarea {
+:is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"]) select,
+:is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"]) textarea {
   font-family: inherit;
 }
 
-:is(#scan-root, #configure-tile-drawer) a {
+:is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"]) a {
   text-decoration: none;
   color: inherit;
 }
 
-:is(#scan-root, #configure-tile-drawer) ul,
-:is(#scan-root, #configure-tile-drawer) ol {
+:is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"]) ul,
+:is(#scan-root, .scd-insights-layer-content, [data-workspace-modal-portal="document"]) ol {
   margin: 0;
   padding: 0;
   list-style: none;

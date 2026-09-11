@@ -10,6 +10,7 @@
 import React, {
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useReducer,
   useRef,
@@ -20,6 +21,7 @@ import { useSplunkTheme, variables } from "@splunk/themes";
 import styled, { css } from "styled-components";
 import Button from "@splunk/react-ui/Button";
 import Popover from "@splunk/react-ui/Popover";
+import ScreenReaderContent from "@splunk/react-ui/ScreenReaderContent";
 import Select from "@splunk/react-ui/Select";
 import Slider from "@splunk/react-ui/Slider";
 import {
@@ -65,6 +67,23 @@ import {
   ZoomOut,
 } from "@/common/icons/SuiIcon";
 import { cn } from "@/common/lib/utils";
+import { useAppThemeControls } from "@/common/theme/AppThemeProvider";
+import {
+  defaultMapTileStyleId,
+  mapTileStyleIdAfterThemeChange,
+  MAP_TILE_STYLE_PRESETS,
+  type MapTileStyleId,
+} from "@/common/maps/mapTileStyles";
+import {
+  buildThousandEyesTestLink,
+  normalizeThousandEyesLink,
+  THOUSAND_EYES_APP_URL,
+} from "@/common/lib/thousandEyesUrl";
+import {
+  MAX_CUSTOMER_TOPOLOGY_LINKS,
+  MAX_CUSTOMER_TOPOLOGY_SITE_ALIASES,
+  MAX_CUSTOMER_TOPOLOGY_SITES,
+} from "@/common/lib/customerTopologyBounds";
 import {
   readUserScopedStorageItem,
   userScopedStorageKey,
@@ -161,10 +180,11 @@ const MapTopRightActions = styled.div`
   pointer-events: auto;
 `;
 
-const MapBottomRightActions = styled.div`
+const MapBottomRightActions = styled.div<{ $reserveCommandSummary: boolean }>`
   position: absolute;
   right: ${variables.spacingMedium};
-  bottom: ${variables.spacingMedium};
+  bottom: ${({ $reserveCommandSummary }) =>
+    $reserveCommandSummary ? "84px" : "12px"};
   z-index: 1100;
   display: flex;
   flex-direction: column;
@@ -231,6 +251,19 @@ const MapLegendToggleButton = styled(Button)`
   }
 `;
 
+const MapCreditsButton = styled(Button)`
+  && {
+    ${mapControlChrome}
+    margin: 0;
+    padding: ${variables.spacingXSmall} ${variables.spacingSmall};
+  }
+
+  &&:focus,
+  &&:focus-visible {
+    box-shadow: ${variables.focusShadow};
+  }
+`;
+
 const MapLegendLabel = styled.span`
   color: inherit;
   font-size: ${variables.fontSizeSmall};
@@ -250,16 +283,10 @@ const MotionSettingsCard = styled(OneCdGlassCard)`
   padding: ${variables.spacingLarge};
 `;
 
-delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })
-  ._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-  iconUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-  shadowUrl:
-    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-});
+const MapCreditsCard = styled(OneCdGlassCard)`
+  width: 15rem;
+  padding: ${variables.spacingMedium};
+`;
 
 export const CUSTOMER_TOPOLOGY: CustomerTopology = {
   id: "customer-site-connectivity",
@@ -1537,6 +1564,7 @@ const optionalTextArray = (value: unknown): string[] => {
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(text.slice(0, 80));
+    if (out.length >= MAX_CUSTOMER_TOPOLOGY_SITE_ALIASES) break;
   }
   return out;
 };
@@ -1824,15 +1852,6 @@ const selectAutoTeMatch = (
   return best;
 };
 
-const THOUSAND_EYES_APP_URL = "https://app.thousandeyes.com/";
-
-const buildThousandEyesTestLink = (teTestId?: string): string | undefined => {
-  if (!teTestId) return undefined;
-  return `https://app.thousandeyes.com/network-app-synthetics/views/?testId=${encodeURIComponent(
-    teTestId,
-  )}`;
-};
-
 interface ThousandEyesA2AEndpointOption {
   key: string;
   label: string;
@@ -1943,10 +1962,11 @@ const sanitizeTopology = (
   const fallbackLinksById = new Map(
     fallback.links.map((link) => [link.id, link]),
   );
-  const rawSites =
+  const rawSites = (
     Array.isArray(source.sites) && source.sites.length > 0
-      ? source.sites
-      : fallback.sites;
+      ? source.sites.filter(isRecord)
+      : fallback.sites
+  ).slice(0, MAX_CUSTOMER_TOPOLOGY_SITES) as Array<Partial<TopologySite>>;
   const usedSiteIds = new Set<string>();
   const sites = rawSites.map((site, index) => {
     const id = uniqueId(
@@ -2025,7 +2045,9 @@ const sanitizeTopology = (
   });
 
   const validSiteIds = new Set(sites.map((site) => site.id));
-  const rawLinks = Array.isArray(source.links) ? source.links : fallback.links;
+  const rawLinks = (
+    Array.isArray(source.links) ? source.links.filter(isRecord) : fallback.links
+  ).slice(0, MAX_CUSTOMER_TOPOLOGY_LINKS) as Array<Partial<TopologyLink>>;
   const usedLinkIds = new Set<string>();
   const links = rawLinks
     .map((link, index) => {
@@ -2111,7 +2133,7 @@ const sanitizeTopology = (
         normalized.endpointDevices = endpointDevices;
       }
       const teLink =
-        optionalText(link.teLink) ??
+        normalizeThousandEyesLink(optionalText(link.teLink)) ??
         (isLegacyFactoryLink ? fallbackLinkById?.teLink : undefined);
       if (teLink) normalized.teLink = teLink;
       const lastUpdated = optionalText(link.lastUpdated);
@@ -2228,39 +2250,6 @@ const escapeRegex = (value: string): string =>
 const includesPlacementPhrase = (query: string, alias: string): boolean =>
   new RegExp(`(^|\\s)${escapeRegex(alias)}($|\\s)`).test(query);
 
-const buildPlacementLookupQueries = (value: string): string[] => {
-  const trimmed = value.trim();
-  if (!trimmed) return [];
-
-  const queries: string[] = [];
-  const add = (candidate: string) => {
-    const normalized = candidate.replace(/\s+/g, " ").trim();
-    if (normalized && !queries.includes(normalized)) queries.push(normalized);
-  };
-
-  add(trimmed);
-
-  const commaParts = trimmed
-    .split(",")
-    .map((part) => part.trim())
-    .filter(Boolean);
-  if (commaParts.length > 1) {
-    add(commaParts.slice(-2).join(", "));
-    add(commaParts[0]);
-  }
-
-  const words = trimmed
-    .replace(/[^a-zA-Z0-9\s,-]+/g, " ")
-    .split(/\s+/)
-    .map((word) => word.trim())
-    .filter(Boolean);
-  for (let count = Math.min(4, words.length); count >= 1; count -= 1) {
-    add(words.slice(-count).join(" "));
-  }
-
-  return queries;
-};
-
 const placementShortName = (name: string): string => {
   const words = normalizePlacementQuery(name)
     .replace(/,/g, " ")
@@ -2345,88 +2334,6 @@ const resolveSitePlacement = (value: string): SitePlacement | null => {
 
   return bestPreset ? sitePlacementFromPreset(bestPreset.preset) : null;
 };
-
-const pickRemoteGeocodeText = (
-  query: string,
-  address: Record<string, unknown>,
-): string => {
-  const city =
-    textValue(address.city) ||
-    textValue(address.town) ||
-    textValue(address.village) ||
-    textValue(address.hamlet) ||
-    textValue(address.municipality) ||
-    textValue(address.county);
-  const region = textValue(address.state);
-  const country = textValue(address.country);
-  const suffix = region || country;
-  if (
-    city &&
-    suffix &&
-    normalizePlacementQuery(city) !== normalizePlacementQuery(suffix)
-  ) {
-    return `${city}, ${suffix}`;
-  }
-  return city || query;
-};
-
-const resolveRemoteSitePlacement = async (
-  value: string,
-): Promise<SitePlacement | null> => {
-  if (typeof window === "undefined" || typeof window.fetch !== "function") {
-    return null;
-  }
-
-  for (const query of buildPlacementLookupQueries(value)) {
-    try {
-      const response = await window.fetch(
-        `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&q=${encodeURIComponent(
-          query,
-        )}`,
-        {
-          headers: {
-            Accept: "application/json",
-          },
-        },
-      );
-      if (!response.ok) continue;
-      const rows = (await response.json()) as unknown;
-      const first = Array.isArray(rows) ? rows[0] : null;
-      if (!isRecord(first)) continue;
-
-      const lat = Number(first.lat);
-      const lng = Number(first.lon);
-      if (
-        !Number.isFinite(lat) ||
-        !Number.isFinite(lng) ||
-        lat < -85 ||
-        lat > 85 ||
-        lng < -180 ||
-        lng > 180
-      ) {
-        continue;
-      }
-
-      const address = isRecord(first.address) ? first.address : {};
-      const name = pickRemoteGeocodeText(query, address);
-      return {
-        name,
-        shortName: placementShortName(name),
-        lat,
-        lng,
-      };
-    } catch {
-      // A failed geocoder request should not block manual coordinate entry.
-    }
-  }
-
-  return null;
-};
-
-const resolveSitePlacementWithFallback = async (
-  value: string,
-): Promise<SitePlacement | null> =>
-  resolveSitePlacement(value) ?? resolveRemoteSitePlacement(value);
 
 const looksLikeGeneratedSiteName = (value: string): boolean =>
   /^site\s+\d+$/i.test(value.trim());
@@ -3112,64 +3019,6 @@ const topologyAnimationCss = `
     }
 `;
 
-interface TileLayerPreset {
-  id: "street" | "satellite" | "terrain" | "dark-ops" | "navigation";
-  label: string;
-  light: string;
-  dark: string;
-  attribution: string;
-}
-
-const TILE_LAYER_PRESETS: TileLayerPreset[] = [
-  {
-    id: "street",
-    label: "Street",
-    light: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-    attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
-  },
-  {
-    id: "satellite",
-    label: "Satellite",
-    light:
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    dark: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-    attribution: "Tiles &copy; Esri",
-  },
-  {
-    id: "terrain",
-    label: "Terrain",
-    light:
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
-    dark: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
-    attribution: "Tiles &copy; Esri",
-  },
-  {
-    id: "dark-ops",
-    label: "Dark Ops",
-    light:
-      "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
-    dark: "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
-    attribution: "Tiles &copy; Esri",
-  },
-  {
-    id: "navigation",
-    label: "Navigation",
-    light:
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
-    dark: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
-    attribution: "Tiles &copy; Esri",
-  },
-];
-
-const DEFAULT_LIGHT_TILE_LAYER_PRESET_ID: TileLayerPreset["id"] = "terrain";
-const DEFAULT_DARK_TILE_LAYER_PRESET_ID: TileLayerPreset["id"] = "street";
-
-const defaultTileLayerPresetId = (isDark: boolean): TileLayerPreset["id"] =>
-  isDark
-    ? DEFAULT_DARK_TILE_LAYER_PRESET_ID
-    : DEFAULT_LIGHT_TILE_LAYER_PRESET_ID;
-
 const escapeHtml = (value: string): string =>
   value.replace(/[&<>"']/g, (ch) => {
     switch (ch) {
@@ -3591,12 +3440,14 @@ const parseLinkRow = (
           "thousandeyes.test.id",
         ]),
       ) ??
-      textFromRow(row, [
-        "teLink",
-        "te_link",
-        "thousandeyesPermalink",
-        "thousandeyes.permalink",
-      ]) ??
+      normalizeThousandEyesLink(
+        textFromRow(row, [
+          "teLink",
+          "te_link",
+          "thousandeyesPermalink",
+          "thousandeyes.permalink",
+        ]),
+      ) ??
       base.teLink,
     lastUpdated:
       textFromRow(row, ["lastUpdated", "last_updated", "_time"]) ??
@@ -3631,7 +3482,9 @@ const parseTeA2ACandidateRow = (
   const status =
     normalizeStatus(textFromRow(row, ["status", "linkStatus"])) ?? "unknown";
   const teLink =
-    textFromRow(row, ["teLink", "te_link", "thousandeyes.permalink"]) ??
+    normalizeThousandEyesLink(
+      textFromRow(row, ["teLink", "te_link", "thousandeyes.permalink"]),
+    ) ??
     buildThousandEyesTestLink(teTestId);
 
   return {
@@ -5621,7 +5474,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
           onClick={() => zoomAtCenter(1 / COMMAND_ZOOM_STEP)}
           title="Zoom out"
           aria-label="Zoom out command topology"
-          className="rounded-md p-1.5 transition-colors sui-hover-bg-accent focus:outline-none focus-visible:ring-1 sui-focus-visible-ring disabled:cursor-not-allowed disabled:opacity-35"
+          className="rounded-md p-1.5 transition-colors sui-hover-bg-overlay focus:outline-none focus-visible:ring-1 sui-focus-visible-ring disabled:cursor-not-allowed disabled:opacity-35"
         >
           <ZoomOut className="h-4 w-4" />
         </button>
@@ -5638,7 +5491,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
           onClick={() => zoomAtCenter(COMMAND_ZOOM_STEP)}
           title="Zoom in"
           aria-label="Zoom in command topology"
-          className="rounded-md p-1.5 transition-colors sui-hover-bg-accent focus:outline-none focus-visible:ring-1 sui-focus-visible-ring disabled:cursor-not-allowed disabled:opacity-35"
+          className="rounded-md p-1.5 transition-colors sui-hover-bg-overlay focus:outline-none focus-visible:ring-1 sui-focus-visible-ring disabled:cursor-not-allowed disabled:opacity-35"
         >
           <ZoomIn className="h-4 w-4" />
         </button>
@@ -5653,7 +5506,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
           onClick={() => scheduleViewport(COMMAND_FIT_VIEWPORT)}
           title="Fit topology"
           aria-label="Fit command topology to view"
-          className="rounded-md p-1.5 transition-colors sui-hover-bg-accent focus:outline-none focus-visible:ring-1 sui-focus-visible-ring"
+          className="rounded-md p-1.5 transition-colors sui-hover-bg-overlay focus:outline-none focus-visible:ring-1 sui-focus-visible-ring"
         >
           <Maximize2 className="h-4 w-4" />
         </button>
@@ -5730,7 +5583,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   onOpenInSearch,
   onSummaryMetricsChange,
 }) => {
-  const { colorScheme } = useSplunkTheme();
+  const { colorScheme } = useAppThemeControls();
   const isDark = colorScheme === "dark";
   const [selected, setSelected] = useState<SelectedTarget | null>(null);
   const [surfaceMode, setSurfaceMode] = useState<TopologySurfaceMode>("geo");
@@ -5759,9 +5612,23 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   const [motionSettingsOpen, setMotionSettingsOpen] = useState(false);
   const [motionSettingsAnchor, setMotionSettingsAnchor] =
     useState<HTMLAnchorElement | HTMLButtonElement | null>(null);
-  const [tilePresetId, setTilePresetId] = useState<TileLayerPreset["id"]>(() =>
-    defaultTileLayerPresetId(isDark),
+  const [mapCreditsOpen, setMapCreditsOpen] = useState(false);
+  const [mapCreditsAnchor, setMapCreditsAnchor] =
+    useState<HTMLAnchorElement | HTMLButtonElement | null>(null);
+  const [tilePresetId, setTilePresetId] = useState<MapTileStyleId>(() =>
+    defaultMapTileStyleId(isDark),
   );
+  const previousIsDarkRef = useRef(isDark);
+
+  useEffect(() => {
+    const previousIsDark = previousIsDarkRef.current;
+    if (previousIsDark === isDark) return;
+
+    setTilePresetId((current) =>
+      mapTileStyleIdAfterThemeChange(current, previousIsDark, isDark),
+    );
+    previousIsDarkRef.current = isDark;
+  }, [isDark]);
   const [catalogueByName, setCatalogueByName] = useState<Record<
     string,
     SearchbaseRecord
@@ -6711,12 +6578,13 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   // phase from inside the popup component itself.
 
   const tilePreset =
-    TILE_LAYER_PRESETS.find((preset) => preset.id === tilePresetId) ??
-    TILE_LAYER_PRESETS.find(
-      (preset) => preset.id === defaultTileLayerPresetId(isDark),
+    MAP_TILE_STYLE_PRESETS.find((preset) => preset.id === tilePresetId) ??
+    MAP_TILE_STYLE_PRESETS.find(
+      (preset) => preset.id === defaultMapTileStyleId(isDark),
     ) ??
-    TILE_LAYER_PRESETS[0];
-  const tileUrl = isDark ? tilePreset.dark : tilePreset.light;
+    MAP_TILE_STYLE_PRESETS[0];
+  const tileUrl = isDark ? tilePreset.darkUrl : tilePreset.lightUrl;
+  const tileAttribution = tilePreset.attribution.replace(/&copy;/gi, "©");
   const effectiveMapBounds = boundsForTopologySites(
     resolvedTopology.map.bounds,
     resolvedTopology.sites,
@@ -6740,10 +6608,11 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   };
 
   const cycleTilePreset = () => {
-    const index = TILE_LAYER_PRESETS.findIndex(
+    const index = MAP_TILE_STYLE_PRESETS.findIndex(
       (preset) => preset.id === tilePresetId,
     );
-    const next = TILE_LAYER_PRESETS[(index + 1) % TILE_LAYER_PRESETS.length];
+    const next =
+      MAP_TILE_STYLE_PRESETS[(index + 1) % MAP_TILE_STYLE_PRESETS.length];
     setTilePresetId(next.id);
   };
 
@@ -6751,6 +6620,11 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     setMotionSettingsOpen(false);
     window.requestAnimationFrame(() => motionSettingsAnchor?.focus());
   }, [motionSettingsAnchor]);
+
+  const closeMapCredits = useCallback(() => {
+    setMapCreditsOpen(false);
+    window.requestAnimationFrame(() => mapCreditsAnchor?.focus());
+  }, [mapCreditsAnchor]);
 
   // Build 99 fix: the spotlight-pause logic was previously
   // bumping `pauseUntilRef` on EVERY click, including ones that
@@ -7037,7 +6911,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
           maxZoom={resolvedTopology.map.maxZoom}
           style={{ height: "100%", width: "100%" }}
           zoomControl={false}
-          scrollWheelZoom={false}
+          scrollWheelZoom
           attributionControl={false}
           className="customer-topology-map z-10"
         >
@@ -7059,7 +6933,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
           />
           <TileLayer
             key={`${tilePreset.id}-${tileUrl}`}
-            attribution=""
+            attribution={tilePreset.attribution}
             url={tileUrl}
           />
           <ZoomControl position="bottomleft" />
@@ -7170,6 +7044,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
       />
 
       <MapBottomRightActions
+        $reserveCommandSummary={surfaceMode === "command"}
         aria-label="Map legend and view controls"
         role="region"
         tabIndex={roleLegendExpanded ? 0 : undefined}
@@ -7254,6 +7129,62 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             />
           ))}
         </MapViewSelect>
+
+        {surfaceMode === "geo" && (
+          <div>
+            <MapCreditsButton
+              appearance="subtle"
+              elementRef={setMapCreditsAnchor}
+              label="Map credits"
+              onClick={() => setMapCreditsOpen((open) => !open)}
+              aria-controls={
+                mapCreditsOpen ? "customer-topology-map-credits" : undefined
+              }
+              aria-haspopup="dialog"
+              aria-expanded={mapCreditsOpen}
+            />
+            <Popover
+              appearance="none"
+              anchor={mapCreditsAnchor}
+              defaultPlacement="above"
+              hideArrow
+              onRequestClose={closeMapCredits}
+              open={mapCreditsOpen}
+              repositionMode="any"
+              retainFocus
+              takeFocus
+            >
+              <MapCreditsCard
+                id="customer-topology-map-credits"
+                tag="section"
+                role="dialog"
+                aria-labelledby="customer-topology-map-credits-title"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h5
+                      id="customer-topology-map-credits-title"
+                      className="text-sm font-bold"
+                    >
+                      Map credits
+                    </h5>
+                    <p className="mt-1 text-xs leading-snug sui-color-default">
+                      Map rendering: Leaflet. Basemap: {tileAttribution}.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeMapCredits}
+                    aria-label="Close map credits"
+                    className="rounded-md p-1 sui-color-default transition-colors sui-hover-bg-floating sui-hover-color-current focus:outline-none focus:ring-1 sui-focus-ring"
+                  >
+                    <X className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                </div>
+              </MapCreditsCard>
+            </Popover>
+          </div>
+        )}
       </MapBottomRightActions>
     </TopologyMapRoot>
   );
@@ -7418,9 +7349,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
     <div
       className={cn(
         "space-y-2 rounded-md border-2 px-2.5 py-2.5",
-        isDark
-          ? "sui-border-info sui-bg-accent"
-          : "sui-border-info sui-bg-info",
+        "sui-border-info sui-bg-selected",
       )}
     >
       <div className="flex items-center justify-between gap-2">
@@ -7598,9 +7527,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                 }}
                 className={cn(
                   "inline-flex items-center gap-0.5 rounded-full border px-2 py-0.5 text-xs font-semibold transition-colors",
-                  isDark
-                    ? "sui-bg-accent sui-border-info sui-color-info sui-hover-bg-accent"
-                    : "sui-bg-info sui-border-info sui-color-info sui-hover-bg-info",
+                  "sui-bg-selected sui-border-info sui-color-info sui-hover-bg-overlay",
                 )}
                 title={`Remove tag filter: ${tag}`}
               >
@@ -7707,7 +7634,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                   isDark
                     ? "sui-border-weak sui-hover-bg-overlay"
                     : "sui-border-weak sui-hover-bg-info",
-                  isSelected && (isDark ? "sui-bg-accent" : "sui-bg-info"),
+                  isSelected && "sui-bg-selected",
                 )}
                 title={
                   entry.description
@@ -7763,9 +7690,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                         <span
                           className={cn(
                             "inline-flex rounded px-1 text-xs font-bold uppercase tracking-wider",
-                            isDark
-                              ? "sui-bg-accent sui-color-info"
-                              : "sui-bg-info sui-color-info",
+                            "sui-bg-selected sui-color-info",
                           )}
                           title={`This search is shaped for a topology ${label}`}
                         >
@@ -7816,9 +7741,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
               disabled={customDraft.trim() === (currentSearchName ?? "").trim()}
               className={cn(
                 "rounded-md border px-2 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors",
-                isDark
-                  ? "sui-bg-accent sui-border-info sui-color-info sui-hover-bg-accent disabled:opacity-40 disabled:cursor-not-allowed"
-                  : "sui-bg-info sui-border-info sui-color-info sui-hover-bg-info disabled:opacity-40 disabled:cursor-not-allowed",
+                "scd-action-secondary disabled:cursor-not-allowed",
               )}
               title="Apply this custom name as the search for this element"
             >
@@ -8197,9 +8120,7 @@ const SelectionCard: React.FC<SelectionCardProps> = ({
               className={cn(
                 "inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
                 onOpenInSearch && selectedSpl
-                  ? isDark
-                    ? "sui-color-info sui-hover-color-info sui-bg-accent sui-hover-bg-accent cursor-pointer"
-                    : "sui-color-info sui-hover-color-info sui-bg-info sui-hover-bg-info cursor-pointer"
+                  ? "scd-action-secondary cursor-pointer"
                   : isDark
                     ? "sui-color-muted sui-bg-floating cursor-not-allowed"
                     : "sui-color-default sui-bg-section cursor-not-allowed",
@@ -8249,6 +8170,105 @@ interface TopologyEditorPanelProps {
    */
   onOpenInSearch?: (spl: string, appContext?: string) => void;
 }
+
+interface TopologyEditorFrame {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface TopologyEditorPointerInteraction {
+  mode: "move" | "resize";
+  pointerId: number | null;
+  startClientX: number;
+  startClientY: number;
+  startFrame: TopologyEditorFrame;
+}
+
+const TOPOLOGY_EDITOR_MARGIN = 12;
+const TOPOLOGY_EDITOR_DEFAULT_WIDTH = 430;
+const TOPOLOGY_EDITOR_MIN_WIDTH = 320;
+const TOPOLOGY_EDITOR_MIN_HEIGHT = 320;
+const TOPOLOGY_EDITOR_KEYBOARD_STEP = 8;
+const TOPOLOGY_EDITOR_KEYBOARD_LARGE_STEP = 32;
+
+const clampTopologyEditorValue = (
+  value: number,
+  minimum: number,
+  maximum: number,
+): number => Math.min(Math.max(value, minimum), maximum);
+
+const defaultTopologyEditorFrame = (
+  container: HTMLElement,
+): TopologyEditorFrame => {
+  const maximumWidth = Math.max(
+    0,
+    container.clientWidth - TOPOLOGY_EDITOR_MARGIN * 2,
+  );
+  const maximumHeight = Math.max(
+    0,
+    container.clientHeight - TOPOLOGY_EDITOR_MARGIN * 2,
+  );
+  const width = Math.min(TOPOLOGY_EDITOR_DEFAULT_WIDTH, maximumWidth);
+
+  return {
+    x: Math.max(
+      TOPOLOGY_EDITOR_MARGIN,
+      container.clientWidth - TOPOLOGY_EDITOR_MARGIN - width,
+    ),
+    y: TOPOLOGY_EDITOR_MARGIN,
+    width,
+    height: maximumHeight,
+  };
+};
+
+const constrainTopologyEditorFrame = (
+  frame: TopologyEditorFrame,
+  container: HTMLElement,
+): TopologyEditorFrame => {
+  const maximumWidth = Math.max(
+    0,
+    container.clientWidth - TOPOLOGY_EDITOR_MARGIN * 2,
+  );
+  const maximumHeight = Math.max(
+    0,
+    container.clientHeight - TOPOLOGY_EDITOR_MARGIN * 2,
+  );
+  const minimumWidth = Math.min(TOPOLOGY_EDITOR_MIN_WIDTH, maximumWidth);
+  const minimumHeight = Math.min(TOPOLOGY_EDITOR_MIN_HEIGHT, maximumHeight);
+  const width = clampTopologyEditorValue(
+    frame.width,
+    minimumWidth,
+    maximumWidth,
+  );
+  const height = clampTopologyEditorValue(
+    frame.height,
+    minimumHeight,
+    maximumHeight,
+  );
+
+  return {
+    x: clampTopologyEditorValue(
+      frame.x,
+      TOPOLOGY_EDITOR_MARGIN,
+      Math.max(
+        TOPOLOGY_EDITOR_MARGIN,
+        container.clientWidth - TOPOLOGY_EDITOR_MARGIN - width,
+      ),
+    ),
+    y: clampTopologyEditorValue(
+      frame.y,
+      TOPOLOGY_EDITOR_MARGIN,
+      Math.max(
+        TOPOLOGY_EDITOR_MARGIN,
+        container.clientHeight - TOPOLOGY_EDITOR_MARGIN - height,
+      ),
+    ),
+    width,
+    height,
+  };
+};
 
 const editorInputClass = (isDark: boolean): string =>
   cn(
@@ -8309,6 +8329,267 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
   );
   const [teEndpointSelectionsByLinkId, setTeEndpointSelectionsByLinkId] =
     useState<Record<string, { source?: string; target?: string }>>({});
+  const editorTitleId = useId();
+  const editorMovementHelpId = useId();
+  const editorResizeHelpId = useId();
+  const panelRef = useRef<HTMLElement | null>(null);
+  const pointerInteractionRef =
+    useRef<TopologyEditorPointerInteraction | null>(null);
+  const [editorFrame, setEditorFrame] =
+    useState<TopologyEditorFrame | null>(null);
+
+  const resetEditorFrame = useCallback(() => {
+    const container = panelRef.current?.parentElement;
+    if (!container) {
+      return;
+    }
+    setEditorFrame(defaultTopologyEditorFrame(container));
+  }, []);
+
+  useEffect(() => {
+    if (!open) {
+      pointerInteractionRef.current = null;
+      setEditorFrame(null);
+      return undefined;
+    }
+
+    const container = panelRef.current?.parentElement;
+    if (!container) {
+      return undefined;
+    }
+
+    setEditorFrame(defaultTopologyEditorFrame(container));
+    const resizeObserver = new ResizeObserver(() => {
+      setEditorFrame((current) =>
+        current
+          ? constrainTopologyEditorFrame(current, container)
+          : defaultTopologyEditorFrame(container),
+      );
+    });
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, [open]);
+
+  const updateEditorFrame = useCallback(
+    (update: (current: TopologyEditorFrame) => TopologyEditorFrame) => {
+      const container = panelRef.current?.parentElement;
+      if (!container) {
+        return;
+      }
+      setEditorFrame((current) =>
+        constrainTopologyEditorFrame(
+          update(current ?? defaultTopologyEditorFrame(container)),
+          container,
+        ),
+      );
+    },
+    [],
+  );
+
+  const startEditorPointerInteraction = useCallback(
+    (
+      event: React.PointerEvent<HTMLElement>,
+      mode: TopologyEditorPointerInteraction["mode"],
+    ) => {
+      if (
+        !editorFrame ||
+        event.button !== 0 ||
+        event.pointerType === "mouse"
+      ) {
+        return;
+      }
+      if (
+        mode === "move" &&
+        event.target instanceof Element &&
+        event.target.closest("button, input, select, textarea, a") !==
+          event.currentTarget
+      ) {
+        return;
+      }
+
+      pointerInteractionRef.current = {
+        mode,
+        pointerId: event.pointerId,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        startFrame: editorFrame,
+      };
+      event.currentTarget.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    },
+    [editorFrame],
+  );
+
+  const startEditorMouseInteraction = useCallback(
+    (
+      event: React.MouseEvent<HTMLElement>,
+      mode: TopologyEditorPointerInteraction["mode"],
+    ) => {
+      if (!editorFrame || event.button !== 0) {
+        return;
+      }
+      if (
+        mode === "move" &&
+        event.target instanceof Element &&
+        event.target.closest("button, input, select, textarea, a") !==
+          event.currentTarget
+      ) {
+        return;
+      }
+
+      pointerInteractionRef.current = {
+        mode,
+        pointerId: null,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        startFrame: editorFrame,
+      };
+      event.preventDefault();
+    },
+    [editorFrame],
+  );
+
+  const continueEditorInteraction = useCallback(
+    (clientX: number, clientY: number) => {
+      const interaction = pointerInteractionRef.current;
+      if (!interaction) {
+        return;
+      }
+
+      const deltaX = clientX - interaction.startClientX;
+      const deltaY = clientY - interaction.startClientY;
+      updateEditorFrame((current) =>
+        interaction.mode === "move"
+          ? {
+              ...current,
+              x: interaction.startFrame.x + deltaX,
+              y: interaction.startFrame.y + deltaY,
+            }
+          : {
+              ...current,
+              width: interaction.startFrame.width + deltaX,
+              height: interaction.startFrame.height + deltaY,
+            },
+      );
+    },
+    [updateEditorFrame],
+  );
+
+  const continueEditorPointerInteraction = useCallback(
+    (event: React.PointerEvent<HTMLElement>) => {
+      const interaction = pointerInteractionRef.current;
+      if (
+        !interaction ||
+        interaction.pointerId === null ||
+        interaction.pointerId !== event.pointerId
+      ) {
+        return;
+      }
+
+      continueEditorInteraction(event.clientX, event.clientY);
+      event.preventDefault();
+    },
+    [continueEditorInteraction],
+  );
+
+  const finishEditorPointerInteraction = useCallback(
+    (event: React.PointerEvent<HTMLElement>) => {
+      const interaction = pointerInteractionRef.current;
+      if (
+        !interaction ||
+        interaction.pointerId === null ||
+        interaction.pointerId !== event.pointerId
+      ) {
+        return;
+      }
+      pointerInteractionRef.current = null;
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+
+    const onMouseMove = (event: MouseEvent) => {
+      const interaction = pointerInteractionRef.current;
+      if (!interaction || interaction.pointerId !== null) {
+        return;
+      }
+      continueEditorInteraction(event.clientX, event.clientY);
+      event.preventDefault();
+    };
+    const onMouseUp = () => {
+      if (pointerInteractionRef.current?.pointerId === null) {
+        pointerInteractionRef.current = null;
+      }
+    };
+
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [continueEditorInteraction, open]);
+
+  const moveEditorWithKeyboard = useCallback(
+    (event: React.KeyboardEvent<HTMLElement>) => {
+      if (event.currentTarget !== event.target) {
+        return;
+      }
+      const step = event.shiftKey
+        ? TOPOLOGY_EDITOR_KEYBOARD_LARGE_STEP
+        : TOPOLOGY_EDITOR_KEYBOARD_STEP;
+      const deltaByKey: Record<string, [number, number]> = {
+        ArrowLeft: [-step, 0],
+        ArrowRight: [step, 0],
+        ArrowUp: [0, -step],
+        ArrowDown: [0, step],
+      };
+      const delta = deltaByKey[event.key];
+      if (!delta) {
+        return;
+      }
+      event.preventDefault();
+      updateEditorFrame((current) => ({
+        ...current,
+        x: current.x + delta[0],
+        y: current.y + delta[1],
+      }));
+    },
+    [updateEditorFrame],
+  );
+
+  const resizeEditorWithKeyboard = useCallback(
+    (event: React.KeyboardEvent<HTMLButtonElement>) => {
+      const step = event.shiftKey
+        ? TOPOLOGY_EDITOR_KEYBOARD_LARGE_STEP
+        : TOPOLOGY_EDITOR_KEYBOARD_STEP;
+      const deltaByKey: Record<string, [number, number]> = {
+        ArrowLeft: [-step, 0],
+        ArrowRight: [step, 0],
+        ArrowUp: [0, -step],
+        ArrowDown: [0, step],
+      };
+      const delta = deltaByKey[event.key];
+      if (!delta) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      updateEditorFrame((current) => ({
+        ...current,
+        width: current.width + delta[0],
+        height: current.height + delta[1],
+      }));
+    },
+    [updateEditorFrame],
+  );
 
   useEffect(() => {
     if (!open) return undefined;
@@ -8491,13 +8772,13 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
       setSitePlacementErrors((current) => ({
         ...current,
         [siteId]:
-          "Enter a city, address, or coordinates. Renamed sites can be placed by name too.",
+          "Enter a supported city or coordinates. Renamed sites in the offline city list can be placed by name too.",
       }));
       return;
     }
 
     setPlacingSiteIds((current) => ({ ...current, [siteId]: true }));
-    const placement = await resolveSitePlacementWithFallback(lookupText);
+    const placement = resolveSitePlacement(lookupText);
     setPlacingSiteIds((current) => {
       const next = { ...current };
       delete next[siteId];
@@ -8507,7 +8788,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
       setSitePlacementErrors((current) => ({
         ...current,
         [siteId]:
-          "Could not place that location. Try a city, address, or coordinates like 48.8566,2.3522.",
+          "That location is not in the offline city list. Enter coordinates like 48.8566,2.3522.",
       }));
       return;
     }
@@ -8771,9 +9052,26 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     <AnimatePresence>
       {open && (
         <motion.aside
+          ref={panelRef}
+          aria-labelledby={editorTitleId}
           initial={{ opacity: 0, x: 28, scale: 0.98 }}
           animate={{ opacity: 1, x: 0, scale: 1 }}
           exit={{ opacity: 0, x: 28, scale: 0.98 }}
+          style={
+            editorFrame
+              ? {
+                  left: editorFrame.x,
+                  top: editorFrame.y,
+                  width: editorFrame.width,
+                  height: editorFrame.height,
+                }
+              : {
+                  top: TOPOLOGY_EDITOR_MARGIN,
+                  right: TOPOLOGY_EDITOR_MARGIN,
+                  bottom: TOPOLOGY_EDITOR_MARGIN,
+                  width: `min(${TOPOLOGY_EDITOR_DEFAULT_WIDTH}px, calc(100% - ${TOPOLOGY_EDITOR_MARGIN * 2}px))`,
+                }
+          }
           className={cn(
             // Background is fully opaque so map labels (city
             // names, road outlines) don't bleed through the
@@ -8789,7 +9087,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
             // rounded corners and on top of any drag-handle
             // sticker that pokes out, without sacrificing
             // legibility of the main form area.
-            "absolute top-3 right-3 bottom-3 z-[2200] w-[min(430px,calc(100%-1.5rem))] rounded-xl border shadow-2xl overflow-hidden flex flex-col backdrop-blur-sm",
+            "absolute z-[2200] rounded-xl border shadow-2xl overflow-hidden flex flex-col backdrop-blur-sm",
             isDark
               ? "sui-bg-page sui-border-default sui-color-active"
               : "sui-bg-section sui-border-weak sui-color-active",
@@ -8801,32 +9099,75 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
               isDark ? "sui-border-weak" : "sui-border-weak",
             )}
           >
-            <div className="min-w-0">
-              <p className="text-xs font-black uppercase tracking-[0.18em] sui-color-info">
+            <button
+              type="button"
+              aria-label="Move topology editor"
+              aria-describedby={editorMovementHelpId}
+              aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight"
+              title="Drag to move. With this header focused, use the arrow keys to move; hold Shift for larger steps."
+              onPointerDown={(event) =>
+                startEditorPointerInteraction(event, "move")
+              }
+              onMouseDown={(event) =>
+                startEditorMouseInteraction(event, "move")
+              }
+              onPointerMove={continueEditorPointerInteraction}
+              onPointerUp={finishEditorPointerInteraction}
+              onPointerCancel={finishEditorPointerInteraction}
+              onLostPointerCapture={() => {
+                pointerInteractionRef.current = null;
+              }}
+              onKeyDown={moveEditorWithKeyboard}
+              className="min-w-0 flex-1 cursor-move select-none touch-none rounded text-left focus:outline-none focus:ring-1 sui-focus-ring"
+            >
+              <span
+                id={editorTitleId}
+                className="block text-xs font-black uppercase tracking-[0.18em] sui-color-info"
+              >
                 Topology Editor
-              </p>
-              <p
+              </span>
+              <span
                 className={cn(
-                  "text-xs font-semibold truncate",
+                  "block truncate text-xs font-semibold",
                   isDark ? "sui-color-default" : "sui-color-muted",
                 )}
               >
                 {topology.name}
-              </p>
-            </div>
-            <button
-              type="button"
-              aria-label="Close topology editor"
-              onClick={onClose}
-              className={cn(
-                "p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
-                isDark
-                  ? "sui-hover-bg-overlay sui-color-default"
-                  : "sui-hover-bg-section sui-color-muted",
-              )}
-            >
-              <X className="w-4 h-4" />
+              </span>
+              <ScreenReaderContent id={editorMovementHelpId}>
+                Drag this header or use the arrow keys to move the editor. Hold
+                Shift for larger steps.
+              </ScreenReaderContent>
             </button>
+            <div className="flex flex-shrink-0 items-center gap-1 cursor-default">
+              <button
+                type="button"
+                aria-label="Reset topology editor position and size"
+                title="Reset panel position and size"
+                onClick={resetEditorFrame}
+                className={cn(
+                  "p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
+                  isDark
+                    ? "sui-hover-bg-overlay sui-color-default"
+                    : "sui-hover-bg-section sui-color-muted",
+                )}
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                aria-label="Close topology editor"
+                onClick={onClose}
+                className={cn(
+                  "p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
+                  isDark
+                    ? "sui-hover-bg-overlay sui-color-default"
+                    : "sui-hover-bg-section sui-color-muted",
+                )}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           <div className="flex-1 overflow-auto p-4 space-y-4">
@@ -8901,9 +9242,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                   title={`Copy current map view: ${currentMapView.center[0]}, ${currentMapView.center[1]} at zoom ${currentMapView.zoom}`}
                   className={cn(
                     "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
-                    isDark
-                      ? "sui-border-info sui-bg-accent sui-color-info sui-hover-bg-accent"
-                      : "sui-border-info sui-bg-info sui-color-info sui-hover-bg-info",
+                    "scd-action-secondary",
                   )}
                 >
                   <Crosshair className="h-3.5 w-3.5" />
@@ -8990,7 +9329,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                   type="button"
                   onClick={addSite}
                   title="Add site"
-                  className="inline-flex items-center gap-1 rounded-md sui-bg-accent px-2 py-1 text-xs font-black sui-color-active sui-hover-bg-accent focus:outline-none focus:ring-1 sui-focus-ring"
+                  className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-black scd-action-secondary focus:outline-none focus:ring-1 sui-focus-ring"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Add
@@ -9117,14 +9456,24 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 pickSiteId === site.id ? null : site.id,
                               )
                             }
-                            title="Click the map to set this site's lat/lng"
-                            className={cn(
-                              "p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
+                            aria-label={
                               pickSiteId === site.id
-                                ? "sui-bg-accent sui-color-active"
+                                ? `Stop choosing a map location for ${site.name}`
+                                : `Choose a map location for ${site.name}`
+                            }
+                            aria-pressed={pickSiteId === site.id}
+                            title={
+                              pickSiteId === site.id
+                                ? "Stop choosing this site's map location"
+                                : "Click the map to set this site's lat/lng"
+                            }
+                            className={cn(
+                              "rounded-md border p-1.5 transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
+                              pickSiteId === site.id
+                                ? "sui-border-info sui-bg-selected sui-color-active"
                                 : isDark
-                                  ? "sui-bg-popup sui-color-default sui-hover-bg-floating"
-                                  : "sui-bg-section sui-color-muted sui-hover-bg-section",
+                                  ? "sui-border-weak sui-bg-popup sui-color-default sui-hover-bg-floating"
+                                  : "sui-border-weak sui-bg-section sui-color-muted sui-hover-bg-section",
                             )}
                           >
                             <MousePointer2 className="w-3.5 h-3.5" />
@@ -9167,7 +9516,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 aria-label={`Place site ${site.id}`}
                                 className={editorInputClass(isDark)}
                                 value={sitePlacementDrafts[site.id] ?? ""}
-                                placeholder="City, address, or 48.8566,2.3522"
+                                placeholder="Supported city or 48.8566,2.3522"
                                 onChange={(event) =>
                                   updateSitePlacementDraft(
                                     site.id,
@@ -9187,9 +9536,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 disabled={isPlacingSite}
                                 className={cn(
                                   "inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1.5 text-xs font-black uppercase tracking-wider transition-colors focus:outline-none focus:ring-1 sui-focus-ring disabled:cursor-wait disabled:opacity-60",
-                                  isDark
-                                    ? "sui-border-info sui-bg-accent sui-color-info sui-hover-bg-accent"
-                                    : "sui-border-info sui-bg-info sui-color-info sui-hover-bg-info",
+                                  "scd-action-secondary",
                                 )}
                               >
                                 {isPlacingSite && (
@@ -9268,11 +9615,6 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 style={{
                                   width: "100%",
                                   minHeight: 28,
-                                  borderColor: isDark ? "#334155" : "#e2e8f0",
-                                  backgroundColor: isDark
-                                    ? "#020617"
-                                    : "#ffffff",
-                                  color: isDark ? "#f1f5f9" : "#1e293b",
                                   fontSize: 12,
                                   fontWeight: 600,
                                 }}
@@ -9537,7 +9879,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                   onClick={addLink}
                   disabled={topology.sites.length < 2}
                   title="Add connection"
-                  className="inline-flex items-center gap-1 rounded-md sui-bg-accent px-2 py-1 text-xs font-black sui-color-active  disabled:opacity-40 sui-hover-bg-accent focus:outline-none focus:ring-1 sui-focus-ring"
+                  className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-black scd-action-secondary disabled:opacity-40 focus:outline-none focus:ring-1 sui-focus-ring"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Add connection
@@ -9614,8 +9956,9 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                       boundTeMatch?.candidate.teTestId ??
                         link.thousandEyesA2A?.teTestId,
                     ) ??
-                    boundTeMatch?.candidate.teLink ??
-                    link.teLink;
+                    normalizeThousandEyesLink(
+                      boundTeMatch?.candidate.teLink ?? link.teLink,
+                    );
                   return (
                     <div
                       key={link.id}
@@ -9958,9 +10301,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                     title="Clear ThousandEyes binding"
                                     className={cn(
                                       "p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
-                                      isDark
-                                        ? "sui-bg-popup sui-color-negative sui-hover-bg-negative"
-                                        : "sui-bg-negative sui-color-negative sui-hover-bg-negative",
+                                      "sui-bg-section sui-color-negative sui-hover-bg-notification-negative",
                                     )}
                                   >
                                     <X className="w-3.5 h-3.5" />
@@ -10283,7 +10624,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
 
           <div
             className={cn(
-              "border-t p-3 flex items-center justify-between gap-2",
+              "border-t p-3 pr-9 flex items-center justify-between gap-2",
               isDark ? "sui-border-weak" : "sui-border-weak",
             )}
           >
@@ -10303,11 +10644,8 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
               disabled={isSaving}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-black transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
-                isSaving
-                  ? "cursor-not-allowed opacity-50"
-                  : isDark
-                    ? "sui-bg-section sui-color-negative sui-hover-bg-negative"
-                    : "sui-bg-negative sui-color-negative sui-hover-bg-negative",
+                "scd-action-destructive-secondary",
+                isSaving && "cursor-not-allowed opacity-50",
               )}
             >
               {isSaving ? (
@@ -10322,7 +10660,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
               onClick={onSave}
               disabled={isSaving}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-md sui-bg-accent px-3 py-1.5 text-xs font-black sui-color-active sui-hover-bg-accent focus:outline-none focus:ring-1 sui-focus-ring",
+                "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-black scd-action-primary focus:outline-none focus:ring-1 sui-focus-ring",
                 isSaving && "cursor-not-allowed opacity-60",
               )}
             >
@@ -10334,6 +10672,37 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
               Save
             </button>
           </div>
+
+          <button
+            type="button"
+            aria-label="Resize topology editor"
+            aria-describedby={editorResizeHelpId}
+            aria-keyshortcuts="ArrowUp ArrowDown ArrowLeft ArrowRight"
+            title="Drag to resize. With this handle focused, use the arrow keys to resize; hold Shift for larger steps."
+            onPointerDown={(event) =>
+              startEditorPointerInteraction(event, "resize")
+            }
+            onMouseDown={(event) =>
+              startEditorMouseInteraction(event, "resize")
+            }
+            onPointerMove={continueEditorPointerInteraction}
+            onPointerUp={finishEditorPointerInteraction}
+            onPointerCancel={finishEditorPointerInteraction}
+            onLostPointerCapture={() => {
+              pointerInteractionRef.current = null;
+            }}
+            onKeyDown={resizeEditorWithKeyboard}
+            className="absolute bottom-0 right-0 z-10 flex h-7 w-7 cursor-se-resize touch-none items-center justify-center rounded-tl-md sui-color-info sui-hover-bg-overlay focus:outline-none focus:ring-1 focus:ring-inset sui-focus-ring"
+          >
+            <span
+              aria-hidden="true"
+              className="h-3 w-3 border-b-2 border-r-2 sui-border-info"
+            />
+            <ScreenReaderContent id={editorResizeHelpId}>
+              Drag this handle or use the arrow keys to resize the editor. Hold
+              Shift for larger steps.
+            </ScreenReaderContent>
+          </button>
         </motion.aside>
       )}
     </AnimatePresence>
@@ -10602,7 +10971,8 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({
   // state as a removal regression on 2026-05-14.
   const isLoading = link.dataState === "loading";
   const thousandEyesLink =
-    buildThousandEyesTestLink(link.thousandEyesA2A?.teTestId) ?? link.teLink;
+    buildThousandEyesTestLink(link.thousandEyesA2A?.teTestId) ??
+    normalizeThousandEyesLink(link.teLink);
   const isGenericThousandEyesLink = thousandEyesLink === THOUSAND_EYES_APP_URL;
   return (
     <>
@@ -10786,9 +11156,7 @@ const LinkDetails: React.FC<LinkDetailsProps> = ({
             rel="noopener noreferrer"
             className={cn(
               "mt-1 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-bold transition-colors",
-              isDark
-                ? "sui-bg-accent sui-color-info sui-hover-bg-accent"
-                : "sui-bg-info sui-color-info sui-hover-bg-info",
+              "scd-action-secondary",
             )}
           >
             <ExternalLink className="w-3 h-3" />

@@ -516,8 +516,11 @@ export const SplPreviewTooltip: React.FC<SplPreviewTooltipProps> = ({
                                   aria-label={`Close SPL preview for ${title}`}
                                   onPointerDown={(event) => event.stopPropagation()}
                                   onClick={closeTooltip}
-                                  className="rounded p-1 transition-colors sui-bg-section focus:outline-none focus:ring-1 sui-focus-ring"
-                                  style={{ color: SPLUNK_EDITOR_COLORS.muted }}
+                                  className="rounded p-1 transition-colors focus:outline-none focus:ring-1 sui-focus-ring"
+                                  style={{
+                                      backgroundColor: SPLUNK_EDITOR_COLORS.editor,
+                                      color: SPLUNK_EDITOR_COLORS.muted,
+                                  }}
                               >
                                   <X className="h-3.5 w-3.5" />
                               </button>

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Button from '@splunk/react-ui/Button';
+import Slider from '@splunk/react-ui/Slider';
 import {
     ArrowDown,
     ArrowUp,
@@ -17,6 +18,9 @@ import {
     X,
 } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
+import { useModalFocusTrap } from '@/common/hooks/useModalFocusTrap';
+import { useAppThemeControls } from '@/common/theme/AppThemeProvider';
+import { formatMetricNumber } from '@/common/lib/metricValueFormat';
 import { splunkSearchAppUrl } from '@/common/lib/splunkSearchUrl';
 import {
     plainTextFromHtml,
@@ -89,23 +93,23 @@ const STATUS_DOT_CLASS = {
 };
 
 const STATUS_BG_CLASS = {
-    healthy: 'sui-bg-section  sui-bg-positive sui-hover-bg-positive',
-    warning: 'sui-bg-warning sui-hover-bg-warning',
-    critical: 'sui-bg-negative sui-hover-bg-negative',
+    healthy: 'sui-bg-notification-positive sui-hover-bg-notification-positive',
+    warning: 'sui-bg-notification-warning sui-hover-bg-notification-warning',
+    critical: 'sui-bg-notification-negative sui-hover-bg-notification-negative',
     unknown: 'sui-bg-section sui-hover-bg-section',
 };
 
 const STATUS_TEXT_CLASS = {
     healthy: 'sui-color-active',
-    warning: 'sui-color-warning',
-    critical: 'sui-color-negative',
+    warning: 'sui-color-active',
+    critical: 'sui-color-active',
     unknown: 'sui-color-active',
 };
 
 const STATUS_PILL_CLASS = {
-    healthy: 'sui-bg-positive sui-color-positive',
-    warning: 'sui-bg-warning sui-color-warning',
-    critical: 'sui-bg-negative sui-color-negative',
+    healthy: 'sui-bg-notification-positive sui-color-active',
+    warning: 'sui-bg-notification-warning sui-color-active',
+    critical: 'sui-bg-notification-negative sui-color-active',
     unknown: 'sui-bg-floating sui-color-default',
 };
 
@@ -131,28 +135,6 @@ export interface SignalTickerMetricDefaults {
     color?: string;
     thresholds?: MetricThresholds;
 }
-
-const formatTickerNumber = (value: number, unit?: string): string => {
-    if (!Number.isFinite(value)) return '--';
-    const abs = Math.abs(value);
-    const format = (divisor: number, suffix: string) => {
-        const n = value / divisor;
-        return `${n >= 10 ? n.toFixed(0) : n.toFixed(1)}${suffix}`;
-    };
-    const body =
-        abs >= 1_000_000_000
-            ? format(1_000_000_000, 'B')
-            : abs >= 1_000_000
-            ? format(1_000_000, 'M')
-            : abs >= 100_000
-            ? `${Math.round(value / 1000)}K`
-            : abs >= 1_000
-            ? format(1_000, 'K')
-            : Number.isInteger(value)
-            ? value.toLocaleString()
-            : value.toLocaleString(undefined, { maximumFractionDigits: 1 });
-    return unit ? `${body}${unit}` : body;
-};
 
 const labelForRecord = (
     item: SignalTickerItem,
@@ -424,6 +406,7 @@ const SignalTickerTile: React.FC<SignalTickerTileProps> = ({
             description: descriptionForRecord(record, metricDefault),
             spl: record?.search,
             dispatchContext: record?.dispatchContext,
+            dispatchPriority: 0,
             valueField: item.valueField ?? metricDefault?.valueField,
             displayField: metricDefault?.displayField,
             sparkDataField: metricDefault?.sparkDataField,
@@ -449,7 +432,7 @@ const SignalTickerTile: React.FC<SignalTickerTileProps> = ({
     const loading = catalogueLoading || result.source === 'loading';
     const valueText = loading
         ? 'Loading'
-        : result.displayValue ?? formatTickerNumber(result.value, unit);
+        : result.displayValue ?? formatMetricNumber(result.value, unit);
     const status: MetricStatus = loading ? 'unknown' : result.status;
     const subtitle = subtitleForRecord(record, metricDefault);
     const deltaDir: SignalRailDeltaDirection =
@@ -460,7 +443,7 @@ const SignalTickerTile: React.FC<SignalTickerTileProps> = ({
             : 'down';
     const delta =
         !loading && Number.isFinite(result.change)
-            ? formatTickerNumber(Math.abs(result.change), unit)
+            ? formatMetricNumber(Math.abs(result.change), unit)
             : undefined;
     const visual = useMemo<SignalTickerTileVisualState>(
         () => ({
@@ -630,6 +613,7 @@ interface SignalTickerEditorProps {
     isWorkspaceDefault?: boolean;
     persistenceStatus?: SignalTickerPersistenceStatus;
     persistenceError?: string;
+    sharedCatalog?: boolean;
     onClose: () => void;
 }
 
@@ -683,8 +667,12 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
     isWorkspaceDefault = false,
     persistenceStatus = 'account',
     persistenceError,
+    sharedCatalog = false,
     onClose,
 }) => {
+    const { colorScheme } = useAppThemeControls();
+    const dialogRef = useRef<HTMLDivElement | null>(null);
+    const closeButtonRef = useRef<HTMLButtonElement | null>(null);
     const [query, setQuery] = useState('');
     const [selectedApp, setSelectedApp] = useState(ALL_APPS);
     const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
@@ -900,16 +888,12 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         return () => document.removeEventListener('mousedown', handler);
     }, [open, tagDropdownOpen]);
 
-    useEffect(() => {
-        if (!open) return undefined;
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key !== 'Escape') return;
-            event.preventDefault();
-            onClose();
-        };
-        document.addEventListener('keydown', onKeyDown, true);
-        return () => document.removeEventListener('keydown', onKeyDown, true);
-    }, [open, onClose]);
+    useModalFocusTrap({
+        isOpen: open,
+        dialogRef,
+        onClose,
+        initialFocusRef: closeButtonRef,
+    });
 
     const addTag = (tag: string) => {
         setActiveTags((current) => {
@@ -966,9 +950,15 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
     if (!open) return null;
 
     const persistenceCopy: Record<SignalTickerPersistenceStatus, string> = {
-        loading: 'Loading your private workspace preferences…',
-        saving: 'Saving privately to your Splunk account…',
-        account: 'Private to your Splunk account and this workspace',
+        loading: sharedCatalog
+            ? 'Loading the shared Signal Rail…'
+            : 'Loading your private display preferences…',
+        saving: sharedCatalog
+            ? 'Saving Signal Rail KPIs for every viewer…'
+            : 'Saving privately to your Splunk account…',
+        account: sharedCatalog
+            ? 'KPIs are shared with every viewer. Speed and density stay private to you.'
+            : 'Private display preferences for this workspace',
         browser: 'Browser-only fallback — account storage is unavailable',
     };
 
@@ -1011,10 +1001,14 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
 
     return (
         <div
+            ref={dialogRef}
             className="fixed inset-0 z-[1800] flex items-center justify-center sui-bg-page p-4 backdrop-blur-sm"
             role="dialog"
             aria-modal="true"
             aria-label="Signal rail editor"
+            tabIndex={-1}
+            data-app-color-scheme={colorScheme}
+            style={{ colorScheme }}
             onMouseDown={(event) => {
                 if (event.target === event.currentTarget) onClose();
             }}
@@ -1022,7 +1016,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
             <div className="flex max-h-[86vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border   shadow-2xl sui-border-weak sui-bg-page">
                 <div className="flex items-start justify-between gap-4 border-b  px-5 py-4 sui-border-weak">
                     <div className="flex min-w-0 items-start gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg sui-bg-accent sui-color-active shadow-sm">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg sui-bg-notification-info sui-color-active shadow-sm">
                             <Sparkles className="h-5 w-5" />
                         </div>
                         <div className="min-w-0">
@@ -1047,6 +1041,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                         </div>
                     </div>
                     <button
+                        ref={closeButtonRef}
                         type="button"
                         onClick={onClose}
                         className="rounded-lg p-2  transition-colors   focus:outline-none focus-visible:ring-2 sui-focus-visible-ring sui-color-default sui-hover-bg-section sui-hover-color-active"
@@ -1165,7 +1160,10 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
 
                         <div className="mt-4">
                             <div className="flex items-center justify-between gap-3">
-                                <span className="text-xs font-black uppercase tracking-[0.16em] sui-color-default">
+                                <span
+                                    id="signal-rail-speed-label"
+                                    className="text-xs font-black uppercase tracking-[0.16em] sui-color-default"
+                                >
                                     Legacy ticker speed
                                 </span>
                                 <span className="rounded-full  px-2 py-0.5 text-xs font-black uppercase tracking-[0.12em]  sui-bg-section sui-color-default">
@@ -1178,24 +1176,30 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                 </span>
                             </div>
                             <div className="mt-3 rounded-lg border   px-3 py-2.5 sui-border-weak sui-bg-page">
-                                <input
-                                    type="range"
+                                <Slider
+                                    inputId="signal-rail-speed"
+                                    labelledBy="signal-rail-speed-label"
                                     min={MIN_SIGNAL_TICKER_SPEED}
                                     max={MAX_SIGNAL_TICKER_SPEED}
                                     step={SIGNAL_TICKER_SPEED_STEP}
+                                    stepMarks="always"
                                     value={config.speed}
-                                    onChange={(event) =>
+                                    displayValue={
+                                        config.speed === 0
+                                            ? 'Static'
+                                            : `${(config.speed / NORMAL_SIGNAL_TICKER_SPEED)
+                                                  .toFixed(2)
+                                                  .replace(/\.00$/, '')
+                                                  .replace(/0$/, '')}×`
+                                    }
+                                    minLabel="Static"
+                                    maxLabel="2×"
+                                    onChange={(_event, { value }) =>
                                         updateConfig({
-                                            speed: Number(event.currentTarget.value),
+                                            speed: value,
                                         })
                                     }
-                                    className="w-full accent-sky-500"
-                                    aria-label="Signal rail speed"
                                 />
-                                <div className="mt-1 flex justify-between text-xs font-black uppercase tracking-[0.14em] sui-color-default">
-                                    <span>Static</span>
-                                    <span>2×</span>
-                                </div>
                                 <p className="mt-2 text-xs leading-snug  sui-color-muted">
                                     The 1CD glass status cards remain static. This speed applies only to optional legacy ticker styles.
                                 </p>
@@ -1462,7 +1466,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                     />
                                     Filters
                                     {activeFilterCount > 0 && (
-                                        <span className="rounded-full sui-bg-accent px-1.5 py-0.5 text-xs sui-color-active">
+                                        <span className="rounded-full sui-bg-notification-info px-1.5 py-0.5 text-xs sui-color-active">
                                             {activeFilterCount}
                                         </span>
                                     )}
@@ -1648,7 +1652,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                                             return (
                                                                 <span
                                                                     key={tag}
-                                                                    className="inline-flex items-center gap-1 rounded-full sui-bg-accent py-0.5 pl-2 pr-1 text-xs font-bold uppercase tracking-wide sui-color-active"
+                                                                    className="inline-flex items-center gap-1 rounded-full sui-bg-notification-info py-0.5 pl-2 pr-1 text-xs font-bold uppercase tracking-wide sui-color-active"
                                                                 >
                                                                     {tag}
                                                                     {count > 0 && (
@@ -1666,7 +1670,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                                                         }}
                                                                         title={`Remove ${tag} filter`}
                                                                         aria-label={`Remove ${tag} filter`}
-                                                                        className="rounded-full p-0.5 sui-hover-bg-accent"
+                                                                        className="rounded-full p-0.5 sui-hover-bg-overlay"
                                                                     >
                                                                         <X className="h-2.5 w-2.5" />
                                                                     </button>
@@ -1886,7 +1890,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                                             'inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-black uppercase tracking-wide transition-colors focus:outline-none focus-visible:ring-2 sui-focus-visible-ring',
                                                             selected
                                                                 ? 'sui-bg-section sui-color-default'
-                                                                : 'sui-bg-accent sui-color-active sui-hover-bg-accent'
+                                                                : 'scd-action-secondary'
                                                         )}
                                                     >
                                                         <Plus className="h-3.5 w-3.5" />
@@ -1951,7 +1955,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="rounded-lg sui-bg-accent px-4 py-2 text-sm font-black sui-color-active shadow-sm transition-colors sui-hover-bg-accent focus:outline-none focus-visible:ring-2 sui-focus-visible-ring"
+                        className="rounded-lg px-4 py-2 text-sm font-black scd-action-primary shadow-sm transition-colors focus:outline-none focus-visible:ring-2 sui-focus-visible-ring"
                     >
                         Done
                     </button>

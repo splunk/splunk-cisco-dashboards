@@ -7,32 +7,14 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const vm = require('vm');
+const { readManifest } = require('./apply_build_profile.js');
 
 const APP_ROOT = path.resolve(__dirname, '..');
 const STAGE_DIR = process.argv[2]
     ? path.resolve(process.cwd(), process.argv[2])
     : path.join(APP_ROOT, 'stage');
+const APP_PROFILE = process.argv[3] || 'developer';
 const PAGES_DIR = path.join(STAGE_DIR, 'appserver', 'static', 'pages');
-const DASHBOARD_MANAGER_VIEW = path.join(
-    STAGE_DIR,
-    'default',
-    'data',
-    'ui',
-    'views',
-    'dashboard_manager.xml'
-);
-const DASHBOARD_MANAGER_BOOTSTRAP = path.join(
-    STAGE_DIR,
-    'appserver',
-    'static',
-    'dashboard_manager_bootstrap.js'
-);
-const LEGACY_DASHBOARD_MANAGER_TEMPLATE = path.join(
-    STAGE_DIR,
-    'appserver',
-    'templates',
-    'dashboardbuilder.html'
-);
 const APACHE_LICENSE_SHA256 =
     'cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30';
 
@@ -46,18 +28,30 @@ const ENTRY_NAMES = [
     'macro_index_tuning',
     'user_guide',
     'secure_operations_glass',
+    'secure_networking_pillars',
     'dashboardbuilder',
 ];
+const ALLOWED_PROFILES = new Set(['developer', 'splunkbase']);
+const DEVELOPING_ENTRY_NAMES = new Set(
+    readManifest().developing.staticAssets.flatMap((assetPath) => {
+        const match = assetPath.match(/^appserver\/static\/pages\/([^/]+)\.js$/);
+        return match ? [match[1]] : [];
+    })
+);
+const REQUIRED_ENTRY_NAMES = ENTRY_NAMES.filter(
+    (entryName) =>
+        APP_PROFILE !== 'splunkbase' || !DEVELOPING_ENTRY_NAMES.has(entryName)
+);
 
 const FORBIDDEN_SOURCE_EXTENSIONS = new Set(['.jsx', '.ts', '.tsx', '.map']);
+const FORBIDDEN_RUNTIME_FILE_EXTENSIONS = new Set(['.pyc', '.pyo']);
 const DEVELOPMENT_REACT_MARKERS = [
     'This page is using the development build of React',
     'react.development.js',
     'react-dom.development.js',
     'jsxDEV(',
 ];
-const ROOT_RELATIVE_APP_ASSET_PATTERN =
-    /(?:=|,|\[|\()\s*["'`]\/static\/app\/splunk-cisco-dashboards\//;
+const SOURCE_MAP_DIRECTIVE_PATTERN = /^[ \t]*(?:\/\/|\/\*)[#@]\s*sourceMappingURL\s*=/m;
 
 function walkFiles(directory) {
     return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -66,10 +60,25 @@ function walkFiles(directory) {
     });
 }
 
+function findDirectoriesNamed(directory, name) {
+    return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+        if (!entry.isDirectory()) return [];
+        const entryPath = path.join(directory, entry.name);
+        return [
+            ...(entry.name === name ? [entryPath] : []),
+            ...findDirectoriesNamed(entryPath, name),
+        ];
+    });
+}
+
 function fail(message, details = []) {
     console.error(`✗ ${message}`);
     details.forEach((detail) => console.error(`  - ${detail}`));
     process.exit(1);
+}
+
+if (!ALLOWED_PROFILES.has(APP_PROFILE)) {
+    fail(`Unknown app profile "${APP_PROFILE}"; expected developer or splunkbase.`);
 }
 
 if (!fs.existsSync(STAGE_DIR) || !fs.existsSync(PAGES_DIR)) {
@@ -105,6 +114,18 @@ if (!notice.includes('Copyright 2026 Splunk Inc.')) {
 const leakedSourceFiles = stagedFiles.filter((filePath) =>
     FORBIDDEN_SOURCE_EXTENSIONS.has(path.extname(filePath).toLowerCase())
 );
+const leakedPythonRuntimeArtifacts = stagedFiles.filter((filePath) => {
+    const relativeParts = path.relative(STAGE_DIR, filePath).split(path.sep);
+    return (
+        FORBIDDEN_RUNTIME_FILE_EXTENSIONS.has(
+            path.extname(filePath).toLowerCase()
+        ) || relativeParts.includes('__pycache__')
+    );
+});
+const leakedPythonCacheDirectories = findDirectoriesNamed(
+    STAGE_DIR,
+    '__pycache__'
+);
 
 if (leakedSourceFiles.length > 0) {
     fail(
@@ -113,24 +134,25 @@ if (leakedSourceFiles.length > 0) {
     );
 }
 
-const rootRelativeAppAssetFiles = stagedFiles
-    .filter((filePath) => ['.js', '.html'].includes(path.extname(filePath).toLowerCase()))
-    .filter((filePath) =>
-        ROOT_RELATIVE_APP_ASSET_PATTERN.test(fs.readFileSync(filePath, 'utf8'))
-    );
-
-if (rootRelativeAppAssetFiles.length > 0) {
+if (
+    leakedPythonRuntimeArtifacts.length > 0 ||
+    leakedPythonCacheDirectories.length > 0
+) {
     fail(
-        'Production assets contain locale-unsafe root-relative /static/app URLs.',
-        rootRelativeAppAssetFiles.map((filePath) => path.relative(STAGE_DIR, filePath))
+        'Production stage contains Python bytecode or cache files.',
+        [
+            ...leakedPythonRuntimeArtifacts,
+            ...leakedPythonCacheDirectories,
+        ].map((filePath) => path.relative(STAGE_DIR, filePath))
     );
 }
 
 const missingEntries = [];
 const developmentEntries = [];
 const invalidEntries = [];
+const sourceMapDirectiveEntries = [];
 
-ENTRY_NAMES.forEach((entryName) => {
+REQUIRED_ENTRY_NAMES.forEach((entryName) => {
     const bundlePath = path.join(PAGES_DIR, `${entryName}.js`);
     if (!fs.existsSync(bundlePath) || fs.statSync(bundlePath).size === 0) {
         missingEntries.push(`${entryName}.js`);
@@ -144,6 +166,9 @@ ENTRY_NAMES.forEach((entryName) => {
     if (matchedMarker) {
         developmentEntries.push(`${entryName}.js (${matchedMarker})`);
     }
+    if (SOURCE_MAP_DIRECTIVE_PATTERN.test(bundle)) {
+        sourceMapDirectiveEntries.push(`${entryName}.js`);
+    }
 
     try {
         new vm.Script(bundle, { filename: bundlePath });
@@ -153,6 +178,18 @@ ENTRY_NAMES.forEach((entryName) => {
     }
 });
 
+const leakedDevelopingEntries = [...DEVELOPING_ENTRY_NAMES]
+    .filter((entryName) => APP_PROFILE === 'splunkbase')
+    .filter((entryName) => fs.existsSync(path.join(PAGES_DIR, `${entryName}.js`)))
+    .map((entryName) => `${entryName}.js`);
+
+if (leakedDevelopingEntries.length > 0) {
+    fail(
+        'Splunkbase stage contains developing entry bundles.',
+        leakedDevelopingEntries
+    );
+}
+
 if (missingEntries.length > 0) {
     fail('Production entry bundles are missing or empty.', missingEntries);
 }
@@ -161,80 +198,14 @@ if (developmentEntries.length > 0) {
     fail('Development React code was found in production bundles.', developmentEntries);
 }
 
+if (sourceMapDirectiveEntries.length > 0) {
+    fail('Production entry bundles contain source-map directives.', sourceMapDirectiveEntries);
+}
+
 if (invalidEntries.length > 0) {
     fail('Production entry bundles contain invalid or truncated JavaScript.', invalidEntries);
 }
 
-if (
-    !fs.existsSync(DASHBOARD_MANAGER_VIEW) ||
-    !fs.statSync(DASHBOARD_MANAGER_VIEW).isFile() ||
-    !fs.existsSync(DASHBOARD_MANAGER_BOOTSTRAP) ||
-    !fs.statSync(DASHBOARD_MANAGER_BOOTSTRAP).isFile()
-) {
-    fail('Dashboard Manager restart-safe view assets are missing.');
-}
-
-const dashboardManagerView = fs.readFileSync(DASHBOARD_MANAGER_VIEW, 'utf8');
-const missingDashboardManagerViewContracts = [
-    '<dashboard version="1.1"',
-    'script="dashboard_manager_bootstrap.js"',
-    'id="scan-root"',
-].filter((contract) => !dashboardManagerView.includes(contract));
-const forbiddenDashboardManagerViewContracts = [
-    '<view',
-    'template=',
-    'dashboardbuilder.html',
-].filter((contract) => dashboardManagerView.includes(contract));
-
-if (
-    missingDashboardManagerViewContracts.length > 0 ||
-    forbiddenDashboardManagerViewContracts.length > 0
-) {
-    fail('Dashboard Manager must use the restart-safe Simple XML shell.', [
-        ...missingDashboardManagerViewContracts.map(
-            (contract) => `missing ${JSON.stringify(contract)}`
-        ),
-        ...forbiddenDashboardManagerViewContracts.map(
-            (contract) => `forbidden ${JSON.stringify(contract)}`
-        ),
-    ]);
-}
-
-const dashboardManagerBootstrap = fs.readFileSync(
-    DASHBOARD_MANAGER_BOOTSTRAP,
-    'utf8'
-);
-const missingDashboardManagerBootstrapContracts = [
-    'application.css',
-    'application.js',
-    'dashboard.js',
-    'pages/dashboardbuilder.js',
-    'scd-dashboard-manager-load-error',
-].filter((contract) => !dashboardManagerBootstrap.includes(contract));
-
-if (missingDashboardManagerBootstrapContracts.length > 0) {
-    fail('Dashboard Manager bootstrap is incomplete.', [
-        ...missingDashboardManagerBootstrapContracts.map(
-            (contract) => `missing ${JSON.stringify(contract)}`
-        ),
-    ]);
-}
-
-try {
-    new vm.Script(dashboardManagerBootstrap, {
-        filename: DASHBOARD_MANAGER_BOOTSTRAP,
-    });
-} catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    fail('Dashboard Manager bootstrap contains invalid JavaScript.', [detail]);
-}
-
-if (fs.existsSync(LEGACY_DASHBOARD_MANAGER_TEMPLATE)) {
-    fail(
-        'Restart-sensitive Dashboard Manager Mako template must not ship in production.'
-    );
-}
-
 console.log(
-    `✓ Verified ${ENTRY_NAMES.length} production bundles and restart-safe Dashboard Manager assets: valid compiled JavaScript only, no source maps`
+    `✓ Verified ${REQUIRED_ENTRY_NAMES.length} ${APP_PROFILE} production bundles: valid compiled JavaScript only, no source maps`
 );

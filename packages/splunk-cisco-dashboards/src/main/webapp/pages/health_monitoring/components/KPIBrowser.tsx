@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowRight, Filter, Search, X } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
@@ -8,6 +8,7 @@ import type {
 } from '@/data/kpi-templates';
 import { KPI_SECTION_TITLES } from '@/data/kpi-templates';
 import { iconRegistry } from './MetricCard';
+import { useModalFocusTrap } from '@/common/hooks/useModalFocusTrap';
 
 interface BindingInfo {
     instanceId: string;
@@ -48,20 +49,20 @@ export const KPIBrowser: React.FC<KPIBrowserProps> = ({
     const [app, setApp] = useState(ALL_APPS);
     const [category, setCategory] = useState(ALL_CATEGORIES);
     const [subCategory, setSubCategory] = useState(ALL_SUBCATEGORIES);
+    const dialogRef = useRef<HTMLDivElement | null>(null);
+    const queryInputRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
         if (!open) return;
         setQuery(initialQuery);
     }, [open, initialQuery]);
 
-    useEffect(() => {
-        if (!open) return undefined;
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') onClose();
-        };
-        document.addEventListener('keydown', onKeyDown);
-        return () => document.removeEventListener('keydown', onKeyDown);
-    }, [open, onClose]);
+    useModalFocusTrap({
+        isOpen: open,
+        dialogRef,
+        initialFocusRef: queryInputRef,
+        onClose,
+    });
 
     const apps = useMemo(() => [ALL_APPS, ...unique(templates.map((t) => t.app))], [templates]);
     const categories = useMemo(() => {
@@ -112,6 +113,7 @@ export const KPIBrowser: React.FC<KPIBrowserProps> = ({
 
     return createPortal(
         <div
+            ref={dialogRef}
             className="fixed inset-0 z-[9996] flex items-start justify-center overflow-y-auto sui-bg-page px-4 py-8 backdrop-blur-sm"
             onMouseDown={(event) => {
                 if (event.target === event.currentTarget) onClose();
@@ -119,6 +121,7 @@ export const KPIBrowser: React.FC<KPIBrowserProps> = ({
             role="dialog"
             aria-modal="true"
             aria-label="Browse KPI library"
+            tabIndex={-1}
         >
             <div className="flex max-h-[88vh] w-[min(560px,96vw)] flex-col overflow-hidden rounded-xl border    shadow-2xl sui-border-default sui-bg-page sui-color-active">
                 <header className="flex items-start justify-between gap-4 px-6 py-5">
@@ -142,7 +145,8 @@ export const KPIBrowser: React.FC<KPIBrowserProps> = ({
                     <div className="relative">
                         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 sui-color-default" />
                         <input
-                            autoFocus
+                            ref={queryInputRef}
+                            aria-label="Filter KPI library"
                             value={query}
                             onChange={(event) => setQuery(event.target.value)}
                             placeholder="Filter by name, description, or tag..."

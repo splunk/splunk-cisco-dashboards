@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html class="no-js" lang="">
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="x-ua-compatible" content="ie=edge" />
+        <title>SSNE | Dashboard Manager</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <script>
+            // Do not use make_url() for app static assets here. Splunk Web can
+            // retain an old @hash:build namespace after an in-place app update,
+            // which leaves Dashboard Manager running an earlier JavaScript and
+            // stylesheet bundle. The direct app path is refreshed per page load.
+            (function loadDashboardBuilderStylesheet() {
+                const localeMatch = window.location.pathname.match(/^\/[^/]+/);
+                const localePrefix = localeMatch ? localeMatch[0] : '';
+                const appStaticBase =
+                    localePrefix + '/static/app/splunk-cisco-dashboards/';
+                const stylesheet = document.createElement('link');
+                stylesheet.rel = 'stylesheet';
+                stylesheet.href = appStaticBase + 'application.css?v=' + Date.now();
+                document.head.appendChild(stylesheet);
+
+                window.scdDashboardBuilderAssetBase = appStaticBase;
+            })();
+        </script>
+        <style>
+            div[data-test='DashboardLayoutContainer'] {
+                height: calc(100%);
+                padding: 0 !important;
+            }
+        </style>
+    </head>
+
+    <body>
+        <script src="${make_url('/config?autoload=1')}" crossorigin="use-credentials"></script>
+        <script src="${make_url('/static/js/i18n.js')}"></script>
+        <script src="${make_url('/i18ncatalog?autoload=1')}"></script>
+        <script>
+            const titleScript = document.createElement('script');
+            titleScript.src =
+                window.scdDashboardBuilderAssetBase + 'dashboard.js?v=' + Date.now();
+            document.head.appendChild(titleScript);
+        </script>
+        <script>
+            __splunkd_partials__ = ${json_decode(splunkd)};
+        </script>
+
+        <script>
+            function loadDashboardBuilderBundle() {
+                const dashboardBuilderBundle =
+                    document.createElement('script');
+                dashboardBuilderBundle.src =
+                    window.scdDashboardBuilderAssetBase + 'pages/dashboardbuilder.js' +
+                    '?v=' +
+                    Date.now();
+                document.body.appendChild(dashboardBuilderBundle);
+            }
+
+            const setupGate = document.createElement('script');
+            setupGate.src =
+                window.scdDashboardBuilderAssetBase + 'application.js' +
+                '?v=' +
+                Date.now();
+            setupGate.onload = function () {
+                Promise.resolve(window.scdSetupGatePromise).then(function (canLoadApp) {
+                    if (canLoadApp !== false) {
+                        loadDashboardBuilderBundle();
+                    }
+                });
+            };
+            setupGate.onerror = loadDashboardBuilderBundle;
+            document.body.appendChild(setupGate);
+        </script>
+    </body>
+</html>

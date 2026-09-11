@@ -233,9 +233,12 @@ const dragPayloadForAsset = (asset: TopologyDiscoveredNode): PaletteDragPayload 
     siteLabel: asset.siteLabel,
 });
 
-const InventoryRow: React.FC<{ asset: TopologyDiscoveredNode }> = ({ asset }) => {
+const InventoryRow: React.FC<{
+    asset: TopologyDiscoveredNode;
+    onAddToCanvas?: (payload: PaletteDragPayload) => void;
+}> = ({ asset, onAddToCanvas }) => {
     const Icon = CISCO_ICONS[asset.shape] ?? CISCO_ICONS.generic;
-    const handleDragStart = (e: React.DragEvent<HTMLDivElement>): void => {
+    const handleDragStart = (e: React.DragEvent<HTMLButtonElement>): void => {
         const payload = dragPayloadForAsset(asset);
         e.dataTransfer.setData(PALETTE_DND_MIME, JSON.stringify(payload));
         e.dataTransfer.setData('text/plain', asset.label);
@@ -244,17 +247,17 @@ const InventoryRow: React.FC<{ asset: TopologyDiscoveredNode }> = ({ asset }) =>
     const deviceType = facetAccessor.deviceType(asset) ?? asset.shape;
     const model = facetAccessor.model(asset);
     return (
-        <div
+        <button
+            type="button"
             draggable
             onDragStart={handleDragStart}
-            role="button"
-            tabIndex={0}
-            aria-label={`Drag ${asset.label} to canvas`}
+            onClick={() => onAddToCanvas?.(dragPayloadForAsset(asset))}
+            aria-label={`Add ${asset.label} to canvas`}
             title={`${asset.label}\n${deviceType}${
                 model ? `\nModel: ${model}` : ''
-            }${asset.siteLabel ? `\n${asset.siteLabel}` : ''}`}
+            }${asset.siteLabel ? `\n${asset.siteLabel}` : ''}\nSelect to add at the canvas centre, or drag to place it.`}
             className={cn(
-                'flex items-center gap-2 px-2 py-1.5 rounded-md cursor-grab active:cursor-grabbing select-none',
+                'flex w-full appearance-none items-center gap-2 rounded-md px-2 py-1.5 text-left cursor-grab active:cursor-grabbing select-none',
                 'border sui-border-transparent sui-hover-border-info  sui-hover-bg-info',
                 'transition-colors duration-100'
             )}
@@ -263,16 +266,16 @@ const InventoryRow: React.FC<{ asset: TopologyDiscoveredNode }> = ({ asset }) =>
                 so each inventory row picks up its icon's per-class
                 accent (router=amber, firewall=rose, etc.). */}
             <Icon className="w-6 h-6 flex-shrink-0" />
-            <div className="min-w-0 flex-1">
-                <div className="text-xs font-medium  sui-color-active truncate">
+            <span className="min-w-0 flex flex-1 flex-col">
+                <span className="text-xs font-medium  sui-color-active truncate">
                     {asset.shortLabel}
-                </div>
-                <div className="text-xs  sui-color-default truncate uppercase tracking-wide">
+                </span>
+                <span className="text-xs  sui-color-default truncate uppercase tracking-wide">
                     {deviceType}
                     {model ? ` · ${model}` : ''}
-                </div>
-            </div>
-        </div>
+                </span>
+            </span>
+        </button>
     );
 };
 
@@ -455,7 +458,9 @@ const ProvenanceChips: React.FC<{
     );
 };
 
-export const InventoryTab: React.FC = () => {
+export const InventoryTab: React.FC<{
+    onAddToCanvas?: (payload: PaletteDragPayload) => void;
+}> = ({ onAddToCanvas }) => {
     const { assets, error, isLoading, reload } = useUnifiedInventory();
     const [query, setQuery] = useState<string>('');
     const [provenanceFilter, setProvenanceFilter] = useState<ProvenanceFilter>('all');
@@ -733,7 +738,11 @@ export const InventoryTab: React.FC = () => {
                 )}
                 <div className="flex flex-col gap-0.5">
                     {visible.map((a) => (
-                        <InventoryRow key={a.id} asset={a} />
+                        <InventoryRow
+                            key={a.id}
+                            asset={a}
+                            onAddToCanvas={onAddToCanvas}
+                        />
                     ))}
                 </div>
                 {overflow > 0 && (

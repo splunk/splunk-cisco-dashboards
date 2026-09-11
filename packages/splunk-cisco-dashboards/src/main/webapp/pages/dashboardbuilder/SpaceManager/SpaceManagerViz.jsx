@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import SplunkVisualization from '@splunk/visualizations/common/SplunkVisualization';
 import { Map as MapIcon } from '@splunk/visualization-icons';
 import { isEqual, reduce, intersection } from 'lodash-es';
+import { normalizeSharedImageSource } from '../../../common/lib/imageSource';
 
 const SAMPLE_FLOOR = {
     locationHierarchy: [
@@ -437,6 +438,7 @@ const SpaceManagerViz = (props) => {
     const model = useMemo(() => getSpaceModel(dataSources || {}), [dataSources]);
     const svgId = useMemo(() => `space-manager-${generateRandomString()}`, []);
     const map = model.maps?.[0] || {};
+    const mapImageSrc = normalizeSharedImageSource(map.imageUrl);
     const zones = model.zones || map.zones || [];
     const accessPoints = model.accessPoints || [];
     const devices = model.devices || [];
@@ -606,9 +608,9 @@ const SpaceManagerViz = (props) => {
                                 opacity="0.14"
                                 rx="10"
                             />
-                            {map.imageUrl && (
+                            {mapImageSrc && (
                                 <image
-                                    href={map.imageUrl}
+                                    href={mapImageSrc}
                                     x={bounds.minX}
                                     y={bounds.minY}
                                     width={bounds.maxX - bounds.minX}

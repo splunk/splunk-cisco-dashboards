@@ -1,8 +1,8 @@
 import {
     IconRegistry,
     LocalIconProvider,
-    StandardIconProvider,
 } from '@splunk/dashboard-context';
+import { StandardIconProvider } from '@splunk/dashboard-ui';
 
 import SEIIconProvider from './SEIIconProvider';
 

@@ -57,11 +57,11 @@
 }
 
 #root-nav-menu [title="Zero Trust Access"] {
-  --scd-pillar-icon: url("images/nav-icons/Fingerprint.svg");
+  --scd-pillar-icon: url("images/nav-icons/FingerprintNodes.svg");
 }
 
 #root-nav-menu [title="Secure Infrastructure"] {
-  --scd-pillar-icon: url("images/nav-icons/NetworkDevices.svg");
+  --scd-pillar-icon: url("images/nav-icons/ServerBrackets.svg");
 }
 
 #root-nav-menu [title="Secure Data Center Operations"] {
@@ -69,15 +69,15 @@
 }
 
 #root-nav-menu [title="Scalable Network Segmentation"] {
-  --scd-pillar-icon: url("images/nav-icons/Globe.svg");
+  --scd-pillar-icon: url("images/nav-icons/GlobeDivision.svg");
 }
 
 #root-nav-menu [title="Hybrid Mesh Firewalling"] {
-  --scd-pillar-icon: url("images/nav-icons/ArrowsDoubleLeftRight.svg");
+  --scd-pillar-icon: url("images/nav-icons/ColumnArrowsLeftRight.svg");
 }
 
 #root-nav-menu [title="Agentic Ops"] {
-  --scd-pillar-icon: url("images/nav-icons/RobotAgent.svg");
+  --scd-pillar-icon: url("images/nav-icons/RobotFaceSparkle.svg");
 }
 
 #root-nav-menu [data-test="monogram"] {
@@ -205,91 +205,6 @@ body.scd-managed-studio-template #input_time_range > button:last-child {
 body.scd-managed-studio-template #input_time_range svg {
   color: currentColor;
   fill: currentColor;
-}
-
-/*
- * Dashboard Manager is mounted inside a restart-safe Simple XML shell. Remove
- * only the wrappers that surround #scan-root so the React manager owns the
- * full content area without changing Splunk's global app navigation.
- */
-body.scd-dashboard-manager-shell .dashboard-body:has(#scan-root) {
-  min-width: 0;
-  padding: 0 !important;
-}
-
-body.scd-dashboard-manager-shell
-  .dashboard:has(#scan-root)
-  > .dashboard-header,
-body.scd-dashboard-manager-shell
-  .dashboard:has(#scan-root)
-  > .dashboard-messages {
-  display: none !important;
-  height: 0 !important;
-  min-height: 0 !important;
-}
-
-body.scd-dashboard-manager-shell
-  :is(
-    .dashboard-layout-row-column,
-    .dashboard-element,
-    .panel-element-row,
-    .dashboard-row,
-    .dashboard-cell,
-    .dashboard-panel
-  ):has(#scan-root) {
-  min-width: 0;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-body.scd-dashboard-manager-shell
-  .dashboard-panel:has(#scan-root)
-  .panel-body {
-  padding: 0 !important;
-}
-
-body.scd-dashboard-manager-shell #scan-root {
-  width: 100%;
-  min-width: 0;
-  min-height: calc(100vh - 56px);
-  background: #0f1117;
-}
-
-body.scd-dashboard-manager-shell #scan-root > * {
-  min-width: 0;
-}
-
-body.scd-dashboard-manager-shell .scd-dashboard-manager-load-error {
-  box-sizing: border-box;
-  width: min(680px, calc(100% - 48px));
-  margin: 48px auto;
-  padding: 28px;
-  border: 1px solid #45566c;
-  border-radius: 8px;
-  background: #172130;
-  color: #ecf0f5;
-  font-family: "Splunk Platform Sans", Inter, system-ui, sans-serif;
-}
-
-body.scd-dashboard-manager-shell .scd-dashboard-manager-load-error h2 {
-  margin: 0 0 10px;
-  color: #ecf0f5;
-}
-
-body.scd-dashboard-manager-shell .scd-dashboard-manager-load-error p {
-  margin: 0 0 20px;
-  color: #c7d0dc;
-}
-
-body.scd-dashboard-manager-shell .scd-dashboard-manager-load-error button {
-  min-height: 32px;
-  padding: 6px 14px;
-  border: 1px solid #00bceb;
-  border-radius: 4px;
-  background: #049fd9;
-  color: #fff;
-  cursor: pointer;
-  font-weight: 600;
 }
 
 body {

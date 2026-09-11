@@ -39,7 +39,7 @@ import { resolveSearchbaseAppContexts } from './searchbaseDispatch';
  * fallbacks for common Cisco packages whose app.conf omits a display label.
  */
 export const SEARCHBASE_APP_LABEL_FALLBACKS: Readonly<Record<string, string>> = {
-    'cisco-catalyst-app': 'Cisco Enterprise Networking for Splunk Platform',
+    'cisco-catalyst-app': 'Cisco Enterprise Networking App for Splunk',
     'cisco_dc_networking_app_for_splunk': 'Cisco DC Networking App for Splunk',
     CiscoSecurityCloud: 'Cisco Security Cloud',
     Splunk_TA_Cisco_Intersight: 'Cisco Intersight Add-on for Splunk',
@@ -47,7 +47,7 @@ export const SEARCHBASE_APP_LABEL_FALLBACKS: Readonly<Record<string, string>> = 
     Splunk_TA_cisco_meraki: 'Cisco Meraki Add-on for Splunk',
     'Splunk_TA_cisco-wsa': 'Splunk Add-on for Cisco WSA',
     'TA-cisco-cloud-security-addon': 'Cisco Secure Access Add-on for Splunk',
-    TA_cisco_catalyst: 'Cisco Catalyst Add-on for Splunk',
+    TA_cisco_catalyst: 'Cisco Enterprise Networking Add-on for Splunk',
     ta_cisco_spaces: 'Cisco Spaces Add-on for Splunk',
     ta_cisco_thousandeyes: 'Cisco ThousandEyes App for Splunk',
 };

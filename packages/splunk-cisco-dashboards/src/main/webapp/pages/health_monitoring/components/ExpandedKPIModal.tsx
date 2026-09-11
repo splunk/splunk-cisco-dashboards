@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowDownRight, ArrowUpRight, X } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
@@ -11,6 +11,7 @@ import {
     iconRegistry,
     KPIChart,
 } from './MetricCard';
+import { useModalFocusTrap } from '@/common/hooks/useModalFocusTrap';
 
 interface ExpandedKPIModalProps {
     kpi: KPIInstance | null;
@@ -21,19 +22,24 @@ export const ExpandedKPIModal: React.FC<ExpandedKPIModalProps> = ({
     kpi,
     onClose,
 }) => {
+    const dialogRef = useRef<HTMLDivElement | null>(null);
+    const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+
+    useModalFocusTrap({
+        isOpen: Boolean(kpi),
+        dialogRef,
+        initialFocusRef: closeButtonRef,
+        onClose,
+    });
+
     useEffect(() => {
         if (!kpi) return undefined;
-        const onKeyDown = (event: KeyboardEvent) => {
-            if (event.key === 'Escape') onClose();
-        };
         const previousOverflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
-        document.addEventListener('keydown', onKeyDown);
         return () => {
             document.body.style.overflow = previousOverflow;
-            document.removeEventListener('keydown', onKeyDown);
         };
-    }, [kpi, onClose]);
+    }, [kpi]);
 
     if (!kpi || typeof document === 'undefined') return null;
 
@@ -56,6 +62,7 @@ export const ExpandedKPIModal: React.FC<ExpandedKPIModalProps> = ({
 
     return createPortal(
         <div
+            ref={dialogRef}
             className="fixed inset-0 z-[9998] flex items-center justify-center sui-bg-page p-4 backdrop-blur-sm"
             onMouseDown={(event) => {
                 if (event.target === event.currentTarget) onClose();
@@ -63,6 +70,7 @@ export const ExpandedKPIModal: React.FC<ExpandedKPIModalProps> = ({
             role="dialog"
             aria-modal="true"
             aria-label={`${kpi.title} expanded view`}
+            tabIndex={-1}
         >
             <div className="flex max-h-[92vh] w-[min(920px,96vw)] flex-col overflow-hidden rounded-xl border    shadow-2xl sui-border-default sui-bg-page sui-color-active">
                 <header className="flex items-center justify-between border-b  px-7 py-5 sui-border-weak">
@@ -79,6 +87,7 @@ export const ExpandedKPIModal: React.FC<ExpandedKPIModalProps> = ({
                     </div>
                     <button
                         type="button"
+                        ref={closeButtonRef}
                         aria-label="Close expanded KPI"
                         title="Close"
                         {...getInteractiveControlProps(() => onClose())}

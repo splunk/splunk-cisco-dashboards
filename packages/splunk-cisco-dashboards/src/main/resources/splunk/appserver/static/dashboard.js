@@ -4,9 +4,9 @@
  * suffix and apply the Secure Networking product acronym exactly once.
  */
 (function setSasnDashboardTitle() {
-  const prefix = "SASN | ";
+  const prefix = "SSNE | ";
   const splunkVersionSuffix = /\s*\|\s*Splunk(?:\s+Enterprise)?\s+[\w.-]+\s*$/i;
-  const sasnPrefix = /^(?:SASN\s*\|\s*)+/i;
+  const sasnPrefix = /^(?:SSNE\s*\|\s*)+/i;
 
   const normalizeTitle = (title) => {
     const dashboardName = String(title || "")
@@ -54,6 +54,7 @@
     "sn_agentic_ops_operational_intelligence",
     "sn_agentic_ops_executive_assurance",
     "sn_agentic_ops_secure_networking_assurance",
+    "sn_data_center_operations",
     "sn_hmf_dlp_cloud_native_security",
     "sn_hmf_sdwan_network_health",
     "sn_hmf_threat_detection_enforcement",

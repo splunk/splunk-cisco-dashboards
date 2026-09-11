@@ -153,6 +153,13 @@ const TileCountValue = styled.span`
   font-variant-numeric: tabular-nums;
 `;
 
+const TileCountAllStatus = styled.span`
+  color: ${variables.contentColorActive};
+  font-size: ${variables.fontSizeSmall};
+  font-weight: ${variables.fontWeightSemiBold};
+  font-variant-numeric: tabular-nums;
+`;
+
 const ShowAllButton = styled(Button)`
   &&:not([disabled], [aria-disabled="true"]) {
     border-color: ${variables.actionColorBorderSecondary};
@@ -214,11 +221,7 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
     action();
     window.requestAnimationFrame(() => actionToggleRef.current?.focus());
   };
-  const effectiveTileCount = tileCount
-    ? tilePager?.showingAll
-      ? Math.min(tilePager.total, tileCount.max)
-      : tileCount.value
-    : 0;
+  const effectiveTileCount = tileCount?.value ?? 0;
   const hasMenuActions = Boolean(
     addTileAction || onEditTitle || onToggleFocus || height || tileCount,
   );
@@ -342,34 +345,42 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
 
   const tileCountControl = tileCount ? (
     <TileCountControl>
-      <span>Visible tiles</span>
-      <TileCountStepper
-        aria-label={`${tileCount.label ?? "Tiles"}: ${effectiveTileCount} of ${tileCount.max}`}
-        role="group"
-      >
-        <Button
-          append
-          appearance="secondary"
-          disabled={effectiveTileCount <= tileCount.min}
-          hideLabel
-          icon={<Minus aria-hidden="true" />}
-          label={`Show fewer ${(tileCount.label ?? "tiles").toLowerCase()}`}
-          onClick={() => tileCount.onChange(effectiveTileCount - 1)}
-        />
-        <TileCountValue aria-hidden="true">{effectiveTileCount}</TileCountValue>
-        <Button
-          appearance="secondary"
-          disabled={effectiveTileCount >= tileCount.max}
-          hideLabel
-          icon={<Plus aria-hidden="true" />}
-          label={`Show more ${(tileCount.label ?? "tiles").toLowerCase()}`}
-          onClick={() => tileCount.onChange(effectiveTileCount + 1)}
-          prepend
-        />
-      </TileCountStepper>
+      {tilePager?.showingAll ? (
+        <TileCountAllStatus>All {tilePager.total} visible</TileCountAllStatus>
+      ) : (
+        <>
+          <span>Tiles per page</span>
+          <TileCountStepper
+            aria-label={`${tileCount.label ?? "Tiles"} per page: ${effectiveTileCount} of ${tileCount.max}`}
+            role="group"
+          >
+            <Button
+              append
+              appearance="secondary"
+              disabled={effectiveTileCount <= tileCount.min}
+              hideLabel
+              icon={<Minus aria-hidden="true" />}
+              label={`Show fewer ${(tileCount.label ?? "tiles").toLowerCase()} per page`}
+              onClick={() => tileCount.onChange(effectiveTileCount - 1)}
+            />
+            <TileCountValue aria-hidden="true">{effectiveTileCount}</TileCountValue>
+            <Button
+              appearance="secondary"
+              disabled={effectiveTileCount >= tileCount.max}
+              hideLabel
+              icon={<Plus aria-hidden="true" />}
+              label={`Show more ${(tileCount.label ?? "tiles").toLowerCase()} per page`}
+              onClick={() => tileCount.onChange(effectiveTileCount + 1)}
+              prepend
+            />
+          </TileCountStepper>
+        </>
+      )}
       <ScreenReaderContent>
         <span role="status">
-          {tileCount.label ?? "Tiles"}: {effectiveTileCount} of {tileCount.max} visible
+          {tilePager?.showingAll
+            ? `All ${tilePager.total} ${tileCount.label ?? "tiles"} visible`
+            : `${tileCount.label ?? "Tiles"}: ${effectiveTileCount} per page`}
         </span>
       </ScreenReaderContent>
     </TileCountControl>
@@ -379,14 +390,14 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
     <ShowAllButton
       aria-label={
         tilePager.showingAll
-          ? `Show ${tileCount.value} ${tileCount.label ?? "tiles"}`
+          ? `Show ${tileCount.value} ${tileCount.label ?? "tiles"} per page`
           : `Show all ${tilePager.total} ${tileCount.label ?? "tiles"}`
       }
       aria-pressed={tilePager.showingAll}
       appearance="standalone"
       label={
         tilePager.showingAll
-          ? `Show ${tileCount.value}`
+          ? `Show ${tileCount.value} per page`
           : `Show all ${tilePager.total}`
       }
       onClick={tilePager.onToggleShowAll}
@@ -412,7 +423,10 @@ export const DashboardSection: React.FC<DashboardSectionProps> = ({
     </SectionHeaderActions>
   );
 
-  const tilePagerToolbar = tilePager && tileCount && tilePager.total > tileCount.value ? (
+  const tilePagerToolbar = tilePager &&
+    tileCount &&
+    tilePager.total > tileCount.value &&
+    (tilePager.showingAll || tilePager.pageCount > 1) ? (
     <TilePagerToolbar aria-atomic="true" aria-live="polite">
       {tilePager.showingAll ? (
         <TilePagerStatus>

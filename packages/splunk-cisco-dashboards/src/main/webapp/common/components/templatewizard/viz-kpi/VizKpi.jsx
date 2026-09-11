@@ -35,10 +35,6 @@ import DOMPurify from 'dompurify';
 import InformationCircle from '@splunk/react-icons/InformationCircle';
 import useDashboardStore from '../../../state/dashboardStore';
 import { cloneDeep, isEqual } from 'lodash-es';
-import { appStaticAssetUrl } from '../../../lib/appStaticAssetUrl';
-
-const KPI_PLACEHOLDER_ASSET_URL = appStaticAssetUrl('placeholder.svg');
-const KPI_VIEW_ICON_ASSET_URL = appStaticAssetUrl('icn_view.svg');
 
 const generateRandomString = (length = 10) => {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -153,7 +149,7 @@ const VizKpi = (props) => {
                         justifyContent: 'center',
                         boxSizing: 'border-box',
                         cursor: options.readonly ? 'auto' : 'pointer',
-                        backgroundImage: `url('${KPI_PLACEHOLDER_ASSET_URL}')`,
+                        backgroundImage: "url('/static/app/splunk-cisco-dashboards/placeholder.svg')",
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                     }}
@@ -174,7 +170,7 @@ const VizKpi = (props) => {
                         }}
                     >
                         <img
-                            src={KPI_VIEW_ICON_ASSET_URL}
+                            src="/static/app/splunk-cisco-dashboards/icn_view.svg"
                             style={{ height: '100%', width: '100%' }}
                         ></img>
                     </div>

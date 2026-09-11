@@ -88,6 +88,7 @@
  * Splunk backend.
  */
 
+import { normalizeSharedImageSource } from '../lib/imageSource';
 import { getSearchAppContext } from './splunkSearchService';
 
 /** Splunk app namespace this service must always target. Used by
@@ -501,6 +502,48 @@ const assertValidName = (name: string): void => {
 const optionalString = (raw: unknown): string => {
     if (typeof raw !== 'string') return '';
     return raw;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+    Boolean(value && typeof value === 'object' && !Array.isArray(value));
+
+const normalizeCustomStencilAsset = (
+    raw: unknown
+): CustomStencilAsset | undefined => {
+    if (!isRecord(raw)) return undefined;
+    const id = optionalString(raw.id).trim();
+    const label = optionalString(raw.label).trim();
+    const mediaType = raw.mediaType;
+    const src = normalizeSharedImageSource(raw.src);
+    if (
+        !id ||
+        !label ||
+        (mediaType !== 'image/svg+xml' && mediaType !== 'image/png') ||
+        !src
+    ) {
+        return undefined;
+    }
+    if (
+        (src.startsWith('data:') && !src.toLowerCase().startsWith(`data:${mediaType}`)) ||
+        (src.startsWith('/static/') &&
+            !src.toLowerCase().endsWith(mediaType === 'image/svg+xml' ? '.svg' : '.png'))
+    ) {
+        return undefined;
+    }
+    const width = typeof raw.width === 'number' && raw.width > 0 ? raw.width : undefined;
+    const height = typeof raw.height === 'number' && raw.height > 0 ? raw.height : undefined;
+    return { id, label, src, mediaType, ...(width ? { width } : {}), ...(height ? { height } : {}) };
+};
+
+const sanitizeDiagramNode = (node: SavedDiagramNode): SavedDiagramNode => {
+    if (!isRecord(node) || !Object.prototype.hasOwnProperty.call(node, 'customStencil')) {
+        return node;
+    }
+    const { customStencil: rawCustomStencil, ...withoutCustomStencil } = node;
+    const customStencil = normalizeCustomStencilAsset(rawCustomStencil);
+    return customStencil
+        ? { ...withoutCustomStencil, customStencil }
+        : (withoutCustomStencil as SavedDiagramNode);
 };
 
 /** Build 115.5 — coerce a possibly-stringy conf value to a
@@ -1060,7 +1103,7 @@ const validatePayload = (raw: unknown): SavedDiagramPayload => {
     }
     return {
         version: typeof p.version === 'number' ? p.version : DIAGRAM_PAYLOAD_VERSION,
-        nodes: nodes as SavedDiagramNode[],
+        nodes: (nodes as SavedDiagramNode[]).map(sanitizeDiagramNode),
         edges: edges as SavedDiagramEdge[],
         groups: groups as SavedDiagramGroup[],
         title,
@@ -1150,7 +1193,9 @@ export const saveDiagram = async (
     assertValidName(name);
     const safePayload: SavedDiagramPayload = {
         version: DIAGRAM_PAYLOAD_VERSION,
-        nodes: Array.isArray(payload.nodes) ? payload.nodes : [],
+        nodes: Array.isArray(payload.nodes)
+            ? payload.nodes.map(sanitizeDiagramNode)
+            : [],
         edges: Array.isArray(payload.edges) ? payload.edges : [],
         groups: Array.isArray(payload.groups) ? payload.groups : [],
         title: payload.title,

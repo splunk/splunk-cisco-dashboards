@@ -37,7 +37,9 @@ import { createFetchInit } from '@splunk/splunk-utils/fetch';
 import { getSearchAppContext } from './splunkSearchService';
 import { clearSearchbaseCache } from './searchbaseCatalogue';
 import {
+    AGENTIC_SOC_WORKSPACE_SOURCE_ID,
     EXECUTIVE_WORKSPACE_SOURCE_ID,
+    PACKAGED_AGENTIC_SOC_SEARCHBASE_STANZA_IDS,
     isWorkspaceSourceId,
     type WorkspaceSourceId,
 } from '@/common/config/insightsWorkspaces';
@@ -458,6 +460,10 @@ export interface FactoryTileConfigPatch {
     tileId: string;
     workspaceId?: WorkspaceSourceId;
     section: string;
+    /** Defaults to an Overview tile; map footers patch viz_options.mapFooter instead. */
+    target?:
+        | { kind: 'overview' }
+        | { kind: 'mapFooter'; slot: 'primary' | 'secondary' };
     /** Current stanza id the tile is defined on (before this save). */
     fromStanzaId: string;
     thresholds?: TileThresholdsPatch;
@@ -542,6 +548,61 @@ const patchFactoryOverviewEntry = (
         patchFactoryEntry(entry, patch),
     );
 
+const mapFooterEntry = (
+    vizOptions: Record<string, unknown>,
+): Record<string, unknown> | null => {
+    const raw = vizOptions.mapFooter;
+    return raw && typeof raw === 'object' && !Array.isArray(raw)
+        ? (raw as Record<string, unknown>)
+        : null;
+};
+
+const patchFactoryMapFooterEntry = (
+    vizOptions: Record<string, unknown>,
+    patch: FactoryTileConfigPatch,
+    sourceEntry?: Record<string, unknown> | null,
+): Record<string, unknown> => {
+    if (patch.target?.kind !== 'mapFooter') return vizOptions;
+
+    const next = { ...vizOptions };
+    const existing = mapFooterEntry(vizOptions);
+    if (existing && existing.id !== patch.tileId) {
+        throw new SearchbaseTileConfigError(
+            `The selected Searchbase entry already powers map footer "${String(
+                existing.id ?? existing.slot ?? 'unknown',
+            )}". Choose a different search.`,
+        );
+    }
+
+    next.mapFooter = patchFactoryEntry(
+        {
+            ...(sourceEntry ?? {}),
+            ...(existing ?? {}),
+            slot: patch.target.slot,
+            id: patch.tileId,
+        },
+        patch,
+    );
+    return next;
+};
+
+const removeFactoryMapFooterEntry = (
+    vizOptions: Record<string, unknown>,
+    patch: FactoryTileConfigPatch,
+): Record<string, unknown> => {
+    if (patch.target?.kind !== 'mapFooter') return vizOptions;
+    const next = { ...vizOptions };
+    const existing = mapFooterEntry(vizOptions);
+    if (
+        existing &&
+        (existing.id === patch.tileId ||
+            (existing.id === undefined && existing.slot === patch.target.slot))
+    ) {
+        delete next.mapFooter;
+    }
+    return next;
+};
+
 /**
  * Single entry point the UI calls on Apply. All changes for one owning
  * stanza are submitted in one REST write. A search rebind necessarily spans
@@ -565,7 +626,9 @@ export const saveFactoryTileConfig = async (patch: FactoryTileConfigPatch): Prom
         const fields: Record<string, string> = { ...drilldownFields };
         if (hasOverviewChanges) {
             fields.viz_options = JSON.stringify(
-                patchFactoryOverviewEntry(vizOptions, patch, workspaceId),
+                patch.target?.kind === 'mapFooter'
+                    ? patchFactoryMapFooterEntry(vizOptions, patch)
+                    : patchFactoryOverviewEntry(vizOptions, patch, workspaceId),
             );
         }
         if (Object.keys(fields).length > 0) {
@@ -577,31 +640,41 @@ export const saveFactoryTileConfig = async (patch: FactoryTileConfigPatch): Prom
 
     const fromState = await loadEffectiveStanza(patch.fromStanzaId);
     const toState = await loadEffectiveStanza(rebindTarget);
-    const patchedTarget = patchOverviewEntry(
-        toState.vizOptions,
-        patch.tileId,
-        workspaceId,
-        (entry) =>
-            patchFactoryEntry(
-                {
-                    ...entry,
-                    tileId: patch.tileId,
-                    section: patch.section,
-                },
-                patch,
-            ),
-    );
+    const patchedTarget =
+        patch.target?.kind === 'mapFooter'
+            ? patchFactoryMapFooterEntry(
+                  toState.vizOptions,
+                  patch,
+                  mapFooterEntry(fromState.vizOptions),
+              )
+            : patchOverviewEntry(
+                  toState.vizOptions,
+                  patch.tileId,
+                  workspaceId,
+                  (entry) =>
+                      patchFactoryEntry(
+                          {
+                              ...entry,
+                              tileId: patch.tileId,
+                              section: patch.section,
+                          },
+                          patch,
+                      ),
+              );
     await writeStanzaKeys(rebindTarget, {
         viz_options: JSON.stringify(patchedTarget),
         ...drilldownFields,
     });
 
     try {
-        const patchedSource = removeOverviewEntry(
-            fromState.vizOptions,
-            patch.tileId,
-            workspaceId,
-        );
+        const patchedSource =
+            patch.target?.kind === 'mapFooter'
+                ? removeFactoryMapFooterEntry(fromState.vizOptions, patch)
+                : removeOverviewEntry(
+                      fromState.vizOptions,
+                      patch.tileId,
+                      workspaceId,
+                  );
         await writeStanzaKeys(patch.fromStanzaId, {
             viz_options: JSON.stringify(patchedSource),
         });
@@ -631,11 +704,13 @@ export const resetInsightsWorkspaceTileConfig = async (
 ): Promise<void> => {
     if (!isInSplunkRuntime()) return;
 
-    const stanzaIds = new Set<string>(
+    const packagedStanzaIds =
         workspaceId === EXECUTIVE_WORKSPACE_SOURCE_ID
             ? DEFAULT_EXECUTIVE_WORKSPACE_STANZA_IDS
-            : []
-    );
+            : workspaceId === AGENTIC_SOC_WORKSPACE_SOURCE_ID
+              ? PACKAGED_AGENTIC_SOC_SEARCHBASE_STANZA_IDS
+              : [];
+    const stanzaIds = new Set<string>(packagedStanzaIds);
     currentOwnerStanzaIds.forEach((raw) => {
         const stanza = typeof raw === 'string' ? raw.trim() : '';
         if (!stanza || !STANZA_ID_PATTERN.test(stanza)) return;

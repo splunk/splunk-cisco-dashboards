@@ -51,14 +51,15 @@ import Multiselect from "@splunk/react-ui/Multiselect";
 import Paragraph from "@splunk/react-ui/Paragraph";
 import RadioBar from "@splunk/react-ui/RadioBar";
 import SearchInput from "@splunk/react-ui/Search";
-import ScreenReaderContent from "@splunk/react-ui/ScreenReaderContent";
 import Select from "@splunk/react-ui/Select";
 import Switch from "@splunk/react-ui/Switch";
 import Text from "@splunk/react-ui/Text";
+import Tooltip from "@splunk/react-ui/Tooltip";
 import WaitSpinner from "@splunk/react-ui/WaitSpinner";
 import { variables } from "@splunk/themes";
 import {
   Eye,
+  Info,
   Play,
   RotateCcw,
   Settings2,
@@ -88,6 +89,101 @@ import { VizIcon, resolveVizMapping } from "./vizIcons";
 const ALL_CATEGORIES = "__all__";
 const ALL_SUB_CATEGORIES = "__all_sub__";
 
+interface OptionHelpConfig {
+  title: string;
+  description: string;
+  docsUrl: string;
+}
+
+interface OptionPanelActionsProps {
+  help: OptionHelpConfig;
+  summary: string;
+  children?: React.ReactNode;
+}
+
+const OPTION_HELP: Record<
+  "dataMapping" | "drilldown" | "chartStyle" | "display" | "thresholds",
+  OptionHelpConfig
+> = {
+  dataMapping: {
+    title: "Data mapping",
+    description:
+      "Choose the result field used as the tile value and optionally replace the tile label.",
+    docsUrl:
+      "https://help.splunk.com/en/splunk-enterprise/create-dashboards-and-reports/dashboard-studio/10.2/configuration-options-reference/visualization-configuration-options",
+  },
+  drilldown: {
+    title: "Drilldown",
+    description:
+      "Choose the searches that viewers can open from this tile to investigate the metric in more detail.",
+    docsUrl:
+      "https://help.splunk.com/en/splunk-enterprise/create-dashboards-and-reports/dashboard-studio/10.2/make-dashboards-dynamic-and-interactive/interactions",
+  },
+  chartStyle: {
+    title: "Chart style",
+    description:
+      "Choose how the tile visualizes its search results without changing the search that powers it.",
+    docsUrl:
+      "https://help.splunk.com/en/splunk-enterprise/create-dashboards-and-reports/dashboard-studio/10.2/visualizations/add-and-format-visualizations",
+  },
+  display: {
+    title: "Display",
+    description:
+      "Show or hide supporting tile details such as peak labels, previous-period change, and comparison overlays.",
+    docsUrl:
+      "https://help.splunk.com/en/splunk-enterprise/create-dashboards-and-reports/dashboard-studio/10.2/configuration-options-reference/visualization-configuration-options",
+  },
+  thresholds: {
+    title: "Thresholds",
+    description:
+      "Set warning and critical value bands used for tile status colors and indicators.",
+    docsUrl:
+      "https://help.splunk.com/en/splunk-enterprise/create-dashboards-and-reports/dashboard-studio/10.0/visualizations/single-value-visualizations",
+  },
+};
+
+const OptionHelpAction: React.FC<OptionHelpConfig> = ({
+  title,
+  description,
+  docsUrl,
+}) => (
+  <Tooltip
+    content={description}
+    defaultPlacement="above"
+    renderAnchor={({ describedBy, elementRef, onBlur, onFocus }) => (
+      <Button
+        appearance="subtle"
+        aria-describedby={describedBy}
+        aria-label={`Learn about ${title} in Splunk documentation`}
+        elementRef={elementRef}
+        icon={<Info aria-hidden="true" />}
+        onBlur={onBlur}
+        onFocus={onFocus}
+        openInNewContext
+        to={docsUrl}
+      />
+    )}
+  />
+);
+
+const OptionSummary = styled.span`
+  color: ${variables.contentColorMuted};
+  font-size: ${variables.fontSizeSmall};
+  white-space: nowrap;
+`;
+
+const OptionPanelActions: React.FC<OptionPanelActionsProps> = ({
+  help,
+  summary,
+  children,
+}) => (
+  <Layout>
+    <OptionSummary>{summary}</OptionSummary>
+    <OptionHelpAction {...help} />
+    {children}
+  </Layout>
+);
+
 // Splunk Web's legacy input rule outranks SUI, so restore the themed search background here.
 const StyledSearch = styled(SearchInput)`
   && input[role="searchbox"] {
@@ -101,6 +197,17 @@ const StyledDrawer = styled(Drawer)`
   & > div {
     width: 100%;
     max-width: 100vw;
+  }
+`;
+
+const SearchResultSummary = styled.p`
+  margin: ${variables.spacingSmall} 0;
+  color: ${variables.contentColorMuted};
+  font-size: ${variables.fontSizeSmall};
+
+  strong {
+    color: ${variables.contentColorActive};
+    font-weight: ${variables.fontWeightSemiBold};
   }
 `;
 
@@ -119,6 +226,9 @@ const makeDefaultAppSelection = (): Set<string> => new Set();
 
 const isDefaultAppSelection = (selection: ReadonlySet<string>): boolean =>
   selection.size === 0;
+
+const formatSearchCount = (count: number): string =>
+  `${count.toLocaleString()} ${count === 1 ? "search" : "searches"}`;
 
 const entryMatchesAppSelection = (
   entry: SearchbaseRecord,
@@ -266,6 +376,8 @@ export interface KpiPickerContext {
   currentHidePeak?: boolean;
   currentHideDelta?: boolean;
   currentHideOverlay?: boolean;
+  /** False for fixed single-value surfaces that do not render chart/display options. */
+  allowPersonalDisplayControls?: boolean;
   /**
    * Opaque section identifier for this tile (Build 1203). When
    * provided alongside an `onApplyDisplayToSection` handler on the
@@ -462,7 +574,7 @@ const highlightMatch = (text: string, query: string): React.ReactNode => {
     re.test(part) ? (
       <mark
         key={idx}
-        className="sui-bg-info sui-bg-accent text-inherit rounded-sm px-0.5"
+        className="sui-bg-notification-info text-inherit rounded-sm px-0.5"
       >
         {part}
       </mark>
@@ -777,6 +889,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
   const [detailsCollapsed, setDetailsCollapsed] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const filtersPanelRef = useRef<HTMLDivElement | null>(null);
+  const drilldownFiltersPanelRef = useRef<HTMLDivElement | null>(null);
   const drilldownDraftResetKeyRef = useRef<string>("");
 
   // Lazy-load searchbase.conf when the panel first opens. Cached at
@@ -1498,6 +1612,7 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
   const currentBoundSearchbaseUrl = currentBoundEntry
     ? buildSearchbaseEditUrl(currentBoundEntry)
     : null;
+  const currentBoundEntryId = currentBoundEntry?.id;
 
   // Refs for scroll-to-current behaviour. When the panel opens, we
   // want the bound entry to be on-screen even if it's deep in a
@@ -1524,17 +1639,20 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
   // Run the jump once when the catalogue finishes loading and the
   // panel is open with a current binding. We delay one frame so the
   // list has rendered and the item refs are populated before we try
-  // to scroll. Without that the lookup misses and nothing happens.
+  // to scroll. Depend on the stable stanza id rather than the record
+  // object or catalogue length: visibility changes can refetch the
+  // catalogue and recreate every record, but must not replay this
+  // one-time opening jump while the user is working in the filters.
   useEffect(() => {
-    if (!open || !currentBoundEntry) return undefined;
+    if (!open || !currentBoundEntryId) return undefined;
     const id = window.setTimeout(() => {
-      const el = itemRefs.current.get(currentBoundEntry.id);
+      const el = itemRefs.current.get(currentBoundEntryId);
       if (el && listScrollRef.current) {
         el.scrollIntoView({ block: "center" });
       }
     }, 50);
     return () => window.clearTimeout(id);
-  }, [open, currentBoundEntry, catalogue.length]);
+  }, [open, currentBoundEntryId]);
 
   if (!context) return null;
 
@@ -1650,9 +1768,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
 
   const facetsActive = activeFilterCount > 0;
   const availableSearchCount = filtered.length;
-  const availableSearchLabel = `${availableSearchCount.toLocaleString()} ${
-    availableSearchCount === 1 ? "search" : "searches"
-  } available`;
+  const availableSearchCountText = availableSearchCount.toLocaleString();
+  const availableSearchNoun =
+    availableSearchCount === 1 ? "search" : "searches";
+  const searchResultQualifier =
+    facetsActive || query.trim().length > 0
+      ? `${availableSearchCount === 1 ? "matches" : "match"} your current search and filters`
+      : "available";
   const drilldownActiveFilterCount =
     (!isDefaultAppSelection(drilldownSelectedApps) ? 1 : 0) +
     (drilldownSelectedCategory !== ALL_CATEGORIES ? 1 : 0) +
@@ -1663,19 +1785,21 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
   const handleApply = () => {
     if (!selectedEntry || !canApply || !context) return;
 
-    // ---- Personal display taste: always applies, always local. ----
+    // ---- Personal display taste: applies only to surfaces that render it. ----
     // Viz override (Build 1174) and the three display toggles are
     // the only things left in the localStorage override — chart
     // style and chrome-hiding are genuinely per-viewer taste, not
     // org-wide fact.
-    const displayPayload: MetricOverride = {};
-    if (vizOverrideInput) {
-      displayPayload.vizOverride = vizOverrideInput;
+    if (context.allowPersonalDisplayControls !== false) {
+      const displayPayload: MetricOverride = {};
+      if (vizOverrideInput) {
+        displayPayload.vizOverride = vizOverrideInput;
+      }
+      if (hidePeakInput) displayPayload.hidePeak = true;
+      if (hideDeltaInput) displayPayload.hideDelta = true;
+      if (hideOverlayInput) displayPayload.hideOverlay = true;
+      onApply(context.tileId, displayPayload);
     }
-    if (hidePeakInput) displayPayload.hidePeak = true;
-    if (hideDeltaInput) displayPayload.hideDelta = true;
-    if (hideOverlayInput) displayPayload.hideOverlay = true;
-    onApply(context.tileId, displayPayload);
 
     // ---- Org-wide fields: admin-only, saved server-side. ----
     // Thresholds / Data Mapping / Drilldown inputs render
@@ -1871,6 +1995,11 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     setSelectedCategory(ALL_CATEGORIES);
     setSelectedSubCategory(ALL_SUB_CATEGORIES);
     setActiveTags(new Set());
+    window.requestAnimationFrame(() => {
+      filtersPanelRef.current
+        ?.querySelector<HTMLButtonElement>('button[aria-expanded]')
+        ?.focus({ preventScroll: true });
+    });
   };
 
   const handleClearDrilldownFacets = () => {
@@ -1878,6 +2007,11 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
     setDrilldownSelectedCategory(ALL_CATEGORIES);
     setDrilldownSelectedSubCategory(ALL_SUB_CATEGORIES);
     setDrilldownActiveTags(new Set());
+    window.requestAnimationFrame(() => {
+      drilldownFiltersPanelRef.current
+        ?.querySelector<HTMLButtonElement>('button[aria-expanded]')
+        ?.focus({ preventScroll: true });
+    });
   };
 
   const handleEditorViewChange = (value: unknown) => {
@@ -1891,7 +2025,6 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
   return (
     <>
       <StyledDrawer
-        id="configure-tile-drawer"
         divider="both"
         material="glass"
         onRequestClose={() => {
@@ -1908,7 +2041,10 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
           subtitle={context.defaultLabel}
         />
 
-        <Drawer.Body>
+        <Drawer.Body
+          className="scd-insights-layer-content"
+          id="configure-tile-drawer"
+        >
           <ControlGroup hideLabel label="Tile configuration view">
             <RadioBar
               onChange={(_event, { value }) => handleEditorViewChange(value)}
@@ -1930,28 +2066,30 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 />
               </ControlGroup>
 
-              <CollapsiblePanel
-                actions={
-                  facetsActive ? (
-                    <Button
-                      appearance="subtle"
-                      aria-label="Clear search filters"
-                      label="Clear filters"
-                      onClick={handleClearFacets}
-                    />
-                  ) : null
-                }
-                appearance="subtle"
-                description={availableSearchLabel}
-                inset
-                onChange={(_event, { action }) => setFiltersOpen(action === "open")}
-                open={filtersOpen}
-                title={
-                  activeFilterCount > 0
-                    ? `Filters (${activeFilterCount} active)`
-                    : "Filters"
-                }
-              >
+              <div ref={filtersPanelRef}>
+                <CollapsiblePanel
+                  actions={
+                    facetsActive ? (
+                      <Button
+                        appearance="subtle"
+                        aria-label="Clear search filters"
+                        label="Clear filters"
+                        onClick={handleClearFacets}
+                      />
+                    ) : null
+                  }
+                  appearance="subtle"
+                  inset
+                  onChange={(_event, { action }) =>
+                    setFiltersOpen(action === "open")
+                  }
+                  open={filtersOpen}
+                  title={
+                    activeFilterCount > 0
+                      ? `Filters (${activeFilterCount} active)`
+                      : "Filters"
+                  }
+                >
                 <ControlGroup label="App">
                   <Multiselect
                     compact
@@ -2060,13 +2198,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                       onChange={(_event, { values }) =>
                         setActiveTags(new Set(values.map(String)))
                       }
-                      placeholder={`All tags (${allTagsWithCounts.length})`}
+                      placeholder="All tags"
                       showSelectedValuesFirst="nextOpen"
                       values={Array.from(activeTags)}
                     >
                       {allTagsWithCounts.map(([tag, count]) => (
                         <Multiselect.Option
-                          description={`${count} searches`}
+                          description={formatSearchCount(count)}
                           descriptionPosition="right"
                           key={tag}
                           label={tag}
@@ -2076,7 +2214,25 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                     </Multiselect>
                   </ControlGroup>
                 )}
-              </CollapsiblePanel>
+                </CollapsiblePanel>
+              </div>
+
+              <SearchResultSummary
+                aria-atomic="true"
+                aria-live="polite"
+                role="status"
+              >
+                {loadState === "loading" ? (
+                  "Loading searches"
+                ) : loadState === "idle" ? (
+                  <>
+                    <strong>{availableSearchCountText}</strong>{" "}
+                    {availableSearchNoun} {searchResultQualifier}
+                  </>
+                ) : (
+                  "Searches could not be loaded"
+                )}
+              </SearchResultSummary>
 
               {currentBoundEntry && !boundDismissed && (
                 <Message
@@ -2130,13 +2286,6 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                 id="kpi-picker-search-results"
                 ref={listScrollRef}
               >
-                <ScreenReaderContent aria-live="polite" role="status">
-                  {loadState === "loading"
-                    ? "Loading searches"
-                    : loadState === "idle"
-                      ? availableSearchLabel
-                      : "Searches could not be loaded"}
-                </ScreenReaderContent>
                 {loadState === "loading" && (
                   <Layout>
                     <WaitSpinner screenReaderText={null} size="medium" />
@@ -2387,8 +2536,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                   </div>
 
                   <CollapsiblePanel
+                    actions={
+                      <OptionPanelActions
+                        help={OPTION_HELP.dataMapping}
+                        summary={`${valueField ? `Value: ${valueField}` : "Automatic value"}${labelOverride.trim() ? " · Custom label" : ""}`}
+                      />
+                    }
                     appearance="subtle"
-                    description={`${valueField ? `Value: ${valueField}` : "Automatic value"}${labelOverride.trim() ? " · Custom label" : ""}`}
                     inset
                     onChange={(_event, { action }) =>
                       setDataMappingOpen(action === "open")
@@ -2463,12 +2617,19 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                   </CollapsiblePanel>
 
                   <CollapsiblePanel
-                    appearance="subtle"
-                    description={
-                      drilldownDraftSearchNames.length > 0
-                        ? `${drilldownDraftSearchNames.length} searches`
-                        : "None"
+                    actions={
+                      <OptionPanelActions
+                        help={OPTION_HELP.drilldown}
+                        summary={
+                          drilldownDraftSearchNames.length > 0
+                            ? formatSearchCount(
+                                drilldownDraftSearchNames.length,
+                              )
+                            : "None"
+                        }
+                      />
                     }
+                    appearance="subtle"
                     inset
                     onChange={(_event, { action }) =>
                       setDrilldownOpen(action === "open")
@@ -2592,29 +2753,30 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                             />
                           </ControlGroup>
 
-                          <CollapsiblePanel
-                            actions={
-                              drilldownFacetsActive ? (
-                                <Button
-                                  appearance="subtle"
-                                  aria-label="Clear drilldown filters"
-                                  label="Clear filters"
-                                  onClick={handleClearDrilldownFacets}
-                                />
-                              ) : null
-                            }
-                            appearance="subtle"
-                            inset
-                            onChange={(_event, { action }) =>
-                              setDrilldownFiltersOpen(action === "open")
-                            }
-                            open={drilldownFiltersOpen}
-                            title={
-                              drilldownActiveFilterCount > 0
-                                ? `Filters (${drilldownActiveFilterCount} active)`
-                                : "Filters"
-                            }
-                          >
+                          <div ref={drilldownFiltersPanelRef}>
+                            <CollapsiblePanel
+                              actions={
+                                drilldownFacetsActive ? (
+                                  <Button
+                                    appearance="subtle"
+                                    aria-label="Clear drilldown filters"
+                                    label="Clear filters"
+                                    onClick={handleClearDrilldownFacets}
+                                  />
+                                ) : null
+                              }
+                              appearance="subtle"
+                              inset
+                              onChange={(_event, { action }) =>
+                                setDrilldownFiltersOpen(action === "open")
+                              }
+                              open={drilldownFiltersOpen}
+                              title={
+                                drilldownActiveFilterCount > 0
+                                  ? `Filters (${drilldownActiveFilterCount} active)`
+                                  : "Filters"
+                              }
+                            >
                             <ControlGroup label="App">
                               <Multiselect
                                 compact
@@ -2700,13 +2862,13 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                       new Set(values.map(String)),
                                     )
                                   }
-                                  placeholder={`All tags (${drilldownAllTagsWithCounts.length})`}
+                                  placeholder="All tags"
                                   values={Array.from(drilldownActiveTags)}
                                 >
                                   {drilldownAllTagsWithCounts.map(
                                     ([tag, count]) => (
                                       <Multiselect.Option
-                                        description={`${count} searches`}
+                                        description={formatSearchCount(count)}
                                         descriptionPosition="right"
                                         key={tag}
                                         label={tag}
@@ -2717,7 +2879,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                                 </Multiselect>
                               </ControlGroup>
                             )}
-                          </CollapsiblePanel>
+                            </CollapsiblePanel>
+                          </div>
 
                           <Layout>
                             <Badge
@@ -2794,6 +2957,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                     </div>
                   </CollapsiblePanel>
 
+                  {context.allowPersonalDisplayControls !== false && (
+                    <>
                   {/* CHART STYLE form.
                    *
                    * Lets the operator override how the tile
@@ -2809,22 +2974,26 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                    * overview page can actually draw. */}
                   <CollapsiblePanel
                     actions={
-                      vizOverrideInput ? (
-                        <Button
-                          appearance="subtle"
-                          aria-label="Reset chart style to default"
-                          icon={<RotateCcw aria-hidden="true" />}
-                          label="Reset to default"
-                          onClick={() => setVizOverrideInput(null)}
-                        />
-                      ) : null
+                      <OptionPanelActions
+                        help={OPTION_HELP.chartStyle}
+                        summary={
+                          vizOverrideInput
+                            ? "Custom"
+                            : `Default: ${resolveVizMapping(selectedEntry.defaultViz).label}`
+                        }
+                      >
+                        {vizOverrideInput ? (
+                          <Button
+                            appearance="subtle"
+                            aria-label="Reset chart style to default"
+                            icon={<RotateCcw aria-hidden="true" />}
+                            label="Reset to default"
+                            onClick={() => setVizOverrideInput(null)}
+                          />
+                        ) : null}
+                      </OptionPanelActions>
                     }
                     appearance="subtle"
-                    description={
-                      vizOverrideInput
-                        ? "Custom"
-                        : `Default: ${resolveVizMapping(selectedEntry.defaultViz).label}`
-                    }
                     inset
                     onChange={(_event, { action }) =>
                       setChartStyleOpen(action === "open")
@@ -2897,18 +3066,22 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                    * user hasn't customised. */}
                   <CollapsiblePanel
                     actions={
-                      displayCustomised ? (
-                        <Button
-                          appearance="subtle"
-                          aria-label="Reset display to default"
-                          icon={<RotateCcw aria-hidden="true" />}
-                          label="Reset to default"
-                          onClick={handleResetDisplay}
-                        />
-                      ) : null
+                      <OptionPanelActions
+                        help={OPTION_HELP.display}
+                        summary={displayCustomised ? "Custom" : "Default"}
+                      >
+                        {displayCustomised ? (
+                          <Button
+                            appearance="subtle"
+                            aria-label="Reset display to default"
+                            icon={<RotateCcw aria-hidden="true" />}
+                            label="Reset to default"
+                            onClick={handleResetDisplay}
+                          />
+                        ) : null}
+                      </OptionPanelActions>
                     }
                     appearance="subtle"
-                    description={displayCustomised ? "Custom" : "Default"}
                     inset
                     onChange={(_event, { action }) =>
                       setDisplayOpen(action === "open")
@@ -2972,27 +3145,33 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
                         </Layout>
                       )}
                   </CollapsiblePanel>
+                    </>
+                  )}
 
                   <CollapsiblePanel
                     actions={
-                      thresholdsCustomised ? (
-                        <Button
-                          appearance="subtle"
-                          aria-label="Reset thresholds to default"
-                          icon={<RotateCcw aria-hidden="true" />}
-                          label="Reset to default"
-                          onClick={handleResetThresholds}
-                        />
-                      ) : null
+                      <OptionPanelActions
+                        help={OPTION_HELP.thresholds}
+                        summary={
+                          !thresholdsEnabled
+                            ? "Off"
+                            : thresholdsCustomised
+                              ? "Custom"
+                              : "Default"
+                        }
+                      >
+                        {thresholdsCustomised ? (
+                          <Button
+                            appearance="subtle"
+                            aria-label="Reset thresholds to default"
+                            icon={<RotateCcw aria-hidden="true" />}
+                            label="Reset to default"
+                            onClick={handleResetThresholds}
+                          />
+                        ) : null}
+                      </OptionPanelActions>
                     }
                     appearance="subtle"
-                    description={
-                      !thresholdsEnabled
-                        ? "Off"
-                        : thresholdsCustomised
-                          ? "Custom"
-                          : "Default"
-                    }
                     inset
                     onChange={(_event, { action }) =>
                       setThresholdsOpen(action === "open")

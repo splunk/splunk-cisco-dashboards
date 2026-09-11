@@ -11,14 +11,8 @@
  * still iterating on the diagram authoring experience.
  */
 var scdAssetVersion = Date.now();
-var scdLocaleMatch = window.location.pathname.match(
-    /^\/([a-z]{2}-[A-Z]{2})(?:\/|$)/
-);
-var scdLocalePrefix = '/' + (scdLocaleMatch ? scdLocaleMatch[1] : 'en-US');
 require([
-    scdLocalePrefix +
-        '/static/app/splunk-cisco-dashboards/pages/network_diagram.js?v=' +
-        scdAssetVersion,
+    '/static/app/splunk-cisco-dashboards/pages/network_diagram.js?v=' + scdAssetVersion,
 ], function () {
     // The React bundle self-initializes on load.
 });
