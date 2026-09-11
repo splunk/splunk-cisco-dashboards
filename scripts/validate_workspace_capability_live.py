@@ -11,7 +11,9 @@ from __future__ import annotations
 import base64
 import json
 import os
+import secrets
 import ssl
+import string
 import sys
 import urllib.error
 import urllib.parse
@@ -25,6 +27,26 @@ CAPABILITY = "ssne_manage_insights_workspaces"
 
 class LiveValidationError(RuntimeError):
     pass
+
+
+def temporary_user_password() -> str:
+    """Return a one-off Splunk password that is never logged or reused.
+
+    The previous template string was flagged by secret scanning. This value is
+    generated at runtime with a CSPRNG and includes mixed case, a digit, and a
+    symbol so default Splunk password policies accept it.
+    """
+    alphabet = string.ascii_letters + string.digits
+    symbols = "!@#%^*_+-"
+    chars = [
+        secrets.choice(string.ascii_lowercase),
+        secrets.choice(string.ascii_uppercase),
+        secrets.choice(string.digits),
+        secrets.choice(symbols),
+        *[secrets.choice(alphabet) for _ in range(20)],
+    ]
+    secrets.SystemRandom().shuffle(chars)
+    return "".join(chars)
 
 
 def env_required(name: str) -> str:
@@ -313,7 +335,7 @@ def main() -> int:
     viewer_user = f"ssne14_viewer_{suffix}"
     power_user = f"ssne14_power_{suffix}"
     sc_admin_user = f"ssne14_sc_admin_{suffix}"
-    password = f"SSNE-14-{suffix}-Test!"
+    password = temporary_user_password()
     created_roles: list[str] = []
     created_users: list[str] = []
     cleanup_stanzas: list[tuple[str, str]] = []

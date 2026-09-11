@@ -232,6 +232,12 @@ const commonConfig = webpackMerge(baseConfig, {
         extensions: ['.ts', '.tsx', '.js', '.jsx'],
         alias: {
             '@': webappRoot,
+            // Splunk visualizations still CJS-require maplibre-gl. 6.x is
+            // ESM-only, so point the require at the published module file.
+            'maplibre-gl$': path.join(
+                workspaceRoot,
+                'node_modules/maplibre-gl/dist/maplibre-gl.mjs'
+            ),
         },
     },
     plugins: [
