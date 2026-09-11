@@ -58,16 +58,6 @@
 			},
 			"type": "splunk.markdown"
 		},
-		"viz_bmxsRvR0": {
-			"options": {
-				"fillColor": "#131a23",
-				"rx": 10,
-				"strokeColor": "rgba(100,158,245,0.28)",
-				"strokeWidth": 1,
-				"strokeOpacity": 1
-			},
-			"type": "splunk.rectangle"
-		},
 		"viz_corr": {
 			"dataSources": {
 				"annotation": "ds_annotations",
@@ -681,16 +671,6 @@
 				},
 				"structure": [
 					{
-						"item": "viz_bmxsRvR0",
-						"position": {
-							"h": 290,
-							"w": 312,
-							"x": 670,
-							"y": 170
-						},
-						"type": "block"
-					},
-					{
 						"item": "viz_about_box",
 						"position": {
 							"h": 130,
@@ -773,7 +753,7 @@
 					{
 						"item": "viz_t3_box",
 						"position": {
-							"h": 240,
+							"h": 290,
 							"w": 312,
 							"x": 668,
 							"y": 170

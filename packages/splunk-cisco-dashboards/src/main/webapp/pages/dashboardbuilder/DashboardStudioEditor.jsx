@@ -78,6 +78,7 @@ import { INSIGHTS_APP_ID } from "../../common/lib/constants";
 import {
   DASHBOARD_MANAGER_FRAMEWORK_VIEW_NAMES,
   DASHBOARD_MANAGER_TAG,
+  MANAGER_ROUTED_STUDIO_VIEW_NAMES,
   getDashboardNamespaceApp,
   isDashboardManagerDashboard,
   requiresDashboardManagerRuntime,
@@ -128,7 +129,9 @@ import {
 const ENABLE_EXPERIMENTAL_SPACE_MANAGER = false;
 const DASHBOARD_STUDIO_HEIGHT = 1200;
 const VIEWPORT_FIT_DASHBOARD_IDS = DASHBOARD_MANAGER_FRAMEWORK_VIEW_NAMES;
+const WIDTH_FIT_DASHBOARD_IDS = MANAGER_ROUTED_STUDIO_VIEW_NAMES;
 const VIEWPORT_FIT_PADDING = 16;
+const MANAGED_STUDIO_CHROME_HEIGHT = 56;
 
 const getViewportFitLayout = (definition, requestedLayoutId) => {
   const layoutDefinitions = definition?.layout?.layoutDefinitions;
@@ -161,6 +164,9 @@ const calculateViewportFitScale = ({
       (viewportHeight - VIEWPORT_FIT_PADDING) / canvasHeight,
     ),
   );
+
+const calculateWidthFitScale = ({ canvasWidth, viewportWidth }) =>
+  Math.max(0.25, viewportWidth / canvasWidth);
 
 const StyledCardContent = styled.div`
   height: 160px;
@@ -996,6 +1002,10 @@ const DashboardStudioEditor = ({
 
   const [dashboardHeightDifference, setDashboardHeightDifference] =
     useState(null);
+  const [managedStudioHeight, setManagedStudioHeight] = useState(
+    DASHBOARD_STUDIO_HEIGHT,
+  );
+  const [routeSearchParams] = useSearchParams();
 
   const [openDashboardModal, setOpenDashboardModal] = useState(false);
   const [openConvertModal, setOpenConvertModal] = useState(false);
@@ -1548,18 +1558,21 @@ const DashboardStudioEditor = ({
 
   useEffect(() => {
     const isViewMode = (dashMode ?? "view") === "view";
+    const useViewportFit = VIEWPORT_FIT_DASHBOARD_IDS.has(dashID);
+    const useWidthFit = WIDTH_FIT_DASHBOARD_IDS.has(dashID);
     if (isViewMode && isDashboardMounted) {
       apiRef?.collapseToolbar?.();
     }
 
-    if (!isViewMode || !VIEWPORT_FIT_DASHBOARD_IDS.has(dashID)) {
+    if (!isViewMode || (!useViewportFit && !useWidthFit)) {
       viewportFitKeyRef.current = "";
+      setManagedStudioHeight(DASHBOARD_STUDIO_HEIGHT);
     }
 
     if (
       !isViewMode ||
       !isDashboardMounted ||
-      !VIEWPORT_FIT_DASHBOARD_IDS.has(dashID) ||
+      (!useViewportFit && !useWidthFit) ||
       dashboardHeightDifference == null
     ) {
       return undefined;
@@ -1567,9 +1580,7 @@ const DashboardStudioEditor = ({
 
     const dashboardApi = dashboardApiElem.current ?? apiRef;
     const definition = dashboardApi?.getDefinition?.();
-    const requestedLayoutId = new URLSearchParams(window.location.search).get(
-      "tab",
-    );
+    const requestedLayoutId = routeSearchParams.get("tab");
     const { layoutId, options } = getViewportFitLayout(
       definition,
       requestedLayoutId,
@@ -1621,11 +1632,13 @@ const DashboardStudioEditor = ({
       const viewportWidth = layoutContainer.clientWidth;
       const viewportHeight = layoutContainer.clientHeight;
 
+      if (!Number.isFinite(viewportWidth) || viewportWidth <= 0) {
+        return;
+      }
       if (
-        !Number.isFinite(viewportWidth) ||
-        !Number.isFinite(viewportHeight) ||
-        viewportWidth <= 0 ||
-        viewportHeight <= VIEWPORT_FIT_PADDING
+        useViewportFit &&
+        (!Number.isFinite(viewportHeight) ||
+          viewportHeight <= VIEWPORT_FIT_PADDING)
       ) {
         return;
       }
@@ -1638,12 +1651,19 @@ const DashboardStudioEditor = ({
         viewportWidth,
         viewportHeight,
       ].join(":");
-      const scale = calculateViewportFitScale({
-        canvasWidth,
-        canvasHeight,
-        viewportWidth,
-        viewportHeight,
-      });
+      const scale = useViewportFit
+        ? calculateViewportFitScale({
+            canvasWidth,
+            canvasHeight,
+            viewportWidth,
+            viewportHeight,
+          })
+        : calculateWidthFitScale({ canvasWidth, viewportWidth });
+      if (useWidthFit) {
+        setManagedStudioHeight(
+          Math.ceil(canvasHeight * scale + MANAGED_STUDIO_CHROME_HEIGHT),
+        );
+      }
       const renderedScale =
         canvasElement.getBoundingClientRect().width / canvasWidth;
       if (
@@ -1684,6 +1704,7 @@ const DashboardStudioEditor = ({
     dashMode,
     dashboardHeightDifference,
     isDashboardMounted,
+    routeSearchParams,
   ]);
 
   useEffect(() => {
@@ -2099,11 +2120,18 @@ const DashboardStudioEditor = ({
     !embededMode &&
     (dashMode ?? "view") === "view" &&
     VIEWPORT_FIT_DASHBOARD_IDS.has(dashID);
-  const embeddedDashboardHeight = embededMode
-    ? "100%"
-    : useViewportFitView
-      ? `calc(100vh - ${dashboardTopOffset}px)`
-      : DASHBOARD_STUDIO_HEIGHT;
+  const useWidthFitView =
+    !embededMode &&
+    (dashMode ?? "view") === "view" &&
+    WIDTH_FIT_DASHBOARD_IDS.has(dashID);
+  let embeddedDashboardHeight = DASHBOARD_STUDIO_HEIGHT;
+  if (embededMode) {
+    embeddedDashboardHeight = "100%";
+  } else if (useViewportFitView) {
+    embeddedDashboardHeight = `calc(100vh - ${dashboardTopOffset}px)`;
+  } else if (useWidthFitView) {
+    embeddedDashboardHeight = managedStudioHeight;
+  }
 
   const sourceEditorPanel = useMemo(() => {
     return isCodeEditable ? (

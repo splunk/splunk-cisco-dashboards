@@ -87,6 +87,10 @@ const searchbaseConf = fs.readFileSync(
   path.join(packageRoot, "src/main/resources/splunk/default/searchbase.conf"),
   "utf8",
 );
+const navigation = fs.readFileSync(
+  path.join(packageRoot, "src/main/resources/splunk/default/data/ui/nav/default.xml"),
+  "utf8",
+);
 const extractSetValues = (exportName) => {
   const match = managerScope.match(
     new RegExp(`export const ${exportName} = new Set\\(\\[([\\s\\S]*?)\\]\\);`),
@@ -101,6 +105,24 @@ const readDefinition = (viewName) => {
   assert.ok(definition, `${viewName} must contain a Dashboard Studio definition`);
   return JSON.parse(definition[1]);
 };
+
+for (const viewName of [
+  "admin_asset_inventory",
+  "netops_catalyst_health",
+  "netops_catalyst_operations",
+  "netops_critical_systems_health",
+  "netops_readiness",
+  "secops_resilience",
+  "workplace_building_intelligence",
+  "workplace_operations_overview",
+  "workplace_spaces_intelligence",
+]) {
+  assert.match(
+    navigation,
+    new RegExp(`href="dashboard_manager#/${viewName}"`),
+    `${viewName} must open through Dashboard Manager to preserve the styled app shell`,
+  );
+}
 
 assert.match(
   editor,
@@ -131,6 +153,21 @@ assert.match(
   editor,
   /VIEWPORT_FIT_DASHBOARD_IDS = DASHBOARD_MANAGER_FRAMEWORK_VIEW_NAMES/,
   "Every included Dashboard Manager view must use the approved viewport fit",
+);
+assert.match(
+  editor,
+  /WIDTH_FIT_DASHBOARD_IDS = MANAGER_ROUTED_STUDIO_VIEW_NAMES/,
+  "Native Studio views routed through Dashboard Manager must use width fitting",
+);
+assert.match(
+  editor,
+  /calculateWidthFitScale[\s\S]*?viewportWidth \/ canvasWidth/,
+  "Manager-routed native Studio views must derive scale from available width",
+);
+assert.match(
+  editor,
+  /canvasHeight \* scale \+ MANAGED_STUDIO_CHROME_HEIGHT/,
+  "Manager-routed native Studio views must grow their host to the scaled canvas height",
 );
 assert.match(
   editor,
@@ -179,6 +216,98 @@ const frameworkViews = extractSetValues(
   "DASHBOARD_MANAGER_FRAMEWORK_VIEW_NAMES",
 );
 const routedStudioViews = extractSetValues("MANAGER_ROUTED_STUDIO_VIEW_NAMES");
+
+for (const viewName of routedStudioViews) {
+  const definition = readDefinition(viewName);
+  const layoutDefinitions = definition.layout?.layoutDefinitions || {
+    default: definition.layout,
+  };
+
+  for (const [layoutId, layout] of Object.entries(layoutDefinitions)) {
+    const canvasWidth = Number(layout.options?.width);
+    const canvasHeight = Number(layout.options?.height);
+    assert.ok(
+      Number.isFinite(canvasWidth) && Number.isFinite(canvasHeight),
+      `${viewName}:${layoutId} must declare finite canvas dimensions`,
+    );
+
+    const rectanglePositions = new Set();
+    for (const item of layout.structure || []) {
+      const visualization = definition.visualizations?.[item.item];
+      assert.ok(
+        visualization || definition.inputs?.[item.item],
+        `${viewName}:${layoutId}:${item.item} must reference a defined item`,
+      );
+      assert.ok(
+        item.position.x >= 0 &&
+          item.position.y >= 0 &&
+          item.position.x + item.position.w <= canvasWidth &&
+          item.position.y + item.position.h <= canvasHeight,
+        `${viewName}:${layoutId}:${item.item} must fit inside its canvas`,
+      );
+
+      if (visualization?.type === "splunk.rectangle") {
+        const positionKey = [
+          item.position.x,
+          item.position.y,
+          item.position.w,
+          item.position.h,
+        ].join(":");
+        assert.ok(
+          !rectanglePositions.has(positionKey),
+          `${viewName}:${layoutId} must not stack duplicate background rectangles`,
+        );
+        rectanglePositions.add(positionKey);
+      }
+    }
+  }
+}
+
+const workplaceOperationsDefinition = readDefinition(
+  "workplace_operations_overview",
+);
+assert.ok(
+  !workplaceOperationsDefinition.visualizations.viz_bmxsRvR0,
+  "Workplace Operations must not retain the duplicate third KPI background",
+);
+const workplaceOperationsItems =
+  workplaceOperationsDefinition.layout.layoutDefinitions.layout_1.structure;
+const workplaceThirdKpiBox = workplaceOperationsItems.find(
+  ({ item }) => item === "viz_t3_box",
+);
+const workplaceThirdKpiValue = workplaceOperationsItems.find(
+  ({ item }) => item === "viz_t3_value",
+);
+assert.ok(workplaceThirdKpiBox && workplaceThirdKpiValue);
+assert.ok(
+  workplaceThirdKpiBox.position.y + workplaceThirdKpiBox.position.h >=
+    workplaceThirdKpiValue.position.y + workplaceThirdKpiValue.position.h,
+  "Workplace Operations third KPI value must fit inside its background card",
+);
+
+const netopsReadinessDefinition = readDefinition("netops_readiness");
+const netopsReadinessTabA =
+  netopsReadinessDefinition.layout.layoutDefinitions.layout_tab_a.structure;
+const netopsReadinessTabC =
+  netopsReadinessDefinition.layout.layoutDefinitions.layout_tab_c.structure;
+const assertItemInset = (items, itemId, boxId) => {
+  const item = items.find(({ item: id }) => id === itemId);
+  const box = items.find(({ item: id }) => id === boxId);
+  assert.ok(item && box);
+  assert.ok(
+    item.position.x + item.position.w <= box.position.x + box.position.w - 5 &&
+      item.position.y + item.position.h <= box.position.y + box.position.h - 5,
+    `${itemId} must remain visibly inset from ${boxId}`,
+  );
+};
+assertItemInset(netopsReadinessTabA, "viz_nrs_drisk", "viz_box_a_headline");
+assertItemInset(netopsReadinessTabA, "viz_arq_legend", "viz_box_a_headline");
+assertItemInset(netopsReadinessTabC, "viz_q5_saturation", "viz_box_c_q5");
+assertItemInset(
+  netopsReadinessTabC,
+  "viz_q6_occupancy_overlay",
+  "viz_box_c_q6",
+);
 
 assert.deepEqual(
   frameworkViews,

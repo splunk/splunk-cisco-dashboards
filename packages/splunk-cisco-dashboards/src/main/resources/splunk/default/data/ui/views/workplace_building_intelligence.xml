@@ -1,5 +1,5 @@
 
-<dashboard version="2" theme="dark">
+<dashboard version="2" theme="dark" stylesheet="application.css">
     <label>Cisco Spaces - Building Intelligence</label>
     <description>Cisco Spaces location and occupancy plus ISE-correlated wireless device trust</description>
     <definition><![CDATA[
@@ -1690,7 +1690,7 @@
 					{
 						"item": "viz_user_presence_trend",
 						"position": {
-							"h": 190,
+							"h": 175,
 							"w": 670,
 							"x": 30,
 							"y": 1078
@@ -1700,7 +1700,7 @@
 					{
 						"item": "viz_device_presence_trend",
 						"position": {
-							"h": 190,
+							"h": 175,
 							"w": 670,
 							"x": 720,
 							"y": 1078
@@ -1793,7 +1793,7 @@
 							"x": 230,
 							"y": 530,
 							"w": 440,
-							"h": 160
+							"h": 150
 						},
 						"type": "block"
 					},
@@ -1803,7 +1803,7 @@
 							"x": 710,
 							"y": 530,
 							"w": 440,
-							"h": 160
+							"h": 150
 						},
 						"type": "block"
 					}
