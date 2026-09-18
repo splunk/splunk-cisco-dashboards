@@ -38,7 +38,14 @@ test("keeps accessible release history in Markdown", () => {
   assert.match(page, /handleReleaseControl[\s\S]*?querySelectorAll<HTMLDetailsElement>/);
   assert.match(page, /openedForPrint[\s\S]*?panel\.setAttribute\("open", ""\)/);
   assert.match(css, /\.scd-guide-release-summary:focus-visible[\s\S]*?outline:/);
-  for (const version of ["1.0.35", "1.0.44", "1.0.45", "1.0.46", "1.0.49"]) {
+  for (const version of [
+    "1.0.35",
+    "1.0.44",
+    "1.0.45",
+    "1.0.46",
+    "1.0.49",
+    "1.0.50",
+  ]) {
     assert.match(markdown, new RegExp(`Version ${version.replaceAll(".", "\\.")}`));
   }
   assert.match(markdown, /Initial Alpha release[\s\S]*?Alpha release considerations/);

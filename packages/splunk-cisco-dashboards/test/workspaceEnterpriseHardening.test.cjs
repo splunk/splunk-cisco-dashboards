@@ -396,12 +396,69 @@ const searchService = read(
 const topology = read(
   "src/main/webapp/common/components/workspace/CustomerTopologyMap.tsx",
 );
+const searchbaseConfig = read("src/main/resources/splunk/default/searchbase.conf");
 const topologyPersistenceService = read(
   "src/main/webapp/common/services/customerTopologyPersistenceService.ts",
 );
 assert.match(topology, /attributionControl=\{false\}/);
 assert.match(topology, /label="Map credits"/);
 assert.match(topology, /Map rendering: Leaflet\. Basemap:/);
+assert.match(topology, /<ControlGroup[\s\S]*?label="Telemetry source"/);
+assert.match(
+  topology,
+  /<RadioList[\s\S]*?<RadioList\.Option[\s\S]*?value="searchbase"[\s\S]*?Searchbase search/,
+);
+assert.match(
+  topology,
+  /<RadioList\.Option[\s\S]*?value="thousandEyesA2A"[\s\S]*?ThousandEyes A2A test/,
+);
+assert.match(
+  topology,
+  /Switching modes[\s\S]*?replaces the current draft binding when you save/,
+  "Topology links must explain that exactly one draft telemetry binding is active",
+);
+assert.match(
+  topology,
+  /telemetrySourceMode === "thousandEyesA2A"[\s\S]*?ThousandEyes A2A/,
+  "The A2A workflow must render only when its telemetry source is active",
+);
+assert.match(
+  topology,
+  /telemetrySourceMode === "searchbase"[\s\S]*?Searchbase search/,
+  "The Searchbase workflow must render only when its telemetry source is active",
+);
+assert.match(topology, />\s*ThousandEyes source agent\s*</);
+assert.match(topology, />\s*ThousandEyes target agent\s*</);
+assert.match(topology, /!hasSelectedTeEndpoints/);
+assert.doesNotMatch(
+  topology,
+  /`\$\{match\.confidence\}%`/,
+  "A2A choices must not expose low-confidence implementation scores to authors",
+);
+assert.match(
+  topology,
+  /bindSearchbaseToLink[\s\S]*?thousandEyesA2A: undefined,[\s\S]*?teLink: undefined/,
+  "A Searchbase selection must replace any ThousandEyes draft binding",
+);
+const fdemTlhToAubSearch = searchbaseConfig.match(
+  /\[fdem_-_link_tlh_to_aub_thousandeyes_a2a_health\][\s\S]*?(?=\n\[|$)/,
+)?.[0];
+assert.ok(fdemTlhToAubSearch, "The FDEM TLH-to-AUB A2A stanza must exist");
+assert.match(
+  fdemTlhToAubSearch,
+  /\| tstats `scd_summariesonly`[\s\S]*?FROM datamodel="Cisco_ThousandEyes\.Test_Metrics"[\s\S]*?Test_Metrics\.thousandeyes\.test\.id IN \("7148943"\)/,
+  "The FDEM A2A health stanza must use the ThousandEyes data model for test 7148943",
+);
+assert.match(
+  fdemTlhToAubSearch,
+  /teLink=if\(isnotnull\(teLinkBase\) AND isnotnull\(teAccountId\),teLinkBase\."&__a="\.teAccountId,teLinkBase\)/,
+  "The FDEM A2A health stanza must preserve a direct ThousandEyes path link",
+);
+assert.doesNotMatch(
+  fdemTlhToAubSearch,
+  /site[-_]?1|site[-_]?2/i,
+  "The FDEM A2A health stanza must not hard-code generic map site identifiers",
+);
 assert.match(
   topology,
   /persistedPayloadRef = useRef<SavedCustomerTopologyPayload \| null>\(null\)/,
