@@ -314,6 +314,21 @@ Searchbase definitions are app-managed factory content. Workspace managers choos
 
 This Markdown file is the authoritative source for the in-product release history.
 
+::: release Release Notes | September 2026 - Version 1.0.51
+### Release overview
+
+Version 1.0.51 fixes shared Searchbase additions in Insights Workspaces.
+
+### Workspace behavior
+
+- Fixed **Add for everyone** so shared Searchbase additions remain in the workspace after a page reload and are available to every viewer.
+- Retained validation and de-duplication for both persisted CSV values and in-memory search-reference arrays.
+
+### Upgrade notes
+
+- No data migration or Splunk restart is required.
+- Shared searches added with an earlier affected version must be added again after upgrading because the empty saved references cannot be reconstructed.
+
 ::: release Release Notes | September 2026 - Version 1.0.50
 ### Release overview
 

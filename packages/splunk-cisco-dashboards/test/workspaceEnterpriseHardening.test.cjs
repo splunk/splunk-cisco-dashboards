@@ -643,6 +643,11 @@ assert.match(
 );
 assert.match(
   insightsWorkspaceService,
+  /splitSearchbaseAdditions[\s\S]*?Array\.isArray\(raw\)[\s\S]*?saveWorkspaceLayout[\s\S]*?searchbase_additions: splitSearchbaseAdditions\([\s\S]*?sectionConfig\.searchbaseAdditions[\s\S]*?\)\.join\(","\)/,
+  "Saving a shared workspace layout must serialize its Searchbase addition array",
+);
+assert.match(
+  insightsWorkspaceService,
   /deleteInsightsWorkspace[\s\S]*?deleteStanza\(signalRailStanzaName\(workspace\.id\)\)/,
   "Deleting a custom workspace must also remove its cloned Signal Rail stanza",
 );
