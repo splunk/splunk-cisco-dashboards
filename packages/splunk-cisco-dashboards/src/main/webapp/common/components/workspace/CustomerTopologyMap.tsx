@@ -5804,6 +5804,10 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
       latestTime,
       tag: "topology_te_a2a_inventory",
       appContext: record.dispatchContext,
+      // The editor cannot offer a direct A2A choice until this inventory
+      // completes. Run immediately after the signal rail instead of waiting
+      // behind every dashboard section at the default background priority.
+      dispatchPriority: 1,
     })
       .then((res) => {
         if (cancelled) return;
@@ -10462,7 +10466,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                         : "sui-color-default",
                                     )}
                                   >
-                                    ThousandEyes source agent
+                                    ThousandEyes source agent (optional filter)
                                   </span>
                                   <select
                                     aria-label={`ThousandEyes source agent for link ${link.id}`}
@@ -10502,7 +10506,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                         : "sui-color-default",
                                     )}
                                   >
-                                    ThousandEyes target agent
+                                    ThousandEyes target agent (optional filter)
                                   </span>
                                   <select
                                     aria-label={`ThousandEyes target agent for link ${link.id}`}
@@ -10548,8 +10552,8 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 )}
                               >
                                 <span id={teA2AHelpId}>
-                                  Choose the observed source and target agents,
-                                  then select their A2A test.
+                                  Select an observed A2A test, or optionally
+                                  narrow the list by source and target agent.
                                 </span>
                                 {teA2AInventorySearchName && (
                                   <button
@@ -10584,7 +10588,6 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                   value={selectedTeCandidateId}
                                   disabled={
                                     teA2ACandidates === null ||
-                                    !hasSelectedTeEndpoints ||
                                     teMatches.length === 0
                                   }
                                   onChange={(event) => {
@@ -10600,11 +10603,11 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                   <option value="">
                                     {teA2ACandidates === null
                                       ? "Loading A2A tests"
-                                      : !hasSelectedTeEndpoints
-                                        ? "Choose source and target agents first"
-                                        : teMatches.length === 0
+                                      : teMatches.length === 0
+                                        ? hasSelectedTeEndpoints
                                           ? "No A2A tests observed for these agents"
-                                          : "Select A2A test"}
+                                          : "No A2A tests observed"
+                                        : "Select A2A test"}
                                   </option>
                                   {teMatches.slice(0, 30).map((match) => (
                                     <option
@@ -10617,7 +10620,8 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                   ))}
                                 </select>
                               </label>
-                              {teMatches[0]?.ambiguous && (
+                              {hasSelectedTeEndpoints &&
+                                teMatches[0]?.ambiguous && (
                                 <p
                                   className={cn(
                                     "mt-1 text-xs font-semibold",

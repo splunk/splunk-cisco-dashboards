@@ -323,7 +323,8 @@ Version 1.0.50 simplifies topology link telemetry configuration and strengthens 
 
 - Replaced the simultaneous Searchbase and ThousandEyes A2A link controls with one explicit **Telemetry source** choice.
 - Kept the telemetry-source options visibly circular and consistently sized at every editor width.
-- Show only the active setup path: select a reusable Searchbase search, or choose observed ThousandEyes source and target agents followed by their A2A test.
+- Show only the active setup path: select a reusable Searchbase search, or select an observed ThousandEyes A2A test directly and optionally narrow it by source and target agent.
+- Prioritize the A2A inventory immediately after the signal rail so the direct test list is ready without waiting for every dashboard section to load.
 - Removed internal A2A confidence percentages from author-facing choices and clarified the inventory and selection guidance.
 - Fixed false stale-edit conflicts when saving topology Searchbase bindings and retained the saved selection after reopening or reloading a workspace.
 

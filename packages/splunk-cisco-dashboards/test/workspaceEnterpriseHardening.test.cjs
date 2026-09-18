@@ -428,9 +428,23 @@ assert.match(
   /telemetrySourceMode === "searchbase"[\s\S]*?Searchbase search/,
   "The Searchbase workflow must render only when its telemetry source is active",
 );
-assert.match(topology, />\s*ThousandEyes source agent\s*</);
-assert.match(topology, />\s*ThousandEyes target agent\s*</);
-assert.match(topology, /!hasSelectedTeEndpoints/);
+assert.match(topology, />\s*ThousandEyes source agent \(optional filter\)\s*</);
+assert.match(topology, />\s*ThousandEyes target agent \(optional filter\)\s*</);
+assert.match(
+  topology,
+  /Select an observed A2A test, or optionally[\s\S]*?narrow the list by source and target agent/,
+  "The A2A test is the primary choice and agent controls are optional filters",
+);
+assert.doesNotMatch(
+  topology,
+  /teA2ACandidates === null \|\|\s*!hasSelectedTeEndpoints \|\|\s*teMatches\.length === 0/,
+  "A2A test selection must not be gated behind two endpoint filters",
+);
+assert.match(
+  topology,
+  /tag: "topology_te_a2a_inventory"[\s\S]*?dispatchPriority: 1/,
+  "A2A inventory must dispatch ahead of non-interactive dashboard sections",
+);
 assert.doesNotMatch(
   topology,
   /`\$\{match\.confidence\}%`/,
