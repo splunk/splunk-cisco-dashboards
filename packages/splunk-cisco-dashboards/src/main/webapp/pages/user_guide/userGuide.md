@@ -317,7 +317,7 @@ This Markdown file is the authoritative source for the in-product release histor
 ::: release Release Notes | September 2026 - Version 1.0.50
 ### Release overview
 
-Version 1.0.50 simplifies topology link telemetry configuration and strengthens topology-save reliability.
+Version 1.0.50 simplifies topology link telemetry configuration, strengthens topology-save reliability, and adds reusable property-operations searches.
 
 ### Workspace and dashboard behavior
 
@@ -327,6 +327,13 @@ Version 1.0.50 simplifies topology link telemetry configuration and strengthens 
 - Prioritize the A2A inventory immediately after the signal rail so the direct test list is ready without waiting for every dashboard section to load.
 - Removed internal A2A confidence percentages from author-facing choices and clarified the inventory and selection guidance.
 - Fixed false stale-edit conflicts when saving topology Searchbase bindings and retained the saved selection after reopening or reloading a workspace.
+
+### Property operations and inventory
+
+- Added reusable AKIPS searches for device availability, inventory location, interface saturation, and interface-error hotspots.
+- Added Catalyst Center property views for active issues and client experience, including health, RSSI, onboarding time, and poor-client counts.
+- Added Cisco IQ lifecycle-risk views and enriched the unified device inventory with AKIPS location, lifecycle findings, and explainable critical or non-critical classification.
+- Kept the searches customer-neutral: no customer index, property, or workspace name is hard-coded, and missing locations remain visible as **Unmapped**.
 
 ### Accessibility
 

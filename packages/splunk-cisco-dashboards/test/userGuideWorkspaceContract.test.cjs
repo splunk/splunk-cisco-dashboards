@@ -51,6 +51,7 @@ test("keeps accessible release history in Markdown", () => {
   assert.match(markdown, /Initial Alpha release[\s\S]*?Alpha release considerations/);
   assert.match(markdown, /Initial beta release[\s\S]*?Beta considerations/i);
   assert.match(markdown, /Version 1\.0\.49[\s\S]*?Secure Data Center Operations[\s\S]*?Upgrade notes/);
+  assert.match(markdown, /Version 1\.0\.50[\s\S]*?Property operations and inventory[\s\S]*?customer-neutral/);
 });
 
 test("documents the full setup, dashboard, and workspace operating model", () => {
