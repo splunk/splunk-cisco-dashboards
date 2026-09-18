@@ -61,6 +61,12 @@
       "build": 2069,
       "state": "retired_candidate",
       "note": "Retained local candidate only. Build numbers are now allocated automatically into package output; this ledger is release history, not a manual current-release input."
+    },
+    {
+      "version": "1.0.49",
+      "build": 2089,
+      "state": "retired_candidate",
+      "note": "Known clean local Splunkbase candidate retained as the durable build high-water mark. This is not evidence of public publication; future packages must allocate above it even when local dist artifacts are absent."
     }
   ]
 }

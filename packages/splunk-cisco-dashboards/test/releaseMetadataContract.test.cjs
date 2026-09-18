@@ -91,6 +91,23 @@ assert.equal(
   true,
   "the release ledger must retain the positive numeric Splunkbase application id",
 );
+const durableBuildFloor = Math.max(
+  ...releaseLedger.build_allocations.map(({ build }) => build),
+);
+assert.equal(
+  durableBuildFloor,
+  2089,
+  "the durable release ledger must preserve the known build-2089 high-water mark",
+);
+assert.ok(
+  releaseLedger.build_allocations.some(
+    ({ version: allocationVersion, build, state }) =>
+      allocationVersion === "1.0.49" &&
+      build === 2089 &&
+      state === "retired_candidate",
+  ),
+  "build 2089 must remain explicit release history rather than depending on dist artifacts",
+);
 assert.equal(
   setting(stanza("install"), "build"),
   "0",

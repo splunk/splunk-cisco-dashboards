@@ -335,6 +335,10 @@ Version 1.0.50 simplifies topology link telemetry configuration, strengthens top
 - Added Cisco IQ lifecycle-risk views and enriched the unified device inventory with AKIPS location, lifecycle findings, and explainable critical or non-critical classification.
 - Kept the searches customer-neutral: no customer index, property, or workspace name is hard-coded, and missing locations remain visible as **Unmapped**.
 
+### Packaging and release safety
+
+- Preserved the verified build-2089 release floor in tracked release history so removing local package artifacts cannot cause a later Splunkbase build number to decrease.
+
 ### Accessibility
 
 - Grouped the telemetry choice as a labeled radio control and connected the ThousandEyes selectors to concise instructions.

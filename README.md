@@ -68,7 +68,9 @@ readable `dist/` artifacts. The installation target never influences package
 construction.
 The [`releases/splunkbase-9257.json`](releases/splunkbase-9257.json) ledger is
 historical publication evidence and a safe build floor; it is not a manual
-pre-build allocation step.
+pre-build allocation step. Every package allocates above the ledger's greatest
+recorded build even when `dist/` is empty, so deleting local artifacts cannot
+decrement a future Splunkbase package identity.
 Artifacts use the operator-readable name
 `splunk-cisco-dashboards-<version>-<build>.tar.gz` (plus `-developer` only for
 an explicitly selected developer profile). This tarball is the only package

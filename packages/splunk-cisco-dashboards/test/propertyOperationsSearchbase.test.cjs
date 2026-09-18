@@ -37,8 +37,16 @@ for (const name of expected) {
   const matches = searchbase.match(new RegExp(`^\\[${name}\\]$`, "gm")) || [];
   assert.equal(matches.length, 1, `${name} must exist exactly once`);
   const body = stanzaBody(name);
-  assert.doesNotMatch(body, /index=mgm_/i, `${name} must not fix an MGM index`);
-  assert.doesNotMatch(body, /tags\s*=.*\bMGM\b/i, `${name} must not use an MGM tag`);
+  assert.doesNotMatch(
+    body,
+    /\bindex=(?!\*)[A-Za-z0-9_-]+/i,
+    `${name} must not hard-code a customer index`,
+  );
+  assert.doesNotMatch(
+    body,
+    /^tags\s*=.*\bCustomer\b/im,
+    `${name} must not use a customer-specific tag`,
+  );
 }
 
 const availability = stanzaBody("network_akips_low_availability_by_location");
