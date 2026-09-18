@@ -421,7 +421,7 @@ export const loadCustomerTopologyConfig =
 
 export const saveCustomerTopologyConfig = async (
     payload: SavedCustomerTopologyPayload,
-    expectedPayload?: SavedCustomerTopologyPayload,
+    expectedPayload?: SavedCustomerTopologyPayload | null,
 ): Promise<void> => {
     const safePayload = sanitizePayload({
         ...payload,
@@ -447,26 +447,27 @@ export const saveCustomerTopologyConfig = async (
         ? sanitizePayload(expectedPayload)
         : null;
 
-    if (safeExpectedPayload) {
+    if (expectedPayload !== undefined) {
         const currentRow = await fetchRow(stanzaName);
-        if (currentRow?.payloadJson) {
-            let currentRaw: unknown = null;
-            try {
-                currentRaw = JSON.parse(currentRow.payloadJson);
-            } catch {
-                currentRaw = null;
-            }
-            const currentPayload = sanitizePayload(currentRaw);
-            if (
-                !currentPayload ||
-                JSON.stringify(currentPayload) !==
-                    JSON.stringify(safeExpectedPayload)
-            ) {
-                throw new CustomerTopologyPersistenceError(
-                    'The shared topology changed after this page loaded. Reload and review the latest version before saving.',
-                    409,
-                );
-            }
+        let currentRaw: unknown = null;
+        try {
+            currentRaw = currentRow?.payloadJson
+                ? JSON.parse(currentRow.payloadJson)
+                : null;
+        } catch {
+            currentRaw = null;
+        }
+        const currentPayload = sanitizePayload(currentRaw);
+        const expectedMatchesCurrent = safeExpectedPayload
+            ? Boolean(currentPayload) &&
+              JSON.stringify(currentPayload) ===
+                  JSON.stringify(safeExpectedPayload)
+            : currentPayload === null;
+        if (!expectedMatchesCurrent) {
+            throw new CustomerTopologyPersistenceError(
+                'The shared topology changed after this page loaded. Reload and review the latest version before saving.',
+                409,
+            );
         }
     }
 

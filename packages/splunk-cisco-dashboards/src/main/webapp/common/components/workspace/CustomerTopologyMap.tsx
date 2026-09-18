@@ -20,7 +20,9 @@ import React, {
 import { useSplunkTheme, variables } from "@splunk/themes";
 import styled, { css } from "styled-components";
 import Button from "@splunk/react-ui/Button";
+import ControlGroup from "@splunk/react-ui/ControlGroup";
 import Popover from "@splunk/react-ui/Popover";
+import RadioList from "@splunk/react-ui/RadioList";
 import ScreenReaderContent from "@splunk/react-ui/ScreenReaderContent";
 import Select from "@splunk/react-ui/Select";
 import Slider from "@splunk/react-ui/Slider";
@@ -99,6 +101,7 @@ import {
   loadCustomerTopologyConfig,
   saveCustomerTopologyConfig,
   sanitizeCustomerTopologySectionTitles,
+  type SavedCustomerTopologyPayload,
   type CustomerTopologySectionTitles,
 } from "@/common/services/customerTopologyPersistenceService";
 import { runSearch } from "@/common/services/splunkSearchService";
@@ -286,6 +289,21 @@ const MotionSettingsCard = styled(OneCdGlassCard)`
 const MapCreditsCard = styled(OneCdGlassCard)`
   width: 15rem;
   padding: ${variables.spacingMedium};
+`;
+
+const TelemetrySourceRadioList = styled(RadioList)`
+  && {
+    grid-template-columns: [input] 16px [label] minmax(0, 1fr);
+  }
+
+  && input[type='radio'] {
+    inline-size: 16px;
+    min-inline-size: 16px;
+    block-size: 16px;
+    min-block-size: 16px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+  }
 `;
 
 export const CUSTOMER_TOPOLOGY: CustomerTopology = {
@@ -721,6 +739,7 @@ const TE_A2A_INVENTORY_SEARCH_NAME =
 const TE_A2A_INVENTORY_MISSING_MESSAGE =
   'Install Searchbase [overview_link_te_a2a_inventory] / "Overview - Link ThousandEyes A2A Inventory", or set viz_options.topologyMap.role="teA2AInventory" on an equivalent A2A inventory stanza.';
 const TE_A2A_MATCH_THRESHOLD = 72;
+type LinkTelemetrySourceMode = "searchbase" | "thousandEyesA2A";
 const TE_A2A_CLOSE_MATCH_DELTA = 8;
 const TE_A2A_STOP_WORDS = new Set([
   "and",
@@ -2533,18 +2552,6 @@ const sanitizeTopologyPayload = (
   ),
 });
 
-const writeSharedTopologyConfig = async (
-  topology: CustomerTopology,
-  sectionTitles: CustomerTopologySectionTitles,
-  expectedTopology: CustomerTopology,
-  expectedSectionTitles: CustomerTopologySectionTitles,
-): Promise<void> => {
-  await saveCustomerTopologyConfig(
-    buildTopologyPayload(topology, sectionTitles),
-    buildTopologyPayload(expectedTopology, expectedSectionTitles),
-  );
-};
-
 /**
  * Public-facing helper for the "Reset all customisations" flow on
  * the Overview page. As of the shared `customer_topology.conf`
@@ -2569,6 +2576,7 @@ export const usePersistedTopology = (
   );
   const [sectionTitles, setSectionTitles] =
     useState<CustomerTopologySectionTitles>(() => defaultSectionTitles);
+  const persistedPayloadRef = useRef<SavedCustomerTopologyPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -2590,8 +2598,15 @@ export const usePersistedTopology = (
     try {
       const payload = await loadCustomerTopologyConfig(fallback.id);
       if (payload) {
+        // Preserve the exact canonical payload that Splunk returned for the
+        // optimistic-concurrency check. `applyPayload` intentionally expands
+        // older payloads with current defaults for rendering; comparing that
+        // normalized topology with the stored payload creates a false
+        // conflict even when no other operator changed the topology.
+        persistedPayloadRef.current = payload;
         applyPayload(payload);
       } else {
+        persistedPayloadRef.current = null;
         const legacyTopology = readLegacyPersistedTopology(fallback);
         applyPayload(
           legacyTopology
@@ -2609,6 +2624,7 @@ export const usePersistedTopology = (
       }
       setError(null);
     } catch (err) {
+      persistedPayloadRef.current = null;
       const legacyTopology = readLegacyPersistedTopology(fallback);
       applyPayload(
         legacyTopology
@@ -2646,16 +2662,16 @@ export const usePersistedTopology = (
   const saveTopology = useCallback(
     async (next: CustomerTopology) => {
       const sanitized = sanitizeTopology(next, fallback);
+      const nextPayload = buildTopologyPayload(sanitized, sectionTitles);
       const previousTopology = topology;
       setTopology(sanitized);
       setError(null);
       try {
-        await writeSharedTopologyConfig(
-          sanitized,
-          sectionTitles,
-          topology,
-          sectionTitles,
+        await saveCustomerTopologyConfig(
+          nextPayload,
+          persistedPayloadRef.current,
         );
+        persistedPayloadRef.current = nextPayload;
         clearLegacyPersistedTopology();
         emitTopologyConfigChanged();
       } catch (err) {
@@ -2669,16 +2685,16 @@ export const usePersistedTopology = (
 
   const resetTopology = useCallback(async () => {
     const factory = cloneTopology(fallback);
+    const nextPayload = buildTopologyPayload(factory, sectionTitles);
     const previousTopology = topology;
     setTopology(factory);
     setError(null);
     try {
-      await writeSharedTopologyConfig(
-        factory,
-        sectionTitles,
-        topology,
-        sectionTitles,
+      await saveCustomerTopologyConfig(
+        nextPayload,
+        persistedPayloadRef.current,
       );
+      persistedPayloadRef.current = nextPayload;
       clearLegacyPersistedTopology();
       emitTopologyConfigChanged();
     } catch (err) {
@@ -2695,15 +2711,15 @@ export const usePersistedTopology = (
         defaultSectionTitles,
       );
       const previousSectionTitles = sectionTitles;
+      const nextPayload = buildTopologyPayload(topology, sanitized);
       setSectionTitles(sanitized);
       setError(null);
       try {
-        await writeSharedTopologyConfig(
-          topology,
-          sanitized,
-          topology,
-          sectionTitles,
+        await saveCustomerTopologyConfig(
+          nextPayload,
+          persistedPayloadRef.current,
         );
+        persistedPayloadRef.current = nextPayload;
         emitTopologyConfigChanged();
       } catch (err) {
         setSectionTitles(previousSectionTitles);
@@ -5788,6 +5804,10 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
       latestTime,
       tag: "topology_te_a2a_inventory",
       appContext: record.dispatchContext,
+      // The editor cannot offer a direct A2A choice until this inventory
+      // completes. Run immediately after the signal rail instead of waiting
+      // behind every dashboard section at the default background priority.
+      dispatchPriority: 1,
     })
       .then((res) => {
         if (cancelled) return;
@@ -8329,6 +8349,8 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
   );
   const [teEndpointSelectionsByLinkId, setTeEndpointSelectionsByLinkId] =
     useState<Record<string, { source?: string; target?: string }>>({});
+  const [telemetrySourceModeByLinkId, setTelemetrySourceModeByLinkId] =
+    useState<Record<string, LinkTelemetrySourceMode>>({});
   const editorTitleId = useId();
   const editorMovementHelpId = useId();
   const editorResizeHelpId = useId();
@@ -8683,6 +8705,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     if (!open) {
       setExpandedCardKeys(new Set());
       setTeEndpointSelectionsByLinkId({});
+      setTelemetrySourceModeByLinkId({});
     }
   }, [open]);
 
@@ -8847,6 +8870,10 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     linkId: string,
     candidate: ThousandEyesA2ACandidate,
   ) => {
+    setTelemetrySourceModeByLinkId((current) => ({
+      ...current,
+      [linkId]: "thousandEyesA2A",
+    }));
     setTeEndpointSelectionsByLinkId((current) => ({
       ...current,
       [linkId]: {
@@ -8874,6 +8901,21 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     });
   };
 
+  const bindSearchbaseToLink = (linkId: string, searchName: string) => {
+    setTelemetrySourceModeByLinkId((current) => ({
+      ...current,
+      [linkId]: "searchbase",
+    }));
+    updateLink(linkId, {
+      searchName,
+      thousandEyesA2A: undefined,
+      teLink: undefined,
+      telemetrySource: `Searchbase: ${searchName}`,
+      dataState: "loading",
+      dataError: undefined,
+    });
+  };
+
   const updateThousandEyesEndpointSelection = (
     linkId: string,
     side: "source" | "target",
@@ -8881,11 +8923,48 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
   ) => {
     setTeEndpointSelectionsByLinkId((current) => ({
       ...current,
-      [linkId]: {
-        ...current[linkId],
-        [side]: value || undefined,
-      },
+      [linkId]:
+        side === "source"
+          ? { source: value, target: "" }
+          : { ...current[linkId], target: value },
     }));
+  };
+
+  const updateLinkTelemetrySourceMode = (
+    link: TopologyLink,
+    mode: LinkTelemetrySourceMode,
+  ) => {
+    setTelemetrySourceModeByLinkId((current) => ({
+      ...current,
+      [link.id]: mode,
+    }));
+    setExpandedCardKeys((current) => {
+      const next = new Set(current);
+      next.delete(`link-search:${link.id}`);
+      return next;
+    });
+
+    if (mode === "thousandEyesA2A") {
+      updateLink(link.id, {
+        searchName: "",
+        dataState: link.thousandEyesA2A ? "loading" : "static",
+        dataError: undefined,
+        telemetrySource: link.thousandEyesA2A
+          ? link.telemetrySource
+          : "Choose a ThousandEyes A2A test",
+      });
+      return;
+    }
+
+    updateLink(link.id, {
+      thousandEyesA2A: undefined,
+      teLink: undefined,
+      dataState: link.searchName ? "loading" : "static",
+      dataError: undefined,
+      telemetrySource: link.searchName
+        ? link.telemetrySource
+        : "Choose a Searchbase search",
+    });
   };
 
   const updateLinkEndpoints = (
@@ -9898,9 +9977,30 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                   const endpointSummary = `${
                     sourceSite?.shortName ?? link.sourceSiteId
                   } to ${targetSite?.shortName ?? link.targetSiteId}`;
+                  const hasTeBinding = Boolean(link.thousandEyesA2A);
+                  const savedTeCandidate = teA2ACandidates?.find((candidate) =>
+                    teBindingMatchesCandidate(
+                      link.thousandEyesA2A,
+                      candidate,
+                    ),
+                  );
                   const selection = teEndpointSelectionsByLinkId[link.id];
-                  const sourceSelection = selection?.source ?? "";
-                  const targetSelection = selection?.target ?? "";
+                  const sourceSelection =
+                    selection?.source ??
+                    (savedTeCandidate
+                      ? thousandEyesA2AEndpointKey(
+                          savedTeCandidate,
+                          "source",
+                        )
+                      : "");
+                  const targetSelection =
+                    selection?.target ??
+                    (savedTeCandidate
+                      ? thousandEyesA2AEndpointKey(
+                          savedTeCandidate,
+                          "target",
+                        )
+                      : "");
                   const sourceEndpointOptions = teA2ACandidates
                     ? thousandEyesA2AEndpointOptions(teA2ACandidates, "source")
                     : [];
@@ -9942,7 +10042,13 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                     boundTeMatch?.candidate.candidateId ??
                     link.thousandEyesA2A?.candidateId ??
                     "";
-                  const hasTeBinding = Boolean(link.thousandEyesA2A);
+                  const telemetrySourceMode =
+                    telemetrySourceModeByLinkId[link.id] ??
+                    (hasTeBinding ? "thousandEyesA2A" : "searchbase");
+                  const hasSelectedTeEndpoints = Boolean(
+                    sourceSelection && targetSelection,
+                  );
+                  const teA2AHelpId = `topology-link-${link.id}-te-a2a-help`;
                   const bindingSummary =
                     boundSearch ||
                     (hasTeBinding
@@ -10227,6 +10333,46 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                           </div>
                           <div
                             className={cn(
+                              "rounded-md border p-2.5",
+                              isDark
+                                ? "sui-border-weak sui-bg-page"
+                                : "sui-border-weak sui-bg-section",
+                            )}
+                          >
+                            <ControlGroup
+                              controlsLayout="none"
+                              help="Choose one source for this link. Switching modes replaces the current draft binding when you save."
+                              label="Telemetry source"
+                              labelPosition="top"
+                            >
+                              <TelemetrySourceRadioList
+                                name={`telemetry-source-${link.id}`}
+                                value={telemetrySourceMode}
+                                onChange={(_event, { value }) =>
+                                  updateLinkTelemetrySourceMode(
+                                    link,
+                                    value as LinkTelemetrySourceMode,
+                                  )
+                                }
+                              >
+                                <RadioList.Option
+                                  description="Custom link status and metrics"
+                                  value="searchbase"
+                                >
+                                  Searchbase search
+                                </RadioList.Option>
+                                <RadioList.Option
+                                  description="Agent-to-agent health and path"
+                                  value="thousandEyesA2A"
+                                >
+                                  ThousandEyes A2A test
+                                </RadioList.Option>
+                              </TelemetrySourceRadioList>
+                            </ControlGroup>
+                          </div>
+                          {telemetrySourceMode === "thousandEyesA2A" && (
+                          <div
+                            className={cn(
                               "rounded-md border px-2.5 py-2",
                               isDark
                                 ? "sui-border-weak sui-bg-page"
@@ -10276,7 +10422,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 )}
                               </div>
                               <div className="flex flex-shrink-0 items-center gap-1">
-                                {teLink && (
+                                {hasTeBinding && teLink && (
                                   <a
                                     href={teLink}
                                     target="_blank"
@@ -10320,10 +10466,11 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                         : "sui-color-default",
                                     )}
                                   >
-                                    Observed source site
+                                    ThousandEyes source agent (optional filter)
                                   </span>
                                   <select
-                                    aria-label={`Observed ThousandEyes source site for link ${link.id}`}
+                                    aria-label={`ThousandEyes source agent for link ${link.id}`}
+                                    aria-describedby={teA2AHelpId}
                                     className={editorInputClass(isDark)}
                                     value={sourceSelection}
                                     disabled={teA2ACandidates === null}
@@ -10337,8 +10484,8 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                   >
                                     <option value="">
                                       {teA2ACandidates === null
-                                        ? "Loading observed sites"
-                                        : "Any observed source"}
+                                        ? "Loading observed agents"
+                                        : "Choose source agent"}
                                     </option>
                                     {sourceEndpointOptions.map((option) => (
                                       <option
@@ -10359,13 +10506,17 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                         : "sui-color-default",
                                     )}
                                   >
-                                    Observed target site
+                                    ThousandEyes target agent (optional filter)
                                   </span>
                                   <select
-                                    aria-label={`Observed ThousandEyes target site for link ${link.id}`}
+                                    aria-label={`ThousandEyes target agent for link ${link.id}`}
+                                    aria-describedby={teA2AHelpId}
                                     className={editorInputClass(isDark)}
                                     value={targetSelection}
-                                    disabled={teA2ACandidates === null}
+                                    disabled={
+                                      teA2ACandidates === null ||
+                                      !sourceSelection
+                                    }
                                     onChange={(event) =>
                                       updateThousandEyesEndpointSelection(
                                         link.id,
@@ -10376,8 +10527,10 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                   >
                                     <option value="">
                                       {teA2ACandidates === null
-                                        ? "Loading observed sites"
-                                        : "Any observed target"}
+                                        ? "Loading observed agents"
+                                        : !sourceSelection
+                                          ? "Choose source agent first"
+                                          : "Choose target agent"}
                                     </option>
                                     {targetEndpointOptions.map((option) => (
                                       <option
@@ -10398,13 +10551,14 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                     : "sui-color-default",
                                 )}
                               >
-                                <span>
-                                  Select values observed in Splunk to narrow the
-                                  A2A tests below.
+                                <span id={teA2AHelpId}>
+                                  Select an observed A2A test, or optionally
+                                  narrow the list by source and target agent.
                                 </span>
                                 {teA2AInventorySearchName && (
                                   <button
                                     type="button"
+                                    aria-label={`View A2A inventory in Search for ${link.name}`}
                                     onClick={() =>
                                       handleOpenInSearch(
                                         teA2AInventorySearchName,
@@ -10412,52 +10566,62 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                     }
                                     className="shrink-0   sui-color-info sui-hover-color-info"
                                   >
-                                    Open inventory
+                                    View A2A inventory in Search
                                   </button>
                                 )}
                               </div>
-                              <select
-                                aria-label={`ThousandEyes A2A binding for link ${link.id}`}
-                                className={editorInputClass(isDark)}
-                                value={selectedTeCandidateId}
-                                disabled={
-                                  teA2ACandidates === null ||
-                                  teMatches.length === 0
-                                }
-                                onChange={(event) => {
-                                  const candidate = teA2ACandidates?.find(
-                                    (item) =>
-                                      item.candidateId === event.target.value,
-                                  );
-                                  if (candidate) {
-                                    bindThousandEyesA2A(link.id, candidate);
+                              <label className="mt-2 block space-y-1">
+                                <span
+                                  className={cn(
+                                    editorLabelClass,
+                                    isDark
+                                      ? "sui-color-muted"
+                                      : "sui-color-default",
+                                  )}
+                                >
+                                  A2A test
+                                </span>
+                                <select
+                                  aria-label={`A2A test for link ${link.id}`}
+                                  aria-describedby={teA2AHelpId}
+                                  className={editorInputClass(isDark)}
+                                  value={selectedTeCandidateId}
+                                  disabled={
+                                    teA2ACandidates === null ||
+                                    teMatches.length === 0
                                   }
-                                }}
-                              >
-                                <option value="">
-                                  {teA2ACandidates === null
-                                    ? "Loading A2A tests"
-                                    : teMatches.length === 0
-                                      ? "No A2A tests observed"
-                                      : "Select A2A test"}
-                                </option>
-                                {teMatches.slice(0, 30).map((match) => (
-                                  <option
-                                    key={match.candidate.candidateId}
-                                    value={match.candidate.candidateId}
-                                  >
-                                    {match.exact
-                                      ? "Bound"
-                                      : match.confidence >=
-                                          TE_A2A_MATCH_THRESHOLD
-                                        ? "Suggested"
-                                        : `${match.confidence}%`}
-                                    {" - "}
-                                    {formatTeCandidateLabel(match.candidate)}
+                                  onChange={(event) => {
+                                    const candidate = teA2ACandidates?.find(
+                                      (item) =>
+                                        item.candidateId === event.target.value,
+                                    );
+                                    if (candidate) {
+                                      bindThousandEyesA2A(link.id, candidate);
+                                    }
+                                  }}
+                                >
+                                  <option value="">
+                                    {teA2ACandidates === null
+                                      ? "Loading A2A tests"
+                                      : teMatches.length === 0
+                                        ? hasSelectedTeEndpoints
+                                          ? "No A2A tests observed for these agents"
+                                          : "No A2A tests observed"
+                                        : "Select A2A test"}
                                   </option>
-                                ))}
-                              </select>
-                              {teMatches[0]?.ambiguous && (
+                                  {teMatches.slice(0, 30).map((match) => (
+                                    <option
+                                      key={match.candidate.candidateId}
+                                      value={match.candidate.candidateId}
+                                    >
+                                      {match.exact ? "Bound - " : ""}
+                                      {formatTeCandidateLabel(match.candidate)}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              {hasSelectedTeEndpoints &&
+                                teMatches[0]?.ambiguous && (
                                 <p
                                   className={cn(
                                     "mt-1 text-xs font-semibold",
@@ -10466,7 +10630,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                       : "sui-color-warning",
                                   )}
                                 >
-                                  Multiple close A2A matches found
+                                  Multiple A2A tests use these agents
                                 </p>
                               )}
                               {!teA2AInventoryError &&
@@ -10487,6 +10651,8 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 )}
                             </div>
                           </div>
+                          )}
+                          {telemetrySourceMode === "searchbase" && (
                           <div
                             className={cn(
                               "rounded-md border px-2.5 py-2",
@@ -10505,7 +10671,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                       : "sui-color-default",
                                   )}
                                 >
-                                  Search binding
+                                  Searchbase search
                                 </span>
                                 <div
                                   className={cn(
@@ -10522,6 +10688,18 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 >
                                   {boundSearch || "No search bound"}
                                 </div>
+                                <p
+                                  className={cn(
+                                    "mt-1 text-xs font-semibold",
+                                    isDark
+                                      ? "sui-color-muted"
+                                      : "sui-color-default",
+                                  )}
+                                >
+                                  Select a reusable Searchbase search for
+                                  custom link status, metrics, thresholds, and
+                                  drilldown.
+                                </p>
                               </div>
                               <button
                                 type="button"
@@ -10551,11 +10729,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                   preferredTags={["Topology_Link"]}
                                   label="link"
                                   onPick={(searchName) =>
-                                    updateLink(link.id, {
-                                      searchName,
-                                      thousandEyesA2A: undefined,
-                                      dataState: "loading",
-                                    })
+                                    bindSearchbaseToLink(link.id, searchName)
                                   }
                                   isDark={isDark}
                                   showFreeFormInput
@@ -10563,6 +10737,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                               </div>
                             )}
                           </div>
+                          )}
                         </div>
                       )}
                     </div>

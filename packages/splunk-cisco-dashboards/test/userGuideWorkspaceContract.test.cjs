@@ -38,12 +38,21 @@ test("keeps accessible release history in Markdown", () => {
   assert.match(page, /handleReleaseControl[\s\S]*?querySelectorAll<HTMLDetailsElement>/);
   assert.match(page, /openedForPrint[\s\S]*?panel\.setAttribute\("open", ""\)/);
   assert.match(css, /\.scd-guide-release-summary:focus-visible[\s\S]*?outline:/);
-  for (const version of ["1.0.35", "1.0.44", "1.0.45", "1.0.46", "1.0.49"]) {
+  for (const version of [
+    "1.0.35",
+    "1.0.44",
+    "1.0.45",
+    "1.0.46",
+    "1.0.49",
+    "1.0.50",
+  ]) {
     assert.match(markdown, new RegExp(`Version ${version.replaceAll(".", "\\.")}`));
   }
   assert.match(markdown, /Initial Alpha release[\s\S]*?Alpha release considerations/);
   assert.match(markdown, /Initial beta release[\s\S]*?Beta considerations/i);
   assert.match(markdown, /Version 1\.0\.49[\s\S]*?Secure Data Center Operations[\s\S]*?Upgrade notes/);
+  assert.match(markdown, /Version 1\.0\.50[\s\S]*?Property operations and inventory[\s\S]*?customer-neutral/);
+  assert.match(markdown, /Version 1\.0\.50[\s\S]*?Packaging and release safety[\s\S]*?build-2089 release floor/);
 });
 
 test("documents the full setup, dashboard, and workspace operating model", () => {

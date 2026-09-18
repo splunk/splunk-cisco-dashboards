@@ -30,6 +30,7 @@
 !/packages/splunk-cisco-dashboards/test/macroFieldPillsSui.test.cjs
 !/packages/splunk-cisco-dashboards/test/kpiPickerOptionHelpContract.test.cjs
 !/packages/splunk-cisco-dashboards/test/searchbaseSelfContainedAnomalies.test.cjs
+!/packages/splunk-cisco-dashboards/test/propertyOperationsSearchbase.test.cjs
 !/packages/splunk-cisco-dashboards/test/adaptiveSearchbaseSpans.test.cjs
 !/packages/splunk-cisco-dashboards/test/mltkProjectionOptimization.test.cjs
 !/packages/splunk-cisco-dashboards/test/secureNetworkingAssuranceScore.test.cjs

@@ -314,6 +314,36 @@ Searchbase definitions are app-managed factory content. Workspace managers choos
 
 This Markdown file is the authoritative source for the in-product release history.
 
+::: release Release Notes | September 2026 - Version 1.0.50
+### Release overview
+
+Version 1.0.50 simplifies topology link telemetry configuration, strengthens topology-save reliability, and adds reusable property-operations searches.
+
+### Workspace and dashboard behavior
+
+- Replaced the simultaneous Searchbase and ThousandEyes A2A link controls with one explicit **Telemetry source** choice.
+- Kept the telemetry-source options visibly circular and consistently sized at every editor width.
+- Show only the active setup path: select a reusable Searchbase search, or select an observed ThousandEyes A2A test directly and optionally narrow it by source and target agent.
+- Prioritize the A2A inventory immediately after the signal rail so the direct test list is ready without waiting for every dashboard section to load.
+- Removed internal A2A confidence percentages from author-facing choices and clarified the inventory and selection guidance.
+- Fixed false stale-edit conflicts when saving topology Searchbase bindings and retained the saved selection after reopening or reloading a workspace.
+
+### Property operations and inventory
+
+- Added reusable AKIPS searches for device availability, inventory location, interface saturation, and interface-error hotspots.
+- Added Catalyst Center property views for active issues and client experience, including health, RSSI, onboarding time, and poor-client counts.
+- Added Cisco IQ lifecycle-risk views and enriched the unified device inventory with AKIPS location, lifecycle findings, and explainable critical or non-critical classification.
+- Kept the searches customer-neutral: no customer index, property, or workspace name is hard-coded, and missing locations remain visible as **Unmapped**.
+
+### Packaging and release safety
+
+- Preserved the verified build-2089 release floor in tracked release history so removing local package artifacts cannot cause a later Splunkbase build number to decrease.
+
+### Accessibility
+
+- Grouped the telemetry choice as a labeled radio control and connected the ThousandEyes selectors to concise instructions.
+:::
+
 ::: release Release Notes | September 2026 - Version 1.0.49
 ### Release overview
 
@@ -349,6 +379,7 @@ Version 1.0.49 expands secure-networking coverage, repairs workspace and setup r
 - Agentic SOC section headers no longer expose actions that targeted the development-only Searchbase Canvas. Splunkbase packages omit its customer-inaccessible resources, while explicit developer builds retain the internal surface.
 - Open in Search accepts only dashboard-defined safe filter values.
 - Custom Insights workspaces can now be created through the bounded persistence endpoint, and template choices retain circular radio controls.
+- Topology Searchbase bindings now save without false stale-edit conflicts and remain selected after reopening or reloading a workspace.
 - Insights workspace editors, drawers, map controls, Signal Rail controls, topology actions, and Setup retain readable Splunk UI colors in both appearances.
 
 ### Accessibility, security, and delivery
