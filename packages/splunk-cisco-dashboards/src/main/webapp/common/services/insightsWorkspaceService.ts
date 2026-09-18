@@ -140,10 +140,23 @@ const splitCsv = (raw: unknown): string[] => {
 const splitTiles = (raw: unknown): string[] =>
   splitCsv(raw).filter((tileId) => TILE_ID_PATTERN.test(tileId));
 
-const splitSearchbaseAdditions = (raw: unknown): string[] =>
-  splitCsv(raw).filter((searchbaseId) =>
-    SEARCHBASE_ID_PATTERN.test(searchbaseId),
-  );
+const splitSearchbaseAdditions = (raw: unknown): string[] => {
+  const values = Array.isArray(raw) ? raw : splitCsv(raw);
+  const seen = new Set<string>();
+  return values
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter((searchbaseId) => {
+      if (
+        !SEARCHBASE_ID_PATTERN.test(searchbaseId) ||
+        seen.has(searchbaseId)
+      ) {
+        return false;
+      }
+      seen.add(searchbaseId);
+      return true;
+    });
+};
 
 const fallbackSignalRails = (
   workspaces: readonly InsightsWorkspace[],
