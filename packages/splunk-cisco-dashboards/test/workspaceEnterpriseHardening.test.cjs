@@ -406,7 +406,8 @@ assert.match(topology, /Map rendering: Leaflet\. Basemap:/);
 assert.match(topology, /<ControlGroup[\s\S]*?label="Telemetry source"/);
 assert.match(
   topology,
-  /<RadioList[\s\S]*?<RadioList\.Option[\s\S]*?value="searchbase"[\s\S]*?Searchbase search/,
+  /const TelemetrySourceRadioList = styled\(RadioList\)[\s\S]*?grid-template-columns: \[input\] 16px \[label\] minmax\(0, 1fr\)[\s\S]*?inline-size: 16px[\s\S]*?block-size: 16px[\s\S]*?border-radius: 50%[\s\S]*?<TelemetrySourceRadioList[\s\S]*?<RadioList\.Option[\s\S]*?value="searchbase"[\s\S]*?Searchbase search/,
+  "Topology telemetry radios must retain circular, square control tracks",
 );
 assert.match(
   topology,

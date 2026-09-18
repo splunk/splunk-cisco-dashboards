@@ -291,6 +291,21 @@ const MapCreditsCard = styled(OneCdGlassCard)`
   padding: ${variables.spacingMedium};
 `;
 
+const TelemetrySourceRadioList = styled(RadioList)`
+  && {
+    grid-template-columns: [input] 16px [label] minmax(0, 1fr);
+  }
+
+  && input[type='radio'] {
+    inline-size: 16px;
+    min-inline-size: 16px;
+    block-size: 16px;
+    min-block-size: 16px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+  }
+`;
+
 export const CUSTOMER_TOPOLOGY: CustomerTopology = {
   id: "customer-site-connectivity",
   name: "Secure Network Command Map",
@@ -10326,7 +10341,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                               label="Telemetry source"
                               labelPosition="top"
                             >
-                              <RadioList
+                              <TelemetrySourceRadioList
                                 name={`telemetry-source-${link.id}`}
                                 value={telemetrySourceMode}
                                 onChange={(_event, { value }) =>
@@ -10348,7 +10363,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 >
                                   ThousandEyes A2A test
                                 </RadioList.Option>
-                              </RadioList>
+                              </TelemetrySourceRadioList>
                             </ControlGroup>
                           </div>
                           {telemetrySourceMode === "thousandEyesA2A" && (
