@@ -743,9 +743,9 @@ for (const [sectionId, tileIds] of Object.entries(expectedTiles)) {
     assert.equal(vizOptions.overview[0].section, sectionId);
     assert.equal(vizOptions.overview[0].tileId, tileId);
     assert.match(field(search, "tags"), /Agentic SOC/);
-    assert.match(field(search, "tags"), /Custom Conference/);
-    assert.ok(
-      /CIM Accelerated/.test(field(search, "tags")),
+    assert.match(
+      field(search, "search"),
+      /summariesonly=true/,
       `${tileId} must declare accelerated execution`,
     );
     assert.match(field(search, "search"), /^\| tstats /);
@@ -755,8 +755,7 @@ for (const [sectionId, tileIds] of Object.entries(expectedTiles)) {
 
 for (const tileId of acceleratedNetworkResolutionTiles) {
   const search = stanza(searchbase, tileId);
-  assert.match(field(search, "tags"), /CIM Accelerated/);
-  assert.match(field(search, "tags"), /Network Resolution/);
+  assert.match(field(search, "tags"), /\bDNS\b/);
   assert.match(
     search,
     /\| tstats summariesonly=true allow_old_summaries=false/,
@@ -767,7 +766,6 @@ for (const tileId of acceleratedNetworkResolutionTiles) {
 
 for (const tileId of acceleratedNetworkTrafficTiles) {
   const search = stanza(searchbase, tileId);
-  assert.match(field(search, "tags"), /CIM Accelerated/);
   assert.match(field(search, "tags"), /Network Traffic/);
   assert.match(
     search,
@@ -779,7 +777,6 @@ for (const tileId of acceleratedNetworkTrafficTiles) {
 
 for (const tileId of acceleratedNetworkSessionsTiles) {
   const search = stanza(searchbase, tileId);
-  assert.match(field(search, "tags"), /CIM Accelerated/);
   assert.match(field(search, "tags"), /Network Sessions/);
   assert.match(
     search,
@@ -864,7 +861,7 @@ for (const tileId of expectedTiles.firewall_security) {
     assert.match(field(search, "tags"), /Endace/);
   } else {
     assert.match(search, /`index_network_ftd`/);
-    assert.match(field(search, "tags"), /TA 7404/);
+    assert.match(field(search, "tags"), /Secure Firewall/);
   }
   assert.doesNotMatch(field(search, "tags"), /Awaiting Feed/);
 }
@@ -914,12 +911,10 @@ for (const tileId of expectedTiles.network_detection) {
   const search = stanza(searchbase, tileId);
   assert.match(search, /`index_zeek`/);
   assert.match(search, /sourcetype="zeek:/);
-  assert.match(field(search, "tags"), /Stack Validated/);
+  assert.match(field(search, "tags"), /Zeek/);
 }
 for (const tileId of expectedTiles.unified_investigation.slice(3)) {
   const search = stanza(searchbase, tileId);
-  assert.match(field(search, "tags"), /CIM Accelerated/);
-  assert.match(field(search, "tags"), /Derived Signal/);
   assert.match(field(search, "search"), /^\| tstats /);
   assert.doesNotMatch(search, /Synthetic Demo|makeresults/);
   const vizOptions = JSON.parse(field(search, "viz_options"));

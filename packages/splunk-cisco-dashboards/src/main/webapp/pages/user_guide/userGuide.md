@@ -331,6 +331,11 @@ Version 1.0.52 preserves complete large-fleet asset inventories and advances rel
 - Removed the same implicit limit from the **Full Inventory** dashboard table so every row in the generated lookup remains available for display and filtering.
 - Added regression coverage for both inventory paths.
 
+### Searchbase catalogue
+
+- Added 31 validated searches to Splunkbase packages: Zeek SSH authentication pressure, wired NAC vendor-MAC review, eight SD-WAN security analyses, firewall NAT activity, Meraki blocked destinations, and 19 Cyber Vision asset, event, and syslog views.
+- Kept searches without populated validation results or with unresolved macro, data-model, lookup, REST, token, or MLTK dependencies in developer packages until their source contracts can be verified.
+
 ### Packaging and release safety
 
 - Recorded published build 2095 as the durable release-history floor so future packages allocate build 2096 or later even when earlier archives are absent from `dist/`.

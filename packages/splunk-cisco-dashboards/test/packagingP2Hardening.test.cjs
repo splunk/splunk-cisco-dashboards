@@ -59,6 +59,15 @@ const BUILD_PROFILE_MANIFEST_SOURCE = path.join(
   "config",
   "build-profile-manifest.json",
 );
+const SEARCHBASE_SOURCE = path.join(
+  PACKAGE_ROOT,
+  "src",
+  "main",
+  "resources",
+  "splunk",
+  "default",
+  "searchbase.conf",
+);
 const INSIGHTS_WORKSPACES_SOURCE = path.join(
   PACKAGE_ROOT,
   "src",
@@ -147,6 +156,56 @@ function exerciseExcludedViewLinkSafety() {
       source,
       /(?:href:\s*|appUrl\()\s*["']searchbase_canvas(?:[?"'])/,
       `${path.relative(PACKAGE_ROOT, sourcePath)} must not link customers to the excluded Searchbase Canvas`,
+    );
+  }
+}
+
+function exercisePromotedSearchbaseCatalogue() {
+  const manifest = JSON.parse(fs.readFileSync(BUILD_PROFILE_MANIFEST_SOURCE, "utf8"));
+  const searchbase = fs.readFileSync(SEARCHBASE_SOURCE, "utf8");
+  const promotedStanzas = [
+    "security_resilience_zeek_ssh_auth_pressure",
+    "secure_networking_vendor_mac_on_nac_port",
+    "security_resilience_sdwan_hunt_application_downgrade_reversion",
+    "security_resilience_sdwan_hunt_peer_certificate_validation_failure",
+    "security_resilience_sdwan_hunt_cve_2022_20775_path_traversal",
+    "security_resilience_sdwan_hunt_root_ssh_public_key",
+    "security_resilience_sdwan_hunt_root_or_rogue_sessions",
+    "security_resilience_sdwan_hunt_suspicious_local_user_aaa",
+    "security_resilience_sdwan_hunt_correlated_compromise_timeline",
+    "security_resilience_sdwan_utd_amp_disposition_trend",
+    "network_intelligence_firewall_nat_translation_hits",
+    "secure_networking_meraki_top_blocked_destinations",
+    "cybervision_assets_top_protocols",
+    "cybervision_assets_device_inventory",
+    "cybervision_assets_flow_top_talkers",
+    "cybervision_assets_risk_distribution",
+    "cybervision_assets_activity_recency",
+    "cybervision_assets_external_communications_by_center",
+    "cybervision_assets_top_risk_devices",
+    "cybervision_assets_count_by_center",
+    "cybervision_assets_vulnerable_by_center",
+    "cybervision_events_severity_trend",
+    "cybervision_events_severity_distribution",
+    "cybervision_events_type_distribution",
+    "cybervision_events_center_distribution",
+    "cybervision_events_category_distribution",
+    "cybervision_events_detail",
+    "cybervision_syslog_severity_trend",
+    "cybervision_syslog_severity_distribution",
+    "cybervision_syslog_event_class_distribution",
+    "cybervision_syslog_event_detail",
+  ];
+
+  for (const stanzaId of promotedStanzas) {
+    assert.ok(
+      !manifest.developing.searchbaseStanzas.includes(stanzaId),
+      `${stanzaId} must ship in the Splunkbase profile`,
+    );
+    assert.match(
+      searchbase,
+      new RegExp(`^\\[${stanzaId}\\]$`, "m"),
+      `${stanzaId} must remain present in the Searchbase catalogue`,
     );
   }
 }
@@ -1433,5 +1492,6 @@ exerciseLocalInstallProfileDefaults();
 exerciseDirtyDefaultInstallSelectsDeveloper();
 exerciseExcludedViewLinkSafety();
 exerciseDevelopingStaticAssetExclusion();
+exercisePromotedSearchbaseCatalogue();
 
 console.log("Packaging P2 hardening contracts passed.");
