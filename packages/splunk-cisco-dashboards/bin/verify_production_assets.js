@@ -31,16 +31,38 @@ const ENTRY_NAMES = [
     'secure_networking_pillars',
     'dashboardbuilder',
 ];
-const ALLOWED_PROFILES = new Set(['developer', 'splunkbase']);
-const DEVELOPING_ENTRY_NAMES = new Set(
-    readManifest().developing.staticAssets.flatMap((assetPath) => {
-        const match = assetPath.match(/^appserver\/static\/pages\/([^/]+)\.js$/);
-        return match ? [match[1]] : [];
-    })
+const ALLOWED_PROFILES = new Set(['developer', 'splunkbase', 'preview']);
+
+function entryNamesFrom(staticAssets) {
+    return new Set(
+        staticAssets.flatMap((assetPath) => {
+            const match = assetPath.match(
+                /^appserver\/static\/pages\/([^/]+)\.js$/
+            );
+            return match ? [match[1]] : [];
+        })
+    );
+}
+
+const MANIFEST = readManifest();
+const DEVELOPING_ENTRY_NAMES = entryNamesFrom(MANIFEST.developing.staticAssets);
+const PREVIEW_RETAINED_ENTRY_NAMES = entryNamesFrom(
+    MANIFEST.previewRetained.staticAssets
+);
+
+// Which bundles the profile drops, and therefore which ones must be present
+// and which must be absent. A preview keeps whatever the manifest retains.
+const EXCLUDED_ENTRY_NAMES = new Set(
+    APP_PROFILE === 'developer'
+        ? []
+        : [...DEVELOPING_ENTRY_NAMES].filter(
+              (entryName) =>
+                  APP_PROFILE !== 'preview' ||
+                  !PREVIEW_RETAINED_ENTRY_NAMES.has(entryName)
+          )
 );
 const REQUIRED_ENTRY_NAMES = ENTRY_NAMES.filter(
-    (entryName) =>
-        APP_PROFILE !== 'splunkbase' || !DEVELOPING_ENTRY_NAMES.has(entryName)
+    (entryName) => !EXCLUDED_ENTRY_NAMES.has(entryName)
 );
 
 const FORBIDDEN_SOURCE_EXTENSIONS = new Set(['.jsx', '.ts', '.tsx', '.map']);
@@ -78,7 +100,9 @@ function fail(message, details = []) {
 }
 
 if (!ALLOWED_PROFILES.has(APP_PROFILE)) {
-    fail(`Unknown app profile "${APP_PROFILE}"; expected developer or splunkbase.`);
+    fail(
+        `Unknown app profile "${APP_PROFILE}"; expected developer, splunkbase, or preview.`
+    );
 }
 
 if (!fs.existsSync(STAGE_DIR) || !fs.existsSync(PAGES_DIR)) {
@@ -178,14 +202,13 @@ REQUIRED_ENTRY_NAMES.forEach((entryName) => {
     }
 });
 
-const leakedDevelopingEntries = [...DEVELOPING_ENTRY_NAMES]
-    .filter((entryName) => APP_PROFILE === 'splunkbase')
+const leakedDevelopingEntries = [...EXCLUDED_ENTRY_NAMES]
     .filter((entryName) => fs.existsSync(path.join(PAGES_DIR, `${entryName}.js`)))
     .map((entryName) => `${entryName}.js`);
 
 if (leakedDevelopingEntries.length > 0) {
     fail(
-        'Splunkbase stage contains developing entry bundles.',
+        `${APP_PROFILE} stage contains excluded entry bundles.`,
         leakedDevelopingEntries
     );
 }

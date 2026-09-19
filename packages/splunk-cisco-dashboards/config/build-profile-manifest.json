@@ -1,5 +1,33 @@
 {
   "schemaVersion": 1,
+  "previewRetained": {
+    "views": [
+      "searchbase_canvas"
+    ],
+    "staticAssets": [
+      "appserver/static/pages/searchbase_canvas.js",
+      "appserver/static/pages/searchbase_canvas.js.LICENSE.txt",
+      "appserver/static/searchbase_canvas_bootstrap.js"
+    ],
+    "configFiles": [
+      "README/searchbase_canvases.conf.spec",
+      "default/searchbase_canvases.conf"
+    ],
+    "confSettings": [
+      {
+        "file": "default/app.conf",
+        "stanza": "triggers",
+        "key": "reload.searchbase_canvases"
+      },
+      {
+        "file": "default/server.conf",
+        "stanza": "shclustering",
+        "key": "conf_replication_include.searchbase_canvases"
+      }
+    ],
+    "searchbaseStanzas": [],
+    "savedSearches": []
+  },
   "developing": {
     "views": [
       "netops_catalyst_health",

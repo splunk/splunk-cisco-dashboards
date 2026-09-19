@@ -89,6 +89,7 @@ const USER_GUIDE_SOURCE = path.join(
 const {
   applyBuildProfile,
   readManifest,
+  validateManifest,
 } = require("../bin/apply_build_profile.js");
 
 function makeTempRoot(label) {
@@ -313,6 +314,152 @@ function exerciseDevelopingStaticAssetExclusion() {
   }
 }
 
+// The preview profile is the Splunkbase filter minus the manifest's
+// previewRetained carve-outs: everything else developing must still be removed,
+// so a preview cannot quietly become a second developer profile.
+function exercisePreviewRetainedResources() {
+  const appRoot = makeTempRoot("preview-retained");
+  const manifest = readManifest(BUILD_PROFILE_MANIFEST_SOURCE);
+  const retainedIdentity = ({ file, stanza, key }) => `${file} ${stanza} ${key}`;
+  try {
+    for (const viewId of manifest.developing.views) {
+      writeFile(
+        path.join(appRoot, "default", "data", "ui", "views", `${viewId}.xml`),
+        `<view id="${viewId}" />\n`,
+      );
+    }
+    writeFile(
+      path.join(appRoot, "default", "data", "ui", "nav", "default.xml"),
+      '<nav><a href="search?q=1">Search</a></nav>\n',
+    );
+    writeFile(path.join(appRoot, "default", "searchbase.conf"), "");
+    writeFile(path.join(appRoot, "default", "savedsearches.conf"), "");
+    writeFile(
+      path.join(appRoot, "default", "app.conf"),
+      "[triggers]\nreload.searchbase = simple\nreload.searchbase_canvases = simple\n",
+    );
+    writeFile(
+      path.join(appRoot, "default", "server.conf"),
+      "[shclustering]\nconf_replication_include.searchbase = true\nconf_replication_include.searchbase_canvases = true\n",
+    );
+    for (const assetPath of manifest.developing.staticAssets) {
+      writeFile(path.join(appRoot, ...assetPath.split("/")), "development-only\n");
+    }
+    for (const configPath of manifest.developing.configFiles) {
+      writeFile(path.join(appRoot, ...configPath.split("/")), "development-only\n");
+    }
+
+    const previewResult = applyBuildProfile(appRoot, "preview", { manifest });
+
+    assert.ok(
+      manifest.previewRetained.views.includes("searchbase_canvas"),
+      "The preview profile must retain the Searchbase Canvas view",
+    );
+    for (const viewId of manifest.previewRetained.views) {
+      assert.ok(
+        fs.existsSync(
+          path.join(appRoot, "default", "data", "ui", "views", `${viewId}.xml`),
+        ),
+        `${viewId} must remain available in a preview`,
+      );
+    }
+    for (const assetPath of manifest.previewRetained.staticAssets) {
+      assert.ok(
+        fs.existsSync(path.join(appRoot, ...assetPath.split("/"))),
+        `${assetPath} must remain available in a preview`,
+      );
+    }
+    for (const configPath of manifest.previewRetained.configFiles) {
+      assert.ok(
+        fs.existsSync(path.join(appRoot, ...configPath.split("/"))),
+        `${configPath} must remain available in a preview`,
+      );
+    }
+    assert.match(
+      fs.readFileSync(path.join(appRoot, "default", "app.conf"), "utf8"),
+      /reload\.searchbase_canvases\s*=\s*simple/,
+      "A preview must keep the conf settings its retained surface depends on",
+    );
+    assert.match(
+      fs.readFileSync(path.join(appRoot, "default", "server.conf"), "utf8"),
+      /conf_replication_include\.searchbase_canvases\s*=\s*true/,
+    );
+
+    const retainedViews = new Set(manifest.previewRetained.views);
+    assert.deepEqual(
+      previewResult.removedViewIds,
+      manifest.developing.views.filter((id) => !retainedViews.has(id)).sort(),
+      "A preview must still remove every developing view it does not retain",
+    );
+    assert.deepEqual(
+      previewResult.removedStaticAssets,
+      [],
+      "The manifest currently retains the whole Canvas web surface",
+    );
+    assert.deepEqual(
+      previewResult.removedSearchbaseStanzaIds,
+      [...manifest.developing.searchbaseStanzas].sort(),
+      "Unreleased Searchbase content is not part of the Canvas carve-out",
+    );
+    assert.deepEqual(
+      previewResult.removedSavedSearchIds,
+      [...manifest.developing.savedSearches].sort(),
+      "Unreleased saved searches are not part of the Canvas carve-out",
+    );
+    for (const viewId of previewResult.removedViewIds) {
+      assert.ok(
+        !fs.existsSync(
+          path.join(appRoot, "default", "data", "ui", "views", `${viewId}.xml`),
+        ),
+        `${viewId} must not ship in a preview`,
+      );
+    }
+
+    const retainedSettings = new Set(
+      manifest.previewRetained.confSettings.map(retainedIdentity),
+    );
+    for (const setting of previewResult.removedConfSettings) {
+      assert.ok(
+        !retainedSettings.has(retainedIdentity(setting)),
+        `${retainedIdentity(setting)} must not be removed from a preview`,
+      );
+    }
+  } finally {
+    removeTempRoot(appRoot);
+  }
+}
+
+// previewRetained is a carve-out from developing, never a way to add something
+// the Splunkbase profile does not already know about.
+function exercisePreviewRetentionMustBeDeveloping() {
+  const manifest = readManifest(BUILD_PROFILE_MANIFEST_SOURCE);
+  assert.throws(
+    () =>
+      validateManifest({
+        ...manifest,
+        previewRetained: {
+          ...manifest.previewRetained,
+          views: [...manifest.previewRetained.views, "user_guide"],
+        },
+      }),
+    /Preview-retained views must also be declared developing: user_guide/,
+    "A preview must not be able to retain a resource that always ships",
+  );
+  const root = makeTempRoot("preview-retention-schema");
+  try {
+    const manifestPath = path.join(root, "build-profile-manifest.json");
+    const { previewRetained, ...withoutRetention } = manifest;
+    writeFile(manifestPath, `${JSON.stringify(withoutRetention, null, 2)}\n`);
+    assert.throws(
+      () => readManifest(manifestPath),
+      /must declare previewRetained resource arrays/,
+      "A manifest without previewRetained arrays must be rejected outright",
+    );
+  } finally {
+    removeTempRoot(root);
+  }
+}
+
 function run(command, args, options = {}) {
   return execFileSync(command, args, {
     encoding: "utf8",
@@ -392,7 +539,14 @@ function makePackageFixture() {
   writeFile(
     path.join(packageRoot, "bin", "build.js"),
     [
-      "if (!process.argv.includes('--minify')) {",
+      "const fs = require('fs');",
+      "if (process.env.SCD_FIXTURE_BUILD_LOG) {",
+      "  fs.appendFileSync(process.env.SCD_FIXTURE_BUILD_LOG, process.argv.slice(2).join(' ') + '\\n');",
+      "}",
+      "if (",
+      "  !process.argv.includes('--minify') &&",
+      "  process.env.SCD_FIXTURE_EXPECT_UNMINIFIED !== '1'",
+      ") {",
       "  console.error('SplunkBase fixture build must be minified');",
       "  process.exit(1);",
       "}",
@@ -627,6 +781,16 @@ function exerciseProductionVerifierCacheRejection() {
       /searchbase_canvas\.js/,
       "The developer verifier must still require the internal Canvas bundle",
     );
+    const previewMissingCanvasFailure = runExpectFailure(
+      "node",
+      [VERIFY_SCRIPT_SOURCE, stage, "preview"],
+      { cwd: root },
+    );
+    assert.match(
+      previewMissingCanvasFailure,
+      /searchbase_canvas\.js/,
+      "The preview verifier must require the Canvas bundle it deliberately retains",
+    );
     const splunkbaseOutput = run(
       "node",
       [VERIFY_SCRIPT_SOURCE, stage, "splunkbase"],
@@ -648,8 +812,13 @@ function exerciseProductionVerifierCacheRejection() {
     );
     assert.match(
       splunkbaseCanvasLeakFailure,
-      /Splunkbase stage contains developing entry bundles/,
+      /splunkbase stage contains excluded entry bundles/,
       "The Splunkbase verifier must reject a leaked Canvas bundle",
+    );
+    assert.match(
+      run("node", [VERIFY_SCRIPT_SOURCE, stage, "preview"], { cwd: root }),
+      /Verified 11 preview production bundles/,
+      "The preview verifier must accept the Canvas bundle alongside shipped entries",
     );
   } finally {
     removeTempRoot(root);
@@ -974,6 +1143,173 @@ function exercisePackagingProfiles() {
   }
 }
 
+function exerciseSplunkbasePreviewPackaging() {
+  const fixture = makePackageFixture();
+  const distDir = path.join(fixture.root, "dist");
+  try {
+    writeFile(path.join(fixture.root, "uncommitted-release-input.txt"), "dirty\n");
+
+    assert.match(
+      runExpectFailure(
+        "bash",
+        [fixture.packageScript, "--splunkbase-preview", "--developer"],
+        { cwd: fixture.packageRoot },
+      ),
+      /--splunkbase-preview and --developer are mutually exclusive/,
+      "The preview must not be combinable with the profile it exists to exclude",
+    );
+    assert.match(
+      runExpectFailure(
+        "bash",
+        [fixture.packageScript, "--splunkbase-preview", "--from-stage"],
+        { cwd: fixture.packageRoot },
+      ),
+      /--splunkbase-preview and --from-stage are mutually exclusive/,
+      "The preview must not be built from watcher output that may lag source",
+    );
+
+    // A preview is a content check, not a release candidate, so it must not
+    // pay for minification the way the Splunkbase profile always does.
+    const buildLog = path.join(fixture.root, "fixture-build.log");
+    run("bash", [fixture.packageScript, "--splunkbase-preview"], {
+      cwd: fixture.packageRoot,
+      env: {
+        ...process.env,
+        SCD_FIXTURE_BUILD_LOG: buildLog,
+        SCD_FIXTURE_EXPECT_UNMINIFIED: "1",
+      },
+    });
+    assert.doesNotMatch(
+      fs.readFileSync(buildLog, "utf8"),
+      /--minify/,
+      "A preview must not force the slow release minification pass",
+    );
+    const previewArchive = listArchives(distDir).find((name) =>
+      name.endsWith("-preview.tar.gz"),
+    );
+    assert.equal(
+      previewArchive,
+      `${APP_NAME}-1.2.3-8-preview.tar.gz`,
+      "An uncommitted worktree must still produce a Splunkbase-filtered preview archive",
+    );
+    assert.equal(
+      listArchives(distDir).filter((name) => /-\d+\.tar\.gz$/.test(name)).length,
+      0,
+      "A preview must never occupy the release artifact namespace",
+    );
+    assert.deepEqual(
+      JSON.parse(
+        run("tar", [
+          "-xzOf",
+          path.join(distDir, previewArchive),
+          `${APP_NAME}/release-provenance.json`,
+        ]),
+      ),
+      {
+        schema_version: 1,
+        splunkbase_app_id: 9257,
+        package_id: APP_NAME,
+        version: "1.2.3",
+        build: 8,
+        git_commit: run("git", ["rev-parse", "HEAD"], { cwd: fixture.root }).trim(),
+        source_tree_clean: false,
+        release_eligible: false,
+      },
+      "A preview must record its uncommitted state and disclaim release eligibility",
+    );
+
+    // The preview drops the clean-worktree gate and nothing else: a file Git
+    // never tracks would misrepresent the very content the preview shows.
+    const ignoredResourcePath = path.join(
+      fixture.packageRoot,
+      "src",
+      "main",
+      "resources",
+      "splunk",
+      "default",
+      "ignored.env",
+    );
+    writeFile(path.join(fixture.root, ".gitignore"), "/dist/\nignored.env\n");
+    writeFile(ignoredResourcePath, "preview-must-refuse-this\n");
+    assert.match(
+      runExpectFailure("bash", [fixture.packageScript, "--splunkbase-preview"], {
+        cwd: fixture.packageRoot,
+        env: { ...process.env, SCD_FIXTURE_EXPECT_UNMINIFIED: "1" },
+      }),
+      /Splunkbase packaging refuses ignored files under release inputs/,
+      "Preview packaging must still refuse untracked release inputs",
+    );
+  } finally {
+    removeTempRoot(fixture.root);
+  }
+}
+
+function exercisePreviewArchivesCannotBecomeReleases() {
+  const fixture = makeRootBuildFixture();
+  try {
+    const previewOutput = run(
+      "bash",
+      [fixture.buildPath, "--splunkbase-preview"],
+      { cwd: fixture.root },
+    );
+    assert.match(
+      previewOutput,
+      /Tarball: .*splunk-cisco-dashboards-1\.2\.3-1-preview\.tar\.gz/,
+      "--splunkbase-preview must resolve its own artifact namespace",
+    );
+    assert.match(
+      previewOutput,
+      /Upload:\s+no \(Splunkbase preview/,
+      "A preview build must state plainly that it cannot be uploaded",
+    );
+
+    // Renaming a preview into the release namespace must not launder it: the
+    // archive's own release_eligible claim is what the release path trusts.
+    const distDir = path.join(fixture.root, "dist");
+    fs.copyFileSync(
+      path.join(distDir, `${APP_NAME}-1.2.3-1-preview.tar.gz`),
+      path.join(distDir, `${APP_NAME}-1.2.3-1.tar.gz`),
+    );
+    assert.match(
+      runExpectFailure(
+        "bash",
+        [
+          fixture.buildPath,
+          "--no-build",
+          "--splunkbase",
+          "--install",
+          "--auth",
+          "fixture:password",
+        ],
+        { cwd: fixture.root },
+      ),
+      /Splunkbase archive is not release-eligible/,
+      "A renamed preview must never satisfy the Splunkbase release gate",
+    );
+
+    assert.match(
+      runExpectFailure(
+        "bash",
+        [fixture.buildPath, "--splunkbase-preview", "--splunkbase"],
+        { cwd: fixture.root },
+      ),
+      /--splunkbase-preview and --splunkbase are mutually exclusive/,
+      "The preview and release profiles must stay explicitly separate",
+    );
+    assert.match(
+      runExpectFailure(
+        "bash",
+        [fixture.buildPath, "--splunkbase-preview", "--fast"],
+        { cwd: fixture.root },
+      ),
+      /--splunkbase-preview cannot be used with --fast/,
+      "Stage reuse must not be able to masquerade as a Splunkbase preview",
+    );
+  } finally {
+    removeTempRoot(fixture.root);
+  }
+}
+
 function exercisePostBuildSourceVerification() {
   const fixture = makePackageFixture();
   try {
@@ -1039,9 +1375,11 @@ function makeRootBuildFixture() {
       'VERSION="$(tr -d "[:space:]" < "${ROOT_DIR}/VERSION")"',
       'FLOOR=0',
       'DEVELOPER=0',
+      'PREVIEW=0',
       'for ARG in "$@"; do',
       '  case "${ARG}" in',
       '    --developer) DEVELOPER=1 ;;',
+      '    --splunkbase-preview) PREVIEW=1 ;;',
       '    --minify) ;;',
       '    *) echo "unsupported fixture package option: ${ARG}" >&2; exit 2 ;;',
       '  esac',
@@ -1055,6 +1393,7 @@ function makeRootBuildFixture() {
       'BUILD=$((FLOOR + 1))',
       'SUFFIX=""',
       '[[ "${DEVELOPER}" -eq 1 ]] && SUFFIX="-developer"',
+      '[[ "${PREVIEW}" -eq 1 ]] && SUFFIX="-preview"',
       'WORK_DIR="$(mktemp -d)"',
       "trap 'rm -rf \"${WORK_DIR}\"' EXIT",
       'mkdir -p "${WORK_DIR}/${APP_NAME}/default"',
@@ -1062,6 +1401,7 @@ function makeRootBuildFixture() {
       'if [[ "${DEVELOPER}" -eq 0 ]]; then',
       '  ELIGIBLE="${SCD_FIXTURE_RELEASE_ELIGIBLE:-true}"',
       '  CLEAN="${SCD_FIXTURE_SOURCE_TREE_CLEAN:-true}"',
+      '  if [[ "${PREVIEW}" -eq 1 ]]; then ELIGIBLE=false; CLEAN=false; fi',
       '  printf "{\\\"package_id\\\":\\\"%s\\\",\\\"version\\\":\\\"%s\\\",\\\"build\\\":%s,\\\"git_commit\\\":\\\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\\",\\\"source_tree_clean\\\":%s,\\\"release_eligible\\\":%s}\\n" "${APP_NAME}" "${VERSION}" "${BUILD}" "${CLEAN}" "${ELIGIBLE}" > "${WORK_DIR}/${APP_NAME}/release-provenance.json"',
       'fi',
       'ARCHIVE_TMP="${ROOT_DIR}/dist/.fixture-archive.tar.gz"',
@@ -1441,8 +1781,8 @@ assert.match(
 );
 assert.match(
   buildScript,
-  /no_build" -eq 0 && "\$splunkbase_profile_explicit" -eq 0 && "\$developer_profile" -eq 0/,
-  "Dirty-tree developer selection must not apply to --no-build reuse or explicit Splunkbase requests",
+  /no_build" -eq 0 && "\$splunkbase_profile_explicit" -eq 0 && "\$preview_profile" -eq 0[\s\S]*?"\$developer_profile" -eq 0/,
+  "Dirty-tree developer selection must not apply to --no-build reuse, explicit Splunkbase requests, or previews",
 );
 assert.doesNotMatch(
   buildScript,
@@ -1485,6 +1825,8 @@ exerciseCleanBuild();
 exerciseReleaseIdentityValidation();
 exerciseFromStageDefaultsToDeveloperProfile();
 exercisePackagingProfiles();
+exerciseSplunkbasePreviewPackaging();
+exercisePreviewArchivesCannotBecomeReleases();
 exercisePostBuildSourceVerification();
 exerciseProductionVerifierCacheRejection();
 exerciseRootBuildArchiveResolution();
@@ -1492,6 +1834,8 @@ exerciseLocalInstallProfileDefaults();
 exerciseDirtyDefaultInstallSelectsDeveloper();
 exerciseExcludedViewLinkSafety();
 exerciseDevelopingStaticAssetExclusion();
+exercisePreviewRetainedResources();
+exercisePreviewRetentionMustBeDeveloping();
 exercisePromotedSearchbaseCatalogue();
 
 console.log("Packaging P2 hardening contracts passed.");

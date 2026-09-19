@@ -10,6 +10,14 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Added `./build.sh --splunkbase-preview`, which applies the released-resources-only
+  Splunkbase filter to an uncommitted worktree and writes a `-preview` tarball
+  recording `release_eligible: false`. Previews can be installed locally but are
+  refused by the Splunkbase release and install gates even when renamed, so
+  developing resources can be excluded and verified before a commit. The new
+  `previewRetained` block in `config/build-profile-manifest.json` carves the
+  Searchbase Canvas authoring surface out of that filter, keeping Canvas usable
+  for inspecting the catalogue a preview contains.
 - Local `./build.sh --install` now proceeds with the developer profile when
   the Git worktree has uncommitted changes; `--splunkbase` still requires a
   clean committed source state for an upload-ready archive.
@@ -447,13 +455,21 @@ installation target does not influence package allocation. The committed ledger 
 publication history and a build floor, not a manual `current` allocation.
 Successful packages are named
 `splunk-cisco-dashboards-<version>-<build>.tar.gz` (plus `-developer` for an
-explicit developer profile). That tarball is the only emitted package file;
-packaging validates it internally, and the root build wrapper verifies its
-filename identity, gzip integrity, and release-eligible provenance before use.
+explicit developer profile, or `-preview` for a Splunkbase preview). That
+tarball is the only emitted package file; packaging validates it internally, and
+the root build wrapper verifies its filename identity, gzip integrity, and
+release-eligible provenance before use.
 A successful `./build.sh --install --splunkbase --auth user:password` run
 installs the exact upload-ready tarball it creates. Splunkbase builds require a
 clean committed worktree. Uncommitted `./build.sh --install` runs select the
 developer profile automatically so local iteration does not require a commit.
+`./build.sh --splunkbase-preview` keeps the released-resources-only filter on an
+uncommitted worktree and writes a `-preview` tarball marked
+`release_eligible: false`, which the release and install gates always reject.
+Resources listed under `previewRetained` in `config/build-profile-manifest.json`
+survive that filter; it currently carves out the Searchbase Canvas authoring
+surface. Entries there must also be declared developing, so the carve-out can
+only ever shrink what a preview removes, never add something that always ships.
 
 Resource inclusion is controlled by `config/build-profile-manifest.json`.
 The complete workflow and local install command are documented in
