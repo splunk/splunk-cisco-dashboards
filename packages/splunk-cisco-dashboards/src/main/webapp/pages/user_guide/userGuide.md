@@ -321,7 +321,8 @@ Version 1.0.52 preserves complete large-fleet asset inventories and advances rel
 
 ### Workspace usability
 
-- Kept tile information popovers concise by showing the Searchbase description and thresholds while preserving implementation details, operator guidance, and references in the tile detail modal.
+- Kept tile information popovers concise on hover and focus, while clicking the same information control reveals the parent tile's complete Searchbase description, explanation, operator action, references, and execution plan.
+- Kept the separate tile detail control dedicated to associated drill-down searches and each drill-down search's own metadata.
 - Added responsive sizing, safe wrapping for long identifiers, viewport-bounded scrolling, pointer persistence, and Escape dismissal to tile information popovers.
 
 ### Asset inventory

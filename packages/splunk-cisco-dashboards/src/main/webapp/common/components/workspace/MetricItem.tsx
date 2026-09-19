@@ -13,7 +13,11 @@ import {
     type SparklineVizType,
     type DataValuesDisplay,
 } from './Sparkline';
-import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
+import {
+    InfoTooltip,
+    type InfoTooltipAnchor,
+    type InfoTooltipDetailSection,
+} from './InfoTooltip';
 import { WorkspaceModalShell } from './WorkspaceModalShell';
 import { TileActionMenu, TileDrilldownButton } from './TileActionMenu';
 import { cn } from '@/common/lib/utils';
@@ -39,6 +43,8 @@ interface MetricItemProps {
      * omitted, the info icon is not rendered.
      */
     description?: string;
+    /** Complete metadata for this parent tile, separate from drill-down guidance. */
+    infoSections?: readonly InfoTooltipDetailSection[];
     /**
      * Caption shown at the bottom of the Info tooltip — typically the
      * resolved SPL or saved-search name so consumers can trace the
@@ -237,6 +243,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
     label,
     subLabel,
     description,
+    infoSections,
     descriptionFootnote,
     thresholdLines,
     thresholdNote,
@@ -372,6 +379,7 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                             <InfoTooltip
                                 title={label}
                                 description={description}
+                                detailSections={infoSections}
                                 thresholdLines={thresholdLines}
                                 thresholdNote={thresholdNote}
                                 footnote={descriptionFootnote}

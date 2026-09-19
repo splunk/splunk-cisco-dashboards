@@ -31,7 +31,11 @@
 
 import React, { useMemo, useState } from "react";
 import { ChartFocusDialog } from "./ChartFocusDialog";
-import { InfoTooltip, type InfoTooltipAnchor } from "./InfoTooltip";
+import {
+  InfoTooltip,
+  type InfoTooltipAnchor,
+  type InfoTooltipDetailSection,
+} from "./InfoTooltip";
 import { TileActionMenu, TileDrilldownButton } from "./TileActionMenu";
 import { cn } from "@/common/lib/utils";
 import { formatCompactMetricNumber } from "@/common/lib/metricValueFormat";
@@ -41,6 +45,7 @@ interface BarBreakdownTileProps {
   label: string;
   subLabel?: string;
   description?: string;
+  infoSections?: readonly InfoTooltipDetailSection[];
   descriptionFootnote?: string;
   /** Forwarded to the info tooltip's THRESHOLDS section. */
   thresholdNote?: string;
@@ -167,6 +172,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
   label,
   subLabel,
   description,
+  infoSections,
   descriptionFootnote,
   thresholdNote,
   infoAnchor = "auto",
@@ -291,6 +297,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
               <InfoTooltip
                 title={label}
                 description={description}
+                detailSections={infoSections}
                 thresholdNote={thresholdNote}
                 footnote={descriptionFootnote}
                 anchor={infoAnchor}

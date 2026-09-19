@@ -16,7 +16,11 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, ArrowUpDown } from '@/common/icons/SuiIcon';
-import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
+import {
+    InfoTooltip,
+    type InfoTooltipAnchor,
+    type InfoTooltipDetailSection,
+} from './InfoTooltip';
 import { TileActionMenu, TileDrilldownButton } from './TileActionMenu';
 import { cn } from '@/common/lib/utils';
 import type {
@@ -33,6 +37,7 @@ interface TableTileProps {
     label: string;
     subLabel?: string;
     description?: string;
+    infoSections?: readonly InfoTooltipDetailSection[];
     descriptionFootnote?: string;
     /**
      * Forwarded to the info tooltip's THRESHOLDS section. Tables
@@ -163,6 +168,7 @@ export const TableTile: React.FC<TableTileProps> = ({
     label,
     subLabel,
     description,
+    infoSections,
     descriptionFootnote,
     thresholdNote,
     infoAnchor = 'auto',
@@ -282,6 +288,7 @@ export const TableTile: React.FC<TableTileProps> = ({
                             <InfoTooltip
                                 title={label}
                                 description={description}
+                                detailSections={infoSections}
                                 thresholdNote={thresholdNote}
                                 footnote={descriptionFootnote}
                                 anchor={infoAnchor}

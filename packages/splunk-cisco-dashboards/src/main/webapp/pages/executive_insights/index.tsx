@@ -227,6 +227,7 @@ import {
 import { runSearch } from "@/common/services/splunkSearchService";
 import {
   getSearchbaseCatalogue,
+  plainTextFromHtml,
   type SearchbaseRecord,
 } from "@/common/services/searchbaseCatalogue";
 import {
@@ -693,21 +694,6 @@ const readFirstSeriesColor = (
   return first?.trim();
 };
 
-const plainTextFromHtml = (raw: string | undefined): string | undefined => {
-  if (!raw) return undefined;
-  const text = raw
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&amp;/g, "&")
-    .replace(/\s+/g, " ")
-    .trim();
-  return text || undefined;
-};
-
 const parseWorkspaceSource = (raw: unknown): WorkspaceSourceId => {
   if (typeof raw !== "string") return EXECUTIVE_WORKSPACE_SOURCE_ID;
   const trimmed = raw.trim();
@@ -860,11 +846,27 @@ const buildOverviewDescription = (
     plainTextFromHtml(record.explanation) ??
     plainTextFromHtml(record.solution);
 
-  // Hover help is deliberately a concise summary. The complete Searchbase
-  // explanation, solution, related information, and execution plan remain in
-  // SearchbaseDrilldownGuidance inside the tile's detail modal.
+  // Hover/focus help is deliberately a concise summary. Clicking the same
+  // parent-tile info control reveals the remaining parent Searchbase metadata;
+  // the separate detail-table control remains exclusively for drill-downs.
   return summary?.replace(/\s+/g, " ").trim() || undefined;
 };
+
+const buildOverviewInfoSections = (
+  record: SearchbaseRecord,
+): readonly { title: string; content: string }[] =>
+  [
+    { title: "Explanation", content: plainTextFromHtml(record.explanation) },
+    { title: "Operator action", content: plainTextFromHtml(record.solution) },
+    {
+      title: "Related information",
+      content: plainTextFromHtml(record.relatedInfo),
+    },
+    { title: "Execution plan", content: plainTextFromHtml(record.executionPlan) },
+  ].filter(
+    (section): section is { title: string; content: string } =>
+      Boolean(section.content?.trim()),
+  );
 
 const buildOverviewMetricFromDefinition = (
   record: SearchbaseRecord,
@@ -892,6 +894,7 @@ const buildOverviewMetricFromDefinition = (
       record.subCategory ??
       record.category,
     description,
+    infoSections: buildOverviewInfoSections(record),
     searchbaseId: options.searchbaseId ?? record.id,
     savedSearch: record.searchName,
     spl: undefined,
@@ -2174,6 +2177,7 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
       label={effective.label}
       subLabel={effective.subLabel}
       description={effective.description}
+      infoSections={effective.infoSections}
       // Footnote intentionally omitted: surfacing the literal SPL
       // in the info tooltip clutters the executive view and
       // duplicates what the "Open in Search" icon already
@@ -2288,6 +2292,7 @@ const TableCardLeaf: React.FC<CommonLeafProps> = ({
       label={effective.label}
       subLabel={effective.subLabel}
       description={effective.description}
+      infoSections={effective.infoSections}
       descriptionFootnote={undefined}
       thresholdNote={effective.thresholdNote}
       infoAnchor={infoAnchor}
@@ -2351,6 +2356,7 @@ const BarBreakdownCardLeaf: React.FC<CommonLeafProps> = ({
       label={effective.label}
       subLabel={effective.subLabel}
       description={effective.description}
+      infoSections={effective.infoSections}
       descriptionFootnote={undefined}
       thresholdNote={effective.thresholdNote}
       infoAnchor={infoAnchor}
@@ -2415,6 +2421,7 @@ const PieCardLeaf: React.FC<PieCardLeafProps> = ({
       label={effective.label}
       subLabel={effective.subLabel}
       description={effective.description}
+      infoSections={effective.infoSections}
       descriptionFootnote={undefined}
       thresholdNote={effective.thresholdNote}
       infoAnchor={infoAnchor}
@@ -2492,6 +2499,7 @@ const ScalarGaugeCardLeaf: React.FC<ScalarGaugeCardLeafProps> = ({
     label: effective.label,
     subLabel: effective.subLabel,
     description: effective.description,
+    infoSections: effective.infoSections,
     descriptionFootnote: undefined,
     thresholdNote: effective.thresholdNote,
     value,

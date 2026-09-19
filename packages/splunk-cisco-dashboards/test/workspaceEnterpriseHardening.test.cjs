@@ -922,8 +922,18 @@ assert.doesNotMatch(
 );
 assert.match(
   profile,
+  /const buildOverviewInfoSections =[\s\S]*?record\.explanation[\s\S]*?record\.solution[\s\S]*?record\.relatedInfo[\s\S]*?record\.executionPlan/,
+  "The parent tile info control must retain every parent Searchbase guidance field",
+);
+assert.match(
+  profile,
+  /description=\{effective\.description\}[\s\S]*?infoSections=\{effective\.infoSections\}/,
+  "Every workspace tile must receive its own expandable guidance",
+);
+assert.match(
+  profile,
   /<SearchbaseDrilldownGuidance[\s\S]*?metadata=\{activeConfig\.metadata\}/,
-  "The detail modal must retain the complete Searchbase guidance",
+  "The detail modal must continue to render only the active drill-down search metadata",
 );
 assert.match(infoTooltip, /overflowWrap: 'anywhere'/);
 assert.match(infoTooltip, /maxHeight: `min\(480px,/);
@@ -933,7 +943,17 @@ assert.match(
   /if \(event\.key === 'Escape'\) \{\s*closeTooltip\(\);\s*\}/,
 );
 assert.match(infoTooltip, /onMouseEnter=\{cancelScheduledClose\}/);
-assert.match(infoTooltip, /aria-describedby=\{isOpen \? tooltipId : undefined\}/);
+assert.match(
+  infoTooltip,
+  /role=\{showDetails \? 'dialog' : 'tooltip'\}/,
+  "Expanded tile guidance must not use tooltip semantics",
+);
+assert.match(
+  infoTooltip,
+  /aria-describedby=\{isOpen && !showDetails \? tooltipId : undefined\}/,
+);
+assert.match(infoTooltip, /aria-haspopup=\{hasDetails \? 'dialog' : undefined\}/);
+assert.match(metricItem, /detailSections=\{infoSections\}/);
 assert.match(
   searchService,
   /\[SSNE Diagnostics\] ENABLED/,

@@ -15,7 +15,11 @@
  */
 
 import React from 'react';
-import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
+import {
+    InfoTooltip,
+    type InfoTooltipAnchor,
+    type InfoTooltipDetailSection,
+} from './InfoTooltip';
 import { TileActionMenu, TileDrilldownButton } from './TileActionMenu';
 import { cn } from '@/common/lib/utils';
 import type { DataSource } from '@/common/hooks/useMetric';
@@ -34,6 +38,7 @@ export interface CanvasScalarTileChromeProps {
      */
     meaningSubtitle?: string;
     description?: string;
+    infoSections?: readonly InfoTooltipDetailSection[];
     descriptionFootnote?: string;
     thresholdNote?: string;
     infoAnchor?: InfoTooltipAnchor;
@@ -53,6 +58,7 @@ export const CanvasScalarTileChrome: React.FC<CanvasScalarTileChromeProps> = ({
     subLabel,
     meaningSubtitle,
     description,
+    infoSections,
     descriptionFootnote,
     thresholdNote,
     infoAnchor = 'auto',
@@ -93,6 +99,7 @@ export const CanvasScalarTileChrome: React.FC<CanvasScalarTileChromeProps> = ({
                         <InfoTooltip
                             title={label}
                             description={description}
+                            detailSections={infoSections}
                             thresholdNote={thresholdNote}
                             footnote={descriptionFootnote}
                             anchor={infoAnchor}
