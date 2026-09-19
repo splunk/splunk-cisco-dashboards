@@ -45,6 +45,9 @@ JUNK_TAGS = {
     "CIM Accelerated", "TA 7404", "TA Stock Dashboard", "Legacy KPI",
     "ISE TA", "TA Health", "Derived Signal", "Composite KPI", "TStats",
     "Data Model", "Base Search", "Awaiting Feed", "Acceleration",
+    # The upstream TA dashboard a search was lifted from, same class as
+    # "TA Stock Dashboard". Describes where the SPL came from, not its subject.
+    "Events And Incident Viewer",
 }
 
 # Customer / end-user organisation names must never ship in the catalogue.
@@ -57,10 +60,14 @@ GENERIC_TAGS = {
     "Category", "Type", "Status", "Quiet", "Major", "Critical", "Health",
     "Network", "Data Center", "Score", "Activity", "Actions", "Change",
     "Outcomes", "Validation", "KTP",
+    # Restates the stanza's own sub_category, so it narrows nothing. There is
+    # no more specific tag to fold it into.
+    "Network Health",
     # Contentless one-offs that describe no subject.
     "Performance", "Stability", "Components", "Diagnostics", "Optimization",
     "Jobs", "Tasks", "Schedule", "Volume", "Stream", "Drop", "Spike",
-    "Hardware",
+    "Hardware", "Assurance", "Disaster Readiness", "Evidence", "Failover",
+    "Geo", "Impairment", "Internet", "Packets", "Rx", "Tx",
 }
 
 # Product tags whose product must be named in the search's SPL, stanza id, or
@@ -115,6 +122,20 @@ TAG_CANON = {
     "Regional": "Regions",
     # Bare "Root" reads as root-cause; these searches mean the root account.
     "Root": "Root Account",
+    "Asset Inventory": "Inventory",
+    "Alerting": "Alerts",
+    "BGP Neighbors": "BGP",
+    "Event Types": "Events",
+    "IdentityStore": "Identity",
+    "Logins": "Authentication",
+    "Multi-Tenancy": "Tenants",
+    "Security Activity": "Security",
+    "Splunk Internal": "Splunk Platform",
+    "Traffic Logs": "Traffic",
+    # Two spellings each of one concept. Folding "Intrusion Detection" also
+    # redirects "IDS" above, which resolves through it.
+    "Intrusion Detection": "Intrusions",
+    "Denied Traffic": "Denials",
 }
 
 def _resolve(mapping: dict[str, str]) -> dict[str, str]:
@@ -136,13 +157,61 @@ def _resolve(mapping: dict[str, str]) -> dict[str, str]:
 TAG_CANON = _resolve(TAG_CANON)
 
 
-# Workspace / pillar tags that drive auto-discovery. Never dropped.
+# Tags that name a workspace or a journey. "Secure Networking" and "Agentic
+# SOC" are the two auto-discovery requiredTag values and are never dropped.
+# The five pillar names below are section labels, not discovery inputs, and
+# are governed by the strict rule in new_tags instead.
 LOAD_BEARING_TAGS = {
     "Secure Networking", "Agentic SOC", "Zero Trust Access",
     "Secure Infrastructure", "Scalable Network Segmentation",
     "Hybrid Mesh Firewalling", "Agentic Ops", "Cisco DC Networking",
     "Building Intelligence", "IT Health", "NetOps Readiness",
     "Network Intelligence", "Workplace SPOG", "Secure Data Center Operations",
+}
+
+# The five Secure Networking section names, which double as tags.
+SECURE_NETWORKING_PILLAR_TAGS = {
+    "Zero Trust Access", "Secure Infrastructure",
+    "Scalable Network Segmentation", "Hybrid Mesh Firewalling", "Agentic Ops",
+}
+
+# Machine identifiers that name one record in some external system. They are
+# opaque to an operator browsing the catalogue and match only themselves, so
+# they filter nothing. The subject they stand for is always carried by a real
+# tag on the same search ("MITRE ATT&CK", "Vulnerability Intelligence").
+# Matched with fullmatch and applied after LOAD_BEARING_TAGS is exempted.
+#
+# There is deliberately no generic [A-Z]{2,10}-\d{1,6} rule: it would eat
+# "SHA-256", "AES-256" and "P-256", which name algorithms, not records.
+IDENTIFIER_TAG_RE = re.compile(
+    "|".join(
+        (
+            r"CVE-\d{4}-\d{4,7}",              # CVE-2022-20775
+            r"T\d{4}(?:\.\d{3})?",             # ATT&CK T1021.002
+            r"(?:CWE|CAPEC)-\d{1,5}",          # CWE-79
+            r"CSC[a-z]{2}\d{5}",               # Cisco bug id CSCvz12345
+            r"cisco-sa-[\w.-]+",               # Cisco PSIRT advisory id
+            r"(?:sid|gid):?\s?\d+",            # Snort/ES rule id
+            r"\d{1,5}:\d{1,7}(?::\d{1,3})?",   # Snort gid:sid:rev
+            r"(?:TA|ES)[ _-]?\d{3,6}",         # TA/ES build id
+            r"[0-9a-fA-F]{32}",                # md5
+            r"[0-9a-fA-F]{40}",                # sha1
+            r"[0-9a-fA-F]{64}",                # sha256
+            r"[vV]\d+(?:\.\d+)+",              # v2.1
+            r"\d+(?:\.\d+){2,}",               # 1.2.3
+            r"\d+",                            # bare numeric id
+        )
+    ),
+    re.I,
+)
+
+# Tags that are simply wrong on one named stanza, each checked by hand. This
+# is not absence-of-evidence stripping and TAG_REQUIRES_EVIDENCE stays empty:
+# a missing tag can name a component upstream of the data, as the Endace taps
+# do for the Zeek sourcetypes. These entries have no such reading. The search
+# below counts Secure Workload scopes by alert and touches nothing DHCP.
+TAG_TYPOS = {
+    "security_microseg_tetration_top_scopes_by_alert": {"DHCP"},
 }
 
 # Recognized product/source tags. Used to check a search kept its product.
@@ -228,6 +297,86 @@ PILLAR_SUBS = {
     "Agentic Ops", "Agentic Operations", "DNS Security",
     "Firewall Threat Defense", "Network Detection & Response",
     "Unified Detection & Investigation",
+}
+
+# Which Secure Networking pillar a tile belongs in, where the shipped value
+# disagreed with what the search actually reads. Keyed by stanza so the result
+# never depends on the current value, which is what keeps this idempotent.
+PILLAR_REASSIGN = {
+    # Duo MFA decisions and Duo endpoint-posture denials are access control.
+    # The three sibling searches on cisco:duo:authentication already sit in
+    # Zero Trust Access; these two were the only ones filed elsewhere.
+    "secure_networking_infra_duo_application_access": "Zero Trust Access",
+    "secure_networking_infra_duo_blocked_posture_identity": "Zero Trust Access",
+    # meraki:organizationsecurity is the MX security appliance allow/block
+    # stream. Two searches on that sourcetype are Hybrid Mesh Firewalling and
+    # the same feed drives hmf_unified_blocks_trend; these three were split off.
+    "secure_networking_meraki_security_allowed_blocked_trend": "Hybrid Mesh Firewalling",
+    "secure_networking_meraki_top_blocked_destinations": "Hybrid Mesh Firewalling",
+    "secure_networking_meraki_top_offending_clients": "Hybrid Mesh Firewalling",
+    # Webex call success/failure is service assurance, like the Webex meeting
+    # quality and contact-centre searches that are already in Agentic Ops. A
+    # refused call is not an infrastructure security signal.
+    "secure_networking_webex_call_outcome_trend": "Agentic Ops",
+    "secure_networking_webex_failed_calls": "Agentic Ops",
+    # Compares model datasets against indexed events: a feed-coverage check,
+    # the same purpose as source_health_by_pillar and the TA error monitor.
+    "secure_networking_intersight_data_model_coverage": "Agentic Ops",
+    # Carried the prefix and the workspace tag but a generic sub_category, so
+    # they were invisible in their own workspace. Both read Catalyst Center
+    # device health, which is what secure_infra_status_rollup already covers.
+    "secure_networking_fleet_device_health_summary": "Secure Infrastructure",
+    "secure_networking_site_connectivity_summary": "Secure Infrastructure",
+    # Counts events by provider and sourcetype with first- and last-seen
+    # times. No finding, severity, or account is reported, so this is a feed
+    # inventory like source_health_by_pillar, not firewall enforcement.
+    "secure_networking_cloud_native_security_activity": "Agentic Ops",
+    # Groups by ISEPolicySetName and NetworkDeviceName with no SGT, VRF, or
+    # VLAN field anywhere. Its Zero Trust Access counterpart
+    # zta_ise_enforcement_by_domain does read security_group_tag, so the two
+    # were the wrong way round.
+    "secure_networking_ise_policy_hits_by_device": "Zero Trust Access",
+    # XDR incident severity and global risk over time, reading the same
+    # cisco:xdr:incidents scores.global field as the two Agentic Ops
+    # contextual-risk tiles. Neither reports an access decision.
+    "secure_networking_zta_xdr_incident_status_severity_trend": "Agentic Ops",
+    "secure_networking_zta_xdr_risk_pressure_trend": "Agentic Ops",
+}
+
+# A pillar string is a workspace section name. On a stanza outside that
+# workspace it has to earn its place as a plain purpose name, and these did
+# not: each one is listed with the sibling group it was separated from.
+# identity_duo_* is deliberately absent: all ten of those searches are MFA and
+# device-trust decisions, so "Zero Trust Access" is an accurate purpose there.
+PILLAR_SUB_OUTSIDE_WORKSPACE = {
+    # TLOC circuit and site availability from sitehealth/tunnelhealth. No
+    # firewall, policy, or enforcement anywhere in the SPL, and the other 14
+    # monitoring_sdwan_* searches already use WAN Health.
+    "monitoring_sdwan_circuit_availability_table": "WAN Health",
+    "monitoring_sdwan_circuit_state_summary": "WAN Health",
+    "monitoring_sdwan_site_health_map": "WAN Health",
+    "monitoring_sdwan_site_health_table": "WAN Health",
+    "monitoring_sdwan_site_state_summary": "WAN Health",
+    # Blocked/allowed decisions off the Network_Traffic model, exactly what the
+    # sibling network_intelligence_top_blocked_ports calls Firewall.
+    "network_intelligence_blocked_flow_detail": "Firewall",
+    "network_intelligence_blocked_vs_allowed": "Firewall",
+    # Gateway CPU, memory, uptime, and status. The other six Multicloud
+    # Defense searches, including this one's own display name, say Cloud
+    # Security.
+    "security_multicloud_defense_gateway_health_table": "Cloud Security",
+    # Attack Analyzer sandbox artefacts. Seventeen sibling xdr_aa_* searches
+    # are Forensics; these three were the only ones under a pillar name.
+    "xdr_aa_forensic_files_network_source_hotspots": "Forensics",
+    "xdr_aa_forensic_network_external_egress_watch": "Forensics",
+    "xdr_aa_forensic_network_internal_service_pressure": "Forensics",
+    # Counts events per source across eighteen index macros and labels each
+    # one Connected. That is feed health, not infrastructure security.
+    "executive_dashboard_data_source_status": "Feed Health",
+    # cisco:sdwan:access:logs permit/deny records with source and destination
+    # SGTs, which is the same subject as the dc_networking ACL Logs searches.
+    "security_resilience_sdwan_access_action_summary": "ACL Logs",
+    "security_resilience_sdwan_access_log_table": "ACL Logs",
 }
 
 # Synonyms, singular/plural pairs, and one-off fragments folded into the
@@ -515,6 +664,12 @@ def new_category(name: str, chunk: str, sub: str) -> str:
 
 def new_subcategory(name: str, chunk: str) -> str:
     raw = field(chunk, "sub_category")
+    # Both corrections are keyed by stanza and run before anything reads the
+    # shipped value, so they are unaffected by what that value currently is.
+    if name in PILLAR_REASSIGN:
+        return PILLAR_REASSIGN[name]
+    if name in PILLAR_SUB_OUTSIDE_WORKSPACE:
+        return PILLAR_SUB_OUTSIDE_WORKSPACE[name]
     if raw in PILLAR_SUBS:
         return raw
     # A staleness check on a product is about the feed, not about the product's
@@ -573,10 +728,61 @@ def new_subcategory(name: str, chunk: str) -> str:
     return sub
 
 
+def own_pillar_tag(name: str, chunk: str) -> str | None:
+    """The one Secure Networking pillar a stanza is allowed to claim as a tag.
+
+    A pillar tag asserts "this search IS that pillar", so the only defensible
+    value is the stanza's own sub_category. Reading the corrected
+    sub_category rather than the shipped one means a retagged search claims
+    the section it was just moved to, and makes the result a fixed point.
+    """
+    sub = new_subcategory(name, chunk)
+    if sub == "Agentic Operations":
+        sub = "Agentic Ops"
+    return sub if sub in SECURE_NETWORKING_PILLAR_TAGS else None
+
+
+def restates_own_taxonomy(tag: str, cat: str, sub: str) -> bool:
+    """True when a tag only repeats the stanza's own category or sub_category.
+
+    Such a tag cannot narrow anything: every search it selects is already
+    reachable by picking that category or sub_category in the UI, so it costs
+    a chip in the filter bar and returns the same set. Exact equality only --
+    "Health Score" against a sub_category of "Device Health" is a different
+    claim and is left alone (see the Health Score guard below).
+
+    Three exemptions, none of them stylistic:
+      * LOAD_BEARING_TAGS -- the five Secure Networking pillar names are
+        deliberately re-added by new_tags to the stanzas whose sub_category
+        they match, so that operators can filter a workspace section by tag.
+        Stripping them here would fight that rule inside the same function.
+        Post-batch every surviving pillar tag is a self-restatement by
+        construction, so this exemption is what keeps all 242 tiles tagged.
+      * PRODUCT_TAGS -- a product name is provenance. It answers "which feed
+        is this?", which stays a real question even when the sub_category
+        happens to carry the same words. All three uses of
+        "Vulnerability Intelligence" are restatements and would vanish.
+      * "Threat Hunting" -- the only tag this rule would erase from the
+        vocabulary outright, because all seven uses sit on stanzas already
+        filed under that sub_category. Kept deliberately as a browsable
+        entry point, so do not "fix" the inconsistency with the tags above.
+    """
+    if tag in LOAD_BEARING_TAGS or tag in PRODUCT_TAGS or tag == "Threat Hunting":
+        return False
+    return tag == cat or tag == sub
+
+
 def new_tags(name: str, chunk: str) -> list[str]:
     raw = [t.strip() for t in field(chunk, "tags").split(",") if t.strip()]
     spl = spl_of(chunk)
     evidence = f"{spl} {name} {field(chunk, 'search_name')}"
+    own_pillar = own_pillar_tag(name, chunk)
+    # Compare against the CORRECTED taxonomy, not the shipped fields. Both
+    # are recomputed here for the same reason own_pillar_tag does it: reading
+    # the shipped sub_category would compare against a value this run is about
+    # to overwrite, and pass two would then reach a different answer.
+    own_sub = new_subcategory(name, chunk)
+    own_cat = new_category(name, chunk, own_sub)
 
     # On most searches "Data Model" and "Acceleration" are badges, but on a
     # coverage search they name the subject, so they survive there.
@@ -600,10 +806,9 @@ def new_tags(name: str, chunk: str) -> list[str]:
             continue
         if tag in CUSTOMER_TAGS or tag in GENERIC_TAGS:
             continue
-        # Raw ATT&CK technique IDs are opaque on their own and every search
-        # carrying one also carries the "MITRE ATT&CK" tag, so they add
-        # nothing. Named CVEs stay: there the CVE is the subject.
-        if re.fullmatch(r"T\d{4}(\.\d{3})?", tag):
+        if tag in TAG_TYPOS.get(name, ()):
+            continue
+        if tag not in LOAD_BEARING_TAGS and IDENTIFIER_TAG_RE.fullmatch(tag):
             continue
         # "cisco:cvi" is Cisco Vulnerability Intelligence, a different product
         # from Cyber Vision despite the similar short name.
@@ -611,14 +816,46 @@ def new_tags(name: str, chunk: str) -> list[str]:
             r"cybervision", spl, re.I
         ):
             tag = "Vulnerability Intelligence"
+        # "cisco:se" is Secure Endpoint. Secure Access is the SSE product and
+        # reads cisco:cloud_security / cisco:secure_access, so on a search that
+        # touches neither the tag names the wrong product.
+        if tag == "Secure Access" and re.search(
+            r'sourcetype\s*=\s*"?cisco:se"?(?!\w)', spl
+        ) and not re.search(r"cloud_security|secure_access", spl, re.I):
+            tag = "Secure Endpoint"
+        # A pillar name is a section label. Carrying one that disagrees with
+        # the stanza's own sub_category claims a section the search is not
+        # in, so it is dropped wherever it appears. Safe to drop: nothing
+        # reads pillar tags. Auto-discovery matches only the requiredTag
+        # values ("Secure Networking", "Agentic SOC") plus sub_category.
+        if tag in SECURE_NETWORKING_PILLAR_TAGS and tag != own_pillar:
+            continue
+        if restates_own_taxonomy(tag, own_cat, own_sub):
+            continue
         if tag in TAG_REQUIRES_EVIDENCE and not re.search(
             TAG_REQUIRES_EVIDENCE[tag], evidence, re.I
         ):
             continue
-        # "Health Score" belongs on searches that actually compute a score or
-        # health percentage, not on plain fault and object counts.
+        # "Health Score" belongs on searches that present a score, not on
+        # anything with "health" in its name. The previous test was
+        #     r"score|health|pct|percent|ratio|availability" against evidence
+        # which kept all 150 uses: it accepted the bare word "health", and
+        # `evidence` includes the stanza id and display name, so any search
+        # called *_device_health_* qualified on the strength of its own title.
+        # This one reads the SPL only, and wants either a computed score (an
+        # explicit percentage, or an assignment to / rename into a score, pct,
+        # percent or ratio field) or a vendor-supplied one the search merely
+        # reads, such as Catalyst Center's health.overallScore or ACI's
+        # latest(health) AS "Health Score" -- surfacing Cisco's own score is
+        # still presenting a health score.
         if tag == "Health Score" and not re.search(
-            r"score|health|pct|percent|ratio|availability", evidence, re.I
+            r"round\s*\(\s*100\s*\*|"
+            r"\b\w*(?:score|pct|percent|ratio)\w*\s*=|"
+            r"\bas\s+\"?\w*(?:score|pct|percent|ratio)\w*|"
+            r"health_score|healthscore|"
+            r"\b\w*(?:Score|Percentage)\b",
+            spl,
+            re.I,
         ):
             continue
         if tag not in kept:
@@ -637,13 +874,22 @@ def new_tags(name: str, chunk: str) -> list[str]:
 
     # Workspace auto-discovery requires the prefix and the tag to agree. A few
     # stanzas shipped with the prefix and a pillar sub_category but no tag,
-    # which silently hid them from their own workspace.
-    sub = field(chunk, "sub_category")
+    # which silently hid them from their own workspace. Read the corrected
+    # sub_category, not the shipped one, so a retagged tile lands in the
+    # section it was just moved to.
+    sub = new_subcategory(name, chunk)
     if sub in PILLAR_SUBS:
         if name.startswith("secure_networking_") and "Secure Networking" not in kept:
             kept.append("Secure Networking")
         if name.startswith("agentic_soc_") and "Agentic SOC" not in kept:
             kept.append("Agentic SOC")
+        # A tile's section is set by its sub_category, but operators filter on
+        # tags, so a tile missing its own pillar tag is invisible to that
+        # filter. Only the workspace's own stanzas get one: elsewhere the same
+        # string is a purpose name and carries no section meaning. Any pillar
+        # tag other than this one was already dropped above.
+        if name.startswith("secure_networking_") and own_pillar and own_pillar not in kept:
+            kept.append(own_pillar)
 
     # Some firewall searches run on vendor-neutral CIM but are named for the
     # product they were written against. The name is the only record of that.

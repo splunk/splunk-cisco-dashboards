@@ -7226,16 +7226,16 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
  * list, all over the Cisco-tagged catalogue) but keep the surface
  * area focused on this one job.
  *
- * The result list is sorted with three layers of priority:
+ * The result list is sorted with two layers of priority:
  *   1. Currently-bound entry first (so the operator sees their
  *      starting point at the top, even after typing a query that
  *      would otherwise demote it).
- *   2. Entries tagged with one of `preferredTags` next — these
- *      are the searches we know are shaped for this surface
- *      (Topology_Site for sites, Topology_Link for links). They
- *      get a small "site" / "link" badge so the operator can
- *      scan-spot them.
- *   3. Everything else alphabetically.
+ *   2. Everything else alphabetically.
+ *
+ * Searches shaped for a specific topology surface declare it in
+ * `viz_options.topologyMap.role`, which `findSearchbaseByTopologyMapRole`
+ * reads. Role lives in viz_options rather than in `tags` so it cannot
+ * collide with the operator-facing tag vocabulary this browser lists.
  *
  * Tag chips are scoped to the *current filtered slice* (the same
  * progressive-narrowing pattern the KPI picker uses), so picking
@@ -7247,9 +7247,7 @@ interface TopologySearchBrowserProps {
   catalogue: SearchbaseRecord[];
   /** searchName currently bound to this site / link, used for highlight + sort. */
   currentSearchName: string;
-  /** Tag(s) to surface to the top of the list (e.g. `Topology_Site`). */
-  preferredTags: string[];
-  /** Human label for the surface — shown in the header and the per-row badge. */
+  /** Human label for the surface — shown in the header. */
   label: "site" | "link";
   /** Click-an-entry handler. Caller persists. */
   onPick: (searchName: string) => void;
@@ -7268,7 +7266,6 @@ const TOPOLOGY_TAG_CHIP_LIMIT = 12;
 const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
   catalogue,
   currentSearchName,
-  preferredTags,
   label,
   onPick,
   isDark,
@@ -7329,15 +7326,11 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
     return [...filtered].sort((a, b) => {
       if (a.searchName === currentSearchName) return -1;
       if (b.searchName === currentSearchName) return 1;
-      const aPreferred = preferredTags.some((tag) => a.tags.includes(tag));
-      const bPreferred = preferredTags.some((tag) => b.tags.includes(tag));
-      if (aPreferred && !bPreferred) return -1;
-      if (!aPreferred && bPreferred) return 1;
       return a.searchName.localeCompare(b.searchName, undefined, {
         sensitivity: "base",
       });
     });
-  }, [filtered, currentSearchName, preferredTags]);
+  }, [filtered, currentSearchName]);
 
   // All tags present in the filtered slice, ranked by frequency.
   // Used for the chip picker AND the typeahead match-count badge.
@@ -7474,7 +7467,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
            * fine for the ~12-tag baseline but became
            * unscalable as the catalogue grew (now 30+
            * unique tags); operators with a tag name in
-           * mind ("ThousandEyes", "Topology_Site") had to
+           * mind ("ThousandEyes", "Reachability") had to
            * scan a long chip wrap to find it. Auto-
            * focuses on open, Enter selects the first
            * match, Escape closes the picker. Same UX
@@ -7641,9 +7634,6 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
         )}
         {sorted.map((entry) => {
           const isSelected = entry.searchName === currentSearchName;
-          const isPreferred = preferredTags.some((tag) =>
-            entry.tags.includes(tag),
-          );
           return (
             <li key={entry.id}>
               <button
@@ -7704,17 +7694,6 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                           )}
                         >
                           · {entry.subCategory}
-                        </span>
-                      )}
-                      {isPreferred && (
-                        <span
-                          className={cn(
-                            "inline-flex rounded px-1 text-xs font-bold uppercase tracking-wider",
-                            "sui-bg-selected sui-color-info",
-                          )}
-                          title={`This search is shaped for a topology ${label}`}
-                        >
-                          {label}
                         </span>
                       )}
                     </div>
@@ -8626,12 +8605,11 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
 
   // The editor's per-card pickers browse the complete Searchbase
   // catalogue, identical to the in-popup `TopologySearchBrowser`.
-  // Tag-narrowing (Topology_Site / Topology_Link) is a *sort
-  // hint*, not a filter — those entries float to the top of the
-  // list, but every installed app's stanza is reachable via search.
-  // This matches the KpiPickerPanel browsing model so editing a
-  // tile and editing a topology element feel like the same
-  // operation.
+  // Tag chips narrow the list but never hide a stanza permanently —
+  // every installed app's stanza stays reachable via free-text
+  // search. This matches the KpiPickerPanel browsing model so
+  // editing a tile and editing a topology element feel like the
+  // same operation.
   //
   const editorSearchOptions = useMemo(() => {
     if (!catalogueByName) return [] as SearchbaseRecord[];
@@ -9927,7 +9905,6 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 <TopologySearchBrowser
                                   catalogue={editorSearchOptions}
                                   currentSearchName={site.searchName ?? ""}
-                                  preferredTags={["Topology_Site"]}
                                   label="site"
                                   onPick={(searchName) =>
                                     updateSite(site.id, {
@@ -10726,7 +10703,6 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 <TopologySearchBrowser
                                   catalogue={editorSearchOptions}
                                   currentSearchName={link.searchName ?? ""}
-                                  preferredTags={["Topology_Link"]}
                                   label="link"
                                   onPick={(searchName) =>
                                     bindSearchbaseToLink(link.id, searchName)
