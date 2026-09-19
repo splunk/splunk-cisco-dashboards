@@ -854,29 +854,16 @@ const buildOverviewDescription = (
   definition: Record<string, unknown>,
 ): string | undefined => {
   const explicit = readOverviewString(definition, "description", 4000);
-  const description = explicit ?? plainTextFromHtml(record.description);
-  const explanation = plainTextFromHtml(record.explanation);
-  const solution = plainTextFromHtml(record.solution);
-  const relatedInfo = plainTextFromHtml(record.relatedInfo);
-  const normalized = new Set<string>();
-  const parts: string[] = [];
-  const append = (label: string | null, value: string | undefined) => {
-    const trimmed = value?.replace(/\s+/g, " ").trim();
-    if (!trimmed) return;
-    const key = trimmed.toLowerCase();
-    if (normalized.has(key)) return;
-    normalized.add(key);
-    parts.push(label ? `${label}: ${trimmed}` : trimmed);
-  };
+  const summary =
+    explicit ??
+    plainTextFromHtml(record.description) ??
+    plainTextFromHtml(record.explanation) ??
+    plainTextFromHtml(record.solution);
 
-  // Searchbase metadata is authored as four complementary fields. Surface all
-  // four in the tile's info popover so operators see meaning, mechanics, next
-  // action, and source context without opening the catalogue editor.
-  append(null, description ?? explanation);
-  append("How it works", explanation);
-  append("Operator action", solution);
-  append("Data source and context", relatedInfo);
-  return parts.length > 0 ? parts.join(" ").slice(0, 4000) : undefined;
+  // Hover help is deliberately a concise summary. The complete Searchbase
+  // explanation, solution, related information, and execution plan remain in
+  // SearchbaseDrilldownGuidance inside the tile's detail modal.
+  return summary?.replace(/\s+/g, " ").trim() || undefined;
 };
 
 const buildOverviewMetricFromDefinition = (

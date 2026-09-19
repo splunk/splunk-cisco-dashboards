@@ -67,6 +67,12 @@
       "build": 2089,
       "state": "retired_candidate",
       "note": "Known clean local Splunkbase candidate retained as the durable build high-water mark. This is not evidence of public publication; future packages must allocate above it even when local dist artifacts are absent."
+    },
+    {
+      "version": "1.0.51",
+      "build": 2095,
+      "state": "published",
+      "note": "User confirmed the release was uploaded to Splunkbase and deployed to the customer Splunk Cloud stack, where the app reports version 1.0.51 build 2095. The exact public archive hash remains unverified."
     }
   ]
 }

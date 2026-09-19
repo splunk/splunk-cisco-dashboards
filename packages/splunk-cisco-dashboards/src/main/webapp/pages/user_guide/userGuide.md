@@ -314,6 +314,31 @@ Searchbase definitions are app-managed factory content. Workspace managers choos
 
 This Markdown file is the authoritative source for the in-product release history.
 
+::: release Release Notes | September 2026 - Version 1.0.52
+### Release overview
+
+Version 1.0.52 preserves complete large-fleet asset inventories and advances release build allocation beyond the published 1.0.51 package.
+
+### Workspace usability
+
+- Kept tile information popovers concise by showing the Searchbase description and thresholds while preserving implementation details, operator guidance, and references in the tile detail modal.
+- Added responsive sizing, safe wrapping for long identifiers, viewport-bounded scrolling, pointer persistence, and Escape dismissal to tile information popovers.
+
+### Asset inventory
+
+- Removed the implicit 10,000-row limit from the **Asset Inventory - Build Lookup** saved search so fleets larger than Splunk's default `sort` limit are written completely to `asset_inventory.csv`.
+- Removed the same implicit limit from the **Full Inventory** dashboard table so every row in the generated lookup remains available for display and filtering.
+- Added regression coverage for both inventory paths.
+
+### Packaging and release safety
+
+- Recorded published build 2095 as the durable release-history floor so future packages allocate build 2096 or later even when earlier archives are absent from `dist/`.
+
+### Upgrade notes
+
+- After upgrading, run **Asset Inventory - Build Lookup** once or wait for its next scheduled execution to replace any previously truncated lookup.
+- No data migration or Splunk restart is required.
+
 ::: release Release Notes | September 2026 - Version 1.0.51
 ### Release overview
 

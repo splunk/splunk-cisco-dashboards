@@ -515,6 +515,9 @@ const rail = read(
 const metricItem = read(
   "src/main/webapp/common/components/workspace/MetricItem.tsx",
 );
+const infoTooltip = read(
+  "src/main/webapp/common/components/workspace/InfoTooltip.tsx",
+);
 const barBreakdownTile = read(
   "src/main/webapp/common/components/workspace/BarBreakdownTile.tsx",
 );
@@ -905,10 +908,32 @@ assert.match(
 assert.match(
   profile,
   /const buildOverviewDescription =/,
-  "Workspace tiles must compose the complete Searchbase metadata contract",
+  "Workspace tiles must derive concise hover help from Searchbase metadata",
 );
-assert.match(profile, /Operator action/);
-assert.match(profile, /Data source and context/);
+assert.match(
+  profile,
+  /const summary =\s*explicit \?\?[\s\S]*?plainTextFromHtml\(record\.description\)/,
+  "Workspace hover help must prefer the concise description field",
+);
+assert.doesNotMatch(
+  profile,
+  /append\("How it works"|append\("Operator action"|append\("Data source and context"/,
+  "Workspace hover help must not concatenate the full Searchbase guidance contract",
+);
+assert.match(
+  profile,
+  /<SearchbaseDrilldownGuidance[\s\S]*?metadata=\{activeConfig\.metadata\}/,
+  "The detail modal must retain the complete Searchbase guidance",
+);
+assert.match(infoTooltip, /overflowWrap: 'anywhere'/);
+assert.match(infoTooltip, /maxHeight: `min\(480px,/);
+assert.match(infoTooltip, /pointer-events-auto overscroll-contain/);
+assert.match(
+  infoTooltip,
+  /if \(event\.key === 'Escape'\) \{\s*closeTooltip\(\);\s*\}/,
+);
+assert.match(infoTooltip, /onMouseEnter=\{cancelScheduledClose\}/);
+assert.match(infoTooltip, /aria-describedby=\{isOpen \? tooltipId : undefined\}/);
 assert.match(
   searchService,
   /\[SSNE Diagnostics\] ENABLED/,

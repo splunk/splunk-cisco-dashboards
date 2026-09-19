@@ -982,7 +982,7 @@
 			"name": "Full Inventory",
 			"options": {
 				"extend": "ds_inventory_base",
-				"query": "| sort device_type device_name \n| rename device_name as \"Device Name\", device_name_short as \"Short Name\", device_type as \"Type\", device_family as \"Family\", platform_id as \"Platform\", ip_address as \"IP Address\", mac_address as \"MAC Address\", software_version as \"Software\", serial_number as \"Serial\", location as \"Location\", device_role as \"Role\", device_series as \"Series\", health_score as \"Health\", compliance_status as \"Compliance\", management_source as \"Source\", last_seen as \"Last Seen\""
+				"query": "| sort 0 device_type device_name \n| rename device_name as \"Device Name\", device_name_short as \"Short Name\", device_type as \"Type\", device_family as \"Family\", platform_id as \"Platform\", ip_address as \"IP Address\", mac_address as \"MAC Address\", software_version as \"Software\", serial_number as \"Serial\", location as \"Location\", device_role as \"Role\", device_series as \"Series\", health_score as \"Health\", compliance_status as \"Compliance\", management_source as \"Source\", last_seen as \"Last Seen\""
 			},
 			"type": "ds.chain"
 		},

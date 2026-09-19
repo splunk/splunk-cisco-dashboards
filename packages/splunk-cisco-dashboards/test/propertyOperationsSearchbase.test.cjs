@@ -9,6 +9,9 @@ const read = (relativePath) =>
   fs.readFileSync(path.join(packageRoot, relativePath), "utf8");
 const searchbase = read("src/main/resources/splunk/default/searchbase.conf");
 const savedsearches = read("src/main/resources/splunk/default/savedsearches.conf");
+const assetInventoryDashboard = read(
+  "src/main/resources/splunk/default/data/ui/views/admin_asset_inventory.xml",
+);
 
 const stanzaBody = (name) => {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -96,5 +99,15 @@ assert.match(savedsearches, /values\(akips_location\) as correlated_akips_locati
 assert.match(savedsearches, /values\(iq_lifecycle_risk\) as correlated_iq_risks/);
 assert.match(savedsearches, /location=coalesce\(location,mvindex\(correlated_akips_locations,0\)\)/);
 assert.match(savedsearches, /Cisco IQ assessments[^\n]+retaining AKIPS location/);
+assert.match(
+  savedsearches,
+  /\| sort 0 device_type device_name \\\n\| search NOT device_name IN \("unknown"\)/,
+  "The inventory builder must not truncate fleets at Splunk's default 10,000-row sort limit",
+);
+assert.match(
+  assetInventoryDashboard,
+  /"query": "\| sort 0 device_type device_name \\n\| rename device_name/,
+  "The full inventory table must preserve every lookup row before display renames",
+);
 
 console.log("Reusable property operations and lifecycle Searchbase contracts passed.");
