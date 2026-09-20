@@ -171,6 +171,13 @@ const TopologyMapRoot = styled.div`
   }
 `;
 
+const MapViewport = styled.div`
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+`;
+
 const MapTopRightActions = styled.div`
   position: absolute;
   top: ${variables.spacingMedium};
@@ -183,17 +190,16 @@ const MapTopRightActions = styled.div`
   pointer-events: auto;
 `;
 
-const MapBottomRightActions = styled.div<{ $reserveCommandSummary: boolean }>`
-  position: absolute;
-  right: ${variables.spacingMedium};
-  bottom: ${({ $reserveCommandSummary }) =>
-    $reserveCommandSummary ? "84px" : "12px"};
-  z-index: 1100;
+const MapBottomRightActions = styled.div`
+  flex: 0 0 auto;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
   gap: ${variables.spacingSmall};
-  max-height: calc(100% - 9rem);
+  max-height: 45%;
+  padding: ${variables.spacingSmall} ${variables.spacingMedium};
+  border-top: ${variables.inputBorderWidth} solid ${variables.borderColor};
   overflow-y: auto;
   overscroll-behavior: contain;
   pointer-events: auto;
@@ -6895,7 +6901,8 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
       )}
     >
       <style>{topologyAnimationCss}</style>
-      {topRightActions}
+      <MapViewport>
+        {topRightActions}
 
       {visualAnimationLevel === "on" &&
         !isEditorOpen &&
@@ -7080,8 +7087,9 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         onOpenInSearch={onOpenInSearch}
       />
 
+      </MapViewport>
+
       <MapBottomRightActions
-        $reserveCommandSummary={surfaceMode === "command"}
         aria-label="Map legend and view controls"
         role="region"
         tabIndex={roleLegendExpanded ? 0 : undefined}

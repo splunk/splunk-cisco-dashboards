@@ -402,6 +402,36 @@ const topologyPersistenceService = read(
 assert.match(topology, /attributionControl=\{false\}/);
 assert.match(topology, /label="Map credits"/);
 assert.match(topology, /Map rendering: Leaflet\. Basemap:/);
+assert.match(
+  topology,
+  /const MapCreditsDisclosure = styled\.div`[\s\S]*?flex-direction: column[\s\S]*?max-width: min\(15rem, calc\(100vw - 3rem\)\)/,
+  "Map credits must stay bounded inside the map-control stack",
+);
+assert.match(
+  topology,
+  /\{mapCreditsOpen && \([\s\S]*?<MapCreditsCard[\s\S]*?<MapCreditsButton/,
+  "Map credits must expand in flow before its trigger instead of using a floating popover",
+);
+assert.match(
+  topology,
+  /event\.key === "Escape" && mapCreditsOpen[\s\S]*?closeMapCredits\(\)/,
+  "Map credits must remain dismissible with Escape",
+);
+assert.match(
+  topology,
+  /mapCreditsCloseButtonRef\.current\?\.focus\(\)[\s\S]*?ref=\{mapCreditsCloseButtonRef\}/,
+  "Opening Map credits must move focus into the disclosure",
+);
+assert.match(
+  topology,
+  /const MapViewport = styled\.div`[\s\S]*?flex: 1 1 auto[\s\S]*?overflow: hidden/,
+  "The draggable map must have its own bounded viewport",
+);
+assert.match(
+  topology,
+  /<\/MapViewport>[\s\S]*?<MapBottomRightActions/,
+  "Map controls must render outside the draggable viewport instead of covering sites",
+);
 assert.match(topology, /<ControlGroup[\s\S]*?label="Telemetry source"/);
 assert.match(
   topology,
