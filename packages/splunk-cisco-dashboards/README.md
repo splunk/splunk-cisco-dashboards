@@ -84,6 +84,9 @@ networking pillars and workplace scenarios.
   `cisco_umbrella`.
 - Restored automatic inclusion of matched CIM models in the Setup draft so
   discovered allowlist changes are saved without a separate selection step.
+- Restored the final Setup save so every detected app routing macro and every
+  matched CIM allowlist is reviewed and persisted to its owning app's local
+  `macros.conf`, even when its effective definition matched a shipped default.
 - Preserved DensityFunction anomaly results across seven Cisco Spaces,
   ThousandEyes, and building-resilience searches by preventing Splunk's search
   optimizer from pruning MLTK-generated `IsOutlier(...)` fields during final

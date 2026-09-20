@@ -811,8 +811,8 @@ assert.match(
 );
 assert.match(
   setupTuner,
-  /for \(const row of setupCimChangesToSave\)/,
-  "Final setup must save only the selected-scoped CIM change list",
+  /for \(const row of setupCimRowsToSave\)/,
+  "Final setup must persist every selected CIM row, including effective definitions that already match",
 );
 
 console.log("Dashboard Manager visibility and setup regression checks passed.");

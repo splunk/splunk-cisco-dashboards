@@ -77,7 +77,7 @@ Setup contains six stages:
 3. **Review packages:** confirm which supporting apps and add-ons are installed and enabled.
 4. **Configure data:** scan a bounded time range, review routing macro proposals, and choose the search-performance mode.
 5. **Tune CIM models:** run one bounded discovery search per CIM data model. Models backed by matching data are selected automatically; clear any allow list that you want to leave unchanged. You can select **Skip CIM tuning** when no model remains selected.
-6. **Review & finish:** compare current and proposed values, then select **Save changes and finish**. When there are no macro changes, Setup only marks initial setup complete and unlocks the workspace.
+6. **Review & finish:** compare current and proposed values, then select **Save changes and finish**. Setup persists every reviewed app routing macro and matched CIM allow list to the owning app's local configuration, including definitions that currently match a shipped default.
 
 Nothing is written until the final confirmation. Canceling Setup discards the draft plan.
 

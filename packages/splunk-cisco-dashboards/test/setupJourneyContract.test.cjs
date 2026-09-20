@@ -144,7 +144,8 @@ test("CIM is a staged step and only the final review saves setup", () => {
     finishStart,
   );
   const finishFlow = tuner.slice(finishStart, finishEnd);
-  assert.match(finishFlow, /for \(const row of setupCimChangesToSave\)/);
+  assert.match(finishFlow, /for \(const row of setupRowsToSave\)/);
+  assert.match(finishFlow, /for \(const row of setupCimRowsToSave\)/);
   assert.match(finishFlow, /await completeInitialSetup\(\)/);
   assert.match(finishFlow, /setSetupComplete\(true\)/);
   assert.doesNotMatch(finishFlow, /window\.location\.assign/);
@@ -223,8 +224,10 @@ test("setup editors keep changes as drafts until final confirmation", () => {
   assert.match(tuner, /Unchanged/);
   assert.match(tuner, /const setupRoutingChangesToSave = useMemo/);
   assert.match(tuner, /const setupCimChangesToSave = useMemo/);
-  assert.match(tuner, /for \(const row of setupRoutingChangesToSave\)/);
-  assert.match(tuner, /for \(const row of setupCimChangesToSave\)/);
+  assert.match(tuner, /for \(const row of setupRowsToSave\)/);
+  assert.match(tuner, /for \(const row of setupCimRowsToSave\)/);
+  assert.doesNotMatch(tuner, /for \(const row of setupRoutingChangesToSave\)/);
+  assert.doesNotMatch(tuner, /for \(const row of setupCimChangesToSave\)/);
 });
 
 test("rerunning discovery protects scope-specific draft changes", () => {

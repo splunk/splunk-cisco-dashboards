@@ -3120,7 +3120,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
   );
   const setupChanges = useMemo<SetupChange[]>(() => {
     const changes: SetupChange[] = [];
-    setupRoutingChangesToSave.forEach((row) => {
+    setupRowsToSave.forEach((row) => {
       changes.push({
         kind: "Routing macro",
         targetApp: row.targetApp,
@@ -3129,7 +3129,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
         proposedValue: row.draftDefinition,
       });
     });
-    setupCimChangesToSave.forEach((row) => {
+    setupCimRowsToSave.forEach((row) => {
       changes.push({
         kind: "CIM allowlist",
         targetApp: row.targetApp,
@@ -3151,8 +3151,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
   }, [
     adhocDefinition,
     initialAdhocDefinition,
-    setupCimChangesToSave,
-    setupRoutingChangesToSave,
+    setupCimRowsToSave,
+    setupRowsToSave,
     shouldSaveAdhocDefinition,
   ]);
   const setupChangedAppCount = useMemo(
@@ -3161,11 +3161,11 @@ export default function MacroIndexTuningPage(): JSX.Element {
   );
   const setupPendingChangeDetail = useMemo(() => {
     const parts = [
-      setupRoutingChangesToSave.length
-        ? `${setupRoutingChangesToSave.length} routing`
+      setupRowsToSave.length
+        ? `${setupRowsToSave.length} routing`
         : "",
-      setupCimChangesToSave.length
-        ? `${setupCimChangesToSave.length} CIM`
+      setupCimRowsToSave.length
+        ? `${setupCimRowsToSave.length} CIM`
         : "",
       shouldSaveAdhocDefinition ? "1 performance" : "",
     ].filter(Boolean);
@@ -3173,8 +3173,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
       ? `${parts.join(" · ")} · Not saved until Step 6 confirmation.`
       : "Nothing is queued to save.";
   }, [
-    setupCimChangesToSave.length,
-    setupRoutingChangesToSave.length,
+    setupCimRowsToSave.length,
+    setupRowsToSave.length,
     shouldSaveAdhocDefinition,
   ]);
   useEffect(() => {
@@ -4072,7 +4072,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
             ? "Saving detected routing macros"
             : "Skipping routing macro tuning",
       });
-      for (const row of setupRoutingChangesToSave) {
+      for (const row of setupRowsToSave) {
         const rowKey = macroStatusKey(row);
         setSaveStatuses((current) => ({
           ...current,
@@ -4117,7 +4117,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
             ? "Saving CIM allowlists"
             : "Keeping current CIM allowlists",
       });
-      for (const row of setupCimChangesToSave) {
+      for (const row of setupCimRowsToSave) {
         const rowKey = macroStatusKey(row);
         setSaveStatuses((current) => ({
           ...current,
@@ -4195,8 +4195,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
     cimScanState,
     integratedSetupView,
     scanState,
-    setupCimChangesToSave,
-    setupRoutingChangesToSave,
+    setupCimRowsToSave,
+    setupRowsToSave,
     shouldSaveAdhocDefinition,
     summariesOnlyBlocked,
   ]);
@@ -5977,10 +5977,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
       (item) => item.state === "enabled",
     ).length;
     const setupChangeNoun =
-      setupChanges.length === 1 ? "setting change" : "setting changes";
+      setupChanges.length === 1 ? "setting" : "settings";
     const setupAppNoun = setupChangedAppCount === 1 ? "app" : "apps";
     let reviewStatus =
-      "No macro definitions changed. Finishing will only mark setup complete.";
+      "No macro definitions are queued. Finishing will only mark setup complete.";
     if (scanState !== "ready") {
       reviewStatus =
         "Return to Configure data and complete the routing scan before finishing setup.";
@@ -6009,7 +6009,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
         value:
           scanState === "error"
             ? "Needs attention — scan failed"
-            : `${setupRoutingChangesToSave.length} changes · ${setupIndexValueCount} proposed indexes`,
+            : `${setupRowsToSave.length} to save · ${setupRoutingChangesToSave.length} definition changes · ${setupIndexValueCount} proposed indexes`,
         detail: "Detected dashboard and installed-app routing definitions",
         warning: scanState === "error",
       },
@@ -6118,7 +6118,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           <div className="flex flex-wrap items-center justify-between gap-2 border-b sui-border-weak px-4 py-3">
             <div>
               <h2 className="text-sm font-bold sui-color-active">
-                Changes to be saved
+                Settings to be saved
               </h2>
               <p className="mt-0.5 text-xs sui-color-muted">
                 Current and proposed values are shown before any write occurs.
@@ -6131,7 +6131,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           {setupChanges.length ? (
             <>
               <ScreenReaderContent>
-                Setup changes grouped by target app with current and proposed
+                Setup settings grouped by target app with current and proposed
                 values.
               </ScreenReaderContent>
               <Table
@@ -6202,7 +6202,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
             </>
           ) : (
             <div className="px-4 py-6 text-sm sui-color-default">
-              No routing, CIM, or performance macro definitions will be changed.
+              No routing, CIM, or performance macro definitions are queued to save.
             </div>
           )}
           <div className="border-t sui-border-weak px-4 py-3 text-xs sui-color-default">
