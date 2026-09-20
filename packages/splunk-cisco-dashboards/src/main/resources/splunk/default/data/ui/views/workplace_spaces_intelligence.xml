@@ -1507,7 +1507,7 @@
 		"ds_capacity_predict": {
 			"name": "Occupancy forecast 24-hour prediction",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR \n| eval users='deviceCounts.userCount',\n    associated='deviceCounts.associatedCount',\n    devices='deviceCounts.deviceCount',\n    pct='deviceCounts.estimatedCapacityPercentage',\n    floor='deviceCounts.location.name',\n    building='deviceCounts.location.parent.name',\n    city='deviceCounts.location.parent.parent.name' \n| bin _time span=1h \n| stats max(users) as users by _time, floor \n| stats sum(users) as users by _time \n| timechart span=1h max(eval(round(users, 2))) as users \n| predict users as predicted future_timespan=24 \n| rename \"upper95(prediction(users))\" as upper95,\n    \"lower95(prediction(users))\" as lower95 \n| eval users=round(users, 2),\n    predicted=round(predicted, 2),\n    upper95=round(upper95, 2),\n    lower95=round(lower95, 2)",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR \n| eval users='deviceCounts.userCount',\n    associated='deviceCounts.associatedCount',\n    devices='deviceCounts.deviceCount',\n    pct='deviceCounts.estimatedCapacityPercentage',\n    floor='deviceCounts.location.name',\n    building='deviceCounts.location.parent.name',\n    city='deviceCounts.location.parent.parent.name' \n| bin _time span=1h \n| stats max(users) as users by _time, floor \n| stats sum(users) as users by _time \n| timechart span=1h max(eval(round(users, 2))) as users \n| predict users as predicted algorithm=LLP5 future_timespan=24 \n| rename \"upper95(predicted)\" as upper95,\n    \"lower95(predicted)\" as lower95 \n| eval users=round(users, 2),\n    predicted=round(predicted, 2),\n    upper95=round(upper95, 2),\n    lower95=round(lower95, 2)\n| appendpipe [ stats count as _empty | where _empty=0 | eval _time=now(), data_status=\"Not enough history in the selected time range to build a forecast. Widen the time range, or confirm the data source is onboarded.\" | fields _time data_status ]",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1936,7 +1936,7 @@
 		"ds_visitor_daily": {
 			"name": "Daily visitors with 7-day forecast",
 			"options": {
-				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_ASSOCIATION\" deviceAssociation.event=\"ASSOCIATE\"\n| eval mac='deviceAssociation.device.macAddress',\n ssid='deviceAssociation.ssid'\n| bin _time span=1d \n| stats dc(mac) as \"Unique Devices\" by _time\n| predict \"Unique Devices\" future_timespan=7",
+				"query": "`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_ASSOCIATION\" deviceAssociation.event=\"ASSOCIATE\"\n| eval mac='deviceAssociation.device.macAddress',\n ssid='deviceAssociation.ssid'\n| timechart span=1d dc(mac) as \"Unique Devices\"\n| predict \"Unique Devices\" as predicted_visitors algorithm=LLP5 future_timespan=7\n| rename \"upper95(predicted_visitors)\" as upper95,\n \"lower95(predicted_visitors)\" as lower95\n| appendpipe [ stats count as _empty | where _empty=0 | eval _time=now(), data_status=\"Not enough history in the selected time range to build a forecast. Widen the time range, or confirm the data source is onboarded.\" | fields _time data_status ]",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
