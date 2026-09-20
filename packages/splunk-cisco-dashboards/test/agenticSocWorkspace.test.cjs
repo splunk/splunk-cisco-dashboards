@@ -745,8 +745,8 @@ for (const [sectionId, tileIds] of Object.entries(expectedTiles)) {
     assert.match(field(search, "tags"), /Agentic SOC/);
     assert.match(
       field(search, "search"),
-      /summariesonly=true/,
-      `${tileId} must declare accelerated execution`,
+      /`scd_summariesonly`/,
+      `${tileId} must gate acceleration through the scd_summariesonly macro`,
     );
     assert.match(field(search, "search"), /^\| tstats /);
     assert.doesNotMatch(search, /\|\s*makeresults|random\s*\(/i);
@@ -756,32 +756,24 @@ for (const [sectionId, tileIds] of Object.entries(expectedTiles)) {
 for (const tileId of acceleratedNetworkResolutionTiles) {
   const search = stanza(searchbase, tileId);
   assert.match(field(search, "tags"), /\bDNS\b/);
-  assert.match(
-    search,
-    /\| tstats summariesonly=true allow_old_summaries=false/,
-  );
-  assert.doesNotMatch(search, /`scd_summariesonly`/);
+  assert.match(search, /\| tstats `scd_summariesonly`/);
+  assert.doesNotMatch(field(search, "search"), /summariesonly=/);
   assert.match(search, /FROM datamodel=Network_Resolution\.DNS/i);
 }
 
 for (const tileId of acceleratedNetworkTrafficTiles) {
   const search = stanza(searchbase, tileId);
   assert.match(field(search, "tags"), /Network Traffic/);
-  assert.match(
-    search,
-    /\| tstats summariesonly=true allow_old_summaries=false/,
-  );
-  assert.doesNotMatch(search, /`scd_summariesonly`/);
+  assert.match(search, /\| tstats `scd_summariesonly`/);
+  assert.doesNotMatch(field(search, "search"), /summariesonly=/);
   assert.match(search, /FROM datamodel=Network_Traffic\.All_Traffic/i);
 }
 
 for (const tileId of acceleratedNetworkSessionsTiles) {
   const search = stanza(searchbase, tileId);
   assert.match(field(search, "tags"), /Network Sessions/);
-  assert.match(
-    search,
-    /\| tstats summariesonly=true allow_old_summaries=false/,
-  );
+  assert.match(search, /\| tstats `scd_summariesonly`/);
+  assert.doesNotMatch(field(search, "search"), /summariesonly=/);
   assert.match(search, /FROM datamodel=Network_Sessions\.All_Sessions/i);
   assert.match(search, /`index_dhcp`/);
   assert.match(search, /sourcetype="dhcp"/);
@@ -933,6 +925,7 @@ assert.ok(stanza(macros, "index_dns_umbrella"));
 assert.ok(stanza(macros, "index_network_ftd"));
 assert.ok(stanza(macros, "index_zeek"));
 assert.ok(stanza(macros, "index_security"));
+assert.ok(stanza(macros, "scd_summariesonly"));
 assert.doesNotMatch(macros, /^\[index_agentic_soc_/m);
 assert.doesNotMatch(searchbase, /`index_agentic_soc_/);
 
@@ -1010,7 +1003,7 @@ for (const searchName of railSearchNames) {
         field(stanza(searchbase, tileId), "search_name") === searchName,
     );
   assert.ok(matchingId, `Expected Signal Rail search ${searchName}`);
-  assert.match(stanza(searchbase, matchingId), /\| tstats summariesonly=true/);
+  assert.match(stanza(searchbase, matchingId), /\| tstats `scd_summariesonly`/);
 }
 
 const fallbackRail = signalConfig.getDefaultSignalTickerConfig(
