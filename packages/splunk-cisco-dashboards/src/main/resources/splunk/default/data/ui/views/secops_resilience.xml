@@ -210,7 +210,7 @@
 			"dataSources": {
 				"primary": "ds_kpi_ise_fail"
 			},
-			"description": "ISE authentication failures (final-verdict 5401 events)",
+			"description": "ISE authentication failures (final-verdict 5400 events)",
 			"options": {
 				"majorColor": "#049fd9",
 				"majorFontSize": 36,
@@ -1255,7 +1255,7 @@
 		"ds_ise_auth": {
 			"name": "Security Resilience - ISE Auth",
 			"options": {
-				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" (\"5200\" OR \"5401\")\n| eval passed=if(match(_raw,\"5200\"),1,0)\n| stats sum(passed) as pass, count as total\n| eval score=if(total>0, round(pass/total*100, 1), 0)\n| fields score",
+				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" (\"5200\" OR \"5400\")\n| eval passed=if(match(_raw,\"5200\"),1,0)\n| stats sum(passed) as pass, count as total\n| eval score=if(total>0, round(pass/total*100, 1), 0)\n| fields score",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1266,7 +1266,7 @@
 		"ds_ise_by_nas": {
 			"name": "Security Resilience - ISE by NAS",
 			"options": {
-				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" (\"5200\" OR \"5401\")\n| rex \"NetworkDeviceName=(?<nas>[^,;]+)\"\n| fillnull nas value=\"Unknown\"\n| eval passed=if(match(_raw,\"5200\"),1,0)\n| stats count as Total, sum(passed) as Pass by nas\n| eval Fail=Total-Pass, \"Pass %\"=round(Pass/Total*100, 1)\n| sort -Total\n| head 10\n| rename nas as \"Network Access Server\"",
+				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" (\"5200\" OR \"5400\")\n| rex \"NetworkDeviceName=(?<nas>[^,;]+)\"\n| fillnull nas value=\"Unknown\"\n| eval passed=if(match(_raw,\"5200\"),1,0)\n| stats count as Total, sum(passed) as Pass by nas\n| eval Fail=Total-Pass, \"Pass %\"=round(Pass/Total*100, 1)\n| sort -Total\n| head 10\n| rename nas as \"Network Access Server\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1277,7 +1277,7 @@
 		"ds_ise_fail_trend": {
 			"name": "ISE Failures Trend",
 			"options": {
-				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" \"5401\" | timechart fixedrange=false count as \"ISE Failures\"",
+				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" \"5400\" | timechart fixedrange=false count as \"ISE Failures\"",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1288,7 +1288,7 @@
 		"ds_ise_failure_reasons": {
 			"name": "Security Resilience - ISE Failure Reasons",
 			"options": {
-				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" \"5401\"\n| rex \"FailureReason=(?<reason>[^,;]+)\"\n| fillnull reason value=\"Unknown\"\n| stats count by reason\n| sort -count\n| head 10\n| rename reason as \"Failure Reason\", count as Count",
+				"query": "`index_identity` sourcetype=\"cisco:ise:syslog\" \"5400\"\n| rex \"FailureReason=(?<reason>[^,;]+)\"\n| fillnull reason value=\"Unknown\"\n| stats count by reason\n| sort -count\n| head 10\n| rename reason as \"Failure Reason\", count as Count",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
