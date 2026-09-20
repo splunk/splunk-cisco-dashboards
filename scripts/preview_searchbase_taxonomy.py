@@ -73,6 +73,47 @@ GENERIC_TAGS = {
     # no parent the two share, and each stanza already carries the tag that
     # distinguishes them (Inventory, VPN), so there is nothing to fold into.
     "Profiles",
+    # Every search in a log platform returns events, so this selects nothing
+    # and excludes nothing. Where the event stream itself is the subject the
+    # stanza already carries the feed that produces it (Syslog, Feed Health)
+    # or the product name.
+    "Events",
+    # An attribute of a finding, not a subject. Picking it returns whatever
+    # happens to report a severity column across every domain in the
+    # catalogue, which is not a set anyone is looking for.
+    "Severity",
+    # Applied to 111 searches, of which only 11 emit a score, percentage, or
+    # ratio column; 66 sit under a sub_category that already says Health
+    # (Client Health, Device Health, Network Health, Fabric Health). The
+    # SPL-evidence guard that used to police it is gone with it -- a tag that
+    # needs a guard to stay honest is not a tag operators can trust.
+    "Health Score",
+    # Every search in the catalogue reads telemetry. The four uses mean "this
+    # feed is being collected", which Feed Health, Collection, and Coverage
+    # already say on the same stanzas. Deliberately NOT folded into
+    # "Streaming Telemetry": that names model-driven IOS-XR telemetry, and
+    # none of these four read it.
+    "Telemetry",
+    # Duplicates a top-level category name one level up, and twelve of its
+    # thirteen uses sit on ACI hardware-detail searches where it means
+    # nothing more than "this is a dashboard panel".
+    "Operations",
+    # vManage, spelled as a bare noun. SD-WAN and Control Plane are on all
+    # three uses and say the same thing in words an operator would search for.
+    "Manager",
+}
+
+# Tags whose whole extent sits inside one sub_category that already names
+# them, so the tag chip and the sub_category facet return the same set. The
+# five Secure Networking section names and "Secure Data Center Operations"
+# are the same defect and are handled by restates_own_taxonomy below, which
+# catches them because the strings are exactly equal.
+SUBCATEGORY_ECHO_TAGS = {
+    # All 8 uses are inside sub_category "ESCU Detections".
+    "ESCU",
+    # 15 of 16 uses are inside "Presence & Associations"; the sixteenth is an
+    # Occupancy search that already carries Rooms.
+    "Presence",
 }
 
 # Product tags whose product must be named in the search's SPL, stanza id, or
@@ -101,6 +142,10 @@ TAG_CANON = {
     "Palo Alto Networks": "Palo Alto",
     "Cyber Vision Center": "Cyber Vision",
     "MX Security Appliance": "Meraki",
+    # vSphere is VMware's product name for the same eleven ESX host, CPU,
+    # datastore, and host-network searches, and all eleven already carry
+    # VMware. Two spellings of one product narrow nothing.
+    "vSphere": "VMware",
     # Singular/plural and long/short spellings of the same concept.
     "Interface": "Interfaces",
     "Destination": "Destinations",
@@ -141,7 +186,60 @@ TAG_CANON = {
     # redirects "IDS" above, which resolves through it.
     "Intrusion Detection": "Intrusions",
     "Denied Traffic": "Denials",
+    # --- three vendors' words for "the platform raised a problem record" ---
+    # "Issues" is what Catalyst Center calls them (all 40 uses read it),
+    # "Faults" is what APIC calls them (19 of 20 read Cisco ACI), and
+    # "Alerts" is what ThousandEyes, Meraki, Secure Workload and Defender
+    # call them. None of the three ever co-occur, which is the signature of
+    # three authors naming one idea rather than of a real distinction. An
+    # operator asking "what has the estate raised?" would pick one chip, not
+    # guess which vendor's noun applies; the vendor is still on every stanza
+    # as a product tag. "Alerts" is the vendor-neutral word and is already
+    # the target of "Alerting" above.
+    "Issues": "Alerts",
+    "Faults": "Alerts",
+    # A host is a device identified by name or address. Never co-occurs with
+    # Devices, which is the catalogue's unit-of-analysis axis.
+    "Hosts": "Devices",
+    # An asset is a device too. Folded into Devices rather than Inventory
+    # (which names the act of enumerating the estate) because eleven of the
+    # twenty-one uses are Cyber Vision searches about OT device risk,
+    # protocols, and recency -- none of which is an inventory listing.
+    "Assets": "Devices",
+    # All three uses already carry Utilization on the same stanza: link
+    # capacity is what the utilization percentage measures.
+    "Capacity": "Utilization",
+    # Segmentation adoption, zero-coverage sites, and interface-statistics
+    # readiness all ask "how much of the estate is covered". Deliberately NOT
+    # folded into "Posture", which in this catalogue means endpoint security
+    # posture (Duo device trust, ISE NAC) and is a different question.
+    "Readiness": "Coverage",
+    # "Can I reach it" and "is it up" are the same question asked twice:
+    # unreachable inventory, BGP prefix reachability, site link state, and
+    # WAN-edge reachable/unreachable counts are all availability.
+    "Reachability": "Availability",
+    # All three uses already carry Energy and Power. Sustainability is the
+    # motivation; Energy is the measurement the search returns.
+    "Sustainability": "Energy",
+    # Eight Forensics searches and nine Investigation searches, and no stanza
+    # ever carries both -- the split is two authors naming one activity, not
+    # two activities. Attack Analyzer file-source tracing and the Agentic SOC
+    # packet and DNS lead queues are the same job. Investigation wins because
+    # it is already the catalogue's word for it, in the sub_category
+    # "Unified Detection & Investigation".
+    "Forensics": "Investigation",
+    # All four uses are z-score and MLTK searches that already carry Anomaly.
+    # The baseline is how the anomaly is computed, not a separate subject.
+    "Statistical Baseline": "Anomaly",
 }
+
+# Umbrella children too thin to stand as their own filter. Each has three
+# uses, so picking one returns a set the operator could have reached by name,
+# and each is a measurement of its parent rather than a distinct subject: a
+# byte count and a throughput rate are both traffic, and a queue is a
+# property of a port. Unlike GENERIC_TAGS these still prove their umbrella,
+# so new_tags credits the parent from TAG_IMPLIES before dropping the child.
+FOLDED_CHILD_TAGS = {"Bytes", "Throughput", "Queues"}
 
 # One tag per metric is too fine a grain to browse by. A descriptor carried by
 # a single search cannot group anything: picking it in the tag filter returns
@@ -312,23 +410,134 @@ def _resolve(mapping: dict[str, str]) -> dict[str, str]:
 TAG_CANON = _resolve({**TAG_CANON, **TAG_ROLLUP})
 
 
-# Tags that name a workspace or a journey. "Secure Networking" and "Agentic
-# SOC" are the two auto-discovery requiredTag values and are never dropped.
-# The five pillar names below are section labels, not discovery inputs, and
-# are governed by the strict rule in new_tags instead.
-LOAD_BEARING_TAGS = {
-    "Secure Networking", "Agentic SOC", "Zero Trust Access",
-    "Secure Infrastructure", "Scalable Network Segmentation",
-    "Hybrid Mesh Firewalling", "Agentic Ops", "Cisco DC Networking",
-    "Building Intelligence", "IT Health", "NetOps Readiness",
-    "Network Intelligence", "Workplace SPOG", "Secure Data Center Operations",
-}
+# The only two tags the application itself reads. Both are
+# autoDiscovery.requiredTag values in common/config/insightsWorkspaces.ts and
+# are matched in pages/executive_insights/index.tsx; dropping either would
+# empty a workspace. Everything else in record.tags is user-facing filtering
+# only -- section routing goes through autoDiscovery.subCategoryToSection and
+# never looks at a tag.
+LOAD_BEARING_TAGS = {"Secure Networking", "Agentic SOC"}
 
-# The five Secure Networking section names, which double as tags.
-SECURE_NETWORKING_PILLAR_TAGS = {
+# Workspace section names that are also sub_category values. A tag here
+# selects exactly the stanzas its identically-named sub_category selects, so
+# it costs a chip in the filter bar and returns the set the operator already
+# had. They were previously exempted from restates_own_taxonomy and re-added
+# by new_tags on the theory that the workspace read them; it does not.
+SECTION_NAME_TAGS = {
     "Zero Trust Access", "Secure Infrastructure",
     "Scalable Network Segmentation", "Hybrid Mesh Firewalling", "Agentic Ops",
+    "Secure Data Center Operations",
 }
+
+# Umbrella tags are DERIVED, never trusted from the stanza.
+#
+# These are the broad subjects an operator browses by first -- "show me the
+# firewall searches", "show me the routing searches". Applied by hand they
+# were a trap: "Firewall" sat on 56 of the 88 searches that read a firewall
+# product, "Routing" on 5 of 41, "Threats" on 2 of 31. A filter that returns
+# a seventh of the truth is worse than no filter, because it looks like it
+# worked. Deriving each umbrella from tags that are themselves specific and
+# verifiable means every qualifying search gets it and no future edit can
+# make the umbrella partial again.
+#
+# Each child either IS an instance of the umbrella (ASA is a firewall,
+# IS-IS is a routing protocol) or is a component of one (a transceiver is
+# part of an interface). Product and vendor names that only sometimes belong
+# are deliberately absent: Meraki sells firewalls, switches, and access
+# points, so "Meraki" cannot imply any of the three.
+TAG_IMPLIES = {
+    # --- Firewall ------------------------------------------------------
+    "ASA": "Firewall",
+    "Secure Firewall": "Firewall",
+    "Palo Alto": "Firewall",
+    "Multicloud Defense": "Firewall",
+    # --- Routing -------------------------------------------------------
+    # "Tunnels" and "Control Plane" are deliberately not children: both are
+    # dominated by SD-WAN TLOC and vManage searches, which are WAN health,
+    # not routing. The MPLS-TE tunnels that are routing already carry MPLS-TE.
+    "BGP": "Routing",
+    "IS-IS": "Routing",
+    "RIB": "Routing",
+    "MPLS-TE": "Routing",
+    "Fast Reroute": "Routing",
+    # --- Wireless ------------------------------------------------------
+    "Access Points": "Wireless",
+    "SSID": "Wireless",
+    "Rogue AP": "Wireless",
+    # --- Threats -------------------------------------------------------
+    "Malware": "Threats",
+    "Intrusions": "Threats",
+    "Intrusion Prevention": "Threats",
+    "MITRE ATT&CK": "Threats",
+    "Threat Intelligence": "Threats",
+    "Threat Hunting": "Threats",
+    "UTD": "Threats",
+    "AMP": "Threats",
+    # --- Traffic -------------------------------------------------------
+    # A flow record, a NetFlow record, a byte count, and a throughput rate
+    # are all measurements of traffic.
+    "Flows": "Traffic",
+    "NetFlow": "Traffic",
+    "Bytes": "Traffic",
+    "Throughput": "Traffic",
+    "Network Traffic": "Traffic",
+    # --- Interfaces ----------------------------------------------------
+    # Optics, transceivers, and queues are all properties of a port.
+    "Optical": "Interfaces",
+    "Transceiver Health": "Interfaces",
+    "Queues": "Interfaces",
+    # --- Sensors -------------------------------------------------------
+    "Environmental": "Sensors",
+}
+
+# Umbrellas whose membership cannot be read off another tag.
+#
+# "Authentication" is the case that forced this: the obvious children (ISE,
+# Duo, Active Directory) do not work, because ISE's authentication log is
+# also the source of SGT group assignment and of ISE node health, and Duo's
+# administrator log is an audit trail. Product presence is therefore not
+# evidence; an authentication outcome in the SPL is. Matched against the SPL
+# plus the stanza id and display name.
+UMBRELLA_EVIDENCE = {
+    "Authentication": re.compile(
+        r"\bauthenticat|"
+        r"DATAMODEL\s*=\s*Authentication|datamodel\s+Authentication|"
+        r"Passed[-_]Authentications?|Failed[-_]Attempts?|"
+        r"\bRADIUS\b|\bTACACS\b|\bMFA\b|\b802\.1x\b|"
+        r"EventCode\s*=\s*\"?4(?:624|625|634|740|768|771)|"
+        r"\blog[_ ]?ons?\b|\blog[_ ]?ins?\b|\bsign[_ -]?ins?\b|"
+        r"\blogged[_ ]?in\b|"
+        r"cisco:duo:(?:authentication|telephony|trust_monitor)|"
+        r"account[_ ]?lock|locked[_ ]?account|\block[_ ]?outs?\b|"
+        r"\bguest[_ ]?auth|"
+        # ISE reports authentication outcomes by message id, not by word:
+        # 5200 is Passed-Authentication and 5400 Failed-Attempt, and
+        # FailureReason only ever appears on an authentication record.
+        r"\bFailureReason\b|\"5[24]00\"|\bAAA\b",
+        re.I,
+    ),
+    # "Threats" was on 2 of the 31 searches carrying a threat-specific tag.
+    # Child tags fix those; this catches the searches that name no child --
+    # the eleven SD-WAN UTD searches in particular, which shipped with SD-WAN
+    # as their only tag. Matched on product-neutral evidence only: the bare
+    # word "threat" is deliberately absent because three Cisco product names
+    # contain it (Email Threat Defense, Firewall Threat Defense, Multicloud
+    # Defense threat feeds) and would tag their admin and audit searches.
+    "Threats": re.compile(
+        r"\bmalware\b|\bransomware\b|\bintrusions?\b|\bsnort\b|\bbotnet\b|"
+        r"\bphishing\b|\bmitre\b|command[- _]and[- _]control|\bexploit|"
+        r"cisco:sdwan:utd|cisco:ftd:intrusion|cisco:ftd:malware|"
+        r"threat[_ ]?(?:hunt|intel|detect|type|name|score|actor|vector|categ)",
+        re.I,
+    ),
+}
+
+# Feed-coverage searches enumerate every sourcetype in the estate, so their
+# SPL mentions authentication and intrusion without being about either.
+EVIDENCE_EXEMPT_SUBS = {"Feed Health", "Feed Inventory"}
+
+# Every derived umbrella, for the restatement exemption below.
+UMBRELLA_TAGS = set(TAG_IMPLIES.values()) | set(UMBRELLA_EVIDENCE)
 
 # Machine identifiers that name one record in some external system. They are
 # opaque to an operator browsing the catalogue and match only themselves, so
@@ -367,6 +576,17 @@ IDENTIFIER_TAG_RE = re.compile(
 # below counts Secure Workload scopes by alert and touches nothing DHCP.
 TAG_TYPOS = {
     "security_microseg_tetration_top_scopes_by_alert": {"DHCP"},
+    # These three carry "IPS", which TAG_CANON resolves to Intrusion
+    # Prevention and TAG_IMPLIES would then resolve to Threats, so a single
+    # mistyped tag would spread. None of the three reads an IPS: the two
+    # ThousandEyes searches read Cisco_ThousandEyes.Alerts, where
+    # "Alerts.signature" is the alert rule name, and the IOS one counts
+    # process crash tracebacks, where "SIG" is a Unix signal.
+    "teuc_5_9_46_alert_severity_distribution": {"Intrusion Prevention"},
+    "teuc_5_9_54_mttr_reduction_via_network_vs_application_isolation": {
+        "Intrusion Prevention"
+    },
+    "network_ios_traceback_by_device": {"Intrusion Prevention"},
 }
 
 # Recognized product/source tags. Used to check a search kept its product.
@@ -374,7 +594,7 @@ PRODUCT_TAGS = {
     "Catalyst Center", "Cisco ACI", "Cisco Spaces", "ThousandEyes", "ISE",
     "Meraki", "SD-WAN", "Nexus Dashboard", "Nexus 9000", "Secure Firewall",
     "Secure Access", "Cyber Vision", "Zeek", "Endace", "Splunk Attack Analyzer",
-    "Webex", "Active Directory", "VMware", "vSphere", "Duo", "XDR",
+    "Webex", "Active Directory", "VMware", "Duo", "XDR",
     "Intersight", "Umbrella", "Multicloud Defense", "ASA", "Secure Client",
     "AI Defense", "AKIPS", "Palo Alto", "Isovalent", "Secure Workload",
     "Secure Network Analytics", "Email Threat Defense", "Secure Endpoint",
@@ -883,46 +1103,38 @@ def new_subcategory(name: str, chunk: str) -> str:
     return sub
 
 
-def own_pillar_tag(name: str, chunk: str) -> str | None:
-    """The one Secure Networking pillar a stanza is allowed to claim as a tag.
-
-    A pillar tag asserts "this search IS that pillar", so the only defensible
-    value is the stanza's own sub_category. Reading the corrected
-    sub_category rather than the shipped one means a retagged search claims
-    the section it was just moved to, and makes the result a fixed point.
-    """
-    sub = new_subcategory(name, chunk)
-    if sub == "Agentic Operations":
-        sub = "Agentic Ops"
-    return sub if sub in SECURE_NETWORKING_PILLAR_TAGS else None
-
-
 def restates_own_taxonomy(tag: str, cat: str, sub: str) -> bool:
     """True when a tag only repeats the stanza's own category or sub_category.
 
     Such a tag cannot narrow anything: every search it selects is already
     reachable by picking that category or sub_category in the UI, so it costs
     a chip in the filter bar and returns the same set. Exact equality only --
-    "Health Score" against a sub_category of "Device Health" is a different
-    claim and is left alone (see the Health Score guard below).
+    "Client Health" against a sub_category of "Client Sessions" is a
+    different claim and is left alone.
 
     Three exemptions, none of them stylistic:
-      * LOAD_BEARING_TAGS -- the five Secure Networking pillar names are
-        deliberately re-added by new_tags to the stanzas whose sub_category
-        they match, so that operators can filter a workspace section by tag.
-        Stripping them here would fight that rule inside the same function.
-        Post-batch every surviving pillar tag is a self-restatement by
-        construction, so this exemption is what keeps all 242 tiles tagged.
+      * LOAD_BEARING_TAGS -- the two requiredTag values the workspace code
+        matches on. Neither is a sub_category today, so this exemption never
+        fires; it is here so that renaming a sub_category to "Secure
+        Networking" cannot silently empty a workspace.
+      * UMBRELLA_TAGS -- the whole point of a derived umbrella is that it
+        returns every qualifying search. Suppressing "Firewall" on the seven
+        searches filed under sub_category "Firewall" would make the chip
+        return 81 of 88 again, which is the defect the derivation exists to
+        fix. The duplication is accepted knowingly and costs nothing: the
+        chip already exists in the vocabulary.
       * PRODUCT_TAGS -- a product name is provenance. It answers "which feed
         is this?", which stays a real question even when the sub_category
         happens to carry the same words. All three uses of
         "Vulnerability Intelligence" are restatements and would vanish.
-      * "Threat Hunting" -- the only tag this rule would erase from the
-        vocabulary outright, because all seven uses sit on stanzas already
-        filed under that sub_category. Kept deliberately as a browsable
-        entry point, so do not "fix" the inconsistency with the tags above.
+
+    "Threat Hunting" is deliberately NOT exempt even though the rule erases it
+    from the vocabulary outright: all seven uses sit under that sub_category,
+    so the chip would return exactly what the facet already returns. It still
+    feeds the Threats umbrella, because implication runs on the raw tags before
+    this filter.
     """
-    if tag in LOAD_BEARING_TAGS or tag in PRODUCT_TAGS or tag == "Threat Hunting":
+    if tag in LOAD_BEARING_TAGS or tag in UMBRELLA_TAGS or tag in PRODUCT_TAGS:
         return False
     return tag == cat or tag == sub
 
@@ -931,9 +1143,7 @@ def new_tags(name: str, chunk: str) -> list[str]:
     raw = [t.strip() for t in field(chunk, "tags").split(",") if t.strip()]
     spl = spl_of(chunk)
     evidence = f"{spl} {name} {field(chunk, 'search_name')}"
-    own_pillar = own_pillar_tag(name, chunk)
-    # Compare against the CORRECTED taxonomy, not the shipped fields. Both
-    # are recomputed here for the same reason own_pillar_tag does it: reading
+    # Compare against the CORRECTED taxonomy, not the shipped fields: reading
     # the shipped sub_category would compare against a value this run is about
     # to overwrite, and pass two would then reach a different answer.
     own_sub = new_subcategory(name, chunk)
@@ -951,8 +1161,20 @@ def new_tags(name: str, chunk: str) -> list[str]:
     subject_tags = {"Data Model", "Acceleration"} if about_models else set()
 
     kept: list[str] = []
+    # Umbrella parents proved by a child tag. Collected before the
+    # restatement and section-name drops below, because a child that is
+    # dropped as a restatement still proves the umbrella: an intrusion search
+    # filed under sub_category "Intrusion Prevention" loses the child tag but
+    # is no less about threats, and dropping the parent with it would put the
+    # partial-coverage defect straight back.
+    implied: list[str] = []
     for tag in raw:
         tag = TAG_CANON.get(tag, tag)
+        if tag in FOLDED_CHILD_TAGS:
+            parent = TAG_IMPLIES.get(tag)
+            if parent and parent not in implied:
+                implied.append(parent)
+            continue
         if tag in subject_tags:
             if tag not in kept:
                 kept.append(tag)
@@ -960,6 +1182,8 @@ def new_tags(name: str, chunk: str) -> list[str]:
         if tag in VIZ_TAGS or tag in JUNK_TAGS:
             continue
         if tag in CUSTOMER_TAGS or tag in GENERIC_TAGS:
+            continue
+        if tag in SUBCATEGORY_ECHO_TAGS:
             continue
         if tag in TAG_TYPOS.get(name, ()):
             continue
@@ -978,12 +1202,16 @@ def new_tags(name: str, chunk: str) -> list[str]:
             r'sourcetype\s*=\s*"?cisco:se"?(?!\w)', spl
         ) and not re.search(r"cloud_security|secure_access", spl, re.I):
             tag = "Secure Endpoint"
-        # A pillar name is a section label. Carrying one that disagrees with
-        # the stanza's own sub_category claims a section the search is not
-        # in, so it is dropped wherever it appears. Safe to drop: nothing
-        # reads pillar tags. Auto-discovery matches only the requiredTag
-        # values ("Secure Networking", "Agentic SOC") plus sub_category.
-        if tag in SECURE_NETWORKING_PILLAR_TAGS and tag != own_pillar:
+        parent = TAG_IMPLIES.get(tag)
+        if parent and parent not in implied:
+            implied.append(parent)
+        # A section name is a label for a slice of one workspace, and the
+        # workspace decides that slice from sub_category alone. On its own
+        # stanzas the tag is a restatement; anywhere else it claims a section
+        # the search is not in. Neither is worth a chip, so it goes in both
+        # cases. Safe to drop: nothing reads these. Auto-discovery matches
+        # only the requiredTag values plus subCategoryToSection.
+        if tag in SECTION_NAME_TAGS:
             continue
         if restates_own_taxonomy(tag, own_cat, own_sub):
             continue
@@ -991,35 +1219,25 @@ def new_tags(name: str, chunk: str) -> list[str]:
             TAG_REQUIRES_EVIDENCE[tag], evidence, re.I
         ):
             continue
-        # "Health Score" belongs on searches that present a score, not on
-        # anything with "health" in its name. The previous test was
-        #     r"score|health|pct|percent|ratio|availability" against evidence
-        # which kept all 150 uses: it accepted the bare word "health", and
-        # `evidence` includes the stanza id and display name, so any search
-        # called *_device_health_* qualified on the strength of its own title.
-        # This one reads the SPL only, and wants either a computed score (an
-        # explicit percentage, or an assignment to / rename into a score, pct,
-        # percent or ratio field) or a vendor-supplied one the search merely
-        # reads, such as Catalyst Center's health.overallScore or ACI's
-        # latest(health) AS "Health Score" -- surfacing Cisco's own score is
-        # still presenting a health score.
-        if tag == "Health Score" and not re.search(
-            r"round\s*\(\s*100\s*\*|"
-            r"\b\w*(?:score|pct|percent|ratio)\w*\s*=|"
-            r"\bas\s+\"?\w*(?:score|pct|percent|ratio)\w*|"
-            r"health_score|healthscore|"
-            r"\b\w*(?:Score|Percentage)\b",
-            spl,
-            re.I,
-        ):
-            continue
         if tag not in kept:
             kept.append(tag)
+
+    for parent in implied:
+        if parent not in kept:
+            kept.append(parent)
+
+    # A search that reads every index in the estate mentions everything, so
+    # its SPL is not evidence of a subject. Same threshold, and the same
+    # reason, as the product net below.
+    index_macros = len(set(re.findall(r"`(index_[a-z0-9_]+)`", spl, re.I)))
+    if own_sub not in EVIDENCE_EXEMPT_SUBS and index_macros < 6:
+        for parent, pattern in UMBRELLA_EVIDENCE.items():
+            if parent not in kept and pattern.search(evidence):
+                kept.append(parent)
 
     # Never let a search end up with no product/source tag. Skip searches that
     # span many index macros: picking the first sourcetype match would claim
     # one arbitrary product for what is really a cross-estate coverage search.
-    index_macros = len(set(re.findall(r"`(index_[a-z0-9_]+)`", spl, re.I)))
     has_product = any(t in PRODUCT_TAGS for t in kept)
     if not has_product and index_macros < 6:
         for pattern, product in PRODUCT_FROM_SPL:
@@ -1038,13 +1256,6 @@ def new_tags(name: str, chunk: str) -> list[str]:
             kept.append("Secure Networking")
         if name.startswith("agentic_soc_") and "Agentic SOC" not in kept:
             kept.append("Agentic SOC")
-        # A tile's section is set by its sub_category, but operators filter on
-        # tags, so a tile missing its own pillar tag is invisible to that
-        # filter. Only the workspace's own stanzas get one: elsewhere the same
-        # string is a purpose name and carries no section meaning. Any pillar
-        # tag other than this one was already dropped above.
-        if name.startswith("secure_networking_") and own_pillar and own_pillar not in kept:
-            kept.append(own_pillar)
 
     # Some firewall searches run on vendor-neutral CIM but are named for the
     # product they were written against. The name is the only record of that.
@@ -1052,6 +1263,23 @@ def new_tags(name: str, chunk: str) -> list[str]:
         identity = f"{name} {field(chunk, 'search_name')}"
         if re.search(r"\bftd\b|_ftd_|(?:^|_|\s)fw[_\s]|\bfirewall\b", identity, re.I):
             kept.insert(0, "Secure Firewall")
+
+    # The two nets above can add a product that is itself an umbrella child,
+    # so the implication has to run once more over what they added.
+    for tag in list(kept):
+        parent = TAG_IMPLIES.get(tag)
+        if parent and parent not in kept:
+            kept.append(parent)
+
+    # Structural floor: nothing ships tagless. Exactly one search reaches
+    # this point, the all-feeds health matrix: its only shipped tag was
+    # "Events", and its eighteen index macros stop both product nets from
+    # claiming a single product for it. What it reports is how much of the
+    # estate is still sending data, which is what Coverage says elsewhere.
+    # apply_searchbase_taxonomy.py fails the run if this floor is ever
+    # reached by a stanza it cannot describe.
+    if not kept:
+        kept.append("Coverage")
     return kept
 
 

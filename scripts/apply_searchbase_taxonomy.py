@@ -106,6 +106,13 @@ def verify(original: str, updated: str) -> list[str]:
         cat = re.search(r"^category = (.*)$", body, re.M)
         if cat and cat.group(1).strip() not in preview.CATEGORIES:
             errors.append(f"[{name}] unexpected category {cat.group(1)!r}")
+        # A tagless stanza is unreachable from the tag filter and shows an
+        # empty chip row in the picker. The classifier has a floor for this;
+        # failing here is what stops a future tag deletion from quietly
+        # emptying a stanza the floor does not cover.
+        tags = re.search(r"^tags = (.*)$", body, re.M)
+        if tags and not tags.group(1).strip():
+            errors.append(f"[{name}] has no tags")
 
     return errors
 

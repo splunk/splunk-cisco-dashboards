@@ -237,14 +237,14 @@ assert.deepEqual(executiveFallback.defaultVisibleSections, [
   "building",
 ]);
 assert.equal(executiveFallback.maxVisibleSections, 3);
-assert.equal(executiveFallback.fallbackTileCount, 9);
+assert.equal(executiveFallback.fallbackTileCount, 3);
 assert.equal(field(executiveBody, "sections"), "it_health,security,building");
 assert.equal(
   field(executiveBody, "default_visible_sections"),
   "it_health,security,building",
 );
 assert.equal(field(executiveBody, "max_visible_sections"), "3");
-assert.equal(field(executiveBody, "default_tile_count"), "9");
+assert.equal(field(executiveBody, "default_tile_count"), "3");
 assert.equal(field(executiveBody, "map_visible"), "1");
 assert.equal(field(executiveBody, "map_position"), "right");
 assert.equal(field(executiveBody, "regional_view"), "map");
@@ -310,8 +310,8 @@ for (const [sectionId, expectedSectionTiles] of Object.entries(
   );
   assert.equal(
     field(layout, "visible_count"),
-    "9",
-    `${layoutId} must expose all nine configured tiles by default`,
+    "3",
+    `${layoutId} must open on three tiles, matching min_tile_count; the other six stay available through the tile picker`,
   );
 
   for (const [tileId, label] of expectedSectionTiles) {
@@ -776,7 +776,7 @@ for (const tileId of acceleratedNetworkSessionsTiles) {
   assert.doesNotMatch(field(search, "search"), /summariesonly=/);
   assert.match(search, /FROM datamodel=Network_Sessions\.All_Sessions/i);
   assert.match(search, /`index_dhcp`/);
-  assert.match(search, /sourcetype="dhcp"/);
+  assert.match(search, /sourcetype="dhcpd"/);
 }
 
 const dhcpActivity = stanza(searchbase, "agentic_soc_unified_threat_activity");
