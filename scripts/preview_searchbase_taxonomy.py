@@ -68,6 +68,11 @@ GENERIC_TAGS = {
     "Jobs", "Tasks", "Schedule", "Volume", "Stream", "Drop", "Spike",
     "Hardware", "Assurance", "Disaster Readiness", "Evidence", "Failover",
     "Geo", "Impairment", "Internet", "Packets", "Rx", "Tx",
+    # A homonym, not a concept: on the Intersight search it means a UCS
+    # server profile, on the ZTA search a RaVPN connection profile. There is
+    # no parent the two share, and each stanza already carries the tag that
+    # distinguishes them (Inventory, VPN), so there is nothing to fold into.
+    "Profiles",
 }
 
 # Product tags whose product must be named in the search's SPL, stanza id, or
@@ -138,6 +143,153 @@ TAG_CANON = {
     "Denied Traffic": "Denials",
 }
 
+# One tag per metric is too fine a grain to browse by. A descriptor carried by
+# a single search cannot group anything: picking it in the tag filter returns
+# the one search you would have found by typing its name, and it costs every
+# other operator a chip to scroll past. These fold each leaf descriptor into
+# the parent its whole family already shares, so the search stays findable by
+# something other operators also use.
+#
+# Rolled up rather than deleted wherever a parent exists. On most of these
+# stanzas the parent tag is already present, so the fold is a removal; where
+# it is absent the fold adds it, which is why this is safe to state as one
+# map. Product, vendor, and standardized-technology names are deliberately
+# absent: a product with one search still keeps its name, because the name is
+# the only accurate way to find it.
+TAG_ROLLUP = {
+    # --- Cisco IOS-XR optical transport -------------------------------
+    # Every one of these is a lane- or transceiver-level measurement on a
+    # stanza that already says Optical.
+    "SNR": "Optical",
+    "Coherent Optics": "Optical",
+    "FEC": "Transceiver Health",
+    "BER": "Transceiver Health",
+    "Transmit Power": "Transceiver Health",
+    # --- Cisco IOS-XR IS-IS -------------------------------------------
+    "LSP": "IS-IS",
+    "SPF": "IS-IS",
+    "Adjacency Health": "IS-IS",
+    "Hello Protocol": "IS-IS",
+    # --- Cisco IOS-XR BGP ---------------------------------------------
+    # Nine one-off names for "something about a BGP session".
+    "Peer Health": "BGP",
+    "Session State": "BGP",
+    "FSM": "BGP",
+    "Neighbor Sessions": "BGP",
+    "Neighbor Throttling": "BGP",
+    "Update Messages": "BGP",
+    "NOTIFICATION Messages": "BGP",
+    "Process Restart": "BGP",
+    "Flap Detection": "BGP",
+    "IPv4/IPv6": "BGP",
+    # --- Cisco IOS-XR RIB, MPLS-TE, interfaces, MLTK -------------------
+    "Route Age": "RIB",
+    "Routing Stability": "RIB",
+    # Convergence is measured on both a BGP and an MPLS-TE search, so it
+    # cannot fold into either protocol; Routing is what they share.
+    "Convergence": "Routing",
+    "Tunnel Stability": "Tunnels",
+    "Tunnel Availability": "Tunnels",
+    # An SD-WAN circuit is the TLOC tunnel these two searches already tag.
+    "Circuits": "Tunnels",
+    "Packet Drops": "Packet Loss",
+    "Interface Errors": "Errors",
+    "Explainability": "Machine Learning",
+    # --- SD-WAN threat hunt -------------------------------------------
+    # Technique and tactic names. MITRE ATT&CK is the vocabulary they come
+    # from and is already on most of these stanzas.
+    "Path Traversal": "MITRE ATT&CK",
+    "Persistence": "MITRE ATT&CK",
+    "Privilege Escalation": "MITRE ATT&CK",
+    "Software Downgrade": "MITRE ATT&CK",
+    "Rogue Peer": "MITRE ATT&CK",
+    "Lateral Movement": "MITRE ATT&CK",
+    # Six names for logging in, spread over three hunt searches.
+    "Interactive Login": "Authentication",
+    "SSH": "Authentication",
+    "Public Key": "Authentication",
+    "AAA": "Authentication",
+    "Root Account": "Authentication",
+    "Local Account": "Authentication",
+    "Credentials": "Authentication",
+    "Failed Logins": "Authentication",
+    "Certificate": "Encryption",
+    "Access Logs": "ACL",
+    "SGACL": "ACL",
+    "Contracts": "ACL",
+    "Signatures": "Intrusions",
+    "Advanced Logging": "Coverage",
+    # --- Intersight hardware lifecycle ---------------------------------
+    "EOL": "Lifecycle",
+    "Provisioning": "Lifecycle",
+    "HCL": "Compliance",
+    "Hardware Health": "Device Health",
+    "Predictive Failure": "Device Health",
+    "Fabric Interconnect": "Device Health",
+    "Port Health": "Interfaces",
+    # --- Catalyst Center interface telemetry ---------------------------
+    "Congestion": "Capacity",
+    "Headroom": "Capacity",
+    "Discards": "Errors",
+    "Asymmetry": "Traffic",
+    "Freshness": "Feed Health",
+    "PoE": "Power",
+    "Power Budget": "Power",
+    "WAN": "Interfaces",
+    "Roaming": "Wireless",
+    # --- Cyber Vision, Zeek, Umbrella ----------------------------------
+    "External Communications": "Traffic",
+    "Event Class": "Events",
+    "Inactive": "Availability",
+    "Transport": "Protocols",
+    "Conversations": "Flows",
+    "Ports": "Destinations",
+    "Egress": "Destinations",
+    "Record Types": "DNS",
+    "Packet Investigation": "Investigation",
+    "Correlation": "Investigation",
+    "Root Cause Analysis": "Investigation",
+    "Security Intelligence": "Threat Intelligence",
+    "Blocklist Triage": "Threat Intelligence",
+    "Failures": "Errors",
+    # --- Zero Trust Access and SSE -------------------------------------
+    "Connections": "Sessions",
+    "Detections": "Threats",
+    # ARQ is literally the initialism of these three components and is
+    # already on all four assurance searches.
+    "Attainability": "ARQ",
+    "Retainability": "ARQ",
+    "Quality": "ARQ",
+    "Bindings": "SGT",
+    "MAC OUI": "Endpoints",
+    "NAC": "Posture",
+    "VLAN": "VRF",
+    "Shadow IT": "Risk",
+    "Web Security": "Web Filtering",
+    "Denials": "Policies",
+    "Runtime Security": "Cloud Security",
+    # --- Webex ----------------------------------------------------------
+    "Calling": "Voice",
+    "Service Level": "Contact Center",
+    "Join Time": "Latency",
+    # --- operations and feed plumbing -----------------------------------
+    "ITSM": "Incidents",
+    "Ticket Management": "Incidents",
+    "API": "Feed Health",
+    "Device Connectivity": "Feed Health",
+    "Modular Input": "Feed Health",
+    "Acceleration": "Data Model",
+    "Cross-Domain": "Executive",
+    "Cache": "Administration",
+    # --- ThousandEyes ----------------------------------------------------
+    "Path Visualization": "Topology",
+    "Spans": "APM",
+    # IPFIX is the IETF standardization of NetFlow and both sit on the one
+    # search that reads either.
+    "IPFIX": "NetFlow",
+}
+
+
 def _resolve(mapping: dict[str, str]) -> dict[str, str]:
     """Follow chains such as Location -> Locations -> Sites to their end.
 
@@ -154,7 +306,10 @@ def _resolve(mapping: dict[str, str]) -> dict[str, str]:
     return out
 
 
-TAG_CANON = _resolve(TAG_CANON)
+# Resolved together so a chain that starts in one map and ends in the other
+# collapses in a single hop: "Root" -> "Root Account" -> "Authentication",
+# "Denied Traffic" -> "Denials" -> "Policies".
+TAG_CANON = _resolve({**TAG_CANON, **TAG_ROLLUP})
 
 
 # Tags that name a workspace or a journey. "Secure Networking" and "Agentic
