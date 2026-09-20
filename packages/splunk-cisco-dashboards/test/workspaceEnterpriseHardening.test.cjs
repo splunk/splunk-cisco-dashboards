@@ -396,7 +396,6 @@ const searchService = read(
 const topology = read(
   "src/main/webapp/common/components/workspace/CustomerTopologyMap.tsx",
 );
-const searchbaseConfig = read("src/main/resources/splunk/default/searchbase.conf");
 const topologyPersistenceService = read(
   "src/main/webapp/common/services/customerTopologyPersistenceService.ts",
 );
@@ -454,25 +453,6 @@ assert.match(
   topology,
   /bindSearchbaseToLink[\s\S]*?thousandEyesA2A: undefined,[\s\S]*?teLink: undefined/,
   "A Searchbase selection must replace any ThousandEyes draft binding",
-);
-const fdemTlhToAubSearch = searchbaseConfig.match(
-  /\[fdem_-_link_tlh_to_aub_thousandeyes_a2a_health\][\s\S]*?(?=\n\[|$)/,
-)?.[0];
-assert.ok(fdemTlhToAubSearch, "The FDEM TLH-to-AUB A2A stanza must exist");
-assert.match(
-  fdemTlhToAubSearch,
-  /\| tstats `scd_summariesonly`[\s\S]*?FROM datamodel="Cisco_ThousandEyes\.Test_Metrics"[\s\S]*?Test_Metrics\.thousandeyes\.test\.id IN \("7148943"\)/,
-  "The FDEM A2A health stanza must use the ThousandEyes data model for test 7148943",
-);
-assert.match(
-  fdemTlhToAubSearch,
-  /teLink=if\(isnotnull\(teLinkBase\) AND isnotnull\(teAccountId\),teLinkBase\."&__a="\.teAccountId,teLinkBase\)/,
-  "The FDEM A2A health stanza must preserve a direct ThousandEyes path link",
-);
-assert.doesNotMatch(
-  fdemTlhToAubSearch,
-  /site[-_]?1|site[-_]?2/i,
-  "The FDEM A2A health stanza must not hard-code generic map site identifiers",
 );
 assert.match(
   topology,

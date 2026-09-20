@@ -346,7 +346,7 @@
 				"annotation": "ds_annotations",
 				"primary": "ds_correlation_strip"
 			},
-			"description": "One Splunk timechart, three sourcetypes (cisco:dnac:devicehealth, cisco:dnac:issue, cisco:spaces:firehose). Watch how DNAC Active Issues spike when Spaces Concurrent Users surge - and how AP Health dips at the same time. Annotations overlay the ExPlan operational milestones (STARTEX, NHC Advisories, County Coordination Calls, PAUSEX, ENDEX). Each series uses carry-forward fill so a sparse ingestion day (e.g. an outage in the upstream Catalyst Center / Spaces collector) doesn't drop the line to zero.",
+			"description": "One Splunk timechart, three sourcetypes (cisco:dnac:devicehealth, cisco:dnac:issue, cisco:spaces:firehose). Watch how DNAC Active Issues spike when Spaces Concurrent Users surge - and how AP Health dips at the same time. Annotations overlay the IT Operations milestones (Start, Checkpoint 1, Checkpoint 2, Close). Each series uses carry-forward fill so a sparse ingestion day (e.g. an outage in the upstream Catalyst Center / Spaces collector) doesn't drop the line to zero.",
 			"options": {
 				"annotationColor": "> annotation | seriesByName('annotation_color')",
 				"annotationLabel": "> annotation | seriesByName('label')",
@@ -600,7 +600,7 @@
 			"dataSources": {
 				"primary": "ds_score_a"
 			},
-			"description": "AP reach % - should be ≥ 95 before exercise",
+			"description": "AP reach % - should be ≥ 95 before the surge event",
 			"options": {
 				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
@@ -879,7 +879,7 @@
 				"annotation": "ds_annotations",
 				"primary": "ds_q10_recovery_health"
 			},
-			"description": "Hourly average client health (0-10). Watch for a tail of degraded health AFTER the exercise - signals stuck sessions or controller stress.",
+			"description": "Hourly average client health (0-10). Watch for a tail of degraded health AFTER the surge event - signals stuck sessions or controller stress.",
 			"options": {
 				"annotationColor": "> annotation | seriesByName('annotation_color')",
 				"annotationLabel": "> annotation | seriesByName('label')",
@@ -905,7 +905,7 @@
 				"annotation": "ds_annotations",
 				"primary": "ds_q10_recovery_issues"
 			},
-			"description": "Hourly DNAC issue count. If issues are still firing 24h+ after the exercise, you have unresolved infrastructure damage to chase down.",
+			"description": "Hourly DNAC issue count. If issues are still firing 24h+ after the surge event, you have unresolved infrastructure damage to chase down.",
 			"options": {
 				"annotationColor": "> annotation | seriesByName('annotation_color')",
 				"annotationLabel": "> annotation | seriesByName('label')",
@@ -925,7 +925,7 @@
 				"annotation": "ds_annotations",
 				"primary": "ds_q10_recovery_onboarding"
 			},
-			"description": "Hourly average client onboarding seconds. Should snap back to baseline within 24h after the exercise. If not, check RADIUS or DHCP for stuck state.",
+			"description": "Hourly average client onboarding seconds. Should snap back to baseline within 24h after the surge event. If not, check RADIUS or DHCP for stuck state.",
 			"options": {
 				"annotationColor": "> annotation | seriesByName('annotation_color')",
 				"annotationLabel": "> annotation | seriesByName('label')",
@@ -949,7 +949,7 @@
 			"dataSources": {
 				"primary": "ds_q1_people_per_ap"
 			},
-			"description": "Peak concurrent users (Spaces) divided by AP count (DNAC) at every site. Industry rule: > 30:1 = saturation risk. Add APs to any 'At Risk' site BEFORE the exercise.",
+			"description": "Peak concurrent users (Spaces) divided by AP count (DNAC) at every site. Industry rule: > 30:1 = saturation risk. Add APs to any 'At Risk' site BEFORE the surge event.",
 			"options": {
 				"fontSize": "small",
 				"showRowNumbers": true,
@@ -983,7 +983,7 @@
 			"dataSources": {
 				"primary": "ds_q3_aps_poor_health"
 			},
-			"description": "Every AP currently UNREACHABLE, with health < 7, or with open issues. The pre-exercise hit list. Empty table = ready to roll.",
+			"description": "Every AP currently UNREACHABLE, with health < 7, or with open issues. The hit list to clear before the surge event. Empty table = ready to roll.",
 			"options": {
 				"count": 20,
 				"fontSize": "small",
@@ -994,7 +994,7 @@
 					"headerColor": "#ecf0f5"
 				}
 			},
-			"title": "Q3 - DNAC: APs to fix before the exercise",
+			"title": "Q3 - DNAC: APs to fix before the surge event",
 			"type": "splunk.table"
 		},
 		"viz_q4_concurrent_users": {
@@ -1228,7 +1228,7 @@
 			"dataSources": {
 				"primary": "ds_q8_surge_per_building"
 			},
-			"description": "Per-site avg concurrent users for two windows: a baseline window (13-7 days ago) vs a recent window (last 3 days). 'Multiplier' = recent / baseline. Tells leadership which buildings absorbed the surge most. Note: windows are relative to 'now', so re-run after the exercise to get the true baseline-vs-exercise comparison.",
+			"description": "Per-site avg concurrent users for two windows: a baseline window (13-7 days ago) vs a recent window (last 3 days). 'Multiplier' = recent / baseline. Tells leadership which buildings absorbed the surge most. Note: windows are relative to 'now', so re-run this after the surge event, once the recent window actually covers it.",
 			"options": {
 				"fontSize": "small",
 				"legendDisplay": "bottom",
@@ -1246,7 +1246,7 @@
 					"#f7782f"
 				]
 			},
-			"title": "Q8 - Spaces: Surge multiplier per building (baseline week vs exercise)",
+			"title": "Q8 - Spaces: Surge multiplier per building (baseline week vs surge event)",
 			"type": "splunk.bar"
 		},
 		"viz_q9_worst_clients": {
@@ -1336,7 +1336,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "**BEFORE - Capacity Planning** - two weeks out: where am I undersized, where will I hit the ceiling, what must I fix before Friday?"
+				"markdown": "**BEFORE - Capacity Planning** - two weeks out: where am I undersized, where will I hit the ceiling, what must I fix before the surge event?"
 			},
 			"type": "splunk.markdown"
 		},
@@ -1354,7 +1354,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "**AFTER - Post-Mortem (Apr 16-22, 2026)** - the lessons-learned tab. Where did the surge land hardest, who suffered most, did the network fully recover?"
+				"markdown": "**AFTER - Post-Mortem** - the lessons-learned tab. Where did the surge land hardest, who suffered most, did the network fully recover?"
 			},
 			"type": "splunk.markdown"
 		}
@@ -1484,7 +1484,7 @@
 			"type": "ds.search"
 		},
 		"ds_q3_aps_poor_health": {
-			"name": "Q3 - DNAC APs to fix before the exercise",
+			"name": "Q3 - DNAC APs to fix before the surge event",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" DeviceFamily=\"Unified AP\"\n| eval site_raw=coalesce(Site, Location, \"Unsited\")\n| stats latest(OverallHealth) as oh,\n latest(Reachability) as Reachability,\n latest(IssueCount) as Issues by DeviceName, site_raw\n| where (oh<7 OR upper(Reachability)!=\"REACHABLE\" OR Issues>0)\n| eval Health = case(upper(Reachability)!=\"REACHABLE\", \"-\", isnull(oh), \"-\", oh<0, \"-\", 1=1, tostring(oh))\n| eval Status=case(upper(Reachability)!=\"REACHABLE\", \"UNREACHABLE\",\n isnotnull(oh) AND oh>=0 AND oh<5, \"Critical\",\n isnotnull(oh) AND oh<7, \"Degraded\",\n Issues>0, \"Has Issues\",\n 1=1, \"Watch\")\n| eval site=replace(site_raw, \"^Global/Region/\", \"\")\n| sort + oh\n| rename DeviceName as \"AP\", site as \"Site\", Issues as \"Open Issues\"\n| table \"AP\" \"Site\" \"Health\" \"Reachability\" \"Open Issues\" \"Status\"",
 				"queryParameters": {

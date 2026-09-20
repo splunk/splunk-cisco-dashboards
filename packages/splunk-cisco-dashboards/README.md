@@ -10,6 +10,41 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Removed customer-identifying names from the shipped catalogue and dashboards.
+  One Searchbase entry was deleted and five were renamed, so **operators who
+  bound any of these searches to a topology map link must re-bind them**. Map
+  link bindings are saved by search name in your own
+  `local/customer_topology.conf`; a binding that points at an old name stops
+  resolving silently, and the link falls back to its static values rather than
+  showing an error. Open the Overview map, select the affected link, and pick
+  the replacement entry from the Searchbase list.
+
+  Deleted:
+
+  - *FDEM - Link TLH to AUB ThousandEyes A2A Health* - this search was pinned to
+    a single ThousandEyes agent-to-agent test ID that exists in only one
+    customer's ThousandEyes account, so on every other deployment it returned a
+    permanent "unknown" placeholder rather than real link health. Re-bind
+    affected links to *Overview - Link ThousandEyes A2A Health*, which reports
+    the same latency, loss, and jitter but discovers the agent-to-agent test
+    from your own data instead of a hard-coded ID.
+
+  Renamed (behaviour is unchanged; only the display name differs):
+
+  | Old name | New name |
+  | --- | --- |
+  | NetOps Readiness - Q3 - DNAC: APs to fix before the exercise | NetOps Readiness - Q3 - DNAC: APs to fix before the surge event |
+  | NetOps Readiness - Q8 - Spaces: Surge multiplier per building (baseline week vs exercise) | NetOps Readiness - Q8 - Spaces: Surge multiplier per building (baseline week vs surge event) |
+  | Cisco Spaces Intelligence - Spaces baseline x exercise - same metrics, side-by-side | Cisco Spaces Intelligence - Spaces baseline vs surge event - same metrics, side-by-side |
+  | Cisco Spaces Intelligence - Spaces baseline x exercise - surge multiplier | Cisco Spaces Intelligence - Spaces baseline vs surge event - surge multiplier |
+  | Cisco Spaces Intelligence - Spaces - WiFi associations by SSID + exercise annotations | Cisco Spaces Intelligence - Spaces - WiFi associations by SSID + surge event annotations |
+
+  Stanza IDs were not changed, so saved searches, drilldowns, and dashboard
+  panels that reference a stanza ID rather than a display name are unaffected.
+  Matching panel titles on the NetOps Readiness and Spaces Intelligence views
+  were updated to the same wording, and stale panel text that described
+  annotation milestones the app no longer emits now names the real ones
+  (Start, Checkpoint 1, Checkpoint 2, Close).
 - Added `./build.sh --splunkbase-preview`, which applies the released-resources-only
   Splunkbase filter to an uncommitted worktree and writes a `-preview` tarball
   recording `release_eligible: false`. Previews can be installed locally but are

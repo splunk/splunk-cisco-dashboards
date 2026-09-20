@@ -72,6 +72,30 @@ _ISSUES_TREND_RELATED_INFO = (
     "</ul>"
 )
 
+# ---------------------------------------------------------------------------
+# "exercise" -> "surge event" display renames
+# ---------------------------------------------------------------------------
+# These five stanzas were authored during a customer engagement whose planned
+# surge event was called an "exercise". That is the customer's operational
+# vocabulary, not Cisco product vocabulary, so it does not belong in a shipped
+# catalogue. "Surge event" says the same thing without carrying the engagement
+# context, and matches the "surge" wording the panels already use elsewhere.
+#
+# Only search_name changes. The stanza ids are NOT touched: they encode the
+# dashboard/data-source reconciliation convention
+# (dashboard_<view>_v1_<dsid> mirrors ds_<dsid>), so renaming them would break
+# the provenance link recorded in each stanza's related_info.
+#
+# The SPL is NOT touched either. dashboard_spaces_intelligence_v1_operations_compare_kpi
+# builds an internal bucket label `phase=if(_time<split_time, "baseline",
+# "exercise")`, compares against it in `stats avg(eval(if(phase="exercise",
+# ...)))`, and then drops everything but `multiplier` with `| fields multiplier`.
+# The literal is a self-referential comparison key that never reaches the panel,
+# and the same SPL is duplicated in the dashboard's inline data source, so
+# renaming it would have to stay byte-synchronised across both files to avoid
+# silently zeroing the KPI - risk with no user-visible gain. The sibling
+# compare_chart search does surface its phase labels, and those already read
+# "Baseline (first half)" / "Operations (second half)".
 OVERRIDES: dict[str, dict[str, str]] = {
     "dashboard_it_health_v1_issues_trend": {
         "search_name": "IT Health - Open Issues Trend",
@@ -82,6 +106,73 @@ OVERRIDES: dict[str, dict[str, str]] = {
             "<code>netops_critical_systems_health.xml</code>.</p>"
         ),
         "related_info": _ISSUES_TREND_RELATED_INFO,
+    },
+    "dashboard_netops_readiness_v1_q3_aps_poor_health": {
+        "search_name": "NetOps Readiness - Q3 - DNAC: APs to fix before the surge event",
+    },
+    "dashboard_netops_readiness_v1_q8_surge_per_building": {
+        "search_name": (
+            "NetOps Readiness - Q8 - Spaces: Surge multiplier per building "
+            "(baseline week vs surge event)"
+        ),
+    },
+    "dashboard_spaces_intelligence_v1_operations_compare_chart": {
+        "search_name": (
+            "Cisco Spaces Intelligence - Spaces baseline vs surge event - "
+            "same metrics, side-by-side"
+        ),
+    },
+    "dashboard_spaces_intelligence_v1_operations_compare_kpi": {
+        "search_name": (
+            "Cisco Spaces Intelligence - Spaces baseline vs surge event - "
+            "surge multiplier"
+        ),
+    },
+    "dashboard_spaces_intelligence_v1_operations_wifi": {
+        "search_name": (
+            "Cisco Spaces Intelligence - Spaces - WiFi associations by SSID + "
+            "surge event annotations"
+        ),
+    },
+    # The same "exercise" wording also reached the catalogue prose of four
+    # unrelated stanzas. These strings render in the Searchbase browser, so they
+    # are genericised for the same reason as the display names above.
+    "enterprise_ds_ssid_client_trend_24h": {
+        "explanation": (
+            "<p>This search targets the Catalyst Center macro "
+            "<code>index_catalyst</code> with sourcetype "
+            "<code>cisco:dnac:client</code>, wireless-only "
+            "<code>type=\"Wireless\"</code>. It timecharts distinct "
+            "<code>macAddress</code> values per interval &mdash; a rolling "
+            "unique client census &mdash; split by the "
+            "<code>connection.ssid</code> multivalue field for SSID-level "
+            "staffing views during enterprise surge events.</p>"
+        ),
+    },
+    "catalyst_center_wired_health_kpi": {
+        "description": (
+            "<p>Mirrors the wireless KPI pattern for <b>wired clients</b>, "
+            "yielding <b>health score</b>, <b>total count</b>, and the same "
+            "<b>four bucket columns</b> for surge event command views.</p>"
+        ),
+    },
+    "executive_summary_issue_trend": {
+        "solution": (
+            "<p><b>Operational insight:</b> A <b>P1 line that slopes up</b> "
+            "during a surge event is a <b>go/no-go signal</b> for "
+            "leadership-pair with remediation staffing.</p>"
+        ),
+    },
+    "overview_link_state_drilldown": {
+        "related_info": (
+            "<ul><li><b><a href=\"https://www.cisco.com/c/en/us/support/routers/"
+            "sd-wan/series.html\">Cisco Catalyst SD-WAN documentation</a></b><br>"
+            "Interface and circuit monitoring in SD-WAN Manager, including the "
+            "bandwidth utilisation fields read here.</li><li><b>Paired tiles</b>"
+            "<br>The topology link tiles and the site-to-site link health charts "
+            "on the executive and readiness dashboards use the same link health "
+            "feed.</li></ul>"
+        ),
     },
 }
 
