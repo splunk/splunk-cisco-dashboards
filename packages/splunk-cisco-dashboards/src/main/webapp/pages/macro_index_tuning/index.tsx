@@ -134,132 +134,157 @@ const CIM_DATA_MODEL_DISCOVERY_CONFIGS = [
     model: "Alerts",
     dataModel: "Alerts",
     rootNodes: ["Alerts"],
+    rootSearch: "tag=alert",
   },
   {
     macro: "cim_Authentication_indexes",
     model: "Authentication",
     dataModel: "Authentication",
     rootNodes: ["Authentication"],
+    rootSearch: 'tag=authentication NOT (action="success" user=*$)',
   },
   {
     macro: "cim_Certificates_indexes",
     model: "Certificates",
     dataModel: "Certificates",
     rootNodes: ["All_Certificates"],
+    rootSearch: "tag=certificate",
   },
   {
     macro: "cim_Change_indexes",
     model: "Change",
     dataModel: "Change",
     rootNodes: ["All_Changes"],
+    rootSearch: "tag=change",
   },
   {
     macro: "cim_Data_Access_indexes",
     model: "Data Access",
     dataModel: "Data_Access",
     rootNodes: ["Data_Access"],
+    rootSearch: "tag=data tag=access",
   },
   {
     macro: "cim_DLP_indexes",
     model: "Data Loss Prevention",
     dataModel: "DLP",
     rootNodes: ["DLP_Incidents"],
+    rootSearch: "tag=dlp tag=incident",
   },
   {
     macro: "cim_Databases_indexes",
     model: "Databases",
     dataModel: "Databases",
     rootNodes: ["All_Databases"],
+    rootSearch: "tag=database",
   },
   {
     macro: "cim_Email_indexes",
     model: "Email",
     dataModel: "Email",
     rootNodes: ["All_Email"],
+    rootSearch: "tag=email",
   },
   {
     macro: "cim_Endpoint_indexes",
     model: "Endpoint",
     dataModel: "Endpoint",
     rootNodes: ["Ports", "Processes", "Services", "Filesystem", "Registry"],
+    rootSearch:
+      "(tag=listening tag=port) OR (tag=process tag=report) OR (tag=service tag=report) OR (tag=endpoint tag=filesystem) OR (tag=endpoint tag=registry)",
   },
   {
     macro: "cim_Interprocess_Messaging_indexes",
     model: "Interprocess Messaging",
     dataModel: "Interprocess_Messaging",
     rootNodes: ["All_Messaging"],
+    rootSearch: "tag=messaging",
   },
   {
     macro: "cim_Intrusion_Detection_indexes",
     model: "Intrusion Detection",
     dataModel: "Intrusion_Detection",
     rootNodes: ["IDS_Attacks"],
+    rootSearch: "tag=ids tag=attack",
   },
   {
     macro: "cim_Compute_Inventory_indexes",
     model: "Inventory",
     dataModel: "Compute_Inventory",
     rootNodes: ["All_Inventory"],
+    rootSearch:
+      "tag=inventory (tag=cpu OR tag=memory OR tag=network OR tag=storage OR (tag=system tag=version) OR tag=user OR tag=virtual)",
   },
   {
     macro: "cim_JVM_indexes",
     model: "JVM",
     dataModel: "JVM",
     rootNodes: ["JVM"],
+    rootSearch: "tag=jvm",
   },
   {
     macro: "cim_Malware_indexes",
     model: "Malware",
     dataModel: "Malware",
     rootNodes: ["Malware_Attacks", "Malware_Operations"],
+    rootSearch: "tag=malware tag=attack",
   },
   {
     macro: "cim_Network_Resolution_indexes",
     model: "Network Resolution (DNS)",
     dataModel: "Network_Resolution",
     rootNodes: ["DNS"],
+    rootSearch: "tag=network tag=resolution tag=dns",
   },
   {
     macro: "cim_Network_Sessions_indexes",
     model: "Network Sessions",
     dataModel: "Network_Sessions",
     rootNodes: ["All_Sessions"],
+    rootSearch: "tag=network tag=session",
   },
   {
     macro: "cim_Network_Traffic_indexes",
     model: "Network Traffic",
     dataModel: "Network_Traffic",
     rootNodes: ["All_Traffic"],
+    rootSearch: "tag=network tag=communicate",
   },
   {
     macro: "cim_Performance_indexes",
     model: "Performance",
     dataModel: "Performance",
     rootNodes: ["All_Performance"],
+    rootSearch:
+      "tag=performance (tag=cpu OR tag=facilities OR tag=memory OR tag=storage OR tag=network OR (tag=os ((tag=time tag=synchronize) OR tag=uptime)))",
   },
   {
     macro: "cim_Ticket_Management_indexes",
     model: "Ticket Management",
     dataModel: "Ticket_Management",
     rootNodes: ["All_Ticket_Management"],
+    rootSearch: "tag=ticketing",
   },
   {
     macro: "cim_Updates_indexes",
     model: "Updates",
     dataModel: "Updates",
     rootNodes: ["Updates", "Update_Errors"],
+    rootSearch: "tag=update tag=status",
   },
   {
     macro: "cim_Vulnerabilities_indexes",
     model: "Vulnerabilities",
     dataModel: "Vulnerabilities",
     rootNodes: ["Vulnerabilities"],
+    rootSearch: "tag=vulnerability tag=report",
   },
   {
     macro: "cim_Web_indexes",
     model: "Web",
     dataModel: "Web",
     rootNodes: ["Web"],
+    rootSearch: "tag=web",
   },
 ] as const;
 const CIM_MACRO_NAMES = CIM_DATA_MODEL_DISCOVERY_CONFIGS.map(
@@ -1114,6 +1139,7 @@ export const buildCimDataModelDiscoverySearch = (
     macro: string;
     dataModel: string;
     rootNodes: readonly string[];
+    rootSearch?: string;
   },
   indexNames: readonly string[],
 ): string => {
@@ -1125,12 +1151,22 @@ export const buildCimDataModelDiscoverySearch = (
   if (indexNames.some((indexName) => !CONCRETE_INDEX_NAME_PATTERN.test(indexName))) {
     throw new Error("CIM discovery received an invalid or wildcard index name.");
   }
-  const nodeClause = config.rootNodes
-    .map((rootNode) => `nodename=${rootNode}`)
-    .join(" OR ");
   const indexClause = indexNames
     .map((indexName) => `"${indexName}"`)
     .join(", ");
+  const rootSearch = config.rootSearch?.trim();
+  if (rootSearch) {
+    return [
+      `| search index IN (${indexClause}) (${rootSearch})`,
+      "| stats count as events values(index) as indexes values(sourcetype) as sourcetypes dc(sourcetype) as sourcetype_count",
+      `| eval macro="${config.macro}", target_app="${CIM_APP_NAME}", definition_format="indexIn"`,
+      '| eval definition="index IN (".mvjoin(indexes, ", ").")"',
+      "| table macro target_app definition_format definition indexes sourcetypes sourcetype_count events",
+    ].join("\n");
+  }
+  const nodeClause = config.rootNodes
+    .map((rootNode) => `nodename=${rootNode}`)
+    .join(" OR ");
   return [
     `| tstats summariesonly=false count as cim_event_count FROM datamodel=${config.dataModel} WHERE (${nodeClause}) AND index IN (${indexClause}) BY index sourcetype`,
     "| stats sum(cim_event_count) as events values(index) as indexes values(sourcetype) as sourcetypes dc(sourcetype) as sourcetype_count",
@@ -1178,6 +1214,17 @@ export const selectCimRowsByMacroNames = <TRow extends { macro: string }>(
   const selected = new Set(selectedMacroNames);
   return rows.filter((row) => selected.has(row.macro));
 };
+
+export const selectMatchedCimMacroNames = (
+  availableMacroNames: readonly string[],
+  rows: readonly Pick<EditableMacroRow, "macro" | "events" | "draftDefinition">[],
+): string[] =>
+  normalizeCimModelSelection(
+    availableMacroNames,
+    rows
+      .filter((row) => row.events > 0 && row.draftDefinition.trim())
+      .map((row) => row.macro),
+  );
 
 const getCimModelLabel = (macro: string): string =>
   CIM_MODEL_LABEL_BY_MACRO.get(macro) ||
@@ -1299,12 +1346,14 @@ export const buildAdditiveCimDraftDefinition = (
   if (!normalizedDiscoveredIndexes.length) return currentDefinition;
 
   const currentIndexes = extractIndexTokens(currentDefinition);
+  const isEmptyAllowlistPlaceholder = currentDefinition.trim() === "()";
   // Preserve an explicit wildcard or a non-standard definition. Discovery may
   // add concrete indexes to a known allowlist, but removal or rewriting remains
   // an explicit administrator action in the index picker.
   if (
     currentIndexes.includes("*") ||
     (currentDefinition.trim() &&
+      !isEmptyAllowlistPlaceholder &&
       (!currentIndexes.length ||
         !isPureIndexAllowlistDefinition(currentDefinition)))
   ) {
@@ -3653,8 +3702,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
         .map((row) => parseSearchResult(row, macroConfigByName))
         .filter((row): row is MacroRow => Boolean(row));
       if (cimAbortRef.current !== controller) return;
-      setCimRows(
-        buildExpectedEditableRows(CIM_MACRO_CONFIGS, parsed, currentDetails),
+      const discoveredRows = buildExpectedEditableRows(
+        CIM_MACRO_CONFIGS,
+        parsed,
+        currentDetails,
+      );
+      setCimRows(discoveredRows);
+      setSelectedSetupCimMacroNames(
+        selectMatchedCimMacroNames(CIM_MACRO_NAMES, discoveredRows),
       );
       if (successfulModels === 0 && failedModels > 0) {
         setCimScanState("error");
@@ -5609,7 +5664,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
         "No Cisco events matched a supported CIM data model in this time range. Nothing was selected or changed.";
     }
     let cimStatus = setupCimAvailable
-      ? "Find matching data models, choose which ones to tune, then review their proposed allowlists."
+      ? "Find matching data models, then review the automatically selected allowlist proposals."
       : "Splunk_SA_CIM is not available. Review the package requirement before finishing.";
     if (isCimLoading) {
       cimStatus = `${cimDiscoveryProgress.completed} of ${cimDiscoveryProgress.total} data models checked. Up to two bounded searches run at once.`;
@@ -5659,10 +5714,10 @@ export default function MacroIndexTuningPage(): JSX.Element {
         cimDiscoveryDescription = `${cimDiscoveryProgress.completed} of ${cimDiscoveryProgress.total} model jobs reached a terminal state; completed results were preserved. ${cimDiscoveryIssueCount} model job${cimDiscoveryIssueCount === 1 ? " needs" : "s need"} another attempt.${cimDiscoveryIssueSummary}`;
       } else {
         cimDiscoveryDescription = setupCimRowsToSave.length
-          ? `${setupCimRowsToSave.length} data model${
+          ? `${setupCimRowsToSave.length} matching data model${
               setupCimRowsToSave.length === 1 ? " is" : "s are"
-            } selected. Only selected models can enter the draft plan.`
-          : "Select the data models you want to tune. No model has been added to the draft plan yet.";
+            } selected automatically. Clear any model you do not want in the draft plan.`
+          : "No matching data model has been added to the draft plan.";
       }
     }
     let cimDiscoveryActionLabel = "Find matching models";
@@ -5694,8 +5749,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
     return (
       <SetupFlowShell
         activeStep={5}
-        title="Choose CIM data models to tune"
-        description="Discovery checks which configured indexes contain events mapped into each CIM data model. Select the saved CIM allowlists you want to update; unselected models remain unchanged. Nothing is saved until Step 6."
+        title="Review CIM data models to tune"
+        description="Discovery checks which configured indexes contain events mapped into each CIM data model and automatically selects every match. Clear any allowlist you want to leave unchanged. Nothing is saved until Step 6."
         status={cimStatus}
         pendingChangeCount={setupChanges.length}
         pendingChangeDetail={setupPendingChangeDetail}
@@ -5792,12 +5847,12 @@ export default function MacroIndexTuningPage(): JSX.Element {
         {setupCimAvailable && cimScanState === "ready" ? (
           <CimModelSelectionSection className="border sui-border-weak sui-bg-section">
             <CimModelSelectionTitle className="sui-color-active">
-              2. Choose data models to tune
+              2. Review matched data models
             </CimModelSelectionTitle>
             <CimModelSelectionDescription className="sui-color-default">
-              Choose which discovered proposals may enter the draft plan. Saved
-              index values are preserved, newly detected indexes are added, and
-              unselected models remain unchanged.
+              Matching models enter the draft plan automatically. Saved index
+              values are preserved, newly detected indexes are added, and any
+              model you clear remains unchanged.
             </CimModelSelectionDescription>
             <CimModelSelectionControl>
               <CimControlGroup
@@ -5819,7 +5874,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                     );
                     setCimBulkSaveStatus({ state: "idle" });
                   }}
-                  placeholder="Choose data models…"
+                  placeholder="No matched data models"
                   selectAllAppearance="checkbox"
                   showSelectedValuesFirst="nextOpen"
                   values={selectedSetupCimMacroNames}
@@ -5846,7 +5901,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
             >
               {setupCimRowsToSave.length
                 ? `${setupCimRowsToSave.length} selected · ${selectedMatchedCimRows.length} with matching data · ${setupCimChangesToSave.length} proposed changes`
-                : "No models selected. You can continue without CIM tuning, and every saved allowlist will remain unchanged."}
+                : "No models selected. Every saved CIM allowlist will remain unchanged."}
             </CimModelSelectionStatus>
           </CimModelSelectionSection>
         ) : null}
@@ -5941,7 +5996,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
     if (setupCimAvailable && cimScanState === "ready") {
       cimReviewValue = `${setupCimRowsToSave.length} selected · ${setupCimRowsToSave.filter((row) => row.events > 0).length} matched · ${setupCimChangesToSave.length} changes`;
       cimReviewDetail =
-        "Only selected Common Information Model allowlists can be saved";
+        "Matched Common Information Model allowlists are selected automatically";
     } else if (setupCimAvailable) {
       cimReviewValue = "Not run · no changes";
       cimReviewDetail =

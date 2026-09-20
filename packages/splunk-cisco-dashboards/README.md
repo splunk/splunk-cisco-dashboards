@@ -79,6 +79,11 @@ networking pillars and workplace scenarios.
   preservation of completed results. Setup retries now skip settings that were
   already saved, and unavailable optional companion-app routing macros no
   longer prevent completion.
+- Fixed first-run CIM discovery so tagged events are detected before the saved
+  CIM index allowlists exist, including Umbrella DNS events in
+  `cisco_umbrella`.
+- Restored automatic inclusion of matched CIM models in the Setup draft so
+  discovered allowlist changes are saved without a separate selection step.
 - Preserved DensityFunction anomaly results across seven Cisco Spaces,
   ThousandEyes, and building-resilience searches by preventing Splunk's search
   optimizer from pruning MLTK-generated `IsOutlier(...)` fields during final

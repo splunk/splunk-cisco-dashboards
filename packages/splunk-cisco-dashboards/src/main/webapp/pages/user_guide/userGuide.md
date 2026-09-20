@@ -76,7 +76,7 @@ Setup contains six stages:
 2. **Verify readiness:** check the Splunk environment and required capabilities.
 3. **Review packages:** confirm which supporting apps and add-ons are installed and enabled.
 4. **Configure data:** scan a bounded time range, review routing macro proposals, and choose the search-performance mode.
-5. **Tune CIM models:** run one bounded discovery search per CIM data model and select only the allow lists that you want to change. You can select **Skip CIM tuning** when no model is selected.
+5. **Tune CIM models:** run one bounded discovery search per CIM data model. Models backed by matching data are selected automatically; clear any allow list that you want to leave unchanged. You can select **Skip CIM tuning** when no model remains selected.
 6. **Review & finish:** compare current and proposed values, then select **Save changes and finish**. When there are no macro changes, Setup only marks initial setup complete and unlocks the workspace.
 
 Nothing is written until the final confirmation. Canceling Setup discards the draft plan.
@@ -117,9 +117,9 @@ Primary app macros use definitions such as `index IN (network, security)`. CIM a
 
 ### Tune CIM models
 
-CIM discovery is separate from source-type discovery because it evaluates tagged events through CIM datasets. It runs one search per data model, allows two searches in flight, preserves completed results, reports progress, and allows cancellation. A slow or unavailable model therefore does not block all other models.
+CIM discovery is separate from source-type discovery because it evaluates each model's root CIM tags against the configured indexes before reading or changing saved allowlists. It runs one search per data model, allows two searches in flight, preserves completed results, reports progress, and allows cancellation. A slow or unavailable model therefore does not block all other models.
 
-Select only the data models whose saved allow lists you want to update. Unselected models remain unchanged. Use a short range first; expand the range only when representative tagged data is missing.
+Every model backed by matching data enters the Step 6 draft automatically. Clear a model only when you want its saved allow list to remain unchanged. Use a short range first; expand the range only when representative tagged data is missing.
 
 ### Review acceleration
 
@@ -317,7 +317,7 @@ This Markdown file is the authoritative source for the in-product release histor
 ::: release Release Notes | September 2026 - Version 1.0.52
 ### Release overview
 
-Version 1.0.52 preserves complete large-fleet asset inventories and advances release build allocation beyond the published 1.0.51 package.
+Version 1.0.52 preserves complete large-fleet asset inventories, advances release build allocation beyond the published 1.0.51 package, and keeps first-run CIM discovery independent of saved allowlists.
 
 ### Workspace usability
 
@@ -330,6 +330,11 @@ Version 1.0.52 preserves complete large-fleet asset inventories and advances rel
 - Removed the implicit 10,000-row limit from the **Asset Inventory - Build Lookup** saved search so fleets larger than Splunk's default `sort` limit are written completely to `asset_inventory.csv`.
 - Removed the same implicit limit from the **Full Inventory** dashboard table so every row in the generated lookup remains available for display and filtering.
 - Added regression coverage for both inventory paths.
+
+### Guided Setup
+
+- Fixed first-run CIM discovery so tagged events are found before a CIM index
+  allowlist has been saved, including Umbrella DNS events in `cisco_umbrella`.
 
 ### Searchbase catalogue
 

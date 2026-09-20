@@ -346,6 +346,29 @@ assert.match(
   endpointDiscoverySearch,
   /WHERE \(nodename=Ports OR nodename=Processes\) AND index IN \("network", "ep_endpoint"\)/,
 );
+const networkResolutionDiscoverySearch = buildCimDataModelDiscoverySearch(
+  {
+    macro: "cim_Network_Resolution_indexes",
+    dataModel: "Network_Resolution",
+    rootNodes: ["DNS"],
+    rootSearch: "tag=network tag=resolution tag=dns",
+  },
+  ["cisco_umbrella"],
+);
+assert.match(
+  networkResolutionDiscoverySearch,
+  /\| search index IN \("cisco_umbrella"\) \(tag=network tag=resolution tag=dns\)/,
+  "CIM discovery must search tagged raw events before allowlists are saved",
+);
+assert.match(
+  networkResolutionDiscoverySearch,
+  /\| stats count as events values\(index\) as indexes values\(sourcetype\) as sourcetypes dc\(sourcetype\) as sourcetype_count/,
+);
+assert.doesNotMatch(
+  networkResolutionDiscoverySearch,
+  /FROM datamodel=Network_Resolution/,
+  "CIM discovery must not inherit an empty saved data-model index macro",
+);
 assert.doesNotMatch(endpointDiscoverySearch, /index IN \(\*\)/);
 assert.throws(
   () =>
@@ -399,6 +422,11 @@ assert.equal(
   "CIM discovery must add newly detected indexes to the saved allowlist",
 );
 assert.equal(
+  buildAdditiveCimDraftDefinition("()", ["cisco_umbrella"]),
+  "index IN (cisco_umbrella)",
+  "An empty CIM placeholder must accept indexes found during discovery",
+);
+assert.equal(
   buildAdditiveCimDraftDefinition("index IN (*)", ["aci"]),
   "index IN (*)",
   "Discovery must preserve an explicit wildcard allowlist",
@@ -445,11 +473,36 @@ const selectCimRowsByMacroNames = evaluateTypeScriptConst(
   setupTuner,
   "selectCimRowsByMacroNames",
 );
+const selectMatchedCimMacroNames = evaluateTypeScriptConst(
+  setupTuner,
+  "selectMatchedCimMacroNames",
+  { normalizeCimModelSelection },
+);
 const cimSelectionRows = [
-  { macro: "cim_Alerts_indexes", changed: true },
-  { macro: "cim_Authentication_indexes", changed: true },
-  { macro: "cim_Network_Traffic_indexes", changed: false },
+  {
+    macro: "cim_Alerts_indexes",
+    changed: true,
+    events: 12,
+    draftDefinition: "index IN (alerts)",
+  },
+  {
+    macro: "cim_Authentication_indexes",
+    changed: true,
+    events: 4,
+    draftDefinition: "index IN (auth)",
+  },
+  {
+    macro: "cim_Network_Traffic_indexes",
+    changed: false,
+    events: 0,
+    draftDefinition: "index IN (network)",
+  },
 ];
+assert.deepEqual(
+  Array.from(selectMatchedCimMacroNames(approvedCimMacros, cimSelectionRows)),
+  ["cim_Alerts_indexes", "cim_Authentication_indexes"],
+  "Every CIM model backed by matching data must enter the setup draft automatically",
+);
 assert.deepEqual(
   Array.from(
     selectCimRowsByMacroNames(cimSelectionRows, [
@@ -459,10 +512,10 @@ assert.deepEqual(
     (row) => ({ ...row }),
   ),
   [
-    { macro: "cim_Authentication_indexes", changed: true },
-    { macro: "cim_Network_Traffic_indexes", changed: false },
+    cimSelectionRows[1],
+    cimSelectionRows[2],
   ],
-  "Only explicitly selected CIM rows may reach the setup change derivation",
+  "The review control may still narrow the automatically selected CIM rows",
 );
 assert.deepEqual(
   Array.from(selectCimRowsByMacroNames(cimSelectionRows, [])),
@@ -683,7 +736,7 @@ assert.match(
 assert.match(
   setupTuner,
   /useState<string\[\]>\(\[\]\)[\s\S]*?label="Data models to tune"[\s\S]*?selectAllAppearance="checkbox"/,
-  "Step 5 must begin with no selected CIM models and provide an accessible select-all picker",
+  "Step 5 must provide an accessible picker for reviewing or clearing automatic CIM matches",
 );
 assert.match(setupBootstrap, /"Tune CIM models"/);
 assert.match(setupTuner, /"Tune CIM models"/);
@@ -709,12 +762,12 @@ assert.match(
 assert.match(
   setupTuner,
   /cimScanState === "ready"[\s\S]*?selectCimRowsByMacroNames\(\s*cimRows,\s*selectedSetupCimMacroNames,\s*\)[\s\S]*?const setupCimChangesToSave/,
-  "Only explicitly selected rows from a completed CIM discovery may enter setup changes",
+  "The automatically populated CIM selection must feed the final setup changes",
 );
 assert.match(
   setupTuner,
-  /Discovery is read-only\.[\s\S]*?No model has been added to the draft plan yet\./,
-  "Step 5 must explain that discovery does not automatically opt models into the draft plan",
+  /setSelectedSetupCimMacroNames\(\s*selectMatchedCimMacroNames\(CIM_MACRO_NAMES, discoveredRows\),\s*\)[\s\S]*?Matching models enter the draft plan automatically\./,
+  "Step 5 must automatically add matched CIM models to the draft plan",
 );
 assert.match(
   setupTuner,

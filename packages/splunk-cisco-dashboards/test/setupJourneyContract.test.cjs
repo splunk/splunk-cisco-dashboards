@@ -612,8 +612,9 @@ test("CIM discovery is bounded per model and reports progressive read-only match
   assert.match(tuner, /Discovery is read-only\./);
   assert.match(
     tuner,
-    /No model has been added to the draft plan yet\./,
+    /selectMatchedCimMacroNames\(CIM_MACRO_NAMES, discoveredRows\)/,
   );
+  assert.match(tuner, /Matching models enter the draft plan automatically\./);
   assert.match(tuner, /import Progress from '@splunk\/react-ui\/Progress'/);
   assert.match(
     tuner,
