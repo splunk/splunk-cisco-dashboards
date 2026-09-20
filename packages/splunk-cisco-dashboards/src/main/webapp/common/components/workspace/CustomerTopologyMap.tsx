@@ -267,6 +267,14 @@ const MapCreditsButton = styled(Button)`
   }
 `;
 
+const MapCreditsDisclosure = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: ${variables.spacingSmall};
+  max-width: min(15rem, calc(100vw - 3rem));
+`;
+
 const MapLegendLabel = styled.span`
   color: inherit;
   font-size: ${variables.fontSizeSmall};
@@ -287,7 +295,7 @@ const MotionSettingsCard = styled(OneCdGlassCard)`
 `;
 
 const MapCreditsCard = styled(OneCdGlassCard)`
-  width: 15rem;
+  width: min(15rem, calc(100vw - 3rem));
   padding: ${variables.spacingMedium};
 `;
 
@@ -5631,6 +5639,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   const [mapCreditsOpen, setMapCreditsOpen] = useState(false);
   const [mapCreditsAnchor, setMapCreditsAnchor] =
     useState<HTMLAnchorElement | HTMLButtonElement | null>(null);
+  const mapCreditsCloseButtonRef = useRef<HTMLButtonElement | null>(null);
   const [tilePresetId, setTilePresetId] = useState<MapTileStyleId>(() =>
     defaultMapTileStyleId(isDark),
   );
@@ -6646,6 +6655,14 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     window.requestAnimationFrame(() => mapCreditsAnchor?.focus());
   }, [mapCreditsAnchor]);
 
+  useEffect(() => {
+    if (!mapCreditsOpen) return undefined;
+    const frame = window.requestAnimationFrame(() =>
+      mapCreditsCloseButtonRef.current?.focus(),
+    );
+    return () => window.cancelAnimationFrame(frame);
+  }, [mapCreditsOpen]);
+
   // Build 99 fix: the spotlight-pause logic was previously
   // bumping `pauseUntilRef` on EVERY click, including ones that
   // *close* the selection panel (toggling off via re-click).
@@ -7151,33 +7168,19 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         </MapViewSelect>
 
         {surfaceMode === "geo" && (
-          <div>
-            <MapCreditsButton
-              appearance="subtle"
-              elementRef={setMapCreditsAnchor}
-              label="Map credits"
-              onClick={() => setMapCreditsOpen((open) => !open)}
-              aria-controls={
-                mapCreditsOpen ? "customer-topology-map-credits" : undefined
+          <MapCreditsDisclosure
+            onKeyDown={(event) => {
+              if (event.key === "Escape" && mapCreditsOpen) {
+                event.stopPropagation();
+                closeMapCredits();
               }
-              aria-haspopup="dialog"
-              aria-expanded={mapCreditsOpen}
-            />
-            <Popover
-              appearance="none"
-              anchor={mapCreditsAnchor}
-              defaultPlacement="above"
-              hideArrow
-              onRequestClose={closeMapCredits}
-              open={mapCreditsOpen}
-              repositionMode="any"
-              retainFocus
-              takeFocus
-            >
+            }}
+          >
+            {mapCreditsOpen && (
               <MapCreditsCard
                 id="customer-topology-map-credits"
                 tag="section"
-                role="dialog"
+                role="region"
                 aria-labelledby="customer-topology-map-credits-title"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -7193,6 +7196,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     </p>
                   </div>
                   <button
+                    ref={mapCreditsCloseButtonRef}
                     type="button"
                     onClick={closeMapCredits}
                     aria-label="Close map credits"
@@ -7202,8 +7206,18 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                   </button>
                 </div>
               </MapCreditsCard>
-            </Popover>
-          </div>
+            )}
+            <MapCreditsButton
+              appearance="subtle"
+              elementRef={setMapCreditsAnchor}
+              label="Map credits"
+              onClick={() => setMapCreditsOpen((open) => !open)}
+              aria-controls={
+                mapCreditsOpen ? "customer-topology-map-credits" : undefined
+              }
+              aria-expanded={mapCreditsOpen}
+            />
+          </MapCreditsDisclosure>
         )}
       </MapBottomRightActions>
     </TopologyMapRoot>
