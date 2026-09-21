@@ -553,6 +553,9 @@ const dashboardBuilderDrilldown = read(
 const modalShell = read(
   "src/main/webapp/common/components/workspace/WorkspaceModalShell.tsx",
 );
+const drilldownGuidance = read(
+  "src/main/webapp/common/components/workspace/SearchbaseDrilldownGuidance.tsx",
+);
 const appThemeProvider = read(
   "src/main/webapp/common/theme/AppThemeProvider.tsx",
 );
@@ -1206,13 +1209,28 @@ assert.match(
 assert.doesNotMatch(modalShell, />Backdrop<|aria-label="Backdrop opacity"/);
 assert.match(
   profile,
-  /contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden sui-bg-section"/,
-  "Insights drill-down dialogs must use the elevated workspace surface",
+  /contentClassName="scd-workspace-modal-content flex min-h-0 flex-1 flex-col overflow-hidden"/,
+  "Insights drill-down dialogs must use the atmospheric workspace surface",
 );
 assert.match(
   dashboardBuilderDrilldown,
-  /<WorkspaceModalShell[\s\S]*?contentClassName="dashboard-builder-drilldown-shell[^\"]*sui-bg-section"/,
-  "Dashboard Manager drill-down dialogs must share the elevated workspace surface and visibility control",
+  /<WorkspaceModalShell[\s\S]*?contentClassName="dashboard-builder-drilldown-shell scd-workspace-modal-content[^\"]*"/,
+  "Dashboard Manager drill-down dialogs must share the atmospheric workspace surface and visibility control",
+);
+assert.match(
+  modalShell,
+  /scd-workspace-modal-surface[\s\S]*?scd-workspace-modal-header/,
+  "The shared drill-down shell must use the workspace atmosphere instead of flat black surfaces",
+);
+assert.match(
+  drilldownGuidance,
+  /scd-workspace-modal-guidance-card[\s\S]*?scd-workspace-modal-guidance border-t/,
+  "Expanded drill-down guidance must continue the themed modal surface instead of restoring a black page fill",
+);
+assert.match(
+  globalStyles,
+  /\[data-app-color-scheme='dark'\] \.scd-workspace-modal-surface[\s\S]*?linear-gradient\(155deg, #17263a[\s\S]*?\.scd-workspace-modal-guidance-card/,
+  "Dark drill-down surfaces must retain the navy workspace atmosphere across the shell and guidance cards",
 );
 assert.match(
   appThemeProvider,

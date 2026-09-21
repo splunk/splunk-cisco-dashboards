@@ -7972,7 +7972,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
       openInSearchHref={searchUrl}
       openInSearchbaseHref={searchbaseUrl}
       wide={!activeIsTable || displayColumns.length > 5}
-      contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden sui-bg-section"
+      contentClassName="scd-workspace-modal-content flex min-h-0 flex-1 flex-col overflow-hidden"
       headerMeta={
         activeIsTable && statusField ? (
           <>
@@ -7989,7 +7989,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
       }
     >
       <div
-        className="flex shrink-0 items-center border-b sui-border-weak sui-bg-page px-4 py-2.5"
+        className="scd-workspace-modal-subheader flex shrink-0 items-center border-b sui-border-weak px-4 py-2.5"
         data-detail-search-summary="true"
       >
         <div className="min-w-0 flex-1">
@@ -8034,7 +8034,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
             aria-labelledby={resultTitleId}
             className="w-full min-w-[860px] sui-bg-transparent text-sm"
           >
-            <thead className="sticky top-0 z-10 border-b sui-border-weak sui-bg-page backdrop-blur-xl">
+            <thead className="scd-workspace-modal-subheader sticky top-0 z-10 border-b sui-border-weak backdrop-blur-xl">
               <tr className="text-left text-xs font-bold sui-color-default">
                 {displayColumns.map((column, index) => {
                   const isSorted = sortState?.field === column.field;

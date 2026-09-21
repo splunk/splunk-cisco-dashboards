@@ -433,6 +433,7 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
             className="fixed inset-0 z-[1900] flex items-center justify-center p-4 max-[719px]:items-end max-[719px]:p-0 max-[719px]:pt-4"
             data-workspace-modal-backdrop="true"
             data-background-visibility={backgroundVisibility}
+            data-app-color-scheme={colorScheme}
             style={{
                 zIndex: 1900,
                 backgroundColor: `rgba(2, 6, 23, ${(100 - backgroundVisibility) / 100})`,
@@ -467,14 +468,14 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                         : undefined
                 }
                 className={cn(
-                    'relative z-10 flex w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[4px] border sui-border-weak sui-bg-section sui-color-active sui-shadow-overlay backdrop-blur-[75px] outline-none',
+                    'scd-workspace-modal-surface relative z-10 flex w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[4px] border sui-border-weak sui-color-active sui-shadow-overlay backdrop-blur-[75px] outline-none',
                     VARIANT_CLASS[variant],
                     variant === 'detail' && wide && 'max-w-[1320px]',
                     dialogClassName,
                     'max-[719px]:h-[calc(100vh-1rem)] max-[719px]:max-h-[calc(100vh-1rem)] max-[719px]:w-full max-[719px]:max-w-none max-[719px]:rounded-b-none max-[719px]:rounded-t-2xl'
                 )}
             >
-                <div className="flex min-h-16 flex-shrink-0 items-center justify-between gap-4 border-b sui-border-weak sui-bg-page py-2.5 pl-5 pr-4 backdrop-blur-xl">
+                <div className="scd-workspace-modal-header flex min-h-16 flex-shrink-0 items-center justify-between gap-4 border-b sui-border-weak py-2.5 pl-5 pr-4 backdrop-blur-xl">
                     <div className="min-w-0">
                         <h2
                             id={titleId}
