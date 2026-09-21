@@ -31,6 +31,9 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from prose_corrections import load_all  # noqa: E402
+
 SOURCE = (
     Path(__file__).resolve().parent.parent
     / "packages/splunk-cisco-dashboards/src/main/resources/splunk/default/searchbase.conf"
@@ -39,63 +42,9 @@ SOURCE = (
 # (stanza_id, key, from_text, to_text, why)
 Correction = tuple[str, str, str, str, str]
 
-# ---------------------------------------------------------------------------
-# 1. Citations of a script that is not in the repository
-# ---------------------------------------------------------------------------
-# Six stanzas credit their field corrections to
-# "scripts/audit_sourcetype_fields.py". No such file has ever been committed.
-# The corrections themselves are right and the SPL proves them -- these
-# searches really do read `id` and not `incident_id` -- so only the false
-# citation goes. A pointer a reader cannot follow is worse than none: it
-# claims evidence exists.
-_MISSING_SCRIPT: list[Correction] = [
-    (
-        "executive_dashboard_xdr_incident_count",
-        "related_info",
-        " Verified via the field audit script (<code>scripts/audit_sourcetype_fields.py</code>).",
-        "",
-        "cited script does not exist in the repo",
-    ),
-    (
-        "it_critical_systems_inventory_reachability_summary",
-        "related_info",
-        " Verified via the field-discovery audit (<code>scripts/audit_sourcetype_fields.py</code> against <code>cisco:dnac:*</code> sourcetypes).",
-        "",
-        "cited script does not exist in the repo",
-    ),
-    (
-        "security_resilience_xdr_by_severity",
-        "related_info",
-        " Verified via <code>scripts/audit_sourcetype_fields.py</code>.",
-        "",
-        "cited script does not exist in the repo",
-    ),
-    (
-        "building_resilience_ds_spaces_kpi_devices",
-        "related_info",
-        " Verified via <code>scripts/audit_sourcetype_fields.py</code>.",
-        "",
-        "cited script does not exist in the repo",
-    ),
-    (
-        "overview_xdr_critical_incidents",
-        "explanation",
-        " &mdash; verified via <code>scripts/audit_sourcetype_fields.py</code>",
-        "",
-        "cited script does not exist in the repo",
-    ),
-    (
-        "overview_top_incident_volume",
-        "related_info",
-        " Verified with <code>scripts/audit_sourcetype_fields.py</code>.",
-        "",
-        "cited script does not exist in the repo",
-    ),
-]
+# One module per defect class, under scripts/prose_corrections/.
+CORRECTIONS: list[Correction] = load_all()
 
-CORRECTIONS: list[Correction] = [
-    *_MISSING_SCRIPT,
-]
 
 
 def chunks_of(text: str) -> list[str]:

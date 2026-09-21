@@ -37,6 +37,9 @@ import sys
 from pathlib import Path
 from typing import TypedDict
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from prose_audit_allowlist import ALLOWED, is_allowed  # noqa: E402
+
 REPO = Path(__file__).resolve().parent.parent
 DEFAULT = REPO / "packages/splunk-cisco-dashboards/src/main/resources/splunk/default"
 SOURCE = DEFAULT / "searchbase.conf"
@@ -103,14 +106,19 @@ CONTRAST_RE = re.compile(
     r"legacy|renamed|replaced|formerly|was\b|used to|mistak|wrong|incorrect|"
     r"empty|null|unmapped|unavailable|elsewhere|counterpart|paired|"
     r"fall(?:s|back)?|fallback|prefer|convert|rework|version|original|"
-    r"upstream|stock|intentional|why\b|in case|you.d rather|defaults to)\b",
+    r"upstream|stock|intentional|why\b|in case|you.d rather|defaults to|"
+    # lineage and rename phrasing: "the endpoints that feed X", "distinct
+    # from the Y stream", "replaces the demo-only Z".
+    r"feed|feeds|distinct from|replaces|supplied by|populated by|"
+    r"sourced from|comes from|upstream of)\b",
     re.I,
 )
 # Prose offering the reader a next step, not describing this search.
 SUGGESTION_RE = re.compile(
     r"\b(?:for deeper|for further|for more|diagnostic|drill|next step|"
     r"consider|you can also|also available|extend|pivot to|follow up|"
-    r"related field|other field|additional field)\b",
+    r"related field|other field|additional field|follow-on|correlate|"
+    r"cross-reference|suggested)\b",
     re.I,
 )
 # Prose explaining where the SPL came from rather than what it reads.
@@ -144,6 +152,7 @@ RULES = {
     "R10": "prose span= disagrees with the SPL span",
     "R11": "prose cites a field absent from the SPL",
     "R12": "prose cites a repo file that does not exist",
+    "R13": "prose cross-references a stanza id not in the catalogue",
     "U": "UNVERIFIABLE: claim depends on a macro defined outside this repo",
 }
 
@@ -158,6 +167,10 @@ class Finding(TypedDict):
 MACROS: dict[str, str] = {}
 ALL_NAMES: set[str] = set()
 ALL_STANZA_IDS: set[str] = set()
+# Leading two tokens of every real stanza id, e.g. "secure_networking".
+STANZA_PREFIXES: set[str] = set()
+# PascalCase React component names, so R11 can tell a component from a field.
+WEBAPP_COMPONENTS: set[str] = set()
 
 
 def chunks_of(text: str) -> list[str]:
@@ -226,6 +239,15 @@ def expand_macros(spl: str) -> tuple[str, set[str]]:
     return text, unresolved
 
 
+def _absent_codes(codes: list[str], spl_lower: str) -> list[str]:
+    """Monospaced tokens the SPL does not contain, used to spot enumerations."""
+    return [
+        c.strip() for c in codes
+        if re.fullmatch(r"[A-Za-z_][\w.]{2,60}", c.strip())
+        and c.strip().lower() not in spl_lower
+    ]
+
+
 def _context(text: str, needle: str, width: int = 150) -> str:
     """The sentence around a match, for the contrast and suggestion tests."""
     i = text.lower().find(needle.lower())
@@ -267,12 +289,14 @@ def audit(chunk: str) -> list[Finding]:
 
     # -- R1: prose names a sourcetype the SPL never reads -------------------
     spl_sourcetypes: set[str] = set()
+    # A tstats WHERE subsearch ends ...sourcetype="zeek:dns")], so the closing
+    # bracket and paren have to come off or nothing ever matches the prose.
     for group in re.findall(r"sourcetype\s*(?:=|IN)\s*([^\s]+(?:\s*,\s*[^\s]+)*)", spl):
         for token in group.split(","):
-            spl_sourcetypes.add(token.strip("(),\"' "))
+            spl_sourcetypes.add(token.strip("()[],\"' "))
     for group in re.findall(r"sourcetype\s+IN\s*\(([^)]*)\)", spl, re.I):
         for token in group.split(","):
-            spl_sourcetypes.add(token.strip("(),\"' "))
+            spl_sourcetypes.add(token.strip("()[],\"' "))
     spl_sourcetypes = {s for s in spl_sourcetypes if s}
 
     claimed_sts = {
@@ -282,6 +306,14 @@ def audit(chunk: str) -> list[Finding]:
     for st in claimed_sts:
         if any(glob(cand).fullmatch(st) or glob(st).fullmatch(cand)
                for cand in spl_sourcetypes):
+            continue
+        # The colon shape also fits things that are not sourcetypes at all:
+        # CVSS vectors (AV:N, AC:L) and YANG metric namespaces that mstats
+        # reads by name. If the SPL contains the literal string anywhere,
+        # the prose is not claiming a source the search never touches.
+        if st.lower() in spl.lower():
+            continue
+        if re.fullmatch(r"[A-Z]{2}:[A-Z]", st):
             continue
         if CONTRAST_RE.search(_context(blob, st)) or PROVENANCE_RE.search(_context(blob, st)):
             continue
@@ -412,7 +444,7 @@ def audit(chunk: str) -> list[Finding]:
             or "_ds_" in low
             or low in ALL_STANZA_IDS
             or low in MACROS
-            or re.search(r"\.(conf|xml|csv|json|md|spec)$", low)
+            or re.search(r"\.(conf|xml|csv|json|md|spec|py|tsx?)$", low)
             or re.fullmatch(r"(?:true|false|null|and|or|not|as|by|where|in)", low)
             or low in NOT_FIELDS
         ):
@@ -426,6 +458,21 @@ def audit(chunk: str) -> list[Finding]:
             "_" in c or "." in c or re.search(r"[a-z][A-Z]", c)
         )
         if not field_shaped:
+            continue
+        # A dotted path whose root is a model the SPL queries is the node
+        # address, which SPL spells as DATAMODEL=root + nodename=rest.
+        if "." in c and c.split(".")[0].lower() in spl_model_roots:
+            continue
+        # A UI component, not a field. Cheap and general: a PascalCase token
+        # with a matching source file in the webapp is code, not schema.
+        if re.fullmatch(r"[A-Z][A-Za-z0-9]+", c) and WEBAPP_COMPONENTS and c in WEBAPP_COMPONENTS:
+            continue
+        # Enumerations list example values, not fields: "HttpOperation on
+        # PortPolicies, ServerRoles, ApiKeys". A field claim names one or two
+        # fields; three or more unknown tokens in one sentence is a list of
+        # values or of examples from the source system.
+        if len([o for o in _absent_codes(codes, spl_lower)
+                if o in _context(blob, c, 120)]) >= 3:
             continue
         near = _context(blob, c)
         # Only a sentence that asserts the search uses the field is a claim.
@@ -453,16 +500,44 @@ def audit(chunk: str) -> list[Finding]:
         ):
             add("R12", f"cites {cited}, which does not exist in the repo")
 
+    # -- R13: a stanza cross-reference that is not in the catalogue ---------
+    # R9 only sees <i>-wrapped display names. Stanza ids are written in
+    # <code>, and a wrong one is worse than a wrong display name: it looks
+    # authoritative and returns nothing from a catalogue lookup.
+    for cited in {c.strip() for c in codes}:
+        low = cited.lower()
+        if low == sid.lower() or low in ALL_STANZA_IDS:
+            continue
+        # Long snake_case alone is not distinctive: CIM-ish field names like
+        # device_health_ip_address have the same shape. A stanza id also
+        # shares its leading namespace with real stanzas ("overview_",
+        # "secure_networking_"), so require that. Derived from the catalogue
+        # rather than hardcoded, so new workspaces need no maintenance here.
+        if cited != low or not re.fullmatch(r"[a-z][a-z0-9]*(?:_[a-z0-9]+){2,}", low):
+            continue
+        if "_".join(low.split("_")[:2]) not in STANZA_PREFIXES:
+            continue
+        if low in MACROS or re.search(r"\.(conf|xml|csv|json|py)$", low):
+            continue
+        # A token the SPL itself contains is a lookup or field this search
+        # uses -- site_topology_lookup, not a pointer to another stanza.
+        if low in spl_lower:
+            continue
+        add("R13", f"cross-references stanza <code>{cited}</code>, "
+                   f"which is not in the catalogue")
+
     return out
 
 
 def main() -> int:
-    global MACROS, ALL_NAMES, ALL_STANZA_IDS
+    global MACROS, ALL_NAMES, ALL_STANZA_IDS, STANZA_PREFIXES, WEBAPP_COMPONENTS
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--rule", help="show findings for one rule, e.g. R5")
     ap.add_argument("--stanza", help="show findings for one stanza id")
     ap.add_argument("--limit", type=int, default=40)
+    ap.add_argument("--show-allowed", action="store_true",
+                    help="include findings reviewed as sound prose")
     args = ap.parse_args()
 
     text = SOURCE.read_text()
@@ -470,8 +545,23 @@ def main() -> int:
     MACROS = load_macros()
     ALL_NAMES = {field(c, "search_name") for c in chunks}
     ALL_STANZA_IDS = {re.match(r"^\[([^\]]+)\]", c).group(1).lower() for c in chunks}
+    STANZA_PREFIXES = {"_".join(s.split("_")[:2]) for s in ALL_STANZA_IDS}
+    webapp = REPO / "packages/splunk-cisco-dashboards/src/main/webapp"
+    WEBAPP_COMPONENTS = {f.stem for f in webapp.rglob("*.tsx")} if webapp.exists() else set()
 
     findings = [f for c in chunks for f in audit(c)]
+
+    # Reviewed-and-sound findings move aside so the report can reach zero,
+    # but stale entries are surfaced: an allowlist that outlives the prose it
+    # excuses would hide the next real defect in that stanza.
+    suppressed = [f for f in findings if is_allowed(f["stanza"], f["rule"], f["detail"])]
+    if not args.show_allowed:
+        findings = [f for f in findings if f not in suppressed]
+    stale = [
+        (s, r, p) for s, r, p, _ in ALLOWED
+        if not any(f["stanza"] == s and f["rule"] == r and p in f["detail"]
+                   for f in suppressed)
+    ]
 
     if args.stanza:
         findings = [f for f in findings if f["stanza"] == args.stanza]
@@ -480,7 +570,15 @@ def main() -> int:
 
     affected = {f["stanza"] for f in findings}
     print(f"{len(chunks)} stanzas audited, {len(findings)} findings, "
-          f"{len(affected)} stanzas affected\n")
+          f"{len(affected)} stanzas affected")
+    print(f"{len(suppressed)} findings allowlisted as sound prose "
+          f"(--show-allowed to see them)\n")
+    if stale:
+        print(f"WARNING: {len(stale)} allowlist entries no longer match any "
+              f"finding; the prose changed and the entry should go:")
+        for s_, r_, p_ in stale:
+            print(f"  - {s_} {r_} {p_!r}")
+        print()
 
     if args.rule or args.stanza:
         for f in findings[: args.limit]:
