@@ -5,7 +5,7 @@ const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { execFileSync } = require("child_process");
+const { execFileSync, spawnSync } = require("child_process");
 
 const APP_NAME = "splunk-cisco-dashboards";
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
@@ -68,6 +68,23 @@ const SEARCHBASE_SOURCE = path.join(
   "default",
   "searchbase.conf",
 );
+const CATALYST_HEALTH_SOURCE = path.join(
+  PACKAGE_ROOT,
+  "src",
+  "main",
+  "resources",
+  "splunk",
+  "default",
+  "data",
+  "ui",
+  "views",
+  "netops_catalyst_health.xml",
+);
+const OPERATIONAL_VALIDATOR_SOURCE = path.join(
+  REPOSITORY_ROOT,
+  "scripts",
+  "validate_operational_search_surfaces.py",
+);
 const INSIGHTS_WORKSPACES_SOURCE = path.join(
   PACKAGE_ROOT,
   "src",
@@ -85,6 +102,15 @@ const USER_GUIDE_SOURCE = path.join(
   "pages",
   "user_guide",
   "index.tsx",
+);
+const USER_GUIDE_MARKDOWN_SOURCE = path.join(
+  PACKAGE_ROOT,
+  "src",
+  "main",
+  "webapp",
+  "pages",
+  "user_guide",
+  "userGuide.md",
 );
 const {
   applyBuildProfile,
@@ -1664,6 +1690,129 @@ assert.doesNotMatch(
   /_scd_local_backup/,
   "Clean build must not use a shared fixed /tmp backup path",
 );
+function exerciseThreatSourcesAcceleration() {
+  const searchbase = fs.readFileSync(SEARCHBASE_SOURCE, "utf8");
+  const userGuide = fs.readFileSync(USER_GUIDE_MARKDOWN_SOURCE, "utf8");
+  const stanzaMatch = searchbase.match(
+    /\[executive_dashboard_threat_sources_with_baseline\]\n([\s\S]*?)(?=\n\[|$)/,
+  );
+  assert.ok(stanzaMatch, "Threat Sources baseline stanza must exist");
+  const stanza = stanzaMatch[1];
+
+  assert.match(stanza, /\| tstats `scd_summariesonly` count FROM DATAMODEL=Network_Traffic/);
+  assert.match(stanza, /nodename=All_Traffic\.Traffic_By_Action\.Blocked_Traffic/);
+  for (const sourcetype of [
+    "cisco:asa",
+    "cisco:ftd",
+    "cisco:ftd:*",
+    "cisco:sfw:estreamer",
+  ]) {
+    assert.ok(stanza.includes(`sourcetype="${sourcetype}"`));
+  }
+  assert.match(stanza, /BY _time span=auto All_Traffic\.src/);
+  assert.match(stanza, /\| rename All_Traffic\.src AS src/);
+  assert.match(stanza, /\| eventstats dc\(src\) AS total_sources/);
+  assert.match(
+    stanza,
+    /\| stats dc\(src\) AS sources, max\(total_sources\) AS total_sources BY _time/,
+  );
+  assert.match(stanza, /\| eventstats avg\(sources\) AS baseline/);
+  assert.doesNotMatch(stanza, /search = `index_firewall`/);
+  assert.doesNotMatch(stanza, /deliberately abandon|cannot be recovered/i);
+  assert.match(
+    userGuide,
+    /Threat sources[\s\S]*?accelerated CIM \*\*Blocked Traffic\*\*[\s\S]*?distinct-source headline[\s\S]*?distributed-peer failures/,
+    "The current release notes must disclose the accelerated Threat Sources repair",
+  );
+
+  const activeTeMatch = searchbase.match(
+    /\[it_health_active_te_alerts_high_critical\]\n([\s\S]*?)(?=\n\[|$)/,
+  );
+  assert.ok(activeTeMatch, "Active TE alerts time-series stanza must exist");
+  assert.match(activeTeMatch[1], /"tileId":"active_te_alerts"/);
+  assert.match(activeTeMatch[1], /"valueField":"total_count"/);
+  assert.match(activeTeMatch[1], /"sparkDataField":"active"/);
+  assert.match(activeTeMatch[1], /"baselineField":"baseline"/);
+}
+
+function exerciseOperationalSearchSurfaceValidator() {
+  const catalystHealth = fs.readFileSync(CATALYST_HEALTH_SOURCE, "utf8");
+  assert.doesNotMatch(
+    catalystHealth,
+    /round\(<<FIELD>>\//,
+    "Dynamic timechart fields must be quoted because protocol and SSID values can contain punctuation",
+  );
+  assert.match(catalystHealth, /round\('\<\<FIELD\>\>'\/1073741824/);
+
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "scd-search-surfaces-"));
+  try {
+    const defaultRoot = path.join(fixtureRoot, "default");
+    const viewsRoot = path.join(defaultRoot, "data/ui/views");
+    fs.mkdirSync(viewsRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(defaultRoot, "searchbase.conf"),
+      `[tile_search]\nsearch_name = Tile Search\ndispatch_context = test_app\nviz_options = {"overview":[{"tileId":"tile_one"}]}\nsearch = | makeresults | eval value=1\n\n[rail_search]\nsearch_name = Rail Search\ndispatch_context = test_app\nsearch = | makeresults | eval value=2\n`,
+    );
+    fs.writeFileSync(
+      path.join(defaultRoot, "insights_workspaces.conf"),
+      `[signal_item.rail_one]\nsearch_name = Rail Search\n\n[signal_rail.demo]\nenabled = 1\nitems = rail_one\n\n[layout.demo.section]\ntiles = tile_one,tile_one\n`,
+    );
+    fs.writeFileSync(
+      path.join(defaultRoot, "customer_topology.conf"),
+      `[topology.default]\npayload_json = {"topology":{"links":[{"searchName":"Tile Search"}]}}\n`,
+    );
+    fs.writeFileSync(
+      path.join(viewsRoot, "fixture.xml"),
+      `<dashboard version="2"><definition><![CDATA[\n{"inputs":{"time":{"type":"input.timerange","options":{"token":"time_tok","defaultValue":"-4h,now"}}},"dataSources":{"base":{"type":"ds.search","options":{"query":"| makeresults | eval source=$source_tok$","queryParameters":{"earliest":"$time_tok.earliest$","latest":"$time_tok.latest$"}}},"catalogue":{"type":"ds.searchbase","options":{"ref":"tile_search","queryParameters":{"earliest":"$time_tok.earliest$","latest":"$time_tok.latest$"}}},"child":{"type":"ds.chain","options":{"extend":"base","query":"| head 1"}}}}\n]]></definition></dashboard>`,
+    );
+
+    const inventory = spawnSync(
+      "python3",
+      [OPERATIONAL_VALIDATOR_SOURCE, "--app-root", fixtureRoot, "--inventory-only", "--json"],
+      { encoding: "utf8" },
+    );
+    assert.equal(inventory.status, 0, inventory.stderr || inventory.stdout);
+    const report = JSON.parse(inventory.stdout);
+    assert.equal(report.ok, true);
+    assert.equal(report.inventory.workspace_references, 2);
+    assert.equal(report.inventory.signal_rail_references, 1);
+    assert.equal(report.inventory.topology_references, 1);
+    assert.equal(report.inventory.dashboard_search_roots, 1);
+    assert.equal(report.inventory.dashboard_searchbase_roots, 1);
+    assert.equal(report.inventory.dashboard_chains, 1);
+    assert.equal(report.inventory.unique_search_targets, 3);
+    assert.deepEqual(report.status_counts, { deferred: 1 });
+    assert.match(report.issues[0].message, /interaction-dependent tokens: source_tok/);
+
+    const secret = "validator-test-password";
+    const failedLive = spawnSync(
+      "python3",
+      [
+        OPERATIONAL_VALIDATOR_SOURCE,
+        "--app-root",
+        fixtureRoot,
+        "--base-url",
+        "http://127.0.0.1:9",
+        "--username",
+        "tester",
+        "--password",
+        secret,
+        "--no-effective-config",
+        "--timeout",
+        "1",
+        "--json",
+      ],
+      { encoding: "utf8" },
+    );
+    assert.equal(failedLive.status, 1);
+    assert.doesNotMatch(failedLive.stdout + failedLive.stderr, new RegExp(secret));
+    const failedReport = JSON.parse(failedLive.stdout);
+    assert.ok(failedReport.results.every((result) => result.status === "failed"));
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+}
+
 assert.match(
   fs.readFileSync(CLEAN_BUILD_SOURCE, "utf8"),
   /mktemp -d "\$\{TMPDIR:-\/tmp\}\/scd-clean-build\.XXXXXX"[\s\S]*?trap restore_local EXIT/,
@@ -1837,5 +1986,7 @@ exerciseDevelopingStaticAssetExclusion();
 exercisePreviewRetainedResources();
 exercisePreviewRetentionMustBeDeveloping();
 exercisePromotedSearchbaseCatalogue();
+exerciseThreatSourcesAcceleration();
+exerciseOperationalSearchSurfaceValidator();
 
 console.log("Packaging P2 hardening contracts passed.");

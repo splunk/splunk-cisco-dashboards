@@ -343,6 +343,9 @@ Version 1.0.52 preserves complete large-fleet asset inventories, advances releas
 
 ### Searchbase catalogue
 
+- Moved the executive **Threat sources** tile from a raw firewall-event scan to the accelerated CIM **Blocked Traffic** dataset. The tile keeps its selected-window distinct-source headline and source scope while avoiding the high-volume distributed-peer failures seen with the previous raw pipeline.
+- Restored the missing Searchbase binding for the **Active TE alerts** workspace tile so its Major/Critical alert total, trend, and baseline dispatch with the rest of the IT Health section.
+- Corrected Catalyst wireless protocol and SSID traffic charts so punctuation-bearing series names such as `802.11ax` are handled as fields instead of causing a templatized-search parse failure.
 - Added 31 validated searches to Splunkbase packages: Zeek SSH authentication pressure, wired NAC vendor-MAC review, eight SD-WAN security analyses, firewall NAT activity, Meraki blocked destinations, and 19 Cyber Vision asset, event, and syslog views.
 - Kept searches without populated validation results or with unresolved macro, data-model, lookup, REST, token, or MLTK dependencies in developer packages until their source contracts can be verified.
 
