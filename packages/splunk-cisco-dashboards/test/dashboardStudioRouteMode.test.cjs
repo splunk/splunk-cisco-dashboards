@@ -285,6 +285,33 @@ assert.ok(
   "Workplace Operations third KPI value must fit inside its background card",
 );
 
+const securityResilienceDefinition = readDefinition("secops_resilience");
+const securityResilienceDetails =
+  securityResilienceDefinition.layout.layoutDefinitions.layout_details.structure;
+const securityResilienceDetailsNarrative = securityResilienceDetails.find(
+  ({ item }) => item === "viz_narr_details",
+);
+const securityResilienceDetailsSection = securityResilienceDetails.find(
+  ({ item }) => item === "viz_sec_section2",
+);
+assert.ok(
+  securityResilienceDetailsNarrative && securityResilienceDetailsSection,
+  "Security Resilience Details must retain its narrative and section frame",
+);
+assert.equal(
+  securityResilienceDetailsNarrative.position.x,
+  securityResilienceDetailsSection.position.x + 20,
+  "Security Resilience Details narrative must align with the section content inset",
+);
+assert.equal(
+  securityResilienceDetailsNarrative.position.x +
+    securityResilienceDetailsNarrative.position.w,
+  securityResilienceDetailsSection.position.x +
+    securityResilienceDetailsSection.position.w -
+    20,
+  "Security Resilience Details narrative must span the section without wrapping into a scrollbar",
+);
+
 const netopsReadinessDefinition = readDefinition("netops_readiness");
 const netopsReadinessTabA =
   netopsReadinessDefinition.layout.layoutDefinitions.layout_tab_a.structure;

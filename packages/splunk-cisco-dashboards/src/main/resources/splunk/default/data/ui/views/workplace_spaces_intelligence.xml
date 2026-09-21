@@ -794,17 +794,19 @@
 			"dataSources": {
 				"primary": "ds_net_kpi_client_health"
 			},
-			"description": "DNAC overall client health (0-100).",
+			"description": "Latest available DNAC overall client health (0-100).",
 			"options": {
 				"majorColor": "#049fd9",
+				"majorValue": "> primary | seriesByName('Client Health') | lastPoint()",
 				"numberPrecision": 0,
 				"shouldAbbreviateMajorValue": true,
 				"shouldAbbreviateTrendValue": true,
 				"unit": "/100",
 				"unitPosition": "after",
+				"underLabel": "> primary | seriesByName('score_age') | lastPoint()",
 				"backgroundColor": "#131a23",
-				"trendColor": "#649ef5",
-				"sparklineStrokeColor": "#649ef5"
+				"showTrendIndicator": false,
+				"sparklineDisplay": "off"
 			},
 			"title": "Client health",
 			"type": "splunk.singlevalue"
@@ -1529,7 +1531,7 @@
 		"ds_client_health_by_site": {
 			"name": "Client health score by site over time",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" connectionStatus=\"connected\"\n| eval siteHierarchy=`dnac_site_normalize(siteHierarchy)`,\n health='health.overallScore'\n| where siteHierarchy!=\"\" AND isnotnull(health) AND health>0\n| bin _time span=1h\n| stats avg(health) as health by _time, siteHierarchy\n| timechart span=1h useother=t avg(eval(round(health, 2))) as \"Client Health\" by siteHierarchy where max in top10",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" connectionStatus=\"connected\"\n| eval site_raw=mvindex(mvdedup(siteHierarchy),0), health=tonumber(mvindex(mvdedup('health.overallScore'),0))\n| eval Site=`dnac_site_normalize(site_raw)`\n| where Site!=\"\" AND isnotnull(health) AND health>0\n| bin _time span=1h\n| stats avg(health) as health by _time, Site\n| timechart span=1h useother=t avg(eval(round(health, 2))) as \"Client Health\" by Site where max in top10",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1551,7 +1553,7 @@
 		"ds_convergence_health": {
 			"name": "Convergence health scores",
 			"options": {
-				"query": "`index_catalyst` (sourcetype=\"cisco:dnac:networkhealth\" category=\"All\") OR (sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\")\n| eval metric=case(sourcetype=\"cisco:dnac:networkhealth\", \"network_health\",\n sourcetype=\"cisco:dnac:clienthealth\", \"client_health\"),\n value=case(sourcetype=\"cisco:dnac:networkhealth\", healthScore,\n sourcetype=\"cisco:dnac:clienthealth\", scoreValue)\n| bin _time span=1h \n| stats latest(eval(if(metric=\"network_health\", value, null()))) as \"Network Health\",\n latest(eval(if(metric=\"client_health\", value, null()))) as \"Client Health\" by _time\n| eval \"Network Health\"=round('Network Health', 2),\n \"Client Health\"=round('Client Health', 2)",
+				"query": "`index_catalyst` ((sourcetype=\"cisco:dnac:networkhealth\" category=\"All\") OR (sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\" scoreType=\"ALL\"))\n| eval metric=case(sourcetype=\"cisco:dnac:networkhealth\", \"network_health\", sourcetype=\"cisco:dnac:clienthealth\", \"client_health\"),\n value=case(metric=\"network_health\",tonumber(mvindex(mvdedup(healthScore),0)),metric=\"client_health\",tonumber(mvindex(mvdedup(scoreValue),0))),\n clients=if(metric=\"client_health\",tonumber(mvindex(mvdedup(clientCount),0)),null())\n| where isnotnull(value) AND value>=0 AND (metric!=\"client_health\" OR clients>0)\n| bin _time span=1h \n| stats latest(eval(if(metric=\"network_health\", value, null()))) as \"Network Health\",\n latest(eval(if(metric=\"client_health\", value, null()))) as \"Client Health\" by _time\n| eval \"Network Health\"=round('Network Health', 2), \"Client Health\"=round('Client Health', 2)",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1738,7 +1740,7 @@
 		"ds_net_kpi_client_health": {
 			"name": "KPI Client health score",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\"\n| bin _time span=1h \n| stats latest(scoreValue) as \"Client Health\" by _time\n| eval \"Client Health\"=round('Client Health', 2)",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\" scoreType=\"ALL\"\n| eval \"Client Health\"=tonumber(mvindex(mvdedup(scoreValue),0)), clients=tonumber(mvindex(mvdedup(clientCount),0))\n| where 'Client Health'>=0 AND clients>0\n| sort 0 - _time\n| head 1\n| eval \"Client Health\"=round('Client Health',0), score_age_seconds=max(0,now()-_time)\n| eval score_age=case(score_age_seconds<60,\"Reported just now\",score_age_seconds<3600,\"Reported \".floor(score_age_seconds/60).\"m ago\",score_age_seconds<86400,\"Reported \".floor(score_age_seconds/3600).\"h ago\",true(),\"Reported \".floor(score_age_seconds/86400).\"d ago\")\n| fields \"Client Health\" score_age",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1782,7 +1784,7 @@
 		"ds_occupancy_vs_health": {
 			"name": "Scatter Occupancy vs Client Health",
 			"options": {
-				"query": "`index_catalyst` OR `index_spaces` (sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\") OR (sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR)\n| eval metric=case(sourcetype=\"cisco:dnac:clienthealth\", \"health\",\n sourcetype=\"cisco:spaces:firehose\", \"occupancy\"),\n value=case(sourcetype=\"cisco:dnac:clienthealth\", scoreValue,\n sourcetype=\"cisco:spaces:firehose\", 'deviceCounts.userCount')\n| bin _time span=1h \n| stats max(eval(if(metric=\"occupancy\", value, null()))) as occupancy,\n latest(eval(if(metric=\"health\", value, null()))) as client_health by _time\n| where isnotnull(occupancy) AND isnotnull(client_health)\n| eval occupancy=round(occupancy, 2),\n client_health=round(client_health, 2)\n| table occupancy client_health",
+				"query": "(`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\" scoreType=\"ALL\") OR (`index_spaces` sourcetype=\"cisco:spaces:firehose\" eventType=\"DEVICE_COUNT\" deviceCounts.location.inferredLocationTypes{}=FLOOR)\n| eval metric=case(sourcetype=\"cisco:dnac:clienthealth\", \"health\", sourcetype=\"cisco:spaces:firehose\", \"occupancy\"),\n value=case(metric=\"health\",tonumber(mvindex(mvdedup(scoreValue),0)),metric=\"occupancy\",tonumber(mvindex(mvdedup('deviceCounts.userCount'),0))),\n clients=if(metric=\"health\",tonumber(mvindex(mvdedup(clientCount),0)),null())\n| where (metric=\"occupancy\" AND isnotnull(value)) OR (metric=\"health\" AND value>=0 AND clients>0)\n| bin _time span=1h \n| stats max(eval(if(metric=\"occupancy\", value, null()))) as occupancy,\n latest(eval(if(metric=\"health\", value, null()))) as client_health by _time\n| where isnotnull(occupancy) AND isnotnull(client_health)\n| eval occupancy=round(occupancy, 2), client_health=round(client_health, 2)\n| table occupancy client_health",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"

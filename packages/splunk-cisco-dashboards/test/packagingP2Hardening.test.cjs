@@ -68,6 +68,17 @@ const SEARCHBASE_SOURCE = path.join(
   "default",
   "searchbase.conf",
 );
+const DASHBOARD_VIEW_DIRECTORY = path.join(
+  PACKAGE_ROOT,
+  "src",
+  "main",
+  "resources",
+  "splunk",
+  "default",
+  "data",
+  "ui",
+  "views",
+);
 const CATALYST_HEALTH_SOURCE = path.join(
   PACKAGE_ROOT,
   "src",
@@ -79,6 +90,30 @@ const CATALYST_HEALTH_SOURCE = path.join(
   "ui",
   "views",
   "netops_catalyst_health.xml",
+);
+const CRITICAL_SYSTEMS_HEALTH_SOURCE = path.join(
+  PACKAGE_ROOT,
+  "src",
+  "main",
+  "resources",
+  "splunk",
+  "default",
+  "data",
+  "ui",
+  "views",
+  "netops_critical_systems_health.xml",
+);
+const WORKPLACE_SPACES_SOURCE = path.join(
+  PACKAGE_ROOT,
+  "src",
+  "main",
+  "resources",
+  "splunk",
+  "default",
+  "data",
+  "ui",
+  "views",
+  "workplace_spaces_intelligence.xml",
 );
 const OPERATIONAL_VALIDATOR_SOURCE = path.join(
   REPOSITORY_ROOT,
@@ -1744,6 +1779,95 @@ function exerciseOperationalSearchSurfaceValidator() {
   );
   assert.match(catalystHealth, /round\('\<\<FIELD\>\>'\/1073741824/);
 
+  const criticalSystemsHealth = fs.readFileSync(
+    CRITICAL_SYSTEMS_HEALTH_SOURCE,
+    "utf8",
+  );
+  for (const dataSourceId of [
+    "ds_uxh_wired_health",
+    "ds_uxh_wireless_health",
+  ]) {
+    const dataSource = criticalSystemsHealth.match(
+      new RegExp(`"${dataSourceId}": \\{[\\s\\S]*?"query": "([\\s\\S]*?)",\\n\\s+"queryParameters"`),
+    );
+    assert.ok(dataSource, `${dataSourceId} must exist`);
+    assert.match(
+      dataSource[1],
+      /score=tonumber\(mvindex\(mvdedup\(scoreValue\),0\)\)/,
+      `${dataSourceId} must scalarize and coerce each source score`,
+    );
+    assert.match(dataSource[1], /clients=tonumber\(mvindex\(mvdedup\(clientCount\),0\)\)/);
+    assert.match(dataSource[1], /where score>=0 AND clients>0/);
+    assert.match(dataSource[1], /sort 0 - _time\\n\| head 1/);
+    assert.match(dataSource[1], /score_age=case\(/);
+    assert.match(dataSource[1], /fields score score_age/);
+    assert.doesNotMatch(
+      dataSource[1],
+        /if\(sv>=0, sv, 0\)|No current data/,
+      `${dataSourceId} must not convert unavailable health to zero`,
+    );
+  }
+  assert.equal(
+    [
+      ...criticalSystemsHealth.matchAll(
+        /"underLabel": "> primary \| seriesByName\('score_age'\) \| lastPoint\(\)"/g,
+      ),
+    ].length,
+    2,
+    "Both client-health tiles must display the age of the latest valid score",
+  );
+  assert.ok(
+    [...criticalSystemsHealth.matchAll(/"unit": "%"/g)].length >= 2,
+    "Both client-health tiles must retain percent units",
+  );
+
+  const workplaceSpaces = fs.readFileSync(WORKPLACE_SPACES_SOURCE, "utf8");
+  const networkImpactClientHealth = workplaceSpaces.match(
+    /"ds_net_kpi_client_health": \{[\s\S]*?"query": "([\s\S]*?)",\n\s+"queryParameters"/,
+  );
+  assert.ok(networkImpactClientHealth, "Network Impact client-health KPI must exist");
+  assert.match(networkImpactClientHealth[1], /where 'Client Health'>=0 AND clients>0/);
+  assert.match(networkImpactClientHealth[1], /sort 0 - _time\\n\| head 1/);
+  assert.match(networkImpactClientHealth[1], /score_age=case\(/);
+
+  const convergenceHealth = workplaceSpaces.match(
+    /"ds_convergence_health": \{[\s\S]*?"query": "([\s\S]*?)",\n\s+"queryParameters"/,
+  );
+  assert.ok(convergenceHealth, "Network Impact convergence-health series must exist");
+  assert.match(convergenceHealth[1], /`index_catalyst` \(\(sourcetype=/);
+  assert.match(convergenceHealth[1], /value>=0/);
+  assert.match(convergenceHealth[1], /metric!=\\"client_health\\" OR clients>0/);
+
+  const occupancyHealth = workplaceSpaces.match(
+    /"ds_occupancy_vs_health": \{[\s\S]*?"query": "([\s\S]*?)",\n\s+"queryParameters"/,
+  );
+  assert.ok(occupancyHealth, "Network Impact occupancy-health correlation must exist");
+  assert.match(occupancyHealth[1], /^\(`index_catalyst`[\s\S]*?\) OR \(`index_spaces`/);
+  assert.match(occupancyHealth[1], /metric=\\"health\\" AND value>=0 AND clients>0/);
+
+  const clientHealthBySite = workplaceSpaces.match(
+    /"ds_client_health_by_site": \{[\s\S]*?"query": "([\s\S]*?)",\n\s+"queryParameters"/,
+  );
+  assert.ok(clientHealthBySite, "Client health by site data source must exist");
+  assert.match(
+    clientHealthBySite[1],
+    /site_raw=mvindex\(mvdedup\(siteHierarchy\),0\)/,
+    "Client site hierarchy must be scalarized before macro normalization",
+  );
+  assert.match(
+    clientHealthBySite[1],
+    /health=tonumber\(mvindex\(mvdedup\('health\.overallScore'\),0\)\)/,
+    "Client health must be scalarized and converted before numeric comparison",
+  );
+  assert.match(clientHealthBySite[1], /Site=`dnac_site_normalize\(site_raw\)`/);
+  assert.match(clientHealthBySite[1], /by _time, Site/);
+  assert.match(clientHealthBySite[1], /by Site where max in top10/);
+  assert.doesNotMatch(
+    clientHealthBySite[1],
+    /dnac_site_normalize\(siteHierarchy\)/,
+    "The multivalue hierarchy must not be passed directly to the normalization macro",
+  );
+
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "scd-search-surfaces-"));
   try {
     const defaultRoot = path.join(fixtureRoot, "default");
@@ -1810,6 +1934,57 @@ function exerciseOperationalSearchSurfaceValidator() {
     assert.ok(failedReport.results.every((result) => result.status === "failed"));
   } finally {
     fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+}
+
+function exerciseAggregateFieldQuoting() {
+  const sourcePaths = [
+    ...fs
+      .readdirSync(DASHBOARD_VIEW_DIRECTORY)
+      .filter((fileName) => fileName.endsWith(".xml"))
+      .map((fileName) => path.join(DASHBOARD_VIEW_DIRECTORY, fileName)),
+    SEARCHBASE_SOURCE,
+  ];
+  const quotedDottedAggregate =
+    /\b(?:count|dc|distinct_count|latest|earliest|values|list|avg|average|sum|min|max|first|last|median|mode|range|stdev|var|perc\d+)\(\s*'[^']*\.[^']*'\s*\)/g;
+  const allowedEvalAggregateCounts = new Map([
+    ["avg('timeSeries{}.latencyMs')", 2],
+    ["max('timeSeries{}.lossPercent')", 1],
+    ["avg('iotTelemetry.temperature.temperatureInCelsius')", 1],
+  ]);
+  const observedAllowedCounts = new Map();
+  const unexpectedMatches = [];
+
+  for (const sourcePath of sourcePaths) {
+    const source = fs.readFileSync(sourcePath, "utf8");
+    for (const match of source.matchAll(quotedDottedAggregate)) {
+      const aggregate = match[0];
+      if (allowedEvalAggregateCounts.has(aggregate)) {
+        observedAllowedCounts.set(
+          aggregate,
+          (observedAllowedCounts.get(aggregate) || 0) + 1,
+        );
+        continue;
+      }
+
+      const line = source.slice(0, match.index).split("\n").length;
+      unexpectedMatches.push(
+        `${path.relative(PACKAGE_ROOT, sourcePath)}:${line}:${aggregate}`,
+      );
+    }
+  }
+
+  assert.deepEqual(
+    unexpectedMatches,
+    [],
+    `Direct stats/timechart aggregate fields must be bare; quoted dotted fields are only valid inside the reviewed eval-expression aggregates:\n${unexpectedMatches.join("\n")}`,
+  );
+  for (const [aggregate, expectedCount] of allowedEvalAggregateCounts) {
+    assert.equal(
+      observedAllowedCounts.get(aggregate),
+      expectedCount,
+      `${aggregate} must remain an explicitly reviewed timechart eval-expression exception`,
+    );
   }
 }
 
@@ -1987,6 +2162,7 @@ exercisePreviewRetainedResources();
 exercisePreviewRetentionMustBeDeveloping();
 exercisePromotedSearchbaseCatalogue();
 exerciseThreatSourcesAcceleration();
+exerciseAggregateFieldQuoting();
 exerciseOperationalSearchSurfaceValidator();
 
 console.log("Packaging P2 hardening contracts passed.");
