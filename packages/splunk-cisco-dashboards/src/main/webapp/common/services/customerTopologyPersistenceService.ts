@@ -447,8 +447,10 @@ export const saveCustomerTopologyConfig = async (
         ? sanitizePayload(expectedPayload)
         : null;
 
+    let stanzaExists: boolean | undefined;
     if (expectedPayload !== undefined) {
         const currentRow = await fetchRow(stanzaName);
+        stanzaExists = currentRow !== null;
         let currentRaw: unknown = null;
         try {
             currentRaw = currentRow?.payloadJson
@@ -494,10 +496,18 @@ export const saveCustomerTopologyConfig = async (
     const updateUrl = `${buildMutationBaseUrl(appName)}/${encodeURIComponent(
         stanzaName
     )}`;
+    let saveUrl = updateUrl;
+    let saveInit = postInit;
+    if (stanzaExists === false) {
+        const createBody = new URLSearchParams(body);
+        createBody.set('name', stanzaName);
+        saveUrl = buildMutationBaseUrl(appName);
+        saveInit = buildMutationInit(createBody);
+    }
     let response: Response;
     try {
         response = await withRetry(() =>
-            fetch(updateUrl, postInit)
+            fetch(saveUrl, saveInit)
         );
     } catch (error) {
         throw new CustomerTopologyPersistenceError(
@@ -508,7 +518,7 @@ export const saveCustomerTopologyConfig = async (
     }
     if (response.ok) return;
 
-    if (response.status === 404) {
+    if (response.status === 404 && stanzaExists !== false) {
         const createBody = new URLSearchParams(body);
         createBody.set('name', stanzaName);
         const createInit = buildMutationInit(createBody);
