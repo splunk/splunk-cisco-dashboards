@@ -59,39 +59,50 @@ const DESKTOP_DIALOG_BREAKPOINT = 720;
 const DIALOG_VIEWPORT_GUTTER = 32;
 const MIN_RESIZABLE_WIDTH = 640;
 const MIN_RESIZABLE_HEIGHT = 360;
-const BACKDROP_OPACITY_STORAGE_KEY =
+const BACKGROUND_VISIBILITY_STORAGE_KEY =
+    'splunk-cisco-dashboards.workspaceModal.backgroundVisibility';
+const LEGACY_BACKDROP_OPACITY_STORAGE_KEY =
     'splunk-cisco-dashboards.workspaceModal.backdropOpacity';
-const DEFAULT_BACKDROP_OPACITY = 16;
-const MIN_BACKDROP_OPACITY = 0;
-const MAX_BACKDROP_OPACITY = 100;
+const DEFAULT_BACKGROUND_VISIBILITY = 84;
+const MIN_BACKGROUND_VISIBILITY = 0;
+const MAX_BACKGROUND_VISIBILITY = 100;
 
 const clamp = (value: number, min: number, max: number): number =>
     Math.min(Math.max(value, Math.min(min, max)), max);
 
-const normalizeBackdropOpacity = (value: number): number =>
-    Math.round(clamp(value, MIN_BACKDROP_OPACITY, MAX_BACKDROP_OPACITY));
+const normalizeBackgroundVisibility = (value: number): number =>
+    Math.round(clamp(value, MIN_BACKGROUND_VISIBILITY, MAX_BACKGROUND_VISIBILITY));
 
-const readBackdropOpacity = (): number => {
-    if (typeof window === 'undefined') return DEFAULT_BACKDROP_OPACITY;
+const readBackgroundVisibility = (): number => {
+    if (typeof window === 'undefined') return DEFAULT_BACKGROUND_VISIBILITY;
     try {
         const stored = readUserScopedStorageItem(
-            userScopedStorageKey(BACKDROP_OPACITY_STORAGE_KEY),
+            userScopedStorageKey(BACKGROUND_VISIBILITY_STORAGE_KEY),
         );
-        if (stored === null) return DEFAULT_BACKDROP_OPACITY;
-        const parsed = Number(stored);
-        return Number.isFinite(parsed)
-            ? normalizeBackdropOpacity(parsed)
-            : DEFAULT_BACKDROP_OPACITY;
+        if (stored !== null) {
+            const parsed = Number(stored);
+            return Number.isFinite(parsed)
+                ? normalizeBackgroundVisibility(parsed)
+                : DEFAULT_BACKGROUND_VISIBILITY;
+        }
+
+        const legacyOpacity = readUserScopedStorageItem(
+            userScopedStorageKey(LEGACY_BACKDROP_OPACITY_STORAGE_KEY),
+        );
+        const parsedLegacyOpacity = Number(legacyOpacity);
+        return legacyOpacity !== null && Number.isFinite(parsedLegacyOpacity)
+            ? 100 - normalizeBackgroundVisibility(parsedLegacyOpacity)
+            : DEFAULT_BACKGROUND_VISIBILITY;
     } catch {
-        return DEFAULT_BACKDROP_OPACITY;
+        return DEFAULT_BACKGROUND_VISIBILITY;
     }
 };
 
-const writeBackdropOpacity = (value: number): void => {
+const writeBackgroundVisibility = (value: number): void => {
     if (typeof window === 'undefined') return;
     try {
         window.localStorage.setItem(
-            userScopedStorageKey(BACKDROP_OPACITY_STORAGE_KEY),
+            userScopedStorageKey(BACKGROUND_VISIBILITY_STORAGE_KEY),
             String(value),
         );
     } catch {
@@ -153,7 +164,7 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
     const { colorScheme } = useAppThemeControls();
     const generatedTitleId = React.useId();
     const generatedSubtitleId = React.useId();
-    const generatedBackdropOpacityId = React.useId();
+    const generatedBackgroundVisibilityId = React.useId();
     const titleId = providedTitleId ?? generatedTitleId;
     const dialogRef = React.useRef<HTMLDivElement>(null);
     const onCloseRef = React.useRef(onClose);
@@ -163,7 +174,8 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
     const [dialogSize, setDialogSize] = React.useState<DialogSize | null>(() =>
         isResizable ? getAutoDetailSize(wide) : null
     );
-    const [backdropOpacity, setBackdropOpacity] = React.useState(readBackdropOpacity);
+    const [backgroundVisibility, setBackgroundVisibility] =
+        React.useState(readBackgroundVisibility);
 
     onCloseRef.current = onClose;
 
@@ -347,18 +359,23 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
     React.useEffect(() => {
         if (typeof window === 'undefined') return undefined;
         const onStorage = (event: StorageEvent) => {
-            if (event.key !== userScopedStorageKey(BACKDROP_OPACITY_STORAGE_KEY)) return;
-            setBackdropOpacity(readBackdropOpacity());
+            if (
+                event.key !== userScopedStorageKey(BACKGROUND_VISIBILITY_STORAGE_KEY) &&
+                event.key !== userScopedStorageKey(LEGACY_BACKDROP_OPACITY_STORAGE_KEY)
+            ) {
+                return;
+            }
+            setBackgroundVisibility(readBackgroundVisibility());
         };
         window.addEventListener('storage', onStorage);
         return () => window.removeEventListener('storage', onStorage);
     }, []);
 
-    const updateBackdropOpacity = React.useCallback(
+    const updateBackgroundVisibility = React.useCallback(
         (event: React.FormEvent<HTMLInputElement>) => {
-            const next = normalizeBackdropOpacity(Number(event.currentTarget.value));
-            setBackdropOpacity(next);
-            writeBackdropOpacity(next);
+            const next = normalizeBackgroundVisibility(Number(event.currentTarget.value));
+            setBackgroundVisibility(next);
+            writeBackgroundVisibility(next);
         },
         []
     );
@@ -413,12 +430,14 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
 
     const modalLayer = (
         <div
-            className="fixed inset-0 z-[1900] flex items-center justify-center p-4 backdrop-blur-[2px] max-[719px]:items-end max-[719px]:p-0 max-[719px]:pt-4"
+            className="fixed inset-0 z-[1900] flex items-center justify-center p-4 max-[719px]:items-end max-[719px]:p-0 max-[719px]:pt-4"
             data-workspace-modal-backdrop="true"
-            data-backdrop-opacity={backdropOpacity}
+            data-background-visibility={backgroundVisibility}
             style={{
                 zIndex: 1900,
-                backgroundColor: `rgba(2, 6, 23, ${backdropOpacity / 100})`,
+                backgroundColor: `rgba(2, 6, 23, ${(100 - backgroundVisibility) / 100})`,
+                backdropFilter: `blur(${((100 - backgroundVisibility) / 100) * 2}px)`,
+                WebkitBackdropFilter: `blur(${((100 - backgroundVisibility) / 100) * 2}px)`,
             }}
         >
             <button
@@ -475,28 +494,28 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                     <div className="flex flex-shrink-0 items-center gap-2">
                         {headerMeta && <div className="hidden items-center gap-2 lg:flex">{headerMeta}</div>}
                         <label
-                            htmlFor={generatedBackdropOpacityId}
-                            title="Adjust workspace dimming behind the dialog"
+                            htmlFor={generatedBackgroundVisibilityId}
+                            title="Choose how much of the dashboard remains visible behind this window"
                             className="hidden h-8 items-center gap-2 rounded-[6px] border sui-border-weak sui-bg-page px-2  font-semibold sui-color-default min-[720px]:flex"
                         >
-                            <span>Backdrop</span>
+                            <span>Background</span>
                             <input
-                                id={generatedBackdropOpacityId}
+                                id={generatedBackgroundVisibilityId}
                                 type="range"
-                                min={MIN_BACKDROP_OPACITY}
-                                max={MAX_BACKDROP_OPACITY}
+                                min={MIN_BACKGROUND_VISIBILITY}
+                                max={MAX_BACKGROUND_VISIBILITY}
                                 step={1}
-                                value={backdropOpacity}
-                                onInput={updateBackdropOpacity}
-                                aria-label="Backdrop opacity"
-                                aria-valuetext={`${backdropOpacity}% opaque`}
+                                value={backgroundVisibility}
+                                onInput={updateBackgroundVisibility}
+                                aria-label="Background visibility"
+                                aria-valuetext={`${backgroundVisibility}% of background visible`}
                                 className="h-1.5 w-20 cursor-pointer accent-sky-400"
                             />
                             <output
-                                htmlFor={generatedBackdropOpacityId}
+                                htmlFor={generatedBackgroundVisibilityId}
                                 className="w-8 text-right font-mono  sui-color-default"
                             >
-                                {backdropOpacity}%
+                                {backgroundVisibility}%
                             </output>
                         </label>
                         {searchAction}

@@ -319,6 +319,8 @@ This Markdown file is the authoritative source for the in-product release histor
 
 Version 1.0.52 preserves complete large-fleet asset inventories, advances release build allocation beyond the published 1.0.51 package, and keeps first-run CIM discovery independent of saved allowlists.
 
+- Made drill-down backgrounds consistent with their parent workspace and replaced the inverted Backdrop control with a shared Background visibility control across Insights and Dashboard Manager dialogs.
+
 - Moved the Site Roles, View, and Map credits controls into a dedicated rail below the topology viewport, so compact maps keep every site visible and the full map surface remains draggable.
 
 ### Workspace usability

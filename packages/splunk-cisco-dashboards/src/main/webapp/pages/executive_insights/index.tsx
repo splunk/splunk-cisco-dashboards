@@ -7972,7 +7972,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
       openInSearchHref={searchUrl}
       openInSearchbaseHref={searchbaseUrl}
       wide={!activeIsTable || displayColumns.length > 5}
-      contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden sui-bg-page"
+      contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden sui-bg-section"
       headerMeta={
         activeIsTable && statusField ? (
           <>

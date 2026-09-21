@@ -547,6 +547,9 @@ const dashboardBuilderPicker = read(
 const dashboardBuilderStyles = read(
   "src/main/webapp/common/styles/commonstyles.css",
 );
+const dashboardBuilderDrilldown = read(
+  "src/main/webapp/pages/dashboardbuilder/DashboardStudioDrilldownModal.jsx",
+);
 const modalShell = read(
   "src/main/webapp/common/components/workspace/WorkspaceModalShell.tsx",
 );
@@ -1185,6 +1188,32 @@ assert.doesNotMatch(
 );
 
 assert.match(modalShell, /const previouslyFocused = document\.activeElement/);
+assert.match(
+  modalShell,
+  /<span>Background<\/span>[\s\S]*?aria-label="Background visibility"[\s\S]*?aria-valuetext=\{`\$\{backgroundVisibility\}% of background visible`\}/,
+  "Workspace dialogs must describe how much of the underlying dashboard remains visible",
+);
+assert.match(
+  modalShell,
+  /backgroundColor: `rgba\(2, 6, 23, \$\{\(100 - backgroundVisibility\) \/ 100\}\)`/,
+  "Background visibility must directly invert the obscuring overlay",
+);
+assert.match(
+  modalShell,
+  /LEGACY_BACKDROP_OPACITY_STORAGE_KEY[\s\S]*?100 - normalizeBackgroundVisibility\(parsedLegacyOpacity\)/,
+  "Existing backdrop preferences must migrate without changing their rendered result",
+);
+assert.doesNotMatch(modalShell, />Backdrop<|aria-label="Backdrop opacity"/);
+assert.match(
+  profile,
+  /contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden sui-bg-section"/,
+  "Insights drill-down dialogs must use the elevated workspace surface",
+);
+assert.match(
+  dashboardBuilderDrilldown,
+  /<WorkspaceModalShell[\s\S]*?contentClassName="dashboard-builder-drilldown-shell[^\"]*sui-bg-section"/,
+  "Dashboard Manager drill-down dialogs must share the elevated workspace surface and visibility control",
+);
 assert.match(
   appThemeProvider,
   /mountRoot\.dataset\.appColorScheme = colorScheme[\s\S]*?mountRoot\.style\.colorScheme = colorScheme/,
