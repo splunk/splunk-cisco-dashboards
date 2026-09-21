@@ -6295,6 +6295,10 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         latestTime,
         tag: `topology_link_${link.id}`,
         appContext: record.dispatchContext,
+        // Link telemetry is part of the active map experience. Dispatch it
+        // immediately after the signal rail instead of leaving it behind all
+        // dashboard sections at the default background priority.
+        dispatchPriority: 1,
       })
         .then((res) => {
           if (cancelled) return;

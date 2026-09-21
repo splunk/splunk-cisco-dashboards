@@ -474,6 +474,11 @@ assert.match(
   /tag: "topology_te_a2a_inventory"[\s\S]*?dispatchPriority: 1/,
   "A2A inventory must dispatch ahead of non-interactive dashboard sections",
 );
+assert.match(
+  topology,
+  /tag: `topology_link_\$\{link\.id\}`[\s\S]*?dispatchPriority: 1/,
+  "Searchbase-bound topology links must dispatch ahead of non-interactive dashboard sections",
+);
 assert.doesNotMatch(
   topology,
   /`\$\{match\.confidence\}%`/,
@@ -797,6 +802,11 @@ assert.match(
   userGuide,
   /Insights workspace editors, drawers, map controls,[\s\S]*?readable Splunk UI colors in both/,
   "The current in-app release notes must document the appearance repair",
+);
+assert.match(
+  userGuide,
+  /Searchbase-bound topology link searches[\s\S]*?waiting behind ordinary dashboard sections/,
+  "The current in-app release notes must document the topology link dispatch repair",
 );
 assert.match(
   userGuide,
