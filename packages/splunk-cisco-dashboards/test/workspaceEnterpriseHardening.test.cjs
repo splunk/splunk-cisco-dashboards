@@ -1193,20 +1193,19 @@ assert.doesNotMatch(
 assert.match(modalShell, /const previouslyFocused = document\.activeElement/);
 assert.match(
   modalShell,
-  /<span>Background<\/span>[\s\S]*?aria-label="Background visibility"[\s\S]*?aria-valuetext=\{`\$\{backgroundVisibility\}% of background visible`\}/,
-  "Workspace dialogs must describe how much of the underlying dashboard remains visible",
+  /const FIXED_BACKDROP_OPACITY = 0\.7;[\s\S]*?const FIXED_BACKDROP_BLUR_PX = 2;/,
+  "Workspace dialogs must use one deliberate fixed backdrop treatment",
 );
 assert.match(
   modalShell,
-  /backgroundColor: `rgba\(2, 6, 23, \$\{\(100 - backgroundVisibility\) \/ 100\}\)`/,
-  "Background visibility must directly invert the obscuring overlay",
+  /backgroundColor: `rgba\(2, 6, 23, \$\{FIXED_BACKDROP_OPACITY\}\)`[\s\S]*?backdropFilter: `blur\(\$\{FIXED_BACKDROP_BLUR_PX\}px\)`/,
+  "The fixed backdrop must dim and lightly blur the workspace behind the opaque dialog",
 );
-assert.match(
+assert.doesNotMatch(
   modalShell,
-  /LEGACY_BACKDROP_OPACITY_STORAGE_KEY[\s\S]*?100 - normalizeBackgroundVisibility\(parsedLegacyOpacity\)/,
-  "Existing backdrop preferences must migrate without changing their rendered result",
+  /type="range"|Background visibility|backdropOpacity|backgroundVisibility/,
+  "Workspace dialogs must not expose ambiguous backdrop or transparency sliders",
 );
-assert.doesNotMatch(modalShell, />Backdrop<|aria-label="Backdrop opacity"/);
 assert.match(
   profile,
   /contentClassName="scd-workspace-modal-content flex min-h-0 flex-1 flex-col overflow-hidden"/,

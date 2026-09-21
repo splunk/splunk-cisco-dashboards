@@ -1,10 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { ExternalLink, PanelRightOpen, X } from '@/common/icons/SuiIcon';
-import {
-    readUserScopedStorageItem,
-    userScopedStorageKey,
-} from '@/common/config/insightsWorkspaces';
 
 import { cn } from '@/common/lib/utils';
 import { useAppThemeControls } from '@/common/theme/AppThemeProvider';
@@ -59,56 +55,11 @@ const DESKTOP_DIALOG_BREAKPOINT = 720;
 const DIALOG_VIEWPORT_GUTTER = 32;
 const MIN_RESIZABLE_WIDTH = 640;
 const MIN_RESIZABLE_HEIGHT = 360;
-const BACKGROUND_VISIBILITY_STORAGE_KEY =
-    'splunk-cisco-dashboards.workspaceModal.backgroundVisibility';
-const LEGACY_BACKDROP_OPACITY_STORAGE_KEY =
-    'splunk-cisco-dashboards.workspaceModal.backdropOpacity';
-const DEFAULT_BACKGROUND_VISIBILITY = 84;
-const MIN_BACKGROUND_VISIBILITY = 0;
-const MAX_BACKGROUND_VISIBILITY = 100;
+const FIXED_BACKDROP_OPACITY = 0.7;
+const FIXED_BACKDROP_BLUR_PX = 2;
 
 const clamp = (value: number, min: number, max: number): number =>
     Math.min(Math.max(value, Math.min(min, max)), max);
-
-const normalizeBackgroundVisibility = (value: number): number =>
-    Math.round(clamp(value, MIN_BACKGROUND_VISIBILITY, MAX_BACKGROUND_VISIBILITY));
-
-const readBackgroundVisibility = (): number => {
-    if (typeof window === 'undefined') return DEFAULT_BACKGROUND_VISIBILITY;
-    try {
-        const stored = readUserScopedStorageItem(
-            userScopedStorageKey(BACKGROUND_VISIBILITY_STORAGE_KEY),
-        );
-        if (stored !== null) {
-            const parsed = Number(stored);
-            return Number.isFinite(parsed)
-                ? normalizeBackgroundVisibility(parsed)
-                : DEFAULT_BACKGROUND_VISIBILITY;
-        }
-
-        const legacyOpacity = readUserScopedStorageItem(
-            userScopedStorageKey(LEGACY_BACKDROP_OPACITY_STORAGE_KEY),
-        );
-        const parsedLegacyOpacity = Number(legacyOpacity);
-        return legacyOpacity !== null && Number.isFinite(parsedLegacyOpacity)
-            ? 100 - normalizeBackgroundVisibility(parsedLegacyOpacity)
-            : DEFAULT_BACKGROUND_VISIBILITY;
-    } catch {
-        return DEFAULT_BACKGROUND_VISIBILITY;
-    }
-};
-
-const writeBackgroundVisibility = (value: number): void => {
-    if (typeof window === 'undefined') return;
-    try {
-        window.localStorage.setItem(
-            userScopedStorageKey(BACKGROUND_VISIBILITY_STORAGE_KEY),
-            String(value),
-        );
-    } catch {
-        // Storage may be unavailable in hardened browser contexts.
-    }
-};
 
 const getDialogBounds = (): DialogSize => ({
     width: Math.max(320, window.innerWidth - DIALOG_VIEWPORT_GUTTER),
@@ -164,7 +115,6 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
     const { colorScheme } = useAppThemeControls();
     const generatedTitleId = React.useId();
     const generatedSubtitleId = React.useId();
-    const generatedBackgroundVisibilityId = React.useId();
     const titleId = providedTitleId ?? generatedTitleId;
     const dialogRef = React.useRef<HTMLDivElement>(null);
     const onCloseRef = React.useRef(onClose);
@@ -174,9 +124,6 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
     const [dialogSize, setDialogSize] = React.useState<DialogSize | null>(() =>
         isResizable ? getAutoDetailSize(wide) : null
     );
-    const [backgroundVisibility, setBackgroundVisibility] =
-        React.useState(readBackgroundVisibility);
-
     onCloseRef.current = onClose;
 
     const resetAutoSize = React.useCallback(() => {
@@ -356,30 +303,6 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
         };
     }, [isOpen, isResizable, resetAutoSize, wide]);
 
-    React.useEffect(() => {
-        if (typeof window === 'undefined') return undefined;
-        const onStorage = (event: StorageEvent) => {
-            if (
-                event.key !== userScopedStorageKey(BACKGROUND_VISIBILITY_STORAGE_KEY) &&
-                event.key !== userScopedStorageKey(LEGACY_BACKDROP_OPACITY_STORAGE_KEY)
-            ) {
-                return;
-            }
-            setBackgroundVisibility(readBackgroundVisibility());
-        };
-        window.addEventListener('storage', onStorage);
-        return () => window.removeEventListener('storage', onStorage);
-    }, []);
-
-    const updateBackgroundVisibility = React.useCallback(
-        (event: React.FormEvent<HTMLInputElement>) => {
-            const next = normalizeBackgroundVisibility(Number(event.currentTarget.value));
-            setBackgroundVisibility(next);
-            writeBackgroundVisibility(next);
-        },
-        []
-    );
-
     if (!isOpen || !portalTarget) {
         return null;
     }
@@ -432,13 +355,12 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
         <div
             className="fixed inset-0 z-[1900] flex items-center justify-center p-4 max-[719px]:items-end max-[719px]:p-0 max-[719px]:pt-4"
             data-workspace-modal-backdrop="true"
-            data-background-visibility={backgroundVisibility}
             data-app-color-scheme={colorScheme}
             style={{
                 zIndex: 1900,
-                backgroundColor: `rgba(2, 6, 23, ${(100 - backgroundVisibility) / 100})`,
-                backdropFilter: `blur(${((100 - backgroundVisibility) / 100) * 2}px)`,
-                WebkitBackdropFilter: `blur(${((100 - backgroundVisibility) / 100) * 2}px)`,
+                backgroundColor: `rgba(2, 6, 23, ${FIXED_BACKDROP_OPACITY})`,
+                backdropFilter: `blur(${FIXED_BACKDROP_BLUR_PX}px)`,
+                WebkitBackdropFilter: `blur(${FIXED_BACKDROP_BLUR_PX}px)`,
             }}
         >
             <button
@@ -494,31 +416,6 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                     </div>
                     <div className="flex flex-shrink-0 items-center gap-2">
                         {headerMeta && <div className="hidden items-center gap-2 lg:flex">{headerMeta}</div>}
-                        <label
-                            htmlFor={generatedBackgroundVisibilityId}
-                            title="Choose how much of the dashboard remains visible behind this window"
-                            className="hidden h-8 items-center gap-2 rounded-[6px] border sui-border-weak sui-bg-page px-2  font-semibold sui-color-default min-[720px]:flex"
-                        >
-                            <span>Background</span>
-                            <input
-                                id={generatedBackgroundVisibilityId}
-                                type="range"
-                                min={MIN_BACKGROUND_VISIBILITY}
-                                max={MAX_BACKGROUND_VISIBILITY}
-                                step={1}
-                                value={backgroundVisibility}
-                                onInput={updateBackgroundVisibility}
-                                aria-label="Background visibility"
-                                aria-valuetext={`${backgroundVisibility}% of background visible`}
-                                className="h-1.5 w-20 cursor-pointer accent-sky-400"
-                            />
-                            <output
-                                htmlFor={generatedBackgroundVisibilityId}
-                                className="w-8 text-right font-mono  sui-color-default"
-                            >
-                                {backgroundVisibility}%
-                            </output>
-                        </label>
                         {searchAction}
                         {searchbaseAction}
                         {onOpenDetailTable && (
