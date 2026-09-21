@@ -146,7 +146,7 @@ Macro discovery and data-model acceleration are separate checks. Use the readine
 | Cyber Vision | `cisco:cybervision:*` | `index_cybervision` |
 | UCS | `cisco:ucs*` | `index_ucs` |
 | Network Visibility Module | `cisco:nvm:*` | `index_nvm` |
-| DHCP | Windows DHCP Server logs such as `DhcpSrvLog` | `index_dhcp` |
+| DHCP | Windows DHCP Server logs (`DhcpSrvLog`) and ISC DHCP logs (`dhcpd`) | `index_dhcp` |
 
 Dashboard results depend on source types, normalized fields, data models, index mappings, permissions, and the selected time range. An empty result can mean that no matching condition occurred; it does not always indicate a collection failure.
 

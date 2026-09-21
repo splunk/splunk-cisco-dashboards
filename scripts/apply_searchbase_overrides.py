@@ -96,7 +96,79 @@ _ISSUES_TREND_RELATED_INFO = (
 # silently zeroing the KPI - risk with no user-visible gain. The sibling
 # compare_chart search does surface its phase labels, and those already read
 # "Baseline (first half)" / "Operations (second half)".
+# ---------------------------------------------------------------------------
+# Agentic SOC DHCP tiles: prose that names the wrong source type
+# ---------------------------------------------------------------------------
+# These three read the accelerated Network_Sessions data model through tstats
+# and filter it to DHCP. Their prose was written when the SPL filtered
+# sourcetype="dhcp"; the SPL now filters sourcetype="dhcpd", the value that
+# actually returns events in the target estate, so the prose names a source
+# type none of them reads.
+#
+# The word "confirmed" also goes. It asserted that the named source type had
+# been verified present in the accelerated model, which was true of the
+# original value at authoring time and has not been re-established since.
+# Membership in an accelerated data model is a property of the environment,
+# not of this repository: it depends on the add-on that tags the events and
+# on the acceleration being enabled. Prose in a shipped catalogue should not
+# claim an environment fact it cannot check. Each tile now says which source
+# type it reads and leaves the verifying to the operator, who can settle it
+# with:
+#
+#     | tstats count FROM datamodel=Network_Sessions.All_Sessions
+#           WHERE `index_dhcp` BY sourcetype
+#
+# If that returns a source type other than dhcpd, the SPL is what needs
+# changing, and these three strings move with it.
+#
+# The SPL is NOT touched here. dhcpd is the only value tested against live
+# data, and nothing in this repository can improve on that.
+_DHCP_ACTIVITY_EXPLANATION = (
+    "<p><code>tstats</code> counts the <code>dhcpd</code> member with "
+    "<code>span=auto</code> and broadcasts <code>WindowSessions</code> for the "
+    "headline. This provides identity and endpoint context; it is not a threat "
+    "count.</p>"
+)
+_DHCP_ACTIVITY_RELATED_INFO = (
+    "<ul><li><b>Headline</b><br><code>WindowSessions</code> is the "
+    "selected-window modeled DHCP event total.</li>"
+    "<li><b>Source contract</b><br>Reads <code>sourcetype=\"dhcpd\"</code> from "
+    "accelerated <code>Network_Sessions.All_Sessions</code>. The tile is empty "
+    "unless that source type is both present and tagged into the model.</li></ul>"
+)
+_DHCP_DEVICES_RELATED_INFO = (
+    "<ul><li><b>Headline semantics</b><br><code>PeakBucketObservedDevices</code> "
+    "is the maximum distinct MAC count in any automatic bucket, not a "
+    "managed-device inventory or an exact whole-window distinct count.</li>"
+    "<li><b>Source contract</b><br><code>All_Sessions.dest_mac</code> from the "
+    "<code>dhcpd</code> member of accelerated "
+    "<code>Network_Sessions.All_Sessions</code>.</li></ul>"
+)
+_DHCP_OUTCOMES_EXPLANATION = (
+    "<p>Accelerated <code>tstats</code> groups the <code>dhcpd</code> member of "
+    "<code>Network_Sessions.All_Sessions</code> by <code>All_Sessions.action</code> "
+    "and counts modeled sessions.</p>"
+)
+_DHCP_OUTCOMES_RELATED_INFO = (
+    "<ul><li><b>Interpretation</b><br>A high count reflects activity volume; the "
+    "action and signature context determine whether it is expected.</li>"
+    "<li><b>Field dependency</b><br>Requires <code>All_Sessions.action</code> to "
+    "be populated by whichever add-on normalises the DHCP feed. An empty result "
+    "can mean the field is unmapped rather than that no sessions occurred.</li></ul>"
+)
+
 OVERRIDES: dict[str, dict[str, str]] = {
+    "agentic_soc_unified_threat_activity": {
+        "explanation": _DHCP_ACTIVITY_EXPLANATION,
+        "related_info": _DHCP_ACTIVITY_RELATED_INFO,
+    },
+    "agentic_soc_unified_xdr_severity": {
+        "related_info": _DHCP_DEVICES_RELATED_INFO,
+    },
+    "agentic_soc_unified_xdr_status": {
+        "explanation": _DHCP_OUTCOMES_EXPLANATION,
+        "related_info": _DHCP_OUTCOMES_RELATED_INFO,
+    },
     "dashboard_it_health_v1_issues_trend": {
         "search_name": "IT Health - Open Issues Trend",
         "description": (

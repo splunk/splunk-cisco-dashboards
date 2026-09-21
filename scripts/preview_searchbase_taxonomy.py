@@ -599,7 +599,7 @@ PRODUCT_TAGS = {
     "AI Defense", "AKIPS", "Palo Alto", "Isovalent", "Secure Workload",
     "Secure Network Analytics", "Email Threat Defense", "Secure Endpoint",
     "Email Security", "Cisco IQ", "ServiceNow", "Zscaler", "NetFlow",
-    "Cisco IOS-XR", "IOS", "Windows DHCP", "Splunk Platform", "F5",
+    "Cisco IOS-XR", "IOS", "Windows DHCP", "ISC DHCP", "Splunk Platform", "F5",
     "Secure Web Appliance", "Kenna", "Microsoft Defender",
     "Vulnerability Intelligence",
 }
@@ -980,6 +980,16 @@ SUB_TO_CAT = {
 # Detect a missing product from the SPL so nothing loses its source.
 PRODUCT_FROM_SPL = (
     (r"sourcetype=\"?DhcpSrvLog", "Windows DHCP"),
+    # index_dhcp carries two different DHCP servers, and until now only the
+    # Windows one had a product tag, so the tag filter could not separate
+    # them. "dhcpd" is the ISC DHCP daemon: the two DHCP - Operations
+    # searches that read it parse ISC lease text ("No Lease offered",
+    # DHCPDISCOVER, DHCPv6 INFORMATION-REQUEST) and cite isc.org in their
+    # related_info, none of which appears in the comma-separated numeric
+    # event IDs that Windows DHCP writes. Keyed on the source type rather
+    # than the stanza id so the tag follows the SPL if the feed is
+    # re-onboarded under a different name.
+    (r"sourcetype=\"?dhcpd", "ISC DHCP"),
     (r"`index_windows`|WinEventLog|sourcetype=\"?ActiveDirectory|MSAD:", "Active Directory"),
     (r"^\s*\|\s*rest\s+/servicesNS|^\s*\|\s*rest\s+/services|index=_internal|index=_audit", "Splunk Platform"),
     (r"cisco:ise:", "ISE"),
