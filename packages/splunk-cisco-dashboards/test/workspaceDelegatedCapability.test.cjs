@@ -96,6 +96,16 @@ assert.doesNotMatch(
 );
 assert.match(topologyService, /buildBaseUrl[\s\S]*?configs\/conf-\$\{CONF_BASENAME\}/);
 assert.match(topologyService, /buildMutationBaseUrl[\s\S]*?scd_customer_topology/);
+assert.match(
+  topologyService,
+  /const currentRow = await fetchRow\(stanzaName\);[\s\S]*?stanzaExists = currentRow !== null;[\s\S]*?if \(stanzaExists === false\) \{[\s\S]*?createBody\.set\('name', stanzaName\);[\s\S]*?saveUrl = buildMutationBaseUrl\(appName\);/,
+  "A topology absent at load time must use the collection create route without an expected 404",
+);
+assert.match(
+  topologyService,
+  /response\.status === 404 && stanzaExists !== false[\s\S]*?createBody\.set\('name', stanzaName\)/,
+  "A topology update must retain the create fallback for a concurrent stanza deletion",
+);
 
 assert.match(
   defaultMeta,

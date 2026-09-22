@@ -407,22 +407,31 @@ const fetchRow = async (stanzaName: string): Promise<CustomerTopologyRow | null>
 export const loadCustomerTopologyConfig =
     async (topologyId?: string): Promise<SavedCustomerTopologyPayload | null> => {
         const row = await fetchRow(stanzaNameForTopology(topologyId));
-        if (!row?.payloadJson) return null;
-        let parsedPayload: unknown = null;
+        if (!row) return null;
+        if (!row.payloadJson) {
+            throw new CustomerTopologyPersistenceError(
+                'The shared topology configuration exists but has no payload. Repair or reset it before editing.'
+            );
+        }
+        let parsedPayload: unknown;
         try {
             parsedPayload = JSON.parse(row.payloadJson);
         } catch {
-            parsedPayload = null;
+            throw new CustomerTopologyPersistenceError(
+                'The shared topology configuration contains invalid JSON. Repair or reset it before editing.'
+            );
         }
         const payload = sanitizePayload(parsedPayload);
         if (payload) return payload;
-        return null;
+        throw new CustomerTopologyPersistenceError(
+            'The shared topology configuration is invalid. Repair or reset it before editing.'
+        );
     };
 
 export const saveCustomerTopologyConfig = async (
     payload: SavedCustomerTopologyPayload,
     expectedPayload?: SavedCustomerTopologyPayload | null,
-): Promise<void> => {
+): Promise<SavedCustomerTopologyPayload> => {
     const safePayload = sanitizePayload({
         ...payload,
         version: PAYLOAD_VERSION,
@@ -447,22 +456,26 @@ export const saveCustomerTopologyConfig = async (
         ? sanitizePayload(expectedPayload)
         : null;
 
+    let stanzaExists: boolean | undefined;
     if (expectedPayload !== undefined) {
         const currentRow = await fetchRow(stanzaName);
+        stanzaExists = currentRow !== null;
         let currentRaw: unknown = null;
+        let currentPayloadMalformed = false;
         try {
             currentRaw = currentRow?.payloadJson
                 ? JSON.parse(currentRow.payloadJson)
                 : null;
         } catch {
-            currentRaw = null;
+            currentPayloadMalformed = true;
         }
         const currentPayload = sanitizePayload(currentRaw);
         const expectedMatchesCurrent = safeExpectedPayload
-            ? Boolean(currentPayload) &&
+            ? !currentPayloadMalformed &&
+              Boolean(currentPayload) &&
               JSON.stringify(currentPayload) ===
                   JSON.stringify(safeExpectedPayload)
-            : currentPayload === null;
+            : currentRow === null;
         if (!expectedMatchesCurrent) {
             throw new CustomerTopologyPersistenceError(
                 'The shared topology changed after this page loaded. Reload and review the latest version before saving.',
@@ -473,7 +486,7 @@ export const saveCustomerTopologyConfig = async (
 
     if (!isInSplunkRuntime()) {
         writeDevPayload(stanzaName, safePayload);
-        return;
+        return safePayload;
     }
 
     const appName = getSearchAppContext();
@@ -494,10 +507,18 @@ export const saveCustomerTopologyConfig = async (
     const updateUrl = `${buildMutationBaseUrl(appName)}/${encodeURIComponent(
         stanzaName
     )}`;
+    let saveUrl = updateUrl;
+    let saveInit = postInit;
+    if (stanzaExists === false) {
+        const createBody = new URLSearchParams(body);
+        createBody.set('name', stanzaName);
+        saveUrl = buildMutationBaseUrl(appName);
+        saveInit = buildMutationInit(createBody);
+    }
     let response: Response;
     try {
         response = await withRetry(() =>
-            fetch(updateUrl, postInit)
+            fetch(saveUrl, saveInit)
         );
     } catch (error) {
         throw new CustomerTopologyPersistenceError(
@@ -506,16 +527,16 @@ export const saveCustomerTopologyConfig = async (
             }`
         );
     }
-    if (response.ok) return;
+    if (response.ok) return safePayload;
 
-    if (response.status === 404) {
+    if (response.status === 404 && stanzaExists !== false) {
         const createBody = new URLSearchParams(body);
         createBody.set('name', stanzaName);
         const createInit = buildMutationInit(createBody);
         const createResponse = await withRetry(() =>
             fetch(buildMutationBaseUrl(appName), createInit)
         );
-        if (createResponse.ok) return;
+        if (createResponse.ok) return safePayload;
         let createError: unknown = null;
         try {
             createError = await createResponse.json();

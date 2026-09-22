@@ -5,7 +5,7 @@ const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { execFileSync } = require("child_process");
+const { execFileSync, spawnSync } = require("child_process");
 
 const APP_NAME = "splunk-cisco-dashboards";
 const PACKAGE_ROOT = path.resolve(__dirname, "..");
@@ -59,6 +59,67 @@ const BUILD_PROFILE_MANIFEST_SOURCE = path.join(
   "config",
   "build-profile-manifest.json",
 );
+const SEARCHBASE_SOURCE = path.join(
+  PACKAGE_ROOT,
+  "src",
+  "main",
+  "resources",
+  "splunk",
+  "default",
+  "searchbase.conf",
+);
+const DASHBOARD_VIEW_DIRECTORY = path.join(
+  PACKAGE_ROOT,
+  "src",
+  "main",
+  "resources",
+  "splunk",
+  "default",
+  "data",
+  "ui",
+  "views",
+);
+const CATALYST_HEALTH_SOURCE = path.join(
+  PACKAGE_ROOT,
+  "src",
+  "main",
+  "resources",
+  "splunk",
+  "default",
+  "data",
+  "ui",
+  "views",
+  "netops_catalyst_health.xml",
+);
+const CRITICAL_SYSTEMS_HEALTH_SOURCE = path.join(
+  PACKAGE_ROOT,
+  "src",
+  "main",
+  "resources",
+  "splunk",
+  "default",
+  "data",
+  "ui",
+  "views",
+  "netops_critical_systems_health.xml",
+);
+const WORKPLACE_SPACES_SOURCE = path.join(
+  PACKAGE_ROOT,
+  "src",
+  "main",
+  "resources",
+  "splunk",
+  "default",
+  "data",
+  "ui",
+  "views",
+  "workplace_spaces_intelligence.xml",
+);
+const OPERATIONAL_VALIDATOR_SOURCE = path.join(
+  REPOSITORY_ROOT,
+  "scripts",
+  "validate_operational_search_surfaces.py",
+);
 const INSIGHTS_WORKSPACES_SOURCE = path.join(
   PACKAGE_ROOT,
   "src",
@@ -77,9 +138,19 @@ const USER_GUIDE_SOURCE = path.join(
   "user_guide",
   "index.tsx",
 );
+const USER_GUIDE_MARKDOWN_SOURCE = path.join(
+  PACKAGE_ROOT,
+  "src",
+  "main",
+  "webapp",
+  "pages",
+  "user_guide",
+  "userGuide.md",
+);
 const {
   applyBuildProfile,
   readManifest,
+  validateManifest,
 } = require("../bin/apply_build_profile.js");
 
 function makeTempRoot(label) {
@@ -147,6 +218,56 @@ function exerciseExcludedViewLinkSafety() {
       source,
       /(?:href:\s*|appUrl\()\s*["']searchbase_canvas(?:[?"'])/,
       `${path.relative(PACKAGE_ROOT, sourcePath)} must not link customers to the excluded Searchbase Canvas`,
+    );
+  }
+}
+
+function exercisePromotedSearchbaseCatalogue() {
+  const manifest = JSON.parse(fs.readFileSync(BUILD_PROFILE_MANIFEST_SOURCE, "utf8"));
+  const searchbase = fs.readFileSync(SEARCHBASE_SOURCE, "utf8");
+  const promotedStanzas = [
+    "security_resilience_zeek_ssh_auth_pressure",
+    "secure_networking_vendor_mac_on_nac_port",
+    "security_resilience_sdwan_hunt_application_downgrade_reversion",
+    "security_resilience_sdwan_hunt_peer_certificate_validation_failure",
+    "security_resilience_sdwan_hunt_cve_2022_20775_path_traversal",
+    "security_resilience_sdwan_hunt_root_ssh_public_key",
+    "security_resilience_sdwan_hunt_root_or_rogue_sessions",
+    "security_resilience_sdwan_hunt_suspicious_local_user_aaa",
+    "security_resilience_sdwan_hunt_correlated_compromise_timeline",
+    "security_resilience_sdwan_utd_amp_disposition_trend",
+    "network_intelligence_firewall_nat_translation_hits",
+    "secure_networking_meraki_top_blocked_destinations",
+    "cybervision_assets_top_protocols",
+    "cybervision_assets_device_inventory",
+    "cybervision_assets_flow_top_talkers",
+    "cybervision_assets_risk_distribution",
+    "cybervision_assets_activity_recency",
+    "cybervision_assets_external_communications_by_center",
+    "cybervision_assets_top_risk_devices",
+    "cybervision_assets_count_by_center",
+    "cybervision_assets_vulnerable_by_center",
+    "cybervision_events_severity_trend",
+    "cybervision_events_severity_distribution",
+    "cybervision_events_type_distribution",
+    "cybervision_events_center_distribution",
+    "cybervision_events_category_distribution",
+    "cybervision_events_detail",
+    "cybervision_syslog_severity_trend",
+    "cybervision_syslog_severity_distribution",
+    "cybervision_syslog_event_class_distribution",
+    "cybervision_syslog_event_detail",
+  ];
+
+  for (const stanzaId of promotedStanzas) {
+    assert.ok(
+      !manifest.developing.searchbaseStanzas.includes(stanzaId),
+      `${stanzaId} must ship in the Splunkbase profile`,
+    );
+    assert.match(
+      searchbase,
+      new RegExp(`^\\[${stanzaId}\\]$`, "m"),
+      `${stanzaId} must remain present in the Searchbase catalogue`,
     );
   }
 }
@@ -254,6 +375,152 @@ function exerciseDevelopingStaticAssetExclusion() {
   }
 }
 
+// The preview profile is the Splunkbase filter minus the manifest's
+// previewRetained carve-outs: everything else developing must still be removed,
+// so a preview cannot quietly become a second developer profile.
+function exercisePreviewRetainedResources() {
+  const appRoot = makeTempRoot("preview-retained");
+  const manifest = readManifest(BUILD_PROFILE_MANIFEST_SOURCE);
+  const retainedIdentity = ({ file, stanza, key }) => `${file} ${stanza} ${key}`;
+  try {
+    for (const viewId of manifest.developing.views) {
+      writeFile(
+        path.join(appRoot, "default", "data", "ui", "views", `${viewId}.xml`),
+        `<view id="${viewId}" />\n`,
+      );
+    }
+    writeFile(
+      path.join(appRoot, "default", "data", "ui", "nav", "default.xml"),
+      '<nav><a href="search?q=1">Search</a></nav>\n',
+    );
+    writeFile(path.join(appRoot, "default", "searchbase.conf"), "");
+    writeFile(path.join(appRoot, "default", "savedsearches.conf"), "");
+    writeFile(
+      path.join(appRoot, "default", "app.conf"),
+      "[triggers]\nreload.searchbase = simple\nreload.searchbase_canvases = simple\n",
+    );
+    writeFile(
+      path.join(appRoot, "default", "server.conf"),
+      "[shclustering]\nconf_replication_include.searchbase = true\nconf_replication_include.searchbase_canvases = true\n",
+    );
+    for (const assetPath of manifest.developing.staticAssets) {
+      writeFile(path.join(appRoot, ...assetPath.split("/")), "development-only\n");
+    }
+    for (const configPath of manifest.developing.configFiles) {
+      writeFile(path.join(appRoot, ...configPath.split("/")), "development-only\n");
+    }
+
+    const previewResult = applyBuildProfile(appRoot, "preview", { manifest });
+
+    assert.ok(
+      manifest.previewRetained.views.includes("searchbase_canvas"),
+      "The preview profile must retain the Searchbase Canvas view",
+    );
+    for (const viewId of manifest.previewRetained.views) {
+      assert.ok(
+        fs.existsSync(
+          path.join(appRoot, "default", "data", "ui", "views", `${viewId}.xml`),
+        ),
+        `${viewId} must remain available in a preview`,
+      );
+    }
+    for (const assetPath of manifest.previewRetained.staticAssets) {
+      assert.ok(
+        fs.existsSync(path.join(appRoot, ...assetPath.split("/"))),
+        `${assetPath} must remain available in a preview`,
+      );
+    }
+    for (const configPath of manifest.previewRetained.configFiles) {
+      assert.ok(
+        fs.existsSync(path.join(appRoot, ...configPath.split("/"))),
+        `${configPath} must remain available in a preview`,
+      );
+    }
+    assert.match(
+      fs.readFileSync(path.join(appRoot, "default", "app.conf"), "utf8"),
+      /reload\.searchbase_canvases\s*=\s*simple/,
+      "A preview must keep the conf settings its retained surface depends on",
+    );
+    assert.match(
+      fs.readFileSync(path.join(appRoot, "default", "server.conf"), "utf8"),
+      /conf_replication_include\.searchbase_canvases\s*=\s*true/,
+    );
+
+    const retainedViews = new Set(manifest.previewRetained.views);
+    assert.deepEqual(
+      previewResult.removedViewIds,
+      manifest.developing.views.filter((id) => !retainedViews.has(id)).sort(),
+      "A preview must still remove every developing view it does not retain",
+    );
+    assert.deepEqual(
+      previewResult.removedStaticAssets,
+      [],
+      "The manifest currently retains the whole Canvas web surface",
+    );
+    assert.deepEqual(
+      previewResult.removedSearchbaseStanzaIds,
+      [...manifest.developing.searchbaseStanzas].sort(),
+      "Unreleased Searchbase content is not part of the Canvas carve-out",
+    );
+    assert.deepEqual(
+      previewResult.removedSavedSearchIds,
+      [...manifest.developing.savedSearches].sort(),
+      "Unreleased saved searches are not part of the Canvas carve-out",
+    );
+    for (const viewId of previewResult.removedViewIds) {
+      assert.ok(
+        !fs.existsSync(
+          path.join(appRoot, "default", "data", "ui", "views", `${viewId}.xml`),
+        ),
+        `${viewId} must not ship in a preview`,
+      );
+    }
+
+    const retainedSettings = new Set(
+      manifest.previewRetained.confSettings.map(retainedIdentity),
+    );
+    for (const setting of previewResult.removedConfSettings) {
+      assert.ok(
+        !retainedSettings.has(retainedIdentity(setting)),
+        `${retainedIdentity(setting)} must not be removed from a preview`,
+      );
+    }
+  } finally {
+    removeTempRoot(appRoot);
+  }
+}
+
+// previewRetained is a carve-out from developing, never a way to add something
+// the Splunkbase profile does not already know about.
+function exercisePreviewRetentionMustBeDeveloping() {
+  const manifest = readManifest(BUILD_PROFILE_MANIFEST_SOURCE);
+  assert.throws(
+    () =>
+      validateManifest({
+        ...manifest,
+        previewRetained: {
+          ...manifest.previewRetained,
+          views: [...manifest.previewRetained.views, "user_guide"],
+        },
+      }),
+    /Preview-retained views must also be declared developing: user_guide/,
+    "A preview must not be able to retain a resource that always ships",
+  );
+  const root = makeTempRoot("preview-retention-schema");
+  try {
+    const manifestPath = path.join(root, "build-profile-manifest.json");
+    const { previewRetained, ...withoutRetention } = manifest;
+    writeFile(manifestPath, `${JSON.stringify(withoutRetention, null, 2)}\n`);
+    assert.throws(
+      () => readManifest(manifestPath),
+      /must declare previewRetained resource arrays/,
+      "A manifest without previewRetained arrays must be rejected outright",
+    );
+  } finally {
+    removeTempRoot(root);
+  }
+}
+
 function run(command, args, options = {}) {
   return execFileSync(command, args, {
     encoding: "utf8",
@@ -333,7 +600,14 @@ function makePackageFixture() {
   writeFile(
     path.join(packageRoot, "bin", "build.js"),
     [
-      "if (!process.argv.includes('--minify')) {",
+      "const fs = require('fs');",
+      "if (process.env.SCD_FIXTURE_BUILD_LOG) {",
+      "  fs.appendFileSync(process.env.SCD_FIXTURE_BUILD_LOG, process.argv.slice(2).join(' ') + '\\n');",
+      "}",
+      "if (",
+      "  !process.argv.includes('--minify') &&",
+      "  process.env.SCD_FIXTURE_EXPECT_UNMINIFIED !== '1'",
+      ") {",
       "  console.error('SplunkBase fixture build must be minified');",
       "  process.exit(1);",
       "}",
@@ -568,6 +842,16 @@ function exerciseProductionVerifierCacheRejection() {
       /searchbase_canvas\.js/,
       "The developer verifier must still require the internal Canvas bundle",
     );
+    const previewMissingCanvasFailure = runExpectFailure(
+      "node",
+      [VERIFY_SCRIPT_SOURCE, stage, "preview"],
+      { cwd: root },
+    );
+    assert.match(
+      previewMissingCanvasFailure,
+      /searchbase_canvas\.js/,
+      "The preview verifier must require the Canvas bundle it deliberately retains",
+    );
     const splunkbaseOutput = run(
       "node",
       [VERIFY_SCRIPT_SOURCE, stage, "splunkbase"],
@@ -589,8 +873,13 @@ function exerciseProductionVerifierCacheRejection() {
     );
     assert.match(
       splunkbaseCanvasLeakFailure,
-      /Splunkbase stage contains developing entry bundles/,
+      /splunkbase stage contains excluded entry bundles/,
       "The Splunkbase verifier must reject a leaked Canvas bundle",
+    );
+    assert.match(
+      run("node", [VERIFY_SCRIPT_SOURCE, stage, "preview"], { cwd: root }),
+      /Verified 11 preview production bundles/,
+      "The preview verifier must accept the Canvas bundle alongside shipped entries",
     );
   } finally {
     removeTempRoot(root);
@@ -915,6 +1204,173 @@ function exercisePackagingProfiles() {
   }
 }
 
+function exerciseSplunkbasePreviewPackaging() {
+  const fixture = makePackageFixture();
+  const distDir = path.join(fixture.root, "dist");
+  try {
+    writeFile(path.join(fixture.root, "uncommitted-release-input.txt"), "dirty\n");
+
+    assert.match(
+      runExpectFailure(
+        "bash",
+        [fixture.packageScript, "--splunkbase-preview", "--developer"],
+        { cwd: fixture.packageRoot },
+      ),
+      /--splunkbase-preview and --developer are mutually exclusive/,
+      "The preview must not be combinable with the profile it exists to exclude",
+    );
+    assert.match(
+      runExpectFailure(
+        "bash",
+        [fixture.packageScript, "--splunkbase-preview", "--from-stage"],
+        { cwd: fixture.packageRoot },
+      ),
+      /--splunkbase-preview and --from-stage are mutually exclusive/,
+      "The preview must not be built from watcher output that may lag source",
+    );
+
+    // A preview is a content check, not a release candidate, so it must not
+    // pay for minification the way the Splunkbase profile always does.
+    const buildLog = path.join(fixture.root, "fixture-build.log");
+    run("bash", [fixture.packageScript, "--splunkbase-preview"], {
+      cwd: fixture.packageRoot,
+      env: {
+        ...process.env,
+        SCD_FIXTURE_BUILD_LOG: buildLog,
+        SCD_FIXTURE_EXPECT_UNMINIFIED: "1",
+      },
+    });
+    assert.doesNotMatch(
+      fs.readFileSync(buildLog, "utf8"),
+      /--minify/,
+      "A preview must not force the slow release minification pass",
+    );
+    const previewArchive = listArchives(distDir).find((name) =>
+      name.endsWith("-preview.tar.gz"),
+    );
+    assert.equal(
+      previewArchive,
+      `${APP_NAME}-1.2.3-8-preview.tar.gz`,
+      "An uncommitted worktree must still produce a Splunkbase-filtered preview archive",
+    );
+    assert.equal(
+      listArchives(distDir).filter((name) => /-\d+\.tar\.gz$/.test(name)).length,
+      0,
+      "A preview must never occupy the release artifact namespace",
+    );
+    assert.deepEqual(
+      JSON.parse(
+        run("tar", [
+          "-xzOf",
+          path.join(distDir, previewArchive),
+          `${APP_NAME}/release-provenance.json`,
+        ]),
+      ),
+      {
+        schema_version: 1,
+        splunkbase_app_id: 9257,
+        package_id: APP_NAME,
+        version: "1.2.3",
+        build: 8,
+        git_commit: run("git", ["rev-parse", "HEAD"], { cwd: fixture.root }).trim(),
+        source_tree_clean: false,
+        release_eligible: false,
+      },
+      "A preview must record its uncommitted state and disclaim release eligibility",
+    );
+
+    // The preview drops the clean-worktree gate and nothing else: a file Git
+    // never tracks would misrepresent the very content the preview shows.
+    const ignoredResourcePath = path.join(
+      fixture.packageRoot,
+      "src",
+      "main",
+      "resources",
+      "splunk",
+      "default",
+      "ignored.env",
+    );
+    writeFile(path.join(fixture.root, ".gitignore"), "/dist/\nignored.env\n");
+    writeFile(ignoredResourcePath, "preview-must-refuse-this\n");
+    assert.match(
+      runExpectFailure("bash", [fixture.packageScript, "--splunkbase-preview"], {
+        cwd: fixture.packageRoot,
+        env: { ...process.env, SCD_FIXTURE_EXPECT_UNMINIFIED: "1" },
+      }),
+      /Splunkbase packaging refuses ignored files under release inputs/,
+      "Preview packaging must still refuse untracked release inputs",
+    );
+  } finally {
+    removeTempRoot(fixture.root);
+  }
+}
+
+function exercisePreviewArchivesCannotBecomeReleases() {
+  const fixture = makeRootBuildFixture();
+  try {
+    const previewOutput = run(
+      "bash",
+      [fixture.buildPath, "--splunkbase-preview"],
+      { cwd: fixture.root },
+    );
+    assert.match(
+      previewOutput,
+      /Tarball: .*splunk-cisco-dashboards-1\.2\.3-1-preview\.tar\.gz/,
+      "--splunkbase-preview must resolve its own artifact namespace",
+    );
+    assert.match(
+      previewOutput,
+      /Upload:\s+no \(Splunkbase preview/,
+      "A preview build must state plainly that it cannot be uploaded",
+    );
+
+    // Renaming a preview into the release namespace must not launder it: the
+    // archive's own release_eligible claim is what the release path trusts.
+    const distDir = path.join(fixture.root, "dist");
+    fs.copyFileSync(
+      path.join(distDir, `${APP_NAME}-1.2.3-1-preview.tar.gz`),
+      path.join(distDir, `${APP_NAME}-1.2.3-1.tar.gz`),
+    );
+    assert.match(
+      runExpectFailure(
+        "bash",
+        [
+          fixture.buildPath,
+          "--no-build",
+          "--splunkbase",
+          "--install",
+          "--auth",
+          "fixture:password",
+        ],
+        { cwd: fixture.root },
+      ),
+      /Splunkbase archive is not release-eligible/,
+      "A renamed preview must never satisfy the Splunkbase release gate",
+    );
+
+    assert.match(
+      runExpectFailure(
+        "bash",
+        [fixture.buildPath, "--splunkbase-preview", "--splunkbase"],
+        { cwd: fixture.root },
+      ),
+      /--splunkbase-preview and --splunkbase are mutually exclusive/,
+      "The preview and release profiles must stay explicitly separate",
+    );
+    assert.match(
+      runExpectFailure(
+        "bash",
+        [fixture.buildPath, "--splunkbase-preview", "--fast"],
+        { cwd: fixture.root },
+      ),
+      /--splunkbase-preview cannot be used with --fast/,
+      "Stage reuse must not be able to masquerade as a Splunkbase preview",
+    );
+  } finally {
+    removeTempRoot(fixture.root);
+  }
+}
+
 function exercisePostBuildSourceVerification() {
   const fixture = makePackageFixture();
   try {
@@ -980,9 +1436,11 @@ function makeRootBuildFixture() {
       'VERSION="$(tr -d "[:space:]" < "${ROOT_DIR}/VERSION")"',
       'FLOOR=0',
       'DEVELOPER=0',
+      'PREVIEW=0',
       'for ARG in "$@"; do',
       '  case "${ARG}" in',
       '    --developer) DEVELOPER=1 ;;',
+      '    --splunkbase-preview) PREVIEW=1 ;;',
       '    --minify) ;;',
       '    *) echo "unsupported fixture package option: ${ARG}" >&2; exit 2 ;;',
       '  esac',
@@ -996,6 +1454,7 @@ function makeRootBuildFixture() {
       'BUILD=$((FLOOR + 1))',
       'SUFFIX=""',
       '[[ "${DEVELOPER}" -eq 1 ]] && SUFFIX="-developer"',
+      '[[ "${PREVIEW}" -eq 1 ]] && SUFFIX="-preview"',
       'WORK_DIR="$(mktemp -d)"',
       "trap 'rm -rf \"${WORK_DIR}\"' EXIT",
       'mkdir -p "${WORK_DIR}/${APP_NAME}/default"',
@@ -1003,6 +1462,7 @@ function makeRootBuildFixture() {
       'if [[ "${DEVELOPER}" -eq 0 ]]; then',
       '  ELIGIBLE="${SCD_FIXTURE_RELEASE_ELIGIBLE:-true}"',
       '  CLEAN="${SCD_FIXTURE_SOURCE_TREE_CLEAN:-true}"',
+      '  if [[ "${PREVIEW}" -eq 1 ]]; then ELIGIBLE=false; CLEAN=false; fi',
       '  printf "{\\\"package_id\\\":\\\"%s\\\",\\\"version\\\":\\\"%s\\\",\\\"build\\\":%s,\\\"git_commit\\\":\\\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\\\",\\\"source_tree_clean\\\":%s,\\\"release_eligible\\\":%s}\\n" "${APP_NAME}" "${VERSION}" "${BUILD}" "${CLEAN}" "${ELIGIBLE}" > "${WORK_DIR}/${APP_NAME}/release-provenance.json"',
       'fi',
       'ARCHIVE_TMP="${ROOT_DIR}/dist/.fixture-archive.tar.gz"',
@@ -1265,6 +1725,269 @@ assert.doesNotMatch(
   /_scd_local_backup/,
   "Clean build must not use a shared fixed /tmp backup path",
 );
+function exerciseThreatSourcesAcceleration() {
+  const searchbase = fs.readFileSync(SEARCHBASE_SOURCE, "utf8");
+  const userGuide = fs.readFileSync(USER_GUIDE_MARKDOWN_SOURCE, "utf8");
+  const stanzaMatch = searchbase.match(
+    /\[executive_dashboard_threat_sources_with_baseline\]\n([\s\S]*?)(?=\n\[|$)/,
+  );
+  assert.ok(stanzaMatch, "Threat Sources baseline stanza must exist");
+  const stanza = stanzaMatch[1];
+
+  assert.match(stanza, /\| tstats `scd_summariesonly` count FROM DATAMODEL=Network_Traffic/);
+  assert.match(stanza, /nodename=All_Traffic\.Traffic_By_Action\.Blocked_Traffic/);
+  for (const sourcetype of [
+    "cisco:asa",
+    "cisco:ftd",
+    "cisco:ftd:*",
+    "cisco:sfw:estreamer",
+  ]) {
+    assert.ok(stanza.includes(`sourcetype="${sourcetype}"`));
+  }
+  assert.match(stanza, /BY _time span=auto All_Traffic\.src/);
+  assert.match(stanza, /\| rename All_Traffic\.src AS src/);
+  assert.match(stanza, /\| eventstats dc\(src\) AS total_sources/);
+  assert.match(
+    stanza,
+    /\| stats dc\(src\) AS sources, max\(total_sources\) AS total_sources BY _time/,
+  );
+  assert.match(stanza, /\| eventstats avg\(sources\) AS baseline/);
+  assert.doesNotMatch(stanza, /search = `index_firewall`/);
+  assert.doesNotMatch(stanza, /deliberately abandon|cannot be recovered/i);
+  assert.match(
+    userGuide,
+    /Threat sources[\s\S]*?accelerated CIM \*\*Blocked Traffic\*\*[\s\S]*?distinct-source headline[\s\S]*?distributed-peer failures/,
+    "The current release notes must disclose the accelerated Threat Sources repair",
+  );
+
+  const activeTeMatch = searchbase.match(
+    /\[it_health_active_te_alerts_high_critical\]\n([\s\S]*?)(?=\n\[|$)/,
+  );
+  assert.ok(activeTeMatch, "Active TE alerts time-series stanza must exist");
+  assert.match(activeTeMatch[1], /"tileId":"active_te_alerts"/);
+  assert.match(activeTeMatch[1], /"valueField":"total_count"/);
+  assert.match(activeTeMatch[1], /"sparkDataField":"active"/);
+  assert.match(activeTeMatch[1], /"baselineField":"baseline"/);
+}
+
+function exerciseOperationalSearchSurfaceValidator() {
+  const catalystHealth = fs.readFileSync(CATALYST_HEALTH_SOURCE, "utf8");
+  assert.doesNotMatch(
+    catalystHealth,
+    /round\(<<FIELD>>\//,
+    "Dynamic timechart fields must be quoted because protocol and SSID values can contain punctuation",
+  );
+  assert.match(catalystHealth, /round\('\<\<FIELD\>\>'\/1073741824/);
+
+  const criticalSystemsHealth = fs.readFileSync(
+    CRITICAL_SYSTEMS_HEALTH_SOURCE,
+    "utf8",
+  );
+  for (const dataSourceId of [
+    "ds_uxh_wired_health",
+    "ds_uxh_wireless_health",
+  ]) {
+    const dataSource = criticalSystemsHealth.match(
+      new RegExp(`"${dataSourceId}": \\{[\\s\\S]*?"query": "([\\s\\S]*?)",\\n\\s+"queryParameters"`),
+    );
+    assert.ok(dataSource, `${dataSourceId} must exist`);
+    assert.match(
+      dataSource[1],
+      /score=tonumber\(mvindex\(mvdedup\(scoreValue\),0\)\)/,
+      `${dataSourceId} must scalarize and coerce each source score`,
+    );
+    assert.match(dataSource[1], /clients=tonumber\(mvindex\(mvdedup\(clientCount\),0\)\)/);
+    assert.match(dataSource[1], /where score>=0 AND clients>0/);
+    assert.match(dataSource[1], /sort 0 - _time\\n\| head 1/);
+    assert.match(dataSource[1], /score_age=case\(/);
+    assert.match(dataSource[1], /fields score score_age/);
+    assert.doesNotMatch(
+      dataSource[1],
+        /if\(sv>=0, sv, 0\)|No current data/,
+      `${dataSourceId} must not convert unavailable health to zero`,
+    );
+  }
+  assert.equal(
+    [
+      ...criticalSystemsHealth.matchAll(
+        /"underLabel": "> primary \| seriesByName\('score_age'\) \| lastPoint\(\)"/g,
+      ),
+    ].length,
+    2,
+    "Both client-health tiles must display the age of the latest valid score",
+  );
+  assert.ok(
+    [...criticalSystemsHealth.matchAll(/"unit": "%"/g)].length >= 2,
+    "Both client-health tiles must retain percent units",
+  );
+
+  const workplaceSpaces = fs.readFileSync(WORKPLACE_SPACES_SOURCE, "utf8");
+  const networkImpactClientHealth = workplaceSpaces.match(
+    /"ds_net_kpi_client_health": \{[\s\S]*?"query": "([\s\S]*?)",\n\s+"queryParameters"/,
+  );
+  assert.ok(networkImpactClientHealth, "Network Impact client-health KPI must exist");
+  assert.match(networkImpactClientHealth[1], /where 'Client Health'>=0 AND clients>0/);
+  assert.match(networkImpactClientHealth[1], /sort 0 - _time\\n\| head 1/);
+  assert.match(networkImpactClientHealth[1], /score_age=case\(/);
+
+  const convergenceHealth = workplaceSpaces.match(
+    /"ds_convergence_health": \{[\s\S]*?"query": "([\s\S]*?)",\n\s+"queryParameters"/,
+  );
+  assert.ok(convergenceHealth, "Network Impact convergence-health series must exist");
+  assert.match(convergenceHealth[1], /`index_catalyst` \(\(sourcetype=/);
+  assert.match(convergenceHealth[1], /value>=0/);
+  assert.match(convergenceHealth[1], /metric!=\\"client_health\\" OR clients>0/);
+
+  const occupancyHealth = workplaceSpaces.match(
+    /"ds_occupancy_vs_health": \{[\s\S]*?"query": "([\s\S]*?)",\n\s+"queryParameters"/,
+  );
+  assert.ok(occupancyHealth, "Network Impact occupancy-health correlation must exist");
+  assert.match(occupancyHealth[1], /^\(`index_catalyst`[\s\S]*?\) OR \(`index_spaces`/);
+  assert.match(occupancyHealth[1], /metric=\\"health\\" AND value>=0 AND clients>0/);
+
+  const clientHealthBySite = workplaceSpaces.match(
+    /"ds_client_health_by_site": \{[\s\S]*?"query": "([\s\S]*?)",\n\s+"queryParameters"/,
+  );
+  assert.ok(clientHealthBySite, "Client health by site data source must exist");
+  assert.match(
+    clientHealthBySite[1],
+    /site_raw=mvindex\(mvdedup\(siteHierarchy\),0\)/,
+    "Client site hierarchy must be scalarized before macro normalization",
+  );
+  assert.match(
+    clientHealthBySite[1],
+    /health=tonumber\(mvindex\(mvdedup\('health\.overallScore'\),0\)\)/,
+    "Client health must be scalarized and converted before numeric comparison",
+  );
+  assert.match(clientHealthBySite[1], /Site=`dnac_site_normalize\(site_raw\)`/);
+  assert.match(clientHealthBySite[1], /by _time, Site/);
+  assert.match(clientHealthBySite[1], /by Site where max in top10/);
+  assert.doesNotMatch(
+    clientHealthBySite[1],
+    /dnac_site_normalize\(siteHierarchy\)/,
+    "The multivalue hierarchy must not be passed directly to the normalization macro",
+  );
+
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "scd-search-surfaces-"));
+  try {
+    const defaultRoot = path.join(fixtureRoot, "default");
+    const viewsRoot = path.join(defaultRoot, "data/ui/views");
+    fs.mkdirSync(viewsRoot, { recursive: true });
+    fs.writeFileSync(
+      path.join(defaultRoot, "searchbase.conf"),
+      `[tile_search]\nsearch_name = Tile Search\ndispatch_context = test_app\nviz_options = {"overview":[{"tileId":"tile_one"}]}\nsearch = | makeresults | eval value=1\n\n[rail_search]\nsearch_name = Rail Search\ndispatch_context = test_app\nsearch = | makeresults | eval value=2\n`,
+    );
+    fs.writeFileSync(
+      path.join(defaultRoot, "insights_workspaces.conf"),
+      `[signal_item.rail_one]\nsearch_name = Rail Search\n\n[signal_rail.demo]\nenabled = 1\nitems = rail_one\n\n[layout.demo.section]\ntiles = tile_one,tile_one\n`,
+    );
+    fs.writeFileSync(
+      path.join(defaultRoot, "customer_topology.conf"),
+      `[topology.default]\npayload_json = {"topology":{"links":[{"searchName":"Tile Search"}]}}\n`,
+    );
+    fs.writeFileSync(
+      path.join(viewsRoot, "fixture.xml"),
+      `<dashboard version="2"><definition><![CDATA[\n{"inputs":{"time":{"type":"input.timerange","options":{"token":"time_tok","defaultValue":"-4h,now"}}},"dataSources":{"base":{"type":"ds.search","options":{"query":"| makeresults | eval source=$source_tok$","queryParameters":{"earliest":"$time_tok.earliest$","latest":"$time_tok.latest$"}}},"catalogue":{"type":"ds.searchbase","options":{"ref":"tile_search","queryParameters":{"earliest":"$time_tok.earliest$","latest":"$time_tok.latest$"}}},"child":{"type":"ds.chain","options":{"extend":"base","query":"| head 1"}}}}\n]]></definition></dashboard>`,
+    );
+
+    const inventory = spawnSync(
+      "python3",
+      [OPERATIONAL_VALIDATOR_SOURCE, "--app-root", fixtureRoot, "--inventory-only", "--json"],
+      { encoding: "utf8" },
+    );
+    assert.equal(inventory.status, 0, inventory.stderr || inventory.stdout);
+    const report = JSON.parse(inventory.stdout);
+    assert.equal(report.ok, true);
+    assert.equal(report.inventory.workspace_references, 2);
+    assert.equal(report.inventory.signal_rail_references, 1);
+    assert.equal(report.inventory.topology_references, 1);
+    assert.equal(report.inventory.dashboard_search_roots, 1);
+    assert.equal(report.inventory.dashboard_searchbase_roots, 1);
+    assert.equal(report.inventory.dashboard_chains, 1);
+    assert.equal(report.inventory.unique_search_targets, 3);
+    assert.deepEqual(report.status_counts, { deferred: 1 });
+    assert.match(report.issues[0].message, /interaction-dependent tokens: source_tok/);
+
+    const secret = "validator-test-password";
+    const failedLive = spawnSync(
+      "python3",
+      [
+        OPERATIONAL_VALIDATOR_SOURCE,
+        "--app-root",
+        fixtureRoot,
+        "--base-url",
+        "http://127.0.0.1:9",
+        "--username",
+        "tester",
+        "--password",
+        secret,
+        "--no-effective-config",
+        "--timeout",
+        "1",
+        "--json",
+      ],
+      { encoding: "utf8" },
+    );
+    assert.equal(failedLive.status, 1);
+    assert.doesNotMatch(failedLive.stdout + failedLive.stderr, new RegExp(secret));
+    const failedReport = JSON.parse(failedLive.stdout);
+    assert.ok(failedReport.results.every((result) => result.status === "failed"));
+  } finally {
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
+  }
+}
+
+function exerciseAggregateFieldQuoting() {
+  const sourcePaths = [
+    ...fs
+      .readdirSync(DASHBOARD_VIEW_DIRECTORY)
+      .filter((fileName) => fileName.endsWith(".xml"))
+      .map((fileName) => path.join(DASHBOARD_VIEW_DIRECTORY, fileName)),
+    SEARCHBASE_SOURCE,
+  ];
+  const quotedDottedAggregate =
+    /\b(?:count|dc|distinct_count|latest|earliest|values|list|avg|average|sum|min|max|first|last|median|mode|range|stdev|var|perc\d+)\(\s*'[^']*\.[^']*'\s*\)/g;
+  const allowedEvalAggregateCounts = new Map([
+    ["avg('timeSeries{}.latencyMs')", 2],
+    ["max('timeSeries{}.lossPercent')", 1],
+    ["avg('iotTelemetry.temperature.temperatureInCelsius')", 1],
+  ]);
+  const observedAllowedCounts = new Map();
+  const unexpectedMatches = [];
+
+  for (const sourcePath of sourcePaths) {
+    const source = fs.readFileSync(sourcePath, "utf8");
+    for (const match of source.matchAll(quotedDottedAggregate)) {
+      const aggregate = match[0];
+      if (allowedEvalAggregateCounts.has(aggregate)) {
+        observedAllowedCounts.set(
+          aggregate,
+          (observedAllowedCounts.get(aggregate) || 0) + 1,
+        );
+        continue;
+      }
+
+      const line = source.slice(0, match.index).split("\n").length;
+      unexpectedMatches.push(
+        `${path.relative(PACKAGE_ROOT, sourcePath)}:${line}:${aggregate}`,
+      );
+    }
+  }
+
+  assert.deepEqual(
+    unexpectedMatches,
+    [],
+    `Direct stats/timechart aggregate fields must be bare; quoted dotted fields are only valid inside the reviewed eval-expression aggregates:\n${unexpectedMatches.join("\n")}`,
+  );
+  for (const [aggregate, expectedCount] of allowedEvalAggregateCounts) {
+    assert.equal(
+      observedAllowedCounts.get(aggregate),
+      expectedCount,
+      `${aggregate} must remain an explicitly reviewed timechart eval-expression exception`,
+    );
+  }
+}
+
 assert.match(
   fs.readFileSync(CLEAN_BUILD_SOURCE, "utf8"),
   /mktemp -d "\$\{TMPDIR:-\/tmp\}\/scd-clean-build\.XXXXXX"[\s\S]*?trap restore_local EXIT/,
@@ -1382,8 +2105,8 @@ assert.match(
 );
 assert.match(
   buildScript,
-  /no_build" -eq 0 && "\$splunkbase_profile_explicit" -eq 0 && "\$developer_profile" -eq 0/,
-  "Dirty-tree developer selection must not apply to --no-build reuse or explicit Splunkbase requests",
+  /no_build" -eq 0 && "\$splunkbase_profile_explicit" -eq 0 && "\$preview_profile" -eq 0[\s\S]*?"\$developer_profile" -eq 0/,
+  "Dirty-tree developer selection must not apply to --no-build reuse, explicit Splunkbase requests, or previews",
 );
 assert.doesNotMatch(
   buildScript,
@@ -1426,6 +2149,8 @@ exerciseCleanBuild();
 exerciseReleaseIdentityValidation();
 exerciseFromStageDefaultsToDeveloperProfile();
 exercisePackagingProfiles();
+exerciseSplunkbasePreviewPackaging();
+exercisePreviewArchivesCannotBecomeReleases();
 exercisePostBuildSourceVerification();
 exerciseProductionVerifierCacheRejection();
 exerciseRootBuildArchiveResolution();
@@ -1433,5 +2158,11 @@ exerciseLocalInstallProfileDefaults();
 exerciseDirtyDefaultInstallSelectsDeveloper();
 exerciseExcludedViewLinkSafety();
 exerciseDevelopingStaticAssetExclusion();
+exercisePreviewRetainedResources();
+exercisePreviewRetentionMustBeDeveloping();
+exercisePromotedSearchbaseCatalogue();
+exerciseThreatSourcesAcceleration();
+exerciseAggregateFieldQuoting();
+exerciseOperationalSearchSurfaceValidator();
 
 console.log("Packaging P2 hardening contracts passed.");

@@ -10,6 +10,7 @@
 # Default workflow:
 #   ./build.sh                                                # Splunkbase profile: minified released resources only
 #   ./build.sh --developer                                    # developer profile: includes developing resources
+#   ./build.sh --splunkbase-preview                           # Splunkbase content from an uncommitted worktree
 #
 # Install workflows (splunkd-managed; goes through REST mgmt port 8089):
 #   ./build.sh --install --auth admin:********                # Splunkbase build + `splunk install app` against the default Splunk
@@ -84,6 +85,7 @@ minify=0
 developer_profile=0
 developer_profile_explicit=0
 splunkbase_profile_explicit=0
+preview_profile=0
 lint_spl_antipatterns=0
 restart_after_install=0
 verbose=0
@@ -205,6 +207,7 @@ find_release_archive() {
         archive_name="$(basename "$archive")"
         archive_profile="splunkbase"
         [[ "$archive" == *-developer.tar.gz ]] && archive_profile="developer"
+        [[ "$archive" == *-preview.tar.gz ]] && archive_profile="preview"
         [[ "$archive_profile" == "$expected_profile" ]] || continue
 
         identity="$(archive_identity "$archive")"
@@ -215,6 +218,7 @@ find_release_archive() {
             && "$archive_build" =~ ^[1-9][0-9]*$ ]]; then
             profile_suffix=""
             [[ "$archive_profile" == "developer" ]] && profile_suffix="-developer"
+            [[ "$archive_profile" == "preview" ]] && profile_suffix="-preview"
             expected_name="${APP_NAME}-${archive_version}-${archive_build}${profile_suffix}.tar.gz"
             [[ "$archive_name" == "$expected_name" ]] || continue
             if (( archive_build > highest_build )); then
@@ -267,12 +271,51 @@ verify_release_archive() {
     fi
     profile_suffix=""
     [[ "$archive_name" == *-developer.tar.gz ]] && profile_suffix="-developer"
+    [[ "$archive_name" == *-preview.tar.gz ]] && profile_suffix="-preview"
     expected_name="${APP_NAME}-${archive_version}-${archive_build}${profile_suffix}.tar.gz"
     if [[ "$archive_name" != "$expected_name" ]]; then
         err "ERROR: release archive filename must contain its version and build: ${expected_name}"
         return 1
     fi
+    # A preview carries Splunkbase content under a name the release path never
+    # accepts. Check the claim as well as the name, so renaming an archive in
+    # either direction cannot move it between the two profiles.
+    if [[ "$expected_profile" == "preview" ]]; then
+        if [[ "$profile_suffix" != "-preview" ]]; then
+            err "ERROR: expected a Splunkbase preview archive: ${archive_name}"
+            return 1
+        fi
+        if ! provenance="$(tar -xzOf "$archive" "${APP_NAME}/release-provenance.json" 2>/dev/null)"; then
+            err "ERROR: Splunkbase preview archive is missing source provenance: ${archive_name}"
+            return 1
+        fi
+        if ! printf '%s' "$provenance" | node -e '
+            const fs = require("fs");
+            const [expectedPackageId, expectedVersion, expectedBuild] = process.argv.slice(1);
+            let value;
+            try {
+                value = JSON.parse(fs.readFileSync(0, "utf8"));
+            } catch {
+                process.exit(1);
+            }
+            if (
+                value.package_id !== expectedPackageId ||
+                value.version !== expectedVersion ||
+                value.build !== Number(expectedBuild) ||
+                value.release_eligible !== false
+            ) {
+                process.exit(1);
+            }
+        ' "$archive_package_id" "$archive_version" "$archive_build"; then
+            err "ERROR: preview archive does not declare itself non-release-eligible: ${archive_name}"
+            return 1
+        fi
+    fi
     if [[ "$expected_profile" == "splunkbase" ]]; then
+        if [[ -n "$profile_suffix" ]]; then
+            err "ERROR: ${profile_suffix#-} archives can never be treated as a Splunkbase release: ${archive_name}"
+            return 1
+        fi
         if ! provenance="$(tar -xzOf "$archive" "${APP_NAME}/release-provenance.json" 2>/dev/null)"; then
             err "ERROR: Splunkbase archive is missing release provenance: ${archive_name}"
             return 1
@@ -585,6 +628,17 @@ Other options:
                          This is the default when the Git worktree is clean.
                          Requires a clean committed worktree; uncommitted
                          local builds select the developer profile instead.
+  --splunkbase-preview   Apply the same released-resources-only filter to an
+                         uncommitted worktree, keeping the resources listed
+                         under previewRetained in the app's
+                         config/build-profile-manifest.json. Searchbase Canvas
+                         stays available so the preview can be used to inspect
+                         the catalogue it is previewing. Writes a
+                         \`*-preview.tar.gz\` marked release_eligible=false,
+                         which can be installed locally but never uploaded or
+                         installed as a release. Add --minify to match release
+                         bundle output. Not valid with --developer,
+                         --splunkbase, or --fast/--from-stage.
   --lint-spl-antipatterns
                          Run the experimental Searchbase SPL anti-pattern
                          policy gate before packaging. Disabled by default
@@ -615,6 +669,7 @@ Examples:
   ./build.sh                                                  # Splunkbase package (released resources only)
   ./build.sh --developer                                      # local developer package
   ./build.sh --install --splunkbase --auth admin:********     # upload-ready package + exact local install
+  ./build.sh --splunkbase-preview                             # SplunkBase content, uncommitted source
   ./build.sh --developer --install --auth admin:********      # explicit developer-profile install
   SPLUNK_HOME=/opt/10 ./build.sh --developer --fast --install --auth admin:********
   SPLUNK_HOME=/opt/10 ./build.sh --install --auth admin:******** --restart
@@ -698,6 +753,11 @@ while [[ $# -gt 0 ]]; do
         --splunkbase)
             developer_profile=0
             splunkbase_profile_explicit=1
+            shift
+            ;;
+        --splunkbase-preview)
+            developer_profile=0
+            preview_profile=1
             shift
             ;;
         --lint-spl-antipatterns)
@@ -832,6 +892,16 @@ if [[ "$developer_profile_explicit" -eq 1 && "$splunkbase_profile_explicit" -eq 
     echo "ERROR: --developer and --splunkbase are mutually exclusive." >&2
     exit 2
 fi
+if [[ "$preview_profile" -eq 1 && "$developer_profile_explicit" -eq 1 ]]; then
+    echo "ERROR: --splunkbase-preview and --developer are mutually exclusive." >&2
+    echo "       The preview profile excludes developing resources by design." >&2
+    exit 2
+fi
+if [[ "$preview_profile" -eq 1 && "$splunkbase_profile_explicit" -eq 1 ]]; then
+    echo "ERROR: --splunkbase-preview and --splunkbase are mutually exclusive." >&2
+    echo "       --splunkbase produces an upload-ready archive from a clean worktree." >&2
+    exit 2
+fi
 
 # The released-resources-only Splunkbase profile is the default for a clean
 # committed worktree. Uncommitted local work cannot produce an upload-ready
@@ -866,6 +936,11 @@ if [[ "$from_stage" -eq 1 && "$splunkbase_profile_explicit" -eq 1 ]]; then
     echo "       Watcher-built stage reuse is always a developer profile." >&2
     exit 2
 fi
+if [[ "$from_stage" -eq 1 && "$preview_profile" -eq 1 ]]; then
+    echo "ERROR: --splunkbase-preview cannot be used with --fast/--from-stage." >&2
+    echo "       A preview must reflect current source, not watcher-built stage output." >&2
+    exit 2
+fi
 if [[ "$from_stage" -eq 1 ]]; then
     developer_profile=1
 fi
@@ -880,11 +955,13 @@ worktree_has_uncommitted_changes() {
     [[ -n "$(git -C "$ROOT_DIR" status --porcelain --untracked-files=all)" ]]
 }
 
-if [[ "$no_build" -eq 0 && "$splunkbase_profile_explicit" -eq 0 && "$developer_profile" -eq 0 ]] \
+if [[ "$no_build" -eq 0 && "$splunkbase_profile_explicit" -eq 0 && "$preview_profile" -eq 0 \
+    && "$developer_profile" -eq 0 ]] \
     && worktree_has_uncommitted_changes; then
     developer_profile=1
     hdr "Uncommitted changes detected; using the developer profile so the build can proceed."
     hdr "Pass --splunkbase from a clean committed worktree for an upload-ready archive."
+    hdr "Pass --splunkbase-preview to see Splunkbase-filtered content before committing."
 fi
 
 # Minification changes webpack output, so it cannot be applied to a stage/
@@ -994,24 +1071,30 @@ else
     package_args=()
     if [[ "$developer_profile" -eq 1 ]]; then
         package_args+=(--developer)
+    elif [[ "$preview_profile" -eq 1 ]]; then
+        package_args+=(--splunkbase-preview)
     fi
     if [[ "$minify" -eq 1 ]]; then
         package_args+=(--minify)
         if [[ "$developer_profile" -eq 1 ]]; then
             hdr "Packaging ${APP_NAME} v${build_version} (minified developer profile; may take 10+ minutes)..."
+        elif [[ "$preview_profile" -eq 1 ]]; then
+            hdr "Packaging ${APP_NAME} v${build_version} (minified Splunkbase preview; may take 10+ minutes)..."
         else
             hdr "Packaging ${APP_NAME} v${build_version} (minified Splunkbase profile; may take 10+ minutes)..."
         fi
     else
         if [[ "$developer_profile" -eq 1 ]]; then
             hdr "Packaging ${APP_NAME} v${build_version} (developer profile)..."
+        elif [[ "$preview_profile" -eq 1 ]]; then
+            hdr "Packaging ${APP_NAME} v${build_version} (Splunkbase preview; not uploadable)..."
         else
             hdr "Packaging ${APP_NAME} v${build_version} (minified Splunkbase profile; required for release)..."
         fi
     fi
     # macOS ships Bash 3.2, where expanding an empty array under `set -u`
     # raises "unbound variable" instead of passing zero arguments.
-    if [[ "$developer_profile" -eq 1 || "$minify" -eq 1 ]]; then
+    if [[ "$developer_profile" -eq 1 || "$preview_profile" -eq 1 || "$minify" -eq 1 ]]; then
         run_quietly bash "${APP_DIR}/bin/package_app.sh" "${package_args[@]}"
     else
         run_quietly bash "${APP_DIR}/bin/package_app.sh"
@@ -1020,6 +1103,8 @@ fi
 
 if [[ "$developer_profile" -eq 1 ]]; then
     package_profile="developer"
+elif [[ "$preview_profile" -eq 1 ]]; then
+    package_profile="preview"
 else
     package_profile="splunkbase"
 fi
@@ -1271,6 +1356,8 @@ if [[ "$minify" -eq 1 ]]; then
 fi
 if [[ "$developer_profile" -eq 1 ]]; then
     app_profile_label="developer (released + developing resources)"
+elif [[ "$preview_profile" -eq 1 ]]; then
+    app_profile_label="Splunkbase preview (released resources + Searchbase Canvas; uncommitted source)"
 else
     app_profile_label="Splunkbase (released resources only)"
 fi
@@ -1285,6 +1372,8 @@ echo "  Profile: ${app_profile_label}"
 echo "  Tarball: ${package_path}"
 if [[ "$package_profile" == "splunkbase" ]]; then
     echo "  Upload:  ready for Splunkbase submission"
+elif [[ "$package_profile" == "preview" ]]; then
+    echo "  Upload:  no (Splunkbase preview; rebuild with --splunkbase from a clean worktree)"
 else
     echo "  Upload:  no (developer profile)"
 fi

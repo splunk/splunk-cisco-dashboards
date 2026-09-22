@@ -2265,7 +2265,7 @@
 		"ds_cs_traffic_by_protocol": {
 			"name": "Client Traffic by Protocol timechart",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.protocol as Protocol, traffic.* as * | eval tx_bytes=tonumber(mvindex(mvdedup(txBytes),0)), rx_bytes=tonumber(mvindex(mvdedup(rxBytes),0)), total_bytes=coalesce(tx_bytes,0)+coalesce(rx_bytes,0) | timechart sum(total_bytes) as traffic_bytes by Protocol fixedrange=false | foreach * [eval <<FIELD>>=if(\"<<FIELD>>\"!=\"_time\", round(<<FIELD>>/1073741824, 2), <<FIELD>>)]",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.protocol as Protocol, traffic.* as * | eval tx_bytes=tonumber(mvindex(mvdedup(txBytes),0)), rx_bytes=tonumber(mvindex(mvdedup(rxBytes),0)), total_bytes=coalesce(tx_bytes,0)+coalesce(rx_bytes,0) | timechart sum(total_bytes) as traffic_bytes by Protocol fixedrange=false | foreach * [eval <<FIELD>>=if(\"<<FIELD>>\"!=\"_time\", round('<<FIELD>>'/1073741824, 2), '<<FIELD>>')]",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -2276,7 +2276,7 @@
 		"ds_cs_traffic_by_ssid": {
 			"name": "Client Traffic by SSID timechart",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.ssid as SSID, traffic.* as * | eval tx_bytes=tonumber(mvindex(mvdedup(txBytes),0)), rx_bytes=tonumber(mvindex(mvdedup(rxBytes),0)), total_bytes=coalesce(tx_bytes,0)+coalesce(rx_bytes,0) | timechart sum(total_bytes) as traffic_bytes by SSID fixedrange=false | foreach * [eval <<FIELD>>=if(\"<<FIELD>>\"!=\"_time\", round(<<FIELD>>/1073741824, 2), <<FIELD>>)]",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:client\" type=\"Wireless\" | rename connection.ssid as SSID, traffic.* as * | eval tx_bytes=tonumber(mvindex(mvdedup(txBytes),0)), rx_bytes=tonumber(mvindex(mvdedup(rxBytes),0)), total_bytes=coalesce(tx_bytes,0)+coalesce(rx_bytes,0) | timechart sum(total_bytes) as traffic_bytes by SSID fixedrange=false | foreach * [eval <<FIELD>>=if(\"<<FIELD>>\"!=\"_time\", round('<<FIELD>>'/1073741824, 2), '<<FIELD>>')]",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"

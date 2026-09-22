@@ -76,8 +76,8 @@ Setup contains six stages:
 2. **Verify readiness:** check the Splunk environment and required capabilities.
 3. **Review packages:** confirm which supporting apps and add-ons are installed and enabled.
 4. **Configure data:** scan a bounded time range, review routing macro proposals, and choose the search-performance mode.
-5. **Tune CIM models:** run one bounded discovery search per CIM data model and select only the allow lists that you want to change. You can select **Skip CIM tuning** when no model is selected.
-6. **Review & finish:** compare current and proposed values, then select **Save changes and finish**. When there are no macro changes, Setup only marks initial setup complete and unlocks the workspace.
+5. **Tune CIM models:** run one bounded discovery search per CIM data model. Models backed by matching data are selected automatically; clear any allow list that you want to leave unchanged. You can select **Skip CIM tuning** when no model remains selected.
+6. **Review & finish:** compare current and proposed values, then select **Save changes and finish**. Setup persists every reviewed app routing macro and matched CIM allow list to the owning app's local configuration, including definitions that currently match a shipped default.
 
 Nothing is written until the final confirmation. Canceling Setup discards the draft plan.
 
@@ -117,9 +117,9 @@ Primary app macros use definitions such as `index IN (network, security)`. CIM a
 
 ### Tune CIM models
 
-CIM discovery is separate from source-type discovery because it evaluates tagged events through CIM datasets. It runs one search per data model, allows two searches in flight, preserves completed results, reports progress, and allows cancellation. A slow or unavailable model therefore does not block all other models.
+CIM discovery is separate from source-type discovery because it evaluates each model's root CIM tags against the configured indexes before reading or changing saved allowlists. It runs one search per data model, allows two searches in flight, preserves completed results, reports progress, and allows cancellation. A slow or unavailable model therefore does not block all other models.
 
-Select only the data models whose saved allow lists you want to update. Unselected models remain unchanged. Use a short range first; expand the range only when representative tagged data is missing.
+Every model backed by matching data enters the Step 6 draft automatically. Clear a model only when you want its saved allow list to remain unchanged. Use a short range first; expand the range only when representative tagged data is missing.
 
 ### Review acceleration
 
@@ -146,7 +146,7 @@ Macro discovery and data-model acceleration are separate checks. Use the readine
 | Cyber Vision | `cisco:cybervision:*` | `index_cybervision` |
 | UCS | `cisco:ucs*` | `index_ucs` |
 | Network Visibility Module | `cisco:nvm:*` | `index_nvm` |
-| DHCP | Windows DHCP Server logs such as `DhcpSrvLog` | `index_dhcp` |
+| DHCP | Windows DHCP Server logs (`DhcpSrvLog`) and ISC DHCP logs (`dhcpd`) | `index_dhcp` |
 
 Dashboard results depend on source types, normalized fields, data models, index mappings, permissions, and the selected time range. An empty result can mean that no matching condition occurred; it does not always indicate a collection failure.
 
@@ -313,6 +313,56 @@ Searchbase definitions are app-managed factory content. Workspace managers choos
 ## What's New / Release Notes {#release-notes}
 
 This Markdown file is the authoritative source for the in-product release history.
+
+::: release Release Notes | September 2026 - Version 1.0.52
+### Release overview
+
+Version 1.0.52 preserves complete large-fleet asset inventories, advances release build allocation beyond the published 1.0.51 package, and keeps first-run CIM discovery independent of saved allowlists.
+
+- Made Insights and Dashboard Manager drill-downs use the workspace's navy, cyan, and purple atmosphere instead of a flat black panel, with a consistent dimmed backdrop instead of an ambiguous transparency slider.
+
+- Moved the Site Roles, View, and Map credits controls into a dedicated rail below the topology viewport, so compact maps keep every site visible and the full map surface remains draggable.
+
+### Workspace usability
+
+- Kept tile information popovers concise on hover and focus, while clicking the same information control reveals the parent tile's complete Searchbase description, explanation, operator action, references, and execution plan.
+- Kept the separate tile detail control dedicated to associated drill-down searches and each drill-down search's own metadata.
+- Added responsive sizing, safe wrapping for long identifiers, viewport-bounded scrolling, pointer persistence, and Escape dismissal to tile information popovers.
+- Prioritized Searchbase-bound topology link searches immediately after the Signal Rail, so live link status and ThousandEyes metrics populate without waiting behind ordinary dashboard sections.
+
+### Asset inventory
+
+- Removed the implicit 10,000-row limit from the **Asset Inventory - Build Lookup** saved search so fleets larger than Splunk's default `sort` limit are written completely to `asset_inventory.csv`.
+- Removed the same implicit limit from the **Full Inventory** dashboard table so every row in the generated lookup remains available for display and filtering.
+- Added regression coverage for both inventory paths.
+
+### Guided Setup
+
+- Fixed first-run CIM discovery so tagged events are found before a CIM index
+  allowlist has been saved, including Umbrella DNS events in `cisco_umbrella`.
+
+### Searchbase catalogue
+
+- Moved the executive **Threat sources** tile from a raw firewall-event scan to the accelerated CIM **Blocked Traffic** dataset. The tile keeps its selected-window distinct-source headline and source scope while avoiding the high-volume distributed-peer failures seen with the previous raw pipeline.
+- Restored the missing Searchbase binding for the **Active TE alerts** workspace tile so its Major/Critical alert total, trend, and baseline dispatch with the rest of the IT Health section.
+- Corrected Catalyst wireless protocol and SSID traffic charts so punctuation-bearing series names such as `802.11ax` are handled as fields instead of causing a templatized-search parse failure.
+- Corrected the Cisco Spaces **Client health by site** chart so duplicate multivalue Catalyst health and site fields are scalarized before numeric filtering and site normalization, restoring the named per-site series instead of an anonymous aggregate.
+- Corrected Catalyst client-health handling across IT Critical Systems and Cisco Spaces Network Impact: `-1` and zero-client records are treated as unavailable, single-value tiles show the latest valid score with its reported age, and trend/correlation charts exclude unavailable samples.
+- Aligned the Security Resilience **Details & KPI Reference** narrative with the full dashboard section so its guidance remains on one line without an unnecessary scrollbar.
+- Corrected dotted-field quoting in Cisco Spaces device counts, Meraki VPN peer status, and Catalyst client-experience aggregations so Dashboard Studio and Searchbase searches resolve their nested fields instead of returning empty metrics.
+- Corrected first-time topology saves so a workspace without an existing map stanza uses the create endpoint directly instead of producing an expected 404 before retrying.
+- Hardened topology editing against stale-tab overwrites and damaged shared configuration, blocked editing until the canonical map has loaded, preserved intentionally empty maps, and added confirmations for draft discard and factory reset.
+- Added 31 validated searches to Splunkbase packages: Zeek SSH authentication pressure, wired NAC vendor-MAC review, eight SD-WAN security analyses, firewall NAT activity, Meraki blocked destinations, and 19 Cyber Vision asset, event, and syslog views.
+- Kept searches without populated validation results or with unresolved macro, data-model, lookup, REST, token, or MLTK dependencies in developer packages until their source contracts can be verified.
+
+### Packaging and release safety
+
+- Recorded published build 2095 as the durable release-history floor so future packages allocate build 2096 or later even when earlier archives are absent from `dist/`.
+
+### Upgrade notes
+
+- After upgrading, run **Asset Inventory - Build Lookup** once or wait for its next scheduled execution to replace any previously truncated lookup.
+- No data migration or Splunk restart is required.
 
 ::: release Release Notes | September 2026 - Version 1.0.51
 ### Release overview

@@ -96,8 +96,17 @@ const durableBuildFloor = Math.max(
 );
 assert.equal(
   durableBuildFloor,
-  2089,
-  "the durable release ledger must preserve the known build-2089 high-water mark",
+  2095,
+  "the durable release ledger must preserve the confirmed build-2095 high-water mark",
+);
+assert.ok(
+  releaseLedger.build_allocations.some(
+    ({ version: allocationVersion, build, state }) =>
+      allocationVersion === "1.0.51" &&
+      build === 2095 &&
+      state === "published",
+  ),
+  "published build 2095 must remain explicit release history rather than depending on tags or dist artifacts",
 );
 assert.ok(
   releaseLedger.build_allocations.some(

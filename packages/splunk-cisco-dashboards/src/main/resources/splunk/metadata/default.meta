@@ -107,6 +107,18 @@ export = system
 access = read : [ * ], write : [ admin, power, sc_admin ]
 export = system
 
+[macros/index_dns_umbrella]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/index_network_ftd]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
+[macros/index_webex]
+access = read : [ * ], write : [ admin, power, sc_admin ]
+export = system
+
 [insights_workspaces]
 access = read : [ * ], write : [ admin, sc_admin ]
 export = system

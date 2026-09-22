@@ -583,7 +583,7 @@ export const PACKAGED_WORKSPACE_FALLBACKS: readonly InsightsWorkspace[] = [
     sectionIds: ["it_health", "security", "building"],
     defaultVisibleSections: ["it_health", "security", "building"],
     maxVisibleSections: 3,
-    fallbackTileCount: 9,
+    fallbackTileCount: 3,
     headerTitle: "Global Operations Command",
     headerSubtitle: "Enterprise health, risk, and experience at decision speed",
     isBuiltIn: true,

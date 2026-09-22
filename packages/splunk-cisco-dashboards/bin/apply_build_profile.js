@@ -61,7 +61,19 @@ const SOURCE_SAVEDSEARCHES_PATH = path.join(
   "default",
   "savedsearches.conf",
 );
-const ALLOWED_PROFILES = new Set(["developer", "splunkbase"]);
+// developer retains every developing resource, splunkbase retains none, and
+// preview retains only what the manifest lists under previewRetained. The
+// Searchbase Canvas authoring tool lives there so a preview can still be used
+// to inspect the catalogue it is previewing.
+const ALLOWED_PROFILES = new Set(["developer", "splunkbase", "preview"]);
+const RESOURCE_CATEGORIES = [
+  "views",
+  "staticAssets",
+  "configFiles",
+  "confSettings",
+  "searchbaseStanzas",
+  "savedSearches",
+];
 const XML_OPTIONS = {
   ignoreAttributes: false,
   preserveOrder: true,
@@ -80,18 +92,56 @@ function readManifest(manifestPath = MANIFEST_PATH) {
 
   if (
     manifest.schemaVersion !== 1 ||
-    !Array.isArray(manifest.developing?.views) ||
-    !Array.isArray(manifest.developing?.staticAssets) ||
-    !Array.isArray(manifest.developing?.configFiles) ||
-    !Array.isArray(manifest.developing?.confSettings) ||
-    !Array.isArray(manifest.developing?.searchbaseStanzas) ||
-    !Array.isArray(manifest.developing?.savedSearches)
+    RESOURCE_CATEGORIES.some(
+      (category) => !Array.isArray(manifest.developing?.[category]),
+    )
   ) {
     throw new Error(
       "build-profile-manifest.json must declare schemaVersion 1 and developing resource arrays",
     );
   }
+  if (
+    RESOURCE_CATEGORIES.some(
+      (category) => !Array.isArray(manifest.previewRetained?.[category]),
+    )
+  ) {
+    throw new Error(
+      "build-profile-manifest.json must declare previewRetained resource arrays",
+    );
+  }
   return manifest;
+}
+
+function resourceIdentity(resource) {
+  return typeof resource === "string"
+    ? resource
+    : `${resource.file}\u0000${resource.stanza}\u0000${resource.key}`;
+}
+
+// A preview is a Splunkbase package with a documented set of carve-outs, so
+// every retained resource must be one the Splunkbase profile would otherwise
+// remove. Anything else means the two lists have drifted apart.
+function validatePreviewRetention(manifest) {
+  for (const category of RESOURCE_CATEGORIES) {
+    const developing = new Set(
+      manifest.developing[category].map(resourceIdentity),
+    );
+    const retained = manifest.previewRetained[category].map(resourceIdentity);
+    const unknown = retained.filter((identity) => !developing.has(identity));
+    const duplicates = retained.filter(
+      (identity, index) => retained.indexOf(identity) !== index,
+    );
+    if (unknown.length > 0) {
+      throw new Error(
+        `Preview-retained ${category} must also be declared developing: ${unknown
+          .map((identity) => identity.replace(/\u0000/g, " "))
+          .join(", ")}`,
+      );
+    }
+    if (duplicates.length > 0) {
+      throw new Error(`Preview-retained ${category} has duplicates`);
+    }
+  }
 }
 
 function validateDevelopingStaticAssets(staticAssets) {
@@ -339,6 +389,8 @@ function validateManifest(
     "saved search",
   );
 
+  validatePreviewRetention(manifest);
+
   const fivePillarViewIds = new Set(listFivePillarViewIds());
   const excludedPillarViews = manifest.developing.views.filter((viewId) =>
     fivePillarViewIds.has(viewId),
@@ -458,6 +510,23 @@ function applyBuildProfile(appRoot, profile, options = {}) {
     ...manifest.developing.savedSearches,
   ].sort();
 
+  const retained =
+    profile === "preview"
+      ? new Set(
+          RESOURCE_CATEGORIES.flatMap((category) =>
+            manifest.previewRetained[category].map(resourceIdentity),
+          ),
+        )
+      : new Set();
+  const excluded = (resources) =>
+    resources.filter((resource) => !retained.has(resourceIdentity(resource)));
+  const excludedViewIds = excluded(developingViewIds);
+  const excludedStaticAssets = excluded(developingStaticAssets);
+  const excludedConfigFiles = excluded(developingConfigFiles);
+  const excludedConfSettings = excluded(developingConfSettings);
+  const excludedSearchbaseStanzaIds = excluded(developingSearchbaseStanzaIds);
+  const excludedSavedSearchIds = excluded(developingSavedSearchIds);
+
   if (
     !fs.existsSync(appViewsDir) ||
     !fs.existsSync(appNavPath) ||
@@ -474,6 +543,8 @@ function applyBuildProfile(appRoot, profile, options = {}) {
     }
   }
 
+  // The developer profile removes nothing, so leave every staged file byte
+  // for byte rather than round-tripping the navigation XML for no change.
   if (profile === "developer") {
     return {
       profile,
@@ -497,13 +568,13 @@ function applyBuildProfile(appRoot, profile, options = {}) {
   const parser = new XMLParser(XML_OPTIONS);
   const parsedNav = parser.parse(navXml);
   let removedNavReferences = 0;
-  for (const viewId of developingViewIds) {
+  for (const viewId of excludedViewIds) {
     removedNavReferences += countNavigationReferences(parsedNav, viewId);
   }
 
   const filteredNav = filterNavigationNodes(
     parsedNav,
-    new Set(developingViewIds),
+    new Set(excludedViewIds),
   );
   const builder = new XMLBuilder({
     ...XML_OPTIONS,
@@ -512,11 +583,11 @@ function applyBuildProfile(appRoot, profile, options = {}) {
   });
   fs.writeFileSync(appNavPath, `${builder.build(filteredNav).trimEnd()}\n`);
 
-  for (const viewId of developingViewIds) {
+  for (const viewId of excludedViewIds) {
     fs.unlinkSync(path.join(appViewsDir, `${viewId}.xml`));
   }
 
-  for (const assetPath of developingStaticAssets) {
+  for (const assetPath of excludedStaticAssets) {
     const absoluteAssetPath = path.join(appRoot, ...assetPath.split("/"));
     if (!fs.existsSync(absoluteAssetPath)) {
       throw new Error(`Staged app is missing manifest static asset: ${absoluteAssetPath}`);
@@ -524,7 +595,7 @@ function applyBuildProfile(appRoot, profile, options = {}) {
     fs.unlinkSync(absoluteAssetPath);
   }
 
-  for (const configPath of developingConfigFiles) {
+  for (const configPath of excludedConfigFiles) {
     const absoluteConfigPath = path.join(appRoot, ...configPath.split("/"));
     if (!fs.existsSync(absoluteConfigPath)) {
       throw new Error(
@@ -535,7 +606,7 @@ function applyBuildProfile(appRoot, profile, options = {}) {
   }
 
   const settingsByFile = new Map();
-  for (const setting of developingConfSettings) {
+  for (const setting of excludedConfSettings) {
     if (!settingsByFile.has(setting.file)) {
       settingsByFile.set(setting.file, []);
     }
@@ -555,16 +626,13 @@ function applyBuildProfile(appRoot, profile, options = {}) {
   const searchbaseSource = fs.readFileSync(appSearchbasePath, "utf8");
   fs.writeFileSync(
     appSearchbasePath,
-    filterConfStanzas(
-      searchbaseSource,
-      new Set(developingSearchbaseStanzaIds),
-    ),
+    filterConfStanzas(searchbaseSource, new Set(excludedSearchbaseStanzaIds)),
   );
 
   const savedSearchesSource = fs.readFileSync(appSavedSearchesPath, "utf8");
   fs.writeFileSync(
     appSavedSearchesPath,
-    filterConfStanzas(savedSearchesSource, new Set(developingSavedSearchIds)),
+    filterConfStanzas(savedSearchesSource, new Set(excludedSavedSearchIds)),
   );
 
   return {
@@ -575,12 +643,12 @@ function applyBuildProfile(appRoot, profile, options = {}) {
     developingConfSettings,
     developingSearchbaseStanzaIds,
     developingSavedSearchIds,
-    removedViewIds: developingViewIds,
-    removedStaticAssets: developingStaticAssets,
-    removedConfigFiles: developingConfigFiles,
-    removedConfSettings: developingConfSettings,
-    removedSearchbaseStanzaIds: developingSearchbaseStanzaIds,
-    removedSavedSearchIds: developingSavedSearchIds,
+    removedViewIds: excludedViewIds,
+    removedStaticAssets: excludedStaticAssets,
+    removedConfigFiles: excludedConfigFiles,
+    removedConfSettings: excludedConfSettings,
+    removedSearchbaseStanzaIds: excludedSearchbaseStanzaIds,
+    removedSavedSearchIds: excludedSavedSearchIds,
     removedNavReferences,
   };
 }
@@ -590,7 +658,7 @@ function main() {
   const profile = process.argv[3] || "splunkbase";
   if (!appRoot) {
     console.error(
-      "Usage: node bin/apply_build_profile.js <staged-app-root> [splunkbase|developer]",
+      "Usage: node bin/apply_build_profile.js <staged-app-root> [splunkbase|developer|preview]",
     );
     process.exit(2);
   }
@@ -609,7 +677,7 @@ function main() {
       );
     } else {
       console.log(
-        `[build-profile] splunkbase: excluded ${result.removedViewIds.length} ` +
+        `[build-profile] ${profile}: excluded ${result.removedViewIds.length} ` +
           `developing view(s), ${result.removedNavReferences} navigation ` +
           `reference(s), ${result.removedStaticAssets.length} static asset(s), ` +
           `${result.removedConfigFiles.length} config file(s), ` +
@@ -618,6 +686,11 @@ function main() {
           `developing Searchbase stanza(s), and ` +
           `${result.removedSavedSearchIds.length} developing saved search(es)`,
       );
+      if (profile === "preview") {
+        console.log(
+          "[build-profile] preview: retained the Searchbase Canvas authoring surface",
+        );
+      }
     }
   } catch (error) {
     console.error(`[build-profile] ERROR: ${error.message}`);

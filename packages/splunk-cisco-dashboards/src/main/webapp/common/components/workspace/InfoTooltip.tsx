@@ -1,8 +1,8 @@
 /**
  * InfoTooltip — small hover/focus-revealed help bubble.
  *
- * Renders an `Info` icon that, on hover or keyboard focus, exposes a
- * popover with the supplied description.
+ * Renders an `Info` icon that exposes a concise summary on hover/focus and,
+ * when clicked, expands the same parent-tile surface with complete guidance.
  *
  * Why this is portaled to `#scan-root` (NOT `document.body`):
  *
@@ -42,7 +42,7 @@
  * so it can sit cleanly inside narrow flex rows.
  */
 
-import React, { useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useId, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Info } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
@@ -50,11 +50,21 @@ import type { ThresholdLine } from '@/common/hooks/useMetric';
 
 export type InfoTooltipAnchor = 'auto' | 'left' | 'right';
 
+export interface InfoTooltipDetailSection {
+    title: string;
+    content: string;
+}
+
 interface InfoTooltipProps {
     /** Heading shown bold at the top of the popover. */
     title?: string;
     /** Body text — supports a few short lines. */
     description: string;
+    /**
+     * Parent-tile guidance revealed when the user clicks the info button.
+     * This is deliberately distinct from drill-down search metadata.
+     */
+    detailSections?: readonly InfoTooltipDetailSection[];
     /**
      * Threshold rows for the THRESHOLDS section, typically derived
      * from a tile's `MetricThresholds` via `deriveThresholdLines`.
@@ -104,10 +114,10 @@ const THRESHOLD_TONE_DOT: Record<ThresholdLine['tone'], string> = {
     unknown: 'sui-bg-floating',
 };
 
-// Width of the popover in pixels. Kept in sync with the Tailwind
-// `w-[360px]` class on the popover so positioning math and rendered
-// width agree.
+// Compact and expanded widths in pixels. Inline sizing keeps positioning math
+// and rendered width aligned while maxWidth protects narrow viewports.
 const POPOVER_WIDTH = 360;
+const DETAIL_POPOVER_WIDTH = 520;
 // Vertical gap between the trigger icon and the popover top edge.
 const POPOVER_GAP = 6;
 // Minimum distance between the popover and the viewport edge so the
@@ -122,19 +132,20 @@ interface TooltipCoords {
 const computeCoords = (
     rect: DOMRect,
     anchor: InfoTooltipAnchor,
-    popoverHeight: number
+    popoverHeight: number,
+    popoverWidth: number
 ): TooltipCoords => {
     let left: number;
     if (anchor === 'left') {
         left = rect.left;
     } else if (anchor === 'right') {
-        left = rect.right - POPOVER_WIDTH;
+        left = rect.right - popoverWidth;
     } else {
-        left = rect.left + rect.width / 2 - POPOVER_WIDTH / 2;
+        left = rect.left + rect.width / 2 - popoverWidth / 2;
     }
     left = Math.max(
         VIEWPORT_PADDING,
-        Math.min(left, window.innerWidth - POPOVER_WIDTH - VIEWPORT_PADDING)
+        Math.min(left, window.innerWidth - popoverWidth - VIEWPORT_PADDING)
     );
 
     // Default: popover hangs below the trigger. If that would push
@@ -151,6 +162,7 @@ const computeCoords = (
 export const InfoTooltip: React.FC<InfoTooltipProps> = ({
     title,
     description,
+    detailSections,
     thresholdLines,
     thresholdNote,
     footnote,
@@ -167,10 +179,35 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
     const showThresholds =
         (Array.isArray(thresholdLines) && thresholdLines.length > 0) ||
         Boolean(thresholdNote);
+    const tooltipId = useId();
     const triggerRef = useRef<HTMLButtonElement | null>(null);
     const popoverRef = useRef<HTMLSpanElement | null>(null);
+    const closeTimerRef = useRef<number | null>(null);
     const [isOpen, setIsOpen] = useState(false);
+    const [showDetails, setShowDetails] = useState(false);
     const [coords, setCoords] = useState<TooltipCoords | null>(null);
+    const availableDetailSections = (detailSections ?? []).filter(
+        (section) => section.title.trim() && section.content.trim()
+    );
+    const hasDetails = availableDetailSections.length > 0;
+
+    const cancelScheduledClose = useCallback(() => {
+        if (closeTimerRef.current !== null) {
+            window.clearTimeout(closeTimerRef.current);
+            closeTimerRef.current = null;
+        }
+    }, []);
+    const closeTooltip = useCallback(() => {
+        cancelScheduledClose();
+        setIsOpen(false);
+        setShowDetails(false);
+        setCoords(null);
+    }, [cancelScheduledClose]);
+    const scheduleClose = useCallback(() => {
+        cancelScheduledClose();
+        if (showDetails) return;
+        closeTimerRef.current = window.setTimeout(closeTooltip, 120);
+    }, [cancelScheduledClose, closeTooltip, showDetails]);
 
     // Position the popover after it mounts. We measure the popover's
     // actual rendered height on a first pass (with the popover
@@ -183,12 +220,15 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
         const popoverHeight = popoverRef.current
             ? popoverRef.current.getBoundingClientRect().height
             : 0;
-        setCoords(computeCoords(triggerRect, anchor, popoverHeight));
+        const popoverWidth = popoverRef.current
+            ? popoverRef.current.getBoundingClientRect().width
+            : POPOVER_WIDTH;
+        setCoords(computeCoords(triggerRect, anchor, popoverHeight, popoverWidth));
         // showThresholds is included so the popover repositions when
         // the THRESHOLDS section grows or shrinks the body height
         // (e.g. switching between tiles with 3 threshold rows and
         // tiles with only a note).
-    }, [isOpen, anchor, description, title, footnote, showThresholds]);
+    }, [isOpen, anchor, description, title, footnote, showThresholds, showDetails]);
 
     // Reposition on scroll / resize so the popover follows its
     // trigger if the page scrolls underneath while the user keeps
@@ -202,7 +242,10 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
             const popoverHeight = popoverRef.current
                 ? popoverRef.current.getBoundingClientRect().height
                 : 0;
-            setCoords(computeCoords(triggerRect, anchor, popoverHeight));
+            const popoverWidth = popoverRef.current
+                ? popoverRef.current.getBoundingClientRect().width
+                : POPOVER_WIDTH;
+            setCoords(computeCoords(triggerRect, anchor, popoverHeight, popoverWidth));
         };
         window.addEventListener('scroll', reposition, true);
         window.addEventListener('resize', reposition);
@@ -211,6 +254,27 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
             window.removeEventListener('resize', reposition);
         };
     }, [isOpen, anchor]);
+
+    // Hover/focus content must be dismissible without moving focus. It also
+    // remains open while the pointer crosses the small portal gap so users can
+    // hover and scroll a viewport-limited popover (WCAG 2.2 SC 1.4.13).
+    useLayoutEffect(() => {
+        if (!isOpen) return undefined;
+        const dismissOnEscape = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                closeTooltip();
+            }
+        };
+        window.addEventListener('keydown', dismissOnEscape);
+        return () => window.removeEventListener('keydown', dismissOnEscape);
+    }, [isOpen, closeTooltip]);
+
+    useLayoutEffect(
+        () => () => {
+            cancelScheduledClose();
+        },
+        [cancelScheduledClose]
+    );
 
     // Portal target: `#scan-root` (the React mount node) rather than
     // `document.body`. Tailwind utilities are scoped under #scan-root
@@ -229,13 +293,21 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
         isOpen && portalTarget
             ? createPortal(
                   <span
+                      id={tooltipId}
                       ref={popoverRef}
-                      role="tooltip"
+                      role={showDetails ? 'dialog' : 'tooltip'}
+                      aria-label={showDetails ? `${title ?? 'Tile'} information` : undefined}
+                      onMouseEnter={cancelScheduledClose}
+                      onMouseLeave={showDetails ? undefined : closeTooltip}
                       style={{
                           position: 'fixed',
                           left: coords?.left ?? -9999,
                           top: coords?.top ?? -9999,
-                          width: POPOVER_WIDTH,
+                          width: showDetails ? DETAIL_POPOVER_WIDTH : POPOVER_WIDTH,
+                          maxWidth: `calc(100vw - ${VIEWPORT_PADDING * 2}px)`,
+                          maxHeight: `min(480px, calc(100vh - ${VIEWPORT_PADDING * 2}px))`,
+                          overflowY: 'auto',
+                          overflowWrap: 'anywhere',
                           // Hide on the very first paint while we're
                           // still measuring the actual rendered height.
                           // The follow-up useLayoutEffect commits the
@@ -247,7 +319,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                           visibility: coords ? 'visible' : 'hidden',
                       }}
                       className={cn(
-                          'z-[9999] p-4 rounded-lg pointer-events-none',
+                          'z-[9999] p-4 rounded-lg pointer-events-auto overscroll-contain',
                           'sui-bg-section sui-color-active shadow-xl ring-1 sui-focus-ring',
                           // 13.5px sub-pixel-rounds noticeably crisper
                           // than 13 on retina displays; leading-[1.6]
@@ -262,9 +334,20 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                               {title}
                           </span>
                       )}
-                      <span className="block sui-color-active font-normal normal-case">
-                          {description}
-                      </span>
+                      {showDetails ? (
+                          <span className="block min-w-0">
+                              <span className="block sui-color-info text-xs font-bold tracking-wider mb-1 uppercase">
+                                  Description
+                              </span>
+                              <span className="block whitespace-pre-wrap break-words sui-color-active font-normal normal-case">
+                                  {description}
+                              </span>
+                          </span>
+                      ) : (
+                          <span className="block break-words sui-color-active font-normal normal-case">
+                              {description}
+                          </span>
+                      )}
                       {showThresholds && (
                           <span className="block mt-3 pt-2.5 border-t sui-border-default">
                               {/* Section header. Mirrors the all-caps
@@ -307,7 +390,7 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                               {thresholdNote && (
                                   <span
                                       className={cn(
-                                          'block  sui-color-default leading-snug',
+                                          'block break-words sui-color-default leading-snug',
                                           Array.isArray(thresholdLines) && thresholdLines.length > 0
                                               ? 'mt-1.5'
                                               : ''
@@ -321,6 +404,25 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                       {footnote && (
                           <span className="block mt-2.5 pt-2 border-t sui-border-default  italic sui-color-default font-mono break-all leading-snug">
                               {footnote}
+                          </span>
+                      )}
+                      {showDetails && hasDetails && (
+                          <span className="block mt-3 pt-3 border-t sui-border-default space-y-3">
+                              {availableDetailSections.map((section) => (
+                                  <span key={section.title} className="block min-w-0">
+                                      <span className="block sui-color-info text-xs font-bold tracking-wider mb-1 uppercase">
+                                          {section.title}
+                                      </span>
+                                      <span className="block whitespace-pre-wrap break-words sui-color-active font-normal normal-case">
+                                          {section.content}
+                                      </span>
+                                  </span>
+                              ))}
+                          </span>
+                      )}
+                      {hasDetails && !showDetails && (
+                          <span className="block mt-2.5 pt-2 border-t sui-border-default text-xs sui-color-muted">
+                              Click the info button for complete tile guidance.
                           </span>
                       )}
                   </span>,
@@ -355,21 +457,35 @@ export const InfoTooltip: React.FC<InfoTooltipProps> = ({
                 'relative inline-flex focus-within:outline-none',
                 className
             )}
-            onMouseEnter={() => setIsOpen(true)}
-            onMouseLeave={() => {
-                setIsOpen(false);
-                setCoords(null);
+            onMouseEnter={() => {
+                cancelScheduledClose();
+                setIsOpen(true);
             }}
-            onFocus={() => setIsOpen(true)}
-            onBlur={() => {
-                setIsOpen(false);
-                setCoords(null);
+            onMouseLeave={scheduleClose}
+            onFocus={() => {
+                cancelScheduledClose();
+                setIsOpen(true);
             }}
+            onBlur={closeTooltip}
         >
             <button
                 ref={triggerRef}
                 type="button"
                 aria-label={iconAriaLabel}
+                aria-describedby={isOpen && !showDetails ? tooltipId : undefined}
+                aria-expanded={hasDetails ? showDetails : undefined}
+                aria-controls={hasDetails && isOpen ? tooltipId : undefined}
+                aria-haspopup={hasDetails ? 'dialog' : undefined}
+                onClick={() => {
+                    if (!hasDetails) return;
+                    if (showDetails) {
+                        closeTooltip();
+                        return;
+                    }
+                    cancelScheduledClose();
+                    setIsOpen(true);
+                    setShowDetails(true);
+                }}
                 className={cn(
                     'p-0.5 -my-0.5  sui-color-default  sui-hover-color-info  sui-focus-color-info transition-colors rounded focus:outline-none focus:ring-1 sui-focus-ring',
                     iconClassName

@@ -10,6 +10,49 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Removed customer-identifying names from the shipped catalogue and dashboards.
+  One Searchbase entry was deleted and five were renamed, so **operators who
+  bound any of these searches to a topology map link must re-bind them**. Map
+  link bindings are saved by search name in your own
+  `local/customer_topology.conf`; a binding that points at an old name stops
+  resolving silently, and the link falls back to its static values rather than
+  showing an error. Open the Overview map, select the affected link, and pick
+  the replacement entry from the Searchbase list.
+
+  Deleted:
+
+  - *FDEM - Link TLH to AUB ThousandEyes A2A Health* - this search was pinned to
+    a single ThousandEyes agent-to-agent test ID that exists in only one
+    customer's ThousandEyes account, so on every other deployment it returned a
+    permanent "unknown" placeholder rather than real link health. Re-bind
+    affected links to *Overview - Link ThousandEyes A2A Health*, which reports
+    the same latency, loss, and jitter but discovers the agent-to-agent test
+    from your own data instead of a hard-coded ID.
+
+  Renamed (behaviour is unchanged; only the display name differs):
+
+  | Old name | New name |
+  | --- | --- |
+  | NetOps Readiness - Q3 - DNAC: APs to fix before the exercise | NetOps Readiness - Q3 - DNAC: APs to fix before the surge event |
+  | NetOps Readiness - Q8 - Spaces: Surge multiplier per building (baseline week vs exercise) | NetOps Readiness - Q8 - Spaces: Surge multiplier per building (baseline week vs surge event) |
+  | Cisco Spaces Intelligence - Spaces baseline x exercise - same metrics, side-by-side | Cisco Spaces Intelligence - Spaces baseline vs surge event - same metrics, side-by-side |
+  | Cisco Spaces Intelligence - Spaces baseline x exercise - surge multiplier | Cisco Spaces Intelligence - Spaces baseline vs surge event - surge multiplier |
+  | Cisco Spaces Intelligence - Spaces - WiFi associations by SSID + exercise annotations | Cisco Spaces Intelligence - Spaces - WiFi associations by SSID + surge event annotations |
+
+  Stanza IDs were not changed, so saved searches, drilldowns, and dashboard
+  panels that reference a stanza ID rather than a display name are unaffected.
+  Matching panel titles on the NetOps Readiness and Spaces Intelligence views
+  were updated to the same wording, and stale panel text that described
+  annotation milestones the app no longer emits now names the real ones
+  (Start, Checkpoint 1, Checkpoint 2, Close).
+- Added `./build.sh --splunkbase-preview`, which applies the released-resources-only
+  Splunkbase filter to an uncommitted worktree and writes a `-preview` tarball
+  recording `release_eligible: false`. Previews can be installed locally but are
+  refused by the Splunkbase release and install gates even when renamed, so
+  developing resources can be excluded and verified before a commit. The new
+  `previewRetained` block in `config/build-profile-manifest.json` carves the
+  Searchbase Canvas authoring surface out of that filter, keeping Canvas usable
+  for inspecting the catalogue a preview contains.
 - Local `./build.sh --install` now proceeds with the developer profile when
   the Git worktree has uncommitted changes; `--splunkbase` still requires a
   clean committed source state for an upload-ready archive.
@@ -71,6 +114,14 @@ networking pillars and workplace scenarios.
   preservation of completed results. Setup retries now skip settings that were
   already saved, and unavailable optional companion-app routing macros no
   longer prevent completion.
+- Fixed first-run CIM discovery so tagged events are detected before the saved
+  CIM index allowlists exist, including Umbrella DNS events in
+  `cisco_umbrella`.
+- Restored automatic inclusion of matched CIM models in the Setup draft so
+  discovered allowlist changes are saved without a separate selection step.
+- Restored the final Setup save so every detected app routing macro and every
+  matched CIM allowlist is reviewed and persisted to its owning app's local
+  `macros.conf`, even when its effective definition matched a shipped default.
 - Preserved DensityFunction anomaly results across seven Cisco Spaces,
   ThousandEyes, and building-resilience searches by preventing Splunk's search
   optimizer from pruning MLTK-generated `IsOutlier(...)` fields during final
@@ -447,13 +498,21 @@ installation target does not influence package allocation. The committed ledger 
 publication history and a build floor, not a manual `current` allocation.
 Successful packages are named
 `splunk-cisco-dashboards-<version>-<build>.tar.gz` (plus `-developer` for an
-explicit developer profile). That tarball is the only emitted package file;
-packaging validates it internally, and the root build wrapper verifies its
-filename identity, gzip integrity, and release-eligible provenance before use.
+explicit developer profile, or `-preview` for a Splunkbase preview). That
+tarball is the only emitted package file; packaging validates it internally, and
+the root build wrapper verifies its filename identity, gzip integrity, and
+release-eligible provenance before use.
 A successful `./build.sh --install --splunkbase --auth user:password` run
 installs the exact upload-ready tarball it creates. Splunkbase builds require a
 clean committed worktree. Uncommitted `./build.sh --install` runs select the
 developer profile automatically so local iteration does not require a commit.
+`./build.sh --splunkbase-preview` keeps the released-resources-only filter on an
+uncommitted worktree and writes a `-preview` tarball marked
+`release_eligible: false`, which the release and install gates always reject.
+Resources listed under `previewRetained` in `config/build-profile-manifest.json`
+survive that filter; it currently carves out the Searchbase Canvas authoring
+surface. Entries there must also be declared developing, so the carve-out can
+only ever shrink what a preview removes, never add something that always ships.
 
 Resource inclusion is controlled by `config/build-profile-manifest.json`.
 The complete workflow and local install command are documented in

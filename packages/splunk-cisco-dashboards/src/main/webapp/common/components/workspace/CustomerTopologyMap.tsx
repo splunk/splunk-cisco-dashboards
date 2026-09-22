@@ -21,6 +21,8 @@ import { useSplunkTheme, variables } from "@splunk/themes";
 import styled, { css } from "styled-components";
 import Button from "@splunk/react-ui/Button";
 import ControlGroup from "@splunk/react-ui/ControlGroup";
+import Message from "@splunk/react-ui/Message";
+import Modal from "@splunk/react-ui/Modal";
 import Popover from "@splunk/react-ui/Popover";
 import RadioList from "@splunk/react-ui/RadioList";
 import ScreenReaderContent from "@splunk/react-ui/ScreenReaderContent";
@@ -171,6 +173,13 @@ const TopologyMapRoot = styled.div`
   }
 `;
 
+const MapViewport = styled.div`
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+`;
+
 const MapTopRightActions = styled.div`
   position: absolute;
   top: ${variables.spacingMedium};
@@ -183,17 +192,16 @@ const MapTopRightActions = styled.div`
   pointer-events: auto;
 `;
 
-const MapBottomRightActions = styled.div<{ $reserveCommandSummary: boolean }>`
-  position: absolute;
-  right: ${variables.spacingMedium};
-  bottom: ${({ $reserveCommandSummary }) =>
-    $reserveCommandSummary ? "84px" : "12px"};
-  z-index: 1100;
+const MapBottomRightActions = styled.div`
+  flex: 0 0 auto;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
   gap: ${variables.spacingSmall};
-  max-height: calc(100% - 9rem);
+  max-height: 45%;
+  padding: ${variables.spacingSmall} ${variables.spacingMedium};
+  border-top: ${variables.inputBorderWidth} solid ${variables.borderColor};
   overflow-y: auto;
   overscroll-behavior: contain;
   pointer-events: auto;
@@ -267,6 +275,14 @@ const MapCreditsButton = styled(Button)`
   }
 `;
 
+const MapCreditsDisclosure = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: ${variables.spacingSmall};
+  max-width: min(15rem, calc(100vw - 3rem));
+`;
+
 const MapLegendLabel = styled.span`
   color: inherit;
   font-size: ${variables.fontSizeSmall};
@@ -287,7 +303,7 @@ const MotionSettingsCard = styled(OneCdGlassCard)`
 `;
 
 const MapCreditsCard = styled(OneCdGlassCard)`
-  width: 15rem;
+  width: min(15rem, calc(100vw - 3rem));
   padding: ${variables.spacingMedium};
 `;
 
@@ -1982,7 +1998,7 @@ const sanitizeTopology = (
     fallback.links.map((link) => [link.id, link]),
   );
   const rawSites = (
-    Array.isArray(source.sites) && source.sites.length > 0
+    Array.isArray(source.sites)
       ? source.sites.filter(isRecord)
       : fallback.sites
   ).slice(0, MAX_CUSTOMER_TOPOLOGY_SITES) as Array<Partial<TopologySite>>;
@@ -2522,8 +2538,14 @@ interface PersistedTopologyState {
   sectionTitles: CustomerTopologySectionTitles;
   isLoading: boolean;
   error: string | null;
-  saveTopology: (next: CustomerTopology) => Promise<void>;
-  resetTopology: () => Promise<void>;
+  capturePersistedPayload: () => SavedCustomerTopologyPayload | null;
+  saveTopology: (
+    next: CustomerTopology,
+    expectedPayload: SavedCustomerTopologyPayload | null,
+  ) => Promise<void>;
+  resetTopology: (
+    expectedPayload: SavedCustomerTopologyPayload | null,
+  ) => Promise<void>;
   saveSectionTitles: (next: CustomerTopologySectionTitles) => Promise<void>;
   reload: () => Promise<void>;
 }
@@ -2579,6 +2601,11 @@ export const usePersistedTopology = (
   const persistedPayloadRef = useRef<SavedCustomerTopologyPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const capturePersistedPayload = useCallback(
+    () => persistedPayloadRef.current,
+    [],
+  );
 
   const applyPayload = useCallback(
     (payload: Partial<PersistedTopologyPayload> | null | undefined) => {
@@ -2660,18 +2687,21 @@ export const usePersistedTopology = (
   }, [reload]);
 
   const saveTopology = useCallback(
-    async (next: CustomerTopology) => {
+    async (
+      next: CustomerTopology,
+      expectedPayload: SavedCustomerTopologyPayload | null,
+    ) => {
       const sanitized = sanitizeTopology(next, fallback);
       const nextPayload = buildTopologyPayload(sanitized, sectionTitles);
       const previousTopology = topology;
       setTopology(sanitized);
       setError(null);
       try {
-        await saveCustomerTopologyConfig(
+        const savedPayload = await saveCustomerTopologyConfig(
           nextPayload,
-          persistedPayloadRef.current,
+          expectedPayload,
         );
-        persistedPayloadRef.current = nextPayload;
+        persistedPayloadRef.current = savedPayload;
         clearLegacyPersistedTopology();
         emitTopologyConfigChanged();
       } catch (err) {
@@ -2683,18 +2713,20 @@ export const usePersistedTopology = (
     [fallback, sectionTitles, topology],
   );
 
-  const resetTopology = useCallback(async () => {
+  const resetTopology = useCallback(async (
+    expectedPayload: SavedCustomerTopologyPayload | null,
+  ) => {
     const factory = cloneTopology(fallback);
     const nextPayload = buildTopologyPayload(factory, sectionTitles);
     const previousTopology = topology;
     setTopology(factory);
     setError(null);
     try {
-      await saveCustomerTopologyConfig(
+      const savedPayload = await saveCustomerTopologyConfig(
         nextPayload,
-        persistedPayloadRef.current,
+        expectedPayload,
       );
-      persistedPayloadRef.current = nextPayload;
+      persistedPayloadRef.current = savedPayload;
       clearLegacyPersistedTopology();
       emitTopologyConfigChanged();
     } catch (err) {
@@ -2715,11 +2747,11 @@ export const usePersistedTopology = (
       setSectionTitles(sanitized);
       setError(null);
       try {
-        await saveCustomerTopologyConfig(
+        const savedPayload = await saveCustomerTopologyConfig(
           nextPayload,
           persistedPayloadRef.current,
         );
-        persistedPayloadRef.current = nextPayload;
+        persistedPayloadRef.current = savedPayload;
         emitTopologyConfigChanged();
       } catch (err) {
         setSectionTitles(previousSectionTitles);
@@ -2735,6 +2767,7 @@ export const usePersistedTopology = (
     sectionTitles,
     isLoading,
     error,
+    capturePersistedPayload,
     saveTopology,
     resetTopology,
     saveSectionTitles,
@@ -5607,6 +5640,9 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   const [paused, setPaused] = useState(false);
   const {
     topology: storedTopology,
+    isLoading: isTopologyLoading,
+    error: topologyLoadError,
+    capturePersistedPayload,
     saveTopology,
     resetTopology,
   } = usePersistedTopology(topology);
@@ -5618,6 +5654,9 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   const [draftTopology, setDraftTopology] = useState<CustomerTopology>(() =>
     cloneTopology(storedTopology),
   );
+  const editorExpectedPayloadRef =
+    useRef<SavedCustomerTopologyPayload | null>(null);
+  const editorTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [currentMapView, setCurrentMapView] = useState<TopologyMapView>(() =>
     mapViewFromTopologyMap(storedTopology.map),
   );
@@ -5631,6 +5670,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   const [mapCreditsOpen, setMapCreditsOpen] = useState(false);
   const [mapCreditsAnchor, setMapCreditsAnchor] =
     useState<HTMLAnchorElement | HTMLButtonElement | null>(null);
+  const mapCreditsCloseButtonRef = useRef<HTMLButtonElement | null>(null);
   const [tilePresetId, setTilePresetId] = useState<MapTileStyleId>(() =>
     defaultMapTileStyleId(isDark),
   );
@@ -6280,6 +6320,10 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         latestTime,
         tag: `topology_link_${link.id}`,
         appContext: record.dispatchContext,
+        // Link telemetry is part of the active map experience. Dispatch it
+        // immediately after the signal rail instead of leaving it behind all
+        // dashboard sections at the default background priority.
+        dispatchPriority: 1,
       })
         .then((res) => {
           if (cancelled) return;
@@ -6646,6 +6690,14 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     window.requestAnimationFrame(() => mapCreditsAnchor?.focus());
   }, [mapCreditsAnchor]);
 
+  useEffect(() => {
+    if (!mapCreditsOpen) return undefined;
+    const frame = window.requestAnimationFrame(() =>
+      mapCreditsCloseButtonRef.current?.focus(),
+    );
+    return () => window.cancelAnimationFrame(frame);
+  }, [mapCreditsOpen]);
+
   // Build 99 fix: the spotlight-pause logic was previously
   // bumping `pauseUntilRef` on EVERY click, including ones that
   // *close* the selection panel (toggling off via re-click).
@@ -6693,6 +6745,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   );
 
   const openEditor = () => {
+    if (isTopologyLoading || topologyLoadError) return;
     // Opening the editor closes any open selection card; that's
     // a dismiss, so resume spotlight immediately rather than
     // pausing. The editor itself doesn't render the spotlight
@@ -6701,6 +6754,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     pauseUntilRef.current = 0;
     setSelected(null);
     setSurfaceMode("geo");
+    editorExpectedPayloadRef.current = capturePersistedPayload();
     setDraftTopology(cloneTopology(storedTopology));
     setEditorPersistenceError(null);
     setIsEditorOpen(true);
@@ -6710,9 +6764,10 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     setIsEditorSaving(true);
     setEditorPersistenceError(null);
     try {
-      await saveTopology(draftTopology);
+      await saveTopology(draftTopology, editorExpectedPayloadRef.current);
       setPickSiteId(null);
       setIsEditorOpen(false);
+      window.requestAnimationFrame(() => editorTriggerRef.current?.focus());
     } catch (err) {
       setEditorPersistenceError(errorMessage(err));
     } finally {
@@ -6724,15 +6779,31 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     setIsEditorSaving(true);
     setEditorPersistenceError(null);
     try {
-      await resetTopology();
+      await resetTopology(editorExpectedPayloadRef.current);
       setPickSiteId(null);
       setIsEditorOpen(false);
+      window.requestAnimationFrame(() => editorTriggerRef.current?.focus());
     } catch (err) {
       setEditorPersistenceError(errorMessage(err));
     } finally {
       setIsEditorSaving(false);
     }
   };
+
+  const closeEditor = useCallback(() => {
+    if (isEditorSaving) return;
+    setPickSiteId(null);
+    setEditorPersistenceError(null);
+    setIsEditorOpen(false);
+    window.requestAnimationFrame(() => editorTriggerRef.current?.focus());
+  }, [isEditorSaving]);
+
+  const editorHasUnsavedChanges = useMemo(
+    () =>
+      isEditorOpen &&
+      JSON.stringify(draftTopology) !== JSON.stringify(storedTopology),
+    [draftTopology, isEditorOpen, storedTopology],
+  );
 
   const applyMapPick = (lat: number, lng: number) => {
     if (!pickSiteId) return;
@@ -6765,9 +6836,17 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
       {canManageTopology && (
         <MapIconButton
           appearance="subtle"
+          disabled={isTopologyLoading || Boolean(topologyLoadError)}
+          elementRef={editorTriggerRef}
           hideLabel
           icon={<Pencil className="w-4 h-4" />}
-          label="Edit topology"
+          label={
+            isTopologyLoading
+              ? "Loading topology"
+              : topologyLoadError
+                ? "Topology editor unavailable"
+                : "Edit topology"
+          }
           onClick={openEditor}
         />
       )}
@@ -6878,7 +6957,17 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
       )}
     >
       <style>{topologyAnimationCss}</style>
-      {topRightActions}
+      <MapViewport>
+        {topRightActions}
+
+      {topologyLoadError && (
+        <div className="absolute left-3 right-14 top-3 z-[1000]">
+          <Message type="error" appearance="fill">
+            <Message.Title>Topology editor unavailable</Message.Title>
+            {topologyLoadError}
+          </Message>
+        </div>
+      )}
 
       {visualAnimationLevel === "on" &&
         !isEditorOpen &&
@@ -7052,19 +7141,17 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         onResetFactory={resetEditor}
         isSaving={isEditorSaving}
         saveError={editorPersistenceError}
-        onClose={() => {
-          setPickSiteId(null);
-          setEditorPersistenceError(null);
-          setIsEditorOpen(false);
-        }}
+        hasUnsavedChanges={editorHasUnsavedChanges}
+        onClose={closeEditor}
         catalogueByName={catalogueByName}
         teA2ACandidates={teA2ACandidates}
         teA2AInventoryError={teA2AInventoryError}
         onOpenInSearch={onOpenInSearch}
       />
 
+      </MapViewport>
+
       <MapBottomRightActions
-        $reserveCommandSummary={surfaceMode === "command"}
         aria-label="Map legend and view controls"
         role="region"
         tabIndex={roleLegendExpanded ? 0 : undefined}
@@ -7151,33 +7238,19 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
         </MapViewSelect>
 
         {surfaceMode === "geo" && (
-          <div>
-            <MapCreditsButton
-              appearance="subtle"
-              elementRef={setMapCreditsAnchor}
-              label="Map credits"
-              onClick={() => setMapCreditsOpen((open) => !open)}
-              aria-controls={
-                mapCreditsOpen ? "customer-topology-map-credits" : undefined
+          <MapCreditsDisclosure
+            onKeyDown={(event) => {
+              if (event.key === "Escape" && mapCreditsOpen) {
+                event.stopPropagation();
+                closeMapCredits();
               }
-              aria-haspopup="dialog"
-              aria-expanded={mapCreditsOpen}
-            />
-            <Popover
-              appearance="none"
-              anchor={mapCreditsAnchor}
-              defaultPlacement="above"
-              hideArrow
-              onRequestClose={closeMapCredits}
-              open={mapCreditsOpen}
-              repositionMode="any"
-              retainFocus
-              takeFocus
-            >
+            }}
+          >
+            {mapCreditsOpen && (
               <MapCreditsCard
                 id="customer-topology-map-credits"
                 tag="section"
-                role="dialog"
+                role="region"
                 aria-labelledby="customer-topology-map-credits-title"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -7193,6 +7266,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                     </p>
                   </div>
                   <button
+                    ref={mapCreditsCloseButtonRef}
                     type="button"
                     onClick={closeMapCredits}
                     aria-label="Close map credits"
@@ -7202,8 +7276,18 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
                   </button>
                 </div>
               </MapCreditsCard>
-            </Popover>
-          </div>
+            )}
+            <MapCreditsButton
+              appearance="subtle"
+              elementRef={setMapCreditsAnchor}
+              label="Map credits"
+              onClick={() => setMapCreditsOpen((open) => !open)}
+              aria-controls={
+                mapCreditsOpen ? "customer-topology-map-credits" : undefined
+              }
+              aria-expanded={mapCreditsOpen}
+            />
+          </MapCreditsDisclosure>
         )}
       </MapBottomRightActions>
     </TopologyMapRoot>
@@ -7226,16 +7310,16 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
  * list, all over the Cisco-tagged catalogue) but keep the surface
  * area focused on this one job.
  *
- * The result list is sorted with three layers of priority:
+ * The result list is sorted with two layers of priority:
  *   1. Currently-bound entry first (so the operator sees their
  *      starting point at the top, even after typing a query that
  *      would otherwise demote it).
- *   2. Entries tagged with one of `preferredTags` next — these
- *      are the searches we know are shaped for this surface
- *      (Topology_Site for sites, Topology_Link for links). They
- *      get a small "site" / "link" badge so the operator can
- *      scan-spot them.
- *   3. Everything else alphabetically.
+ *   2. Everything else alphabetically.
+ *
+ * Searches shaped for a specific topology surface declare it in
+ * `viz_options.topologyMap.role`, which `findSearchbaseByTopologyMapRole`
+ * reads. Role lives in viz_options rather than in `tags` so it cannot
+ * collide with the operator-facing tag vocabulary this browser lists.
  *
  * Tag chips are scoped to the *current filtered slice* (the same
  * progressive-narrowing pattern the KPI picker uses), so picking
@@ -7247,9 +7331,7 @@ interface TopologySearchBrowserProps {
   catalogue: SearchbaseRecord[];
   /** searchName currently bound to this site / link, used for highlight + sort. */
   currentSearchName: string;
-  /** Tag(s) to surface to the top of the list (e.g. `Topology_Site`). */
-  preferredTags: string[];
-  /** Human label for the surface — shown in the header and the per-row badge. */
+  /** Human label for the surface — shown in the header. */
   label: "site" | "link";
   /** Click-an-entry handler. Caller persists. */
   onPick: (searchName: string) => void;
@@ -7268,7 +7350,6 @@ const TOPOLOGY_TAG_CHIP_LIMIT = 12;
 const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
   catalogue,
   currentSearchName,
-  preferredTags,
   label,
   onPick,
   isDark,
@@ -7329,15 +7410,11 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
     return [...filtered].sort((a, b) => {
       if (a.searchName === currentSearchName) return -1;
       if (b.searchName === currentSearchName) return 1;
-      const aPreferred = preferredTags.some((tag) => a.tags.includes(tag));
-      const bPreferred = preferredTags.some((tag) => b.tags.includes(tag));
-      if (aPreferred && !bPreferred) return -1;
-      if (!aPreferred && bPreferred) return 1;
       return a.searchName.localeCompare(b.searchName, undefined, {
         sensitivity: "base",
       });
     });
-  }, [filtered, currentSearchName, preferredTags]);
+  }, [filtered, currentSearchName]);
 
   // All tags present in the filtered slice, ranked by frequency.
   // Used for the chip picker AND the typeahead match-count badge.
@@ -7474,7 +7551,7 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
            * fine for the ~12-tag baseline but became
            * unscalable as the catalogue grew (now 30+
            * unique tags); operators with a tag name in
-           * mind ("ThousandEyes", "Topology_Site") had to
+           * mind ("ThousandEyes", "Reachability") had to
            * scan a long chip wrap to find it. Auto-
            * focuses on open, Enter selects the first
            * match, Escape closes the picker. Same UX
@@ -7641,9 +7718,6 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
         )}
         {sorted.map((entry) => {
           const isSelected = entry.searchName === currentSearchName;
-          const isPreferred = preferredTags.some((tag) =>
-            entry.tags.includes(tag),
-          );
           return (
             <li key={entry.id}>
               <button
@@ -7704,17 +7778,6 @@ const TopologySearchBrowser: React.FC<TopologySearchBrowserProps> = ({
                           )}
                         >
                           · {entry.subCategory}
-                        </span>
-                      )}
-                      {isPreferred && (
-                        <span
-                          className={cn(
-                            "inline-flex rounded px-1 text-xs font-bold uppercase tracking-wider",
-                            "sui-bg-selected sui-color-info",
-                          )}
-                          title={`This search is shaped for a topology ${label}`}
-                        >
-                          {label}
                         </span>
                       )}
                     </div>
@@ -8170,6 +8233,7 @@ interface TopologyEditorPanelProps {
   onResetFactory: () => void | Promise<void>;
   isSaving?: boolean;
   saveError?: string | null;
+  hasUnsavedChanges: boolean;
   onClose: () => void;
   /**
    * Searchbase catalogue keyed by `searchName`. Used to populate the
@@ -8330,6 +8394,7 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
   onResetFactory,
   isSaving = false,
   saveError,
+  hasUnsavedChanges,
   onClose,
   catalogueByName,
   teA2ACandidates,
@@ -8352,6 +8417,8 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
   const [telemetrySourceModeByLinkId, setTelemetrySourceModeByLinkId] =
     useState<Record<string, LinkTelemetrySourceMode>>({});
   const editorTitleId = useId();
+  const jsonEditorLabelId = useId();
+  const jsonEditorErrorId = useId();
   const editorMovementHelpId = useId();
   const editorResizeHelpId = useId();
   const panelRef = useRef<HTMLElement | null>(null);
@@ -8359,6 +8426,18 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
     useRef<TopologyEditorPointerInteraction | null>(null);
   const [editorFrame, setEditorFrame] =
     useState<TopologyEditorFrame | null>(null);
+  const [confirmation, setConfirmation] = useState<
+    "discard" | "factory" | null
+  >(null);
+
+  const requestClose = useCallback(() => {
+    if (isSaving) return;
+    if (hasUnsavedChanges) {
+      setConfirmation("discard");
+      return;
+    }
+    onClose();
+  }, [hasUnsavedChanges, isSaving, onClose]);
 
   const resetEditorFrame = useCallback(() => {
     const container = panelRef.current?.parentElement;
@@ -8615,23 +8694,42 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
 
   useEffect(() => {
     if (!open) return undefined;
+    const frame = window.requestAnimationFrame(() => panelRef.current?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return undefined;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
+      if (
+        event.key !== "Escape" ||
+        confirmation !== null
+      ) {
+        return;
+      }
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      if (
+        target?.tagName === "SELECT" ||
+        target?.closest(
+          '[role="listbox"], [role="menu"], [aria-expanded="true"]',
+        )
+      ) {
+        return;
+      }
       event.preventDefault();
-      onClose();
+      requestClose();
     };
     document.addEventListener("keydown", onKeyDown, true);
     return () => document.removeEventListener("keydown", onKeyDown, true);
-  }, [open, onClose]);
+  }, [confirmation, open, requestClose]);
 
   // The editor's per-card pickers browse the complete Searchbase
   // catalogue, identical to the in-popup `TopologySearchBrowser`.
-  // Tag-narrowing (Topology_Site / Topology_Link) is a *sort
-  // hint*, not a filter — those entries float to the top of the
-  // list, but every installed app's stanza is reachable via search.
-  // This matches the KpiPickerPanel browsing model so editing a
-  // tile and editing a topology element feel like the same
-  // operation.
+  // Tag chips narrow the list but never hide a stanza permanently —
+  // every installed app's stanza stays reachable via free-text
+  // search. This matches the KpiPickerPanel browsing model so
+  // editing a tile and editing a topology element feel like the
+  // same operation.
   //
   const editorSearchOptions = useMemo(() => {
     if (!catalogueByName) return [] as SearchbaseRecord[];
@@ -8906,12 +9004,27 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
       ...current,
       [linkId]: "searchbase",
     }));
+    const normalizedSearchName = searchName.trim();
     updateLink(linkId, {
-      searchName,
+      searchName: normalizedSearchName,
       thousandEyesA2A: undefined,
       teLink: undefined,
-      telemetrySource: `Searchbase: ${searchName}`,
-      dataState: "loading",
+      telemetrySource: normalizedSearchName
+        ? `Searchbase: ${normalizedSearchName}`
+        : "Awaiting topology link telemetry",
+      dataState: normalizedSearchName ? "loading" : "static",
+      dataError: undefined,
+    });
+  };
+
+  const bindSearchbaseToSite = (siteId: string, searchName: string) => {
+    const normalizedSearchName = searchName.trim();
+    updateSite(siteId, {
+      searchName: normalizedSearchName,
+      telemetrySource: normalizedSearchName
+        ? `Searchbase: ${normalizedSearchName}`
+        : "Awaiting topology site telemetry",
+      dataState: normalizedSearchName ? "loading" : "static",
       dataError: undefined,
     });
   };
@@ -9128,11 +9241,15 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
   };
 
   return (
+    <>
     <AnimatePresence>
       {open && (
         <motion.aside
           ref={panelRef}
+          role="dialog"
+          aria-modal="false"
           aria-labelledby={editorTitleId}
+          tabIndex={-1}
           initial={{ opacity: 0, x: 28, scale: 0.98 }}
           animate={{ opacity: 1, x: 0, scale: 1 }}
           exit={{ opacity: 0, x: 28, scale: 0.98 }}
@@ -9236,7 +9353,8 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
               <button
                 type="button"
                 aria-label="Close topology editor"
-                onClick={onClose}
+                onClick={requestClose}
+                disabled={isSaving}
                 className={cn(
                   "p-1.5 rounded-md transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
                   isDark
@@ -9927,12 +10045,9 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 <TopologySearchBrowser
                                   catalogue={editorSearchOptions}
                                   currentSearchName={site.searchName ?? ""}
-                                  preferredTags={["Topology_Site"]}
                                   label="site"
                                   onPick={(searchName) =>
-                                    updateSite(site.id, {
-                                      searchName,
-                                    })
+                                    bindSearchbaseToSite(site.id, searchName)
                                   }
                                   isDark={isDark}
                                   showFreeFormInput
@@ -10726,7 +10841,6 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                                 <TopologySearchBrowser
                                   catalogue={editorSearchOptions}
                                   currentSearchName={link.searchName ?? ""}
-                                  preferredTags={["Topology_Link"]}
                                   label="link"
                                   onPick={(searchName) =>
                                     bindSearchbaseToLink(link.id, searchName)
@@ -10780,7 +10894,16 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                   </button>
                 </div>
               </div>
+              <label
+                id={jsonEditorLabelId}
+                className="text-xs font-bold sui-color-default"
+              >
+                Topology JSON
+              </label>
               <textarea
+                aria-labelledby={jsonEditorLabelId}
+                aria-describedby={jsonError ? jsonEditorErrorId : undefined}
+                aria-invalid={Boolean(jsonError)}
                 className={cn(
                   editorInputClass(isDark),
                   "min-h-[96px] font-mono font-medium leading-relaxed resize-y",
@@ -10790,7 +10913,11 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
                 placeholder="Export or paste topology JSON"
               />
               {jsonError && (
-                <p className="text-xs font-semibold sui-color-negative">
+                <p
+                  id={jsonEditorErrorId}
+                  role="alert"
+                  className="text-xs font-semibold sui-color-negative"
+                >
                   {jsonError}
                 </p>
               )}
@@ -10805,31 +10932,18 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
           >
             <div className="min-w-0 flex-1">
               {saveError && (
-                <p
-                  className="truncate text-xs font-semibold sui-color-negative"
-                  title={saveError}
-                >
+                <Message type="error" appearance="fill">
                   {saveError}
-                </p>
+                </Message>
               )}
             </div>
-            <button
-              type="button"
-              onClick={onResetFactory}
+            <Button
+              appearance="destructiveSecondary"
+              icon={<RotateCcw className="w-3.5 h-3.5" />}
+              label="Reset to factory"
+              onClick={() => setConfirmation("factory")}
               disabled={isSaving}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-black transition-colors focus:outline-none focus:ring-1 sui-focus-ring",
-                "scd-action-destructive-secondary",
-                isSaving && "cursor-not-allowed opacity-50",
-              )}
-            >
-              {isSaving ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <RotateCcw className="w-3.5 h-3.5" />
-              )}
-              Factory
-            </button>
+            />
             <button
               type="button"
               onClick={onSave}
@@ -10881,6 +10995,53 @@ const TopologyEditorPanel: React.FC<TopologyEditorPanelProps> = ({
         </motion.aside>
       )}
     </AnimatePresence>
+    {confirmation !== null && (
+    <Modal
+      open
+      onRequestClose={() => setConfirmation(null)}
+      returnFocus={() => panelRef.current?.focus()}
+      style={{ width: 440 }}
+    >
+      <Modal.Header
+        title={
+          confirmation === "factory"
+            ? "Reset shared topology?"
+            : "Discard unsaved changes?"
+        }
+      />
+      <Modal.Body>
+        {confirmation === "factory" ? (
+          <p>
+            This replaces the shared map for every user with the app factory
+            topology. This action cannot be undone.
+          </p>
+        ) : (
+          <p>Your unsaved map changes will be lost.</p>
+        )}
+      </Modal.Body>
+      <Modal.Footer>
+        <Button
+          appearance="secondary"
+          label="Cancel"
+          onClick={() => setConfirmation(null)}
+        />
+        <Button
+          appearance="destructive"
+          label={confirmation === "factory" ? "Reset shared map" : "Discard changes"}
+          onClick={() => {
+            const action = confirmation;
+            setConfirmation(null);
+            if (action === "factory") {
+              void onResetFactory();
+            } else {
+              onClose();
+            }
+          }}
+        />
+      </Modal.Footer>
+    </Modal>
+    )}
+    </>
   );
 };
 

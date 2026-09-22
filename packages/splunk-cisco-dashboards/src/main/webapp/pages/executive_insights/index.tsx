@@ -227,6 +227,7 @@ import {
 import { runSearch } from "@/common/services/splunkSearchService";
 import {
   getSearchbaseCatalogue,
+  plainTextFromHtml,
   type SearchbaseRecord,
 } from "@/common/services/searchbaseCatalogue";
 import {
@@ -693,21 +694,6 @@ const readFirstSeriesColor = (
   return first?.trim();
 };
 
-const plainTextFromHtml = (raw: string | undefined): string | undefined => {
-  if (!raw) return undefined;
-  const text = raw
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&amp;/g, "&")
-    .replace(/\s+/g, " ")
-    .trim();
-  return text || undefined;
-};
-
 const parseWorkspaceSource = (raw: unknown): WorkspaceSourceId => {
   if (typeof raw !== "string") return EXECUTIVE_WORKSPACE_SOURCE_ID;
   const trimmed = raw.trim();
@@ -854,30 +840,33 @@ const buildOverviewDescription = (
   definition: Record<string, unknown>,
 ): string | undefined => {
   const explicit = readOverviewString(definition, "description", 4000);
-  const description = explicit ?? plainTextFromHtml(record.description);
-  const explanation = plainTextFromHtml(record.explanation);
-  const solution = plainTextFromHtml(record.solution);
-  const relatedInfo = plainTextFromHtml(record.relatedInfo);
-  const normalized = new Set<string>();
-  const parts: string[] = [];
-  const append = (label: string | null, value: string | undefined) => {
-    const trimmed = value?.replace(/\s+/g, " ").trim();
-    if (!trimmed) return;
-    const key = trimmed.toLowerCase();
-    if (normalized.has(key)) return;
-    normalized.add(key);
-    parts.push(label ? `${label}: ${trimmed}` : trimmed);
-  };
+  const summary =
+    explicit ??
+    plainTextFromHtml(record.description) ??
+    plainTextFromHtml(record.explanation) ??
+    plainTextFromHtml(record.solution);
 
-  // Searchbase metadata is authored as four complementary fields. Surface all
-  // four in the tile's info popover so operators see meaning, mechanics, next
-  // action, and source context without opening the catalogue editor.
-  append(null, description ?? explanation);
-  append("How it works", explanation);
-  append("Operator action", solution);
-  append("Data source and context", relatedInfo);
-  return parts.length > 0 ? parts.join(" ").slice(0, 4000) : undefined;
+  // Hover/focus help is deliberately a concise summary. Clicking the same
+  // parent-tile info control reveals the remaining parent Searchbase metadata;
+  // the separate detail-table control remains exclusively for drill-downs.
+  return summary?.replace(/\s+/g, " ").trim() || undefined;
 };
+
+const buildOverviewInfoSections = (
+  record: SearchbaseRecord,
+): readonly { title: string; content: string }[] =>
+  [
+    { title: "Explanation", content: plainTextFromHtml(record.explanation) },
+    { title: "Operator action", content: plainTextFromHtml(record.solution) },
+    {
+      title: "Related information",
+      content: plainTextFromHtml(record.relatedInfo),
+    },
+    { title: "Execution plan", content: plainTextFromHtml(record.executionPlan) },
+  ].filter(
+    (section): section is { title: string; content: string } =>
+      Boolean(section.content?.trim()),
+  );
 
 const buildOverviewMetricFromDefinition = (
   record: SearchbaseRecord,
@@ -905,6 +894,7 @@ const buildOverviewMetricFromDefinition = (
       record.subCategory ??
       record.category,
     description,
+    infoSections: buildOverviewInfoSections(record),
     searchbaseId: options.searchbaseId ?? record.id,
     savedSearch: record.searchName,
     spl: undefined,
@@ -2187,6 +2177,7 @@ const MetricCardLeaf: React.FC<MetricCardLeafProps> = ({
       label={effective.label}
       subLabel={effective.subLabel}
       description={effective.description}
+      infoSections={effective.infoSections}
       // Footnote intentionally omitted: surfacing the literal SPL
       // in the info tooltip clutters the executive view and
       // duplicates what the "Open in Search" icon already
@@ -2301,6 +2292,7 @@ const TableCardLeaf: React.FC<CommonLeafProps> = ({
       label={effective.label}
       subLabel={effective.subLabel}
       description={effective.description}
+      infoSections={effective.infoSections}
       descriptionFootnote={undefined}
       thresholdNote={effective.thresholdNote}
       infoAnchor={infoAnchor}
@@ -2364,6 +2356,7 @@ const BarBreakdownCardLeaf: React.FC<CommonLeafProps> = ({
       label={effective.label}
       subLabel={effective.subLabel}
       description={effective.description}
+      infoSections={effective.infoSections}
       descriptionFootnote={undefined}
       thresholdNote={effective.thresholdNote}
       infoAnchor={infoAnchor}
@@ -2428,6 +2421,7 @@ const PieCardLeaf: React.FC<PieCardLeafProps> = ({
       label={effective.label}
       subLabel={effective.subLabel}
       description={effective.description}
+      infoSections={effective.infoSections}
       descriptionFootnote={undefined}
       thresholdNote={effective.thresholdNote}
       infoAnchor={infoAnchor}
@@ -2505,6 +2499,7 @@ const ScalarGaugeCardLeaf: React.FC<ScalarGaugeCardLeafProps> = ({
     label: effective.label,
     subLabel: effective.subLabel,
     description: effective.description,
+    infoSections: effective.infoSections,
     descriptionFootnote: undefined,
     thresholdNote: effective.thresholdNote,
     value,
@@ -7977,7 +7972,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
       openInSearchHref={searchUrl}
       openInSearchbaseHref={searchbaseUrl}
       wide={!activeIsTable || displayColumns.length > 5}
-      contentClassName="flex min-h-0 flex-1 flex-col overflow-hidden sui-bg-page"
+      contentClassName="scd-workspace-modal-content flex min-h-0 flex-1 flex-col overflow-hidden"
       headerMeta={
         activeIsTable && statusField ? (
           <>
@@ -7994,7 +7989,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
       }
     >
       <div
-        className="flex shrink-0 items-center border-b sui-border-weak sui-bg-page px-4 py-2.5"
+        className="scd-workspace-modal-subheader flex shrink-0 items-center border-b sui-border-weak px-4 py-2.5"
         data-detail-search-summary="true"
       >
         <div className="min-w-0 flex-1">
@@ -8039,7 +8034,7 @@ const MetricDetailTableModal: React.FC<MetricDetailTableModalProps> = ({
             aria-labelledby={resultTitleId}
             className="w-full min-w-[860px] sui-bg-transparent text-sm"
           >
-            <thead className="sticky top-0 z-10 border-b sui-border-weak sui-bg-page backdrop-blur-xl">
+            <thead className="scd-workspace-modal-subheader sticky top-0 z-10 border-b sui-border-weak backdrop-blur-xl">
               <tr className="text-left text-xs font-bold sui-color-default">
                 {displayColumns.map((column, index) => {
                   const isSorted = sortState?.field === column.field;

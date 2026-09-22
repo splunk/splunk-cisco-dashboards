@@ -11,7 +11,11 @@
 
 import React, { useMemo, useState } from 'react';
 import { ChartFocusDialog } from './ChartFocusDialog';
-import { InfoTooltip, type InfoTooltipAnchor } from './InfoTooltip';
+import {
+    InfoTooltip,
+    type InfoTooltipAnchor,
+    type InfoTooltipDetailSection,
+} from './InfoTooltip';
 import { TileActionMenu, TileDrilldownButton } from './TileActionMenu';
 import { cn } from '@/common/lib/utils';
 import { C3_SERIES_PALETTE } from '@/common/theme/c3VisualizationPalette';
@@ -21,6 +25,7 @@ interface PieTileProps {
     label: string;
     subLabel?: string;
     description?: string;
+    infoSections?: readonly InfoTooltipDetailSection[];
     descriptionFootnote?: string;
     thresholdNote?: string;
     infoAnchor?: InfoTooltipAnchor;
@@ -101,6 +106,7 @@ export const PieTile: React.FC<PieTileProps> = ({
     label,
     subLabel,
     description,
+    infoSections,
     descriptionFootnote,
     thresholdNote,
     infoAnchor = 'auto',
@@ -244,6 +250,7 @@ export const PieTile: React.FC<PieTileProps> = ({
                             <InfoTooltip
                                 title={label}
                                 description={description}
+                                detailSections={infoSections}
                                 thresholdNote={thresholdNote}
                                 footnote={descriptionFootnote}
                                 anchor={infoAnchor}

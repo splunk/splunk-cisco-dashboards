@@ -1,10 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { ExternalLink, PanelRightOpen, X } from '@/common/icons/SuiIcon';
-import {
-    readUserScopedStorageItem,
-    userScopedStorageKey,
-} from '@/common/config/insightsWorkspaces';
 
 import { cn } from '@/common/lib/utils';
 import { useAppThemeControls } from '@/common/theme/AppThemeProvider';
@@ -59,45 +55,11 @@ const DESKTOP_DIALOG_BREAKPOINT = 720;
 const DIALOG_VIEWPORT_GUTTER = 32;
 const MIN_RESIZABLE_WIDTH = 640;
 const MIN_RESIZABLE_HEIGHT = 360;
-const BACKDROP_OPACITY_STORAGE_KEY =
-    'splunk-cisco-dashboards.workspaceModal.backdropOpacity';
-const DEFAULT_BACKDROP_OPACITY = 16;
-const MIN_BACKDROP_OPACITY = 0;
-const MAX_BACKDROP_OPACITY = 100;
+const FIXED_BACKDROP_OPACITY = 0.7;
+const FIXED_BACKDROP_BLUR_PX = 2;
 
 const clamp = (value: number, min: number, max: number): number =>
     Math.min(Math.max(value, Math.min(min, max)), max);
-
-const normalizeBackdropOpacity = (value: number): number =>
-    Math.round(clamp(value, MIN_BACKDROP_OPACITY, MAX_BACKDROP_OPACITY));
-
-const readBackdropOpacity = (): number => {
-    if (typeof window === 'undefined') return DEFAULT_BACKDROP_OPACITY;
-    try {
-        const stored = readUserScopedStorageItem(
-            userScopedStorageKey(BACKDROP_OPACITY_STORAGE_KEY),
-        );
-        if (stored === null) return DEFAULT_BACKDROP_OPACITY;
-        const parsed = Number(stored);
-        return Number.isFinite(parsed)
-            ? normalizeBackdropOpacity(parsed)
-            : DEFAULT_BACKDROP_OPACITY;
-    } catch {
-        return DEFAULT_BACKDROP_OPACITY;
-    }
-};
-
-const writeBackdropOpacity = (value: number): void => {
-    if (typeof window === 'undefined') return;
-    try {
-        window.localStorage.setItem(
-            userScopedStorageKey(BACKDROP_OPACITY_STORAGE_KEY),
-            String(value),
-        );
-    } catch {
-        // Storage may be unavailable in hardened browser contexts.
-    }
-};
 
 const getDialogBounds = (): DialogSize => ({
     width: Math.max(320, window.innerWidth - DIALOG_VIEWPORT_GUTTER),
@@ -153,7 +115,6 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
     const { colorScheme } = useAppThemeControls();
     const generatedTitleId = React.useId();
     const generatedSubtitleId = React.useId();
-    const generatedBackdropOpacityId = React.useId();
     const titleId = providedTitleId ?? generatedTitleId;
     const dialogRef = React.useRef<HTMLDivElement>(null);
     const onCloseRef = React.useRef(onClose);
@@ -163,8 +124,6 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
     const [dialogSize, setDialogSize] = React.useState<DialogSize | null>(() =>
         isResizable ? getAutoDetailSize(wide) : null
     );
-    const [backdropOpacity, setBackdropOpacity] = React.useState(readBackdropOpacity);
-
     onCloseRef.current = onClose;
 
     const resetAutoSize = React.useCallback(() => {
@@ -344,25 +303,6 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
         };
     }, [isOpen, isResizable, resetAutoSize, wide]);
 
-    React.useEffect(() => {
-        if (typeof window === 'undefined') return undefined;
-        const onStorage = (event: StorageEvent) => {
-            if (event.key !== userScopedStorageKey(BACKDROP_OPACITY_STORAGE_KEY)) return;
-            setBackdropOpacity(readBackdropOpacity());
-        };
-        window.addEventListener('storage', onStorage);
-        return () => window.removeEventListener('storage', onStorage);
-    }, []);
-
-    const updateBackdropOpacity = React.useCallback(
-        (event: React.FormEvent<HTMLInputElement>) => {
-            const next = normalizeBackdropOpacity(Number(event.currentTarget.value));
-            setBackdropOpacity(next);
-            writeBackdropOpacity(next);
-        },
-        []
-    );
-
     if (!isOpen || !portalTarget) {
         return null;
     }
@@ -413,12 +353,14 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
 
     const modalLayer = (
         <div
-            className="fixed inset-0 z-[1900] flex items-center justify-center p-4 backdrop-blur-[2px] max-[719px]:items-end max-[719px]:p-0 max-[719px]:pt-4"
+            className="fixed inset-0 z-[1900] flex items-center justify-center p-4 max-[719px]:items-end max-[719px]:p-0 max-[719px]:pt-4"
             data-workspace-modal-backdrop="true"
-            data-backdrop-opacity={backdropOpacity}
+            data-app-color-scheme={colorScheme}
             style={{
                 zIndex: 1900,
-                backgroundColor: `rgba(2, 6, 23, ${backdropOpacity / 100})`,
+                backgroundColor: `rgba(2, 6, 23, ${FIXED_BACKDROP_OPACITY})`,
+                backdropFilter: `blur(${FIXED_BACKDROP_BLUR_PX}px)`,
+                WebkitBackdropFilter: `blur(${FIXED_BACKDROP_BLUR_PX}px)`,
             }}
         >
             <button
@@ -448,14 +390,14 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                         : undefined
                 }
                 className={cn(
-                    'relative z-10 flex w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[4px] border sui-border-weak sui-bg-section sui-color-active sui-shadow-overlay backdrop-blur-[75px] outline-none',
+                    'scd-workspace-modal-surface relative z-10 flex w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-[4px] border sui-border-weak sui-color-active sui-shadow-overlay backdrop-blur-[75px] outline-none',
                     VARIANT_CLASS[variant],
                     variant === 'detail' && wide && 'max-w-[1320px]',
                     dialogClassName,
                     'max-[719px]:h-[calc(100vh-1rem)] max-[719px]:max-h-[calc(100vh-1rem)] max-[719px]:w-full max-[719px]:max-w-none max-[719px]:rounded-b-none max-[719px]:rounded-t-2xl'
                 )}
             >
-                <div className="flex min-h-16 flex-shrink-0 items-center justify-between gap-4 border-b sui-border-weak sui-bg-page py-2.5 pl-5 pr-4 backdrop-blur-xl">
+                <div className="scd-workspace-modal-header flex min-h-16 flex-shrink-0 items-center justify-between gap-4 border-b sui-border-weak py-2.5 pl-5 pr-4 backdrop-blur-xl">
                     <div className="min-w-0">
                         <h2
                             id={titleId}
@@ -474,31 +416,6 @@ export const WorkspaceModalShell: React.FC<WorkspaceModalShellProps> = ({
                     </div>
                     <div className="flex flex-shrink-0 items-center gap-2">
                         {headerMeta && <div className="hidden items-center gap-2 lg:flex">{headerMeta}</div>}
-                        <label
-                            htmlFor={generatedBackdropOpacityId}
-                            title="Adjust workspace dimming behind the dialog"
-                            className="hidden h-8 items-center gap-2 rounded-[6px] border sui-border-weak sui-bg-page px-2  font-semibold sui-color-default min-[720px]:flex"
-                        >
-                            <span>Backdrop</span>
-                            <input
-                                id={generatedBackdropOpacityId}
-                                type="range"
-                                min={MIN_BACKDROP_OPACITY}
-                                max={MAX_BACKDROP_OPACITY}
-                                step={1}
-                                value={backdropOpacity}
-                                onInput={updateBackdropOpacity}
-                                aria-label="Backdrop opacity"
-                                aria-valuetext={`${backdropOpacity}% opaque`}
-                                className="h-1.5 w-20 cursor-pointer accent-sky-400"
-                            />
-                            <output
-                                htmlFor={generatedBackdropOpacityId}
-                                className="w-8 text-right font-mono  sui-color-default"
-                            >
-                                {backdropOpacity}%
-                            </output>
-                        </label>
                         {searchAction}
                         {searchbaseAction}
                         {onOpenDetailTable && (

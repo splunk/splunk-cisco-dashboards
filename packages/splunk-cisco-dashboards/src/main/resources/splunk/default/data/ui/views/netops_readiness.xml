@@ -346,7 +346,7 @@
 				"annotation": "ds_annotations",
 				"primary": "ds_correlation_strip"
 			},
-			"description": "One Splunk timechart, three sourcetypes (cisco:dnac:devicehealth, cisco:dnac:issue, cisco:spaces:firehose). Watch how DNAC Active Issues spike when Spaces Concurrent Users surge - and how AP Health dips at the same time. Annotations overlay the ExPlan operational milestones (STARTEX, NHC Advisories, County Coordination Calls, PAUSEX, ENDEX). Each series uses carry-forward fill so a sparse ingestion day (e.g. an outage in the upstream Catalyst Center / Spaces collector) doesn't drop the line to zero.",
+			"description": "One Splunk timechart, three sourcetypes (cisco:dnac:devicehealth, cisco:dnac:issue, cisco:spaces:firehose). Watch how DNAC Active Issues spike when Spaces Concurrent Users surge - and how AP Health dips at the same time. Annotations overlay the IT Operations milestones (Start, Checkpoint 1, Checkpoint 2, Close). Each series uses carry-forward fill so a sparse ingestion day (e.g. an outage in the upstream Catalyst Center / Spaces collector) doesn't drop the line to zero.",
 			"options": {
 				"annotationColor": "> annotation | seriesByName('annotation_color')",
 				"annotationLabel": "> annotation | seriesByName('label')",
@@ -600,7 +600,7 @@
 			"dataSources": {
 				"primary": "ds_score_a"
 			},
-			"description": "AP reach % - should be ≥ 95 before exercise",
+			"description": "AP reach % - should be ≥ 95 before the surge event",
 			"options": {
 				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
@@ -879,7 +879,7 @@
 				"annotation": "ds_annotations",
 				"primary": "ds_q10_recovery_health"
 			},
-			"description": "Hourly average client health (0-10). Watch for a tail of degraded health AFTER the exercise - signals stuck sessions or controller stress.",
+			"description": "Hourly average client health (0-10). Watch for a tail of degraded health AFTER the surge event - signals stuck sessions or controller stress.",
 			"options": {
 				"annotationColor": "> annotation | seriesByName('annotation_color')",
 				"annotationLabel": "> annotation | seriesByName('label')",
@@ -905,7 +905,7 @@
 				"annotation": "ds_annotations",
 				"primary": "ds_q10_recovery_issues"
 			},
-			"description": "Hourly DNAC issue count. If issues are still firing 24h+ after the exercise, you have unresolved infrastructure damage to chase down.",
+			"description": "Hourly DNAC issue count. If issues are still firing 24h+ after the surge event, you have unresolved infrastructure damage to chase down.",
 			"options": {
 				"annotationColor": "> annotation | seriesByName('annotation_color')",
 				"annotationLabel": "> annotation | seriesByName('label')",
@@ -925,7 +925,7 @@
 				"annotation": "ds_annotations",
 				"primary": "ds_q10_recovery_onboarding"
 			},
-			"description": "Hourly average client onboarding seconds. Should snap back to baseline within 24h after the exercise. If not, check RADIUS or DHCP for stuck state.",
+			"description": "Hourly average client onboarding seconds. Should snap back to baseline within 24h after the surge event. If not, check RADIUS or DHCP for stuck state.",
 			"options": {
 				"annotationColor": "> annotation | seriesByName('annotation_color')",
 				"annotationLabel": "> annotation | seriesByName('label')",
@@ -949,7 +949,7 @@
 			"dataSources": {
 				"primary": "ds_q1_people_per_ap"
 			},
-			"description": "Peak concurrent users (Spaces) divided by AP count (DNAC) at every site. Industry rule: > 30:1 = saturation risk. Add APs to any 'At Risk' site BEFORE the exercise.",
+			"description": "Peak concurrent users (Spaces) divided by AP count (DNAC) at every site. Industry rule: > 30:1 = saturation risk. Add APs to any 'At Risk' site BEFORE the surge event.",
 			"options": {
 				"fontSize": "small",
 				"showRowNumbers": true,
@@ -983,7 +983,7 @@
 			"dataSources": {
 				"primary": "ds_q3_aps_poor_health"
 			},
-			"description": "Every AP currently UNREACHABLE, with health < 7, or with open issues. The pre-exercise hit list. Empty table = ready to roll.",
+			"description": "Every AP currently UNREACHABLE, with health < 7, or with open issues. The hit list to clear before the surge event. Empty table = ready to roll.",
 			"options": {
 				"count": 20,
 				"fontSize": "small",
@@ -994,7 +994,7 @@
 					"headerColor": "#ecf0f5"
 				}
 			},
-			"title": "Q3 - DNAC: APs to fix before the exercise",
+			"title": "Q3 - DNAC: APs to fix before the surge event",
 			"type": "splunk.table"
 		},
 		"viz_q4_concurrent_users": {
@@ -1228,7 +1228,7 @@
 			"dataSources": {
 				"primary": "ds_q8_surge_per_building"
 			},
-			"description": "Per-site avg concurrent users for two windows: a baseline window (13-7 days ago) vs a recent window (last 3 days). 'Multiplier' = recent / baseline. Tells leadership which buildings absorbed the surge most. Note: windows are relative to 'now', so re-run after the exercise to get the true baseline-vs-exercise comparison.",
+			"description": "Per-site avg concurrent users for two windows: a baseline window (13-7 days ago) vs a recent window (last 3 days). 'Multiplier' = recent / baseline. Tells leadership which buildings absorbed the surge most. Note: windows are relative to 'now', so re-run this after the surge event, once the recent window actually covers it.",
 			"options": {
 				"fontSize": "small",
 				"legendDisplay": "bottom",
@@ -1246,7 +1246,7 @@
 					"#f7782f"
 				]
 			},
-			"title": "Q8 - Spaces: Surge multiplier per building (baseline week vs exercise)",
+			"title": "Q8 - Spaces: Surge multiplier per building (baseline week vs surge event)",
 			"type": "splunk.bar"
 		},
 		"viz_q9_worst_clients": {
@@ -1336,7 +1336,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "**BEFORE - Capacity Planning** - two weeks out: where am I undersized, where will I hit the ceiling, what must I fix before Friday?"
+				"markdown": "**BEFORE - Capacity Planning** - two weeks out: where am I undersized, where will I hit the ceiling, what must I fix before the surge event?"
 			},
 			"type": "splunk.markdown"
 		},
@@ -1354,7 +1354,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "**AFTER - Post-Mortem (Apr 16-22, 2026)** - the lessons-learned tab. Where did the surge land hardest, who suffered most, did the network fully recover?"
+				"markdown": "**AFTER - Post-Mortem** - the lessons-learned tab. Where did the surge land hardest, who suffered most, did the network fully recover?"
 			},
 			"type": "splunk.markdown"
 		}
@@ -1363,7 +1363,7 @@
 		"ds_a_nrs_forecast": {
 			"name": "NRS hourly with 24h forecast",
 			"options": {
-				"query": "| union [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" OverallHealth=* \n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\" \n | where OverallHealth >= 0 \n | bin _time span=1h \n | stats latest(Reachability) as reach, latest(OverallHealth) as oh by _time, DeviceName \n | eval is_reach=if(upper(reach)=\"REACHABLE\", 1, 0), ap_ok=if(oh>=`nrs_th_ap_health`, 1, 0) \n | stats avg(is_reach) as ap_reach, avg(ap_ok) as ap_health_ok, count as ap_n by _time ]\n| union [ search `index_catalyst` sourcetype=\"cisco:dnac:client\" \n | eval cl_health=tonumber('health.overallScore'), ob_ms=tonumber('onboarding.avgRunDuration'), rv=tonumber('connection.rssi') \n | bin _time span=1h \n | stats avg(cl_health) as health_avg, avg(eval(if(ob_ms>0,ob_ms,null()))) as ob_ms, avg(rv) as arv, count(eval(cl_health>=`nrs_th_cl_health`)) as ok_n, count as cl_n by _time \n | eval cl_ok=if(cl_n>0, ok_n/cl_n, null()), h100=coalesce(health_avg,8)*10, ob_s=coalesce(ob_ms,1500)/1000 \n | eval o100=if(ob_s<=1,100,if(ob_s>=5,0,100-((ob_s-1)*25))), r100=max(0,min(100,coalesce(arv,-20)+100)) \n | eval quality=0.35*h100+0.35*o100+0.30*r100 ] \n| stats values(ap_reach) as ap_reach, values(ap_health_ok) as ap_ok,\n values(cl_ok) as cl_ok, values(quality) as quality,\n values(ap_n) as ap_n, values(cl_n) as cl_n by _time \n| where (isnotnull(ap_n) AND ap_n>0) OR (isnotnull(cl_n) AND cl_n>0) \n| eval ap_reach=coalesce(ap_reach,1), ap_ok=coalesce(ap_ok,1),\n cl_ok=coalesce(cl_ok,1), quality=coalesce(quality,80) \n| eval A=ap_reach*100, R=(ap_ok*0.5 + cl_ok*0.5)*100, Q=quality \n| eval E_base=A*`nrs_w_nrs_a` + R*`nrs_w_nrs_r` + Q*`nrs_w_nrs_q` \n| timechart span=1h max(eval(round(E_base, 2))) as E_base \n| appendcols [ search `index_catalyst` sourcetype=\"cisco:dnac:issue\" \n | where isnotnull(IssueID) AND IssueID!=\"\" \n | stats latest(IssueStatus) as issue_status, latest(IssuePriority) as issue_priority by IssueID \n | where lower(issue_status)=\"active\" \n | stats count(eval(upper(issue_priority)=\"P1\")) as p1, count(eval(upper(issue_priority)=\"P2\")) as p2 \n | eval D_risk=max(0.5,1-0.05*p1-0.02*p2) ] \n| eventstats max(D_risk) as D_risk \n| eval D_risk=coalesce(D_risk,1), NRS=round(E_base*D_risk,2) \n| fields - E_base D_risk \n| predict NRS as predicted future_timespan=24 \n| rename \"upper95(prediction(NRS))\" as upper95,\n \"lower95(prediction(NRS))\" as lower95 \n| eval predicted=round(predicted, 2), upper95=round(upper95, 2), lower95=round(lower95, 2)",
+				"query": "| union [ search `index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" OverallHealth=* \n | search DeviceFamily=\"Unified AP\" OR DeviceFamily=\"Wireless Controller\" \n | where OverallHealth >= 0 \n | bin _time span=1h \n | stats latest(Reachability) as reach, latest(OverallHealth) as oh by _time, DeviceName \n | eval is_reach=if(upper(reach)=\"REACHABLE\", 1, 0), ap_ok=if(oh>=`nrs_th_ap_health`, 1, 0) \n | stats avg(is_reach) as ap_reach, avg(ap_ok) as ap_health_ok, count as ap_n by _time ]\n| union [ search `index_catalyst` sourcetype=\"cisco:dnac:client\" \n | eval cl_health=tonumber('health.overallScore'), ob_ms=tonumber('onboarding.avgRunDuration'), rv=tonumber('connection.rssi') \n | bin _time span=1h \n | stats avg(cl_health) as health_avg, avg(eval(if(ob_ms>0,ob_ms,null()))) as ob_ms, avg(rv) as arv, count(eval(cl_health>=`nrs_th_cl_health`)) as ok_n, count as cl_n by _time \n | eval cl_ok=if(cl_n>0, ok_n/cl_n, null()), h100=coalesce(health_avg,8)*10, ob_s=coalesce(ob_ms,1500)/1000 \n | eval o100=if(ob_s<=1,100,if(ob_s>=5,0,100-((ob_s-1)*25))), r100=max(0,min(100,coalesce(arv,-20)+100)) \n | eval quality=0.35*h100+0.35*o100+0.30*r100 ] \n| stats values(ap_reach) as ap_reach, values(ap_health_ok) as ap_ok,\n values(cl_ok) as cl_ok, values(quality) as quality,\n values(ap_n) as ap_n, values(cl_n) as cl_n by _time \n| where (isnotnull(ap_n) AND ap_n>0) OR (isnotnull(cl_n) AND cl_n>0) \n| eval ap_reach=coalesce(ap_reach,1), ap_ok=coalesce(ap_ok,1),\n cl_ok=coalesce(cl_ok,1), quality=coalesce(quality,80) \n| eval A=ap_reach*100, R=(ap_ok*0.5 + cl_ok*0.5)*100, Q=quality \n| eval E_base=A*`nrs_w_nrs_a` + R*`nrs_w_nrs_r` + Q*`nrs_w_nrs_q` \n| timechart span=1h max(eval(round(E_base, 2))) as E_base \n| appendcols [ search `index_catalyst` sourcetype=\"cisco:dnac:issue\" \n | where isnotnull(IssueID) AND IssueID!=\"\" \n | stats latest(IssueStatus) as issue_status, latest(IssuePriority) as issue_priority by IssueID \n | where lower(issue_status)=\"active\" \n | stats count(eval(upper(issue_priority)=\"P1\")) as p1, count(eval(upper(issue_priority)=\"P2\")) as p2 \n | eval D_risk=max(0.5,1-0.05*p1-0.02*p2) ] \n| eventstats max(D_risk) as D_risk \n| eval D_risk=coalesce(D_risk,1), NRS=round(E_base*D_risk,2) \n| fields _time NRS \n| predict NRS as predicted algorithm=LLP5 future_timespan=24 \n| rename \"upper95(predicted)\" as upper95,\n \"lower95(predicted)\" as lower95 \n| eval predicted=round(predicted, 2), upper95=round(upper95, 2), lower95=round(lower95, 2)\n| appendpipe [ stats count as _empty | where _empty=0 | eval _time=now(), data_status=\"Not enough history in the selected time range to build a forecast. Widen the time range, or confirm the data source is onboarded.\" | fields _time data_status ]",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1398,7 +1398,7 @@
 		"ds_c_issues_forecast": {
 			"name": "Active issues hourly with 24h forecast",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\"\n| timechart dc(IssueID) as \"Active Issues\"\n| predict \"Active Issues\" as predicted future_timespan=24\n| rename \"upper95(prediction(Active Issues))\" as upper95,\n \"lower95(prediction(Active Issues))\" as lower95\n| eval predicted=round(predicted, 2), upper95=round(upper95, 2), lower95=round(lower95, 2)",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:issue\" IssueStatus=\"active\"\n| timechart span=1h dc(IssueID) as active_issues\n| predict active_issues as predicted algorithm=LLP5 future_timespan=24\n| rename \"upper95(predicted)\" as upper95,\n \"lower95(predicted)\" as lower95\n| eval predicted=round(predicted, 2), upper95=round(upper95, 2), lower95=round(lower95, 2)\n| rename active_issues as \"Active Issues\"\n| appendpipe [ stats count as _empty | where _empty=0 | eval _time=now(), data_status=\"Not enough history in the selected time range to build a forecast. Widen the time range, or confirm the data source is onboarded.\" | fields _time data_status ]",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -1484,7 +1484,7 @@
 			"type": "ds.search"
 		},
 		"ds_q3_aps_poor_health": {
-			"name": "Q3 - DNAC APs to fix before the exercise",
+			"name": "Q3 - DNAC APs to fix before the surge event",
 			"options": {
 				"query": "`index_catalyst` sourcetype=\"cisco:dnac:devicehealth\" DeviceFamily=\"Unified AP\"\n| eval site_raw=coalesce(Site, Location, \"Unsited\")\n| stats latest(OverallHealth) as oh,\n latest(Reachability) as Reachability,\n latest(IssueCount) as Issues by DeviceName, site_raw\n| where (oh<7 OR upper(Reachability)!=\"REACHABLE\" OR Issues>0)\n| eval Health = case(upper(Reachability)!=\"REACHABLE\", \"-\", isnull(oh), \"-\", oh<0, \"-\", 1=1, tostring(oh))\n| eval Status=case(upper(Reachability)!=\"REACHABLE\", \"UNREACHABLE\",\n isnotnull(oh) AND oh>=0 AND oh<5, \"Critical\",\n isnotnull(oh) AND oh<7, \"Degraded\",\n Issues>0, \"Has Issues\",\n 1=1, \"Watch\")\n| eval site=replace(site_raw, \"^Global/Region/\", \"\")\n| sort + oh\n| rename DeviceName as \"AP\", site as \"Site\", Issues as \"Open Issues\"\n| table \"AP\" \"Site\" \"Health\" \"Reachability\" \"Open Issues\" \"Status\"",
 				"queryParameters": {

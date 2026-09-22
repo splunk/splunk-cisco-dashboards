@@ -65,7 +65,7 @@ const MetadataBlock: React.FC<MetadataBlockProps> = ({ title, html, appearance }
     }
 
     return (
-        <section className="min-w-0 rounded-lg border sui-border-weak sui-bg-page p-4">
+        <section className="scd-workspace-modal-guidance-card min-w-0 rounded-lg border sui-border-weak p-4">
             <h4 className="mb-2 text-xs font-black uppercase tracking-[0.12em] sui-color-info">
                 {title}
             </h4>
@@ -155,7 +155,7 @@ export const SearchbaseDrilldownGuidance: React.FC<SearchbaseDrilldownGuidancePr
     return (
         <section
             className={cn(
-                'border-t sui-border-weak sui-bg-page',
+                'scd-workspace-modal-guidance border-t sui-border-weak',
                 expanded ? 'flex min-h-[120px] flex-1 flex-col' : 'shrink-0'
             )}
             data-searchbase-drilldown-guidance="workspace"

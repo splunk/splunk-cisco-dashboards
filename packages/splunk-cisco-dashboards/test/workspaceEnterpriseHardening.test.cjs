@@ -396,13 +396,42 @@ const searchService = read(
 const topology = read(
   "src/main/webapp/common/components/workspace/CustomerTopologyMap.tsx",
 );
-const searchbaseConfig = read("src/main/resources/splunk/default/searchbase.conf");
 const topologyPersistenceService = read(
   "src/main/webapp/common/services/customerTopologyPersistenceService.ts",
 );
 assert.match(topology, /attributionControl=\{false\}/);
 assert.match(topology, /label="Map credits"/);
 assert.match(topology, /Map rendering: Leaflet\. Basemap:/);
+assert.match(
+  topology,
+  /const MapCreditsDisclosure = styled\.div`[\s\S]*?flex-direction: column[\s\S]*?max-width: min\(15rem, calc\(100vw - 3rem\)\)/,
+  "Map credits must stay bounded inside the map-control stack",
+);
+assert.match(
+  topology,
+  /\{mapCreditsOpen && \([\s\S]*?<MapCreditsCard[\s\S]*?<MapCreditsButton/,
+  "Map credits must expand in flow before its trigger instead of using a floating popover",
+);
+assert.match(
+  topology,
+  /event\.key === "Escape" && mapCreditsOpen[\s\S]*?closeMapCredits\(\)/,
+  "Map credits must remain dismissible with Escape",
+);
+assert.match(
+  topology,
+  /mapCreditsCloseButtonRef\.current\?\.focus\(\)[\s\S]*?ref=\{mapCreditsCloseButtonRef\}/,
+  "Opening Map credits must move focus into the disclosure",
+);
+assert.match(
+  topology,
+  /const MapViewport = styled\.div`[\s\S]*?flex: 1 1 auto[\s\S]*?overflow: hidden/,
+  "The draggable map must have its own bounded viewport",
+);
+assert.match(
+  topology,
+  /<\/MapViewport>[\s\S]*?<MapBottomRightActions/,
+  "Map controls must render outside the draggable viewport instead of covering sites",
+);
 assert.match(topology, /<ControlGroup[\s\S]*?label="Telemetry source"/);
 assert.match(
   topology,
@@ -445,6 +474,11 @@ assert.match(
   /tag: "topology_te_a2a_inventory"[\s\S]*?dispatchPriority: 1/,
   "A2A inventory must dispatch ahead of non-interactive dashboard sections",
 );
+assert.match(
+  topology,
+  /tag: `topology_link_\$\{link\.id\}`[\s\S]*?dispatchPriority: 1/,
+  "Searchbase-bound topology links must dispatch ahead of non-interactive dashboard sections",
+);
 assert.doesNotMatch(
   topology,
   /`\$\{match\.confidence\}%`/,
@@ -455,24 +489,15 @@ assert.match(
   /bindSearchbaseToLink[\s\S]*?thousandEyesA2A: undefined,[\s\S]*?teLink: undefined/,
   "A Searchbase selection must replace any ThousandEyes draft binding",
 );
-const fdemTlhToAubSearch = searchbaseConfig.match(
-  /\[fdem_-_link_tlh_to_aub_thousandeyes_a2a_health\][\s\S]*?(?=\n\[|$)/,
-)?.[0];
-assert.ok(fdemTlhToAubSearch, "The FDEM TLH-to-AUB A2A stanza must exist");
 assert.match(
-  fdemTlhToAubSearch,
-  /\| tstats `scd_summariesonly`[\s\S]*?FROM datamodel="Cisco_ThousandEyes\.Test_Metrics"[\s\S]*?Test_Metrics\.thousandeyes\.test\.id IN \("7148943"\)/,
-  "The FDEM A2A health stanza must use the ThousandEyes data model for test 7148943",
+  topology,
+  /bindSearchbaseToLink[\s\S]*?normalizedSearchName \? "loading" : "static"/,
+  "Unbinding Searchbase from a link must clear its loading state",
 );
 assert.match(
-  fdemTlhToAubSearch,
-  /teLink=if\(isnotnull\(teLinkBase\) AND isnotnull\(teAccountId\),teLinkBase\."&__a="\.teAccountId,teLinkBase\)/,
-  "The FDEM A2A health stanza must preserve a direct ThousandEyes path link",
-);
-assert.doesNotMatch(
-  fdemTlhToAubSearch,
-  /site[-_]?1|site[-_]?2/i,
-  "The FDEM A2A health stanza must not hard-code generic map site identifiers",
+  topology,
+  /bindSearchbaseToSite[\s\S]*?normalizedSearchName \? "loading" : "static"/,
+  "Unbinding Searchbase from a site must clear its loading state",
 );
 assert.match(
   topology,
@@ -486,8 +511,13 @@ assert.match(
 );
 assert.match(
   topology,
-  /saveCustomerTopologyConfig\([\s\S]*?nextPayload,[\s\S]*?persistedPayloadRef\.current,[\s\S]*?\);[\s\S]*?persistedPayloadRef\.current = nextPayload;/,
-  "Successful topology writes must compare and advance the canonical payload baseline",
+  /capturePersistedPayload[\s\S]*?editorExpectedPayloadRef\.current = capturePersistedPayload\(\)[\s\S]*?saveTopology\(draftTopology, editorExpectedPayloadRef\.current\)/,
+  "Topology editing must freeze the exact concurrency baseline when the editor opens",
+);
+assert.match(
+  topology,
+  /const savedPayload = await saveCustomerTopologyConfig\([\s\S]*?expectedPayload,[\s\S]*?\);[\s\S]*?persistedPayloadRef\.current = savedPayload;/,
+  "Successful topology writes must advance to the normalized payload returned by persistence",
 );
 assert.match(
   topologyPersistenceService,
@@ -496,8 +526,23 @@ assert.match(
 );
 assert.match(
   topologyPersistenceService,
-  /if \(expectedPayload !== undefined\)[\s\S]*?expectedMatchesCurrent[\s\S]*?currentPayload === null/,
+  /if \(expectedPayload !== undefined\)[\s\S]*?expectedMatchesCurrent[\s\S]*?currentRow === null/,
   "Optimistic concurrency must protect existing and initially absent topology stanzas",
+);
+assert.match(
+  topologyPersistenceService,
+  /if \(!row\) return null;[\s\S]*?shared topology configuration exists but has no payload/,
+  "An invalid existing topology stanza must not be treated as an absent stanza",
+);
+assert.match(
+  topology,
+  /hasUnsavedChanges[\s\S]*?setConfirmation\("discard"\)/,
+  "Closing a dirty topology editor must require discard confirmation",
+);
+assert.match(
+  topology,
+  /setConfirmation\("factory"\)[\s\S]*?Reset shared topology\?/,
+  "Resetting the shared topology must require destructive confirmation",
 );
 const picker = read(
   "src/main/webapp/common/components/workspace/KpiPickerPanel.tsx",
@@ -514,6 +559,9 @@ const rail = read(
 );
 const metricItem = read(
   "src/main/webapp/common/components/workspace/MetricItem.tsx",
+);
+const infoTooltip = read(
+  "src/main/webapp/common/components/workspace/InfoTooltip.tsx",
 );
 const barBreakdownTile = read(
   "src/main/webapp/common/components/workspace/BarBreakdownTile.tsx",
@@ -534,8 +582,14 @@ const dashboardBuilderPicker = read(
 const dashboardBuilderStyles = read(
   "src/main/webapp/common/styles/commonstyles.css",
 );
+const dashboardBuilderDrilldown = read(
+  "src/main/webapp/pages/dashboardbuilder/DashboardStudioDrilldownModal.jsx",
+);
 const modalShell = read(
   "src/main/webapp/common/components/workspace/WorkspaceModalShell.tsx",
+);
+const drilldownGuidance = read(
+  "src/main/webapp/common/components/workspace/SearchbaseDrilldownGuidance.tsx",
 );
 const appThemeProvider = read(
   "src/main/webapp/common/theme/AppThemeProvider.tsx",
@@ -781,6 +835,11 @@ assert.match(
 );
 assert.match(
   userGuide,
+  /Searchbase-bound topology link searches[\s\S]*?waiting behind ordinary dashboard sections/,
+  "The current in-app release notes must document the topology link dispatch repair",
+);
+assert.match(
+  userGuide,
   /Add search now opens and resets with only[\s\S]*?this app selected[\s\S]*?Entire catalogue remains[\s\S]*?available/,
   "The current in-app release notes must document the Add search default repair",
 );
@@ -905,10 +964,52 @@ assert.match(
 assert.match(
   profile,
   /const buildOverviewDescription =/,
-  "Workspace tiles must compose the complete Searchbase metadata contract",
+  "Workspace tiles must derive concise hover help from Searchbase metadata",
 );
-assert.match(profile, /Operator action/);
-assert.match(profile, /Data source and context/);
+assert.match(
+  profile,
+  /const summary =\s*explicit \?\?[\s\S]*?plainTextFromHtml\(record\.description\)/,
+  "Workspace hover help must prefer the concise description field",
+);
+assert.doesNotMatch(
+  profile,
+  /append\("How it works"|append\("Operator action"|append\("Data source and context"/,
+  "Workspace hover help must not concatenate the full Searchbase guidance contract",
+);
+assert.match(
+  profile,
+  /const buildOverviewInfoSections =[\s\S]*?record\.explanation[\s\S]*?record\.solution[\s\S]*?record\.relatedInfo[\s\S]*?record\.executionPlan/,
+  "The parent tile info control must retain every parent Searchbase guidance field",
+);
+assert.match(
+  profile,
+  /description=\{effective\.description\}[\s\S]*?infoSections=\{effective\.infoSections\}/,
+  "Every workspace tile must receive its own expandable guidance",
+);
+assert.match(
+  profile,
+  /<SearchbaseDrilldownGuidance[\s\S]*?metadata=\{activeConfig\.metadata\}/,
+  "The detail modal must continue to render only the active drill-down search metadata",
+);
+assert.match(infoTooltip, /overflowWrap: 'anywhere'/);
+assert.match(infoTooltip, /maxHeight: `min\(480px,/);
+assert.match(infoTooltip, /pointer-events-auto overscroll-contain/);
+assert.match(
+  infoTooltip,
+  /if \(event\.key === 'Escape'\) \{\s*closeTooltip\(\);\s*\}/,
+);
+assert.match(infoTooltip, /onMouseEnter=\{cancelScheduledClose\}/);
+assert.match(
+  infoTooltip,
+  /role=\{showDetails \? 'dialog' : 'tooltip'\}/,
+  "Expanded tile guidance must not use tooltip semantics",
+);
+assert.match(
+  infoTooltip,
+  /aria-describedby=\{isOpen && !showDetails \? tooltipId : undefined\}/,
+);
+assert.match(infoTooltip, /aria-haspopup=\{hasDetails \? 'dialog' : undefined\}/);
+assert.match(metricItem, /detailSections=\{infoSections\}/);
 assert.match(
   searchService,
   /\[SSNE Diagnostics\] ENABLED/,
@@ -968,7 +1069,7 @@ assert.match(
 );
 assert.match(
   topology,
-  /\{canManageTopology && \([\s\S]*?label="Edit topology"/,
+  /\{canManageTopology && \([\s\S]*?: "Edit topology"/,
 );
 assert.match(
   picker,
@@ -1130,6 +1231,46 @@ assert.doesNotMatch(
 );
 
 assert.match(modalShell, /const previouslyFocused = document\.activeElement/);
+assert.match(
+  modalShell,
+  /const FIXED_BACKDROP_OPACITY = 0\.7;[\s\S]*?const FIXED_BACKDROP_BLUR_PX = 2;/,
+  "Workspace dialogs must use one deliberate fixed backdrop treatment",
+);
+assert.match(
+  modalShell,
+  /backgroundColor: `rgba\(2, 6, 23, \$\{FIXED_BACKDROP_OPACITY\}\)`[\s\S]*?backdropFilter: `blur\(\$\{FIXED_BACKDROP_BLUR_PX\}px\)`/,
+  "The fixed backdrop must dim and lightly blur the workspace behind the opaque dialog",
+);
+assert.doesNotMatch(
+  modalShell,
+  /type="range"|Background visibility|backdropOpacity|backgroundVisibility/,
+  "Workspace dialogs must not expose ambiguous backdrop or transparency sliders",
+);
+assert.match(
+  profile,
+  /contentClassName="scd-workspace-modal-content flex min-h-0 flex-1 flex-col overflow-hidden"/,
+  "Insights drill-down dialogs must use the atmospheric workspace surface",
+);
+assert.match(
+  dashboardBuilderDrilldown,
+  /<WorkspaceModalShell[\s\S]*?contentClassName="dashboard-builder-drilldown-shell scd-workspace-modal-content[^\"]*"/,
+  "Dashboard Manager drill-down dialogs must share the atmospheric workspace surface and visibility control",
+);
+assert.match(
+  modalShell,
+  /scd-workspace-modal-surface[\s\S]*?scd-workspace-modal-header/,
+  "The shared drill-down shell must use the workspace atmosphere instead of flat black surfaces",
+);
+assert.match(
+  drilldownGuidance,
+  /scd-workspace-modal-guidance-card[\s\S]*?scd-workspace-modal-guidance border-t/,
+  "Expanded drill-down guidance must continue the themed modal surface instead of restoring a black page fill",
+);
+assert.match(
+  globalStyles,
+  /\[data-app-color-scheme='dark'\] \.scd-workspace-modal-surface[\s\S]*?linear-gradient\(155deg, #17263a[\s\S]*?\.scd-workspace-modal-guidance-card/,
+  "Dark drill-down surfaces must retain the navy workspace atmosphere across the shell and guidance cards",
+);
 assert.match(
   appThemeProvider,
   /mountRoot\.dataset\.appColorScheme = colorScheme[\s\S]*?mountRoot\.style\.colorScheme = colorScheme/,

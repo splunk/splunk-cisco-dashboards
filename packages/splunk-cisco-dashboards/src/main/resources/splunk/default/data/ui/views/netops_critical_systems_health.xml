@@ -2149,6 +2149,11 @@
 			"context": {
 				"majorColorEditorConfig": [
 					{
+						"to": -0.0001,
+						"value": "#8a9099"
+					},
+					{
+						"from": 0,
 						"to": 70,
 						"value": "#fa5762"
 					},
@@ -2166,15 +2171,17 @@
 			"dataSources": {
 				"primary": "ds_uxh_wired_health"
 			},
-			"description": "Current wired client health score from Catalyst Center",
+			"description": "Latest available wired client health score from Catalyst Center",
 			"options": {
 				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"majorFontSize": 48,
-				"shouldAbbreviateMajorValue": true,
+				"majorValue": "> primary | seriesByName('score') | lastPoint()",
+				"shouldAbbreviateMajorValue": false,
 				"shouldAbbreviateTrendValue": true,
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
+				"underLabel": "> primary | seriesByName('score_age') | lastPoint()",
 				"unit": "%",
 				"trendColor": "#649ef5"
 			},
@@ -2185,6 +2192,11 @@
 			"context": {
 				"majorColorEditorConfig": [
 					{
+						"to": -0.0001,
+						"value": "#8a9099"
+					},
+					{
+						"from": 0,
 						"to": 70,
 						"value": "#fa5762"
 					},
@@ -2202,15 +2214,17 @@
 			"dataSources": {
 				"primary": "ds_uxh_wireless_health"
 			},
-			"description": "Current wireless client health score from Catalyst Center",
+			"description": "Latest available wireless client health score from Catalyst Center",
 			"options": {
 				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(majorColorEditorConfig)",
 				"majorFontSize": 48,
-				"shouldAbbreviateMajorValue": true,
+				"majorValue": "> primary | seriesByName('score') | lastPoint()",
+				"shouldAbbreviateMajorValue": false,
 				"shouldAbbreviateTrendValue": true,
 				"showTrendIndicator": false,
 				"sparklineDisplay": "off",
+				"underLabel": "> primary | seriesByName('score_age') | lastPoint()",
 				"unit": "%",
 				"trendColor": "#649ef5"
 			},
@@ -2986,7 +3000,7 @@
 		"ds_uxh_wired_health": {
 			"name": "IT Health - User Experience - Wired Health",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" scoreType=\"ALL\"\n| stats latest(scoreValue) as sv\n| eval score=if(sv>=0, sv, 0)\n| fields score",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" scoreType=\"ALL\"\n| eval score=tonumber(mvindex(mvdedup(scoreValue),0)), clients=tonumber(mvindex(mvdedup(clientCount),0))\n| where score>=0 AND clients>0\n| sort 0 - _time\n| head 1\n| eval score=round(score,0), score_age_seconds=max(0,now()-_time)\n| eval score_age=case(score_age_seconds<60,\"Reported just now\",score_age_seconds<3600,\"Reported \".floor(score_age_seconds/60).\"m ago\",score_age_seconds<86400,\"Reported \".floor(score_age_seconds/3600).\"h ago\",true(),\"Reported \".floor(score_age_seconds/86400).\"d ago\")\n| fields score score_age",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"
@@ -2997,7 +3011,7 @@
 		"ds_uxh_wireless_health": {
 			"name": "IT Health - User Experience - Wireless Health",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" scoreType=\"ALL\"\n| stats latest(scoreValue) as sv\n| eval score=if(sv>=0, sv, 0)\n| fields score",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" scoreType=\"ALL\"\n| eval score=tonumber(mvindex(mvdedup(scoreValue),0)), clients=tonumber(mvindex(mvdedup(clientCount),0))\n| where score>=0 AND clients>0\n| sort 0 - _time\n| head 1\n| eval score=round(score,0), score_age_seconds=max(0,now()-_time)\n| eval score_age=case(score_age_seconds<60,\"Reported just now\",score_age_seconds<3600,\"Reported \".floor(score_age_seconds/60).\"m ago\",score_age_seconds<86400,\"Reported \".floor(score_age_seconds/3600).\"h ago\",true(),\"Reported \".floor(score_age_seconds/86400).\"d ago\")\n| fields score score_age",
 				"queryParameters": {
 					"earliest": "$global_time.earliest$",
 					"latest": "$global_time.latest$"

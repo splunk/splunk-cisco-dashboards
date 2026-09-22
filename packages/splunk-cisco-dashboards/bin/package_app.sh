@@ -11,12 +11,13 @@ APP_NAME="splunk-cisco-dashboards"
 FROM_STAGE=0
 MINIFY=0
 DEVELOPER_PROFILE=0
+PREVIEW_PROFILE=0
 ROOT_DIR="${PKG_ROOT}/../.."
 VERSION_FILE="${ROOT_DIR}/VERSION"
 
 usage() {
   cat <<EOF
-Usage: bin/package_app.sh [--from-stage] [--minify] [--developer]
+Usage: bin/package_app.sh [--from-stage] [--minify] [--developer|--splunkbase-preview]
 
 Default behavior: clean stage/, run minified production webpack, then create
 the Splunkbase profile without resources listed as developing in the app
@@ -34,6 +35,13 @@ Options:
   --developer             Include all resources listed as developing and write
                           a clearly labeled developer tarball. Intended for
                           local use.
+  --splunkbase-preview    Apply the Splunkbase content filter to an uncommitted
+                          worktree, keeping the resources listed under
+                          previewRetained in the build manifest (the Searchbase
+                          Canvas authoring surface). Writes a clearly labeled
+                          *-preview tarball recording release_eligible=false,
+                          which can never be uploaded or installed as a
+                          release. Not valid with --developer or --from-stage.
   -h, --help              Show this help.
 EOF
 }
@@ -97,6 +105,10 @@ while [[ $# -gt 0 ]]; do
       DEVELOPER_PROFILE=1
       shift
       ;;
+    --splunkbase-preview)
+      PREVIEW_PROFILE=1
+      shift
+      ;;
     -h|--help)
       usage
       exit 0
@@ -108,6 +120,21 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+# The preview profile exists to answer "what would Splunkbase receive?" before
+# the source is committed. It shares the Splunkbase content filter but none of
+# its release claims, so it cannot be combined with the developer profile or
+# with a watcher-built stage whose bundles may not match current source.
+if [[ "$PREVIEW_PROFILE" -eq 1 && "$DEVELOPER_PROFILE" -eq 1 ]]; then
+  echo "ERROR: --splunkbase-preview and --developer are mutually exclusive." >&2
+  echo "       The preview profile excludes developing resources by design." >&2
+  exit 2
+fi
+if [[ "$PREVIEW_PROFILE" -eq 1 && "$FROM_STAGE" -eq 1 ]]; then
+  echo "ERROR: --splunkbase-preview and --from-stage are mutually exclusive." >&2
+  echo "       A preview must reflect current source, not watcher-built stage output." >&2
+  exit 2
+fi
 
 # A watcher-built stage can contain developing resources and is not a clean
 # production build. Preserve the historical --from-stage behavior by making
@@ -141,9 +168,16 @@ node "${PKG_ROOT}/bin/validate_release_identity.js"
 
 DIST_DIR="${PKG_ROOT}/../../dist"
 mkdir -p "$DIST_DIR"
+# APP_PROFILE selects which resources are packaged and what the archive is
+# allowed to claim about itself. The preview applies the Splunkbase filter
+# minus the carve-outs the build manifest lists under previewRetained, and
+# lands under a name no release path will ever accept.
 if [[ "$DEVELOPER_PROFILE" -eq 1 ]]; then
   APP_PROFILE="developer"
   ARTIFACT_PROFILE_SUFFIX="-developer"
+elif [[ "$PREVIEW_PROFILE" -eq 1 ]]; then
+  APP_PROFILE="preview"
+  ARTIFACT_PROFILE_SUFFIX="-preview"
 else
   APP_PROFILE="splunkbase"
   ARTIFACT_PROFILE_SUFFIX=""
@@ -205,6 +239,7 @@ resolve_clean_release_commit() {
   if [[ -n "$(git -C "$ROOT_DIR" status --porcelain --untracked-files=all)" ]]; then
     echo "ERROR: publishable Splunkbase packaging requires a clean Git worktree." >&2
     echo "       Commit the release source, or use --developer/--from-stage for local testing." >&2
+    echo "       Use --splunkbase-preview to apply the Splunkbase filter to uncommitted source." >&2
     return 1
   fi
   resolve_release_commit
@@ -223,11 +258,28 @@ resolve_splunkbase_app_id() {
   ' "${ROOT_DIR}/releases/splunkbase-9257.json"
 }
 
+worktree_is_clean() {
+  if [[ -n "$(git -C "$ROOT_DIR" status --porcelain --untracked-files=all)" ]]; then
+    printf 'false\n'
+  else
+    printf 'true\n'
+  fi
+}
+
 RELEASE_COMMIT=""
 SPLUNKBASE_APP_ID=""
 SOURCE_TREE_CLEAN=true
 RELEASE_ELIGIBLE=true
-if [[ "$APP_PROFILE" == "splunkbase" ]]; then
+if [[ "$APP_PROFILE" == "preview" ]]; then
+  # The preview drops exactly one gate: the clean worktree. Ignored files are
+  # still refused, because a file Git never tracks would misrepresent the
+  # Splunkbase content the preview exists to show. The recorded commit is the
+  # base HEAD, which is why this archive can never claim release eligibility.
+  RELEASE_COMMIT="$(resolve_release_commit)"
+  SPLUNKBASE_APP_ID="$(resolve_splunkbase_app_id)"
+  SOURCE_TREE_CLEAN="$(worktree_is_clean)"
+  RELEASE_ELIGIBLE=false
+elif [[ "$APP_PROFILE" == "splunkbase" ]]; then
   RELEASE_COMMIT="$(resolve_clean_release_commit)"
   SPLUNKBASE_APP_ID="$(resolve_splunkbase_app_id)"
   # Published bundles are an operator-facing release surface. Keep fast,
@@ -427,13 +479,15 @@ echo "[package] app.conf: stamped build ${new_build} into package output (source
 
 # Keep source provenance in a standalone package manifest rather than
 # app.conf. This records the source commit and release eligibility without
-# exposing a workstation, branch name, timestamp, or dirty file details.
-if [[ "$APP_PROFILE" == "splunkbase" ]]; then
+# exposing a workstation, branch name, timestamp, or dirty file details. A
+# preview carries it too, because declaring release_eligible=false is what
+# keeps it out of the release and install paths.
+if [[ "$APP_PROFILE" != "developer" ]]; then
   provenance_file="${TMP_DIR}/${APP_NAME}/release-provenance.json"
   printf '{\n  "schema_version": 1,\n  "splunkbase_app_id": %s,\n  "package_id": "%s",\n  "version": "%s",\n  "build": %s,\n  "git_commit": "%s",\n  "source_tree_clean": %s,\n  "release_eligible": %s\n}\n' \
     "$SPLUNKBASE_APP_ID" "$APP_NAME" "$VERSION" "$new_build" "$RELEASE_COMMIT" \
     "$SOURCE_TREE_CLEAN" "$RELEASE_ELIGIBLE" > "$provenance_file"
-  echo "[package] source provenance: commit ${RELEASE_COMMIT}; release_eligible=${RELEASE_ELIGIBLE}"
+  echo "[package] source provenance: commit ${RELEASE_COMMIT}; source_tree_clean=${SOURCE_TREE_CLEAN}; release_eligible=${RELEASE_ELIGIBLE}"
 fi
 
 # Webpack emits a unique marker rather than reading app.conf at compile time.
@@ -572,3 +626,6 @@ rm -f "$ARCHIVE_TMP"
 ARCHIVE_TMP=""
 SIZE=$(du -h "$PKG_PATH" | cut -f1 | xargs)
 echo "Created ${PKG_PATH} (${SIZE})"
+if [[ "$APP_PROFILE" == "preview" ]]; then
+  echo "[package] Splunkbase content preview only; not uploadable and not installable as a release."
+fi

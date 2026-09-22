@@ -237,14 +237,14 @@ assert.deepEqual(executiveFallback.defaultVisibleSections, [
   "building",
 ]);
 assert.equal(executiveFallback.maxVisibleSections, 3);
-assert.equal(executiveFallback.fallbackTileCount, 9);
+assert.equal(executiveFallback.fallbackTileCount, 3);
 assert.equal(field(executiveBody, "sections"), "it_health,security,building");
 assert.equal(
   field(executiveBody, "default_visible_sections"),
   "it_health,security,building",
 );
 assert.equal(field(executiveBody, "max_visible_sections"), "3");
-assert.equal(field(executiveBody, "default_tile_count"), "9");
+assert.equal(field(executiveBody, "default_tile_count"), "3");
 assert.equal(field(executiveBody, "map_visible"), "1");
 assert.equal(field(executiveBody, "map_position"), "right");
 assert.equal(field(executiveBody, "regional_view"), "map");
@@ -310,8 +310,8 @@ for (const [sectionId, expectedSectionTiles] of Object.entries(
   );
   assert.equal(
     field(layout, "visible_count"),
-    "9",
-    `${layoutId} must expose all nine configured tiles by default`,
+    "3",
+    `${layoutId} must open on three tiles, matching min_tile_count; the other six stay available through the tile picker`,
   );
 
   for (const [tileId, label] of expectedSectionTiles) {
@@ -743,10 +743,10 @@ for (const [sectionId, tileIds] of Object.entries(expectedTiles)) {
     assert.equal(vizOptions.overview[0].section, sectionId);
     assert.equal(vizOptions.overview[0].tileId, tileId);
     assert.match(field(search, "tags"), /Agentic SOC/);
-    assert.match(field(search, "tags"), /Custom Conference/);
-    assert.ok(
-      /CIM Accelerated/.test(field(search, "tags")),
-      `${tileId} must declare accelerated execution`,
+    assert.match(
+      field(search, "search"),
+      /`scd_summariesonly`/,
+      `${tileId} must gate acceleration through the scd_summariesonly macro`,
     );
     assert.match(field(search, "search"), /^\| tstats /);
     assert.doesNotMatch(search, /\|\s*makeresults|random\s*\(/i);
@@ -755,39 +755,28 @@ for (const [sectionId, tileIds] of Object.entries(expectedTiles)) {
 
 for (const tileId of acceleratedNetworkResolutionTiles) {
   const search = stanza(searchbase, tileId);
-  assert.match(field(search, "tags"), /CIM Accelerated/);
-  assert.match(field(search, "tags"), /Network Resolution/);
-  assert.match(
-    search,
-    /\| tstats summariesonly=true allow_old_summaries=false/,
-  );
-  assert.doesNotMatch(search, /`scd_summariesonly`/);
+  assert.match(field(search, "tags"), /\bDNS\b/);
+  assert.match(search, /\| tstats `scd_summariesonly`/);
+  assert.doesNotMatch(field(search, "search"), /summariesonly=/);
   assert.match(search, /FROM datamodel=Network_Resolution\.DNS/i);
 }
 
 for (const tileId of acceleratedNetworkTrafficTiles) {
   const search = stanza(searchbase, tileId);
-  assert.match(field(search, "tags"), /CIM Accelerated/);
   assert.match(field(search, "tags"), /Network Traffic/);
-  assert.match(
-    search,
-    /\| tstats summariesonly=true allow_old_summaries=false/,
-  );
-  assert.doesNotMatch(search, /`scd_summariesonly`/);
+  assert.match(search, /\| tstats `scd_summariesonly`/);
+  assert.doesNotMatch(field(search, "search"), /summariesonly=/);
   assert.match(search, /FROM datamodel=Network_Traffic\.All_Traffic/i);
 }
 
 for (const tileId of acceleratedNetworkSessionsTiles) {
   const search = stanza(searchbase, tileId);
-  assert.match(field(search, "tags"), /CIM Accelerated/);
   assert.match(field(search, "tags"), /Network Sessions/);
-  assert.match(
-    search,
-    /\| tstats summariesonly=true allow_old_summaries=false/,
-  );
+  assert.match(search, /\| tstats `scd_summariesonly`/);
+  assert.doesNotMatch(field(search, "search"), /summariesonly=/);
   assert.match(search, /FROM datamodel=Network_Sessions\.All_Sessions/i);
   assert.match(search, /`index_dhcp`/);
-  assert.match(search, /sourcetype="dhcp"/);
+  assert.match(search, /sourcetype="dhcpd"/);
 }
 
 const dhcpActivity = stanza(searchbase, "agentic_soc_unified_threat_activity");
@@ -864,7 +853,7 @@ for (const tileId of expectedTiles.firewall_security) {
     assert.match(field(search, "tags"), /Endace/);
   } else {
     assert.match(search, /`index_network_ftd`/);
-    assert.match(field(search, "tags"), /TA 7404/);
+    assert.match(field(search, "tags"), /Secure Firewall/);
   }
   assert.doesNotMatch(field(search, "tags"), /Awaiting Feed/);
 }
@@ -914,12 +903,10 @@ for (const tileId of expectedTiles.network_detection) {
   const search = stanza(searchbase, tileId);
   assert.match(search, /`index_zeek`/);
   assert.match(search, /sourcetype="zeek:/);
-  assert.match(field(search, "tags"), /Stack Validated/);
+  assert.match(field(search, "tags"), /Zeek/);
 }
 for (const tileId of expectedTiles.unified_investigation.slice(3)) {
   const search = stanza(searchbase, tileId);
-  assert.match(field(search, "tags"), /CIM Accelerated/);
-  assert.match(field(search, "tags"), /Derived Signal/);
   assert.match(field(search, "search"), /^\| tstats /);
   assert.doesNotMatch(search, /Synthetic Demo|makeresults/);
   const vizOptions = JSON.parse(field(search, "viz_options"));
@@ -938,6 +925,7 @@ assert.ok(stanza(macros, "index_dns_umbrella"));
 assert.ok(stanza(macros, "index_network_ftd"));
 assert.ok(stanza(macros, "index_zeek"));
 assert.ok(stanza(macros, "index_security"));
+assert.ok(stanza(macros, "scd_summariesonly"));
 assert.doesNotMatch(macros, /^\[index_agentic_soc_/m);
 assert.doesNotMatch(searchbase, /`index_agentic_soc_/);
 
@@ -1015,7 +1003,7 @@ for (const searchName of railSearchNames) {
         field(stanza(searchbase, tileId), "search_name") === searchName,
     );
   assert.ok(matchingId, `Expected Signal Rail search ${searchName}`);
-  assert.match(stanza(searchbase, matchingId), /\| tstats summariesonly=true/);
+  assert.match(stanza(searchbase, matchingId), /\| tstats `scd_summariesonly`/);
 }
 
 const fallbackRail = signalConfig.getDefaultSignalTickerConfig(

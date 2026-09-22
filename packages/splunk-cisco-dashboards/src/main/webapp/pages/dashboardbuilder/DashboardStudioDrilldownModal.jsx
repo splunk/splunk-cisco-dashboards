@@ -275,7 +275,7 @@ const DashboardStudioDrilldownModal = ({
             }
             renderInDocumentBody
             dialogClassName="dashboard-builder-drilldown-modal"
-            contentClassName="dashboard-builder-drilldown-shell flex min-h-0 flex-1 flex-col overflow-hidden sui-bg-page"
+            contentClassName="dashboard-builder-drilldown-shell scd-workspace-modal-content flex min-h-0 flex-1 flex-col overflow-hidden"
         >
             {loadError && (
                 <div className="dashboard-builder-drilldown-status">

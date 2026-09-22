@@ -46,6 +46,7 @@ test("keeps accessible release history in Markdown", () => {
     "1.0.49",
     "1.0.50",
     "1.0.51",
+    "1.0.52",
   ]) {
     assert.match(markdown, new RegExp(`Version ${version.replaceAll(".", "\\.")}`));
   }
@@ -55,6 +56,7 @@ test("keeps accessible release history in Markdown", () => {
   assert.match(markdown, /Version 1\.0\.50[\s\S]*?Property operations and inventory[\s\S]*?customer-neutral/);
   assert.match(markdown, /Version 1\.0\.50[\s\S]*?Packaging and release safety[\s\S]*?build-2089 release floor/);
   assert.match(markdown, /Version 1\.0\.51[\s\S]*?Add for everyone[\s\S]*?No data migration or Splunk restart is required/);
+  assert.match(markdown, /Version 1\.0\.52[\s\S]*?10,000-row limit[\s\S]*?build 2096 or later/);
 });
 
 test("documents the full setup, dashboard, and workspace operating model", () => {

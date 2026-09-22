@@ -34,6 +34,7 @@ import {
 } from './canvasVizOptions';
 import type { DataSource, NoDataReason } from '@/common/hooks/useMetric';
 import { C3_VISUALIZATION_COLORS } from '@/common/theme/c3VisualizationPalette';
+import type { InfoTooltipDetailSection } from './InfoTooltip';
 
 export interface SingleValueRadialTileProps {
     label: string;
@@ -41,6 +42,7 @@ export interface SingleValueRadialTileProps {
     /** Plumbed through to the chrome's meaning-subtitle row. */
     meaningSubtitle?: string;
     description?: string;
+    infoSections?: readonly InfoTooltipDetailSection[];
     descriptionFootnote?: string;
     thresholdNote?: string;
     value: string | number;
@@ -362,6 +364,7 @@ export const SingleValueRadialTile: React.FC<SingleValueRadialTileProps> = ({
     subLabel,
     meaningSubtitle,
     description,
+    infoSections,
     descriptionFootnote,
     thresholdNote,
     value,
@@ -429,6 +432,7 @@ export const SingleValueRadialTile: React.FC<SingleValueRadialTileProps> = ({
             subLabel={subLabel}
             meaningSubtitle={meaningSubtitle}
             description={description}
+            infoSections={infoSections}
             descriptionFootnote={descriptionFootnote}
             thresholdNote={thresholdNote}
             source={source}

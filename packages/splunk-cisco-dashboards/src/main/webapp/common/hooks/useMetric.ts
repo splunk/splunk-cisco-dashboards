@@ -190,6 +190,8 @@ export interface MetricConfig {
    * answer "what does this number actually mean?" — one or two lines.
    */
   description?: string;
+  /** Full parent-tile guidance shown by expanding the tile info control. */
+  infoSections?: readonly { title: string; content: string }[];
   /**
    * Optional searchbase.conf stanza id. Overview factory tiles use this as the
    * stable binding when the tile definition is authored in searchbase metadata.
