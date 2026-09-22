@@ -491,6 +491,16 @@ assert.match(
 );
 assert.match(
   topology,
+  /bindSearchbaseToLink[\s\S]*?normalizedSearchName \? "loading" : "static"/,
+  "Unbinding Searchbase from a link must clear its loading state",
+);
+assert.match(
+  topology,
+  /bindSearchbaseToSite[\s\S]*?normalizedSearchName \? "loading" : "static"/,
+  "Unbinding Searchbase from a site must clear its loading state",
+);
+assert.match(
+  topology,
   /persistedPayloadRef = useRef<SavedCustomerTopologyPayload \| null>\(null\)/,
   "Topology editing must retain the exact payload last read from Splunk",
 );
@@ -501,8 +511,13 @@ assert.match(
 );
 assert.match(
   topology,
-  /saveCustomerTopologyConfig\([\s\S]*?nextPayload,[\s\S]*?persistedPayloadRef\.current,[\s\S]*?\);[\s\S]*?persistedPayloadRef\.current = nextPayload;/,
-  "Successful topology writes must compare and advance the canonical payload baseline",
+  /capturePersistedPayload[\s\S]*?editorExpectedPayloadRef\.current = capturePersistedPayload\(\)[\s\S]*?saveTopology\(draftTopology, editorExpectedPayloadRef\.current\)/,
+  "Topology editing must freeze the exact concurrency baseline when the editor opens",
+);
+assert.match(
+  topology,
+  /const savedPayload = await saveCustomerTopologyConfig\([\s\S]*?expectedPayload,[\s\S]*?\);[\s\S]*?persistedPayloadRef\.current = savedPayload;/,
+  "Successful topology writes must advance to the normalized payload returned by persistence",
 );
 assert.match(
   topologyPersistenceService,
@@ -511,8 +526,23 @@ assert.match(
 );
 assert.match(
   topologyPersistenceService,
-  /if \(expectedPayload !== undefined\)[\s\S]*?expectedMatchesCurrent[\s\S]*?currentPayload === null/,
+  /if \(expectedPayload !== undefined\)[\s\S]*?expectedMatchesCurrent[\s\S]*?currentRow === null/,
   "Optimistic concurrency must protect existing and initially absent topology stanzas",
+);
+assert.match(
+  topologyPersistenceService,
+  /if \(!row\) return null;[\s\S]*?shared topology configuration exists but has no payload/,
+  "An invalid existing topology stanza must not be treated as an absent stanza",
+);
+assert.match(
+  topology,
+  /hasUnsavedChanges[\s\S]*?setConfirmation\("discard"\)/,
+  "Closing a dirty topology editor must require discard confirmation",
+);
+assert.match(
+  topology,
+  /setConfirmation\("factory"\)[\s\S]*?Reset shared topology\?/,
+  "Resetting the shared topology must require destructive confirmation",
 );
 const picker = read(
   "src/main/webapp/common/components/workspace/KpiPickerPanel.tsx",
@@ -1039,7 +1069,7 @@ assert.match(
 );
 assert.match(
   topology,
-  /\{canManageTopology && \([\s\S]*?label="Edit topology"/,
+  /\{canManageTopology && \([\s\S]*?: "Edit topology"/,
 );
 assert.match(
   picker,

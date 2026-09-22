@@ -351,6 +351,7 @@ Version 1.0.52 preserves complete large-fleet asset inventories, advances releas
 - Aligned the Security Resilience **Details & KPI Reference** narrative with the full dashboard section so its guidance remains on one line without an unnecessary scrollbar.
 - Corrected dotted-field quoting in Cisco Spaces device counts, Meraki VPN peer status, and Catalyst client-experience aggregations so Dashboard Studio and Searchbase searches resolve their nested fields instead of returning empty metrics.
 - Corrected first-time topology saves so a workspace without an existing map stanza uses the create endpoint directly instead of producing an expected 404 before retrying.
+- Hardened topology editing against stale-tab overwrites and damaged shared configuration, blocked editing until the canonical map has loaded, preserved intentionally empty maps, and added confirmations for draft discard and factory reset.
 - Added 31 validated searches to Splunkbase packages: Zeek SSH authentication pressure, wired NAC vendor-MAC review, eight SD-WAN security analyses, firewall NAT activity, Meraki blocked destinations, and 19 Cyber Vision asset, event, and syslog views.
 - Kept searches without populated validation results or with unresolved macro, data-model, lookup, REST, token, or MLTK dependencies in developer packages until their source contracts can be verified.
 
