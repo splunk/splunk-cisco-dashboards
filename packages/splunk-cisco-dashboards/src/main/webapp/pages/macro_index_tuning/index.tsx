@@ -557,6 +557,11 @@ interface SetupChange {
   proposedValue: string;
 }
 
+interface SetupChangeGroup {
+  targetApp: string;
+  changes: SetupChange[];
+}
+
 interface SetupEditorState {
   kind: "routing" | "cim";
   rowKey: string;
@@ -970,6 +975,31 @@ const getMacroConfig = (
 
 const getTargetAppLabel = (targetApp: string): string =>
   TARGET_APP_LABELS[targetApp] || targetApp;
+
+const groupSetupChangesByTargetApp = (
+  changes: SetupChange[],
+): SetupChangeGroup[] => {
+  const changesByApp = changes.reduce<Map<string, SetupChange[]>>(
+    (groups, change) => {
+      const appChanges = groups.get(change.targetApp) || [];
+      appChanges.push(change);
+      groups.set(change.targetApp, appChanges);
+      return groups;
+    },
+    new Map<string, SetupChange[]>(),
+  );
+
+  const orderedGroups = TARGET_APP_ORDER.flatMap((targetApp) => {
+    const appChanges = changesByApp.get(targetApp);
+    changesByApp.delete(targetApp);
+    return appChanges?.length ? [{ targetApp, changes: appChanges }] : [];
+  });
+  const extraGroups = Array.from(changesByApp.entries()).map(
+    ([targetApp, appChanges]) => ({ targetApp, changes: appChanges }),
+  );
+
+  return [...orderedGroups, ...extraGroups];
+};
 
 const normalizeDefinitionFormat = (value: unknown): DefinitionFormat => {
   const normalized = normalizeText(value).trim();
@@ -5925,6 +5955,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
     const setupChangeNoun =
       setupChanges.length === 1 ? "setting" : "settings";
     const setupAppNoun = setupChangedAppCount === 1 ? "app" : "apps";
+    const setupChangeGroups = groupSetupChangesByTargetApp(setupChanges);
     let reviewStatus =
       "No macro definitions are queued. Finishing will only mark setup complete.";
     if (scanState !== "ready") {
@@ -6084,65 +6115,75 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 headType="fixed"
                 horizontalOverflow="scroll"
                 innerStyle={{ maxHeight: 440 }}
-                primaryColumnIndex={1}
+                primaryColumnIndex={0}
                 tableStyle={{ minWidth: 900, tableLayout: "fixed" }}
               >
                 <Table.Head>
-                  <Table.HeadCell width={230}>App</Table.HeadCell>
-                  <Table.HeadCell width={210}>Setting</Table.HeadCell>
-                  <Table.HeadCell width={230}>Current value</Table.HeadCell>
-                  <Table.HeadCell width={230}>Proposed value</Table.HeadCell>
+                  <Table.HeadCell width={250}>Setting</Table.HeadCell>
+                  <Table.HeadCell width={280}>Current value</Table.HeadCell>
+                  <Table.HeadCell width={280}>Proposed value</Table.HeadCell>
                 </Table.Head>
                 <Table.Body>
-                  {setupChanges.map((change) => {
-                    const changeStatus =
-                      saveStatuses[`${change.targetApp}:${change.setting}`];
-                    return (
-                    <Table.Row key={`${change.targetApp}:${change.setting}`}>
-                      <Table.Cell>
-                        <div className="min-w-0 max-w-full">
-                          <div className="break-words font-bold sui-color-active">
-                            {getTargetAppLabel(change.targetApp)}
+                  {setupChangeGroups.map(({ targetApp, changes }) => (
+                    <React.Fragment key={targetApp}>
+                      <Table.Row className="sui-bg-section">
+                        <Table.Cell colSpan={3}>
+                          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                            <span className="font-bold sui-color-active">
+                              {getTargetAppLabel(targetApp)}
+                            </span>
+                            <code className="font-mono text-xs sui-color-muted">
+                              {targetApp}
+                            </code>
+                            <span className="text-xs sui-color-muted">
+                              {changes.length} {changes.length === 1 ? "setting" : "settings"}
+                            </span>
                           </div>
-                          <div className="mt-1 break-words font-mono text-xs sui-color-muted">
-                            {change.targetApp}
-                          </div>
-                        </div>
-                      </Table.Cell>
-                      <Table.Cell>
-                        <div className="min-w-0 max-w-full">
-                          <div className="text-xs font-bold sui-color-info">
-                            {change.kind}
-                          </div>
-                          <div className="mt-1 break-words font-mono text-sm sui-color-active">
-                            {change.setting}
-                          </div>
-                        </div>
-                      </Table.Cell>
-                      <Table.Cell>
-                        <SetupDefinitionPreview
-                          $tone="default"
-                          className="min-w-0 max-w-full"
-                        >
-                          {change.currentValue}
-                        </SetupDefinitionPreview>
-                      </Table.Cell>
-                      <Table.Cell>
-                        <SetupDefinitionPreview className="min-w-0 max-w-full">
-                          {change.proposedValue}
-                        </SetupDefinitionPreview>
-                        {changeStatus?.state === "error" ? (
-                          <div
-                            className="mt-2 break-words text-xs font-bold sui-color-negative"
-                            role="alert"
+                        </Table.Cell>
+                      </Table.Row>
+                      {changes.map((change) => {
+                        const changeStatus =
+                          saveStatuses[`${change.targetApp}:${change.setting}`];
+                        return (
+                          <Table.Row
+                            key={`${change.targetApp}:${change.setting}`}
                           >
-                            Save failed: {changeStatus.message || "Unknown error"}
-                          </div>
-                        ) : null}
-                      </Table.Cell>
-                    </Table.Row>
-                    );
-                  })}
+                            <Table.Cell>
+                              <div className="min-w-0 max-w-full">
+                                <div className="text-xs font-bold sui-color-info">
+                                  {change.kind}
+                                </div>
+                                <div className="mt-1 break-words font-mono text-sm sui-color-active">
+                                  {change.setting}
+                                </div>
+                              </div>
+                            </Table.Cell>
+                            <Table.Cell>
+                              <SetupDefinitionPreview
+                                $tone="default"
+                                className="min-w-0 max-w-full"
+                              >
+                                {change.currentValue}
+                              </SetupDefinitionPreview>
+                            </Table.Cell>
+                            <Table.Cell>
+                              <SetupDefinitionPreview className="min-w-0 max-w-full">
+                                {change.proposedValue}
+                              </SetupDefinitionPreview>
+                              {changeStatus?.state === "error" ? (
+                                <div
+                                  className="mt-2 break-words text-xs font-bold sui-color-negative"
+                                  role="alert"
+                                >
+                                  Save failed: {changeStatus.message || "Unknown error"}
+                                </div>
+                              ) : null}
+                            </Table.Cell>
+                          </Table.Row>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
                 </Table.Body>
               </Table>
             </>

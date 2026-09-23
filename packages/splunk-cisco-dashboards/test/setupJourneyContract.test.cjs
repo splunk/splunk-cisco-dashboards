@@ -218,6 +218,24 @@ test("final review shows exact before and after values and requires confirmation
   );
 });
 
+test("final review groups saved settings by target app", () => {
+  assert.match(tuner, /interface SetupChangeGroup/);
+  assert.match(tuner, /const groupSetupChangesByTargetApp =/);
+  assert.match(
+    tuner,
+    /const setupChangeGroups = groupSetupChangesByTargetApp\(setupChanges\)/,
+  );
+  assert.match(
+    tuner,
+    /setupChangeGroups\.map\(\(\{ targetApp, changes \}\)/,
+  );
+  assert.match(tuner, /<Table\.Cell colSpan=\{3\}>/);
+  assert.doesNotMatch(
+    tuner,
+    /<Table\.HeadCell width=\{230\}>App<\/Table\.HeadCell>/,
+  );
+});
+
 test("setup editors keep changes as drafts until final confirmation", () => {
   assert.match(tuner, /setupMode \? \(/);
   assert.match(tuner, /Will change/);

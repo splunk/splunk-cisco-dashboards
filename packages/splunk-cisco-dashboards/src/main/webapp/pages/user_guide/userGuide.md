@@ -345,6 +345,9 @@ Version 1.0.52 preserves complete large-fleet asset inventories, advances releas
 - Kept TA-owned Cisco DC Networking routing macros and the Cisco Enterprise
   Networking sourcetype allow-list outside the Setup tuning and save path so
   their static definitions remain managed by the owning TA.
+- Grouped the final Settings to be saved review by target app so multiple
+  macros and settings remain easy to scan without repeating the app name on
+  every row.
 
 ### Searchbase catalogue
 
