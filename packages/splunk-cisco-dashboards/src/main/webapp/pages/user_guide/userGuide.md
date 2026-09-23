@@ -77,7 +77,7 @@ Setup contains six stages:
 3. **Review packages:** confirm which supporting apps and add-ons are installed and enabled.
 4. **Configure data:** scan a bounded time range, review routing macro proposals, and choose the search-performance mode.
 5. **Tune CIM models:** run one bounded discovery search per CIM data model. Models backed by matching data are selected automatically; clear any allow list that you want to leave unchanged. You can select **Skip CIM tuning** when no model remains selected.
-6. **Review & finish:** compare current and proposed values, then select **Save changes and finish**. Setup persists every reviewed app routing macro and matched CIM allow list to the owning app's local configuration, including definitions that currently match a shipped default.
+6. **Review & finish:** compare current and proposed values, then select **Save changes and finish**. Setup persists every reviewed user-tunable app routing macro and matched CIM allow list to the owning app's local configuration, including definitions that currently match a shipped default. TA-owned Cisco DC Networking macros and the Cisco Enterprise Networking sourcetype allow-list macro remain outside this user-driven save path.
 
 Nothing is written until the final confirmation. Canceling Setup discards the draft plan.
 
@@ -94,6 +94,8 @@ Back up customer-managed `local` configuration before an upgrade. Packaged defau
 ## Macro index tuning {#macro-tuning}
 
 Setup discovers indexes that contain supported Cisco source types and proposes bounded macro definitions. Review every proposal before saving it.
+
+TA-owned Cisco DC Networking routing macros and the Cisco Enterprise Networking sourcetype allow-list macro are not user-tunable in this workflow. Their definitions remain static here and can continue to change through the owning TA's upgrade path.
 
 ### Configure app and companion macros
 
@@ -317,7 +319,7 @@ This Markdown file is the authoritative source for the in-product release histor
 ::: release Release Notes | September 2026 - Version 1.0.52
 ### Release overview
 
-Version 1.0.52 preserves complete large-fleet asset inventories, advances release build allocation beyond the published 1.0.51 package, and keeps first-run CIM discovery independent of saved allowlists.
+Version 1.0.52 preserves complete large-fleet asset inventories, advances release build allocation beyond the published 1.0.51 package, keeps first-run CIM discovery independent of saved allowlists, and keeps TA-owned Cisco routing definitions outside user-driven tuning.
 
 - Made Insights and Dashboard Manager drill-downs use the workspace's navy, cyan, and purple atmosphere instead of a flat black panel, with a consistent dimmed backdrop instead of an ambiguous transparency slider.
 
@@ -340,6 +342,9 @@ Version 1.0.52 preserves complete large-fleet asset inventories, advances releas
 
 - Fixed first-run CIM discovery so tagged events are found before a CIM index
   allowlist has been saved, including Umbrella DNS events in `cisco_umbrella`.
+- Kept TA-owned Cisco DC Networking routing macros and the Cisco Enterprise
+  Networking sourcetype allow-list outside the Setup tuning and save path so
+  their static definitions remain managed by the owning TA.
 
 ### Searchbase catalogue
 
