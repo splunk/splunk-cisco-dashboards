@@ -2942,6 +2942,23 @@ const topologyAnimationCss = `
         cursor: pointer;
         pointer-events: stroke;
     }
+    .customer-topology-link-hitbox:hover {
+        stroke-opacity: 0.18;
+    }
+    .customer-topology-link-hitbox:focus-visible {
+        stroke-opacity: 0.6;
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+    }
+    .customer-topology-map .customer-topology-site-marker,
+    .customer-topology-site-marker > div {
+        pointer-events: none;
+    }
+    .customer-topology-site-marker .customer-topology-site-beacon,
+    .customer-topology-site-marker .customer-topology-site-label {
+        pointer-events: auto;
+        cursor: pointer;
+    }
     .customer-topology-link-shadow {
         filter: blur(2px);
         mix-blend-mode: multiply;
@@ -4089,7 +4106,7 @@ const createSiteIcon = (
     `--site-marker-font-size:${markerTheme.fontSize};` +
     `--site-marker-font-weight:${markerTheme.fontWeight};`;
   return L.divIcon({
-    className: "custom-div-icon",
+    className: "custom-div-icon customer-topology-site-marker",
     html: `
       <div class="relative flex flex-col items-center group w-[220px] ${entranceClass}" style="${entranceStyle}${markerStyle}">
         <div class="customer-topology-site-beacon ${selectionScale} transition-transform duration-200">
@@ -4097,7 +4114,7 @@ const createSiteIcon = (
             <span class="customer-topology-site-code">${safeShortName}</span>
           </span>
         </div>
-        <div class="mt-1 whitespace-nowrap font-semibold px-2.5 py-0.5 rounded-md shadow-sm border text-xs ${labelChrome} ${roleChrome.label}" style="border-color:${markerAccentColor}66;">
+        <div class="customer-topology-site-label mt-1 whitespace-nowrap font-semibold px-2.5 py-0.5 rounded-md shadow-sm border text-xs ${labelChrome} ${roleChrome.label}" style="border-color:${markerAccentColor}66;">
           ${safeName}
         </div>
       </div>
@@ -4240,6 +4257,36 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
   const color = STATUS_STROKE[link.status];
   const statusClass = `customer-topology-link--${link.status}`;
   const polylineRef = useRef<L.Polyline | null>(null);
+  const hitboxRef = useRef<L.Polyline | null>(null);
+
+  useEffect(() => {
+    const hitbox = hitboxRef.current;
+    if (!hitbox) return undefined;
+    let attachedElement: Element | undefined;
+    const activate = (event: Event) => {
+      if (!(event instanceof KeyboardEvent)) return;
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      event.stopPropagation();
+      onSelect(link);
+    };
+    const apply = () => {
+      const element = hitbox.getElement();
+      if (!element) return;
+      attachedElement?.removeEventListener("keydown", activate);
+      attachedElement = element;
+      element.setAttribute("tabindex", "0");
+      element.setAttribute("role", "button");
+      element.setAttribute("aria-label", `Open link ${link.name}`);
+      element.addEventListener("keydown", activate);
+    };
+    apply();
+    hitbox.on("add", apply);
+    return () => {
+      hitbox.off("add", apply);
+      attachedElement?.removeEventListener("keydown", activate);
+    };
+  }, [link, onSelect]);
 
   // Subtle level: slow the marching dashes and breathing roughly 70% to keep
   // the line readable as "alive" without the eye-grabbing cadence of full.
@@ -4315,14 +4362,15 @@ const TopologyLinkPath: React.FC<TopologyLinkPathProps> = ({
   return (
     <>
       <Polyline
+        ref={hitboxRef}
+        className="customer-topology-link-hitbox"
         positions={positions}
         pathOptions={{
-          color: "#ffffff",
-          weight: 24,
+          color,
+          weight: 32,
           opacity: 0.01,
           lineCap: "round",
           lineJoin: "round",
-          className: "customer-topology-link-hitbox",
         }}
         eventHandlers={{ click: handleClick }}
       />

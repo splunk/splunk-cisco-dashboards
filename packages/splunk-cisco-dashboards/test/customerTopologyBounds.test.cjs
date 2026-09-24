@@ -6,6 +6,18 @@ const path = require("path");
 const ts = require("typescript");
 
 const packageRoot = path.resolve(__dirname, "..");
+const mapSource = fs.readFileSync(path.join(packageRoot,
+  "src/main/webapp/common/components/workspace/CustomerTopologyMap.tsx"), "utf8");
+assert.match(mapSource, /customer-topology-site-marker > div\s*\{\s*pointer-events: none/);
+assert.match(mapSource, /customer-topology-site-marker \.customer-topology-site-label\s*\{\s*pointer-events: auto/);
+assert.match(mapSource, /ref=\{hitboxRef\}[\s\S]*?weight: 32/);
+assert.match(mapSource, /ref=\{hitboxRef\}\s*className="customer-topology-link-hitbox"/);
+assert.match(mapSource, /element\.setAttribute\("tabindex", "0"\)/);
+assert.match(mapSource, /element\.setAttribute\("role", "button"\)/);
+assert.match(mapSource, /event\.key !== "Enter" && event\.key !== " "/);
+assert.match(mapSource, /event\.preventDefault\(\);\s*event\.stopPropagation\(\);\s*onSelect\(link\)/);
+assert.match(mapSource, /attachedElement\?\.removeEventListener\("keydown", activate\)/);
+assert.match(mapSource, /customer-topology-link-hitbox:focus-visible\s*\{\s*stroke-opacity: 0\.6/);
 const modulePath = path.join(
   packageRoot,
   "src/main/webapp/common/lib/customerTopologyBounds.ts",

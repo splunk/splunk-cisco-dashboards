@@ -321,6 +321,10 @@ Searchbase definitions are app-managed factory content. Workspace managers choos
 This Markdown file is the authoritative source for the in-product release history.
 
 ::: release Release Notes | September 2026 - Version 1.0.53
+### Map usability
+
+- Prevented transparent site-marker padding from intercepting nearby link clicks, widened link selection targets, and added keyboard activation with visible focus for map links.
+
 ### Search performance
 
 - Replaced raw FTD feed-freshness, WSA volume, SD-WAN audit volume, and total SSE event scans with indexed-metadata `tstats` searches.
