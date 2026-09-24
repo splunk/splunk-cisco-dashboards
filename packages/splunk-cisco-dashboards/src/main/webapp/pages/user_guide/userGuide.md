@@ -56,6 +56,10 @@ For each search, use an accelerated CIM model when it preserves the required mea
 
 Data-model acceleration improves eligible `tstats` searches but does not replace correct data ingestion, tagging, field extraction, or index permissions.
 
+For event counts and freshness that need only indexed fields (such as index, sourcetype, and time), use index-backed `tstats` directly. This avoids raw payload scans without depending on model tagging or summary freshness. Do not replace source-feed health with summary health.
+
+For model-backed searches, the shared `summariesonly` setting controls whether incomplete summaries may be supplemented from unsummarized data. Summary-only mode can be faster but can omit recent or uncovered events. Validate acceleration coverage before enabling it; shortening the dashboard window does not repair a coverage gap. Event-detail searches may still need raw fields. Apply expensive display enrichment after bounded selection when this preserves filtering and ranking.
+
 ## Install and upgrade {#install}
 
 ### Install the app
@@ -315,6 +319,14 @@ Searchbase definitions are app-managed factory content. Workspace managers choos
 ## What's New / Release Notes {#release-notes}
 
 This Markdown file is the authoritative source for the in-product release history.
+
+::: release Release Notes | September 2026 - Version 1.0.53
+### Search performance
+
+- Replaced raw FTD feed-freshness, WSA volume, SD-WAN audit volume, and total SSE event scans with indexed-metadata `tstats` searches.
+- Added model-backed aggregation for ThousandEyes page completion and path-quality detail, plus Catalyst interface spike, drop, and asymmetry candidates. These searches require their companion models and honor the shared summary-coverage setting.
+- Deferred display enrichment until after the existing result limits for SSE event detail and FTD anomalous sessions, preserving selection and thresholds.
+:::
 
 ::: release Release Notes | September 2026 - Version 1.0.52
 ### Release overview
