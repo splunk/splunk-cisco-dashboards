@@ -18,7 +18,7 @@ import {
   syncDashboardManagerNavigation,
 } from "../../common/lib/splunk";
 import { DashboardContextProvider } from "@splunk/dashboard-context";
-import EnterprisePreset from "@splunk/dashboard-presets/EnterprisePreset";
+import EnterprisePreset from "./dashboardPreset";
 import SearchBaseDataSource from "./SearchBaseDataSource";
 import SimpleTimePicker from "./custominput/SimpleTimePicker";
 import VizKpi from "../../common/components/templatewizard/viz-kpi/VizKpi";

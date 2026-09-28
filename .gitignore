@@ -50,6 +50,7 @@
 !/packages/splunk-cisco-dashboards/test/customerTopologyBounds.test.cjs
 !/packages/splunk-cisco-dashboards/test/xmlCdata.test.cjs
 !/packages/splunk-cisco-dashboards/test/dashboardCreation.test.cjs
+!/packages/splunk-cisco-dashboards/test/dashboardPreset.test.cjs
 !/packages/splunk-cisco-dashboards/test/imageSource.test.cjs
 !/packages/splunk-cisco-dashboards/test/mapEgressBoundary.test.cjs
 /tests/

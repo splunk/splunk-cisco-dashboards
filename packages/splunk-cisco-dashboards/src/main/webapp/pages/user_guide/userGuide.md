@@ -337,6 +337,7 @@ This Markdown file is the authoritative source for the in-product release histor
 
 - Prevented new dashboards from overwriting existing dashboard IDs or creating private copies that conflict when shared. Creation errors now remain visible in the dialog, duplicate submissions are blocked, and a saved dashboard can still be opened if sharing fails.
 - Kept Dashboard Manager error notifications in front of open dialogs and previews until dismissed, with one notification host shared across the library and editor.
+- Corrected Network Graph option types to eliminate repeated schema-validation warnings when opening Dashboard Manager and its editor, while preserving validation of graph settings.
 
 ### Map usability
 
