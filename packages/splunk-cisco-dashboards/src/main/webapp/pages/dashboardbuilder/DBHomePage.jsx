@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import ColumnLayout from "@splunk/react-ui/ColumnLayout";
 
 import "../../common/styles/commonstyles.css";
@@ -32,11 +32,8 @@ import { addDash } from "../../common/lib/splunk";
 
 import { cloneDeep } from "lodash-es";
 import Trash from "@splunk/react-icons/enterprise/Trash";
-import Toaster, {
-  makeCreateToast,
-} from "@splunk/react-toast-notifications/Toaster";
 import { TOAST_TYPES } from "@splunk/react-toast-notifications/ToastConstants";
-import ToastMessages from "@splunk/react-toast-notifications/ToastMessages";
+import { notifyDashboard, dashboardResponseMessage } from "./dashboardNotifications";
 import TextArea from "@splunk/react-ui/TextArea";
 import Select from "@splunk/react-ui/Select";
 import Tooltip from "@splunk/react-ui/Tooltip";
@@ -47,6 +44,7 @@ import createSEIIconRegistry from "../../common/udf/IconProviders/createSEIIconR
 import Paginator from "@splunk/react-ui/Paginator";
 import Table from "@splunk/react-ui/Table";
 import WaitSpinner from "@splunk/react-ui/WaitSpinner";
+import Message from "@splunk/react-ui/Message";
 import useSplunkTheme from "@splunk/themes/useSplunkTheme";
 
 import FileCharts from "@splunk/react-icons/FileCharts";
@@ -228,6 +226,10 @@ export default function DBHomePage() {
   const [dashboardTitle, setDashboardTitle] = useState("");
   const [dashboardDescription, setDashboardDescription] = useState("");
   const [dashboardSharing, setDashboardSharing] = useState("app");
+  const [isCreatingDashboard, setIsCreatingDashboard] = useState(false);
+  const [dashboardCreateError, setDashboardCreateError] = useState("");
+  const [createdDashboardId, setCreatedDashboardId] = useState("");
+  const createInFlight = useRef(false);
   const [gridLayout, setGridLayout] = useState("absolute");
   const [openDeleteDashboard, setOpenDeleteDashboard] = useState(false);
   const [DashboardToDelete, setDashboardToDelete] = useState();
@@ -350,56 +352,78 @@ export default function DBHomePage() {
     }
   }, [pageNum, totalDashboardPages]);
 
-  const handleOpenClick = () => {
-    const dashid = `scd_${dashboardTitle.replaceAll(" ", "_").replaceAll("#", "")}`;
+  const handleOpenClick = async () => {
+    if (createInFlight.current || createdDashboardId || !dashboardTitle.trim()) {
+      return;
+    }
+    createInFlight.current = true;
+    setIsCreatingDashboard(true);
+    setDashboardCreateError("");
+    const title = dashboardTitle.trim();
+    const dashid = `scd_${title.replaceAll(" ", "_").replaceAll("#", "")}`;
     const jsonDefinition = cloneDeep(initialDefinition);
-    jsonDefinition.title = dashboardTitle;
+    jsonDefinition.title = title;
     jsonDefinition.description = dashboardDescription;
     jsonDefinition.layout.type = gridLayout;
 
-    addDash(
-      dashid,
-      JSON.stringify(jsonDefinition),
-      dashboardTitle,
-      dashboardDescription,
-      DASHBOARD_MANAGER_TAG,
-      "dark",
-      currentSplunkUser,
-      dashboardSharing,
-    ).then((response) => {
+    try {
+      const response = await addDash(
+        dashid,
+        JSON.stringify(jsonDefinition),
+        title,
+        dashboardDescription,
+        DASHBOARD_MANAGER_TAG,
+        "dark",
+        currentSplunkUser,
+        dashboardSharing,
+      );
       if (response.status >= 200 && response.status <= 299) {
-        console.log(response);
         syncDashboardManagerNavigation([
           ...managerDashboards,
           {
             title: dashid,
-            label: dashboardTitle,
+            label: title,
             app: INSIGHTS_APP_ID,
             owner: currentSplunkUser,
-            sharing: "user",
+            sharing: dashboardSharing,
             tag: DASHBOARD_MANAGER_TAG,
             definition: {
-              title: dashboardTitle,
+              title,
             },
           },
         ]).catch((error) => {
           console.warn("Unable to sync Dashboard Manager navigation.", error);
         });
         setOpenCreateDashboard(false);
-        setTimeout(() => {
-          //navigate(`/${dashid}/edit`, { replace: true });
-          window.open(buildDashboardStudioUrl(dashid, "edit"), "_self");
-        }, 500);
+        navigate(buildDashboardStudioPath(dashid, "edit"));
       } else {
-        console.log(response);
-        makeCreateToast(Toaster)({
-          message: `An error occured while creating the new dashboard... ${JSON.stringify(
-            response,
-          )}`,
-          type: TOAST_TYPES.ERROR,
-        });
+        const detail = (Array.isArray(response.messages) ? response.messages : [])
+          .map((message) => typeof message?.text === "string" ? message.text : "")
+          .filter(Boolean)
+          .join(" ")
+          .slice(0, 500) || `Request failed (${response.status}).`;
+        if (response.dashboardSaved) {
+          setCreatedDashboardId(dashid);
+          setDashboardCreateError(
+            `The dashboard was saved, but sharing it in the app could not be completed. Open the saved dashboard to continue. ${detail}`,
+          );
+          refreshDashboards();
+        } else {
+          setDashboardCreateError(
+            response.status === 409
+              ? "A dashboard with this ID already exists. Choose a different title, or cancel and open the existing dashboard to edit it."
+              : `Unable to create the dashboard. ${detail}`,
+          );
+        }
       }
-    });
+    } catch {
+      setDashboardCreateError(
+        "The dashboard creation request could not be confirmed. Check the dashboard library before trying again.",
+      );
+    } finally {
+      createInFlight.current = false;
+      setIsCreatingDashboard(false);
+    }
   };
 
   const refreshDashboards = () => {
@@ -465,7 +489,16 @@ export default function DBHomePage() {
 
         setDashboards(insightDash);
       } else {
+        notifyDashboard({
+          message: `Unable to load dashboards. ${dashboardResponseMessage(response)}`,
+          type: TOAST_TYPES.ERROR,
+        });
       }
+    }).catch(() => {
+      notifyDashboard({
+        message: "Unable to load dashboards. Check your connection and reload Dashboard Manager.",
+        type: TOAST_TYPES.ERROR,
+      });
     });
   };
 
@@ -488,11 +521,16 @@ export default function DBHomePage() {
   };
 
   const handleCloseCreateDashboard = () => {
+    if (createInFlight.current) {
+      return;
+    }
     // kh 2026-05-10: Reset builder metadata and mode-specific state so the next modal session starts from a clean default configuration.
     setOpenCreateDashboard(false);
     setDashboardTitle("");
     setDashboardDescription("");
     setDashboardSharing("app");
+    setDashboardCreateError("");
+    setCreatedDashboardId("");
     setGridLayout("absolute");
   };
 
@@ -599,7 +637,7 @@ export default function DBHomePage() {
 
   const handleSaveDashboardMetadata = () => {
     if (!dashboardMetadataTarget || !dashboardMetadataTitle.trim()) {
-      makeCreateToast(Toaster)({
+      notifyDashboard({
         message: "Title is required before saving dashboard metadata.",
         type: TOAST_TYPES.ERROR,
       });
@@ -619,7 +657,7 @@ export default function DBHomePage() {
       dashboardMetadataTarget.sharing,
     ).then((response) => {
       if (response.status >= 200 && response.status <= 299) {
-        makeCreateToast(Toaster)({
+        notifyDashboard({
           message: `Metadata for ${dashboardMetadataTitle.trim()} was updated successfully.`,
           type: TOAST_TYPES.SUCCESS,
         });
@@ -646,13 +684,17 @@ export default function DBHomePage() {
         handleCloseDashboardMetadataEditor();
       } else {
         setIsSavingDashboardMetadata(false);
-        makeCreateToast(Toaster)({
-          message: `An error occured while updating dashboard metadata... ${JSON.stringify(
-            response,
-          )}`,
+        notifyDashboard({
+          message: `Unable to update dashboard metadata. ${dashboardResponseMessage(response)}`,
           type: TOAST_TYPES.ERROR,
         });
       }
+    }).catch(() => {
+      setIsSavingDashboardMetadata(false);
+      notifyDashboard({
+        message: "The metadata save could not be confirmed. Check your connection and reload the dashboard before retrying.",
+        type: TOAST_TYPES.ERROR,
+      });
     });
   };
 
@@ -675,7 +717,7 @@ export default function DBHomePage() {
         DashboardToDelete.deleteLink,
       ).then((response) => {
         if (response.status >= 200 && response.status <= 299) {
-          makeCreateToast(Toaster)({
+          notifyDashboard({
             message: `Dashboard deleted successfully...`,
             type: TOAST_TYPES.SUCCESS,
           });
@@ -694,21 +736,23 @@ export default function DBHomePage() {
           setDashboardToDelete(undefined);
           refreshDashboards();
         } else {
-          makeCreateToast(Toaster)({
-            message: `An error occured while deleting the dashboard... ${JSON.stringify(
-              response,
-            )}`,
+          notifyDashboard({
+            message: `Unable to delete the dashboard. ${dashboardResponseMessage(response)}`,
             type: TOAST_TYPES.ERROR,
           });
           setOpenDeleteDashboard(false);
           setDashboardToDelete(undefined);
         }
+      }).catch(() => {
+        notifyDashboard({
+          message: "The delete request could not be confirmed. Reload Dashboard Manager to check whether the dashboard still exists.",
+          type: TOAST_TYPES.ERROR,
+        });
       });
   };
 
   return (
     <>
-      <ToastMessages></ToastMessages>
       <Modal
         open={openCreateDashboard}
         className={`dashboard-builder-create-modal dashboard-builder-themed-modal dashboard-builder-themed-modal-${managerColorScheme}`}
@@ -723,6 +767,14 @@ export default function DBHomePage() {
 
         <Modal.Body className="dashboard-builder-modal-body">
           <div className="dashboard-builder-modal-content">
+            <div role="alert" aria-atomic="true">
+              {dashboardCreateError && (
+                <Message type="error">{dashboardCreateError}</Message>
+              )}
+            </div>
+            <div role="status" aria-live="polite">
+              {isCreatingDashboard ? "Creating dashboard…" : ""}
+            </div>
             {/* The Cisco builder only needs a title to create a dashboard; description remains optional metadata. */}
             <div className="dashboard-builder-form-grid">
               <div className="dashboard-builder-form-group dashboard-builder-title-group">
@@ -746,8 +798,10 @@ export default function DBHomePage() {
                 >
                   <Text
                     value={dashboardTitle}
+                    disabled={isCreatingDashboard || Boolean(createdDashboardId)}
                     onChange={(e, { value }) => {
                       setDashboardTitle(value);
+                      setDashboardCreateError("");
                     }}
                   />
                 </SplunkControlGroup>
@@ -769,6 +823,7 @@ export default function DBHomePage() {
               >
                 <TextArea
                   value={dashboardDescription}
+                  disabled={isCreatingDashboard || Boolean(createdDashboardId)}
                   onChange={(e, { value }) => {
                     setDashboardDescription(value);
                   }}
@@ -781,6 +836,7 @@ export default function DBHomePage() {
             >
               <Select
                 value={dashboardSharing}
+                disabled={isCreatingDashboard || Boolean(createdDashboardId)}
                 onChange={(event, { value }) => setDashboardSharing(value)}
               >
                 <Select.Option label="Shared in App — Visible to app users" value="app" />
@@ -845,16 +901,25 @@ export default function DBHomePage() {
           </div>
         </Modal.Body>
         <Modal.Footer>
-          <Button
-            appearance="primary"
-            label="Create"
-            disabled={!dashboardTitle.trim()}
-            onClick={handleOpenClick}
-          />
+          {createdDashboardId ? (
+            <Button
+              appearance="primary"
+              label="Open saved dashboard"
+              onClick={() => navigate(buildDashboardStudioPath(createdDashboardId, "edit"))}
+            />
+          ) : (
+            <Button
+              appearance="primary"
+              label={isCreatingDashboard ? "Creating…" : "Create"}
+              disabled={!dashboardTitle.trim() || isCreatingDashboard}
+              onClick={handleOpenClick}
+            />
+          )}
 
           <Button
             appearance="secondary"
             label="Cancel"
+            disabled={isCreatingDashboard}
             onClick={handleCloseCreateDashboard}
           />
         </Modal.Footer>

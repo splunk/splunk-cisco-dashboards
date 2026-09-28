@@ -321,6 +321,11 @@ Searchbase definitions are app-managed factory content. Workspace managers choos
 This Markdown file is the authoritative source for the in-product release history.
 
 ::: release Release Notes | September 2026 - Version 1.0.53
+### Dashboard Manager
+
+- Prevented new dashboards from overwriting existing dashboard IDs or creating private copies that conflict when shared. Creation errors now remain visible in the dialog, duplicate submissions are blocked, and a saved dashboard can still be opened if sharing fails.
+- Kept Dashboard Manager error notifications in front of open dialogs and previews until dismissed, with one notification host shared across the library and editor.
+
 ### Map usability
 
 - Prevented transparent site-marker padding from intercepting nearby link clicks, widened link selection targets, and added keyboard activation with visible focus for map links.

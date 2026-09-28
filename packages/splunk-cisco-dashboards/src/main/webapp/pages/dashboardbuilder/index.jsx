@@ -20,6 +20,7 @@ import DrilldownActionViz from './DrilldownActionViz';
 import SearchBaseDataSource from './SearchBaseDataSource';
 import SpaceManagerViz from './SpaceManager/SpaceManagerViz';
 import SimpleTimePicker from './custominput/SimpleTimePicker';
+import DashboardManagerNotifications from './DashboardManagerNotifications';
 
 const router = createHashRouter(
     createRoutesFromElements([
@@ -30,7 +31,12 @@ const router = createHashRouter(
 );
 
 function CustomDSEditorPage() {
-    return <RouterProvider router={router} />;
+    return (
+        <>
+            <DashboardManagerNotifications />
+            <RouterProvider router={router} />
+        </>
+    );
 }
 
 const customPresets = {
