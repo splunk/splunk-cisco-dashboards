@@ -179,6 +179,16 @@ The **More** menu contains IT Health, NetOps Readiness, Security Resilience, Bui
 - **Open in Search** opens the exact SPL with the active dashboard time range and allowed dashboard-defined filters.
 - Dashboard Manager view controls support display options, zoom, export, and cloning for supported dashboards.
 
+### Create a dashboard
+
+1. Open **More > Dashboard Manager** and select **Create New**.
+2. Enter a title and optional description, choose **Private** or **Shared in App** under **Permissions**, and select an **Absolute** or **Grid** layout.
+3. Select **Create** once. The button shows **Creating…** while the request is in progress, and the editor opens when creation succeeds.
+
+If the title produces an existing dashboard ID, choose a different title or cancel and open the existing dashboard to edit it. Creating a dashboard does not overwrite the existing one. Creation errors remain visible inside the dialog.
+
+If the dashboard is saved but app sharing fails, select **Open saved dashboard** to continue with the saved dashboard. If the request cannot be confirmed, check the dashboard library before trying again. Other Dashboard Manager error notifications appear above open dialogs and previews and remain until dismissed.
+
 ## Insights Workspaces {#workspaces}
 
 Insights Workspaces are reusable, audience-specific views of Searchbase-backed KPIs. A workspace combines header metadata, sections, default tiles, a Signal Rail, map settings, and presentation defaults. Built-in workspaces provide packaged starting points; custom workspaces store customer-specific choices without changing packaged definitions.
@@ -310,6 +320,8 @@ Searchbase definitions are app-managed factory content. Workspace managers choos
 | Setup discovery takes too long | Use a shorter representative range. CIM discovery reports each model independently and can be canceled without losing completed results. |
 | Setup cannot finish | Return to Configure data after a failed routing scan, or choose Balanced mode when accelerated-only prerequisites are incomplete. |
 | A workspace cannot be saved | Confirm `ssne_manage_insights_workspaces`, then inspect the bounded REST error returned by Splunk Enterprise. |
+| A dashboard cannot be created | Read the error inside the Create dialog. For an existing dashboard ID, choose a different title or open the existing dashboard to edit it. If the request cannot be confirmed, check the library before retrying. |
+| A dashboard was saved but sharing failed | Select **Open saved dashboard** and check the reported sharing error and your permissions before changing its sharing settings. |
 | A personal layout disappeared | Check whether browser storage or cookies were cleared. Publish layouts that must be shared. |
 | A duplicated workspace has unexpected content | Confirm the source workspace, shared layout, and Signal Rail before saving the copy. |
 | Site names or links are missing | Verify topology configuration, coordinates, lookup data, ThousandEyes bindings, and data permissions. |
