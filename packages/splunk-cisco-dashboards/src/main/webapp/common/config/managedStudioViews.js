@@ -155,13 +155,25 @@ export const getDashboardManagerScope = (dashboard, currentUsername) => {
   }
 
   if (
-    normalizeValue(dashboard?.sharing) === "app" &&
+    ["app", "global"].includes(normalizeValue(dashboard?.sharing)) &&
     hasLegacyDashboardManagerIdentity(dashboard)
   ) {
-    return "yours";
+    return "shared";
   }
 
   return undefined;
+};
+
+// These filters describe dashboards already returned by Splunk for the signed-in
+// user. The server ACL remains the authority for read and write access.
+export const matchesDashboardManagerScope = (dashboard, currentUsername, scope) => {
+  const dashboardScope = getDashboardManagerScope(dashboard, currentUsername);
+  if (!dashboardScope) return false;
+  if (scope === "shared") {
+    return dashboardScope !== "included" &&
+      ["app", "global"].includes(normalizeValue(dashboard?.sharing));
+  }
+  return dashboardScope === scope;
 };
 
 export const isDashboardManagerDashboard = (dashboard, currentUsername) =>

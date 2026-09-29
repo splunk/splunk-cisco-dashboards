@@ -383,8 +383,8 @@ assert.match(
 );
 assert.match(
   homePage,
-  /<strong>Included<\/strong>[\s\S]*?<strong>Yours<\/strong>[\s\S]*?create or copy/,
-  "Help must state the exact Included and Yours library scopes",
+  /<strong>Included<\/strong>[\s\S]*?<strong>Yours<\/strong>[\s\S]*?owned by you[\s\S]*?<strong> Shared<\/strong>[\s\S]*?other users/,
+  "Help must explain Included, Yours, and Shared library scopes",
 );
 assert.match(
   homePage,

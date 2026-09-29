@@ -183,6 +183,8 @@ The **More** menu contains IT Health, NetOps Readiness, Security Resilience, Bui
 
 ### Create a dashboard
 
+The library has three tabs: **Included** contains supplied dashboards, **Yours** contains managed dashboards owned by you, and **Shared** contains managed dashboards shared in the app that you have permission to read, including other users' dashboards. A dashboard you own and share appears in both **Yours** and **Shared**. Existing app-owned dashboards appear in **Shared**. Private dashboards do not appear in **Shared**.
+
 1. Open **More > Dashboard Manager** and select **Create New**.
 2. Enter a title and optional description, choose **Private** or **Shared in App** under **Permissions**, and select an **Absolute** or **Grid** layout.
 3. Select **Create** once. The button shows **Creating…** while the request is in progress, and the editor opens when creation succeeds.
@@ -339,6 +341,11 @@ This Markdown file is the authoritative source for the in-product release histor
 ### Insights Workspaces
 
 - Restored the update badge beside the installed version when Splunk reports a newer app release.
+
+### Dashboard Manager
+
+- Added a **Shared** library tab to find dashboards shared in the app, including dashboards created by other users.
+- Kept new shared dashboards associated with their creator so they also appear under **Yours**. Editing dashboard metadata preserves existing sharing permissions.
 :::
 
 ::: release Release Notes | September 2026 - Version 1.0.54

@@ -137,7 +137,7 @@ assert.equal(
     },
     "another-app-user",
   ),
-  "yours",
+  "shared",
   "App-shared Dashboard Manager dashboards must remain discoverable to app users",
 );
 
@@ -183,7 +183,7 @@ assert.match(
 );
 assert.match(
   dashboardPersistence,
-  /sharing = 'user'[\s\S]*?sharing !== 'app'[\s\S]*?owner: 'nobody'[\s\S]*?sharing: 'app'[\s\S]*?'perms\.read': '\*'/,
+  /sharing = 'user'[\s\S]*?sharing !== 'app'[\s\S]*?owner: namespaceOwner[\s\S]*?sharing: 'app'[\s\S]*?'perms\.read': '\*'/,
   "Only explicit app-shared creation must promote the dashboard to the native shared-app ACL",
 );
 assert.match(
