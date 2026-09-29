@@ -122,6 +122,15 @@
   height: auto !important;
 }
 
+/* Loading and empty states bypass the visualization renderer, so they must
+ * also fill the remaining space instead of keeping Studio's fixed height. */
+[data-test="DashboardLayoutContainer"]
+  [data-test="viz-size-wrapper"]
+  > [data-test="viz-waiting-for-input"] {
+  width: 100% !important;
+  height: 100% !important;
+}
+
 /*
  * Managed Studio template: let every native Studio Dashboard Manager canvas
  * consume the space beside Splunk's navigation rail instead of preserving its

@@ -1,5 +1,6 @@
 import React from 'react';
 import EnterprisePreset from '@splunk/dashboard-presets/EnterprisePreset';
+import { withMeasuredVisualizationSizes } from './VisualizationFrame';
 
 // Visualization schemas 28.8.0 omit types on these literal branches. Repair
 // our preset before Studio builds the editor and worker validation schemas.
@@ -44,4 +45,4 @@ export function withNetworkGraphSchemaTypes(preset) {
     };
 }
 
-export default withNetworkGraphSchemaTypes(EnterprisePreset);
+export default withMeasuredVisualizationSizes(withNetworkGraphSchemaTypes(EnterprisePreset));

@@ -15,6 +15,19 @@ const pageRoot = path.resolve(__dirname, "../src/main/webapp/pages/dashboardbuil
 const compiled = babel.transformSync(fs.readFileSync(path.join(pageRoot, "dashboardPreset.js"), "utf8"), {
   plugins: ["@babel/plugin-transform-modules-commonjs"],
 }).code;
+const compiledFrame = babel.transformSync(fs.readFileSync(path.join(pageRoot, "VisualizationFrame.jsx"), "utf8"), {
+  presets: ["@babel/preset-react"],
+  plugins: ["@babel/plugin-transform-modules-commonjs"],
+}).code;
+
+function loadFrame(react = React, ResizeObserver) {
+  const module = { exports: {} };
+  vm.runInNewContext(`(function(require, module, exports) {${compiledFrame}\n})`, { ResizeObserver })((id) => {
+    if (id === "react") return react;
+    throw new Error(`Unexpected import ${id}`);
+  }, module, module.exports);
+  return module.exports;
+}
 
 function loadPreset(optionsSchema = networkGraphOptionsSchema) {
   const NetworkGraph = (props) => React.createElement("div", props);
@@ -24,6 +37,7 @@ function loadPreset(optionsSchema = networkGraphOptionsSchema) {
   const module = { exports: {} };
   vm.runInNewContext(`(function(require, module, exports) {${compiled}\n})`)((id) => {
     if (id === "react") return React;
+    if (id === "./VisualizationFrame") return loadFrame();
     if (id === "@splunk/dashboard-presets/EnterprisePreset") return { __esModule: true, default: upstream };
     throw new Error(`Unexpected import ${id}`);
   }, module, module.exports);
@@ -54,7 +68,8 @@ const definition = (options) => ({
 
 test("repairs vendor literal types without changing the shared schema, renderer, or other preset entries", () => {
   const before = JSON.stringify(networkGraphOptionsSchema);
-  const { default: preset, upstream } = loadPreset();
+  const { withNetworkGraphSchemaTypes, upstream } = loadPreset();
+  const preset = withNetworkGraphSchemaTypes(upstream);
   const graph = preset.visualizations["splunk.networkGraph"];
   const original = upstream.visualizations["splunk.networkGraph"];
   const schema = graph.config.optionsSchema;
@@ -114,4 +129,65 @@ test("library previews and direct editor routes both use the corrected preset", 
     assert.match(source, /import EnterprisePreset from ["']\.\/dashboardPreset["']/);
     assert.doesNotMatch(source, /from ["']@splunk\/dashboard-presets\/EnterprisePreset["']/);
   }
+});
+
+test("sizes each renderer to its panel without losing its configuration or event callbacks", () => {
+  const { default: preset, upstream } = loadPreset();
+  for (const [name, Original] of Object.entries(upstream.visualizations)) {
+    const Wrapped = preset.visualizations[name];
+    const options = { test: true };
+    const onEventTrigger = () => {};
+    const rendered = Wrapped({ width: 634, height: 212, options, onEventTrigger });
+    assert.equal(rendered.props.width, 634);
+    assert.equal(rendered.props.options, options);
+    assert.equal(rendered.props.onEventTrigger, onEventTrigger);
+    assert.equal(Wrapped.defaultProps, Original.defaultProps);
+    if (name !== "splunk.networkGraph") {
+      assert.equal(Wrapped.config, Original.config);
+      assert.equal(rendered.props.component, Original);
+    }
+  }
+});
+
+test("wrapped headers reduce renderer height and resizing uses unscaled dimensions", () => {
+  let size = null;
+  let effect;
+  let resize;
+  let disconnected = false;
+  const frame = { clientWidth: 634, clientHeight: 188 };
+  const react = {
+    ...React,
+    useRef: () => ({ current: frame }),
+    useState: () => [size, (update) => { size = update(size); }],
+    useLayoutEffect: (callback) => { effect = callback; },
+  };
+  class Observer {
+    constructor(callback) { resize = callback; }
+    observe(element) { assert.equal(element, frame); }
+    disconnect() { disconnected = true; }
+  }
+  const { default: Frame } = loadFrame(react, Observer);
+  const component = () => null;
+  const onEventTrigger = () => {};
+  const onRequestHeight = () => {};
+  const props = { component, width: 634, height: 212, onEventTrigger, onRequestHeight };
+  Frame(props);
+  const cleanup = effect();
+  let rendered = Frame(props).props.children;
+  assert.equal(rendered.type, component);
+  assert.equal(rendered.props.width, 634);
+  assert.equal(rendered.props.height, 188, "Wrapped description must not consume the 24px row gap");
+  assert.equal(rendered.props.onEventTrigger, onEventTrigger);
+  assert.equal(rendered.props.onRequestHeight, onRequestHeight);
+  resize([{ contentRect: { width: 560.5, height: 168.25 } }]);
+  rendered = Frame(props).props.children;
+  assert.equal(rendered.props.width, 560.5);
+  assert.equal(rendered.props.height, 168.25);
+  const prior = size;
+  resize([{ contentRect: { width: 560.5, height: 168.25 } }]);
+  assert.equal(size, prior, "Unchanged observations must not trigger render loops");
+  resize([{ contentRect: { width: 0, height: 0 } }]);
+  assert.equal(size, prior, "Hidden tabs should keep their last valid render size");
+  cleanup();
+  assert.equal(disconnected, true);
 });
