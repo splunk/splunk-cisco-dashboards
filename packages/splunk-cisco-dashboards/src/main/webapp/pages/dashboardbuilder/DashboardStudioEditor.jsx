@@ -86,11 +86,8 @@ import {
 import { getDashboard } from "../../common/lib/splunk";
 import { escapeCdata } from "../../common/lib/xmlCdata";
 import "../../common/styles/commonstyles.css";
-import Toaster, {
-  makeCreateToast,
-} from "@splunk/react-toast-notifications/Toaster";
 import { TOAST_TYPES } from "@splunk/react-toast-notifications/ToastConstants";
-import ToastMessages from "@splunk/react-toast-notifications/ToastMessages";
+import { notifyDashboard } from "./dashboardNotifications";
 import { addDash } from "../../common/lib/splunk";
 import { SearchBaseDataSourcePanel } from "./SearchBaseDataSourcePanel";
 import { DataSourceEditors } from "@splunk/dashboard-editors";
@@ -1351,7 +1348,7 @@ const DashboardStudioEditor = ({
 
       if (response.status >= 200 && response.status <= 299) {
         console.log(response);
-        makeCreateToast(Toaster)({
+        notifyDashboard({
           message: `Dashboard saved successfully...`,
           type: TOAST_TYPES.SUCCESS,
         });
@@ -1366,7 +1363,7 @@ const DashboardStudioEditor = ({
         if (onDashboardSaved) onDashboardSaved();
       } else {
         console.log(response);
-        makeCreateToast(Toaster)({
+        notifyDashboard({
           message: `An error occurred while saving the dashboard. ${getSplunkResponseErrorMessage(
             response,
           )}`,
@@ -1377,7 +1374,7 @@ const DashboardStudioEditor = ({
 
     saveDashboard().catch((error) => {
       console.error(error);
-      makeCreateToast(Toaster)({
+      notifyDashboard({
         message: `An error occurred while saving the dashboard. ${getSafeErrorMessage(error)}`,
         type: TOAST_TYPES.ERROR,
       });
@@ -1410,7 +1407,7 @@ const DashboardStudioEditor = ({
       }
 
       if (newMode === "view" && unsavedDefinition === true) {
-        makeCreateToast({
+        notifyDashboard({
           type: TOAST_TYPES.WARNING,
           message: "This dashboard has unsaved changes.",
           autoDismiss: true,
@@ -1499,7 +1496,7 @@ const DashboardStudioEditor = ({
     /*if (!validEditorJson) {
             // show Error toast if definition in sourceEditor is invalid.
 
-            makeCreateToast(Toaster)({
+            notifyDashboard({
                 message: 'Invalid JSON, Please enter valid',
                 type: TOAST_TYPES.ERROR,
             });
@@ -1773,7 +1770,7 @@ const DashboardStudioEditor = ({
         );
       }
 
-      makeCreateToast(Toaster)({
+      notifyDashboard({
         message: `Created ${cloneTitle}.`,
         type: TOAST_TYPES.SUCCESS,
       });
@@ -1783,7 +1780,7 @@ const DashboardStudioEditor = ({
         )}/dashboard_manager#/${encodeURIComponent(cloneId)}/edit`,
       );
     } catch (error) {
-      makeCreateToast(Toaster)({
+      notifyDashboard({
         message: `Unable to clone the dashboard. ${getSafeErrorMessage(error)}`,
         type: TOAST_TYPES.ERROR,
       });
@@ -2323,13 +2320,18 @@ const DashboardStudioEditor = ({
           }, 500);
         } else {
           console.log(response);
-          makeCreateToast(Toaster)({
+          notifyDashboard({
             message: `An error occurred while creating the new dashboard. ${getSplunkResponseErrorMessage(
               response,
             )}`,
             type: TOAST_TYPES.ERROR,
           });
         }
+      }).catch((error) => {
+        notifyDashboard({
+          message: `Unable to create the dashboard. ${getSafeErrorMessage(error)}`,
+          type: TOAST_TYPES.ERROR,
+        });
       });
     } else {
       // open existing dashboard
@@ -2355,7 +2357,7 @@ const DashboardStudioEditor = ({
       dashboardApiElem.current.updateDefinition(def);
 
       setOpenConvertModal(false);
-      makeCreateToast(Toaster)({
+      notifyDashboard({
         message: `Converted ${convertedDataSources} Searchbase data source${
           convertedDataSources === 1 ? "" : "s"
         } and ${convertedInputs} custom time input${
@@ -2365,7 +2367,7 @@ const DashboardStudioEditor = ({
       });
     } catch (error) {
       console.error(error);
-      makeCreateToast(Toaster)({
+      notifyDashboard({
         message: `An error occurred while converting the dashboard. ${getSafeErrorMessage(error)}`,
         type: TOAST_TYPES.ERROR,
       });
@@ -2456,7 +2458,6 @@ const DashboardStudioEditor = ({
 
   return (
     <>
-      <ToastMessages />
       <Modal
         open={openConvertModal}
         className={`dashboard-builder-themed-modal dashboard-builder-themed-modal-${dashboardColorScheme}`}

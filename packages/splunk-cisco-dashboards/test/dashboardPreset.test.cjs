@@ -1,0 +1,193 @@
+"use strict";
+
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+const test = require("node:test");
+const vm = require("node:vm");
+const babel = require("@babel/core");
+const React = require("react");
+const Ajv = require("ajv");
+const { createSchemaBasedOnPresets } = require("@splunk/dashboard-definition/DashboardSchema");
+const { networkGraphOptionsSchema } = require("@splunk/visualization-schemas");
+
+const pageRoot = path.resolve(__dirname, "../src/main/webapp/pages/dashboardbuilder");
+const compiled = babel.transformSync(fs.readFileSync(path.join(pageRoot, "dashboardPreset.js"), "utf8"), {
+  plugins: ["@babel/plugin-transform-modules-commonjs"],
+}).code;
+const compiledFrame = babel.transformSync(fs.readFileSync(path.join(pageRoot, "VisualizationFrame.jsx"), "utf8"), {
+  presets: ["@babel/preset-react"],
+  plugins: ["@babel/plugin-transform-modules-commonjs"],
+}).code;
+
+function loadFrame(react = React, ResizeObserver) {
+  const module = { exports: {} };
+  vm.runInNewContext(`(function(require, module, exports) {${compiledFrame}\n})`, { ResizeObserver })((id) => {
+    if (id === "react") return react;
+    throw new Error(`Unexpected import ${id}`);
+  }, module, module.exports);
+  return module.exports;
+}
+
+function loadPreset(optionsSchema = networkGraphOptionsSchema) {
+  const NetworkGraph = (props) => React.createElement("div", props);
+  NetworkGraph.config = { key: "splunk.networkGraph", optionsSchema, editorConfig: { marker: true } };
+  NetworkGraph.defaultProps = { testDefault: true };
+  const upstream = { visualizations: { "splunk.networkGraph": NetworkGraph, other: () => null }, inputs: {} };
+  const module = { exports: {} };
+  vm.runInNewContext(`(function(require, module, exports) {${compiled}\n})`)((id) => {
+    if (id === "react") return React;
+    if (id === "./VisualizationFrame") return loadFrame();
+    if (id === "@splunk/dashboard-presets/EnterprisePreset") return { __esModule: true, default: upstream };
+    throw new Error(`Unexpected import ${id}`);
+  }, module, module.exports);
+  return { ...module.exports, upstream };
+}
+
+function compile(preset, { allowTokenCoercion = false, serialized = false } = {}) {
+  const warnings = [];
+  let schema = createSchemaBasedOnPresets(preset, { allowTokenCoercion });
+  // The worker receives a serialized schema rather than component functions.
+  if (serialized) schema = JSON.parse(JSON.stringify(schema));
+  const ajv = new Ajv({
+    strictTypes: true,
+    allowUnionTypes: true,
+    allowMatchingProperties: true,
+    keywords: [{ keyword: "skipTokenSupport", schemaType: "boolean" }],
+    logger: { log() {}, warn(message) { warnings.push(message); }, error(message) { warnings.push(message); } },
+  });
+  const validate = ajv.compile(schema);
+  assert.deepEqual(warnings, []);
+  return validate;
+}
+
+const definition = (options) => ({
+  visualizations: { graph: { type: "splunk.networkGraph", options } },
+  defaults: { visualizations: { "splunk.networkGraph": { options } } },
+});
+
+test("repairs vendor literal types without changing the shared schema, renderer, or other preset entries", () => {
+  const before = JSON.stringify(networkGraphOptionsSchema);
+  const { withNetworkGraphSchemaTypes, upstream } = loadPreset();
+  const preset = withNetworkGraphSchemaTypes(upstream);
+  const graph = preset.visualizations["splunk.networkGraph"];
+  const original = upstream.visualizations["splunk.networkGraph"];
+  const schema = graph.config.optionsSchema;
+  assert.equal(schema.hierarchyDirection.anyOf[0].type, "string");
+  assert.equal(schema.linkStrength.anyOf[0].type, "number");
+  assert.equal(schema.hierarchyDirection.anyOf[1], networkGraphOptionsSchema.hierarchyDirection.anyOf[1]);
+  assert.equal(schema.linkStrength.anyOf[1], networkGraphOptionsSchema.linkStrength.anyOf[1]);
+  assert.equal(graph.config.editorConfig, original.config.editorConfig);
+  assert.equal(graph.defaultProps, original.defaultProps);
+  assert.equal(preset.visualizations.other, upstream.visualizations.other);
+  assert.equal(preset.inputs, upstream.inputs);
+  const rendered = graph({ label: "graph" });
+  assert.equal(rendered.type, original);
+  assert.equal(rendered.props.label, "graph");
+  assert.equal(JSON.stringify(networkGraphOptionsSchema), before);
+});
+
+test("compiles editor and serialized worker schemas with strict types and accepts supported values", () => {
+  const { default: preset } = loadPreset();
+  for (const serialized of [false, true]) {
+    const validate = compile(preset, { serialized });
+    for (const hierarchyDirection of ["topBottom", "bottomTop", "leftRight", "rightLeft", "$direction$", "> primary | seriesByName('direction')"]) {
+      for (const linkStrength of [0, 0.5, 1, "> primary | seriesByName('strength')"]) {
+        assert.equal(validate(definition({ hierarchyDirection, linkStrength })), true, JSON.stringify(validate.errors));
+      }
+    }
+    assert.equal(validate(definition({})), true);
+  }
+});
+
+test("continues rejecting invalid directions, invalid types, and out-of-range strengths", () => {
+  const { default: preset } = loadPreset();
+  const validate = compile(preset);
+  for (const options of [
+    { hierarchyDirection: "diagonal" }, { hierarchyDirection: 1 }, { hierarchyDirection: false },
+    { linkStrength: -0.01 }, { linkStrength: 1.01 }, { linkStrength: true }, { linkStrength: "invalid" },
+  ]) assert.equal(validate(definition(options)), false, JSON.stringify(options));
+});
+
+test("retains numeric token support when Studio enables token coercion", () => {
+  const { default: preset } = loadPreset();
+  const validate = compile(preset, { allowTokenCoercion: true, serialized: true });
+  assert.equal(validate(definition({ hierarchyDirection: "$direction$", linkStrength: "$strength$" })), true, JSON.stringify(validate.errors));
+});
+
+test("leaves absent and already corrected vendor schemas unchanged", () => {
+  const { default: preset, withNetworkGraphSchemaTypes, normalizeNetworkGraphSchema } = loadPreset();
+  assert.equal(withNetworkGraphSchemaTypes(preset), preset);
+  const empty = { visualizations: {} };
+  assert.equal(withNetworkGraphSchemaTypes(empty), empty);
+  assert.equal(normalizeNetworkGraphSchema(undefined), undefined);
+});
+
+test("library previews and direct editor routes both use the corrected preset", () => {
+  for (const name of ["index.jsx", "DBHomePage.jsx"]) {
+    const source = fs.readFileSync(path.join(pageRoot, name), "utf8");
+    assert.match(source, /import EnterprisePreset from ["']\.\/dashboardPreset["']/);
+    assert.doesNotMatch(source, /from ["']@splunk\/dashboard-presets\/EnterprisePreset["']/);
+  }
+});
+
+test("sizes each renderer to its panel without losing its configuration or event callbacks", () => {
+  const { default: preset, upstream } = loadPreset();
+  for (const [name, Original] of Object.entries(upstream.visualizations)) {
+    const Wrapped = preset.visualizations[name];
+    const options = { test: true };
+    const onEventTrigger = () => {};
+    const rendered = Wrapped({ width: 634, height: 212, options, onEventTrigger });
+    assert.equal(rendered.props.width, 634);
+    assert.equal(rendered.props.options, options);
+    assert.equal(rendered.props.onEventTrigger, onEventTrigger);
+    assert.equal(Wrapped.defaultProps, Original.defaultProps);
+    if (name !== "splunk.networkGraph") {
+      assert.equal(Wrapped.config, Original.config);
+      assert.equal(rendered.props.component, Original);
+    }
+  }
+});
+
+test("wrapped headers reduce renderer height and resizing uses unscaled dimensions", () => {
+  let size = null;
+  let effect;
+  let resize;
+  let disconnected = false;
+  const frame = { clientWidth: 634, clientHeight: 188 };
+  const react = {
+    ...React,
+    useRef: () => ({ current: frame }),
+    useState: () => [size, (update) => { size = update(size); }],
+    useLayoutEffect: (callback) => { effect = callback; },
+  };
+  class Observer {
+    constructor(callback) { resize = callback; }
+    observe(element) { assert.equal(element, frame); }
+    disconnect() { disconnected = true; }
+  }
+  const { default: Frame } = loadFrame(react, Observer);
+  const component = () => null;
+  const onEventTrigger = () => {};
+  const onRequestHeight = () => {};
+  const props = { component, width: 634, height: 212, onEventTrigger, onRequestHeight };
+  Frame(props);
+  const cleanup = effect();
+  let rendered = Frame(props).props.children;
+  assert.equal(rendered.type, component);
+  assert.equal(rendered.props.width, 634);
+  assert.equal(rendered.props.height, 188, "Wrapped description must not consume the 24px row gap");
+  assert.equal(rendered.props.onEventTrigger, onEventTrigger);
+  assert.equal(rendered.props.onRequestHeight, onRequestHeight);
+  resize([{ contentRect: { width: 560.5, height: 168.25 } }]);
+  rendered = Frame(props).props.children;
+  assert.equal(rendered.props.width, 560.5);
+  assert.equal(rendered.props.height, 168.25);
+  const prior = size;
+  resize([{ contentRect: { width: 560.5, height: 168.25 } }]);
+  assert.equal(size, prior, "Unchanged observations must not trigger render loops");
+  resize([{ contentRect: { width: 0, height: 0 } }]);
+  assert.equal(size, prior, "Hidden tabs should keep their last valid render size");
+  cleanup();
+  assert.equal(disconnected, true);
+});

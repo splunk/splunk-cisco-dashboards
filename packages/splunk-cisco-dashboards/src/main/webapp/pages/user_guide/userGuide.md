@@ -56,6 +56,10 @@ For each search, use an accelerated CIM model when it preserves the required mea
 
 Data-model acceleration improves eligible `tstats` searches but does not replace correct data ingestion, tagging, field extraction, or index permissions.
 
+For event counts and freshness that need only indexed fields (such as index, sourcetype, and time), use index-backed `tstats` directly. This avoids raw payload scans without depending on model tagging or summary freshness. Do not replace source-feed health with summary health.
+
+For model-backed searches, the shared `summariesonly` setting controls whether incomplete summaries may be supplemented from unsummarized data. Summary-only mode can be faster but can omit recent or uncovered events. Validate acceleration coverage before enabling it; shortening the dashboard window does not repair a coverage gap. Event-detail searches may still need raw fields. Apply expensive display enrichment after bounded selection when this preserves filtering and ranking.
+
 ## Install and upgrade {#install}
 
 ### Install the app
@@ -77,7 +81,7 @@ Setup contains six stages:
 3. **Review packages:** confirm which supporting apps and add-ons are installed and enabled.
 4. **Configure data:** scan a bounded time range, review routing macro proposals, and choose the search-performance mode.
 5. **Tune CIM models:** run one bounded discovery search per CIM data model. Models backed by matching data are selected automatically; clear any allow list that you want to leave unchanged. You can select **Skip CIM tuning** when no model remains selected.
-6. **Review & finish:** compare current and proposed values, then select **Save changes and finish**. Setup persists every reviewed app routing macro and matched CIM allow list to the owning app's local configuration, including definitions that currently match a shipped default.
+6. **Review & finish:** compare current and proposed values, then select **Save changes and finish**. Setup persists every reviewed user-tunable app routing macro and matched CIM allow list to the owning app's local configuration, including definitions that currently match a shipped default. TA-owned Cisco DC Networking macros and the Cisco Enterprise Networking sourcetype allow-list macro remain outside this user-driven save path.
 
 Nothing is written until the final confirmation. Canceling Setup discards the draft plan.
 
@@ -94,6 +98,8 @@ Back up customer-managed `local` configuration before an upgrade. Packaged defau
 ## Macro index tuning {#macro-tuning}
 
 Setup discovers indexes that contain supported Cisco source types and proposes bounded macro definitions. Review every proposal before saving it.
+
+TA-owned Cisco DC Networking routing macros and the Cisco Enterprise Networking sourcetype allow-list macro are not user-tunable in this workflow. Their definitions remain static here and can continue to change through the owning TA's upgrade path.
 
 ### Configure app and companion macros
 
@@ -172,6 +178,16 @@ The **More** menu contains IT Health, NetOps Readiness, Security Resilience, Bui
 - **Investigate drivers** opens supporting searches without loading every detail search on the first canvas.
 - **Open in Search** opens the exact SPL with the active dashboard time range and allowed dashboard-defined filters.
 - Dashboard Manager view controls support display options, zoom, export, and cloning for supported dashboards.
+
+### Create a dashboard
+
+1. Open **More > Dashboard Manager** and select **Create New**.
+2. Enter a title and optional description, choose **Private** or **Shared in App** under **Permissions**, and select an **Absolute** or **Grid** layout.
+3. Select **Create** once. The button shows **Creating…** while the request is in progress, and the editor opens when creation succeeds.
+
+If the title produces an existing dashboard ID, choose a different title or cancel and open the existing dashboard to edit it. Creating a dashboard does not overwrite the existing one. Creation errors remain visible inside the dialog.
+
+If the dashboard is saved but app sharing fails, select **Open saved dashboard** to continue with the saved dashboard. If the request cannot be confirmed, check the dashboard library before trying again. Other Dashboard Manager error notifications appear above open dialogs and previews and remain until dismissed.
 
 ## Insights Workspaces {#workspaces}
 
@@ -304,6 +320,8 @@ Searchbase definitions are app-managed factory content. Workspace managers choos
 | Setup discovery takes too long | Use a shorter representative range. CIM discovery reports each model independently and can be canceled without losing completed results. |
 | Setup cannot finish | Return to Configure data after a failed routing scan, or choose Balanced mode when accelerated-only prerequisites are incomplete. |
 | A workspace cannot be saved | Confirm `ssne_manage_insights_workspaces`, then inspect the bounded REST error returned by Splunk Enterprise. |
+| A dashboard cannot be created | Read the error inside the Create dialog. For an existing dashboard ID, choose a different title or open the existing dashboard to edit it. If the request cannot be confirmed, check the library before retrying. |
+| A dashboard was saved but sharing failed | Select **Open saved dashboard** and check the reported sharing error and your permissions before changing its sharing settings. |
 | A personal layout disappeared | Check whether browser storage or cookies were cleared. Publish layouts that must be shared. |
 | A duplicated workspace has unexpected content | Confirm the source workspace, shared layout, and Signal Rail before saving the copy. |
 | Site names or links are missing | Verify topology configuration, coordinates, lookup data, ThousandEyes bindings, and data permissions. |
@@ -314,10 +332,29 @@ Searchbase definitions are app-managed factory content. Workspace managers choos
 
 This Markdown file is the authoritative source for the in-product release history.
 
+::: release Release Notes | September 2026 - Version 1.0.53
+### Dashboard Manager
+
+- Prevented new dashboards from overwriting existing dashboard IDs or creating private copies that conflict when shared. Creation errors now remain visible in the dialog, duplicate submissions are blocked, and a saved dashboard can still be opened if sharing fails.
+- Kept Dashboard Manager error notifications in front of open dialogs and previews until dismissed, with one notification host shared across the library and editor.
+- Corrected Network Graph option types to eliminate repeated schema-validation warnings when opening Dashboard Manager and its editor, while preserving validation of graph settings.
+- Preserved spacing between Dashboard Manager visualizations by sizing chart content to the space remaining beneath wrapped titles and descriptions.
+
+### Map usability
+
+- Prevented transparent site-marker padding from intercepting nearby link clicks, widened link selection targets, and added keyboard activation with visible focus for map links.
+
+### Search performance
+
+- Replaced raw FTD feed-freshness, WSA volume, SD-WAN audit volume, and total SSE event scans with indexed-metadata `tstats` searches.
+- Added model-backed aggregation for ThousandEyes page completion and path-quality detail, plus Catalyst interface spike, drop, and asymmetry candidates. These searches require their companion models and honor the shared summary-coverage setting.
+- Deferred display enrichment until after the existing result limits for SSE event detail and FTD anomalous sessions, preserving selection and thresholds.
+:::
+
 ::: release Release Notes | September 2026 - Version 1.0.52
 ### Release overview
 
-Version 1.0.52 preserves complete large-fleet asset inventories, advances release build allocation beyond the published 1.0.51 package, and keeps first-run CIM discovery independent of saved allowlists.
+Version 1.0.52 preserves complete large-fleet asset inventories, advances release build allocation beyond the published 1.0.51 package, keeps first-run CIM discovery independent of saved allowlists, and keeps TA-owned Cisco routing definitions outside user-driven tuning.
 
 - Made Insights and Dashboard Manager drill-downs use the workspace's navy, cyan, and purple atmosphere instead of a flat black panel, with a consistent dimmed backdrop instead of an ambiguous transparency slider.
 
@@ -340,6 +377,12 @@ Version 1.0.52 preserves complete large-fleet asset inventories, advances releas
 
 - Fixed first-run CIM discovery so tagged events are found before a CIM index
   allowlist has been saved, including Umbrella DNS events in `cisco_umbrella`.
+- Kept TA-owned Cisco DC Networking routing macros and the Cisco Enterprise
+  Networking sourcetype allow-list outside the Setup tuning and save path so
+  their static definitions remain managed by the owning TA.
+- Grouped the final Settings to be saved review by target app so multiple
+  macros and settings remain easy to scan without repeating the app name on
+  every row.
 
 ### Searchbase catalogue
 

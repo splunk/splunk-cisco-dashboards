@@ -101,7 +101,6 @@ const DATA_MODEL_ACCELERATION_SEARCH = `
 `;
 const DEFAULT_INDEX_IN_DEFINITION = "index IN (*)";
 const DEFAULT_INDEX_OR_DEFINITION = "(index=*)";
-const DEFAULT_SOURCETYPE_IN_DEFINITION = "sourcetype IN (*)";
 const SCD_INDEX_MACRO_OR_PLACEHOLDER = "__SCD_INDEX_MACRO_OR__";
 const FALLBACK_SCD_INDEX_MACRO_NAMES = [
   "index_catalyst",
@@ -309,13 +308,7 @@ const THOUSAND_EYES_MODEL_MACRO_NAMES = [
 ] as const;
 const CATALYST_APP_MACRO_NAMES = [
   "cisco_catalyst_app_index",
-  "cisco_catalyst_app_sourcetypes",
   "cisco_catalyst_sdwan_index",
-] as const;
-const DATA_CENTER_NETWORKING_INDEX_MACRO_NAMES = [
-  "cisco_dc_aci_index",
-  "cisco_dc_nd_index",
-  "cisco_dc_n9k_index",
 ] as const;
 const COMPANION_APP_INDEX_MACROS = [
   {
@@ -337,7 +330,6 @@ const COMPANION_APP_INDEX_MACROS = [
 const TARGET_APP_ORDER = [
   APP_NAME,
   CATALYST_APP_NAME,
-  DATA_CENTER_NETWORKING_APP_NAME,
   MERAKI_APP_NAME,
   INTERSIGHT_APP_NAME,
   SPACES_APP_NAME,
@@ -386,8 +378,6 @@ const EXTERNAL_MACRO_DESCRIPTIONS: Record<string, string> = {
     "Routes ThousandEyes alert searches to indexes containing active and historical alert events.",
   cisco_catalyst_app_index:
     "Routes Cisco Catalyst dashboard searches to indexes containing Catalyst Center, ISE, SD-WAN, CyberVision, Meraki, IOS, ThousandEyes, and related network events.",
-  cisco_catalyst_app_sourcetypes:
-    "Defines the broad app-owned sourcetype allow-list used by the Cisco Catalyst data model and index discovery. Keep it broad; use the index macros for deployment-specific scoping.",
   cisco_catalyst_sdwan_index:
     "Routes Cisco Catalyst SD-WAN dashboard searches to indexes containing Cisco SD-WAN events.",
   cisco_dc_aci_index:
@@ -409,7 +399,7 @@ type SaveState = "idle" | "saving" | "saved" | "error";
 type CopyState = "idle" | "copied" | "selected" | "error";
 type InventoryLoadState = "idle" | "loading" | "ready" | "error";
 type SetupRerunScope = "routing" | "cim";
-type DefinitionFormat = "indexIn" | "indexOr" | "sourcetypeIn";
+type DefinitionFormat = "indexIn" | "indexOr";
 type DataModelAccelerationState =
   | "checking"
   | "enabled"
@@ -446,12 +436,10 @@ interface TunableMacroConfig {
   targetApp: string;
   definitionFormat: DefinitionFormat;
   definitionSuffix?: string;
-  preserveCurrentDefinition?: boolean;
   family:
     | "scd"
     | "cim"
     | "catalyst"
-    | "dataCenterNetworking"
     | "meraki"
     | "intersight"
     | "spaces"
@@ -486,20 +474,8 @@ const CATALYST_APP_MACRO_CONFIGS: TunableMacroConfig[] =
   CATALYST_APP_MACRO_NAMES.map((macro) => ({
     macro,
     targetApp: CATALYST_APP_NAME,
-    definitionFormat:
-      macro === "cisco_catalyst_app_sourcetypes"
-        ? "sourcetypeIn"
-        : "indexIn",
-    preserveCurrentDefinition:
-      macro === "cisco_catalyst_app_sourcetypes",
-    family: "catalyst",
-  }));
-const DATA_CENTER_NETWORKING_INDEX_MACRO_CONFIGS: TunableMacroConfig[] =
-  DATA_CENTER_NETWORKING_INDEX_MACRO_NAMES.map((macro) => ({
-    macro,
-    targetApp: DATA_CENTER_NETWORKING_APP_NAME,
     definitionFormat: "indexIn",
-    family: "dataCenterNetworking",
+    family: "catalyst",
   }));
 const COMPANION_APP_INDEX_MACRO_CONFIGS: TunableMacroConfig[] =
   COMPANION_APP_INDEX_MACROS.map(({ macro, targetApp, family }) => ({
@@ -524,7 +500,6 @@ const buildTuningMacroCatalog = (scdIndexMacroNames: readonly string[]) => {
   const fastTuningMacroConfigs: TunableMacroConfig[] = [
     ...indexMacroConfigs,
     ...CATALYST_APP_MACRO_CONFIGS,
-    ...DATA_CENTER_NETWORKING_INDEX_MACRO_CONFIGS,
     ...COMPANION_APP_INDEX_MACRO_CONFIGS,
     ...CISCO_SECURITY_MODEL_MACRO_CONFIGS,
     ...THOUSAND_EYES_MODEL_MACRO_CONFIGS,
@@ -580,6 +555,11 @@ interface SetupChange {
   setting: string;
   currentValue: string;
   proposedValue: string;
+}
+
+interface SetupChangeGroup {
+  targetApp: string;
+  changes: SetupChange[];
 }
 
 interface SetupEditorState {
@@ -996,10 +976,34 @@ const getMacroConfig = (
 const getTargetAppLabel = (targetApp: string): string =>
   TARGET_APP_LABELS[targetApp] || targetApp;
 
+const groupSetupChangesByTargetApp = (
+  changes: SetupChange[],
+): SetupChangeGroup[] => {
+  const changesByApp = changes.reduce<Map<string, SetupChange[]>>(
+    (groups, change) => {
+      const appChanges = groups.get(change.targetApp) || [];
+      appChanges.push(change);
+      groups.set(change.targetApp, appChanges);
+      return groups;
+    },
+    new Map<string, SetupChange[]>(),
+  );
+
+  const orderedGroups = TARGET_APP_ORDER.flatMap((targetApp) => {
+    const appChanges = changesByApp.get(targetApp);
+    changesByApp.delete(targetApp);
+    return appChanges?.length ? [{ targetApp, changes: appChanges }] : [];
+  });
+  const extraGroups = Array.from(changesByApp.entries()).map(
+    ([targetApp, appChanges]) => ({ targetApp, changes: appChanges }),
+  );
+
+  return [...orderedGroups, ...extraGroups];
+};
+
 const normalizeDefinitionFormat = (value: unknown): DefinitionFormat => {
   const normalized = normalizeText(value).trim();
   if (normalized === "indexOr") return "indexOr";
-  if (normalized === "sourcetypeIn") return "sourcetypeIn";
   return "indexIn";
 };
 
@@ -1176,15 +1180,6 @@ export const buildCimDataModelDiscoverySearch = (
   ].join("\n");
 };
 
-const extractSourcetypeTokens = (definition: string): string[] => {
-  const inMatch = definition.match(/\bsourcetype\s+IN\s*\(([^)]*)\)/i);
-  if (!inMatch) return [];
-  return inMatch[1]
-    .split(",")
-    .map(cleanIndexToken)
-    .filter(Boolean);
-};
-
 const normalizeSelectedIndexes = (
   values: unknown[],
   currentValues: string[],
@@ -1257,12 +1252,6 @@ const formatMacroDefinition = (
 ): string => {
   const tokens = values.map(cleanIndexToken).filter(Boolean);
   const suffix = definitionSuffix.trim() ? ` ${definitionSuffix.trim()}` : "";
-  if (definitionFormat === "sourcetypeIn") {
-    const definition = tokens.length
-      ? `sourcetype IN (${tokens.map((token) => `"${token}"`).join(", ")})`
-      : DEFAULT_SOURCETYPE_IN_DEFINITION;
-    return `${definition}${suffix}`;
-  }
   if (!tokens.length) {
     const defaultDefinition =
       definitionFormat === "indexOr"
@@ -1392,9 +1381,7 @@ const buildExpectedEditableRows = (
         config.definitionSuffix,
       );
     let draftDefinition = scanned?.definition || currentDefinition;
-    if (config.preserveCurrentDefinition && details?.definition) {
-      draftDefinition = details.definition;
-    } else if (config.family === "cim" && scanned) {
+    if (config.family === "cim" && scanned) {
       draftDefinition = buildAdditiveCimDraftDefinition(
         currentDefinition,
         scanned.indexes?.length
@@ -1419,11 +1406,7 @@ const buildExpectedEditableRows = (
       indexes: scanned?.indexes?.length
         ? scanned.indexes
         : extractIndexTokens(currentDefinition),
-      sourcetypes: scanned?.sourcetypes?.length
-        ? scanned.sourcetypes
-        : config.definitionFormat === "sourcetypeIn"
-          ? extractSourcetypeTokens(currentDefinition)
-          : [],
+      sourcetypes: scanned?.sourcetypes || [],
       sourcetypeCount: scanned?.sourcetypeCount || 0,
       events: scanned?.events || 0,
       draftDefinition,
@@ -3037,11 +3020,12 @@ export default function MacroIndexTuningPage(): JSX.Element {
         (row) =>
           row.targetApp !== APP_NAME &&
           row.targetApp !== CIM_APP_NAME &&
+          fastTuningMacroNameSet.has(row.macro) &&
           isTargetAppInstalled(row.targetApp) &&
           row.events > 0 &&
           row.draftDefinition.trim(),
       ),
-    [isTargetAppInstalled, rows],
+    [fastTuningMacroNameSet, isTargetAppInstalled, rows],
   );
   const selectedSetupCimMacroNameSet = useMemo(
     () => new Set(selectedSetupCimMacroNames),
@@ -3211,12 +3195,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
     [filterTerms, rows],
   );
   const dashboardMacroRows = rows.filter((row) => row.targetApp === APP_NAME);
-  const externalAppMacroRows = rows.filter(
-    (row) =>
-      row.targetApp !== APP_NAME &&
-      row.targetApp !== CIM_APP_NAME &&
-      isTargetAppInstalled(row.targetApp),
-  );
+  const externalAppMacroRows = modelMacroRows;
   const filteredDashboardMacroRows = filteredRows.filter(
     (row) => row.targetApp === APP_NAME,
   );
@@ -3224,6 +3203,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
     (row) =>
       row.targetApp !== APP_NAME &&
       row.targetApp !== CIM_APP_NAME &&
+      fastTuningMacroNameSet.has(row.macro) &&
       isTargetAppInstalled(row.targetApp),
   );
   const filteredCimRows = useMemo(
@@ -4312,8 +4292,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
       status.state === "error"
         ? status.message || "This macro definition could not be saved. Try again."
         : false;
-    const usesIndexPicker =
-      !isUnknown && row.definitionFormat !== "sourcetypeIn";
+    const usesIndexPicker = !isUnknown;
     const draftIndexes = usesIndexPicker
       ? extractIndexTokens(row.draftDefinition)
       : row.indexes;
@@ -4809,17 +4788,14 @@ export default function MacroIndexTuningPage(): JSX.Element {
   const renderSetupRoutingRow = (row: EditableMacroRow) => {
     const rowKey = macroStatusKey(row);
     const changed = definitionChanged(row.definition, row.draftDefinition);
-    const usesRoutingIndexPicker = row.definitionFormat !== "sourcetypeIn";
+    const usesRoutingIndexPicker = row.macro !== "unknown";
     const editActionLabel = usesRoutingIndexPicker
       ? "Select indexes"
       : "Edit definition";
     const editActionAriaLabel = usesRoutingIndexPicker
       ? `Select indexes for ${row.macro}`
       : `Edit definition for ${row.macro}`;
-    const draftIndexes =
-      row.definitionFormat === "sourcetypeIn"
-        ? row.indexes
-        : extractIndexTokens(row.draftDefinition);
+    const draftIndexes = extractIndexTokens(row.draftDefinition);
     const openEditor = (
       event: React.MouseEvent<HTMLAnchorElement | HTMLButtonElement>,
     ) => {
@@ -4914,7 +4890,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
 
     const isCimEditor = setupEditor.kind === "cim";
     const usesIndexPicker =
-      isCimEditor || setupEditorRow.definitionFormat !== "sourcetypeIn";
+      isCimEditor || setupEditorRow.macro !== "unknown";
     const selectedIndexes = usesIndexPicker
       ? extractIndexTokens(setupEditorRow.draftDefinition)
       : setupEditorRow.indexes;
@@ -5979,6 +5955,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
     const setupChangeNoun =
       setupChanges.length === 1 ? "setting" : "settings";
     const setupAppNoun = setupChangedAppCount === 1 ? "app" : "apps";
+    const setupChangeGroups = groupSetupChangesByTargetApp(setupChanges);
     let reviewStatus =
       "No macro definitions are queued. Finishing will only mark setup complete.";
     if (scanState !== "ready") {
@@ -6138,65 +6115,75 @@ export default function MacroIndexTuningPage(): JSX.Element {
                 headType="fixed"
                 horizontalOverflow="scroll"
                 innerStyle={{ maxHeight: 440 }}
-                primaryColumnIndex={1}
+                primaryColumnIndex={0}
                 tableStyle={{ minWidth: 900, tableLayout: "fixed" }}
               >
                 <Table.Head>
-                  <Table.HeadCell width={230}>App</Table.HeadCell>
-                  <Table.HeadCell width={210}>Setting</Table.HeadCell>
-                  <Table.HeadCell width={230}>Current value</Table.HeadCell>
-                  <Table.HeadCell width={230}>Proposed value</Table.HeadCell>
+                  <Table.HeadCell width={250}>Setting</Table.HeadCell>
+                  <Table.HeadCell width={280}>Current value</Table.HeadCell>
+                  <Table.HeadCell width={280}>Proposed value</Table.HeadCell>
                 </Table.Head>
                 <Table.Body>
-                  {setupChanges.map((change) => {
-                    const changeStatus =
-                      saveStatuses[`${change.targetApp}:${change.setting}`];
-                    return (
-                    <Table.Row key={`${change.targetApp}:${change.setting}`}>
-                      <Table.Cell>
-                        <div className="min-w-0 max-w-full">
-                          <div className="break-words font-bold sui-color-active">
-                            {getTargetAppLabel(change.targetApp)}
+                  {setupChangeGroups.map(({ targetApp, changes }) => (
+                    <React.Fragment key={targetApp}>
+                      <Table.Row className="sui-bg-section">
+                        <Table.Cell colSpan={3}>
+                          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                            <span className="font-bold sui-color-active">
+                              {getTargetAppLabel(targetApp)}
+                            </span>
+                            <code className="font-mono text-xs sui-color-muted">
+                              {targetApp}
+                            </code>
+                            <span className="text-xs sui-color-muted">
+                              {changes.length} {changes.length === 1 ? "setting" : "settings"}
+                            </span>
                           </div>
-                          <div className="mt-1 break-words font-mono text-xs sui-color-muted">
-                            {change.targetApp}
-                          </div>
-                        </div>
-                      </Table.Cell>
-                      <Table.Cell>
-                        <div className="min-w-0 max-w-full">
-                          <div className="text-xs font-bold sui-color-info">
-                            {change.kind}
-                          </div>
-                          <div className="mt-1 break-words font-mono text-sm sui-color-active">
-                            {change.setting}
-                          </div>
-                        </div>
-                      </Table.Cell>
-                      <Table.Cell>
-                        <SetupDefinitionPreview
-                          $tone="default"
-                          className="min-w-0 max-w-full"
-                        >
-                          {change.currentValue}
-                        </SetupDefinitionPreview>
-                      </Table.Cell>
-                      <Table.Cell>
-                        <SetupDefinitionPreview className="min-w-0 max-w-full">
-                          {change.proposedValue}
-                        </SetupDefinitionPreview>
-                        {changeStatus?.state === "error" ? (
-                          <div
-                            className="mt-2 break-words text-xs font-bold sui-color-negative"
-                            role="alert"
+                        </Table.Cell>
+                      </Table.Row>
+                      {changes.map((change) => {
+                        const changeStatus =
+                          saveStatuses[`${change.targetApp}:${change.setting}`];
+                        return (
+                          <Table.Row
+                            key={`${change.targetApp}:${change.setting}`}
                           >
-                            Save failed: {changeStatus.message || "Unknown error"}
-                          </div>
-                        ) : null}
-                      </Table.Cell>
-                    </Table.Row>
-                    );
-                  })}
+                            <Table.Cell>
+                              <div className="min-w-0 max-w-full">
+                                <div className="text-xs font-bold sui-color-info">
+                                  {change.kind}
+                                </div>
+                                <div className="mt-1 break-words font-mono text-sm sui-color-active">
+                                  {change.setting}
+                                </div>
+                              </div>
+                            </Table.Cell>
+                            <Table.Cell>
+                              <SetupDefinitionPreview
+                                $tone="default"
+                                className="min-w-0 max-w-full"
+                              >
+                                {change.currentValue}
+                              </SetupDefinitionPreview>
+                            </Table.Cell>
+                            <Table.Cell>
+                              <SetupDefinitionPreview className="min-w-0 max-w-full">
+                                {change.proposedValue}
+                              </SetupDefinitionPreview>
+                              {changeStatus?.state === "error" ? (
+                                <div
+                                  className="mt-2 break-words text-xs font-bold sui-color-negative"
+                                  role="alert"
+                                >
+                                  Save failed: {changeStatus.message || "Unknown error"}
+                                </div>
+                              ) : null}
+                            </Table.Cell>
+                          </Table.Row>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
                 </Table.Body>
               </Table>
             </>

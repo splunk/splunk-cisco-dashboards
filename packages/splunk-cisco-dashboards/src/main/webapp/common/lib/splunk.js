@@ -138,6 +138,7 @@ export async function addDash(
     dashTheme = 'light',
     owner = undefined,
     sharing = 'user',
+    updateExisting = false,
 ) {
     const namespaceOwner = await resolveDashboardOwner(owner);
     if (!namespaceOwner) {
@@ -150,6 +151,29 @@ export async function addDash(
                 },
             ],
         };
+    }
+
+    if (!updateExisting) {
+        // The user namespace also exposes shared views. Check before creating a
+        // private shadow that cannot later be promoted to the same app-level ID.
+        const lookupParams = new URLSearchParams({
+            output_mode: 'json',
+            count: '0',
+            search: `name=${JSON.stringify(dashName)}`,
+            f: 'name',
+        });
+        const existing = await requestJson(`${dashboardUrl(namespaceOwner)}?${lookupParams}`, {
+            method: 'GET',
+        });
+        if (existing.status < 200 || existing.status > 299) {
+            return existing;
+        }
+        if (!Array.isArray(existing.entry)) {
+            return { status: 502, messages: [{ type: 'ERROR', text: 'Unable to check existing dashboards. Try again after reloading Dashboard Manager.' }] };
+        }
+        if (existing.entry.length > 0) {
+            return { status: 409, messages: [{ type: 'ERROR', text: 'A dashboard with this ID already exists. Choose a different title, or open the existing dashboard to edit it.' }] };
+        }
     }
 
     const dashboardTheme = normalizeDashboardTheme(dashTheme, 'light');
@@ -175,35 +199,34 @@ export async function addDash(
         'eai:data': definition,
     });
 
-    const response = await requestJson(`${dashboardUrl(namespaceOwner)}?${jsonParams.toString()}`, {
+    const savedResponse = await requestJson(`${dashboardUrl(namespaceOwner, updateExisting ? dashName : '')}?${jsonParams.toString()}`, {
         method: 'POST',
-        body: createBody.toString(),
+        body: updateExisting
+            ? new URLSearchParams({ 'eai:data': definition }).toString()
+            : createBody.toString(),
     });
-
-    const savedResponse =
-        response.status !== 409
-            ? response
-            : await requestJson(`${dashboardUrl(namespaceOwner, dashName)}?${jsonParams.toString()}`, {
-                  method: 'POST',
-                  body: new URLSearchParams({ 'eai:data': definition }).toString(),
-              });
 
     if (savedResponse.status < 200 || savedResponse.status > 299 || sharing !== 'app') {
         return savedResponse;
     }
 
-    const aclResponse = await requestJson(`${dashboardUrl(namespaceOwner, dashName)}/acl?${jsonParams.toString()}`, {
-        method: 'POST',
-        body: new URLSearchParams({
-            owner: 'nobody',
-            sharing: 'app',
-            'perms.read': '*',
-        }).toString(),
-    });
+    let aclResponse;
+    try {
+        aclResponse = await requestJson(`${dashboardUrl(namespaceOwner, dashName)}/acl?${jsonParams.toString()}`, {
+            method: 'POST',
+            body: new URLSearchParams({
+                owner: 'nobody',
+                sharing: 'app',
+                'perms.read': '*',
+            }).toString(),
+        });
+    } catch {
+        aclResponse = { status: 503, messages: [{ type: 'ERROR', text: 'The sharing request could not be confirmed.' }] };
+    }
 
     return aclResponse.status >= 200 && aclResponse.status <= 299
         ? savedResponse
-        : aclResponse;
+        : { ...aclResponse, dashboardSaved: true, dashboardId: dashName };
 }
 
 export async function syncDashboardManagerNavigation(dashboards = []) {
@@ -240,6 +263,7 @@ export async function updateDashMetadata(
         dashTheme,
         owner,
         sharing,
+        true,
     );
 }
 

@@ -218,6 +218,24 @@ test("final review shows exact before and after values and requires confirmation
   );
 });
 
+test("final review groups saved settings by target app", () => {
+  assert.match(tuner, /interface SetupChangeGroup/);
+  assert.match(tuner, /const groupSetupChangesByTargetApp =/);
+  assert.match(
+    tuner,
+    /const setupChangeGroups = groupSetupChangesByTargetApp\(setupChanges\)/,
+  );
+  assert.match(
+    tuner,
+    /setupChangeGroups\.map\(\(\{ targetApp, changes \}\)/,
+  );
+  assert.match(tuner, /<Table\.Cell colSpan=\{3\}>/);
+  assert.doesNotMatch(
+    tuner,
+    /<Table\.HeadCell width=\{230\}>App<\/Table\.HeadCell>/,
+  );
+});
+
 test("setup editors keep changes as drafts until final confirmation", () => {
   assert.match(tuner, /setupMode \? \(/);
   assert.match(tuner, /Will change/);
@@ -443,6 +461,17 @@ test("routing macros use index multiselects that generate definitions", () => {
   );
   assert.match(tuner, /Generated definition:/);
   assert.match(tuner, /return `index IN \(\$\{tokens\.join\(", "\)\}\)\$\{suffix\}`/);
+});
+
+test("TA-owned Cisco routing macros remain outside user-driven tuning", () => {
+  assert.doesNotMatch(tuner, /DATA_CENTER_NETWORKING_INDEX_MACRO_NAMES/);
+  assert.doesNotMatch(tuner, /DATA_CENTER_NETWORKING_INDEX_MACRO_CONFIGS/);
+  assert.doesNotMatch(tuner, /cisco_catalyst_app_sourcetypes/);
+  assert.match(
+    tuner,
+    /const setupExternalRowsToSave = useMemo\([\s\S]*?fastTuningMacroNameSet\.has\(row\.macro\)/,
+  );
+  assert.match(tuner, /const externalAppMacroRows = modelMacroRows;/);
 });
 
 test("routing review table fits its panel without forced horizontal scrolling", () => {

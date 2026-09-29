@@ -217,7 +217,12 @@ const numericSpanStanzas = (commandName) => {
 };
 
 assert.deepEqual(numericSpanStanzas("tstats"), [
+  // Preserve the existing 15-minute detection cadence, not a display bucket.
+  "catalyst_center_interface_traffic_drop_candidates",
+  "catalyst_center_interface_traffic_spike_candidates",
   "dashboard_netops_readiness_v1_c_issues_forecast",
+  // One-second preaggregation preserves latest timestamps; timechart stays adaptive.
+  "feed_monitor_ftd_firewall_staleness",
   "it_health_composite_service_alerts",
   "teuc_fit_alert_volume_timeslot_anomaly",
   "teuc_fit_bgp_path_changes_anomaly",
