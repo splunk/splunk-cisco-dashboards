@@ -231,7 +231,7 @@ find_release_archive() {
                 match_count=$((match_count + 1))
             fi
         fi
-    done < <(find "$DIST_DIR" -maxdepth 1 -type f -name "${APP_NAME}-*.tar.gz" -print0)
+    done < <(find "$DIST_DIR" -type f -name "${APP_NAME}-*.tar.gz" -print0)
 
     if [[ "$match_count" -eq 0 ]]; then
         err "ERROR: no immutable ${expected_profile} archive was found for package ${expected_package_id}, version ${expected_version}."
@@ -604,8 +604,13 @@ Push-to-Splunk options (mutually exclusive):
                          run the install as --remote-splunk-user via sudo.
 
 Other options:
+  --verify-release PATH  Read-only upload preflight for the exact archive PATH.
+                         Checks gzip integrity, filename, embedded identity,
+                         and clean release provenance; prints its SHA-256.
+                         Rejects preview/developer archives, including renamed
+                         previews. Use alone; does not build or install.
   --no-build             Skip the yarn package step and reuse the immutable
-                         dist/<app>-*.tar.gz whose package ID, version, and
+                         archive under dist/ whose package ID, version, and
                          build match current source. Requires --install or
                          --deploy. Lets you fan one build out to multiple
                          Splunk instances without rebuilding each time.
@@ -623,7 +628,7 @@ Other options:
                          Not valid with --fast or --no-build.
   --developer            Include resources listed in the app's
                          config/build-profile-manifest.json. Writes a clearly
-                         labeled *-developer.tar.gz intended only for local testing.
+                         labeled dist/developer/*-developer.tar.gz for local testing.
   --splunkbase           Use the released-resources-only SplunkBase profile.
                          This is the default when the Git worktree is clean.
                          Requires a clean committed worktree; uncommitted
@@ -634,9 +639,9 @@ Other options:
                          config/build-profile-manifest.json. Searchbase Canvas
                          stays available so the preview can be used to inspect
                          the catalogue it is previewing. Writes a
-                         \`*-preview.tar.gz\` marked release_eligible=false,
-                         which can be installed locally but never uploaded or
-                         installed as a release. Add --minify to match release
+                         \`dist/preview/*-preview.tar.gz\` marked release_eligible=false.
+                         It can be installed locally; do not upload it to
+                         Splunkbase. Add --minify to match release
                          bundle output. Not valid with --developer,
                          --splunkbase, or --fast/--from-stage.
   --lint-spl-antipatterns
@@ -677,6 +682,7 @@ Examples:
   SPLUNK_HOME=/opt/10 ./build.sh --deploy --restart           # ... against /opt/10 + restart
   ./build.sh                                                   # minified SplunkBase release package
   ./build.sh --developer --minify                              # minified developer package
+  ./build.sh --verify-release dist/<app>-<version>-<build>.tar.gz # check the exact upload candidate
 
   # Build once, install to multiple instances:
   ./build.sh
@@ -689,6 +695,26 @@ Examples:
   SPLUNK_HOME=/opt/10 ./build.sh --developer --fast --install --auth admin:pw
 EOF
 }
+
+# Keep upload verification independent of source VERSION, credentials, building,
+# and installation. No other option is allowed to add a side effect to this mode.
+if [[ "${1:-}" == "--verify-release" ]]; then
+    if [[ $# -ne 2 || -z "$2" || "$2" == --* ]]; then
+        err "ERROR: use --verify-release PATH alone; it cannot be combined with build or install options."
+        exit 2
+    fi
+    verify_release_archive "$2" splunkbase
+    node -e '
+        const fs = require("fs");
+        const crypto = require("crypto");
+        const archive = process.argv[1];
+        const digest = crypto.createHash("sha256").update(fs.readFileSync(archive)).digest("hex");
+        console.log(`Release archive checks passed: ${archive}`);
+        console.log(`SHA-256: ${digest}`);
+        console.log("Upload this exact file. This check does not replace Splunk AppInspect or verify update discovery.");
+    ' "$2"
+    exit 0
+fi
 
 while [[ $# -gt 0 ]]; do
     case "$1" in

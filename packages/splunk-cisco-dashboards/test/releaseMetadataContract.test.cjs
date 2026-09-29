@@ -96,8 +96,8 @@ const durableBuildFloor = Math.max(
 );
 assert.equal(
   durableBuildFloor,
-  2095,
-  "the durable release ledger must preserve the confirmed build-2095 high-water mark",
+  2106,
+  "the durable release ledger must preserve the verified build-2106 high-water mark even after the archive is removed",
 );
 assert.ok(
   releaseLedger.build_allocations.some(

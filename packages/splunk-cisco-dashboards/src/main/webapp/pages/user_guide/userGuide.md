@@ -327,10 +327,20 @@ Searchbase definitions are app-managed factory content. Workspace managers choos
 | Site names or links are missing | Verify topology configuration, coordinates, lookup data, ThousandEyes bindings, and data permissions. |
 | A field projection changes search behavior | Open the search and disable search optimization for a pipeline affected by optimizer field pruning. |
 | New JavaScript or dashboard definitions do not appear | Refresh Splunk Web. Ask the Splunk administrator whether the deployment process requires a restart after endpoint changes. |
+| A new release has no Update link | Confirm the installed app version, **Check for Updates**, and the release's compatibility with your Splunk platform version. Ask your administrator to check Splunkbase connectivity and the app update-check interval. A release appearing on Splunkbase does not by itself confirm that the instance has discovered it. |
 
 ## What's New / Release Notes {#release-notes}
 
 This Markdown file is the authoritative source for the in-product release history.
+
+::: release Release Notes | September 2026 - Version 1.0.54
+### Release packaging
+
+- Separated preview and developer packages from release packages to reduce the chance of selecting a test archive for publication.
+- Added an upload preflight that checks the selected archive's integrity, identity, and release eligibility and reports its SHA-256 for comparison with the published download.
+- Preserved build-number progression when packages are moved into archive folders, and retained the verified historical build floor when local archives are removed.
+- Added troubleshooting guidance for missing Update links. Update discovery on affected installations remains under investigation.
+:::
 
 ::: release Release Notes | September 2026 - Version 1.0.53
 ### Dashboard Manager
