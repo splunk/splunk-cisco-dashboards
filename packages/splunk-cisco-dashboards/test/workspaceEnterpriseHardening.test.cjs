@@ -390,6 +390,30 @@ assert.match(
   /label=\{appVersionLabel\}[\s\S]*?openInNewContext[\s\S]*?to=\{appCatalogUrl\}/,
 );
 assert.doesNotMatch(profile, /description=\{appVersionLabel\}/);
+const updateBootstrap = require(
+  "../src/main/resources/splunk/appserver/static/executive_insights_bootstrap.js",
+);
+const header = profile.slice(headerStart, headerEnd);
+assert.match(
+  header,
+  /<span\s+data-scd-app-update-host\b[^>]*aria-live="polite"[^>]*\/>/,
+  "The workspace header must expose the mount used by the update badge",
+);
+assert.ok(
+  header.indexOf("data-scd-app-update-host") >
+    header.indexOf('className="scd-header-app-version"'),
+  "The available-update badge must appear beside the installed version",
+);
+assert.deepEqual(updateBootstrap.resolveAppVersions("1.0.49", "1.0.54"), {
+  version: "1.0.49",
+  updateVersion: "1.0.54",
+});
+for (const candidate of ["1.0.49", "1.0.48", "", "unknown"]) {
+  assert.deepEqual(updateBootstrap.resolveAppVersions("1.0.49", candidate), {
+    version: "1.0.49",
+    updateVersion: "",
+  });
+}
 const searchService = read(
   "src/main/webapp/common/services/splunkSearchService.js",
 );

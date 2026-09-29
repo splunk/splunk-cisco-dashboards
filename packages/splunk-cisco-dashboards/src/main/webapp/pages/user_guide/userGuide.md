@@ -1,7 +1,7 @@
 ---
 exportTitle: Splunk Secure Networking Essentials User Guide
 contentOwner: splunk-cisco-dashboards
-version: 1.0.49
+version: 1.0.55
 lastUpdated: September 2026
 ---
 <!-- Single source of truth for the in-product User Guide and release history. -->
@@ -94,6 +94,8 @@ Back up customer-managed `local` configuration before an upgrade. Packaged defau
 3. Review optional CIM discovery and data-model acceleration.
 4. Open representative dashboards with the roles that use them.
 5. Confirm the installed version and build displayed in the app header when reporting a problem.
+
+The version label shows the installed app version and build. In Insights Workspaces, a separate update badge appears beside it when Splunk reports a newer version. Select the badge to open the upgrade flow. If Splunk has not discovered an update or the update check is unavailable, the badge stays hidden; its absence does not confirm that you have the latest release.
 
 ## Macro index tuning {#macro-tuning}
 
@@ -333,13 +335,19 @@ Searchbase definitions are app-managed factory content. Workspace managers choos
 
 This Markdown file is the authoritative source for the in-product release history.
 
-::: release Release Notes | September 2026 - Version 1.0.54
-### Release packaging
+::: release Release Notes | September 2026 - Version 1.0.55
+### Insights Workspaces
 
-- Separated preview and developer packages from release packages to reduce the chance of selecting a test archive for publication.
-- Added an upload preflight that checks the selected archive's integrity, identity, and release eligibility and reports its SHA-256 for comparison with the published download.
-- Preserved build-number progression when packages are moved into archive folders, and retained the verified historical build floor when local archives are removed.
-- Added troubleshooting guidance for missing Update links. Update discovery on affected installations remains under investigation.
+- Restored the update badge beside the installed version when Splunk reports a newer app release.
+:::
+
+::: release Release Notes | September 2026 - Version 1.0.54
+### Release overview
+
+- Reduced the app package and JavaScript download sizes.
+- Added troubleshooting guidance for app update notifications.
+
+This maintenance release includes the Dashboard Manager reliability and visualization-spacing improvements introduced in version 1.0.53.
 :::
 
 ::: release Release Notes | September 2026 - Version 1.0.53
