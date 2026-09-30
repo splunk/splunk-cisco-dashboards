@@ -888,8 +888,10 @@ function exerciseProductionVerifierCacheRejection() {
 
 function listArchives(distDir) {
   return fs
-    .readdirSync(distDir)
-    .filter((name) => name.endsWith(".tar.gz"))
+    .readdirSync(distDir, { withFileTypes: true })
+    .flatMap((entry) => entry.isDirectory()
+      ? listArchives(path.join(distDir, entry.name)).map((name) => path.join(entry.name, name))
+      : entry.name.endsWith(".tar.gz") ? [entry.name] : [])
     .sort();
 }
 
@@ -1109,7 +1111,7 @@ function exercisePackagingProfiles() {
       cwd: fixture.packageRoot,
     });
     const developerArchiveName = listArchives(distDir).find(
-      (name) => name === `${APP_NAME}-1.2.3-10-developer.tar.gz`,
+      (name) => name === path.join("developer", `${APP_NAME}-1.2.3-10-developer.tar.gz`),
     );
     assert.ok(
       developerArchiveName,
@@ -1250,7 +1252,7 @@ function exerciseSplunkbasePreviewPackaging() {
     );
     assert.equal(
       previewArchive,
-      `${APP_NAME}-1.2.3-8-preview.tar.gz`,
+      path.join("preview", `${APP_NAME}-1.2.3-8-preview.tar.gz`),
       "An uncommitted worktree must still produce a Splunkbase-filtered preview archive",
     );
     assert.equal(
@@ -1331,6 +1333,15 @@ function exercisePreviewArchivesCannotBecomeReleases() {
       path.join(distDir, `${APP_NAME}-1.2.3-1-preview.tar.gz`),
       path.join(distDir, `${APP_NAME}-1.2.3-1.tar.gz`),
     );
+    for (const name of [`${APP_NAME}-1.2.3-1-preview.tar.gz`, `${APP_NAME}-1.2.3-1.tar.gz`]) {
+      assert.match(
+        runExpectFailure("bash", [fixture.buildPath, "--verify-release", path.join(distDir, name)], {
+          cwd: fixture.root,
+        }),
+        /preview archives can never be treated as a Splunkbase release|not release-eligible/,
+        "Upload preflight must reject previews even after renaming",
+      );
+    }
     assert.match(
       runExpectFailure(
         "bash",
@@ -1492,7 +1503,10 @@ function exerciseRootBuildArchiveResolution() {
       .readdirSync(path.join(fixture.root, "dist"))
       .find((name) => name.endsWith(".tar.gz") && !name.endsWith("-developer.tar.gz"));
     assert.ok(standardArchive, "The fixture must create a standard immutable archive");
-    fs.appendFileSync(path.join(fixture.root, "dist", standardArchive), "tampered");
+    const retainedArchive = path.join(fixture.root, "dist", "archive", "with spaces", standardArchive);
+    fs.mkdirSync(path.dirname(retainedArchive), { recursive: true });
+    fs.renameSync(path.join(fixture.root, "dist", standardArchive), retainedArchive);
+    fs.appendFileSync(retainedArchive, "tampered");
     const tamperFailure = runExpectFailure(
       "bash",
       [fixture.buildPath, "--no-build", "--install", "--auth", "fixture:password"],
@@ -1501,7 +1515,7 @@ function exerciseRootBuildArchiveResolution() {
     assert.match(
       tamperFailure,
       /failed gzip integrity validation/,
-      "The root wrapper must reject a corrupt archive before any install action",
+      "The root wrapper must find a nested archived package and reject corruption before any install action",
     );
 
     const developerOutput = run("bash", [fixture.buildPath, "--developer"], {
@@ -1509,7 +1523,7 @@ function exerciseRootBuildArchiveResolution() {
     });
     assert.match(
       developerOutput,
-      /Tarball: .*splunk-cisco-dashboards-1\.2\.3-2-developer\.tar\.gz/,
+      /Tarball: .*splunk-cisco-dashboards-1\.2\.3-1-developer\.tar\.gz/,
       "A fresh developer build must resolve its profile-specific immutable archive",
     );
   } finally {
@@ -1536,6 +1550,87 @@ function exerciseRootBuildArchiveResolution() {
     );
   } finally {
     removeTempRoot(emptyFixture.root);
+  }
+}
+
+function exerciseArchivedBuildAllocation() {
+  const fixture = makePackageFixture();
+  try {
+    const distDir = path.join(fixture.root, "dist");
+    run("bash", [fixture.packageScript], { cwd: fixture.packageRoot });
+    const retainedArchive = path.join(distDir, "archive", "prior releases", `${APP_NAME}-1.2.3-8.tar.gz`);
+    fs.mkdirSync(path.dirname(retainedArchive), { recursive: true });
+    fs.renameSync(path.join(distDir, `${APP_NAME}-1.2.3-8.tar.gz`), retainedArchive);
+    const retainedDigest = sha256(retainedArchive);
+
+    run("bash", [fixture.packageScript, "--developer", "--from-stage"], { cwd: fixture.packageRoot });
+    const developerArchive = path.join(distDir, "developer", `${APP_NAME}-1.2.3-9-developer.tar.gz`);
+    assert.equal(readArchiveBuild(developerArchive), 9, "An archived release must advance the next build");
+    run("bash", [fixture.packageScript, "--splunkbase-preview"], {
+      cwd: fixture.packageRoot,
+      env: { ...process.env, SCD_FIXTURE_EXPECT_UNMINIFIED: "1" },
+    });
+    const previewArchive = path.join(distDir, "preview", `${APP_NAME}-1.2.3-10-preview.tar.gz`);
+    assert.equal(readArchiveBuild(previewArchive), 10, "Allocation must include the developer directory");
+    run("bash", [fixture.packageScript], { cwd: fixture.packageRoot });
+    assert.equal(
+      readArchiveBuild(path.join(distDir, `${APP_NAME}-1.2.3-11.tar.gz`)),
+      11,
+      "Release allocation must include the preview directory",
+    );
+    assert.equal(sha256(retainedArchive), retainedDigest, "Archive discovery must preserve retained packages");
+    assert.deepEqual(
+      fs.readdirSync(distDir).filter((name) => name.endsWith(".tar.gz")),
+      [`${APP_NAME}-1.2.3-11.tar.gz`],
+      "New preview and developer archives must remain outside the release output folder",
+    );
+  } finally {
+    removeTempRoot(fixture.root);
+  }
+}
+
+function exerciseReadOnlyReleasePreflight() {
+  const fixture = makeRootBuildFixture();
+  try {
+    run("bash", [fixture.buildPath], { cwd: fixture.root });
+    const archive = path.join(fixture.root, "dist", `${APP_NAME}-1.2.3-1.tar.gz`);
+    const digest = sha256(archive);
+    // Upload checking is about this exact candidate, even after source VERSION changes.
+    writeFile(path.join(fixture.root, "VERSION"), "1.2.4\n");
+    const output = run("bash", [fixture.buildPath, "--verify-release", archive], { cwd: fixture.root });
+    assert.match(output, /Release archive checks passed:/);
+    assert.ok(output.includes(`SHA-256: ${digest}`), "Preflight must report the exact candidate's digest");
+    for (const args of [
+      ["--verify-release"],
+      ["--verify-release", archive, "--install"],
+      ["--verify-release", archive, "--restart"],
+      ["--install", "--verify-release", archive],
+    ]) {
+      assert.match(
+        runExpectFailure("bash", [fixture.buildPath, ...args], { cwd: fixture.root }),
+        /use --verify-release PATH alone|Unknown (?:option|argument): --verify-release/,
+        "Preflight must refuse options that could build, install, or restart",
+      );
+    }
+    assert.equal(sha256(archive), digest, "Read-only checks must preserve the selected archive");
+    assert.deepEqual(listArchives(path.join(fixture.root, "dist")), [path.basename(archive)]);
+    assert.match(
+      runExpectFailure("bash", [fixture.buildPath, "--verify-release", `${archive}.missing`], { cwd: fixture.root }),
+      /release archive is missing/,
+    );
+    fs.appendFileSync(archive, "corrupt");
+    assert.match(
+      runExpectFailure("bash", [fixture.buildPath, "--verify-release", archive], { cwd: fixture.root }),
+      /failed gzip integrity validation/,
+    );
+    run("bash", [fixture.buildPath, "--developer"], { cwd: fixture.root });
+    const developerArchive = path.join(fixture.root, "dist", `${APP_NAME}-1.2.4-2-developer.tar.gz`);
+    assert.match(
+      runExpectFailure("bash", [fixture.buildPath, "--verify-release", developerArchive], { cwd: fixture.root }),
+      /developer archives can never be treated as a Splunkbase release/,
+    );
+  } finally {
+    removeTempRoot(fixture.root);
   }
 }
 
@@ -2154,6 +2249,8 @@ exercisePreviewArchivesCannotBecomeReleases();
 exercisePostBuildSourceVerification();
 exerciseProductionVerifierCacheRejection();
 exerciseRootBuildArchiveResolution();
+exerciseArchivedBuildAllocation();
+exerciseReadOnlyReleasePreflight();
 exerciseLocalInstallProfileDefaults();
 exerciseDirtyDefaultInstallSelectsDeveloper();
 exerciseExcludedViewLinkSafety();

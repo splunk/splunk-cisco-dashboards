@@ -73,6 +73,46 @@
       "build": 2095,
       "state": "published",
       "note": "User confirmed the release was uploaded to Splunkbase and deployed to the customer Splunk Cloud stack, where the app reports version 1.0.51 build 2095. The exact public archive hash remains unverified."
+    },
+    {
+      "version": "1.0.52",
+      "build": 2097,
+      "state": "observed_archive",
+      "artifact": {
+        "filename": "splunk-cisco-dashboards-1.0.52-2097.tar.gz",
+        "sha256": "37194b55a8df3d83eeee59a19abd6f84a339f33014662668b95432e63eb3c1d8"
+      },
+      "note": "Retained clean release-eligible archive verified on 2026-09-29. Its public download hash was not independently verified."
+    },
+    {
+      "version": "1.0.53",
+      "build": 2098,
+      "state": "published",
+      "artifact": {
+        "filename": "splunk-secure-networking-essentials-beta_1053.tar.gz",
+        "sha256": "7b238782643bdfa71b6d39bc426e31f6add309b9b005018237d1ebf0e8af890a"
+      },
+      "note": "User-supplied Splunkbase download verified on 2026-09-29 exactly matched the local preview archive. Embedded release_eligible=false; this was not the intended minified 2099 release. Publication here records the observed mistake, not release qualification."
+    },
+    {
+      "version": "1.0.53",
+      "build": 2099,
+      "state": "observed_archive",
+      "artifact": {
+        "filename": "splunk-cisco-dashboards-1.0.53-2099.tar.gz",
+        "sha256": "6b155de4b6c3ba0c84184a786cbf36eeaac800284d6cd56d114641a6e0cfec4a"
+      },
+      "note": "Retained clean, minified, release-eligible archive from commit 239efeffac2bb5d00e1cbc655b3b2404c5e4d082. Verified on 2026-09-29; the supplied public 1.0.53 download was instead preview build 2098."
+    },
+    {
+      "version": "1.0.53",
+      "build": 2106,
+      "state": "retired_candidate",
+      "artifact": {
+        "filename": "splunk-cisco-dashboards-1.0.53-2106.tar.gz",
+        "sha256": "0399e9361ab9e9f06416fbcfaaf450351adbb4232c70323ed864f9f0288e2f4c"
+      },
+      "note": "Clean minified candidate verified on 2026-09-28 from commit 94af48deaf548eaf3ac8a417dd155b11adc7b3c9. Superseded by the later visualization-spacing fix and no longer retained locally. Preserve this verified high-water mark even though later packages regressed to lower builds; no publication is claimed."
     }
   ]
 }

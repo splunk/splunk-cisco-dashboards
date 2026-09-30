@@ -206,7 +206,8 @@ export async function addDash(
             : createBody.toString(),
     });
 
-    if (savedResponse.status < 200 || savedResponse.status > 299 || sharing !== 'app') {
+    // Metadata edits must preserve the existing owner and role permissions.
+    if (savedResponse.status < 200 || savedResponse.status > 299 || sharing !== 'app' || updateExisting) {
         return savedResponse;
     }
 
@@ -215,7 +216,7 @@ export async function addDash(
         aclResponse = await requestJson(`${dashboardUrl(namespaceOwner, dashName)}/acl?${jsonParams.toString()}`, {
             method: 'POST',
             body: new URLSearchParams({
-                owner: 'nobody',
+                owner: namespaceOwner,
                 sharing: 'app',
                 'perms.read': '*',
             }).toString(),

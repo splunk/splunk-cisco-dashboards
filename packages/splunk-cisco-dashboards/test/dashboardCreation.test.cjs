@@ -51,6 +51,9 @@ test("new shared dashboards check for collisions, create, then apply app sharing
   assert.equal(new URLSearchParams(api.calls[1].body).get("name"), "scd_creation_test");
   assert.match(api.calls[2].url.pathname, /scd_creation_test\/acl$/);
   assert.equal(new URLSearchParams(api.calls[2].body).get("sharing"), "app");
+  assert.equal(new URLSearchParams(api.calls[2].body).get("owner"), "builder");
+  assert.equal(new URLSearchParams(api.calls[2].body).get("perms.read"), "*");
+  assert.equal(new URLSearchParams(api.calls[2].body).has("perms.write"), false);
 });
 
 test("private dashboards skip app sharing", async () => {
@@ -102,6 +105,16 @@ test("explicit metadata edits update the existing dashboard without a create req
   assert.match(api.calls[0].url.pathname, /views\/scd_creation_test$/);
   assert.equal(new URLSearchParams(api.calls[0].body).has("name"), false);
   assert.match(new URLSearchParams(api.calls[0].body).get("eai:data"), /Revised title/);
+});
+
+test("shared metadata edits preserve existing ownership and role permissions", async () => {
+  for (const sharing of ["app", "global"]) {
+    const api = persistence([{ status: 200 }]);
+    const result = await api.updateDashMetadata("scd_creation_test", {}, "Revised title", "", "test", "dark", "creator", sharing);
+    assert.equal(result.status, 200);
+    assert.equal(api.calls.length, 1, "Metadata changes must not submit a new sharing ACL");
+    assert.match(api.calls[0].url.pathname, /servicesNS\/creator\/.*\/views\/scd_creation_test$/);
+  }
 });
 
 const home = fs.readFileSync(path.join(webapp, "pages/dashboardbuilder/DBHomePage.jsx"), "utf8");

@@ -58,6 +58,7 @@ import { INSIGHTS_APP_ID } from "../../common/lib/constants";
 import {
   DASHBOARD_MANAGER_TAG,
   getDashboardManagerScope,
+  matchesDashboardManagerScope,
   getDashboardNamespaceApp,
 } from "../../common/config/managedStudioViews";
 
@@ -94,6 +95,7 @@ const DASHBOARD_CARD_DESCRIPTION_LIMIT = 140;
 const DASHBOARD_SCOPE_OPTIONS = [
   { id: "included", label: "Included" },
   { id: "yours", label: "Yours" },
+  { id: "shared", label: "Shared" },
 ];
 
 const truncateDashboardTitle = (title) => {
@@ -318,7 +320,7 @@ export default function DBHomePage() {
     return managerDashboards
       .filter(
         (ds) =>
-          getDashboardManagerScope(ds, currentSplunkUser) === dashboardScope,
+          matchesDashboardManagerScope(ds, currentSplunkUser, dashboardScope),
       )
       .filter(
         (ds) =>
@@ -1228,7 +1230,10 @@ export default function DBHomePage() {
                             <li>
                               <strong>Included</strong> shows supported dashboards
                               shipped with the app. <strong>Yours</strong> shows
-                              managed dashboards you create or copy.
+                              managed dashboards owned by you.
+                              <strong> Shared</strong> shows managed dashboards
+                              shared in the app that you can access, including
+                              those created by other users.
                             </li>
                             <li>
                               Use <strong>Create New</strong>, or a dashboard card
@@ -1331,7 +1336,7 @@ export default function DBHomePage() {
                       className="dashboard-manager-library-search"
                       canClear
                       aria-label="Filter Dashboard Manager library"
-                      placeholder="Filter managed or personal dashboards"
+                      placeholder="Filter dashboards in this tab"
                       value={searchText}
                       onChange={(e, { value }) => {
                         setSearchText(value);

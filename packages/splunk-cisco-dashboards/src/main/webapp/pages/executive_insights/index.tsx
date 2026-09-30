@@ -5258,6 +5258,11 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             aria-label={`App details and upgrades, ${appVersionLabel} (opens in new window)`}
             to={appCatalogUrl}
           />
+          <span
+            data-scd-app-update-host
+            className="inline-flex flex-shrink-0 items-center"
+            aria-live="polite"
+          />
           <Dropdown
             defaultPlacement="below"
             focusToggleReasons={["escapeKey", "tabKey", "toggleClick"]}

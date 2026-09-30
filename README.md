@@ -43,7 +43,8 @@ To build the Splunk app package locally:
 yarn package:app
 ```
 
-The packaged Splunk app tarball is written to `dist/`. Normal packaging uses
+Splunkbase release tarballs are written to `dist/`. Developer artifacts go to
+`dist/developer/`, and previews go to `dist/preview/`. Normal packaging uses
 the Splunkbase app profile. For a local developer artifact, use:
 
 ```bash
@@ -64,13 +65,15 @@ For a release, edit only the root [`VERSION`](VERSION) file and run the build.
 Source `app.conf` and `app.manifest` intentionally retain `0.0.0`/`0`
 placeholders. Packaging stamps VERSION and the release date into generated
 output, then automatically allocates the next build above release history and
-readable `dist/` artifacts. The installation target never influences package
+readable artifacts anywhere under `dist/`, including `dist/archive/` and the
+profile directories. The installation target never influences package
 construction.
 The [`releases/splunkbase-9257.json`](releases/splunkbase-9257.json) ledger is
 historical publication evidence and a safe build floor; it is not a manual
 pre-build allocation step. Every package allocates above the ledger's greatest
-recorded build even when `dist/` is empty, so deleting local artifacts cannot
-decrement a future Splunkbase package identity.
+recorded build even when `dist/` is empty. Keep verified release history in
+this ledger before discarding artifacts; allocation cannot recover unrecorded
+builds once their archives are deleted.
 Artifacts use the operator-readable name
 `splunk-cisco-dashboards-<version>-<build>.tar.gz` (plus `-developer` for an
 explicitly selected developer profile, or `-preview` for a Splunkbase preview).
@@ -83,14 +86,28 @@ applies that exact archive after packaging without changing its identity or
 provenance. Uncommitted `./build.sh --install` runs select the developer
 profile automatically so local iteration can proceed before a commit.
 `./build.sh --splunkbase-preview` applies the same released-resources-only
-filter to an uncommitted worktree so you can see and install what Splunkbase
-would receive. It keeps the resources listed under `previewRetained` in
+filter to an uncommitted worktree for local content inspection. It keeps the
+resources listed under `previewRetained` in
 `config/build-profile-manifest.json`, which currently carves out the Searchbase
 Canvas authoring surface so a preview can still be used to inspect the
 catalogue it is previewing. Everything else developing is removed exactly as it
 would be for a release. Its archive records `release_eligible: false`, and both
-the release gate and the installer reject it even if it is renamed into the
-release namespace.
+the release gate and release-profile installer reject it even if it is renamed
+into the release namespace. Do not upload previews or developer packages to
+Splunkbase; the portal is outside these local safeguards.
+
+Before uploading, check the exact file you intend to select:
+
+```bash
+./build.sh --verify-release dist/splunk-cisco-dashboards-<version>-<build>.tar.gz
+```
+
+This read-only check validates gzip integrity, filename and embedded identity,
+and clean release provenance, then prints the archive's SHA-256. It rejects
+previews and developer packages, including renamed previews. It does not build,
+install, run AppInspect, or prove update discovery. After publication, compare
+the downloaded archive's SHA-256 with this value, since Splunkbase renames the
+download. Verify the Update link separately on an eligible older installation.
 
 ## Usage
 

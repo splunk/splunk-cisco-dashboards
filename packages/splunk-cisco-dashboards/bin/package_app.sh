@@ -33,15 +33,15 @@ Options:
                           developer clean build. Splunkbase packages are always
                           minified. Not valid with --from-stage.
   --developer             Include all resources listed as developing and write
-                          a clearly labeled developer tarball. Intended for
-                          local use.
+                          a clearly labeled tarball in dist/developer/.
+                          Intended for local use.
   --splunkbase-preview    Apply the Splunkbase content filter to an uncommitted
                           worktree, keeping the resources listed under
                           previewRetained in the build manifest (the Searchbase
                           Canvas authoring surface). Writes a clearly labeled
-                          *-preview tarball recording release_eligible=false,
-                          which can never be uploaded or installed as a
-                          release. Not valid with --developer or --from-stage.
+                          *-preview tarball in dist/preview/ recording
+                          release_eligible=false. Do not upload it to
+                          Splunkbase. Not valid with --developer or --from-stage.
   -h, --help              Show this help.
 EOF
 }
@@ -167,7 +167,7 @@ fi
 node "${PKG_ROOT}/bin/validate_release_identity.js"
 
 DIST_DIR="${PKG_ROOT}/../../dist"
-mkdir -p "$DIST_DIR"
+OUTPUT_DIR="$DIST_DIR"
 # APP_PROFILE selects which resources are packaged and what the archive is
 # allowed to claim about itself. The preview applies the Splunkbase filter
 # minus the carve-outs the build manifest lists under previewRetained, and
@@ -175,9 +175,11 @@ mkdir -p "$DIST_DIR"
 if [[ "$DEVELOPER_PROFILE" -eq 1 ]]; then
   APP_PROFILE="developer"
   ARTIFACT_PROFILE_SUFFIX="-developer"
+  OUTPUT_DIR="${DIST_DIR}/developer"
 elif [[ "$PREVIEW_PROFILE" -eq 1 ]]; then
   APP_PROFILE="preview"
   ARTIFACT_PROFILE_SUFFIX="-preview"
+  OUTPUT_DIR="${DIST_DIR}/preview"
 else
   APP_PROFILE="splunkbase"
   ARTIFACT_PROFILE_SUFFIX=""
@@ -265,6 +267,8 @@ worktree_is_clean() {
     printf 'true\n'
   fi
 }
+
+mkdir -p "$OUTPUT_DIR"
 
 RELEASE_COMMIT=""
 SPLUNKBASE_APP_ID=""
@@ -429,8 +433,9 @@ fi
 # Allocate the next build into the package output only. VERSION is the sole
 # operator-maintained release value; source app.conf deliberately stays at the
 # build-zero template used by the sibling TA. Historical release records keep a
-# clean checkout above published builds, while dist/ preserves normal local
-# progress. The installation target never influences package construction.
+# clean checkout above recorded builds. Scan all of dist/, including archived
+# packages and profile directories, to preserve local progress after files move.
+# The installation target never influences package construction.
 PKG_APP_CONF="${TMP_DIR}/${APP_NAME}/default/app.conf"
 source_build="$(read_app_conf_build "$APP_CONF")"
 if [[ ! "$source_build" =~ ^[0-9]+$ ]]; then
@@ -443,15 +448,14 @@ if [[ ! "$history_build" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 dist_build=0
-for prev_tar in "${DIST_DIR}"/${APP_NAME}-*.tar.gz; do
-  [[ -f "$prev_tar" ]] || continue
+while IFS= read -r -d '' prev_tar; do
   previous_identity="$(archive_identity "$prev_tar" || true)"
   [[ -n "$previous_identity" ]] || continue
   IFS=$'\t' read -r previous_version previous_build <<< "$previous_identity"
   if [[ "$previous_build" =~ ^[0-9]+$ ]] && (( previous_build > dist_build )); then
     dist_build="$previous_build"
   fi
-done
+done < <(find "$DIST_DIR" -type f -name "${APP_NAME}-*.tar.gz" -print0)
 build_floor="$source_build"
 (( history_build > build_floor )) && build_floor="$history_build"
 (( dist_build > build_floor )) && build_floor="$dist_build"
@@ -590,7 +594,7 @@ verify_final_archive() {
     "${archive_audit_dir}/${APP_NAME}" "$APP_PROFILE"
 }
 
-# Build the archive in dist/ so the final hard-link promotion is atomic on
+# Build the archive in its output directory so hard-link promotion is atomic on
 # that filesystem. Archive files and symlinks only: supplying both a directory
 # and its descendants to tar makes tar recurse into the directory and write
 # duplicate members. The sorted file list makes member ordering stable without
@@ -600,14 +604,14 @@ ARCHIVE_FILELIST="${TMP_DIR}/archive-files.txt"
   cd "$TMP_DIR"
   LC_ALL=C find "$APP_NAME" \( -type f -o -type l \) -print | LC_ALL=C sort > "$ARCHIVE_FILELIST"
 )
-ARCHIVE_TMP="$(mktemp "${DIST_DIR}/.${APP_NAME}.${VERSION}.archive.XXXXXX")"
+ARCHIVE_TMP="$(mktemp "${OUTPUT_DIR}/.${APP_NAME}.${VERSION}.archive.XXXXXX")"
 (
   cd "$TMP_DIR"
   # COPYFILE_DISABLE prevents macOS tar from embedding AppleDouble resource forks
   COPYFILE_DISABLE=1 tar czf "$ARCHIVE_TMP" -T "$ARCHIVE_FILELIST"
 )
 verify_final_archive "$ARCHIVE_TMP"
-PKG_PATH="${DIST_DIR}/${APP_NAME}-${VERSION}-${new_build}${ARTIFACT_PROFILE_SUFFIX}.tar.gz"
+PKG_PATH="${OUTPUT_DIR}/${APP_NAME}-${VERSION}-${new_build}${ARTIFACT_PROFILE_SUFFIX}.tar.gz"
 if [[ -e "$PKG_PATH" ]]; then
   echo "ERROR: immutable package path already exists: ${PKG_PATH}" >&2
   echo "       Refusing to overwrite a prior archive." >&2
@@ -627,5 +631,5 @@ ARCHIVE_TMP=""
 SIZE=$(du -h "$PKG_PATH" | cut -f1 | xargs)
 echo "Created ${PKG_PATH} (${SIZE})"
 if [[ "$APP_PROFILE" == "preview" ]]; then
-  echo "[package] Splunkbase content preview only; not uploadable and not installable as a release."
+  echo "[package] Splunkbase content preview only; do not upload this file to Splunkbase."
 fi
