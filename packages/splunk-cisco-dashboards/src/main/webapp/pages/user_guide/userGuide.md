@@ -346,6 +346,8 @@ This Markdown file is the authoritative source for the in-product release histor
 
 - Added a **Shared** library tab to find dashboards shared in the app, including dashboards created by other users.
 - Kept new shared dashboards associated with their creator so they also appear under **Yours**. Editing dashboard metadata preserves existing sharing permissions.
+- Opened the linked Searchbase search from the dashboard data-source editor and improved dark-mode text and trend contrast.
+- Set Searchbase app filters to this app by default while keeping other apps available to select.
 :::
 
 ::: release Release Notes | September 2026 - Version 1.0.54

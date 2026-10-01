@@ -1092,6 +1092,16 @@ assert.match(
   "The current-app default must not be reported as an active filter",
 );
 assert.match(
+  picker,
+  /const DEFAULT_APP = "splunk-cisco-dashboards"[\s\S]*?new Set\(\[DEFAULT_APP\]\)[\s\S]*?selection\.size === 1 && selection\.has\(DEFAULT_APP\)/,
+  "The workspace search picker must default to this app while keeping All apps available",
+);
+assert.match(
+  read("src/main/webapp/common/components/workspace/SignalTickerRail.tsx"),
+  /const DEFAULT_APP = 'splunk-cisco-dashboards'[\s\S]*?useState\(DEFAULT_APP\)[\s\S]*?if \(!open \|\| catalogueLoading\) return;[\s\S]*?setSelectedApp\(DEFAULT_APP\)[\s\S]*?setSelectedApp\(apps\.includes\(DEFAULT_APP\) \? DEFAULT_APP : ALL_APPS\)/,
+  "Signal Rail search filters must default and reset to this app when available",
+);
+assert.match(
   topology,
   /\{canManageTopology && \([\s\S]*?: "Edit topology"/,
 );

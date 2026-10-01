@@ -56,6 +56,7 @@ import {
 const ALL_CATEGORIES = '__all__';
 const ALL_SUB_CATEGORIES = '__all_sub__';
 const ALL_APPS = '__all_apps__';
+const DEFAULT_APP = 'splunk-cisco-dashboards';
 const TAG_CHIP_LIMIT = 24;
 
 const TILE_SIZE_CLASS: Record<SignalTickerDensity, string> = {
@@ -674,7 +675,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
     const dialogRef = useRef<HTMLDivElement | null>(null);
     const closeButtonRef = useRef<HTMLButtonElement | null>(null);
     const [query, setQuery] = useState('');
-    const [selectedApp, setSelectedApp] = useState(ALL_APPS);
+    const [selectedApp, setSelectedApp] = useState(DEFAULT_APP);
     const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
     const [selectedSubCategory, setSelectedSubCategory] =
         useState(ALL_SUB_CATEGORIES);
@@ -737,10 +738,15 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         );
     }, [visibilityCatalogue]);
     useEffect(() => {
+        if (!open || catalogueLoading) return;
+        setSelectedApp(DEFAULT_APP);
+    }, [catalogueLoading, open]);
+    useEffect(() => {
+        if (catalogueLoading) return;
         if (selectedApp !== ALL_APPS && !apps.includes(selectedApp)) {
-            setSelectedApp(ALL_APPS);
+            setSelectedApp(apps.includes(DEFAULT_APP) ? DEFAULT_APP : ALL_APPS);
         }
-    }, [apps, selectedApp]);
+    }, [apps, catalogueLoading, selectedApp]);
     const categories = useMemo(() => {
         const set = new Set<string>();
         for (const entry of visibilityCatalogue) {
@@ -915,7 +921,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
         });
     };
     const clearFilters = () => {
-        setSelectedApp(ALL_APPS);
+        setSelectedApp(apps.includes(DEFAULT_APP) ? DEFAULT_APP : ALL_APPS);
         onIncludeHiddenSearchesChange?.(false);
         onIncludeDrilldownSearchesChange?.(false);
         onIncludeTableSearchesChange?.(false);
