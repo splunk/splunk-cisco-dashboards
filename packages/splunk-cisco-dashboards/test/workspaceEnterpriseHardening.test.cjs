@@ -884,8 +884,8 @@ assert.match(
 );
 assert.match(
   userGuide,
-  /patched known npm[\s\S]*?advisories[\s\S]*?MapLibre GL JS XSS[\s\S]*?Splunk visualizations continue to compile/,
-  "The current in-app release notes must document the dependency security patches",
+  /patched published npm advisories[\s\S]*?DOMPurify[\s\S]*?fast-uri[\s\S]*?source-map-js[\s\S]*?postcss-selector-parser[\s\S]*?brace-expansion[\s\S]*?sprintf-js[\s\S]*?MapLibre GL JS XSS[\s\S]*?Splunk visualizations continue to compile[\s\S]*?local security patch[\s\S]*?braces[\s\S]*?100 levels[\s\S]*?Dependabot may still flag/,
+  "The current in-app release notes must document dependency security patches and the local build-tool mitigation",
 );
 
 assert.match(profile, /useInsightsWorkspacePermissions\(\)/);

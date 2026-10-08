@@ -523,7 +523,7 @@ Version 1.0.49 expands secure-networking coverage, repairs workspace and setup r
 - Improved non-color selection cues, focus indicators, control labels, and responsive light and dark contrast.
 - Removed public geocoding of customer site text; site placement uses an offline city list or explicit coordinates.
 - Shared workspace and bounded Dashboard Builder background management support narrow capability delegation.
-- **Dependency security:** patched known npm security advisories in the shipped JavaScript tree, including the MapLibre GL JS XSS advisory, while ensuring Splunk visualizations continue to compile.
+- **Dependency security:** patched published npm advisories by upgrading DOMPurify, fast-uri, source-map-js, postcss-selector-parser, and brace-expansion; removing sprintf-js from ESLint's dependency tree; and retaining the MapLibre GL JS XSS remediation, while ensuring Splunk visualizations continue to compile. A maintained local security patch mitigates the build-time braces stack-exhaustion advisory by rejecting brace/parenthesis nesting and AST traversal beyond 100 levels. Installation automatically applies the patch and fails if it cannot be applied; Dependabot may still flag the upstream version until a patched release is published.
 - `build.sh --install` and `--deploy` use the SplunkBase profile by default. Use `--developer` only when internal development resources are required; the explicit `--fast` workflow remains developer-only.
 - SplunkBase build, install, deploy, and remote-install workflows share one clean-source packaging path and apply the exact release-eligible archive.
 - A successful SplunkBase install creates one upload-ready archive; the target's installed build does not affect package allocation.
