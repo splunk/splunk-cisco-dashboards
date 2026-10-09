@@ -357,6 +357,7 @@ This Markdown file is the authoritative source for the in-product release histor
 - Added eight Zscaler searches for data coverage, private application access, policy and connection reasons, unreachable applications, connection-status trends, ZIA enforcement outcomes, blocked web activity, and named web threats.
 - Distinguished repeated ZPA log records from distinct connection IDs and kept normal connection closures separate from explicit reachability failures.
 - Used the configurable security index scope and documented the required Zscaler add-on fields and interpretation limits.
+- Added recommended placement in existing ZTA dashboards to each Zscaler search description, including guidance for complementary ZPA panels on the remote-access dashboard.
 
 ### Insights Workspaces
 
