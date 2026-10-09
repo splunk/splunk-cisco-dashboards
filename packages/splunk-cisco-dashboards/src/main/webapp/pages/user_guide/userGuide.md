@@ -148,7 +148,7 @@ Macro discovery and data-model acceleration are separate checks. Use the readine
 | Intersight | `cisco:intersight:*` | `index_intersight` |
 | Cisco SD-WAN | `cisco:sdwan:*` | `index_sdwan` |
 | Data center | `cisco:dc:aci:*`, `cisco:dc:hyperfabric:*`, `cisco:dc:mds:*`, `cisco:dc:nd:*`, `cisco:dc:nexus9k*` | `index_dc` |
-| Security stack | Cisco XDR, Umbrella, Secure Access, Secure Endpoint, Isovalent, and related security sources | `index_security` |
+| Security stack | Cisco XDR, Umbrella, Secure Access, Secure Endpoint, Isovalent, Zscaler ZPA/ZIA, and related security sources | `index_security` |
 | F5 BIG-IP | `f5:bigip:*` | `index_f5` |
 | Duo | `cisco:duo:*` | `index_duo` |
 | Cyber Vision | `cisco:cybervision:*` | `index_cybervision` |
@@ -352,6 +352,12 @@ Searchbase definitions are app-managed factory content. Workspace managers choos
 This Markdown file is the authoritative source for the in-product release history.
 
 ::: release Release Notes | September 2026 - Version 1.0.55
+### Zscaler Zero Trust Access
+
+- Added eight Zscaler searches for data coverage, private application access, policy and connection reasons, unreachable applications, connection-status trends, ZIA enforcement outcomes, blocked web activity, and named web threats.
+- Distinguished repeated ZPA log records from distinct connection IDs and kept normal connection closures separate from explicit reachability failures.
+- Used the configurable security index scope and documented the required Zscaler add-on fields and interpretation limits.
+
 ### Insights Workspaces
 
 - Restored the update badge beside the installed version when Splunk reports a newer app release.
