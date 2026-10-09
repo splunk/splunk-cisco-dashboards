@@ -147,7 +147,7 @@ Macro discovery and data-model acceleration are separate checks. Use the readine
 | ThousandEyes | `cisco:thousandeyes:*` and TA data-model macros | `index_thousandeyes` |
 | Intersight | `cisco:intersight:*` | `index_intersight` |
 | Cisco SD-WAN | `cisco:sdwan:*` | `index_sdwan` |
-| Data center | `cisco:dc:aci:*`, `cisco:dc:nd:*`, `cisco:dc:nexus9k` | `index_dc` |
+| Data center | `cisco:dc:aci:*`, `cisco:dc:hyperfabric:*`, `cisco:dc:mds:*`, `cisco:dc:nd:*`, `cisco:dc:nexus9k*` | `index_dc` |
 | Security stack | Cisco XDR, Umbrella, Secure Access, Secure Endpoint, Isovalent, and related security sources | `index_security` |
 | F5 BIG-IP | `f5:bigip:*` | `index_f5` |
 | Duo | `cisco:duo:*` | `index_duo` |
@@ -155,6 +155,20 @@ Macro discovery and data-model acceleration are separate checks. Use the readine
 | UCS | `cisco:ucs*` | `index_ucs` |
 | Network Visibility Module | `cisco:nvm:*` | `index_nvm` |
 | DHCP | Windows DHCP Server logs (`DhcpSrvLog`) and ISC DHCP logs (`dhcpd`) | `index_dhcp` |
+
+Include all DC indexes in your local `index_dc` override. For example, a lab
+using separate indexes can use `index IN (aci, hyperfabric, mds, nd, nexus)`;
+preserve any additional indexes already configured for your deployment.
+The shipped default remains customer-neutral.
+
+The new Cisco networking catalogue searches select individual `resource_type`,
+`dataset`/`endpoint_id`, or `component` schemas. Latest-observed tables describe
+the selected time window, not a guaranteed complete current snapshot. Missing
+measurements remain unknown, cumulative counters are not summed across polls,
+and the dataset coverage table reports observed sources rather than inventing
+healthy rows for missing feeds. Application inventory is not measured traffic;
+MDS API-success summaries and collection configuration are not alarm or
+throughput KPIs. Microburst peak and duration values retain vendor units.
 
 Dashboard results depend on source types, normalized fields, data models, index mappings, permissions, and the selected time range. An empty result can mean that no matching condition occurred; it does not always indicate a collection failure.
 
