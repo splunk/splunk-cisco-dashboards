@@ -83,6 +83,20 @@ const searchBaseDataSource = fs.readFileSync(
   ),
   "utf8",
 );
+const insightKpiButton = fs.readFileSync(
+  path.join(
+    packageRoot,
+    "src/main/webapp/pages/dashboardbuilder/InsightKpiButton.jsx",
+  ),
+  "utf8",
+);
+const addSearchPicker = fs.readFileSync(
+  path.join(
+    packageRoot,
+    "src/main/webapp/pages/dashboardbuilder/DropdownWithSearch.jsx",
+  ),
+  "utf8",
+);
 const searchbaseConf = fs.readFileSync(
   path.join(packageRoot, "src/main/resources/splunk/default/searchbase.conf"),
   "utf8",
@@ -1307,6 +1321,46 @@ assert.match(
   commonStyles,
   /\.dashboard-builder-drilldown-modal \.sui-guidance-content p,[\s\S]*?color: var\(--sui-content-default\) !important/,
   "Searchbase HTML paragraphs must retain readable foreground contrast in the modal",
+);
+assert.match(
+  editor,
+  /<Link[\s\S]*?to=\{splunkSearchbaseEditUrl\(search\.name\)\}[\s\S]*?Edit in Searchbase/,
+  "The Searchbase data-source action must use the locale-aware editor URL helper",
+);
+assert.doesNotMatch(
+  editor,
+  /window\.open\([\s\S]*?\/app\/searchbase\/start/,
+  "The Searchbase data-source action must not open a locale-less route",
+);
+assert.match(
+  commonStyles,
+  /dashboard-builder-themed-modal-dark \.dashboardbuilder-convert-explanation[\s\S]*?color: #d6dee8 !important/,
+  "The conversion explanation must use readable dark-theme text",
+);
+assert.match(
+  addSearchPicker,
+  /const DEFAULT_APP = 'splunk-cisco-dashboards'[\s\S]*?useState\(DEFAULT_APP\)[\s\S]*?setSelectedApp\(DEFAULT_APP\)/,
+  "The Dashboard Studio search picker must default and reset to this app",
+);
+assert.match(
+  insightKpiButton,
+  /DARK_TREND_COLOR = '#8bb8ff'[\s\S]*?LIGHT_TREND_COLOR = '#006d9c'[\s\S]*?trendColor[\s\S]*?options/,
+  "New single-value searches must use a readable theme-aware trend color",
+);
+assert.match(
+  editor,
+  /<InsightKpiButton\s+key="insightKpi"\s+colorScheme=\{dashboardColorScheme\}\s+\/>/,
+  "Added searches must receive Dashboard Studio's active color scheme",
+);
+assert.match(timeRangeUtils, /DEFAULT_EARLIEST = '-24h@h'/);
+assert.match(
+  timeRangeUtils,
+  /DEFAULT_VALUE = `\$\{DEFAULT_EARLIEST\},\$\{DEFAULT_LATEST\},\$\{DEFAULT_SPAN\}`/,
+);
+assert.match(
+  editor,
+  /defaultValue: "-24h@h,now"/,
+  "New dashboards must keep the -24h@h global time default",
 );
 
 console.log(

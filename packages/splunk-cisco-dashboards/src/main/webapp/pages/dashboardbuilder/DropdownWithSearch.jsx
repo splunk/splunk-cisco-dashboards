@@ -20,6 +20,7 @@ import useSplunkTheme from '@splunk/themes/useSplunkTheme';
 import { plainTextFromHtml } from '../../common/services/searchbaseCatalogue';
 
 const ALL_APPS = '__all_apps__';
+const DEFAULT_APP = 'splunk-cisco-dashboards';
 const ALL_CATEGORIES = '__all_categories__';
 const ALL_SUB_CATEGORIES = '__all_sub_categories__';
 const KPI_MENU_WIDTH = 620;
@@ -132,7 +133,7 @@ export default function DropdownWithSearch({
     };
     const dropdownRef = useRef(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedApp, setSelectedApp] = useState(ALL_APPS);
+    const [selectedApp, setSelectedApp] = useState(DEFAULT_APP);
     const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
     const [selectedSubCategory, setSelectedSubCategory] = useState(ALL_SUB_CATEGORIES);
     const [selectedTags, setSelectedTags] = useState([]);
@@ -205,7 +206,7 @@ export default function DropdownWithSearch({
 
     const resetFilters = () => {
         setSearchTerm('');
-        setSelectedApp(ALL_APPS);
+        setSelectedApp(DEFAULT_APP);
         setSelectedCategory(ALL_CATEGORIES);
         setSelectedSubCategory(ALL_SUB_CATEGORIES);
         setSelectedTags([]);
@@ -396,7 +397,10 @@ export default function DropdownWithSearch({
             >
                 <Button
                     appearance={appearance}
-                    onClick={() => setIsOpen(!isOpen)}
+                    onClick={() => {
+                        if (!isOpen) resetFilters();
+                        setIsOpen(!isOpen);
+                    }}
                     label={label}
                     icon={icon}
                     aria-label={ariaLabel || label}

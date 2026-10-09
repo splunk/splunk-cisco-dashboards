@@ -90,6 +90,7 @@ import { TOAST_TYPES } from "@splunk/react-toast-notifications/ToastConstants";
 import { notifyDashboard } from "./dashboardNotifications";
 import { addDash } from "../../common/lib/splunk";
 import { SearchBaseDataSourcePanel } from "./SearchBaseDataSourcePanel";
+import { splunkSearchbaseEditUrl } from "../../common/lib/splunkSearchUrl";
 import { DataSourceEditors } from "@splunk/dashboard-editors";
 import SelectSearchbaseSearchSidebar from "./SelectSearchbaseSearchSidebar";
 import { getSearchBaseConfStanza } from "../../common/lib/searchbase";
@@ -822,15 +823,10 @@ const SearchbaseDataSourceEditor = (props) => {
               >
                 <span>SPL query</span>
                 <Link
+                  to={splunkSearchbaseEditUrl(search.name)}
                   openInNewContext
                   onClick={(e) => {
                     e.stopPropagation();
-                    window.open(
-                      `/app/searchbase/start#/edit/${encodeURIComponent(
-                        `${search?.name}`,
-                      )}/search-spl`,
-                      "_blank",
-                    );
                   }}
                 >
                   Edit in Searchbase
@@ -1823,7 +1819,10 @@ const DashboardStudioEditor = ({
             aria-hidden="true"
           />
           <BackgroundButton key="backgroundButton" iconColor="#26afac" />
-          <InsightKpiButton key="insightKpi" />
+          <InsightKpiButton
+            key="insightKpi"
+            colorScheme={dashboardColorScheme}
+          />
           {ENABLE_EXPERIMENTAL_SPACE_MANAGER && (
             <SpaceManagerButton key="spaceManager" />
           )}
@@ -1861,7 +1860,10 @@ const DashboardStudioEditor = ({
             aria-hidden="true"
           />
           <BackgroundButton key="backgroundButton" iconColor="#26afac" />
-          <InsightKpiButton key="insightKpi" />
+          <InsightKpiButton
+            key="insightKpi"
+            colorScheme={dashboardColorScheme}
+          />
           {ENABLE_EXPERIMENTAL_SPACE_MANAGER && (
             <SpaceManagerButton key="spaceManager" />
           )}

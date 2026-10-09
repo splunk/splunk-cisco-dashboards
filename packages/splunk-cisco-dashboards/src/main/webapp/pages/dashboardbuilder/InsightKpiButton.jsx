@@ -18,6 +18,8 @@ const DEFAULT_KPI_HEIGHT = 260;
 const SINGLE_VALUE_KPI_HEIGHT = 190;
 const TABLE_KPI_HEIGHT = 320;
 const SEARCHBASE_ICON_SRC = '/static/app/splunk-cisco-dashboards/searchbase-app-icon.png';
+const DARK_TREND_COLOR = '#8bb8ff';
+const LIGHT_TREND_COLOR = '#006d9c';
 
 const generateRandomString = (length = 10) => {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -36,17 +38,29 @@ const createDataSourceName = (search) => {
     return `ds_${safeName || generateRandomString()}`;
 };
 
-const newInsightKpiVizConfig = (search, searchKey) => {
+const newInsightKpiVizConfig = (
+    search,
+    searchKey,
+    trendColor = DARK_TREND_COLOR,
+) => {
+    const visualizationType = search.defaultViz || 'splunk.table';
+    const options = search.vizOptions || {};
+    const isSingleValue = visualizationType.toLowerCase().includes('singlevalue');
     return {
         visualizationId: `viz_insightKpi_${generateRandomString()}`,
         visualizationDefinition: {
-            type: search.defaultViz ? search.defaultViz : 'splunk.table',
+            type: visualizationType,
             title: search.searchName,
             description: plainTextFromHtml(search.description || ''),
             dataSources: {
                 primary: searchKey,
             },
-            options: search.vizOptions || {},
+            options: isSingleValue
+                ? {
+                      trendColor,
+                      ...options,
+                  }
+                : options,
         },
     };
 };
@@ -165,6 +179,8 @@ const applyKpiLayout = (dashboardApi, visualizationConfigs) => {
 };
 
 const InsightKpiButton = (props) => {
+    const trendColor =
+        props.colorScheme === 'light' ? LIGHT_TREND_COLOR : DARK_TREND_COLOR;
     // get all searches
     const [searches, setSearches] = useState([]);
     const [selectedKpis, setSelectedKpis] = useState([]);
@@ -211,7 +227,11 @@ const InsightKpiButton = (props) => {
                 }
 
                 if (searchKey) {
-                    const visualizationConfig = newInsightKpiVizConfig(selectedKpi, searchKey);
+                    const visualizationConfig = newInsightKpiVizConfig(
+                        selectedKpi,
+                        searchKey,
+                        trendColor,
+                    );
                     visualizationConfigs.push(visualizationConfig);
                     dashboardApi.coreApi.createVisualization(visualizationConfig);
                 }

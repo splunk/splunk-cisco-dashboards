@@ -884,8 +884,8 @@ assert.match(
 );
 assert.match(
   userGuide,
-  /patched known npm[\s\S]*?advisories[\s\S]*?MapLibre GL JS XSS[\s\S]*?Splunk visualizations continue to compile/,
-  "The current in-app release notes must document the dependency security patches",
+  /patched published npm advisories[\s\S]*?DOMPurify[\s\S]*?fast-uri[\s\S]*?source-map-js[\s\S]*?postcss-selector-parser[\s\S]*?brace-expansion[\s\S]*?sprintf-js[\s\S]*?MapLibre GL JS XSS[\s\S]*?Splunk visualizations continue to compile[\s\S]*?local security patch[\s\S]*?braces[\s\S]*?100 levels[\s\S]*?Dependabot may still flag/,
+  "The current in-app release notes must document dependency security patches and the local build-tool mitigation",
 );
 
 assert.match(profile, /useInsightsWorkspacePermissions\(\)/);
@@ -1090,6 +1090,16 @@ assert.match(
   profile,
   /isDefaultAddTileAppSelection\(selectedApps, currentAppOwner\)/,
   "The current-app default must not be reported as an active filter",
+);
+assert.match(
+  picker,
+  /const DEFAULT_APP = "splunk-cisco-dashboards"[\s\S]*?new Set\(\[DEFAULT_APP\]\)[\s\S]*?selection\.size === 1 && selection\.has\(DEFAULT_APP\)/,
+  "The workspace search picker must default to this app while keeping All apps available",
+);
+assert.match(
+  read("src/main/webapp/common/components/workspace/SignalTickerRail.tsx"),
+  /const DEFAULT_APP = 'splunk-cisco-dashboards'[\s\S]*?useState\(DEFAULT_APP\)[\s\S]*?if \(!open \|\| catalogueLoading\) return;[\s\S]*?setSelectedApp\(DEFAULT_APP\)[\s\S]*?setSelectedApp\(apps\.includes\(DEFAULT_APP\) \? DEFAULT_APP : ALL_APPS\)/,
+  "Signal Rail search filters must default and reset to this app when available",
 );
 assert.match(
   topology,

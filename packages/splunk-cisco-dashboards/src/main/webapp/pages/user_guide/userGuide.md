@@ -147,7 +147,7 @@ Macro discovery and data-model acceleration are separate checks. Use the readine
 | ThousandEyes | `cisco:thousandeyes:*` and TA data-model macros | `index_thousandeyes` |
 | Intersight | `cisco:intersight:*` | `index_intersight` |
 | Cisco SD-WAN | `cisco:sdwan:*` | `index_sdwan` |
-| Data center | `cisco:dc:aci:*`, `cisco:dc:nd:*`, `cisco:dc:nexus9k` | `index_dc` |
+| Data center | `cisco:dc:aci:*`, `cisco:dc:hyperfabric:*`, `cisco:dc:mds:*`, `cisco:dc:nd:*`, `cisco:dc:nexus9k*` | `index_dc` |
 | Security stack | Cisco XDR, Umbrella, Secure Access, Secure Endpoint, Isovalent, and related security sources | `index_security` |
 | F5 BIG-IP | `f5:bigip:*` | `index_f5` |
 | Duo | `cisco:duo:*` | `index_duo` |
@@ -155,6 +155,20 @@ Macro discovery and data-model acceleration are separate checks. Use the readine
 | UCS | `cisco:ucs*` | `index_ucs` |
 | Network Visibility Module | `cisco:nvm:*` | `index_nvm` |
 | DHCP | Windows DHCP Server logs (`DhcpSrvLog`) and ISC DHCP logs (`dhcpd`) | `index_dhcp` |
+
+Include all DC indexes in your local `index_dc` override. For example, a lab
+using separate indexes can use `index IN (aci, hyperfabric, mds, nd, nexus)`;
+preserve any additional indexes already configured for your deployment.
+The shipped default remains customer-neutral.
+
+The new Cisco networking catalogue searches select individual `resource_type`,
+`dataset`/`endpoint_id`, or `component` schemas. Latest-observed tables describe
+the selected time window, not a guaranteed complete current snapshot. Missing
+measurements remain unknown, cumulative counters are not summed across polls,
+and the dataset coverage table reports observed sources rather than inventing
+healthy rows for missing feeds. Application inventory is not measured traffic;
+MDS API-success summaries and collection configuration are not alarm or
+throughput KPIs. Microburst peak and duration values retain vendor units.
 
 Dashboard results depend on source types, normalized fields, data models, index mappings, permissions, and the selected time range. An empty result can mean that no matching condition occurred; it does not always indicate a collection failure.
 
@@ -346,6 +360,8 @@ This Markdown file is the authoritative source for the in-product release histor
 
 - Added a **Shared** library tab to find dashboards shared in the app, including dashboards created by other users.
 - Kept new shared dashboards associated with their creator so they also appear under **Yours**. Editing dashboard metadata preserves existing sharing permissions.
+- Opened the linked Searchbase search from the dashboard data-source editor and improved dark-mode text and trend contrast.
+- Set Searchbase app filters to this app by default while keeping other apps available to select.
 :::
 
 ::: release Release Notes | September 2026 - Version 1.0.54
@@ -521,7 +537,7 @@ Version 1.0.49 expands secure-networking coverage, repairs workspace and setup r
 - Improved non-color selection cues, focus indicators, control labels, and responsive light and dark contrast.
 - Removed public geocoding of customer site text; site placement uses an offline city list or explicit coordinates.
 - Shared workspace and bounded Dashboard Builder background management support narrow capability delegation.
-- **Dependency security:** patched known npm security advisories in the shipped JavaScript tree, including the MapLibre GL JS XSS advisory, while ensuring Splunk visualizations continue to compile.
+- **Dependency security:** patched published npm advisories by upgrading DOMPurify, fast-uri, source-map-js, postcss-selector-parser, and brace-expansion; removing sprintf-js from ESLint's dependency tree; and retaining the MapLibre GL JS XSS remediation, while ensuring Splunk visualizations continue to compile. A maintained local security patch mitigates the build-time braces stack-exhaustion advisory by rejecting brace/parenthesis nesting and AST traversal beyond 100 levels. Installation automatically applies the patch and fails if it cannot be applied; Dependabot may still flag the upstream version until a patched release is published.
 - `build.sh --install` and `--deploy` use the SplunkBase profile by default. Use `--developer` only when internal development resources are required; the explicit `--fast` workflow remains developer-only.
 - SplunkBase build, install, deploy, and remote-install workflows share one clean-source packaging path and apply the exact release-eligible archive.
 - A successful SplunkBase install creates one upload-ready archive; the target's installed build does not affect package allocation.

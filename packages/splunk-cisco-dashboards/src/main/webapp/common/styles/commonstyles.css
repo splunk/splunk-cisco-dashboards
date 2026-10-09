@@ -4562,8 +4562,17 @@ div.card-trend-footer [data-test='button'] {
     max-width: 1280px;
 }
 
-.dashboardbuilder-convert-explanation {
+.dashboardbuilder-convert-explanation,
+.dashboardbuilder-convert-explanation p,
+.dashboardbuilder-convert-explanation code {
     line-height: 1.5;
+    color: var(--dashboard-builder-modal-content-default, #4d4d4d);
+}
+
+.dashboard-builder-themed-modal-dark .dashboardbuilder-convert-explanation,
+.dashboard-builder-themed-modal-dark .dashboardbuilder-convert-explanation p,
+.dashboard-builder-themed-modal-dark .dashboardbuilder-convert-explanation code {
+    color: #d6dee8 !important;
 }
 
 .dashboardbuilder-convert-explanation p:first-child {

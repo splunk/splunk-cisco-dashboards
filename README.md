@@ -37,6 +37,16 @@ Install workspace dependencies from the repository root:
 yarn install
 ```
 
+Installation automatically applies the maintained
+[`braces` security patch](patches/braces+3.0.3.patch) and fails if it cannot
+be applied. Do not use `--ignore-scripts`: it skips this protection.
+The patch bounds brace/parenthesis nesting and AST traversal at 100 levels,
+including cyclic AST parent chains. It preserves ordinary build-tool glob
+patterns and mitigates GHSA-vfj7-8cjw-p6xm until an upstream fix is released.
+Dependabot can still report the upstream `braces@3.0.3` version because it
+does not account for local patches. Run `yarn test` to verify the mitigation
+and the patched dependency-version floors.
+
 To build the Splunk app package locally:
 
 ```bash

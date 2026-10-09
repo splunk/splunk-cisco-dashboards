@@ -212,9 +212,9 @@ const SearchResultSummary = styled.p`
 `;
 
 // The catalogue REST endpoint pulls from every app namespace
-// (`/servicesNS/-/-/configs/conf-searchbase`). The App facet starts at
-// All apps so operators can discover the complete catalogue immediately,
-// then optionally select one or more app namespaces to narrow it.
+// (`/servicesNS/-/-/configs/conf-searchbase`). The App facet starts at this
+// app's namespace so the picker opens on searches most relevant to the
+// current dashboard, while operators can still select additional apps.
 //
 // The UI stores a normalised `catalogueApp` sourced from the stanza's
 // `dispatch_context` value; the UI labels it "App" because that's what
@@ -222,10 +222,12 @@ const SearchResultSummary = styled.p`
 // catalogue falls back to the owning ACL app. Execution separately honors
 // `dispatch_context_force`.
 //
-const makeDefaultAppSelection = (): Set<string> => new Set();
+const DEFAULT_APP = "splunk-cisco-dashboards";
+
+const makeDefaultAppSelection = (): Set<string> => new Set([DEFAULT_APP]);
 
 const isDefaultAppSelection = (selection: ReadonlySet<string>): boolean =>
-  selection.size === 0;
+  selection.size === 1 && selection.has(DEFAULT_APP);
 
 const formatSearchCount = (count: number): string =>
   `${count.toLocaleString()} ${count === 1 ? "search" : "searches"}`;
@@ -981,8 +983,8 @@ export const KpiPickerPanel: React.FC<KpiPickerPanelProps> = ({
   // Reset transient form state when the panel opens for a new tile.
   // Sub-category and tag selections start cleared every time so the
   // user always sees the full slice of the chosen category. The App
-  // facet resets to All apps so every new picker open starts with the
-  // complete catalogue. Filters block collapses so the user lands on a
+  // facet resets to this app so each picker open starts with the most
+  // relevant searches. Filters block collapses so the user lands on a
   // clean result list.
   useEffect(() => {
     if (!open || !context) return;

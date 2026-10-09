@@ -10,6 +10,17 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Added Searchbase coverage for Hyperfabric ports, MDS health and congestion,
+  Nexus DME sensors and BGP, Nexus Dashboard operational datasets and routing
+  peers, Catalyst application inventory and SWIM, and SD-WAN SSE tunnel health.
+  Added dataset/endpoint freshness monitoring and contextual detail links.
+- Corrected Nexus Dashboard advisory and anomaly counts to use controller-scoped
+  latest observed state, and ACI fault counts to include fault-instance records
+  without counting repeated polls. Historical observation trends remain trends,
+  not authoritative current-state inventories.
+- Documented the shared DC index mapping for Hyperfabric and MDS. Deployments
+  with an existing `index_dc` local override must add their Hyperfabric index;
+  customer-neutral shipped index defaults remain unchanged.
 - Removed customer-identifying names from the shipped catalogue and dashboards.
   One Searchbase entry was deleted and five were renamed, so **operators who
   bound any of these searches to a topology map link must re-bind them**. Map
