@@ -290,7 +290,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Reports the failed share of selected-window remote-access VPN connection attempts. Stacked columns preserve successful and failed attempt volume over time."
+                "markdown": "Reports the failed share of selected-window remote-access VPN connection attempts. Stacked columns preserve successful and failed attempt volume over time. Investigate drivers adds complementary Zscaler ZPA record trends, not VPN sessions or posture."
             }
         },
         "viz_card_02_singlevalue": {
@@ -389,7 +389,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Connection%20Outcomes&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Sessions%20by%20Profile,Secure%20Networking%20-%20ZTA%20RaVPN%20Failure%20Reasons"
+                        "url": "/drilldown?origin=Connection%20Outcomes&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Sessions%20by%20Profile,Secure%20Networking%20-%20ZTA%20RaVPN%20Failure%20Reasons,secure_networking_zscaler_zpa_connection_status_trend"
                     }
                 }
             ],
@@ -809,7 +809,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Counts remote-access VPN failure and warning events in the selected window and ranks the reasons blocking or degrading access."
+                "markdown": "Counts remote-access VPN failure and warning events in the selected window and ranks the reasons blocking or degrading access. Investigate drivers adds complementary Zscaler ZPA reachability failures, not VPN failures or posture."
             }
         },
         "viz_card_05_singlevalue": {
@@ -887,7 +887,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Failure%20Reasons&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Failure%20Reasons"
+                        "url": "/drilldown?origin=Failure%20Reasons&target=Secure%20Networking%20-%20ZTA%20RaVPN%20Failure%20Reasons,secure_networking_zscaler_zpa_unreachable_applications"
                     }
                 }
             ],

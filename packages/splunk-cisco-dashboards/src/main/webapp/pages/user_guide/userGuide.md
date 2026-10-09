@@ -358,6 +358,7 @@ This Markdown file is the authoritative source for the in-product release histor
 - Distinguished repeated ZPA log records from distinct connection IDs and kept normal connection closures separate from explicit reachability failures.
 - Used the configurable security index scope and documented the required Zscaler add-on fields and interpretation limits.
 - Added recommended placement in existing ZTA dashboards to each Zscaler search description, including guidance for complementary ZPA panels on the remote-access dashboard.
+- Added Zscaler investigations to relevant cards across all six ZTA dashboards, preserving the six-card layouts and existing investigation choices. Labeled the Zscaler views as separate source detail.
 
 ### Insights Workspaces
 

@@ -796,7 +796,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Counts blocked ZTNA requests in the selected window and ranks the policy, posture, certificate, and connector reasons causing the most denials."
+                "markdown": "Counts blocked ZTNA requests in the selected window and ranks the policy, posture, certificate, and connector reasons causing the most denials. Investigate drivers adds separate Zscaler ZPA reasons and ZIA blocked web categories."
             }
         },
         "viz_card_05_singlevalue": {
@@ -874,7 +874,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=ZTNA%20Denial%20Reasons&target=Secure%20Networking%20-%20ZTA%20ZTNA%20Blocked%20Access%20Reasons"
+                        "url": "/drilldown?origin=ZTNA%20Denial%20Reasons&target=Secure%20Networking%20-%20ZTA%20ZTNA%20Blocked%20Access%20Reasons,secure_networking_zscaler_zpa_policy_activity,secure_networking_zscaler_zia_blocked_web_reasons"
                     }
                 }
             ],

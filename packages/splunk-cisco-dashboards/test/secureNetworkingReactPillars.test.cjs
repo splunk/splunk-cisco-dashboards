@@ -212,6 +212,9 @@ const expectedCardContracts = {
     drilldownIds: [
       "secure_networking_zta_ztna_app_access_summary",
       "secure_networking_zta_ztna_blocked_access_reasons",
+      "secure_networking_zscaler_zpa_application_access",
+      "secure_networking_zscaler_zpa_policy_activity",
+      "secure_networking_zscaler_zpa_connection_status_trend",
     ],
   },
   "remote-access-health": {
@@ -234,7 +237,7 @@ const expectedCardContracts = {
   "control-telemetry-volume": {
     searchId: "secure_networking_zta_user_activity_by_source_summary",
     headlineField: "_WindowEvents",
-    drilldownIds: ["secure_networking_zta_user_activity_cross_source"],
+    drilldownIds: ["secure_networking_zta_user_activity_cross_source", "secure_networking_zscaler_coverage"],
   },
 };
 for (const card of ZERO_TRUST_CARDS) {

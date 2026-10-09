@@ -229,7 +229,7 @@ export const ZERO_TRUST_CARDS: readonly PillarCardDefinition[] = [
         id: 'private-access-status',
         title: 'Private Access Status',
         description:
-            'Cisco Secure Access ZTNA connection outcomes reveal adoption and denial spikes.',
+            'Cisco Secure Access ZTNA connection outcomes reveal adoption and denial spikes. Investigate drivers also offers separate Zscaler ZPA access, policy, and connection-record views.',
         category: 'Identity',
         subCategory: 'Zero Trust Access',
         searchId: 'secure_networking_zta_ztna_connection_status_trend',
@@ -251,6 +251,9 @@ export const ZERO_TRUST_CARDS: readonly PillarCardDefinition[] = [
         drilldownIds: [
             'secure_networking_zta_ztna_app_access_summary',
             'secure_networking_zta_ztna_blocked_access_reasons',
+            'secure_networking_zscaler_zpa_application_access',
+            'secure_networking_zscaler_zpa_policy_activity',
+            'secure_networking_zscaler_zpa_connection_status_trend',
         ],
     },
     {
@@ -302,7 +305,7 @@ export const ZERO_TRUST_CARDS: readonly PillarCardDefinition[] = [
         id: 'control-telemetry-volume',
         title: 'Control Telemetry Volume',
         description:
-            'Selected-window event volume from ISE, ZTNA, and FMC, shown as collection evidence.',
+            'Selected-window event volume from ISE, ZTNA, and FMC, shown as collection evidence. Investigate drivers also offers Zscaler data coverage as a separate feed-readiness view.',
         category: 'Identity',
         subCategory: 'Zero Trust Access',
         searchId: 'secure_networking_zta_user_activity_by_source_summary',
@@ -314,7 +317,10 @@ export const ZERO_TRUST_CARDS: readonly PillarCardDefinition[] = [
         valueLabel: 'Events',
         barColor: C3_VISUALIZATION_COLORS.info,
         zeroOnlyIsEmpty: true,
-        drilldownIds: ['secure_networking_zta_user_activity_cross_source'],
+        drilldownIds: [
+            'secure_networking_zta_user_activity_cross_source',
+            'secure_networking_zscaler_coverage',
+        ],
     },
 ] as const;
 
