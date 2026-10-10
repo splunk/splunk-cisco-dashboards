@@ -10,6 +10,26 @@ const blocks = new Map(all.map(m => [m[1], m[2]]));
 const ids = ['coverage', 'zpa_application_access', 'zpa_policy_activity', 'zpa_unreachable_applications', 'zpa_connection_status_trend', 'zia_policy_outcomes', 'zia_blocked_web_reasons', 'zia_web_threats'];
 const body = id => blocks.get('secure_networking_zscaler_' + id);
 const spl = id => body(id).split(/^search = /m)[1].trim().replace(/\\\n/g, '\n');
+test('Setup discovers Zscaler outside existing scopes and routes it to security', () => {
+  const setup = blocks.get('admin_macro_index_tuning');
+  const query = setup.split(/^search = /m)[1].replace(/\\\n/g, '\n');
+  const preamble = query.split('\n')[0];
+  assert.match(preamble, /\)\) OR sourcetype="pan:\*" OR sourcetype="zscaler\*" by index, sourcetype$/);
+  assert.doesNotMatch(query, /zscaler_demo/, 'Discovery must work with customer index names');
+  const routing = query.split('\n').find(line => line.startsWith('| eval scd_macro=case('));
+  const rules = [...routing.matchAll(/match\(sourcetype,"([^"]+)"\), "([^"]+)"/g)];
+  const classify = sourcetype => rules.find(([, pattern]) => {
+    const insensitive = pattern.startsWith('(?i)');
+    return new RegExp(pattern.replace(/^\(\?i\)/, ''), insensitive ? 'i' : '').test(sourcetype);
+  })?.[2] || 'unknown';
+  for (const feed of ['zscalerlss-zpa-app', 'zscalerlss-zpa-auth', 'zscalernss-web', 'zscalernss-fw', 'zscalernss-dns', 'zscalerapi-zia-audit', 'zscaler:zpa:syslog', 'zscalernss-workload-fw']) {
+    assert.equal(classify(feed), 'index_security', feed);
+  }
+  assert.equal(classify('ZSCALERNSS-WEB'), 'index_security');
+  assert.equal(classify('cisco:ise:syslog'), 'index_identity');
+  assert.equal(classify('pan:traffic'), 'index_firewall');
+  assert.equal(classify('unrelated:feed'), 'unknown');
+});
 test('Zscaler entries resolve in the app with configurable scope and bounded output', () => {
   for (const id of ids) {
     const key = 'secure_networking_zscaler_' + id;
