@@ -52,6 +52,7 @@ import QuestionCircle from "@splunk/react-icons/QuestionCircle";
 import Plus from "@splunk/react-icons/Plus";
 import ArrowSquareTopRight from "@splunk/react-icons/ArrowSquareTopRight";
 import Magnifier from "@splunk/react-icons/Magnifier";
+import DashboardPermissionsModal from "./DashboardPermissionsModal";
 import { initialDefinition } from "./DashboardStudioEditor";
 import DrilldownActionViz from "./DrilldownActionViz";
 import { INSIGHTS_APP_ID } from "../../common/lib/constants";
@@ -241,6 +242,8 @@ export default function DBHomePage() {
   const [openDashboardMetadataEditor, setOpenDashboardMetadataEditor] =
     useState(false);
   const [dashboardMetadataTarget, setDashboardMetadataTarget] = useState();
+  const [permissionsTarget, setPermissionsTarget] = useState();
+  const permissionsReturnFocus = useRef(null);
   const [dashboardMetadataTitle, setDashboardMetadataTitle] = useState("");
   const [dashboardMetadataDescription, setDashboardMetadataDescription] =
     useState("");
@@ -835,7 +838,7 @@ export default function DBHomePage() {
             <SplunkControlGroup
               label={<span className="dashboard-builder-field-label">Who can see this dashboard?</span>}
               labelPosition="top"
-              help="Share in the app when your dashboard is ready so colleagues can benefit. You can also start privately and change Permissions from Splunk Dashboards later, if your role allows app sharing."
+              help="Share in the app when your dashboard is ready so colleagues can benefit. You can also start privately and use Permissions in Dashboard Manager later, if your role allows app sharing."
             >
               <RadioList
                 value={dashboardSharing}
@@ -969,6 +972,18 @@ export default function DBHomePage() {
         </Modal.Footer>
       </Modal>
 
+      <DashboardPermissionsModal
+        dashboard={permissionsTarget}
+        colorScheme={managerColorScheme}
+        themeStyle={dashboardBuilderModalThemeStyle}
+        returnFocus={permissionsReturnFocus}
+        onClose={() => setPermissionsTarget(undefined)}
+        onSaved={() => {
+          notifyDashboard({ message: "Dashboard permissions updated.", type: TOAST_TYPES.SUCCESS });
+          setPermissionsTarget(undefined);
+          refreshDashboards();
+        }}
+      />
       <Modal
         open={openDashboardMetadataEditor}
         className={`dashboard-builder-metadata-modal dashboard-builder-themed-modal dashboard-builder-themed-modal-${managerColorScheme}`}
@@ -1445,6 +1460,17 @@ export default function DBHomePage() {
                           <div className="dashboard-manager-card-footer-content">
                             <div className="dashboard-manager-card-footer-row">
                               <div className="dashboard-manager-library-card-actions">
+                                <Button
+                                  appearance="secondary"
+                                  label="Permissions"
+                                  aria-haspopup="dialog"
+                                  aria-label={`Permissions for ${dash.label || dash.title}`}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    permissionsReturnFocus.current = event.currentTarget;
+                                    setPermissionsTarget(dash);
+                                  }}
+                                />
                                 <Tooltip content="Edit dashboard metadata">
                                   <Button
                                     appearance="subtle"
@@ -1532,6 +1558,17 @@ export default function DBHomePage() {
                             </Table.Cell>
                             <Table.Cell>
                               <div className="dashboard-manager-library-table-actions">
+                                <Button
+                                  appearance="secondary"
+                                  label="Permissions"
+                                  aria-haspopup="dialog"
+                                  aria-label={`Permissions for ${dash.label || dash.title}`}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    permissionsReturnFocus.current = event.currentTarget;
+                                    setPermissionsTarget(dash);
+                                  }}
+                                />
                                 <Button
                                   appearance="primary"
                                   icon={<ArrowSquareTopRight />}

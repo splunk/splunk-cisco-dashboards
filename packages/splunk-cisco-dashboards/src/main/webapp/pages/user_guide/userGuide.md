@@ -354,6 +354,7 @@ This Markdown file is the authoritative source for the in-product release histor
 ::: release Release Notes | October 2026 - Version 1.0.60
 ### Dashboard Manager
 
+- Added **Permissions** to dashboard cards and table rows. Owners with the required Splunk permissions can promote a private dashboard to **Shared in App** or make it private again without leaving Dashboard Manager. The dialog checks current permissions and preserves ownership and existing edit access.
 - Defaulted new dashboards to **Private**, matching standard Splunk creation and avoiding an automatic app-sharing request for users without sharing permission.
 - Kept both visibility choices visible, encouraged app sharing for dashboards ready for colleagues, and explained how to share a private dashboard later. Reset the creation dialog to **Private** each time it is reopened.
 :::
