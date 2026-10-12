@@ -227,7 +227,7 @@ export default function DBHomePage() {
   const [openCreateDashboard, setOpenCreateDashboard] = useState(false);
   const [dashboardTitle, setDashboardTitle] = useState("");
   const [dashboardDescription, setDashboardDescription] = useState("");
-  const [dashboardSharing, setDashboardSharing] = useState("app");
+  const [dashboardSharing, setDashboardSharing] = useState("user");
   const [isCreatingDashboard, setIsCreatingDashboard] = useState(false);
   const [dashboardCreateError, setDashboardCreateError] = useState("");
   const [createdDashboardId, setCreatedDashboardId] = useState("");
@@ -530,7 +530,7 @@ export default function DBHomePage() {
     setOpenCreateDashboard(false);
     setDashboardTitle("");
     setDashboardDescription("");
-    setDashboardSharing("app");
+    setDashboardSharing("user");
     setDashboardCreateError("");
     setCreatedDashboardId("");
     setGridLayout("absolute");
@@ -835,14 +835,17 @@ export default function DBHomePage() {
             <SplunkControlGroup
               label={<span className="dashboard-builder-field-label">Permissions</span>}
               labelPosition="top"
+              help={dashboardSharing === "app"
+                ? "Sharing requires permission to publish dashboards in this app. Choose Private if you only need your own dashboard."
+                : "Only you can see this dashboard. You can manage sharing later in Splunk Dashboards."}
             >
               <Select
                 value={dashboardSharing}
                 disabled={isCreatingDashboard || Boolean(createdDashboardId)}
                 onChange={(event, { value }) => setDashboardSharing(value)}
               >
-                <Select.Option label="Shared in App — Visible to app users" value="app" />
                 <Select.Option label="Private — Visible only to you" value="user" />
+                <Select.Option label="Shared in App — Visible to app users" value="app" />
               </Select>
             </SplunkControlGroup>
             <SplunkControlGroup

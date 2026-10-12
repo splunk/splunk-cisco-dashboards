@@ -173,12 +173,12 @@ assert.match(
 );
 assert.match(
   homePage,
-  /const \[dashboardSharing, setDashboardSharing\] = useState\("app"\)/,
-  "New Dashboard Manager dashboards must default to app sharing",
+  /const \[dashboardSharing, setDashboardSharing\] = useState\("user"\)/,
+  "New Dashboard Manager dashboards must default to private creation",
 );
 assert.match(
   homePage,
-  /Shared in App — Visible to app users[\s\S]*?Private — Visible only to you/,
+  /Private — Visible only to you[\s\S]*?Shared in App — Visible to app users/,
   "The create dialog must expose the native-style app and private permission choices",
 );
 assert.match(
