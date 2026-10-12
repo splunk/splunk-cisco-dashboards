@@ -432,7 +432,7 @@ export default function DBHomePage() {
   };
 
   const refreshDashboards = () => {
-    getDashboards().then((response) => {
+    return getDashboards().then((response) => {
       if (response.status >= 200 && response.status <= 299) {
         const { XMLParser } = require("fast-xml-parser");
         const parser = new XMLParser({
@@ -976,12 +976,18 @@ export default function DBHomePage() {
         dashboard={permissionsTarget}
         colorScheme={managerColorScheme}
         themeStyle={dashboardBuilderModalThemeStyle}
-        returnFocus={permissionsReturnFocus}
+        returnFocus={() => {
+          const key = permissionsReturnFocus.current?.getAttribute("data-permissions-key");
+          const trigger = key
+            ? document.querySelector(`[data-permissions-key="${CSS.escape(key)}"]`)
+            : null;
+          (trigger || document.querySelector('[aria-label="Filter Dashboard Manager library"]'))?.focus();
+        }}
         onClose={() => setPermissionsTarget(undefined)}
-        onSaved={() => {
+        onSaved={async () => {
+          await refreshDashboards();
           notifyDashboard({ message: "Dashboard permissions updated.", type: TOAST_TYPES.SUCCESS });
           setPermissionsTarget(undefined);
-          refreshDashboards();
         }}
       />
       <Modal
@@ -1464,6 +1470,7 @@ export default function DBHomePage() {
                                   appearance="secondary"
                                   label="Permissions"
                                   aria-haspopup="dialog"
+                                  data-permissions-key={`${dash.app}/${dash.title}`}
                                   aria-label={`Permissions for ${dash.label || dash.title}`}
                                   onClick={(event) => {
                                     event.stopPropagation();
@@ -1562,6 +1569,7 @@ export default function DBHomePage() {
                                   appearance="secondary"
                                   label="Permissions"
                                   aria-haspopup="dialog"
+                                  data-permissions-key={`${dash.app}/${dash.title}`}
                                   aria-label={`Permissions for ${dash.label || dash.title}`}
                                   onClick={(event) => {
                                     event.stopPropagation();

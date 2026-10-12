@@ -75,7 +75,7 @@ export default function DashboardPermissionsModal({
                 dashboard.title, dashboard.owner, dashboard.app, sharing, acl,
             );
             if (response.status >= 200 && response.status <= 299) {
-                onSaved(sharing);
+                await onSaved(sharing);
             } else {
                 setError(`Unable to update permissions. ${dashboardResponseMessage(response)}`);
                 setNeedsReload(response.status === 409);
@@ -107,7 +107,7 @@ export default function DashboardPermissionsModal({
                 <div role="alert">{error && <Message type="error">{error}</Message>}</div>
                 {acl && (
                     <>
-                        <p style={textStyle}>Owner: {acl.owner}</p>
+                        <p><span style={textStyle}>Owner: {acl.owner}</span></p>
                         {supported ? (
                             <ControlGroup
                                 label="Who can see this dashboard?"
@@ -127,7 +127,7 @@ export default function DashboardPermissionsModal({
                         {supported && !canShareApp && <Message type="info">Your Splunk permissions do not allow app sharing for this dashboard. Ask the owner or a Splunk administrator to share it.</Message>}
                         {supported && !canShareUser && <Message type="info">Your Splunk permissions do not allow making this dashboard private.</Message>}
                         {sharing === 'app' && acl.sharing === 'user' && <Message type="info">Saving will give all app users read access. It will not grant additional edit access.</Message>}
-                        {acl.sharing === 'app' && <p style={textStyle}>Current read access: {(acl.perms?.read || []).map((role) => (role === '*' ? 'All app users' : role)).filter(Boolean).join(', ') || 'Owner only'}</p>}
+                        {acl.sharing === 'app' && <p><span style={textStyle}>Current read access: {(acl.perms?.read || []).map((role) => (role === '*' ? 'All app users' : role)).filter(Boolean).join(', ') || 'Owner only'}</span></p>}
                         {sharing === 'user' && acl.sharing === 'app' && <Message type="warning">Other app users will lose access to this dashboard. Existing links may stop working for them.</Message>}
                     </>
                 )}
@@ -149,7 +149,7 @@ DashboardPermissionsModal.propTypes = {
     dashboard: PropTypes.shape({ title: PropTypes.string, label: PropTypes.string, owner: PropTypes.string, app: PropTypes.string }),
     colorScheme: PropTypes.string.isRequired,
     themeStyle: PropTypes.object.isRequired,
-    returnFocus: PropTypes.object.isRequired,
+    returnFocus: PropTypes.func.isRequired,
     onClose: PropTypes.func.isRequired,
     onSaved: PropTypes.func.isRequired,
 };
