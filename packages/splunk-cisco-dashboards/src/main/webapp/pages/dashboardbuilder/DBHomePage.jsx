@@ -35,7 +35,7 @@ import Trash from "@splunk/react-icons/enterprise/Trash";
 import { TOAST_TYPES } from "@splunk/react-toast-notifications/ToastConstants";
 import { notifyDashboard, dashboardResponseMessage } from "./dashboardNotifications";
 import TextArea from "@splunk/react-ui/TextArea";
-import Select from "@splunk/react-ui/Select";
+import RadioList from "@splunk/react-ui/RadioList";
 import Tooltip from "@splunk/react-ui/Tooltip";
 import CustomTooltip from "../../common/components/CustomTooltip/CustomTooltip";
 import ManagerPreviewModal from "../../common/components/ManagerPreviewModal";
@@ -833,20 +833,22 @@ export default function DBHomePage() {
               </SplunkControlGroup>
             </div>
             <SplunkControlGroup
-              label={<span className="dashboard-builder-field-label">Permissions</span>}
+              label={<span className="dashboard-builder-field-label">Who can see this dashboard?</span>}
               labelPosition="top"
-              help={dashboardSharing === "app"
-                ? "Sharing requires permission to publish dashboards in this app. Choose Private if you only need your own dashboard."
-                : "Only you can see this dashboard. You can manage sharing later in Splunk Dashboards."}
+              help="Share in the app when your dashboard is ready so colleagues can benefit. You can also start privately and change Permissions from Splunk Dashboards later, if your role allows app sharing."
             >
-              <Select
+              <RadioList
                 value={dashboardSharing}
                 disabled={isCreatingDashboard || Boolean(createdDashboardId)}
                 onChange={(event, { value }) => setDashboardSharing(value)}
               >
-                <Select.Option label="Private — Visible only to you" value="user" />
-                <Select.Option label="Shared in App — Visible to app users" value="app" />
-              </Select>
+                <RadioList.Option value="user" description="Only you can see it while you build or try ideas.">
+                  Private
+                </RadioList.Option>
+                <RadioList.Option value="app" description="Let other app users view and benefit from it. Requires app-sharing permission.">
+                  Shared in App
+                </RadioList.Option>
+              </RadioList>
             </SplunkControlGroup>
             <SplunkControlGroup
               className="dashboard-builder-mode-group"

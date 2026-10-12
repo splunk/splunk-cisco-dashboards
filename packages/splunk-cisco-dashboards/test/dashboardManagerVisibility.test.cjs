@@ -178,8 +178,8 @@ assert.match(
 );
 assert.match(
   homePage,
-  /Private — Visible only to you[\s\S]*?Shared in App — Visible to app users/,
-  "The create dialog must expose the native-style app and private permission choices",
+  /<RadioList[\s\S]*?value="user"[\s\S]*?Private[\s\S]*?value="app"[\s\S]*?Shared in App/,
+  "The create dialog must keep both private and app-sharing choices visible",
 );
 assert.match(
   dashboardPersistence,

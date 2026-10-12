@@ -200,7 +200,7 @@ The **More** menu contains IT Health, NetOps Readiness, Security Resilience, Bui
 The library has three tabs: **Included** contains supplied dashboards, **Yours** contains managed dashboards owned by you, and **Shared** contains managed dashboards shared in the app that you have permission to read, including other users' dashboards. A dashboard you own and share appears in both **Yours** and **Shared**. Existing app-owned dashboards appear in **Shared**. Private dashboards do not appear in **Shared**.
 
 1. Open **More > Dashboard Manager** and select **Create New**.
-2. Enter a title and optional description, keep the default **Private** permission or explicitly choose **Shared in App**, and select an **Absolute** or **Grid** layout. App sharing requires permission to publish dashboards in this app. You can manage sharing later from Splunk's **Dashboards** page.
+2. Enter a title and optional description, then choose who can see the dashboard: **Private** (selected initially) or **Shared in App**. Share a ready dashboard in the app so colleagues can benefit; app sharing requires permission to publish dashboards in this app. You can start privately and change its permissions on Splunk's **Dashboards** page to share it later if your role permits. Select an **Absolute** or **Grid** layout.
 3. Select **Create** once. The button shows **Creating…** while the request is in progress, and the editor opens when creation succeeds.
 
 If the title produces an existing dashboard ID, choose a different title or cancel and open the existing dashboard to edit it. Creating a dashboard does not overwrite the existing one. Creation errors remain visible inside the dialog.
@@ -355,7 +355,7 @@ This Markdown file is the authoritative source for the in-product release histor
 ### Dashboard Manager
 
 - Defaulted new dashboards to **Private**, matching standard Splunk creation and avoiding an automatic app-sharing request for users without sharing permission.
-- Reset the creation dialog to **Private** each time it is reopened and added guidance for explicitly selected app sharing.
+- Kept both visibility choices visible, encouraged app sharing for dashboards ready for colleagues, and explained how to share a private dashboard later. Reset the creation dialog to **Private** each time it is reopened.
 :::
 
 ::: release Release Notes | September 2026 - Version 1.0.55
