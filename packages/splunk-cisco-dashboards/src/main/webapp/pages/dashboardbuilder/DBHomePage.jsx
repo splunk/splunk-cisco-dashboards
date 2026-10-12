@@ -243,6 +243,7 @@ export default function DBHomePage() {
     useState(false);
   const [dashboardMetadataTarget, setDashboardMetadataTarget] = useState();
   const [permissionsTarget, setPermissionsTarget] = useState();
+  const [permissionsStatus, setPermissionsStatus] = useState("");
   const permissionsReturnFocus = useRef(null);
   const [dashboardMetadataTitle, setDashboardMetadataTitle] = useState("");
   const [dashboardMetadataDescription, setDashboardMetadataDescription] =
@@ -984,9 +985,9 @@ export default function DBHomePage() {
           (trigger || document.querySelector('[aria-label="Filter Dashboard Manager library"]'))?.focus();
         }}
         onClose={() => setPermissionsTarget(undefined)}
-        onSaved={async () => {
+        onSaved={async (sharing) => {
           await refreshDashboards();
-          notifyDashboard({ message: "Dashboard permissions updated.", type: TOAST_TYPES.SUCCESS });
+          setPermissionsStatus(`Permissions for ${permissionsTarget.label || permissionsTarget.title} saved: ${sharing === "app" ? "Shared in App" : "Private"}.`);
           setPermissionsTarget(undefined);
         }}
       />
@@ -1390,6 +1391,9 @@ export default function DBHomePage() {
               </ColumnLayout.Column>
             </ColumnLayout.Row>
 
+            <div role="status">
+              {permissionsStatus && <Message type="success">{permissionsStatus}</Message>}
+            </div>
             <ColumnLayout.Row
               id="dashboard-manager-library-results"
               role="tabpanel"
@@ -1475,6 +1479,7 @@ export default function DBHomePage() {
                                   onClick={(event) => {
                                     event.stopPropagation();
                                     permissionsReturnFocus.current = event.currentTarget;
+                                    setPermissionsStatus("");
                                     setPermissionsTarget(dash);
                                   }}
                                 />
@@ -1574,6 +1579,7 @@ export default function DBHomePage() {
                                   onClick={(event) => {
                                     event.stopPropagation();
                                     permissionsReturnFocus.current = event.currentTarget;
+                                    setPermissionsStatus("");
                                     setPermissionsTarget(dash);
                                   }}
                                 />
