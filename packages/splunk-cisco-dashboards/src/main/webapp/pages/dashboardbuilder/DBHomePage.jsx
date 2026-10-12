@@ -842,11 +842,11 @@ export default function DBHomePage() {
                 disabled={isCreatingDashboard || Boolean(createdDashboardId)}
                 onChange={(event, { value }) => setDashboardSharing(value)}
               >
-                <RadioList.Option value="user" description="Only you can see it while you build or try ideas.">
-                  Private
+                <RadioList.Option value="user">
+                  Private — Only you can see it
                 </RadioList.Option>
-                <RadioList.Option value="app" description="Let other app users view and benefit from it. Requires app-sharing permission.">
-                  Shared in App
+                <RadioList.Option value="app">
+                  Shared in App — Let other app users view and benefit from it
                 </RadioList.Option>
               </RadioList>
             </SplunkControlGroup>
