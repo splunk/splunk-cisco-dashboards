@@ -91,6 +91,7 @@ export default function DashboardPermissionsModal({
     const canShareApp = canSetDashboardSharing(acl, 'app');
     const canShareUser = canSetDashboardSharing(acl, 'user');
     const supported = acl && ['user', 'app'].includes(acl.sharing);
+    const textStyle = { color: 'var(--dashboard-builder-modal-content-default)' };
 
     return (
         <Modal
@@ -100,13 +101,13 @@ export default function DashboardPermissionsModal({
             returnFocus={returnFocus}
             onRequestClose={close}
         >
-            <Modal.Header title="Edit permissions" subtitle={dashboard?.label || dashboard?.title} hideCloseButton={saving} />
+            <Modal.Header title="Edit permissions" subtitle={<span style={textStyle}>{dashboard?.label || dashboard?.title}</span>} hideCloseButton={saving} />
             <Modal.Body className="dashboard-builder-modal-body">
                 <div role="status">{loading && 'Loading permissions…'}{saving && 'Saving permissions…'}</div>
                 <div role="alert">{error && <Message type="error">{error}</Message>}</div>
                 {acl && (
                     <>
-                        <p>Owner: {acl.owner}</p>
+                        <p style={textStyle}>Owner: {acl.owner}</p>
                         {supported ? (
                             <ControlGroup
                                 label="Who can see this dashboard?"
@@ -126,7 +127,7 @@ export default function DashboardPermissionsModal({
                         {supported && !canShareApp && <Message type="info">Your Splunk permissions do not allow app sharing for this dashboard. Ask the owner or a Splunk administrator to share it.</Message>}
                         {supported && !canShareUser && <Message type="info">Your Splunk permissions do not allow making this dashboard private.</Message>}
                         {sharing === 'app' && acl.sharing === 'user' && <Message type="info">Saving will give all app users read access. It will not grant additional edit access.</Message>}
-                        {acl.sharing === 'app' && <p>Current read access: {(acl.perms?.read || []).map((role) => (role === '*' ? 'All app users' : role)).filter(Boolean).join(', ') || 'Owner only'}</p>}
+                        {acl.sharing === 'app' && <p style={textStyle}>Current read access: {(acl.perms?.read || []).map((role) => (role === '*' ? 'All app users' : role)).filter(Boolean).join(', ') || 'Owner only'}</p>}
                         {sharing === 'user' && acl.sharing === 'app' && <Message type="warning">Other app users will lose access to this dashboard. Existing links may stop working for them.</Message>}
                     </>
                 )}
