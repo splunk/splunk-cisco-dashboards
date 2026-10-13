@@ -90,6 +90,11 @@ export const customPresets = {
   },
 };
 
+const DASHBOARD_SHARING_LABELS = new Map([
+  ["user", "Private"],
+  ["app", "App"],
+  ["global", "All apps"],
+]);
 const DASHBOARD_PAGE_SIZE = 20;
 const DASHBOARD_CARD_TITLE_LIMIT = 35;
 const DASHBOARD_CARD_DESCRIPTION_LIMIT = 140;
@@ -469,6 +474,7 @@ export default function DBHomePage() {
                 contentApp,
                 owner,
                 sharing,
+                sharingLabel: DASHBOARD_SHARING_LABELS.get(r.acl?.sharing) || "Unknown",
                 tag,
                 deleteLink: r.links?.remove || r.links?.edit,
                 title: r.name,
@@ -1455,6 +1461,8 @@ export default function DBHomePage() {
                         <Card.Body className="dashboard-manager-library-card-body">
                           <b>Author:</b> {dash.author || "Unknown"}
                           <br />
+                          <b>Sharing:</b> {dash.sharingLabel}
+                          <br />
                           <b>Description:</b>{" "}
                           <div
                             className="dashboard-manager-library-card-description"
@@ -1550,6 +1558,7 @@ export default function DBHomePage() {
                         <Table.HeadCell width={220}>Name</Table.HeadCell>
                         <Table.HeadCell width={140}>Author</Table.HeadCell>
                         <Table.HeadCell width={140}>App</Table.HeadCell>
+                        <Table.HeadCell width={100}>Sharing</Table.HeadCell>
                         <Table.HeadCell>Description</Table.HeadCell>
                         <Table.HeadCell width={320}>Actions</Table.HeadCell>
                       </Table.Head>
@@ -1560,6 +1569,7 @@ export default function DBHomePage() {
                             <Table.Cell>{dash.title}</Table.Cell>
                             <Table.Cell>{dash.author}</Table.Cell>
                             <Table.Cell>{dash.app}</Table.Cell>
+                            <Table.Cell>{dash.sharingLabel}</Table.Cell>
                             <Table.Cell>
                               <span
                                 className="dashboard-manager-library-table-description"
