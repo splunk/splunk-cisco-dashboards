@@ -1559,7 +1559,7 @@ export default function DBHomePage() {
                         <Table.HeadCell width={140}>Author</Table.HeadCell>
                         <Table.HeadCell width={140}>App</Table.HeadCell>
                         <Table.HeadCell width={100}>Sharing</Table.HeadCell>
-                        <Table.HeadCell>Description</Table.HeadCell>
+                        <Table.HeadCell width={200}>Description</Table.HeadCell>
                         <Table.HeadCell width={320}>Actions</Table.HeadCell>
                       </Table.Head>
                       <Table.Body>
