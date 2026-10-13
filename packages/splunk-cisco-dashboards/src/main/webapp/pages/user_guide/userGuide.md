@@ -352,6 +352,10 @@ Searchbase definitions are app-managed factory content. Workspace managers choos
 This Markdown file is the authoritative source for the in-product release history.
 
 ::: release Release Notes | October 2026 - Version 1.0.60
+### Setup
+
+- Added a clear **Refresh status** action and last-checked time for data-model acceleration. Clarified that Splunk can still be building summaries after acceleration is enabled.
+
 ### Dashboard Manager
 
 - Added **Sharing** to dashboard cards and the library table so users can see **Private**, **App**, or **All apps** at a glance. Labels refresh after a permission change.

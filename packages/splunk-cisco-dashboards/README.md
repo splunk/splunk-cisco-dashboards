@@ -10,6 +10,7 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Added an explicit **Refresh status** action and last-checked time to Setup's data-model acceleration panel. Clarified that enabled acceleration can still be building summaries in the background.
 - Added Searchbase coverage for Hyperfabric ports, MDS health and congestion,
   Nexus DME sensors and BGP, Nexus Dashboard operational datasets and routing
   peers, Catalyst application inventory and SWIM, and SD-WAN SSE tunnel health.
