@@ -470,7 +470,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Tracks Cisco SSE ZTNA connection statuses over time, enabling operators to follow adoption, detect access disruptions, and correlate denial spikes with policy or infrastructure changes\\."
+                "markdown": "Tracks Cisco SSE ZTNA connection statuses over time, enabling operators to follow adoption, detect access disruptions, and correlate denial spikes with policy or infrastructure changes\\. Investigate drivers adds separate Zscaler ZPA access, policy, and record-status views."
             }
         },
         "viz_card_03_singlevalue": {
@@ -584,7 +584,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Private%20Access%20Status&target=Secure%20Networking%20-%20ZTA%20ZTNA%20Application%20Access%20Summary,Secure%20Networking%20-%20ZTA%20ZTNA%20Blocked%20Access%20Reasons"
+                        "url": "/drilldown?origin=Private%20Access%20Status&target=Secure%20Networking%20-%20ZTA%20ZTNA%20Application%20Access%20Summary,Secure%20Networking%20-%20ZTA%20ZTNA%20Blocked%20Access%20Reasons,secure_networking_zscaler_zpa_application_access,secure_networking_zscaler_zpa_policy_activity,secure_networking_zscaler_zpa_connection_status_trend"
                     }
                 }
             ],
@@ -978,7 +978,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Ranks selected\\-window telemetry events from ISE, ZTNA, and FMC\\. Product logging rates differ, so these bars show source volume rather than correlated users or relative control health\\."
+                "markdown": "Ranks selected\\-window telemetry events from ISE, ZTNA, and FMC\\. Product logging rates differ, so these bars show source volume rather than correlated users or relative control health\\. Investigate drivers adds separate Zscaler data coverage."
             }
         },
         "viz_card_06_singlevalue": {
@@ -1056,7 +1056,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Control%20Telemetry%20Volume&target=secure_networking_zta_user_activity_cross_source"
+                        "url": "/drilldown?origin=Control%20Telemetry%20Volume&target=secure_networking_zta_user_activity_cross_source,secure_networking_zscaler_coverage"
                     }
                 }
             ],

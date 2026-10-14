@@ -2716,6 +2716,8 @@ export default function MacroIndexTuningPage(): JSX.Element {
       message: "Checking acceleration",
     })),
   );
+  const [dataModelReadinessCheckedAt, setDataModelReadinessCheckedAt] =
+    useState<number | null>(null);
   const [setupStatus, setSetupStatus] = useState<SaveStatus>({ state: "idle" });
   const [setupComplete, setSetupComplete] = useState(false);
   const [setupCompletionSummary, setSetupCompletionSummary] =
@@ -3855,6 +3857,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           applicableDataModelRequirements,
         ),
       );
+      setDataModelReadinessCheckedAt(Date.now());
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setDataModelReadiness(
@@ -3866,6 +3869,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
           message,
         })),
       );
+      setDataModelReadinessCheckedAt(Date.now());
     }
   }, [applicableDataModelRequirements]);
 
@@ -6993,8 +6997,7 @@ export default function MacroIndexTuningPage(): JSX.Element {
                     type="button"
                     onClick={checkDataModelAcceleration}
                     disabled={accelerationCheckInProgress}
-                    aria-label="Check data model acceleration again"
-                    className="grid h-8 w-8 shrink-0 place-items-center rounded-md border sui-border-default sui-bg-section sui-color-default sui-hover-border-info sui-hover-color-info disabled:cursor-wait disabled:opacity-60"
+                    className={`${compactButtonBase} shrink-0 sui-border-default sui-bg-section sui-color-default sui-hover-border-info sui-hover-color-info disabled:cursor-wait disabled:opacity-60`}
                   >
                     <RefreshCw
                       size={14}
@@ -7002,6 +7005,9 @@ export default function MacroIndexTuningPage(): JSX.Element {
                         accelerationCheckInProgress ? "animate-spin" : ""
                       }
                     />
+                    {accelerationCheckInProgress
+                      ? "Refreshing"
+                      : "Refresh status"}
                   </button>
                 </div>
                 <p className="mt-1 text-xs leading-5 sui-color-default">
@@ -7047,6 +7053,22 @@ export default function MacroIndexTuningPage(): JSX.Element {
                     : dataModelsNeedingAttention.length
                       ? `${acceleratedDataModelCount} of ${dataModelReadiness.length} accelerated · ${dataModelsNeedingAttention.length} need attention`
                       : `All ${dataModelReadiness.length} recommended data models are accelerated.`}
+                </div>
+                <div className="mt-2 flex flex-wrap justify-between gap-x-3 gap-y-1 text-xs sui-color-muted">
+                  <p>
+                    After enabling a model, return here and refresh. This check
+                    confirms acceleration is enabled; Splunk may still be
+                    building its summaries in the background.
+                  </p>
+                  {dataModelReadinessCheckedAt !== null && (
+                    <p className="shrink-0">
+                      Last checked{" "}
+                      {new Date(dataModelReadinessCheckedAt).toLocaleTimeString(
+                        [],
+                        { hour: "numeric", minute: "2-digit" },
+                      )}
+                    </p>
+                  )}
                 </div>
 
                 <div

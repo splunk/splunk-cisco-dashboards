@@ -942,7 +942,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Counts Attack Analyzer forensic detections in the selected window and separates Critical, High, Medium, Low, and Unknown severity over time."
+                "markdown": "Counts Attack Analyzer forensic detections in the selected window and separates Critical, High, Medium, Low, and Unknown severity over time. Investigate drivers adds separate Zscaler ZIA web threats by action, not correlated XDR incidents."
             }
         },
         "viz_card_06_singlevalue": {
@@ -1043,7 +1043,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Detection%20Severity&target=XDR%20-%20Attack%20Analyzer%20-%20Forensic%20Detections%20Engine%20Severity%20Pressure"
+                        "url": "/drilldown?origin=Detection%20Severity&target=XDR%20-%20Attack%20Analyzer%20-%20Forensic%20Detections%20Engine%20Severity%20Pressure,secure_networking_zscaler_zia_web_threats"
                     }
                 }
             ],

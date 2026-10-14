@@ -148,7 +148,7 @@ Macro discovery and data-model acceleration are separate checks. Use the readine
 | Intersight | `cisco:intersight:*` | `index_intersight` |
 | Cisco SD-WAN | `cisco:sdwan:*` | `index_sdwan` |
 | Data center | `cisco:dc:aci:*`, `cisco:dc:hyperfabric:*`, `cisco:dc:mds:*`, `cisco:dc:nd:*`, `cisco:dc:nexus9k*` | `index_dc` |
-| Security stack | Cisco XDR, Umbrella, Secure Access, Secure Endpoint, Isovalent, and related security sources | `index_security` |
+| Security stack | Cisco XDR, Umbrella, Secure Access, Secure Endpoint, Isovalent, Zscaler ZPA/ZIA, and related security sources | `index_security` |
 | F5 BIG-IP | `f5:bigip:*` | `index_f5` |
 | Duo | `cisco:duo:*` | `index_duo` |
 | Cyber Vision | `cisco:cybervision:*` | `index_cybervision` |
@@ -200,7 +200,7 @@ The **More** menu contains IT Health, NetOps Readiness, Security Resilience, Bui
 The library has three tabs: **Included** contains supplied dashboards, **Yours** contains managed dashboards owned by you, and **Shared** contains managed dashboards shared in the app that you have permission to read, including other users' dashboards. A dashboard you own and share appears in both **Yours** and **Shared**. Existing app-owned dashboards appear in **Shared**. Private dashboards do not appear in **Shared**.
 
 1. Open **More > Dashboard Manager** and select **Create New**.
-2. Enter a title and optional description, choose **Private** or **Shared in App** under **Permissions**, and select an **Absolute** or **Grid** layout.
+2. Enter a title and optional description, then choose who can see the dashboard: **Private** (selected initially) or **Shared in App**. Share a ready dashboard in the app so colleagues can benefit; app sharing requires permission to publish dashboards in this app. You can start privately and change its permissions on Splunk's **Dashboards** page to share it later if your role permits. Select an **Absolute** or **Grid** layout.
 3. Select **Create** once. The button shows **Creating…** while the request is in progress, and the editor opens when creation succeeds.
 
 If the title produces an existing dashboard ID, choose a different title or cancel and open the existing dashboard to edit it. Creating a dashboard does not overwrite the existing one. Creation errors remain visible inside the dialog.
@@ -351,7 +351,29 @@ Searchbase definitions are app-managed factory content. Workspace managers choos
 
 This Markdown file is the authoritative source for the in-product release history.
 
+::: release Release Notes | October 2026 - Version 1.0.60
+### Setup
+
+- Added a clear **Refresh status** action and last-checked time for data-model acceleration. Clarified that Splunk can still be building summaries after acceleration is enabled.
+
+### Dashboard Manager
+
+- Added **Sharing** to dashboard cards and the library table so users can see **Private**, **App**, or **All apps** at a glance. Labels refresh after a permission change.
+- Added **Permissions** to dashboard cards and table rows. Owners with the required Splunk permissions can promote a private dashboard to **Shared in App** or make it private again without leaving Dashboard Manager. The dialog checks current permissions and preserves ownership and existing edit access.
+- Defaulted new dashboards to **Private**, matching standard Splunk creation and avoiding an automatic app-sharing request for users without sharing permission.
+- Kept both visibility choices visible, encouraged app sharing for dashboards ready for colleagues, and explained how to share a private dashboard later. Reset the creation dialog to **Private** each time it is reopened.
+:::
+
 ::: release Release Notes | September 2026 - Version 1.0.55
+### Zscaler Zero Trust Access
+
+- Added eight Zscaler searches for data coverage, private application access, policy and connection reasons, unreachable applications, connection-status trends, ZIA enforcement outcomes, blocked web activity, and named web threats.
+- Distinguished repeated ZPA log records from distinct connection IDs and kept normal connection closures separate from explicit reachability failures.
+- Used the configurable security index scope and documented the required Zscaler add-on fields and interpretation limits.
+- Fixed Setup discovery to find Zscaler feeds outside existing index scopes and propose their indexes for `index_security`; administrators review and save the routing change.
+- Added recommended placement in existing ZTA dashboards to each Zscaler search description, including guidance for complementary ZPA panels on the remote-access dashboard.
+- Added Zscaler investigations to relevant cards across all six ZTA dashboards, preserving the six-card layouts and existing investigation choices. Labeled the Zscaler views as separate source detail.
+
 ### Insights Workspaces
 
 - Restored the update badge beside the installed version when Splunk reports a newer app release.

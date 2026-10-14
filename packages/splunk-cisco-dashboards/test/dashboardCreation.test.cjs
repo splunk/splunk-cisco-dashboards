@@ -212,3 +212,80 @@ test("one notification host survives Manager route changes above modal stacking 
     assert.ok(foreground > Number(match[1]), "Notifications must clear every existing app overlay");
   }
 });
+
+const privateAcl = {
+  owner: 'builder', app: 'splunk-cisco-dashboards', sharing: 'user',
+  can_change_perms: true, can_share_app: true, can_share_user: true,
+  perms: { read: ['reader'], write: ['editor'] },
+};
+const aclResponse = (acl) => ({ entry: [{ acl }] });
+const updateSharing = (api, sharing, expected = privateAcl) => api.updateDashboardPermissions(
+  'scd_creation_test', 'builder', 'splunk-cisco-dashboards', sharing, expected,
+);
+
+test('permission promotion reads fresh ACL and grants read access without changing writers or owner', async () => {
+  const api = persistence([aclResponse(privateAcl), { status: 200 }]);
+  assert.equal((await updateSharing(api, 'app')).status, 200);
+  assert.deepEqual(api.calls.map((call) => call.method), ['GET', 'POST']);
+  assert.match(api.calls[1].url.pathname, /servicesNS\/builder\/splunk-cisco-dashboards\/data\/ui\/views\/scd_creation_test\/acl$/);
+  assert.deepEqual(Object.fromEntries(new URLSearchParams(api.calls[1].body)), { owner: 'builder', sharing: 'app', 'perms.read': '*' });
+});
+
+test('making an app dashboard private preserves all role grants', async () => {
+  const acl = { ...privateAcl, sharing: 'app' };
+  const api = persistence([aclResponse(acl), { status: 200 }]);
+  assert.equal((await updateSharing(api, 'user', acl)).status, 200);
+  assert.deepEqual(Object.fromEntries(new URLSearchParams(api.calls[1].body)), { owner: 'builder', sharing: 'user' });
+});
+
+test('denied, missing and string-false capabilities never issue a permission write', async () => {
+  for (const flag of [false, '0', 0, undefined]) {
+    for (const key of ['can_change_perms', 'can_share_app']) {
+      const acl = { ...privateAcl, [key]: flag };
+      const api = persistence([aclResponse(acl)]);
+      assert.equal((await updateSharing(api, 'app', acl)).status, 403);
+      assert.equal(api.calls.length, 1);
+    }
+  }
+  const api = persistence([]);
+  for (const flag of [true, 1, '1']) {
+    assert.equal(api.canSetDashboardSharing({ can_change_perms: flag, can_share_app: flag }, 'app'), true);
+  }
+});
+
+test('concurrent ownership, sharing or role changes require a fresh review', async () => {
+  for (const change of [{ owner: 'someone' }, { sharing: 'app' }, { perms: { read: ['restricted'], write: ['editor'] } }, { perms: { read: ['reader'], write: ['other'] } }]) {
+    const api = persistence([aclResponse({ ...privateAcl, ...change })]);
+    assert.equal((await updateSharing(api, 'app')).status, 409);
+    assert.equal(api.calls.length, 1);
+  }
+});
+
+test('unchanged sharing and unsupported global changes do not write permissions', async () => {
+  const unchanged = persistence([aclResponse(privateAcl)]);
+  assert.equal((await updateSharing(unchanged, 'user')).status, 200);
+  assert.equal(unchanged.calls.length, 1);
+  const globalAcl = { ...privateAcl, sharing: 'global' };
+  const global = persistence([aclResponse(globalAcl)]);
+  assert.equal((await updateSharing(global, 'app', globalAcl)).status, 403);
+  assert.equal(global.calls.length, 1);
+  const invalid = persistence([]);
+  assert.equal((await updateSharing(invalid, 'global')).status, 400);
+  assert.equal(invalid.calls.length, 0);
+});
+
+test('permission load failures and malformed ACLs do not write, server denials surface', async () => {
+  for (const response of [{ status: 403 }, { status: 404 }, { entry: [] }]) {
+    const api = persistence([response]);
+    assert.ok((await updateSharing(api, 'app')).status >= 400);
+    assert.equal(api.calls.length, 1);
+  }
+  const api = persistence([aclResponse(privateAcl), { status: 403, messages: [{ text: 'Denied by Splunk' }] }]);
+  assert.equal((await updateSharing(api, 'app')).messages[0].text, 'Denied by Splunk');
+});
+
+test('permission requests encode the dashboard namespace without falling back to the current app', async () => {
+  const api = persistence([aclResponse(privateAcl)]);
+  await api.getDashboardPermissions('view/one', 'owner@example.com', 'another app');
+  assert.equal(api.calls[0].url.pathname, '/en-US/splunkd/__raw/servicesNS/owner%40example.com/another%20app/data/ui/views/view%2Fone');
+});

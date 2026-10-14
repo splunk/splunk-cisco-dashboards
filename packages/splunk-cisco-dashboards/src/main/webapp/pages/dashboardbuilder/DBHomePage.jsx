@@ -35,7 +35,7 @@ import Trash from "@splunk/react-icons/enterprise/Trash";
 import { TOAST_TYPES } from "@splunk/react-toast-notifications/ToastConstants";
 import { notifyDashboard, dashboardResponseMessage } from "./dashboardNotifications";
 import TextArea from "@splunk/react-ui/TextArea";
-import Select from "@splunk/react-ui/Select";
+import RadioList from "@splunk/react-ui/RadioList";
 import Tooltip from "@splunk/react-ui/Tooltip";
 import CustomTooltip from "../../common/components/CustomTooltip/CustomTooltip";
 import ManagerPreviewModal from "../../common/components/ManagerPreviewModal";
@@ -52,6 +52,7 @@ import QuestionCircle from "@splunk/react-icons/QuestionCircle";
 import Plus from "@splunk/react-icons/Plus";
 import ArrowSquareTopRight from "@splunk/react-icons/ArrowSquareTopRight";
 import Magnifier from "@splunk/react-icons/Magnifier";
+import DashboardPermissionsModal from "./DashboardPermissionsModal";
 import { initialDefinition } from "./DashboardStudioEditor";
 import DrilldownActionViz from "./DrilldownActionViz";
 import { INSIGHTS_APP_ID } from "../../common/lib/constants";
@@ -89,6 +90,11 @@ export const customPresets = {
   },
 };
 
+const DASHBOARD_SHARING_LABELS = new Map([
+  ["user", "Private"],
+  ["app", "App"],
+  ["global", "All apps"],
+]);
 const DASHBOARD_PAGE_SIZE = 20;
 const DASHBOARD_CARD_TITLE_LIMIT = 35;
 const DASHBOARD_CARD_DESCRIPTION_LIMIT = 140;
@@ -227,7 +233,7 @@ export default function DBHomePage() {
   const [openCreateDashboard, setOpenCreateDashboard] = useState(false);
   const [dashboardTitle, setDashboardTitle] = useState("");
   const [dashboardDescription, setDashboardDescription] = useState("");
-  const [dashboardSharing, setDashboardSharing] = useState("app");
+  const [dashboardSharing, setDashboardSharing] = useState("user");
   const [isCreatingDashboard, setIsCreatingDashboard] = useState(false);
   const [dashboardCreateError, setDashboardCreateError] = useState("");
   const [createdDashboardId, setCreatedDashboardId] = useState("");
@@ -241,6 +247,9 @@ export default function DBHomePage() {
   const [openDashboardMetadataEditor, setOpenDashboardMetadataEditor] =
     useState(false);
   const [dashboardMetadataTarget, setDashboardMetadataTarget] = useState();
+  const [permissionsTarget, setPermissionsTarget] = useState();
+  const [permissionsStatus, setPermissionsStatus] = useState("");
+  const permissionsReturnFocus = useRef(null);
   const [dashboardMetadataTitle, setDashboardMetadataTitle] = useState("");
   const [dashboardMetadataDescription, setDashboardMetadataDescription] =
     useState("");
@@ -429,7 +438,7 @@ export default function DBHomePage() {
   };
 
   const refreshDashboards = () => {
-    getDashboards().then((response) => {
+    return getDashboards().then((response) => {
       if (response.status >= 200 && response.status <= 299) {
         const { XMLParser } = require("fast-xml-parser");
         const parser = new XMLParser({
@@ -465,6 +474,7 @@ export default function DBHomePage() {
                 contentApp,
                 owner,
                 sharing,
+                sharingLabel: DASHBOARD_SHARING_LABELS.get(r.acl?.sharing) || "Unknown",
                 tag,
                 deleteLink: r.links?.remove || r.links?.edit,
                 title: r.name,
@@ -530,7 +540,7 @@ export default function DBHomePage() {
     setOpenCreateDashboard(false);
     setDashboardTitle("");
     setDashboardDescription("");
-    setDashboardSharing("app");
+    setDashboardSharing("user");
     setDashboardCreateError("");
     setCreatedDashboardId("");
     setGridLayout("absolute");
@@ -833,17 +843,22 @@ export default function DBHomePage() {
               </SplunkControlGroup>
             </div>
             <SplunkControlGroup
-              label={<span className="dashboard-builder-field-label">Permissions</span>}
+              label={<span className="dashboard-builder-field-label">Who can see this dashboard?</span>}
               labelPosition="top"
+              help="Share in the app when your dashboard is ready so colleagues can benefit. You can also start privately and use Permissions in Dashboard Manager later, if your role allows app sharing."
             >
-              <Select
+              <RadioList
                 value={dashboardSharing}
                 disabled={isCreatingDashboard || Boolean(createdDashboardId)}
                 onChange={(event, { value }) => setDashboardSharing(value)}
               >
-                <Select.Option label="Shared in App — Visible to app users" value="app" />
-                <Select.Option label="Private — Visible only to you" value="user" />
-              </Select>
+                <RadioList.Option value="user">
+                  Private — Only you can see it
+                </RadioList.Option>
+                <RadioList.Option value="app">
+                  Shared in App — Let other app users view and benefit from it
+                </RadioList.Option>
+              </RadioList>
             </SplunkControlGroup>
             <SplunkControlGroup
               className="dashboard-builder-mode-group"
@@ -964,6 +979,24 @@ export default function DBHomePage() {
         </Modal.Footer>
       </Modal>
 
+      <DashboardPermissionsModal
+        dashboard={permissionsTarget}
+        colorScheme={managerColorScheme}
+        themeStyle={dashboardBuilderModalThemeStyle}
+        returnFocus={() => {
+          const key = permissionsReturnFocus.current?.getAttribute("data-permissions-key");
+          const trigger = key
+            ? document.querySelector(`[data-permissions-key="${CSS.escape(key)}"]`)
+            : null;
+          (trigger || document.querySelector('[aria-label="Filter Dashboard Manager library"]'))?.focus();
+        }}
+        onClose={() => setPermissionsTarget(undefined)}
+        onSaved={async (sharing) => {
+          await refreshDashboards();
+          setPermissionsStatus(`Permissions for ${permissionsTarget.label || permissionsTarget.title} saved: ${sharing === "app" ? "Shared in App" : "Private"}.`);
+          setPermissionsTarget(undefined);
+        }}
+      />
       <Modal
         open={openDashboardMetadataEditor}
         className={`dashboard-builder-metadata-modal dashboard-builder-themed-modal dashboard-builder-themed-modal-${managerColorScheme}`}
@@ -1364,6 +1397,9 @@ export default function DBHomePage() {
               </ColumnLayout.Column>
             </ColumnLayout.Row>
 
+            <div role="status">
+              {permissionsStatus && <Message type="success">{permissionsStatus}</Message>}
+            </div>
             <ColumnLayout.Row
               id="dashboard-manager-library-results"
               role="tabpanel"
@@ -1425,6 +1461,8 @@ export default function DBHomePage() {
                         <Card.Body className="dashboard-manager-library-card-body">
                           <b>Author:</b> {dash.author || "Unknown"}
                           <br />
+                          <b>Sharing:</b> {dash.sharingLabel}
+                          <br />
                           <b>Description:</b>{" "}
                           <div
                             className="dashboard-manager-library-card-description"
@@ -1440,6 +1478,19 @@ export default function DBHomePage() {
                           <div className="dashboard-manager-card-footer-content">
                             <div className="dashboard-manager-card-footer-row">
                               <div className="dashboard-manager-library-card-actions">
+                                <Button
+                                  appearance="secondary"
+                                  label="Permissions"
+                                  aria-haspopup="dialog"
+                                  data-permissions-key={`${dash.app}/${dash.title}`}
+                                  aria-label={`Permissions for ${dash.label || dash.title}`}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    permissionsReturnFocus.current = event.currentTarget;
+                                    setPermissionsStatus("");
+                                    setPermissionsTarget(dash);
+                                  }}
+                                />
                                 <Tooltip content="Edit dashboard metadata">
                                   <Button
                                     appearance="subtle"
@@ -1503,12 +1554,13 @@ export default function DBHomePage() {
                   <div className="dashboard-manager-library-table-wrapper">
                     <Table className="dashboard-manager-library-table">
                       <Table.Head>
-                        <Table.HeadCell width={220}>Label</Table.HeadCell>
-                        <Table.HeadCell width={220}>Name</Table.HeadCell>
-                        <Table.HeadCell width={140}>Author</Table.HeadCell>
-                        <Table.HeadCell width={140}>App</Table.HeadCell>
+                        <Table.HeadCell width={180}>Label</Table.HeadCell>
+                        <Table.HeadCell width={180}>Name</Table.HeadCell>
+                        <Table.HeadCell width={90}>Author</Table.HeadCell>
+                        <Table.HeadCell width={130}>App</Table.HeadCell>
+                        <Table.HeadCell width={90}>Sharing</Table.HeadCell>
                         <Table.HeadCell>Description</Table.HeadCell>
-                        <Table.HeadCell width={320}>Actions</Table.HeadCell>
+                        <Table.HeadCell width={300}>Actions</Table.HeadCell>
                       </Table.Head>
                       <Table.Body>
                         {visibleDashboards.map((dash) => (
@@ -1517,6 +1569,7 @@ export default function DBHomePage() {
                             <Table.Cell>{dash.title}</Table.Cell>
                             <Table.Cell>{dash.author}</Table.Cell>
                             <Table.Cell>{dash.app}</Table.Cell>
+                            <Table.Cell>{dash.sharingLabel}</Table.Cell>
                             <Table.Cell>
                               <span
                                 className="dashboard-manager-library-table-description"
@@ -1527,6 +1580,19 @@ export default function DBHomePage() {
                             </Table.Cell>
                             <Table.Cell>
                               <div className="dashboard-manager-library-table-actions">
+                                <Button
+                                  appearance="secondary"
+                                  label="Permissions"
+                                  aria-haspopup="dialog"
+                                  data-permissions-key={`${dash.app}/${dash.title}`}
+                                  aria-label={`Permissions for ${dash.label || dash.title}`}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    permissionsReturnFocus.current = event.currentTarget;
+                                    setPermissionsStatus("");
+                                    setPermissionsTarget(dash);
+                                  }}
+                                />
                                 <Button
                                   appearance="primary"
                                   icon={<ArrowSquareTopRight />}

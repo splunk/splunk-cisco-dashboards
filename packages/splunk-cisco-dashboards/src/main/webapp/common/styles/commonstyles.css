@@ -6725,6 +6725,10 @@ body.dashboard-builder-modal-portal-dark
 }
 .dashboard-manager-library-table-wrapper {
     padding: 0;
+    overflow-x: auto;
+}
+.dashboard-manager-library-table-wrapper .dashboard-manager-library-table {
+    min-width: 1130px;
 }
 .dashboard-manager-library-table {
     width: 100%;

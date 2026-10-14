@@ -10,6 +10,7 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Added an explicit **Refresh status** action and last-checked time to Setup's data-model acceleration panel. Clarified that enabled acceleration can still be building summaries in the background.
 - Added Searchbase coverage for Hyperfabric ports, MDS health and congestion,
   Nexus DME sensors and BGP, Nexus Dashboard operational datasets and routing
   peers, Catalyst application inventory and SWIM, and SD-WAN SSE tunnel health.
@@ -188,8 +189,8 @@ networking pillars and workplace scenarios.
   artifacts, and the installed target when available.
 - Made Dashboard Manager easier to resume: library cards and preview dialogs
   now expose direct edit actions, and Searchbase picker rows start compact with
-  a toggle for full search metadata. New dashboards default to Shared in App,
-  with a Private option retained in the create dialog.
+  a toggle for full search metadata. New dashboards default to Private,
+  with Shared in App available explicitly when the user has sharing permission.
 - Restricted Dashboard Builder background uploads to bounded PNG, JPEG, GIF, or
   WebP data, persisted them through the capability-protected shared
   configuration handler, and ignore unsupported stored sources in the picker.

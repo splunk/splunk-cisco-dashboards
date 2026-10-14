@@ -118,7 +118,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Ranks selected-window telemetry events from ISE, ZTNA, and FMC. Product logging rates differ, so the bars show source volume rather than correlated users or relative control health."
+                "markdown": "Ranks selected-window telemetry events from ISE, ZTNA, and FMC. Product logging rates differ, so the bars show source volume rather than correlated users or relative control health. Investigate drivers adds separate Zscaler data coverage."
             }
         },
         "viz_card_01_singlevalue": {
@@ -196,7 +196,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Control%20Telemetry%20Volume&target=secure_networking_zta_user_activity_cross_source,secure_networking_infra_duo_application_access"
+                        "url": "/drilldown?origin=Control%20Telemetry%20Volume&target=secure_networking_zta_user_activity_cross_source,secure_networking_infra_duo_application_access,secure_networking_zscaler_coverage"
                     }
                 }
             ],
@@ -272,7 +272,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Counts selected-window private-application connection events and separates connected, denied, and unknown statuses over time."
+                "markdown": "Counts selected-window private-application connection events and separates connected, denied, and unknown statuses over time. Investigate drivers adds separate Zscaler ZPA application access."
             }
         },
         "viz_card_02_singlevalue": {
@@ -371,7 +371,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Private%20Application%20Access&target=Secure%20Networking%20-%20ZTA%20ZTNA%20Application%20Access%20Summary"
+                        "url": "/drilldown?origin=Private%20Application%20Access&target=Secure%20Networking%20-%20ZTA%20ZTNA%20Application%20Access%20Summary,secure_networking_zscaler_zpa_application_access"
                     }
                 }
             ],
@@ -447,7 +447,7 @@
                 "fontColor": "#a6adb6",
                 "fontSize": "custom",
                 "customFontSize": 15,
-                "markdown": "Counts blocked ZTNA requests in the selected window and ranks the policy, posture, certificate, and connector causes producing the most denials."
+                "markdown": "Counts blocked ZTNA requests in the selected window and ranks the policy, posture, certificate, and connector causes producing the most denials. Investigate drivers adds separate Zscaler ZPA policy and connection reasons."
             }
         },
         "viz_card_03_singlevalue": {
@@ -525,7 +525,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Access%20Denial%20Causes&target=Secure%20Networking%20-%20ZTA%20ZTNA%20Blocked%20Access%20Reasons"
+                        "url": "/drilldown?origin=Access%20Denial%20Causes&target=Secure%20Networking%20-%20ZTA%20ZTNA%20Blocked%20Access%20Reasons,secure_networking_zscaler_zpa_policy_activity"
                     }
                 }
             ],

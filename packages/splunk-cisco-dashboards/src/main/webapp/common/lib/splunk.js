@@ -94,9 +94,9 @@ const resolveDashboardOwner = async (owner, fallback = '') => {
     return (await getCurrentSplunkUsername()) || fallback;
 };
 
-const dashboardUrl = (owner, dashboardId = '') =>
+const dashboardUrl = (owner, dashboardId = '', app = INSIGHTS_APP_ID) =>
     `/en-US/splunkd/__raw/servicesNS/${encodeURIComponent(owner)}/${encodeURIComponent(
-        INSIGHTS_APP_ID,
+        app,
     )}/data/ui/views${dashboardId ? `/${encodeURIComponent(dashboardId)}` : ''}`;
 
 export const normalizeDashboardTheme = (theme, fallback) => {
@@ -118,6 +118,63 @@ export async function getDashboard(dashboardID, owner) {
     const namespaceOwner = await resolveDashboardOwner(owner, 'nobody');
     return requestJson(`${dashboardUrl(namespaceOwner, dashboardID)}?${jsonParams.toString()}`, {
         method: 'GET',
+    });
+}
+
+export const dashboardPermissionEnabled = (value) =>
+    value === true || value === 1 || value === '1';
+
+export const canSetDashboardSharing = (acl, sharing) =>
+    ['user', 'app'].includes(sharing) &&
+    dashboardPermissionEnabled(acl?.can_change_perms) &&
+    dashboardPermissionEnabled(acl?.[`can_share_${sharing}`]);
+
+export async function getDashboardPermissions(dashboardID, owner, app = INSIGHTS_APP_ID) {
+    const namespaceOwner = await resolveDashboardOwner(owner, 'nobody');
+    return requestJson(`${dashboardUrl(namespaceOwner, dashboardID, app)}?${jsonParams}`, {
+        method: 'GET',
+    });
+}
+
+const permissionFingerprint = (acl) => JSON.stringify({
+    owner: acl?.owner,
+    app: acl?.app,
+    sharing: acl?.sharing,
+    read: [...(acl?.perms?.read || [])].sort(),
+    write: [...(acl?.perms?.write || [])].sort(),
+});
+
+export async function updateDashboardPermissions(dashboardID, owner, app, sharing, expectedAcl) {
+    const failure = (status, text) => ({ status, messages: [{ type: 'ERROR', text }] });
+    if (!['user', 'app'].includes(sharing)) {
+        return failure(400, 'Choose Private or Shared in App.');
+    }
+    const current = await getDashboardPermissions(dashboardID, owner, app);
+    if (current.status < 200 || current.status > 299) {
+        return current;
+    }
+    const acl = current.entry?.[0]?.acl;
+    if (!acl?.owner || !acl?.sharing || !expectedAcl) {
+        return failure(502, 'Unable to read dashboard permissions. Close this dialog and try again.');
+    }
+    if (permissionFingerprint(acl) !== permissionFingerprint(expectedAcl)) {
+        return failure(409, 'Dashboard permissions changed while this dialog was open. Close it and reopen Permissions to review the latest settings.');
+    }
+    if (acl.sharing === sharing) {
+        return current;
+    }
+    if (!['user', 'app'].includes(acl.sharing) || !canSetDashboardSharing(acl, sharing)) {
+        return failure(403, 'Splunk does not allow you to make this visibility change. Ask the dashboard owner or a Splunk administrator.');
+    }
+    const body = new URLSearchParams({ owner: acl.owner, sharing });
+    // Promotion explicitly grants read access to app users. Omitted write grants
+    // stay unchanged; moving back to private does not replace role permissions.
+    if (sharing === 'app') {
+        body.set('perms.read', '*');
+    }
+    return requestJson(`${dashboardUrl(acl.owner, dashboardID, app)}/acl?${jsonParams}`, {
+        method: 'POST',
+        body: body.toString(),
     });
 }
 
