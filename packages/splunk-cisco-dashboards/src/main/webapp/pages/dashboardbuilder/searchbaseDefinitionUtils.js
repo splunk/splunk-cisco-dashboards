@@ -16,6 +16,7 @@ export const hasSearchbaseDataSources = (definition = {}) =>
 // Manager's time-span token or visualization extensions. Let users repair them.
 export const needsNativeStudioConversion = (definition = {}) =>
     requiresDashboardManagerRuntime(definition) ||
+    definition.applicationProperties?.hideEdit === true ||
     Object.values(definition.inputs || {}).some((input) =>
         input?.type === NATIVE_TIME_RANGE_INPUT_TYPE &&
         String(input.options?.defaultValue || '').split(',').length > 2,
@@ -135,6 +136,13 @@ export const resolveSearchbaseDefinitionForNativeStudio = async (definition = {}
     if (requiresDashboardManagerRuntime(resolvedDefinition)) {
         throw new Error('This dashboard contains other Dashboard Manager extensions. Replace its custom visualizations or inputs before converting. No changes were applied.');
     }
+
+    // Packaged Manager dashboards also hide editing inside the JSON itself.
+    // Native Studio reads this independently of the XML hiddenElements metadata.
+    resolvedDefinition.applicationProperties = {
+        ...resolvedDefinition.applicationProperties,
+        hideEdit: false,
+    };
 
     return {
         definition: resolvedDefinition,

@@ -29,6 +29,7 @@ function load(lookup = async () => ({ status: 200, entry: [{ content: { search: 
 }
 const definition = () => ({
     title: 'Conversion example',
+    applicationProperties: { collapseNavigation: true, hideEdit: true, hideExport: false },
     dataSources: {
         base: { type: 'ds.searchbase', name: 'Base search', options: { ref: 'my_search', ownerApp: 'another_app', queryParameters: { earliest: '$time.earliest$', latest: '$time.latest$', span: '$time.span$' } } },
         chain: { type: 'ds.chain', options: { extend: 'base', query: '| stats sum(count)' } },
@@ -56,6 +57,7 @@ test('conversion preserves exact stanza SPL, namespace, chain references, time t
     assert.deepEqual(plain(converted.inputs.time.options), { defaultValue: '-24h,now', token: 'time' });
     assert.equal(result.convertedDataSources, 1);
     assert.equal(result.convertedInputs, 1);
+    assert.deepEqual(plain(converted.applicationProperties), { collapseNavigation: true, hideEdit: false, hideExport: false });
 });
 test('Manager-only actions are removed from every tab and layout without dropping charts', async () => {
     const api = load();
@@ -104,6 +106,7 @@ test('other Manager extensions fail atomically instead of producing an unusable 
 test('native definitions and span-only partial conversions are detected correctly', () => {
     const api = load();
     assert.equal(api.needsNativeStudioConversion({}), false);
+    assert.equal(api.needsNativeStudioConversion({ applicationProperties: { hideEdit: true } }), true);
     assert.equal(api.needsNativeStudioConversion({ inputs: { time: { type: 'input.timerange', options: { defaultValue: '-7d,now' } } } }), false);
     assert.equal(api.needsNativeStudioConversion({ dataSources: { search: { type: 'ds.search', options: { query: '| makeresults', queryParameters: { span: '$time.span$' } } } } }), true);
 });
