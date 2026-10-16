@@ -351,6 +351,15 @@ Searchbase definitions are app-managed factory content. Workspace managers choos
 
 This Markdown file is the authoritative source for the in-product release history.
 
+::: release Release Notes | October 2026 - Version 1.0.70
+Release preparation is in progress. Publication and integrated-cloud AI Canvas validation are pending.
+
+### Dashboard Manager
+
+- Fixed native Studio conversion for older and Searchbase-backed dashboards: copied searches keep their SPL and time range, native time pickers no longer leave unresolved span parameters, and saved conversions appear in Splunk's dashboard list with native editing enabled. Convert remains available for partially converted copies. The dialog explains that Manager-only investigation controls are removed and that required macros, lookups, commands, and data must still exist.
+- Matched the native Dashboard Studio panel toolbar order: **Open in Search**, **Inspect**, **Fullscreen**, **Refresh**, **Add to AI Canvas**, and **Export**. Inspect opens the running search job. On eligible Cisco Cloud Control integrations, AI Canvas supports native and Searchbase-backed panels, carries their resolved search and time range with a bounded result preview, and offers new or existing canvases. Canvas availability and access remain controlled by Splunk and Cisco Cloud Control.
+:::
+
 ::: release Release Notes | October 2026 - Version 1.0.60
 ### Setup
 
@@ -358,8 +367,6 @@ This Markdown file is the authoritative source for the in-product release histor
 
 ### Dashboard Manager
 
-- Fixed native Studio conversion for older and Searchbase-backed dashboards: copied searches keep their SPL and time range, native time pickers no longer leave unresolved span parameters, and saved conversions appear in Splunk's dashboard list with native editing enabled. Convert remains available for partially converted copies. The dialog explains that Manager-only investigation controls are removed and that required macros, lookups, commands, and data must still exist.
-- Matched the native Dashboard Studio panel toolbar order: **Open in Search**, **Inspect**, **Fullscreen**, **Refresh**, **Add to AI Canvas**, and **Export**. Inspect opens the running search job. On eligible Cisco Cloud Control integrations, AI Canvas supports native and Searchbase-backed panels, carries their resolved search and time range with a bounded result preview, and offers new or existing canvases. Canvas availability and access remain controlled by Splunk and Cisco Cloud Control.
 - Added **Sharing** to dashboard cards and the library table so users can see **Private**, **App**, or **All apps** at a glance. Labels refresh after a permission change.
 - Added **Permissions** to dashboard cards and table rows. Owners with the required Splunk permissions can promote a private dashboard to **Shared in App** or make it private again without leaving Dashboard Manager. The dialog checks current permissions and preserves ownership and existing edit access.
 - Defaulted new dashboards to **Private**, matching standard Splunk creation and avoiding an automatic app-sharing request for users without sharing permission.
