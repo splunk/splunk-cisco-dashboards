@@ -354,6 +354,10 @@ This Markdown file is the authoritative source for the in-product release histor
 ::: release Release Notes | October 2026 - Version 1.0.70
 Release preparation is in progress. Publication and integrated-cloud AI Canvas validation are pending.
 
+### Setup
+
+- Restored **Refresh status** and the last-checked time in the current **Configure data** step, so acceleration can be checked again without leaving setup or saving the draft plan. The check confirms that acceleration is enabled; summary building may still be in progress.
+
 ### Dashboard Manager
 
 - Fixed native Studio conversion for older and Searchbase-backed dashboards: copied searches keep their SPL and time range, native time pickers no longer leave unresolved span parameters, and saved conversions appear in Splunk's dashboard list with native editing enabled. Convert remains available for partially converted copies. The dialog explains that Manager-only investigation controls are removed and that required macros, lookups, commands, and data must still exist.

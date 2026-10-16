@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import PropTypes from 'prop-types';
 import { ActionButton } from '@splunk/dashboard-action-buttons';
 import InformationCircle from '@splunk/react-icons/InformationCircle';
 import LayoutStacked from '@splunk/react-icons/LayoutStacked';
@@ -23,16 +24,25 @@ const DestinationSelector = styled(RadioBar)`
     margin-bottom: ${variables.spacingLarge};
 `;
 
+const panelPropTypes = {
+    itemDefinition: PropTypes.shape({
+        title: PropTypes.string,
+        dataSources: PropTypes.shape({ primary: PropTypes.string }),
+    }).isRequired,
+    dataSources: PropTypes.objectOf(PropTypes.object).isRequired,
+    dashboardApi: PropTypes.object.isRequired,
+};
+
 export function InspectPanelAction({ itemDefinition, dataSources, dashboardApi }) {
     const trigger = useRef(null);
     const [error, setError] = useState('');
-    if (!isCanvasSource(dataSources?.[itemDefinition?.dataSources?.primary])) return null;
+    if (!isCanvasSource(dataSources?.[itemDefinition?.dataSources?.primary])) {return null;}
     const inspect = async () => {
         const popup = window.open('', '_blank', 'left=100,top=200,width=760,height=600');
-        if (popup) popup.opener = null;
+        if (popup) {popup.opener = null;}
         try {
             const sid = await panelSearchId(dashboardApi, itemDefinition);
-            if (!popup) throw new Error('Allow pop-ups to open the search job inspector.');
+            if (!popup) {throw new Error('Allow pop-ups to open the search job inspector.');}
             popup.location.href = inspectorUrl(sid);
         } catch (failure) {
             popup?.close();
@@ -50,6 +60,8 @@ export function InspectPanelAction({ itemDefinition, dataSources, dashboardApi }
         </PanelModal>
     </>;
 }
+
+InspectPanelAction.propTypes = panelPropTypes;
 
 function CanvasDialog({ onClose, returnFocus, itemDefinition, dataSources, dashboardApi }) {
     const [mode, setMode] = useState('new');
@@ -75,21 +87,21 @@ function CanvasDialog({ onClose, returnFocus, itemDefinition, dataSources, dashb
         operation.current = controller;
         canvasIntegration.openSession(controller.signal).then(async (client) => {
             const page = await client.list(0, controller.signal);
-            if (controller.signal.aborted) return;
+            if (controller.signal.aborted) {return;}
             session.current = client;
             setBoards(page.boards);
             setOffset(page.boards.length);
             setTotal(page.total);
         }).catch((failure) => {
-            if (!controller.signal.aborted) setError(failure.message);
+            if (!controller.signal.aborted) {setError(failure.message);}
         }).finally(() => {
-            if (!controller.signal.aborted) setLoading(false);
+            if (!controller.signal.aborted) {setLoading(false);}
         });
         return () => { controller.abort(); operation.current?.abort(); };
     }, []);
 
     const loadMore = async () => {
-        if (busy.current) return;
+        if (busy.current) {return;}
         busy.current = true;
         setLoading(true);
         setError('');
@@ -98,21 +110,21 @@ function CanvasDialog({ onClose, returnFocus, itemDefinition, dataSources, dashb
             operation.current = controller;
             const client = session.current || await canvasIntegration.openSession(controller.signal);
             const page = await client.list(offset, controller.signal);
-            if (controller.signal.aborted) return;
+            if (controller.signal.aborted) {return;}
             session.current = client;
             setBoards((previous) => [...new Map([...previous, ...page.boards].map((board) => [board.boardId, board])).values()]);
             setOffset((previous) => previous + page.boards.length);
             // An empty page must not advertise an endless load-more loop.
             setTotal(page.boards.length ? page.total : offset);
         } catch (failure) {
-            if (!operation.current?.signal.aborted) setError(failure.message);
-        } finally { busy.current = false; if (!operation.current?.signal.aborted) setLoading(false); }
+            if (!operation.current?.signal.aborted) {setError(failure.message);}
+        } finally { busy.current = false; if (!operation.current?.signal.aborted) {setLoading(false);} }
     };
 
     const add = async () => {
-        if (busy.current || complete) return;
+        if (busy.current || complete) {return;}
         setSubmitted(true);
-        if (!cardTitle.trim() || (mode === 'new' && (!title.trim() || !description.trim())) || (mode === 'existing' && !selectedBoard)) return;
+        if (!cardTitle.trim() || (mode === 'new' && (!title.trim() || !description.trim())) || (mode === 'existing' && !selectedBoard)) {return;}
         busy.current = true;
         setAdding(true);
         setError('');
@@ -120,7 +132,7 @@ function CanvasDialog({ onClose, returnFocus, itemDefinition, dataSources, dashb
         operation.current = controller;
         // Reserve a window during the user gesture, before asynchronous requests.
         const popup = window.open('', '_blank');
-        if (popup) popup.opener = null;
+        if (popup) {popup.opener = null;}
         try {
             const panel = await canvasIntegration.preparePanel(dashboardApi, itemDefinition, dataSources, controller.signal);
             const client = session.current || await canvasIntegration.openSession(controller.signal);
@@ -130,31 +142,31 @@ function CanvasDialog({ onClose, returnFocus, itemDefinition, dataSources, dashb
                 boardId = await client.create(title.trim(), description.trim(), controller.signal);
                 createdBoard.current = { id: boardId };
             }
-            if (controller.signal.aborted) return;
+            if (controller.signal.aborted) {return;}
             const cardIds = await client.add(boardId, panel, cardTitle.trim(), controller.signal);
             // Once the card exists, a cross-launch failure must never cause a
             // retry to create a duplicate card. Keep a separate Open action.
             setComplete({ boardId, cardIds });
             const url = await canvasIntegration.launchUrl(boardId, cardIds, controller.signal);
-            if (controller.signal.aborted) return;
+            if (controller.signal.aborted) {return;}
             if (popup) { popup.location.href = url; onClose(); }
-            else setComplete({ boardId, cardIds, url });
+            else {setComplete({ boardId, cardIds, url });}
         } catch (failure) {
             popup?.close();
-            if (!controller.signal.aborted) setError(failure.message || 'Failed to add card to AI Canvas. Try again.');
+            if (!controller.signal.aborted) {setError(failure.message || 'Failed to add card to AI Canvas. Try again.');}
         } finally {
             busy.current = false;
-            if (!controller.signal.aborted) setAdding(false);
+            if (!controller.signal.aborted) {setAdding(false);}
         }
     };
 
     const openCreated = async () => {
-        if (busy.current) return;
+        if (busy.current) {return;}
         busy.current = true;
         const popup = window.open('', '_blank');
-        if (popup) popup.opener = null;
+        if (popup) {popup.opener = null;}
         try {
-            if (!popup) throw new Error('Allow pop-ups to open AI Canvas. Your card has already been added.');
+            if (!popup) {throw new Error('Allow pop-ups to open AI Canvas. Your card has already been added.');}
             popup.location.href = complete.url || await canvasIntegration.launchUrl(complete.boardId, complete.cardIds);
             onClose();
         } catch (failure) { popup?.close(); setError(failure.message); }
@@ -162,6 +174,12 @@ function CanvasDialog({ onClose, returnFocus, itemDefinition, dataSources, dashb
     };
 
     const missing = (value) => submitted && !value.trim();
+    let submitLabel = 'Add to AI Canvas';
+    if (complete) {
+        submitLabel = 'Open AI Canvas';
+    } else if (adding) {
+        submitLabel = 'Adding to AI Canvas…';
+    }
     return <PanelModal open returnFocus={returnFocus} onRequestClose={onClose} closeOnClickAway={false}
         data-test="add-to-ai-canvas-dialog" $width={600}>
         <Modal.Header title="Add to AI Canvas" />
@@ -196,11 +214,17 @@ function CanvasDialog({ onClose, returnFocus, itemDefinition, dataSources, dashb
         </Modal.Body>
         <Modal.Footer>
             <Button appearance="subtle" label={complete ? 'Close' : 'Cancel'} onClick={onClose} />
-            <Button appearance="primary" label={complete ? 'Open AI Canvas' : adding ? 'Adding to AI Canvas…' : 'Add to AI Canvas'}
+            <Button appearance="primary" label={submitLabel}
                 onClick={complete ? openCreated : add} disabled={adding || loading} />
         </Modal.Footer>
     </PanelModal>;
 }
+
+CanvasDialog.propTypes = {
+    ...panelPropTypes,
+    onClose: PropTypes.func.isRequired,
+    returnFocus: PropTypes.shape({ current: PropTypes.instanceOf(Element) }).isRequired,
+};
 
 export function AddToCanvasPanelAction(props) {
     const [eligible, setEligible] = useState(false);
@@ -208,15 +232,17 @@ export function AddToCanvasPanelAction(props) {
     const trigger = useRef(null);
     const supported = isCanvasSource(props.dataSources?.[props.itemDefinition?.dataSources?.primary]);
     useEffect(() => {
-        if (!supported) return undefined;
+        if (!supported) {return undefined;}
         let active = true;
-        canvasIntegration.isEligible().then((result) => { if (active) setEligible(result); });
+        canvasIntegration.isEligible().then((result) => { if (active) {setEligible(result);} });
         return () => { active = false; };
     }, [supported]);
-    if (!supported || !eligible) return null;
+    if (!supported || !eligible) {return null;}
     return <>
         <ActionButton title="Add to AI Canvas" aria-label="Add to AI Canvas" data-test="add-to-ai-canvas-button"
             icon={<LayoutStacked width={18} height={18} />} elementRef={trigger} onClick={() => setOpen(true)} />
         {open && <CanvasDialog {...props} returnFocus={trigger} onClose={() => setOpen(false)} />}
     </>;
 }
+
+AddToCanvasPanelAction.propTypes = panelPropTypes;

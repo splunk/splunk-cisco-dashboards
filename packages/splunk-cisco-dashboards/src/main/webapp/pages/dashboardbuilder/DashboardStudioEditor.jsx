@@ -168,7 +168,7 @@ const calculateWidthFitScale = ({ canvasWidth, viewportWidth }) =>
 
 const StyledCardContent = styled.div`
   height: 160px;
-  background: #ffffff;
+  background: #fff;
 `;
 
 const EXPORT_TRACKED_DATA_SOURCE_TYPES = new Set([
@@ -2352,7 +2352,9 @@ const DashboardStudioEditor = ({
   };
 
   const convertDashboard = async () => {
-    if (conversionInFlight.current) return;
+    if (conversionInFlight.current) {
+      return;
+    }
     conversionInFlight.current = true;
     conversionCancelled.current = false;
     setIsConverting(true);
@@ -2367,7 +2369,9 @@ const DashboardStudioEditor = ({
         dashboardApiElem.current.getDefinition(),
       );
 
-      if (conversionCancelled.current) return;
+      if (conversionCancelled.current) {
+        return;
+      }
       dashboardApiElem.current.updateDefinition(def);
 
       setOpenConvertModal(false);
@@ -2380,7 +2384,9 @@ const DashboardStudioEditor = ({
         type: TOAST_TYPES.SUCCESS,
       });
     } catch (error) {
-      if (!conversionCancelled.current) setConversionError(`Unable to convert the dashboard. ${getSafeErrorMessage(error)}`);
+      if (!conversionCancelled.current) {
+        setConversionError(`Unable to convert the dashboard. ${getSafeErrorMessage(error)}`);
+      }
     } finally {
       conversionInFlight.current = false;
       setIsConverting(false);
@@ -2498,14 +2504,14 @@ const DashboardStudioEditor = ({
               picker to its native Studio equivalent. The converted definition
               can then open directly in Dashboard Studio. It no longer
               receives Searchbase SPL updates automatically. Native time ranges
-              use the binning in the copied SPL instead of Manager's span override.
+              use the binning in the copied SPL instead of Manager&apos;s span override.
             </p>
             <p>
               Manager-only <b>Investigate drivers</b> and <b>About this metric</b>
               {" "}controls are removed from this definition. Charts, tables,
               descriptions, and inline searches are retained. Other unsupported
               extensions must be replaced before conversion can finish.
-              Review and save to make the dashboard visible in Splunk's dashboard list.
+              Review and save to make the dashboard visible in Splunk&apos;s dashboard list.
             </p>
             <p>
               Conversion does <b>not</b> package or remove environmental

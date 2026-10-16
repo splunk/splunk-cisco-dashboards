@@ -25,23 +25,24 @@ export function firstObservable(source) {
     return new Promise((resolve, reject) => {
         let subscription;
         let settled = false;
+        let timer;
         const finish = (error, value) => {
-            if (settled) return;
+            if (settled) {return;}
             settled = true;
             clearTimeout(timer);
             subscription?.unsubscribe();
-            if (error) reject(error);
-            else resolve(value);
+            if (error) {reject(error);}
+            else {resolve(value);}
         };
-        const timer = setTimeout(() => finish(new Error('The panel search is not ready. Try again.')), REQUEST_TIMEOUT);
+        timer = setTimeout(() => finish(new Error('The panel search is not ready. Try again.')), REQUEST_TIMEOUT);
         try {
             subscription = source?.subscribe({
                 next: (value) => finish(null, value),
                 error: (error) => finish(error),
                 complete: () => finish(new Error('The panel search has no search job.')),
             });
-            if (!subscription) finish(new Error('The panel search has no search job.'));
-            if (settled) subscription?.unsubscribe();
+            if (!subscription) {finish(new Error('The panel search has no search job.'));}
+            if (settled) {subscription?.unsubscribe();}
         } catch (error) {
             finish(error);
         }
@@ -56,38 +57,38 @@ export async function panelSearchId(dashboardApi, itemDefinition) {
     const id = itemDefinition?.dataSources?.primary;
     const controller = panelController(dashboardApi, id);
     const metaSid = dashboardApi?.getDataSourceMetaData?.(id)?.sid;
-    if (typeof metaSid === 'string' && metaSid) return metaSid;
+    if (typeof metaSid === 'string' && metaSid) {return metaSid;}
     const source = controller?.dataSource;
     const sid = await firstObservable(source?.getSid?.() || source?.searchJob?.getSid() || source?.splunkSearch?.searchJob?.getSid());
-    if (typeof sid !== 'string' || !sid) throw new Error('The panel search is not ready. Try again.');
+    if (typeof sid !== 'string' || !sid) {throw new Error('The panel search is not ready. Try again.');}
     return sid;
 }
 
 // Resolve chain roots through their running controllers, including Searchbase's
 // resolved SPL and submitted tokens. Never dispatch another search for a handoff.
 export function resolvePanelQuery(dashboardApi, dataSources, id, visited = new Set()) {
-    if (!id || visited.has(id)) throw new Error('The panel has an invalid search chain.');
+    if (!id || visited.has(id)) {throw new Error('The panel has an invalid search chain.');}
     visited.add(id);
     const controller = panelController(dashboardApi, id);
     const source = controller?.def || dataSources?.[id];
-    if (!isCanvasSource(source)) throw new Error('This panel does not have a supported search.');
+    if (!isCanvasSource(source)) {throw new Error('This panel does not have a supported search.');}
     const runtime = controller?.dataSource;
     const query = runtime?.options?.search || runtime?.options?.query || source.options?.query;
     if (source.type === 'ds.chain') {
         const base = resolvePanelQuery(dashboardApi, dataSources, source.options?.extend, visited);
-        if (typeof query !== 'string' || !query.trim()) throw new Error('The panel search is not ready. Try again.');
+        if (typeof query !== 'string' || !query.trim()) {throw new Error('The panel search is not ready. Try again.');}
         return `${base}\n${query}`;
     }
-    if (typeof query !== 'string' || !query.trim()) throw new Error('The panel search is not ready. Try again.');
+    if (typeof query !== 'string' || !query.trim()) {throw new Error('The panel search is not ready. Try again.');}
     return query;
 }
 
 export function chainPostprocess(dashboardApi, dataSources, id, seen = new Set()) {
-    if (!id || seen.has(id)) throw new Error('The panel has an invalid search chain.');
+    if (!id || seen.has(id)) {throw new Error('The panel has an invalid search chain.');}
     seen.add(id);
     const controller = panelController(dashboardApi, id);
     const source = controller?.def || dataSources?.[id];
-    if (source?.type !== 'ds.chain') return '';
+    if (source?.type !== 'ds.chain') {return '';}
     const query = controller?.dataSource?.options?.search || controller?.dataSource?.options?.query || source.options?.query;
     return `${chainPostprocess(dashboardApi, dataSources, source.options?.extend, seen)}\n${query || ''}`.trim();
 }
@@ -106,7 +107,7 @@ export function buildCanvasCard(panel, title) {
         searchMetadata: panel.searchMetadata,
         vizOptions: { vizType: canvasVisualization(panel.type) },
     };
-    if (panel.savedSearch) props.savedSearch = { type: 'report', ...panel.savedSearch };
+    if (panel.savedSearch) {props.savedSearch = { type: 'report', ...panel.savedSearch };}
     return { cards: [{
         sources: [{ name: 'spl', query: panel.searchMetadata.query.query }],
         userData: { text: { content: JSON.stringify({ vizOptions: props.vizOptions }), contentType: 'SPL_WIDGET_TEXT' } },
@@ -126,14 +127,14 @@ export function createCanvasIntegration({ fetchImpl = (...args) => fetch(...args
         const timeout = new AbortController();
         const abort = () => timeout.abort();
         init.signal?.addEventListener('abort', abort, { once: true });
-        if (init.signal?.aborted) abort();
+        if (init.signal?.aborted) {abort();}
         const timer = setTimeout(abort, REQUEST_TIMEOUT);
         try {
             const response = await fetchImpl(url, { ...init, signal: timeout.signal, redirect: 'error' });
-            if (!response.ok) throw new Error(`${message} (HTTP ${response.status})`);
+            if (!response.ok) {throw new Error(`${message} (HTTP ${response.status})`);}
             return await response.json();
         } catch (error) {
-            if (error.name === 'AbortError') throw new Error('The request was interrupted. Check AI Canvas before trying again.');
+            if (error.name === 'AbortError') {throw new Error('The request was interrupted. Check AI Canvas before trying again.');}
             throw error;
         } finally {
             clearTimeout(timer);
@@ -151,11 +152,11 @@ export function createCanvasIntegration({ fetchImpl = (...args) => fetch(...args
             headers: { ...getDefaultFetchInit().headers, 'Content-Type': 'application/x-www-form-urlencoded' },
         });
         const token = tokens.entry?.[0]?.content?.token;
-        if (!token) return false;
+        if (!token) {return false;}
         const claims = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
         const issuer = httpsUrl(claims.iss);
         const user = await json(`${issuer.origin}/oauth2/v1/userinfo`, { headers: { Authorization: `Bearer ${token}` } });
-        if (user.email_verified !== true || !user.email) return false;
+        if (user.email_verified !== true || !user.email) {return false;}
         const bases = features.entry?.find((item) => item.name === 'feature:c3_base_urls')?.content || {};
         const tenants = httpsUrl(`https://${bases.tenants_base_url || 'api.preview.cloud.cisco.com'}`);
         const waitlist = httpsUrl(`https://${bases.waitlist_base_url || 'preview.cloud.cisco.com'}`);
@@ -172,11 +173,11 @@ export function createCanvasIntegration({ fetchImpl = (...args) => fetch(...args
     async function checkEligibility() {
         const features = await local('web-features?output_mode=json', { app: '-', owner: '-', sharing: 'system' });
         const c3 = features.entry?.find((item) => item.name === 'feature:c3')?.content;
-        if (!enabled(c3?.c3_integration_enabled)) return false;
+        if (!enabled(c3?.c3_integration_enabled)) {return false;}
         const query = encode(JSON.stringify({ $and: [{ _key: 'status' }] }));
         const statuses = await local(`storage/collections/data/C3Eligibility?query=${query}`, { app: 'system', owner: currentUser });
         const status = statuses?.[0];
-        if (status) return status.isEmailVerified === true && status.isTACSigned === true && status.signupStatus === 'approved';
+        if (status) {return status.isEmailVerified === true && status.isTACSigned === true && status.signupStatus === 'approved';}
         return eligibilityFallback(features);
     }
 
@@ -195,9 +196,9 @@ export function createCanvasIntegration({ fetchImpl = (...args) => fetch(...args
         ]);
         const baseUrl = httpsUrl(firstContent(config).ai_canvas_base_url);
         endpoint = Promise.resolve(config);
-        if (!auth.access_token) throw new Error('Failed to get AI Canvas access. Contact your Splunk administrator.');
+        if (!auth.access_token) {throw new Error('Failed to get AI Canvas access. Contact your Splunk administrator.');}
         // Use only Canvas headers for Cisco requests; never forward Splunk cookies or CSRF headers.
-        const remote = (path, init = {}, message) => json(`${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}${path}`, {
+        const remote = (path, init, message) => json(`${baseUrl.origin}${baseUrl.pathname.replace(/\/$/, '')}${path}`, {
             ...init, credentials: 'omit', headers: {
                 'x-aiassistant-client-product': 'canvas-splunk', Authorization: `Bearer ${auth.access_token}`,
                 ...(init.body ? { 'Content-Type': 'application/json' } : {}),
@@ -206,17 +207,17 @@ export function createCanvasIntegration({ fetchImpl = (...args) => fetch(...args
         return {
             async list(offset = 0, requestSignal = signal) {
                 const result = await remote(`/api/ai-studio/v2/boards?${new URLSearchParams({ sortBy: 'NAME', orderBy: 'ASC', limit: '50', offset: String(offset) })}`, { signal: requestSignal }, 'Failed to get canvases. Try again.');
-                if (!Array.isArray(result.boards) || !Number.isFinite(result.total) || result.total < 0) throw new Error('AI Canvas returned an invalid canvas list.');
+                if (!Array.isArray(result.boards) || !Number.isFinite(result.total) || result.total < 0) {throw new Error('AI Canvas returned an invalid canvas list.');}
                 return { boards: result.boards, total: result.total };
             },
             async create(name, description, requestSignal) {
                 const result = await remote('/api/ai-studio/v2/boards', { method: 'POST', signal: requestSignal, body: JSON.stringify({ name, description, metadata: {} }) }, 'Failed to create canvas. Check AI Canvas before trying again.');
-                if (!result.board?.boardId) throw new Error('AI Canvas did not return the created canvas ID.');
+                if (!result.board?.boardId) {throw new Error('AI Canvas did not return the created canvas ID.');}
                 return result.board.boardId;
             },
             async add(boardId, panel, title, requestSignal) {
                 const result = await remote(`/api/ai-studio/v2/boards/${encode(boardId)}/cards`, { method: 'POST', signal: requestSignal, body: JSON.stringify(buildCanvasCard(panel, title)) }, 'Failed to add card. Check AI Canvas before trying again.');
-                if (!Array.isArray(result.cardId) || !result.cardId.length) throw new Error('AI Canvas did not return the created card ID.');
+                if (!Array.isArray(result.cardId) || !result.cardId.length) {throw new Error('AI Canvas did not return the created card ID.');}
                 return result.cardId;
             },
         };
@@ -224,7 +225,7 @@ export function createCanvasIntegration({ fetchImpl = (...args) => fetch(...args
 
     async function preparePanel(dashboardApi, itemDefinition, dataSources, signal) {
         const id = itemDefinition?.dataSources?.primary;
-        if (!isCanvasSource(dataSources?.[id])) throw new Error('This panel does not have a supported search.');
+        if (!isCanvasSource(dataSources?.[id])) {throw new Error('This panel does not have a supported search.');}
         const sid = await panelSearchId(dashboardApi, itemDefinition);
         const controller = panelController(dashboardApi, id);
         const context = controller?.dataSource?.context || controller?.dataSource?.splunkSearch?.context || {};
@@ -233,22 +234,22 @@ export function createCanvasIntegration({ fetchImpl = (...args) => fetch(...args
         let query;
         try { query = dashboardApi.getCompleteSearchQueryAndParameters(id)?.query; } catch { /* Custom sources are resolved below. */ }
         const hasSearchbase = (sourceId, seen = new Set()) => {
-            if (!sourceId || seen.has(sourceId)) return false;
+            if (!sourceId || seen.has(sourceId)) {return false;}
             seen.add(sourceId);
             const source = dataSources?.[sourceId];
             return source?.type === 'ds.searchbase' || (source?.type === 'ds.chain' && hasSearchbase(source.options?.extend, seen));
         };
-        if (hasSearchbase(id) || !query) query = dataSources[id].type === 'ds.chain'
+        if (hasSearchbase(id) || !query) {query = dataSources[id].type === 'ds.chain'
             ? resolvePanelQuery(dashboardApi, dataSources, id)
-            : job.request?.search || job.search || resolvePanelQuery(dashboardApi, dataSources, id);
-        if (typeof query !== 'string' || !query.trim() || /\$[\w.]+\$/.test(query)) throw new Error('The panel search has unresolved inputs. Run the panel search and try again.');
+            : job.request?.search || job.search || resolvePanelQuery(dashboardApi, dataSources, id);}
+        if (typeof query !== 'string' || !query.trim() || /\$[\w.]+\$/.test(query)) {throw new Error('The panel search has unresolved inputs. Run the panel search and try again.');}
         const previewParams = new URLSearchParams({ output_mode: 'json_cols', add_summary_to_metadata: 'true', count: String(CANVAS_PREVIEW_ROWS), offset: '0' });
-        if (dataSources[id].type === 'ds.chain') previewParams.set('search', chainPostprocess(dashboardApi, dataSources, id));
+        if (dataSources[id].type === 'ds.chain') {previewParams.set('search', chainPostprocess(dashboardApi, dataSources, id));}
         const preview = await local(`search/v2/jobs/${encode(sid)}/results_preview?${previewParams}`, namespace, { signal }, 'Failed to get panel search results.');
-        if (!Array.isArray(preview.fields) || !Array.isArray(preview.columns)) throw new Error('The panel search did not return usable results.');
-        if (!preview.columns.every(Array.isArray)) throw new Error('The panel search returned invalid result columns.');
+        if (!Array.isArray(preview.fields) || !Array.isArray(preview.columns)) {throw new Error('The panel search did not return usable results.');}
+        if (!preview.columns.every(Array.isArray)) {throw new Error('The panel search returned invalid result columns.');}
         const resultsData = { fields: preview.fields, columns: preview.columns.map((column) => column.slice(0, CANVAS_PREVIEW_ROWS)) };
-        if (JSON.stringify(resultsData).length > 5 * 1024 * 1024) throw new Error('The panel preview is too large for AI Canvas. Reduce the panel result size and try again.');
+        if (JSON.stringify(resultsData).length > 5 * 1024 * 1024) {throw new Error('The panel preview is too large for AI Canvas. Reduce the panel result size and try again.');}
         const earliest = job.request?.earliest_time ?? job.earliestTime ?? '';
         const latest = job.request?.latest_time ?? job.latestTime ?? '';
         const panel = {
@@ -260,9 +261,9 @@ export function createCanvasIntegration({ fetchImpl = (...args) => fetch(...args
             } },
         };
         if (dataSources[id].type === 'ds.savedSearch') {
-            const options = dataSources[id].options;
+            const {options} = dataSources[id];
             const saved = (await local(`saved/searches/${encode(options.ref)}?output_mode=json`, { app: options.app || currentApp, owner: '-' }, { signal })).entry?.[0];
-            if (!saved?.content || !saved?.acl) throw new Error('Failed to get report details.');
+            if (!saved?.content || !saved?.acl) {throw new Error('Failed to get report details.');}
             panel.savedSearch = {
                 snapshotTime: earliest ? `${earliest} to ${latest}` : `before ${latest}`,
                 alternateLink: saved.links?.alternate || '',

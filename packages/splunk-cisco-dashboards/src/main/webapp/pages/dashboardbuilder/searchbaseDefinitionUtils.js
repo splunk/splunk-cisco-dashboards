@@ -118,9 +118,10 @@ export const resolveSearchbaseDefinitionForNativeStudio = async (definition = {}
 
     // span is a Manager-only dispatch option, not a native search parameter.
     // Keeping it blocks dispatch because input.timerange only sets earliest/latest.
-    Object.values(dataSources).forEach((source) => {
+    Object.entries(dataSources).forEach(([id, source]) => {
         if (source.type === SEARCH_DATA_SOURCE_TYPE && source.options?.queryParameters) {
-            delete source.options.queryParameters.span;
+            const { span, ...queryParameters } = source.options.queryParameters;
+            dataSources[id] = { ...source, options: { ...source.options, queryParameters } };
         }
     });
 

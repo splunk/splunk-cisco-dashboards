@@ -59,7 +59,7 @@ export const SingleValueContainer = styled.div`
         &::before,
         &::after {
             background: none;
-            width: 0px;
+            width: 0;
         }
         > div div:nth-child(2) {
             justify-content: left;
@@ -169,7 +169,7 @@ export const StyledControlGroup = styled(ControlGroup)`
 `;
 
 export const StyledThresholdControlGroup = styled(ControlGroup)`
-    margin-bottom: 0px;
+    margin-bottom: 0;
     padding-left: 5px;
 
     div:first-child {
@@ -224,7 +224,7 @@ export const SortableFormRow = styled(FormRows)`
     padding: 10px 15px !important;
 
     [data-test='drag-handle'] {
-        inset: 4px 0px 3px;
+        inset: 4px 0 3px;
         height: initial;
     }
 `;
