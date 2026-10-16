@@ -358,6 +358,7 @@ This Markdown file is the authoritative source for the in-product release histor
 
 ### Dashboard Manager
 
+- Matched the native Dashboard Studio panel toolbar order: **Open in Search**, **Inspect**, **Fullscreen**, **Refresh**, **Add to AI Canvas**, and **Export**. Inspect opens the running search job. On eligible Cisco Cloud Control integrations, AI Canvas supports native and Searchbase-backed panels, carries their resolved search and time range with a bounded result preview, and offers new or existing canvases. Canvas availability and access remain controlled by Splunk and Cisco Cloud Control.
 - Added **Sharing** to dashboard cards and the library table so users can see **Private**, **App**, or **All apps** at a glance. Labels refresh after a permission change.
 - Added **Permissions** to dashboard cards and table rows. Owners with the required Splunk permissions can promote a private dashboard to **Shared in App** or make it private again without leaving Dashboard Manager. The dialog checks current permissions and preserves ownership and existing edit access.
 - Defaulted new dashboards to **Private**, matching standard Splunk creation and avoiding an automatic app-sharing request for users without sharing permission.
