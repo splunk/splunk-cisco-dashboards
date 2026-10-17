@@ -26,8 +26,12 @@ function harness() {
     const root = { ownerDocument: doc, contains: (panel) => panel.owner === root };
     const panel = (owner = root) => {
         const result = { owner, isConnected: true };
-        result.button = { focus(options) { focused.push({ button: this, options }); } };
+        result.button = { focus(options) {
+            if (!result.hidden) { doc.activeElement = this; focused.push({ button: this, options }); }
+        } };
+        result.outline = { focus() { doc.activeElement = this; result.hidden = false; } };
         result.querySelector = (selector) => {
+            if (selector === '[data-test="select-outline"]') return result.outline;
             assert.equal(selector, '[data-test="fullscreen-button"]');
             return result.button;
         };
@@ -101,4 +105,40 @@ test('unmount removes the listener and cancels pending focus', () => {
     h.change(a); h.change(null); h.flush();
     assert.equal(h.frames.size, 0);
     assert.equal(h.focused.length, 0);
+});
+
+test('mouse entry reveals a hidden native toolbar before restoring button focus', () => {
+    const h = harness(); const a = h.panel(); a.hidden = true;
+    const cleanup = bindPanelFullscreenFocus(h.root);
+    h.change(a); h.change(null); h.flush();
+    assert.equal(h.doc.activeElement, a.outline, 'native panel focus reveals hidden actions');
+    assert.equal(h.focused.length, 0);
+    h.flush();
+    assert.equal(h.doc.activeElement, a.button);
+    assert.equal(h.focused.length, 1);
+    cleanup();
+});
+
+test('unmount or reentry cancels the hidden-toolbar follow-up frame', () => {
+    for (const cancel of ['unmount', 'reentry']) {
+        const h = harness(); const a = h.panel(); a.hidden = true;
+        const cleanup = bindPanelFullscreenFocus(h.root);
+        h.change(a); h.change(null); h.flush();
+        assert.equal(h.frames.size, 1);
+        if (cancel === 'unmount') cleanup(); else h.change(h.panel());
+        h.flush();
+        assert.equal(h.focused.length, 0);
+        cleanup();
+    }
+});
+
+test('hidden-toolbar restoration does not override focus moved by the user', () => {
+    const h = harness(); const a = h.panel(); a.hidden = true;
+    const cleanup = bindPanelFullscreenFocus(h.root);
+    h.change(a); h.change(null); h.flush();
+    const other = {}; h.doc.activeElement = other;
+    h.flush();
+    assert.equal(h.doc.activeElement, other);
+    assert.equal(h.focused.length, 0);
+    cleanup();
 });
