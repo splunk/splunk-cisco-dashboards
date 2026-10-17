@@ -123,6 +123,7 @@ import {
   parseDashboardDrilldownUrl,
   parseDashboardMetricInfoUrl,
 } from "../../common/lib/dashboardDrilldown";
+import { bindPanelFullscreenFocus } from "./fullscreenFocus";
 
 const ENABLE_EXPERIMENTAL_SPACE_MANAGER = false;
 const DASHBOARD_STUDIO_HEIGHT = 1200;
@@ -1535,6 +1536,13 @@ const DashboardStudioEditor = ({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
   const { dashboardCoreApi, setDashboardCoreApi } = useDashboardStore();
+  useEffect(() => {
+    if (!apiRef || !dashboardViewportRef.current) {
+      return undefined;
+    }
+    return bindPanelFullscreenFocus(dashboardViewportRef.current);
+  }, [apiRef]);
+
   useEffect(() => {
     if (
       isDashboardMounted &&
