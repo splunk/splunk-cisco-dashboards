@@ -25,12 +25,14 @@ const isEditable = (target: EventTarget | null): boolean => {
     if (!(target instanceof HTMLElement)) return false;
     if (target.isContentEditable) return true;
     const tag = target.tagName;
-    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' ||
+        target.getAttribute('role') === 'textbox';
 };
 
 export const useKeyboardShortcuts = (
     bindings: ShortcutBinding[],
-    enabled = true
+    enabled = true,
+    scopeRef: { readonly current: HTMLElement | null } | undefined = undefined
 ): void => {
     // Stash the latest bindings in a ref so the effect doesn't tear
     // down / rebuild every render.
@@ -41,10 +43,29 @@ export const useKeyboardShortcuts = (
         if (!enabled) return undefined;
         let goMode = false;
         let goTimer: number | undefined;
+        const resetGoMode = () => {
+            goMode = false;
+            if (goTimer) window.clearTimeout(goTimer);
+        };
 
         const onKey = (e: KeyboardEvent) => {
-            if (isEditable(e.target)) return;
-            if (e.metaKey || e.ctrlKey || e.altKey) return;
+            // Shadow DOM retargets e.target to the component host. The
+            // composed path retains the editable element in open roots.
+            // Scoping also protects closed-root editors and external portals.
+            const path = e.composedPath();
+            const isPageBackground =
+                (e.target === document.body || e.target === document.documentElement) &&
+                (document.activeElement === document.body || document.activeElement === document.documentElement);
+            if (
+                e.defaultPrevented || e.isComposing || e.repeat ||
+                e.metaKey || e.ctrlKey || e.altKey ||
+                path.some(isEditable) || isEditable(e.target) ||
+                (scopeRef && (!scopeRef.current ||
+                    (!path.includes(scopeRef.current) && !isPageBackground)))
+            ) {
+                resetGoMode();
+                return;
+            }
 
             // Build candidate strings: single key OR "g <key>" while in go mode.
             const key = e.key.length === 1 ? e.key : e.key;
@@ -59,8 +80,7 @@ export const useKeyboardShortcuts = (
                 if (match) {
                     e.preventDefault();
                     match.handler();
-                    goMode = false;
-                    if (goTimer) window.clearTimeout(goTimer);
+                    resetGoMode();
                     return;
                 }
             }
@@ -73,8 +93,7 @@ export const useKeyboardShortcuts = (
                     goMode = false;
                 }, 1200);
             } else {
-                goMode = false;
-                if (goTimer) window.clearTimeout(goTimer);
+                resetGoMode();
             }
         };
 
@@ -83,5 +102,5 @@ export const useKeyboardShortcuts = (
             document.removeEventListener('keydown', onKey);
             if (goTimer) window.clearTimeout(goTimer);
         };
-    }, [enabled]);
+    }, [enabled, scopeRef]);
 };

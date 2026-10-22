@@ -16,6 +16,7 @@ export const isSearchFailureReason = (
     reason: NoDataReason | undefined
 ): boolean =>
     reason === 'dispatch_failed' ||
+    reason === 'capacity_limited' ||
     reason === 'job_failed' ||
     reason === 'error';
 

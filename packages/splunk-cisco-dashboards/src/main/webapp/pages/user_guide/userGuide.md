@@ -256,6 +256,8 @@ The picker opens in **Suggested** scope with searches from `splunk-cisco-dashboa
 
 Signal Rail membership and order are shared workspace configuration. Speed, density, and KPI text size are per-user preferences. Signal Rail searches are prioritized during initial loading. The Agentic Security Operations Center workspace also avoids dispatching searches from collapsed sections and supports a personal one-to-four concurrent-search setting.
 
+Workspace searches default to two simultaneous requests per page. When Splunk explicitly reports that search slots are exhausted, the page pauses new tile requests and retries with increasing, randomized delays, for at most four attempts per search. A server-provided retry delay is honored up to 30 seconds. If capacity remains unavailable, affected tiles show **search slots busy** instead of treating the rejection as an empty result. Wait for running searches to finish, then refresh. Other tabs and users share the server's limits; this page-level queue does not increase Splunk capacity or coordinate all sessions. Ask the administrator to review per-user, role and platform capacity for the expected simultaneous demo load.
+
 ### Where workspace settings are saved {#workspaces-where-settings-are-saved}
 
 | Scope | What is saved | Location and behavior |
@@ -333,6 +335,7 @@ Searchbase definitions are app-managed factory content. Workspace managers choos
 | --- | --- |
 | A panel is empty | Confirm the time range, run Configure data, verify the macro, then open the panel in Search. |
 | A search is slow | Narrow broad macro definitions, shorten the time range, and inspect data-model acceleration. |
+| A tile reports search slots busy | Wait for running searches to finish, then refresh. Reduce the personal simultaneous-search setting and close unused demo tabs. Ask the administrator to review search concurrency limits and stack capacity if this persists. |
 | A CIM panel is empty | Confirm tags, event types, CIM index macros, model permissions, required fields, and acceleration. |
 | A Cisco model search is empty | Confirm the companion app, model root and child datasets, source types, and model fields. |
 | Setup discovery takes too long | Use a shorter representative range. CIM discovery reports each model independently and can be canceled without losing completed results. |
@@ -353,6 +356,11 @@ This Markdown file is the authoritative source for the in-product release histor
 
 ::: release Release Notes | October 2026 - Version 1.0.70
 Release preparation is in progress. Publication and integrated-cloud AI Canvas validation are pending.
+
+### Insights Workspaces
+
+- Fixed workspace shortcuts intercepting text entered in the Cisco Cloud Control assistant and other embedded editors. Typing keeps its letters, and workspace shortcuts remain available from the workspace and unfocused page background.
+- Added a shared page-level pause and bounded retries when Splunk rejects searches because concurrent-search slots are exhausted. Affected tiles distinguish **search slots busy** from empty results after retries are exhausted; other dispatch and job failures now report **search failed**. Server quotas and permissions remain under administrator control.
 
 ### Setup
 

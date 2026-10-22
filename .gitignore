@@ -27,6 +27,7 @@
 !/packages/splunk-cisco-dashboards/test/agenticSocWorkspace.test.cjs
 !/packages/splunk-cisco-dashboards/test/kpiPickerSearchContract.test.cjs
 !/packages/splunk-cisco-dashboards/test/workspaceFocusRestoration.test.cjs
+!/packages/splunk-cisco-dashboards/test/workspaceKeyboardShortcuts.test.cjs
 !/packages/splunk-cisco-dashboards/test/macroFieldPillsSui.test.cjs
 !/packages/splunk-cisco-dashboards/test/kpiPickerOptionHelpContract.test.cjs
 !/packages/splunk-cisco-dashboards/test/searchbaseSelfContainedAnomalies.test.cjs

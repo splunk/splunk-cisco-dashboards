@@ -90,7 +90,9 @@ const NoDataBody: React.FC<{
     rangeLabel?: string;
 }> = ({ noDataReason, rangeLabel }) => {
     let subtext: string;
-    if (noDataReason === 'error') {
+    if (noDataReason === 'capacity_limited') {
+        subtext = 'search slots busy · refresh after searches finish';
+    } else if (noDataReason === 'dispatch_failed' || noDataReason === 'job_failed' || noDataReason === 'error') {
         subtext = 'search failed';
     } else if (noDataReason === 'empty_rows') {
         subtext = rangeLabel

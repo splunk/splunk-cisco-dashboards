@@ -40,7 +40,7 @@ const loadService = (fetchImpl) => {
     }
     if (id === "@splunk/splunk-utils/fetch") {
       return {
-        findErrorMessage: () => null,
+        findErrorMessage: (payload) => payload?.messages?.find((entry) => entry.text),
         getDefaultFetchInit: () => ({}),
         handleResponse: () => async (response) => response.json(),
       };
@@ -616,4 +616,130 @@ test("aborting queued work removes it without blocking the priority group", asyn
     loaded.service.__resetDispatchQueue();
     loaded.restore();
   }
+});
+
+const quotaResponse = (retryAfter) => ({
+  status: 503,
+  headers: { get: () => retryAfter ?? null },
+  json: async () => ({ messages: [{ type: "ERROR", text:
+    'Search not executed: role-based concurrency limit of historical searches has been reached (usage=3, quota=3), current_concurrency=3, concurrency_limit=3' }] }),
+});
+const successfulResponse = () => ({ status: 200, json: async () => ({ results: [{ count: "1" }] }) });
+
+const withCapacityTest = async (t, fetchImpl, check) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 100000 });
+  t.mock.method(Math, "random", () => 0.5);
+  const loaded = loadService(fetchImpl);
+  const originalError = console.error;
+  console.error = () => {};
+  try { await check(loaded.service); }
+  finally {
+    loaded.service.__resetDispatchQueue();
+    loaded.restore();
+    console.error = originalError;
+    t.mock.timers.reset();
+  }
+};
+
+test("quota rejection pauses queued work and recovers without caching the failure", async (t) => {
+  const starts = [];
+  await withCapacityTest(t, async (_url, init) => {
+    starts.push(new URLSearchParams(String(init.body)).get("search"));
+    return starts.length === 1 ? quotaResponse() : successfulResponse();
+  }, async (service) => {
+    service.setTileSearchConcurrency(1);
+    const first = service.runSearch({ spl: "| makeresults | eval tile=1" });
+    const second = service.runSearch({ spl: "| makeresults | eval tile=2" });
+    await nextTurn();
+    assert.equal(starts.length, 1);
+    t.mock.timers.tick(1999); await nextTurn();
+    assert.equal(starts.length, 1, "no retry or queued tile during cooldown");
+    t.mock.timers.tick(1); await nextTurn();
+    await Promise.all([first, second]);
+    assert.deepEqual(starts, [starts[0], starts[0], "| makeresults | eval tile=2"]);
+    await service.runSearch({ spl: "| makeresults | eval tile=1" });
+    assert.equal(starts.length, 4, "later refresh executes after quota recovery");
+  });
+});
+
+test("a free slot does not drain queued tiles during another search's quota cooldown", async (t) => {
+  const starts = [];
+  let finishOther;
+  await withCapacityTest(t, async (_url, init) => {
+    const spl = new URLSearchParams(String(init.body)).get("search");
+    starts.push(spl);
+    if (starts.length === 1) return quotaResponse();
+    if (starts.length === 2) return new Promise((resolve) => { finishOther = resolve; });
+    return successfulResponse();
+  }, async (service) => {
+    service.setTileSearchConcurrency(2);
+    const jobs = [1, 2, 3].map((tile) => service.runSearch({ spl: `| makeresults | eval tile=${tile}` }));
+    await nextTurn();
+    finishOther(successfulResponse()); await nextTurn();
+    assert.equal(starts.length, 2, "freed slot remains paused");
+    t.mock.timers.tick(2000); await nextTurn();
+    await Promise.all(jobs);
+    assert.equal(starts.length, 4);
+  });
+});
+
+test("persistent quota exhaustion stops after four attempts and stays a capacity failure", async (t) => {
+  let starts = 0;
+  await withCapacityTest(t, async () => { starts += 1; return quotaResponse(); }, async (service) => {
+    let announcements = 0;
+    const unsubscribe = service.subscribeSearchCapacityFailures(() => { announcements += 1; });
+    const result = service.runSearch({ spl: "| makeresults" });
+    const rejection = assert.rejects(result, (err) => {
+      assert.equal(service.classifySearchDispatchError(err).reason, "capacity_limited");
+      assert.equal(err.httpStatus, 503);
+      return true;
+    });
+    await nextTurn();
+    for (const delay of [2000, 5000, 10000]) { t.mock.timers.tick(delay); await nextTurn(); }
+    await rejection;
+    assert.equal(announcements, 1, "notify only after bounded retries are exhausted");
+    unsubscribe();
+    assert.equal(starts, 4);
+    t.mock.timers.tick(60000); await nextTurn();
+    assert.equal(starts, 4, "no automatic fifth attempt");
+  });
+});
+
+test("capacity retries honor Retry-After with a 30-second bound", async (t) => {
+  let starts = 0;
+  await withCapacityTest(t, async () => ++starts === 1 ? quotaResponse("120") : successfulResponse(), async (service) => {
+    const job = service.runSearch({ spl: "| makeresults" });
+    await nextTurn();
+    t.mock.timers.tick(29999); await nextTurn();
+    assert.equal(starts, 1);
+    t.mock.timers.tick(1); await nextTurn();
+    await job;
+    assert.equal(starts, 2);
+  });
+});
+
+test("aborting during quota backoff prevents another request", async (t) => {
+  let starts = 0;
+  await withCapacityTest(t, async () => { starts += 1; return quotaResponse(); }, async (service) => {
+    const controller = new AbortController();
+    const job = service.runSearch({ spl: "| makeresults", signal: controller.signal });
+    const rejected = assert.rejects(job, (err) => err.name === "AbortError");
+    await nextTurn(); controller.abort(); await rejected;
+    t.mock.timers.tick(60000); await nextTurn();
+    assert.equal(starts, 1);
+  });
+});
+
+test("authorization failures do not retry or become capacity failures", async (t) => {
+  let starts = 0;
+  await withCapacityTest(t, async () => {
+    starts += 1;
+    return { status: 403, json: async () => ({ messages: [{ type: "ERROR", text: "Access denied" }] }) };
+  }, async (service) => {
+    await assert.rejects(service.runSearch({ spl: "| makeresults" }), (err) => {
+      assert.equal(service.classifySearchDispatchError(err).reason, "dispatch_failed");
+      return true;
+    });
+    assert.equal(starts, 1);
+  });
 });
