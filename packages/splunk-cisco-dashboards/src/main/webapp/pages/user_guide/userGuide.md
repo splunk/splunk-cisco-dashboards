@@ -399,6 +399,7 @@ Release preparation is in progress. Final package/security review, publication, 
 
 ### Dashboard Manager
 
+- Chart-library debug messages are quiet during normal use. To troubleshoot, add `canvasDebug=1` to the page URL query, before any `#` fragment, and enable the browser console's debug/verbose level. Remove the parameter to disable diagnostics. Warnings and errors remain visible. Diagnostic output can contain chart data; review it before sharing logs.
 - Dashboard Manager hides unavailable KPI comparisons when fewer than two valid numeric trend samples exist, including inherited default trends on null or timestamp-only results. Headline values remain unchanged, and unavailable headline colors use the theme default. Constant line and area series receive finite axis bounds; time-based charts omit rows without a valid time coordinate from rendering. Tables and searches keep their original records, and charts add no synthetic samples.
 - Extended finite-axis handling to inherited chart series and empty numeric domains, covering affected NetOps Readiness, Data Center runtime, and Spaces capacity views. Removed deprecated iteration calls in the packaged chart adapter used by Building Intelligence.
 
