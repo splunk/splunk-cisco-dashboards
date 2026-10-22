@@ -1,8 +1,8 @@
 ---
 exportTitle: Splunk Secure Networking Essentials User Guide
 contentOwner: splunk-cisco-dashboards
-version: 1.0.55
-lastUpdated: September 2026
+version: 1.0.70
+lastUpdated: October 2026
 ---
 <!-- Single source of truth for the in-product User Guide and release history. -->
 
@@ -97,6 +97,19 @@ Back up customer-managed `local` configuration before an upgrade. Packaged defau
 
 The version label shows the installed app version and build. In Insights Workspaces, a separate update badge appears beside it when Splunk reports a newer version. Select the badge to open the upgrade flow. If Splunk has not discovered an update or the update check is unavailable, the badge stays hidden; its absence does not confirm that you have the latest release.
 
+### Validate an integrated Splunk Cloud upgrade
+
+Use the tenant's approved app-management process to install the available release. A local installation or a Splunkbase listing does not confirm that a cloud tenant has upgraded. Read back the installed version and build before testing.
+
+With the same restricted account and launch path used by viewers, check that:
+
+- The workspace loads and searches complete with the intended index and knowledge-object permissions.
+- Typing `r` and `t` in the Cisco Cloud Control assistant keeps the letters without refreshing the background workspace or changing its time range.
+- Dashboard creation, personal preferences, and sharing follow the account's permissions.
+- If **Add to AI Canvas** is available, a new and an existing canvas receive the intended search and time range, and the resulting card opens successfully.
+
+Test expected simultaneous usage separately. A successful administrator session or a single-user check does not establish shared-demo capacity.
+
 ## Macro index tuning {#macro-tuning}
 
 Setup discovers indexes that contain supported Cisco source types and proposes bounded macro definitions. Review every proposal before saving it.
@@ -178,6 +191,8 @@ Dashboard Manager opens and presents the supplied Dashboard Studio views. Most s
 
 ### Secure-networking journeys
 
+Secure-networking dashboards default to `-24h@h` through `now`, matching the **Last 24 hours** preset in the advanced time picker. The **24h** button uses the same range. The start is rounded down to the hour; saved or URL-supplied custom ranges retain their selected boundaries.
+
 | Menu | Dashboards |
 | --- | --- |
 | Zero Trust Access | Zero Trust Posture; Authentication and Policy Enforcement; Policy Management; User Activity Monitoring; Detection & Response; Remote Access VPN Sessions and Posture |
@@ -186,7 +201,7 @@ Dashboard Manager opens and presents the supplied Dashboard Studio views. Most s
 | Hybrid Mesh Firewalling | Hybrid Mesh Enforcement; Threat Detection and Enforcement; DLP and Cloud Native Security |
 | Agentic Ops | Operational Intelligence; Secure Networking Assurance; Executive Assurance |
 
-The **More** menu contains IT Health, NetOps Readiness, Security Resilience, Building Intelligence, Cisco Spaces Intelligence, Workplace Single Pane of Glass, Catalyst Health, Asset Inventory, beta operational views, Dashboard Manager, Search, Setup, and visual lab tools included in the installed profile.
+The **More** menu contains IT Health, NetOps Readiness, Security Resilience, Building Intelligence, Cisco Spaces Intelligence, Workplace Single Pane of Glass, Catalyst Health, Asset Inventory, operational views, Dashboard Manager, Search, Setup, and visual lab tools included in the installed profile.
 
 ### Dashboard actions
 
@@ -255,6 +270,8 @@ The picker opens in **Suggested** scope with searches from `splunk-cisco-dashboa
 ### Configure the Signal Rail
 
 Signal Rail membership and order are shared workspace configuration. Speed, density, and KPI text size are per-user preferences. Signal Rail searches are prioritized during initial loading. The Agentic Security Operations Center workspace also avoids dispatching searches from collapsed sections and supports a personal one-to-four concurrent-search setting.
+
+Workspace searches default to two simultaneous requests per page. When Splunk explicitly reports that search slots are exhausted, the page pauses new tile requests and retries with increasing, randomized delays, for at most four attempts per search. A server-provided retry delay is honored up to 30 seconds. If capacity remains unavailable, affected tiles show **search slots busy** instead of treating the rejection as an empty result. Wait for running searches to finish, then refresh. Other tabs and users share the server's limits; this page-level queue does not increase Splunk capacity or coordinate all sessions. Ask the administrator to review per-user, role and platform capacity for the expected simultaneous demo load.
 
 ### Where workspace settings are saved {#workspaces-where-settings-are-saved}
 
@@ -327,12 +344,28 @@ Searchbase definitions are app-managed factory content. Workspace managers choos
 - Keep customer configuration in `local` and preserve it through the deployment process.
 - Use the installed version and build shown in the app header when opening a support case.
 
+### Plan search capacity for shared demos
+
+Count active sessions and the searches they run together, rather than provisioned accounts. The workspace's two-request default applies to one page; other tabs, dashboards, and users can consume the same server resources. Review effective per-user limits, any enforced cumulative role limits, and overall stack capacity with the Splunk administrator before increasing quotas. Raising a quota does not add compute capacity.
+
+For integrations that assign a demo account at launch, confirm whether the account is reserved exclusively for that session and when it can be reused. Sessions sharing a Splunk identity can compete against that identity's search limit. Do not assume that a large account pool provides an equal number of simultaneous search slots.
+
+### Diagnose integrated sign-in and navigation
+
+A SAML sign-in can succeed while additional Cisco Cloud Control identity or navigation requests fail. When reporting an integration issue, include the launch path, installed app version/build, account type and role, time of failure, and the failing service's status and error text. Compare the app with a standard Splunk page under the same login to help identify the affected component. Remove session tokens and credentials from any evidence you share.
+
+Ask the identity or integration owner to investigate token-exchange failures, service authorization errors, and cross-origin request failures. An app upgrade does not by itself change identity-provider settings, service permissions, browser cross-origin policy, or Splunk search quotas.
+
 ## Troubleshooting {#troubleshooting}
 
 | Symptom | First checks |
 | --- | --- |
 | A panel is empty | Confirm the time range, run Configure data, verify the macro, then open the panel in Search. |
 | A search is slow | Narrow broad macro definitions, shorten the time range, and inspect data-model acceleration. |
+| A tile reports search slots busy | Wait for running searches to finish, then refresh. Reduce the personal simultaneous-search setting and close unused demo tabs. Ask the administrator to review search concurrency limits and stack capacity if this persists. |
+| A tile reports search failed | Open the tile's search in Splunk Search and inspect its error, permissions, and required macros, lookups, models, or commands. A failed search is not an empty result. |
+| Typing r or t in an embedded assistant refreshes the workspace or changes time | Confirm that version 1.0.70 or later is installed, refresh the page, and retest the actual assistant editor. If it persists, report the installed build and affected editor to the app owner. |
+| Splunk opens, but Cisco Cloud Control fails to load | Capture the failing request's status and error text without tokens. Compare a standard Splunk page under the same login and contact the identity or integration owner; successful SAML login does not confirm every connected service is available. |
 | A CIM panel is empty | Confirm tags, event types, CIM index macros, model permissions, required fields, and acceleration. |
 | A Cisco model search is empty | Confirm the companion app, model root and child datasets, source types, and model fields. |
 | Setup discovery takes too long | Use a shorter representative range. CIM discovery reports each model independently and can be canceled without losing completed results. |
@@ -350,6 +383,40 @@ Searchbase definitions are app-managed factory content. Workspace managers choos
 ## What's New / Release Notes {#release-notes}
 
 This Markdown file is the authoritative source for the in-product release history.
+
+::: release Release Notes | October 2026 - Version 1.0.70
+
+- Removed the Beta label from the app name and navigation labels.
+- **Search quota assessment:** Searchbase now includes Search Quota Impact by Cloud Label, separating disk, user, role, and instance limits, normalizing MB measurements, and preserving missing telemetry. Select the desired assessment period in the time picker; labels use the latest 15 minutes of introspection data.
+
+Release preparation is in progress. Final package/security review, publication, and integrated-cloud validation are pending.
+
+### Insights Workspaces
+
+- Fixed workspace shortcuts intercepting text entered in the Cisco Cloud Control assistant and other embedded editors. Typing keeps its letters, and workspace shortcuts remain available from the workspace and unfocused page background.
+- Added a shared page-level pause and bounded retries when Splunk rejects searches because concurrent-search slots are exhausted. Affected tiles distinguish **search slots busy** from empty results after retries are exhausted; other dispatch and job failures now report **search failed**. Server quotas and permissions remain under administrator control.
+
+### Setup
+
+- Restored **Refresh status** and the last-checked time in the current **Configure data** step, so acceleration can be checked again without leaving setup or saving the draft plan. The check confirms that acceleration is enabled; summary building may still be in progress.
+
+### Dashboard Manager
+
+- Aligned the default and **24h** shortcut on the 18 Secure Networking dashboards with the advanced time picker's **Last 24 hours** preset (`-24h@h` through `now`). Custom ranges remain unchanged.
+- Chart-library debug messages are quiet during normal use. To troubleshoot, add `canvasDebug=1` to the page URL query, before any `#` fragment, and enable the browser console's debug/verbose level. Remove the parameter to disable diagnostics. Warnings and errors remain visible. Diagnostic output can contain chart data; review it before sharing logs.
+- Dashboard Manager hides unavailable KPI comparisons when fewer than two valid numeric trend samples exist, including inherited default trends on null or timestamp-only results. Headline values remain unchanged, and unavailable headline colors use the theme default. Constant line and area series receive finite axis bounds; time-based charts omit rows without a valid time coordinate from rendering. Tables and searches keep their original records, and charts add no synthetic samples.
+- Extended finite-axis handling to inherited chart series and empty numeric domains, covering affected NetOps Readiness, Data Center runtime, and Spaces capacity views. Removed deprecated iteration calls in the packaged chart adapter used by Building Intelligence.
+
+- Fixed focus after leaving a fullscreen visualization opened with the keyboard or mouse: focus returns to that panel's native **Fullscreen** button, keeping keyboard navigation in context even when the toolbar was hidden.
+- Fixed native Studio conversion for older and Searchbase-backed dashboards: copied searches keep their SPL and time range, native time pickers no longer leave unresolved span parameters, and saved conversions appear in Splunk's dashboard list with native editing enabled. Convert remains available for partially converted copies. The dialog explains that Manager-only investigation controls are removed and that required macros, lookups, commands, and data must still exist.
+- Matched the native Dashboard Studio panel toolbar order: **Open in Search**, **Inspect**, **Fullscreen**, **Refresh**, **Add to AI Canvas**, and **Export**. Inspect opens the running search job. On eligible Cisco Cloud Control integrations, AI Canvas supports native and Searchbase-backed panels, carries their resolved search and time range with a bounded result preview, and offers new or existing canvases. Canvas availability and access remain controlled by Splunk and Cisco Cloud Control.
+
+### Upgrade and integration notes
+
+- After upgrading, confirm the installed version/build and test with a representative restricted user, including typing in the actual embedded assistant. Local verification does not establish integrated-cloud behavior.
+- Added shared-demo capacity and sign-in troubleshooting guidance. Workspace retries do not increase per-user, role, or stack limits; administrators must size and test expected simultaneous usage.
+- Integrated-cloud AI Canvas creation and cross-launch, restricted-user sharing, and saved CSV export contents still require final release qualification. Cloud Control identity/navigation errors remain under investigation; this release does not claim to resolve them.
+:::
 
 ::: release Release Notes | October 2026 - Version 1.0.60
 ### Setup

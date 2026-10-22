@@ -342,6 +342,7 @@ export interface TimeRange {
  *                            the user typed it on purpose, so we let
  *                            them see the failure (and the picker
  *                            chips guide them to a valid one).
+ *   • 'capacity_limited'   — Splunk search slots remained busy after bounded retries.
  *   • 'dispatch_failed'    — Splunk refused to create the job (HTTP
  *                            503/429, network/abort after retries).
  *   • 'job_failed'         — Job was created but Splunk reported an
@@ -353,6 +354,7 @@ export type NoDataReason =
   | "no_numeric_column"
   | "column_missing"
   | "dispatch_failed"
+  | "capacity_limited"
   | "job_failed"
   | "error";
 

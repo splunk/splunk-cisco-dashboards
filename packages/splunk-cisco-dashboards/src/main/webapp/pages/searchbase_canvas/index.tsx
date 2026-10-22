@@ -697,6 +697,7 @@ const splunkStringLiteral = (value: string): string => {
 
 const noDataReasonLabel = (reason: NoDataReason): string => {
     if (reason === 'empty_rows') return '0 rows';
+    if (reason === 'capacity_limited') { return 'search slots busy'; }
     if (reason === 'dispatch_failed') return 'dispatch failed';
     if (reason === 'job_failed') return 'search job failed';
     if (reason === 'error') return 'search failed';
@@ -1071,6 +1072,12 @@ const noDataCopy = (
     failureHttpStatus?: number
 ): { title: string; detail: string } => {
     const rangeText = rangeLabel ? ` for ${rangeLabel.toLowerCase()}` : '';
+    if (reason === 'capacity_limited') {
+        return {
+            title: 'Search slots busy',
+            detail: 'Splunk could not start this search after several attempts because its concurrent-search limit was reached. Wait for running searches to finish, then refresh. If this persists, ask your administrator to review search capacity.',
+        };
+    }
     if (reason === 'dispatch_failed') {
         const statusSuffix =
             typeof failureHttpStatus === 'number' ? ` (HTTP ${failureHttpStatus})` : '';
@@ -1174,6 +1181,7 @@ const SearchbaseNoDataPanel: React.FC<{
         failureHttpStatus
     );
     const isError =
+        noDataReason === 'capacity_limited' ||
         noDataReason === 'error' ||
         noDataReason === 'dispatch_failed' ||
         noDataReason === 'job_failed';

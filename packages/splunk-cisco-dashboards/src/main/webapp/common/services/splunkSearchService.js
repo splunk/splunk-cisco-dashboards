@@ -363,12 +363,23 @@ export const DEFAULT_DISPATCH_PRIORITY = 100;
 
 const DISPATCH_RETRY_BASE_MS = [500, 1500, 4000];
 const DISPATCH_MAX_ATTEMPTS = 1 + DISPATCH_RETRY_BASE_MS.length;
+const CAPACITY_RETRY_BASE_MS = [2000, 5000, 10000];
+const MAX_RETRY_AFTER_MS = 30000;
 const MANAGED_SEARCH_POLL_MS = 1000;
 
 let dispatchConcurrency = DEFAULT_CONCURRENT_TILE_SEARCHES;
 let dispatchInFlight = 0;
 let activeDispatchPriority = null;
 let searchDiagnosticSequence = 0;
+let capacityCooldownUntil = 0;
+let capacityCooldownTimer = null;
+const capacityFailureListeners = new Set();
+
+/** Subscribe to exhausted capacity retries for one deduplicated page announcement. */
+export const subscribeSearchCapacityFailures = (listener) => {
+  capacityFailureListeners.add(listener);
+  return () => { capacityFailureListeners.delete(listener); };
+};
 /** @type {Array<{ resolve: () => void, reject: (err: Error) => void, priority: number, granted: boolean, signal?: AbortSignal, onAbortCleanup?: () => void }>} */
 const dispatchWaitQueue = [];
 
@@ -395,29 +406,23 @@ const makeAbortError = () =>
     ? new DOMException("Aborted", "AbortError")
     : Object.assign(new Error("Aborted"), { name: "AbortError" });
 
-const abortPromise = (signal) => {
-  if (!signal) return null;
-  if (signal.aborted) {
+const cancellableSleep = (ms, signal) => {
+  if (signal?.aborted) {
     return Promise.reject(makeAbortError());
   }
-  return new Promise((_, reject) => {
+  return new Promise((resolve, reject) => {
+    let timer;
     const onAbort = () => {
-      signal.removeEventListener("abort", onAbort);
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
       reject(makeAbortError());
     };
-    signal.addEventListener("abort", onAbort);
+    timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
   });
-};
-
-const cancellableSleep = (ms, signal) => {
-  if (!signal) {
-    return sleep(ms);
-  }
-  if (signal.aborted) {
-    return Promise.reject(makeAbortError());
-  }
-  const raced = Promise.race([sleep(ms), abortPromise(signal)]);
-  return raced;
 };
 
 const removeQueuedEntry = (entry) => {
@@ -445,6 +450,7 @@ const nextQueuedPriority = () => {
 };
 
 const drainDispatchQueue = () => {
+  if (capacityCooldownUntil > Date.now()) { return; }
   while (dispatchInFlight < dispatchConcurrency) {
     if (activeDispatchPriority === null) {
       activeDispatchPriority = nextQueuedPriority();
@@ -478,6 +484,26 @@ const drainDispatchQueue = () => {
       queueLength: dispatchWaitQueue.length,
     });
     next.resolve();
+  }
+};
+
+// Pause new work across this page after an explicit server-side quota
+// rejection. Other tabs/accounts still need their own admission control.
+const pauseForSearchCapacity = (delayMs) => {
+  capacityCooldownUntil = Math.max(capacityCooldownUntil, Date.now() + Math.ceil(delayMs));
+  if (capacityCooldownTimer !== null) { clearTimeout(capacityCooldownTimer); }
+  capacityCooldownTimer = setTimeout(() => {
+    capacityCooldownTimer = null;
+    if (capacityCooldownUntil > Date.now()) { pauseForSearchCapacity(0); }
+    else { drainDispatchQueue(); }
+  }, Math.max(0, capacityCooldownUntil - Date.now()));
+};
+
+const waitForSearchCapacity = async (signal) => {
+  while (capacityCooldownUntil > Date.now()) {
+    // Another concurrent rejection may extend the same cooldown.
+    // eslint-disable-next-line no-await-in-loop
+    await cancellableSleep(capacityCooldownUntil - Date.now(), signal);
   }
 };
 
@@ -592,8 +618,6 @@ const releaseDispatchSlot = () => {
   drainDispatchQueue();
 };
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
 const jitteredDelay = (baseMs) => {
   const spread = baseMs * 0.2;
   return Math.max(0, baseMs + (Math.random() * 2 - 1) * spread);
@@ -606,17 +630,18 @@ const jitteredDelay = (baseMs) => {
 export class SearchDispatchError extends Error {
   /**
    * @param {string} message
-   * @param {{ httpStatus?: number, kind?: 'dispatch_failed'|'job_failed', retryable?: boolean }} [meta]
+   * @param {{ httpStatus?: number, kind?: 'dispatch_failed'|'job_failed'|'capacity_limited', retryable?: boolean, retryAfterMs?: number }} [meta]
    */
   constructor(
     message,
-    { httpStatus, kind = "dispatch_failed", retryable = false } = {},
+    { httpStatus, kind = "dispatch_failed", retryable = false, retryAfterMs = 0 } = {},
   ) {
     super(message);
     this.name = "SearchDispatchError";
     this.httpStatus = httpStatus;
     this.kind = kind;
     this.retryable = retryable;
+    this.retryAfterMs = retryAfterMs;
   }
 }
 
@@ -636,6 +661,17 @@ const isNetworkError = (err) => {
 
 const isRetryableHttpStatus = (status) => status === 503 || status === 429;
 
+const isSearchCapacityMessage = (message) =>
+  /concurrency limit|concurrency_limit\s*=|maximum number of concurrent.*search|search.*quota.*(?:reached|exceeded)/i.test(message);
+
+const readRetryAfterMs = (response) => {
+  const value = response.headers?.get?.("Retry-After");
+  if (!value) { return 0; }
+  const seconds = Number(value);
+  const ms = Number.isFinite(seconds) ? seconds * 1000 : Date.parse(value) - Date.now();
+  return Number.isFinite(ms) ? Math.min(MAX_RETRY_AFTER_MS, Math.max(0, ms)) : 0;
+};
+
 const shouldCacheSplFailure = (status) =>
   typeof status === "number" &&
   status >= 400 &&
@@ -650,12 +686,12 @@ const splunkJobErrorText = (payload) => {
 /**
  * Map a rejected dispatch to UI-facing reason metadata.
  * @param {unknown} err
- * @returns {{ reason: 'dispatch_failed'|'job_failed'|'error', message: string, httpStatus?: number }}
+ * @returns {{ reason: 'dispatch_failed'|'job_failed'|'capacity_limited'|'error', message: string, httpStatus?: number }}
  */
 export const classifySearchDispatchError = (err) => {
   if (err instanceof SearchDispatchError) {
     return {
-      reason: err.kind === "job_failed" ? "job_failed" : "dispatch_failed",
+      reason: err.kind,
       message: err.message,
       httpStatus: err.httpStatus,
     };
@@ -691,8 +727,10 @@ const dispatchOneShot = async (searchParameters, namespaceOptions, signal) => {
     }
     throw new SearchDispatchError(message, {
       httpStatus: status,
-      kind: "dispatch_failed",
+      kind: isRetryableHttpStatus(status) && isSearchCapacityMessage(message)
+        ? "capacity_limited" : "dispatch_failed",
       retryable: isRetryableHttpStatus(status),
+      retryAfterMs: readRetryAfterMs(response),
     });
   }
 
@@ -717,6 +755,9 @@ const dispatchOneShotWithRetry = async (
     if (signal?.aborted) {
       throw makeAbortError();
     }
+    // Retry attempts must respect cooldown extensions from other searches.
+    // eslint-disable-next-line no-await-in-loop
+    await waitForSearchCapacity(signal);
     try {
       const payload = await dispatchOneShot(
         searchParameters,
@@ -744,19 +785,28 @@ const dispatchOneShotWithRetry = async (
         isRetryableHttpStatus(status) ||
         isNetworkError(err);
       const hasMoreAttempts = attempt < DISPATCH_MAX_ATTEMPTS - 1;
+      const capacityLimited = err instanceof SearchDispatchError && err.kind === "capacity_limited";
+      const retryBase = capacityLimited ? CAPACITY_RETRY_BASE_MS : DISPATCH_RETRY_BASE_MS;
+      const delayMs = Math.max(
+        jitteredDelay(retryBase[Math.min(attempt, retryBase.length - 1)]),
+        err instanceof SearchDispatchError ? err.retryAfterMs : 0,
+      );
+      // Even the final rejected attempt pauses queued work, instead of
+      // immediately sending the next tile into an exhausted quota.
+      if (capacityLimited) { pauseForSearchCapacity(delayMs); }
       canvasDebug("[search/dispatch] retry-outcome", {
         attempt: attempt + 1,
         outcome: retryable && hasMoreAttempts ? "retry" : "reject",
         httpStatus: status,
         retryable,
+        delayMs: retryable && hasMoreAttempts ? delayMs : 0,
       });
       if (!retryable || !hasMoreAttempts) {
         throw err;
       }
-      await cancellableSleep(
-        jitteredDelay(DISPATCH_RETRY_BASE_MS[attempt]),
-        signal,
-      );
+      if (!capacityLimited) {
+        await cancellableSleep(delayMs, signal);
+      }
     }
   }
   throw lastError;
@@ -987,6 +1037,9 @@ export const __resetDispatchQueue = () => {
   activeDispatchPriority = null;
   searchDiagnosticSequence = 0;
   dispatchWaitQueue.length = 0;
+  capacityCooldownUntil = 0;
+  if (capacityCooldownTimer !== null) { clearTimeout(capacityCooldownTimer); }
+  capacityCooldownTimer = null;
 };
 
 /**
@@ -1303,6 +1356,9 @@ export const runSearch = async ({
         FAILED_SPL_CACHE.add(key);
       }
       const classified = classifySearchDispatchError(err);
+      if (classified.reason === "capacity_limited") {
+        capacityFailureListeners.forEach((listener) => listener());
+      }
       const tagLabel = tag || "splunk-search";
       canvasDebug("[search/dispatch] rejected", {
         tag: tagLabel,

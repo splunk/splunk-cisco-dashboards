@@ -11,13 +11,16 @@ import {
     LayerButton,
 } from '@splunk/dashboard-action-buttons';
 import CustomOpenSearch from '../../pages/dashboardbuilder/CustomOpenSearch';
+import { InspectPanelAction, AddToCanvasPanelAction } from '../../pages/dashboardbuilder/StudioPanelActions';
 
 const actionMenus = {
     view: [
         <CustomOpenSearch key="open" />,
+        <InspectPanelAction key="inspect" />,
         <FullscreenButton key="fullscreen" />,
-        <ExportButton key="export" />,
         <RefreshButton key="refresh" />,
+        <AddToCanvasPanelAction key="add-to-ai-canvas" />,
+        <ExportButton key="export" />,
     ],
     edit: [
         <LayerButton key="layers" />,

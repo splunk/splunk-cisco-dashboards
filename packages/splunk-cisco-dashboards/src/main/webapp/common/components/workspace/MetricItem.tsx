@@ -434,7 +434,9 @@ export const MetricItem: React.FC<MetricItemProps> = ({
                     // cleanly and Splunk had simply returned nothing
                     // in the chosen window.
                     let subtext: string;
-                    if (noDataReason === 'error') {
+                    if (noDataReason === 'capacity_limited') {
+                        subtext = 'search slots busy · refresh after searches finish';
+                    } else if (noDataReason === 'dispatch_failed' || noDataReason === 'job_failed' || noDataReason === 'error') {
                         subtext = 'search failed';
                     } else if (noDataReason === 'column_missing') {
                         // Honors the strict valueField rule in

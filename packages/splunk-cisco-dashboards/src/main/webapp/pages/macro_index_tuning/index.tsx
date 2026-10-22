@@ -5463,6 +5463,30 @@ export default function MacroIndexTuningPage(): JSX.Element {
         </section>
 
         <section className="scd-setup__search-performance rounded-md border sui-border-weak sui-bg-section p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-bold sui-color-active">
+              Data model acceleration
+            </h2>
+            <Button
+              onClick={checkDataModelAcceleration}
+              appearance="secondary"
+              disabled={accelerationCheckInProgress ? "dimmed" : false}
+              aria-busy={accelerationCheckInProgress}
+              icon={<RefreshCw aria-hidden="true" size={14} />}
+              label={accelerationCheckInProgress ? "Refreshing" : "Refresh status"}
+            />
+          </div>
+          <div className="mb-3 text-xs sui-color-muted" role="status" aria-live="polite">
+            {accelerationCheckInProgress ? "Checking data model acceleration…" : (
+              <>
+                This check reports whether acceleration is enabled; Splunk may still be
+                building its summaries in the background.
+                {dataModelReadinessCheckedAt !== null ? (
+                  <> Last checked {new Date(dataModelReadinessCheckedAt).toLocaleTimeString()}.</>
+                ) : null}
+              </>
+            )}
+          </div>
           <ControlGroup
             controlsLayout="none"
             help="Balanced is the safe default. Accelerated-only requires every required Cisco data model to be ready."

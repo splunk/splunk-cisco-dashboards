@@ -155,6 +155,8 @@ const CustomOpenSearch = ({ itemId, dashboardApi, itemDefinition, dataSources })
 
     return (
         <ActionButton
+            title="Open in Search"
+            aria-label="Open in Search"
             data-test="CustomOpenSearchButton" // for testing
             onClick={() =>
                 window.open(

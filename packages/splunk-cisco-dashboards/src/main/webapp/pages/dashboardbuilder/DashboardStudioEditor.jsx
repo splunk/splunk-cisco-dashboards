@@ -110,7 +110,7 @@ import SpaceManagerButton from "./SpaceManager/SpaceManagerButton";
 import useDashboardStore from "../../common/state/dashboardStore";
 import createSEIIconRegistry from "../../common/udf/IconProviders/createSEIIconRegistry";
 import {
-  hasSearchbaseDataSources,
+  needsNativeStudioConversion,
   resolveSearchbaseDefinitionForNativeStudio,
 } from "./searchbaseDefinitionUtils";
 import { repairSearchbaseTimeQueryParameters } from "./dashboardTimeUtils";
@@ -123,6 +123,7 @@ import {
   parseDashboardDrilldownUrl,
   parseDashboardMetricInfoUrl,
 } from "../../common/lib/dashboardDrilldown";
+import { bindPanelFullscreenFocus } from "./fullscreenFocus";
 
 const ENABLE_EXPERIMENTAL_SPACE_MANAGER = false;
 const DASHBOARD_STUDIO_HEIGHT = 1200;
@@ -168,7 +169,7 @@ const calculateWidthFitScale = ({ canvasWidth, viewportWidth }) =>
 
 const StyledCardContent = styled.div`
   height: 160px;
-  background: #ffffff;
+  background: #fff;
 `;
 
 const EXPORT_TRACKED_DATA_SOURCE_TYPES = new Set([
@@ -382,7 +383,7 @@ async function updateDash(
    
    <meta type="hiddenElements"><![CDATA[
         {
-        "hideEdit": true,
+        "hideEdit": ${requiresDashboardManagerRuntime(jsonDefinition)},
         "hideOpenInSearch": false,
         "hideExport": false
         }
@@ -1002,6 +1003,11 @@ const DashboardStudioEditor = ({
 
   const [openDashboardModal, setOpenDashboardModal] = useState(false);
   const [openConvertModal, setOpenConvertModal] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
+  const conversionInFlight = useRef(false);
+  const conversionCancelled = useRef(false);
+  const convertButtonRef = useRef(null);
+  const [conversionError, setConversionError] = useState("");
   const [openBackToManagerModal, setOpenBackToManagerModal] = useState(false);
   const [dashboardDrilldown, setDashboardDrilldown] = useState(null);
   const [dashboardDrilldownTimeRange, setDashboardDrilldownTimeRange] =
@@ -1103,11 +1109,11 @@ const DashboardStudioEditor = ({
 
   const dashboardUsesSearchbase = useMemo(() => {
     if (editedDefinition) {
-      return hasSearchbaseDataSources(editedDefinition);
+      return needsNativeStudioConversion(editedDefinition);
     }
 
     try {
-      return hasSearchbaseDataSources(
+      return needsNativeStudioConversion(
         JSON.parse(currentDashboard?.data || "{}"),
       );
     } catch {
@@ -1531,6 +1537,13 @@ const DashboardStudioEditor = ({
   }, []);
   const { dashboardCoreApi, setDashboardCoreApi } = useDashboardStore();
   useEffect(() => {
+    if (!apiRef || !dashboardViewportRef.current) {
+      return undefined;
+    }
+    return bindPanelFullscreenFocus(dashboardViewportRef.current);
+  }, [apiRef]);
+
+  useEffect(() => {
     if (
       isDashboardMounted &&
       tokens?.default &&
@@ -1872,7 +1885,7 @@ const DashboardStudioEditor = ({
           <Button
             style={{ marginRight: 10 }}
             label="Convert"
-            onClick={() => setOpenConvertModal(true)}
+            onClick={(event) => { convertButtonRef.current = event.currentTarget; setConversionError(""); setOpenConvertModal(true); }}
           ></Button>
           <ModeSwitch key="modeSwitch" />
           <SaveButton key="save" onClick={handleSaveClick} isDirty={isDirty} />
@@ -2347,15 +2360,26 @@ const DashboardStudioEditor = ({
   };
 
   const convertDashboard = async () => {
+    if (conversionInFlight.current) {
+      return;
+    }
+    conversionInFlight.current = true;
+    conversionCancelled.current = false;
+    setIsConverting(true);
+    setConversionError("");
     try {
       const {
         definition: def,
         convertedDataSources,
         convertedInputs,
+        removedActions,
       } = await resolveSearchbaseDefinitionForNativeStudio(
         dashboardApiElem.current.getDefinition(),
       );
 
+      if (conversionCancelled.current) {
+        return;
+      }
       dashboardApiElem.current.updateDefinition(def);
 
       setOpenConvertModal(false);
@@ -2364,15 +2388,16 @@ const DashboardStudioEditor = ({
           convertedDataSources === 1 ? "" : "s"
         } and ${convertedInputs} custom time input${
           convertedInputs === 1 ? "" : "s"
-        } to native Studio definitions. Review and save to apply the changes.`,
+        } to native Studio definitions. Removed ${removedActions} Manager-only investigation controls. Review and save to make this dashboard visible in Splunk's dashboard list.`,
         type: TOAST_TYPES.SUCCESS,
       });
     } catch (error) {
-      console.error(error);
-      notifyDashboard({
-        message: `An error occurred while converting the dashboard. ${getSafeErrorMessage(error)}`,
-        type: TOAST_TYPES.ERROR,
-      });
+      if (!conversionCancelled.current) {
+        setConversionError(`Unable to convert the dashboard. ${getSafeErrorMessage(error)}`);
+      }
+    } finally {
+      conversionInFlight.current = false;
+      setIsConverting(false);
     }
   };
 
@@ -2462,6 +2487,10 @@ const DashboardStudioEditor = ({
     <>
       <Modal
         open={openConvertModal}
+        onRequestClose={() => { conversionCancelled.current = true; setOpenConvertModal(false); }}
+        returnFocus={() => (convertButtonRef.current?.isConnected
+          ? convertButtonRef.current
+          : dashboardViewportRef.current?.querySelector('button:not([disabled])'))?.focus()}
         className={`dashboard-builder-themed-modal dashboard-builder-themed-modal-${dashboardColorScheme}`}
         style={{ width: "600px", ...dashboardBuilderModalThemeStyle }}
       >
@@ -2470,20 +2499,27 @@ const DashboardStudioEditor = ({
           icon={<Cog width="30px" />}
         />
         <Modal.Body>
+          {conversionError && <Message type="error" role="alert">{conversionError}</Message>}
           <div className="dashboardbuilder-convert-explanation">
             <p>
-              This dashboard uses Cisco Searchbase data sources. Dashboard
-              Manager registers those data sources and keeps their SPL
-              synchronized with <code>searchbase.conf</code>. Opening the saved
-              view directly in native Dashboard Studio can therefore display
-              custom data-source errors.
+              This dashboard uses Dashboard Manager extensions or an older,
+              incomplete conversion. Clone the dashboard first if you want to
+              keep the original Manager experience.
             </p>
             <p>
               <b>Convert</b> copies the current Searchbase SPL into native{" "}
               <code>ds.search</code> data sources and converts the custom time
               picker to its native Studio equivalent. The converted definition
-              can then open directly in Dashboard Studio, but it no longer
-              receives Searchbase SPL updates automatically.
+              can then open directly in Dashboard Studio. It no longer
+              receives Searchbase SPL updates automatically. Native time ranges
+              use the binning in the copied SPL instead of Manager&apos;s span override.
+            </p>
+            <p>
+              Manager-only <b>Investigate drivers</b> and <b>About this metric</b>
+              {" "}controls are removed from this definition. Charts, tables,
+              descriptions, and inline searches are retained. Other unsupported
+              extensions must be replaced before conversion can finish.
+              Review and save to make the dashboard visible in Splunk&apos;s dashboard list.
             </p>
             <p>
               Conversion does <b>not</b> package or remove environmental
@@ -2497,11 +2533,13 @@ const DashboardStudioEditor = ({
           <Button
             appearance="default"
             label="Cancel"
+            disabled={isConverting}
             onClick={() => setOpenConvertModal(false)}
           />
           <Button
             appearance="primary"
-            label="Convert"
+            label={isConverting ? "Converting…" : "Convert"}
+            disabled={isConverting}
             onClick={convertDashboard}
           />
         </Modal.Footer>

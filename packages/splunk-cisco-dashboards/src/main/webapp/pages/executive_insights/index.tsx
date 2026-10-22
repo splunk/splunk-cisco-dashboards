@@ -224,7 +224,7 @@ import {
   horizontalListSortingStrategy,
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
-import { runSearch } from "@/common/services/splunkSearchService";
+import { runSearch, subscribeSearchCapacityFailures } from "@/common/services/splunkSearchService";
 import {
   getSearchbaseCatalogue,
   plainTextFromHtml,
@@ -2789,6 +2789,11 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   }, []);
   const [autoRefreshSeconds, setAutoRefreshSeconds] = useState<number>(0);
   const [refreshToken, setRefreshToken] = useState<number>(0);
+  const [searchCapacityExceeded, setSearchCapacityExceeded] = useState(false);
+  useEffect(() => {
+    setSearchCapacityExceeded(false);
+    return subscribeSearchCapacityFailures(() => setSearchCapacityExceeded(true));
+  }, [refreshToken, timeRange, insightsWorkspace.id]);
   const [lastRefreshed, setLastRefreshed] = useState<Date>(() => new Date());
   const refreshNow = useCallback(() => {
     setRefreshToken((n) => n + 1);
@@ -5044,7 +5049,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       })),
     [SHORTCUTS],
   );
-  useKeyboardShortcuts(SHORTCUTS, true);
+  useKeyboardShortcuts(SHORTCUTS, true, exportRef);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && helpOpen) closeHelp();
@@ -5067,6 +5072,13 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       )}
       data-color-scheme={colorScheme}
     >
+      <div role="status" aria-live="polite" aria-atomic="true">
+        <ScreenReaderContent>
+          {searchCapacityExceeded
+            ? "Some searches could not start because search slots are busy. Wait for running searches to finish, then refresh."
+            : ""}
+        </ScreenReaderContent>
+      </div>
       <SpotLight
         aria-hidden="true"
         variant="page-top"

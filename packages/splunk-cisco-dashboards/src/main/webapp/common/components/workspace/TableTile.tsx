@@ -137,7 +137,9 @@ const NoDataState: React.FC<{
     let subtext: string;
     if (source === 'loading') {
         subtext = 'loading…';
-    } else if (noDataReason === 'error') {
+    } else if (noDataReason === 'capacity_limited') {
+        subtext = 'search slots busy · refresh after searches finish';
+    } else if (noDataReason === 'dispatch_failed' || noDataReason === 'job_failed' || noDataReason === 'error') {
         subtext = 'search failed';
     } else if (noDataReason === 'empty_rows') {
         subtext = rangeLabel

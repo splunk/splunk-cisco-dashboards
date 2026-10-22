@@ -24,6 +24,8 @@ function loadFrame(react = React, ResizeObserver) {
   const module = { exports: {} };
   vm.runInNewContext(`(function(require, module, exports) {${compiledFrame}\n})`, { ResizeObserver })((id) => {
     if (id === "react") return react;
+    if (id === "prop-types") return require('prop-types');
+    if (id === "./sparseVisualizationOptions") return { sparseVisualizationOptions: (_type, props) => props.options, chartDataSources: (_type, sources) => sources };
     throw new Error(`Unexpected import ${id}`);
   }, module, module.exports);
   return module.exports;
@@ -190,4 +192,88 @@ test("wrapped headers reduce renderer height and resizing uses unscaled dimensio
   assert.equal(size, prior, "Hidden tabs should keep their last valid render size");
   cleanup();
   assert.equal(disconnected, true);
+});
+
+const sparseModule = { exports: {} };
+const sparseCode = babel.transformSync(fs.readFileSync(path.join(pageRoot, 'sparseVisualizationOptions.js'), 'utf8'), {
+  plugins: ['@babel/plugin-transform-modules-commonjs'],
+}).code;
+vm.runInThisContext(`(function(require,module,exports){${sparseCode}\n})`)(require, sparseModule, sparseModule.exports);
+const sparseVisualizationOptions = (type, props) => sparseModule.exports.sparseVisualizationOptions(type, props, require('@splunk/visualization-schemas').singleValueOptionsSchema);
+const sparseProps = (values, extra = {}) => ({
+  options: { sparklineValues: '> primary | seriesByName("value")', trendValue: '> sparklineValues | delta(-2)',
+    trendColor: '> trendValue | rangeValue(colors)', y: '> primary | seriesByName("value")', ...extra },
+  context: { colors: [{ from: 0, value: 'green' }] },
+  dataSources: { primary: { data: { fields: [{ name: 'value' }], columns: [values] } } },
+});
+test('sparse trends are unavailable before color evaluation, preserving headline and input', () => {
+  for (const values of [[], [0], [null], [1, null], [NaN, 2]]) {
+    const props = sparseProps(values, { majorValue: 42 });
+    const result = sparseVisualizationOptions('splunk.singlevalue', props);
+    assert.equal(result.trendDisplay, 'off');
+    assert.equal(result.showTrendIndicator, false);
+    assert.equal(result.trendValue, '');
+    assert.equal(result.trendColor, null);
+    assert.equal(result.majorValue, 42);
+    assert.equal(props.options.trendValue, '> sparklineValues | delta(-2)');
+  }
+  for (const values of [[0, 0], [-2, 3], [4, 1]]) {
+    const props = sparseProps(values);
+    assert.equal(sparseVisualizationOptions('splunk.singlevalue', props), props.options);
+  }
+});
+test('constant chart series get finite nondegenerate axes without changing data or explicit bounds', () => {
+  for (const values of [[0], [0, 0], [-4], [100, 100]]) {
+    const props = sparseProps(values);
+    const result = sparseVisualizationOptions('splunk.line', props);
+    assert.ok(Number.isFinite(result.yAxisMin) && Number.isFinite(result.yAxisMax));
+    assert.ok(result.yAxisMin < result.yAxisMax);
+    assert.ok(result.yAxisMin <= values[0] && result.yAxisMax >= values[0]);
+    assert.equal(props.dataSources.primary.data.columns[0], values);
+  }
+  for (const values of [[1, 3]]) {
+    const props = sparseProps(values);
+    assert.equal(sparseVisualizationOptions('splunk.line', props), props.options);
+  }
+  const explicit = sparseProps([0], { yAxisMin: -10, yAxisMax: 10 });
+  assert.equal(sparseVisualizationOptions('splunk.line', explicit), explicit.options);
+});
+test('preserves logarithmic axes, dependent option aliases and overflow domains', () => {
+  for (const options of [{ yAxisScale: 'log' }, { y: '> customY' }]) {
+    const props = sparseProps([0.1], options);
+    assert.equal(sparseVisualizationOptions('splunk.line', props), props.options);
+  }
+  const alias = sparseProps([1], { sparklineValues: '> customSeries' });
+  assert.equal(sparseVisualizationOptions('splunk.singlevalue', alias), alias.options);
+  const extreme = sparseProps([Number.MAX_VALUE]);
+  assert.equal(sparseVisualizationOptions('splunk.line', extreme), extreme.options);
+});
+test('guards inherited trends on timestamp-only and null results without changing headline semantics', () => {
+  for (const [type, values] of [['time', [1, 2]], ['null', [null]], ['number', [4]]]) {
+    const props = { options: {}, dataSources: { primary: { data: {fields:[{name:type === 'time' ? '_time' : 'value',type}],columns:[values]} } } };
+    const result = sparseVisualizationOptions('splunk.singlevalue', props);
+    assert.equal(result.trendDisplay, 'off');
+    assert.equal(result.majorValue, undefined);
+  }
+  const props = { options: {}, dataSources:{primary:{data:{fields:[{name:'value',type:'number'}],columns:[[1,2]]}}} };
+  assert.equal(sparseVisualizationOptions('splunk.singlevalue', props),props.options);
+});
+test('removes only rows with invalid time coordinates for charts and preserves table records', () => {
+  const sources={primary:{data:{fields:[{name:'_time'},{name:'value'}],columns:[[null,0,123,'2026-10-22T12:00:00Z','bad'],[9,0,4,7,8]]}}};
+  const {chartDataSources}=sparseModule.exports;
+  assert.equal(chartDataSources('splunk.table',sources),sources);
+  assert.equal(chartDataSources('splunk.bar',sources,{x:'> primary | seriesByName("value")'}),sources);
+  const result=chartDataSources('splunk.line',sources,{x:'> primary | seriesByName("_time")'});
+  assert.deepEqual(result.primary.data.columns[0],[0,123,'2026-10-22T12:00:00Z']);
+  assert.deepEqual(result.primary.data.columns[1],[0,4,7]);
+  assert.equal(sources.primary.data.columns[0].length,5);
+});
+test('default Y selectors and empty numeric domains get finite axes without fabricating points', () => {
+  const schema=require('@splunk/visualization-schemas').lineOptionsSchema;
+  for(const values of [[],[null],[0],[0,0]]) {
+    const props=sparseProps(values);delete props.options.y;
+    const result=sparseModule.exports.sparseVisualizationOptions('splunk.line',props,schema);
+    assert.equal(result.yAxisMin,0);assert.equal(result.yAxisMax,1);
+    assert.equal(props.dataSources.primary.data.columns[0],values);
+  }
 });

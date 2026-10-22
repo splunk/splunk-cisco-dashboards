@@ -1,0 +1,49 @@
+diff --git a/node_modules/@splunk/charting-bundle/index.js b/node_modules/@splunk/charting-bundle/index.js
+--- a/node_modules/@splunk/charting-bundle/index.js
++++ b/node_modules/@splunk/charting-bundle/index.js
+@@ -8845,7 +8845,12 @@
+                             (t = n)[e].apply(t, arguments);
+                         };
+                     };
+-                    var o = e.debug = a("debug");
++                    var debug = a("debug");
++                    var o = e.debug = function() {
++                        if (new URLSearchParams(window.location.search).get("canvasDebug") === "1") {
++                            debug.apply(null, arguments);
++                        }
++                    };
+                     var s = e.info = a("info");
+                     var l = e.warn = a("warn");
+                     var c = e.error = a("error");
+@@ -12988,7 +12993,12 @@
+                             (t = n)[e].apply(t, arguments);
+                         };
+                     };
+-                    var o = e.debug = a("debug");
++                    var debug = a("debug");
++                    var o = e.debug = function() {
++                        if (new URLSearchParams(window.location.search).get("canvasDebug") === "1") {
++                            debug.apply(null, arguments);
++                        }
++                    };
+                     var s = e.info = a("info");
+                     var l = e.warn = a("warn");
+                     var c = e.error = a("error");
+@@ -72845,7 +72855,7 @@
+                     firstRenderOverride: function t(e) {
+                         // make this reference available here for testing
+                         this.hcChart = e;
+-                        var i = b.default.Pointer, n = b.default.fireEvent, r = b.default.each;
++                        var i = b.default.Pointer, n = b.default.fireEvent, r = function(array, callback, context) { return Array.prototype.forEach.call(array, callback, context); };
+                         var a = e.options;
+                         /* eslint-disable */
+                         // BEGIN: copied from Highcharts source Chart#firstRender
+@@ -72891,7 +72901,7 @@
+                         /* eslint-enable */                    },
+                     // prettier-ignore
+                     renderOverride: function t(e, i) {
+-                        var n = b.default.each;
++                        var n = function(array, callback, context) { return Array.prototype.forEach.call(array, callback, context); };
+                         var r = e.axes, a = e.renderer, o = e.options;
+                         /* eslint-disable */
+                         // BEGIN: copied from Highcharts source Chart#render
