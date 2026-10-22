@@ -383,6 +383,9 @@ Ask the identity or integration owner to investigate token-exchange failures, se
 This Markdown file is the authoritative source for the in-product release history.
 
 ::: release Release Notes | October 2026 - Version 1.0.70
+
+- **Search quota assessment:** Searchbase now includes Search Quota Impact by Cloud Label, separating disk, user, role, and instance limits, normalizing MB measurements, and preserving missing telemetry. Select the desired assessment period in the time picker; labels use the latest 15 minutes of introspection data.
+
 Release preparation is in progress. Final package/security review, publication, and integrated-cloud validation are pending.
 
 ### Insights Workspaces
