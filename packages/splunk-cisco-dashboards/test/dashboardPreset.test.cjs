@@ -24,7 +24,7 @@ function loadFrame(react = React, ResizeObserver) {
   const module = { exports: {} };
   vm.runInNewContext(`(function(require, module, exports) {${compiledFrame}\n})`, { ResizeObserver })((id) => {
     if (id === "react") return react;
-    if (id === "./sparseVisualizationOptions") return { sparseVisualizationOptions: (_type, props) => props.options };
+    if (id === "./sparseVisualizationOptions") return { sparseVisualizationOptions: (_type, props) => props.options, chartDataSources: (_type, sources) => sources };
     throw new Error(`Unexpected import ${id}`);
   }, module, module.exports);
   return module.exports;
@@ -198,7 +198,7 @@ const sparseCode = babel.transformSync(fs.readFileSync(path.join(pageRoot, 'spar
   plugins: ['@babel/plugin-transform-modules-commonjs'],
 }).code;
 vm.runInThisContext(`(function(require,module,exports){${sparseCode}\n})`)(require, sparseModule, sparseModule.exports);
-const { sparseVisualizationOptions } = sparseModule.exports;
+const sparseVisualizationOptions = (type, props) => sparseModule.exports.sparseVisualizationOptions(type, props, require('@splunk/visualization-schemas').singleValueOptionsSchema);
 const sparseProps = (values, extra = {}) => ({
   options: { sparklineValues: '> primary | seriesByName("value")', trendValue: '> sparklineValues | delta(-2)',
     trendColor: '> trendValue | rangeValue(colors)', y: '> primary | seriesByName("value")', ...extra },
@@ -246,4 +246,24 @@ test('preserves logarithmic axes, dependent option aliases and overflow domains'
   assert.equal(sparseVisualizationOptions('splunk.singlevalue', alias), alias.options);
   const extreme = sparseProps([Number.MAX_VALUE]);
   assert.equal(sparseVisualizationOptions('splunk.line', extreme), extreme.options);
+});
+test('guards inherited trends on timestamp-only and null results without changing headline semantics', () => {
+  for (const [type, values] of [['time', [1, 2]], ['null', [null]], ['number', [4]]]) {
+    const props = { options: {}, dataSources: { primary: { data: {fields:[{name:type === 'time' ? '_time' : 'value',type}],columns:[values]} } } };
+    const result = sparseVisualizationOptions('splunk.singlevalue', props);
+    assert.equal(result.trendDisplay, 'off');
+    assert.equal(result.majorValue, undefined);
+  }
+  const props = { options: {}, dataSources:{primary:{data:{fields:[{name:'value',type:'number'}],columns:[[1,2]]}}} };
+  assert.equal(sparseVisualizationOptions('splunk.singlevalue', props),props.options);
+});
+test('removes only rows with invalid time coordinates for charts and preserves table records', () => {
+  const sources={primary:{data:{fields:[{name:'_time'},{name:'value'}],columns:[[null,0,123,'2026-10-22T12:00:00Z','bad'],[9,0,4,7,8]]}}};
+  const {chartDataSources}=sparseModule.exports;
+  assert.equal(chartDataSources('splunk.table',sources),sources);
+  assert.equal(chartDataSources('splunk.bar',sources,{x:'> primary | seriesByName("value")'}),sources);
+  const result=chartDataSources('splunk.line',sources,{x:'> primary | seriesByName("_time")'});
+  assert.deepEqual(result.primary.data.columns[0],[0,123,'2026-10-22T12:00:00Z']);
+  assert.deepEqual(result.primary.data.columns[1],[0,4,7]);
+  assert.equal(sources.primary.data.columns[0].length,5);
 });

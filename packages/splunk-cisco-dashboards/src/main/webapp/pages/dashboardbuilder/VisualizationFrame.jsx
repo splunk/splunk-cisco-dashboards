@@ -1,11 +1,13 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import { sparseVisualizationOptions } from './sparseVisualizationOptions';
+import { chartDataSources, sparseVisualizationOptions } from './sparseVisualizationOptions';
 
 // Studio subtracts a fixed one-line header from the visualization height.
 // Our wrapped descriptions use more space, so pass the renderer the actual
 // remaining panel size. ResizeObserver reports unscaled CSS pixels even when
 // the dashboard canvas is zoomed or fitted to the viewport.
 export default function VisualizationFrame({ component: Visualization, ...props }) {
+    const type = Visualization.config?.key;
+    const guardedProps = { ...props, dataSources: chartDataSources(type, props.dataSources, props.options, Visualization.config?.optionsSchema) };
     const frameRef = useRef(null);
     const [size, setSize] = useState(null);
 
@@ -34,7 +36,7 @@ export default function VisualizationFrame({ component: Visualization, ...props 
             data-test="dashboard-visualization-frame"
             style={{ width: '100%', height: '100%', minWidth: 0, minHeight: 0 }}
         >
-            <Visualization {...props} options={sparseVisualizationOptions(Visualization.config?.key, props)} {...size} />
+            <Visualization {...guardedProps} options={sparseVisualizationOptions(type, guardedProps, Visualization.config?.optionsSchema)} {...size} />
         </div>
     );
 }
