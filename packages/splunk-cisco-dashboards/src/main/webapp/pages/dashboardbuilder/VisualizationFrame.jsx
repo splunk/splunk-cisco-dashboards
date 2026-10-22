@@ -1,4 +1,5 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
+import PropTypes from 'prop-types';
 import { chartDataSources, sparseVisualizationOptions } from './sparseVisualizationOptions';
 
 // Studio subtracts a fixed one-line header from the visualization height.
@@ -13,18 +14,18 @@ export default function VisualizationFrame({ component: Visualization, ...props 
 
     useLayoutEffect(() => {
         const frame = frameRef.current;
-        if (!frame) return undefined;
+        if (!frame) { return undefined; }
 
         const updateSize = ({ width, height }) => {
-            if (width <= 0 || height <= 0) return;
+            if (width <= 0 || height <= 0) { return; }
             setSize((previous) => previous?.width === width && previous?.height === height
                 ? previous : { width, height });
         };
         updateSize({ width: frame.clientWidth, height: frame.clientHeight });
-        if (typeof ResizeObserver === 'undefined') return undefined;
+        if (typeof ResizeObserver === 'undefined') { return undefined; }
 
         const observer = new ResizeObserver(([entry]) => {
-            if (entry) updateSize(entry.contentRect);
+            if (entry) { updateSize(entry.contentRect); }
         });
         observer.observe(frame);
         return () => observer.disconnect();
@@ -40,6 +41,15 @@ export default function VisualizationFrame({ component: Visualization, ...props 
         </div>
     );
 }
+
+VisualizationFrame.propTypes = {
+    component: PropTypes.oneOfType([PropTypes.func, PropTypes.shape({
+        config: PropTypes.shape({ key: PropTypes.string, optionsSchema: PropTypes.shape({}) }),
+    })]).isRequired,
+    options: PropTypes.shape({}),
+    dataSources: PropTypes.shape({}),
+};
+VisualizationFrame.defaultProps = { options: undefined, dataSources: undefined };
 
 export function withMeasuredVisualizationSizes(preset) {
     return {

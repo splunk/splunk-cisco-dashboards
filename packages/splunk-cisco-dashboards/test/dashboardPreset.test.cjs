@@ -24,6 +24,7 @@ function loadFrame(react = React, ResizeObserver) {
   const module = { exports: {} };
   vm.runInNewContext(`(function(require, module, exports) {${compiledFrame}\n})`, { ResizeObserver })((id) => {
     if (id === "react") return react;
+    if (id === "prop-types") return require('prop-types');
     if (id === "./sparseVisualizationOptions") return { sparseVisualizationOptions: (_type, props) => props.options, chartDataSources: (_type, sources) => sources };
     throw new Error(`Unexpected import ${id}`);
   }, module, module.exports);
