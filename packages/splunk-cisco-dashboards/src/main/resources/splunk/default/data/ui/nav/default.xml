@@ -62,12 +62,12 @@
         <collection label="Network &amp; IT Operations">
             <a href="dashboard_manager#/netops_critical_systems_health">IT Health</a>
             <a href="dashboard_manager#/netops_readiness">NetOps Readiness</a>
-            <a href="netops_health_monitoring">Health Monitoring (Beta)</a>
+            <a href="netops_health_monitoring">Health Monitoring</a>
         </collection>
 
         <collection label="Security Operations">
             <a href="dashboard_manager#/secops_resilience">Security Resilience</a>
-            <a href="secops_overview">Security Operations Overview (Beta)</a>
+            <a href="secops_overview">Security Operations Overview</a>
         </collection>
 
         <collection label="Workplace Intelligence">
@@ -78,10 +78,10 @@
 
         <collection label="Catalyst Operations">
             <a href="dashboard_manager#/netops_catalyst_health">Catalyst Health</a>
-            <a href="dashboard_manager#/netops_catalyst_operations">Catalyst Operations (Beta)</a>
+            <a href="dashboard_manager#/netops_catalyst_operations">Catalyst Operations</a>
         </collection>
 
-        <collection label="Visual Labs (Beta)">
+        <collection label="Visual Labs">
             <a href="secure_networking_pillars">Secure Networking Pillars (React Preview)</a>
             <a href="searchbase_canvas">Searchbase Canvas</a>
             <a href="network_diagram">Network Diagram</a>

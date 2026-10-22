@@ -199,7 +199,7 @@ Dashboard Manager opens and presents the supplied Dashboard Studio views. Most s
 | Hybrid Mesh Firewalling | Hybrid Mesh Enforcement; Threat Detection and Enforcement; DLP and Cloud Native Security |
 | Agentic Ops | Operational Intelligence; Secure Networking Assurance; Executive Assurance |
 
-The **More** menu contains IT Health, NetOps Readiness, Security Resilience, Building Intelligence, Cisco Spaces Intelligence, Workplace Single Pane of Glass, Catalyst Health, Asset Inventory, beta operational views, Dashboard Manager, Search, Setup, and visual lab tools included in the installed profile.
+The **More** menu contains IT Health, NetOps Readiness, Security Resilience, Building Intelligence, Cisco Spaces Intelligence, Workplace Single Pane of Glass, Catalyst Health, Asset Inventory, operational views, Dashboard Manager, Search, Setup, and visual lab tools included in the installed profile.
 
 ### Dashboard actions
 
@@ -384,6 +384,7 @@ This Markdown file is the authoritative source for the in-product release histor
 
 ::: release Release Notes | October 2026 - Version 1.0.70
 
+- Removed the Beta label from the app name and navigation labels.
 - **Search quota assessment:** Searchbase now includes Search Quota Impact by Cloud Label, separating disk, user, role, and instance limits, normalizing MB measurements, and preserving missing telemetry. Select the desired assessment period in the time picker; labels use the latest 15 minutes of introspection data.
 
 Release preparation is in progress. Final package/security review, publication, and integrated-cloud validation are pending.
