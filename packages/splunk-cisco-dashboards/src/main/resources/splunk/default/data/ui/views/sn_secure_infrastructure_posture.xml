@@ -8,7 +8,7 @@
     "inputs": {
         "input_time_range": {
             "options": {
-                "defaultValue": "-24h,now,auto",
+                "defaultValue": "-24h@h,now,auto",
                 "showAdvanced": true,
                 "selections": [
                     {
@@ -16,7 +16,7 @@
                         "label": "4h"
                     },
                     {
-                        "value": "-24h,now,auto",
+                        "value": "-24h@h,now,auto",
                         "label": "24h"
                     },
                     {

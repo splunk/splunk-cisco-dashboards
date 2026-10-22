@@ -191,6 +191,8 @@ Dashboard Manager opens and presents the supplied Dashboard Studio views. Most s
 
 ### Secure-networking journeys
 
+Secure-networking dashboards default to `-24h@h` through `now`, matching the **Last 24 hours** preset in the advanced time picker. The **24h** button uses the same range. The start is rounded down to the hour; saved or URL-supplied custom ranges retain their selected boundaries.
+
 | Menu | Dashboards |
 | --- | --- |
 | Zero Trust Access | Zero Trust Posture; Authentication and Policy Enforcement; Policy Management; User Activity Monitoring; Detection & Response; Remote Access VPN Sessions and Posture |
@@ -400,6 +402,7 @@ Release preparation is in progress. Final package/security review, publication, 
 
 ### Dashboard Manager
 
+- Aligned the default and **24h** shortcut on the 18 Secure Networking dashboards with the advanced time picker's **Last 24 hours** preset (`-24h@h` through `now`). Custom ranges remain unchanged.
 - Chart-library debug messages are quiet during normal use. To troubleshoot, add `canvasDebug=1` to the page URL query, before any `#` fragment, and enable the browser console's debug/verbose level. Remove the parameter to disable diagnostics. Warnings and errors remain visible. Diagnostic output can contain chart data; review it before sharing logs.
 - Dashboard Manager hides unavailable KPI comparisons when fewer than two valid numeric trend samples exist, including inherited default trends on null or timestamp-only results. Headline values remain unchanged, and unavailable headline colors use the theme default. Constant line and area series receive finite axis bounds; time-based charts omit rows without a valid time coordinate from rendering. Tables and searches keep their original records, and charts add no synthetic samples.
 - Extended finite-axis handling to inherited chart series and empty numeric domains, covering affected NetOps Readiness, Data Center runtime, and Spaces capacity views. Removed deprecated iteration calls in the packaged chart adapter used by Building Intelligence.

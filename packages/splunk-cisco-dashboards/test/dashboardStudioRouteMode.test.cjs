@@ -1051,8 +1051,13 @@ sixCardFrameworkViews.forEach((viewName) => {
   assert.equal(cardContracts.length, 6, viewName + " must contract six cards");
   assert.equal(
     definition.inputs.input_time_range.options.defaultValue,
-    "-24h,now,auto",
-    viewName + " must default its timechart span to Auto",
+    "-24h@h,now,auto",
+    viewName + " must default to the hour-aligned Last 24 hours preset with Auto span",
+  );
+  assert.equal(
+    definition.inputs.input_time_range.options.selections.find(({ label }) => label === "24h").value,
+    "-24h@h,now,auto",
+    viewName + " 24h shortcut must match the advanced time preset",
   );
   assert.ok(
     definition.inputs.input_time_range.options.selections.every(({ value }) =>

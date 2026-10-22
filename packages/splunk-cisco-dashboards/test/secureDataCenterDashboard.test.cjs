@@ -58,7 +58,7 @@ assert.match(
 
 assert.equal(
   definition.inputs.input_time_range.options.defaultValue,
-  "-24h,now,auto",
+  "-24h@h,now,auto",
 );
 assert.ok(
   definition.inputs.input_time_range.options.selections.every(({ value }) =>
