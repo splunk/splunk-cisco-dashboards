@@ -399,6 +399,8 @@ Release preparation is in progress. Final package/security review, publication, 
 
 ### Dashboard Manager
 
+- Dashboard Manager hides unavailable KPI comparisons when fewer than two valid trend samples exist, preserving the headline value. Constant line and area series receive finite axis bounds without adding synthetic samples or changing searches.
+
 - Fixed focus after leaving a fullscreen visualization opened with the keyboard or mouse: focus returns to that panel's native **Fullscreen** button, keeping keyboard navigation in context even when the toolbar was hidden.
 - Fixed native Studio conversion for older and Searchbase-backed dashboards: copied searches keep their SPL and time range, native time pickers no longer leave unresolved span parameters, and saved conversions appear in Splunk's dashboard list with native editing enabled. Convert remains available for partially converted copies. The dialog explains that Manager-only investigation controls are removed and that required macros, lookups, commands, and data must still exist.
 - Matched the native Dashboard Studio panel toolbar order: **Open in Search**, **Inspect**, **Fullscreen**, **Refresh**, **Add to AI Canvas**, and **Export**. Inspect opens the running search job. On eligible Cisco Cloud Control integrations, AI Canvas supports native and Searchbase-backed panels, carries their resolved search and time range with a bounded result preview, and offers new or existing canvases. Canvas availability and access remain controlled by Splunk and Cisco Cloud Control.

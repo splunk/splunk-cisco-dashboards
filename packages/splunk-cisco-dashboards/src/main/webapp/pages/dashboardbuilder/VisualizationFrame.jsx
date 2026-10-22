@@ -1,4 +1,5 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
+import { sparseVisualizationOptions } from './sparseVisualizationOptions';
 
 // Studio subtracts a fixed one-line header from the visualization height.
 // Our wrapped descriptions use more space, so pass the renderer the actual
@@ -33,7 +34,7 @@ export default function VisualizationFrame({ component: Visualization, ...props 
             data-test="dashboard-visualization-frame"
             style={{ width: '100%', height: '100%', minWidth: 0, minHeight: 0 }}
         >
-            <Visualization {...props} {...size} />
+            <Visualization {...props} options={sparseVisualizationOptions(Visualization.config?.key, props)} {...size} />
         </div>
     );
 }

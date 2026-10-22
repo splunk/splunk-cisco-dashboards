@@ -24,6 +24,7 @@ function loadFrame(react = React, ResizeObserver) {
   const module = { exports: {} };
   vm.runInNewContext(`(function(require, module, exports) {${compiledFrame}\n})`, { ResizeObserver })((id) => {
     if (id === "react") return react;
+    if (id === "./sparseVisualizationOptions") return { sparseVisualizationOptions: (_type, props) => props.options };
     throw new Error(`Unexpected import ${id}`);
   }, module, module.exports);
   return module.exports;
@@ -190,4 +191,59 @@ test("wrapped headers reduce renderer height and resizing uses unscaled dimensio
   assert.equal(size, prior, "Hidden tabs should keep their last valid render size");
   cleanup();
   assert.equal(disconnected, true);
+});
+
+const sparseModule = { exports: {} };
+const sparseCode = babel.transformSync(fs.readFileSync(path.join(pageRoot, 'sparseVisualizationOptions.js'), 'utf8'), {
+  plugins: ['@babel/plugin-transform-modules-commonjs'],
+}).code;
+vm.runInThisContext(`(function(require,module,exports){${sparseCode}\n})`)(require, sparseModule, sparseModule.exports);
+const { sparseVisualizationOptions } = sparseModule.exports;
+const sparseProps = (values, extra = {}) => ({
+  options: { sparklineValues: '> primary | seriesByName("value")', trendValue: '> sparklineValues | delta(-2)',
+    trendColor: '> trendValue | rangeValue(colors)', y: '> primary | seriesByName("value")', ...extra },
+  context: { colors: [{ from: 0, value: 'green' }] },
+  dataSources: { primary: { data: { fields: [{ name: 'value' }], columns: [values] } } },
+});
+test('sparse trends are unavailable before color evaluation, preserving headline and input', () => {
+  for (const values of [[], [0], [null], [1, null], [NaN, 2]]) {
+    const props = sparseProps(values, { majorValue: 42 });
+    const result = sparseVisualizationOptions('splunk.singlevalue', props);
+    assert.equal(result.trendDisplay, 'off');
+    assert.equal(result.showTrendIndicator, false);
+    assert.equal(result.trendValue, '');
+    assert.equal(result.trendColor, null);
+    assert.equal(result.majorValue, 42);
+    assert.equal(props.options.trendValue, '> sparklineValues | delta(-2)');
+  }
+  for (const values of [[0, 0], [-2, 3], [4, 1]]) {
+    const props = sparseProps(values);
+    assert.equal(sparseVisualizationOptions('splunk.singlevalue', props), props.options);
+  }
+});
+test('constant chart series get finite nondegenerate axes without changing data or explicit bounds', () => {
+  for (const values of [[0], [0, 0], [-4], [100, 100]]) {
+    const props = sparseProps(values);
+    const result = sparseVisualizationOptions('splunk.line', props);
+    assert.ok(Number.isFinite(result.yAxisMin) && Number.isFinite(result.yAxisMax));
+    assert.ok(result.yAxisMin < result.yAxisMax);
+    assert.ok(result.yAxisMin <= values[0] && result.yAxisMax >= values[0]);
+    assert.equal(props.dataSources.primary.data.columns[0], values);
+  }
+  for (const values of [[], [null], [1, 3]]) {
+    const props = sparseProps(values);
+    assert.equal(sparseVisualizationOptions('splunk.line', props), props.options);
+  }
+  const explicit = sparseProps([0], { yAxisMin: -10, yAxisMax: 10 });
+  assert.equal(sparseVisualizationOptions('splunk.line', explicit), explicit.options);
+});
+test('preserves logarithmic axes, dependent option aliases and overflow domains', () => {
+  for (const options of [{ yAxisScale: 'log' }, { y: '> customY' }]) {
+    const props = sparseProps([0.1], options);
+    assert.equal(sparseVisualizationOptions('splunk.line', props), props.options);
+  }
+  const alias = sparseProps([1], { sparklineValues: '> customSeries' });
+  assert.equal(sparseVisualizationOptions('splunk.singlevalue', alias), alias.options);
+  const extreme = sparseProps([Number.MAX_VALUE]);
+  assert.equal(sparseVisualizationOptions('splunk.line', extreme), extreme.options);
 });
