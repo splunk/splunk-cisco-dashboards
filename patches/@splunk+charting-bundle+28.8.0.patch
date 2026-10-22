@@ -1,0 +1,21 @@
+diff --git a/node_modules/@splunk/charting-bundle/index.js b/node_modules/@splunk/charting-bundle/index.js
+--- a/node_modules/@splunk/charting-bundle/index.js
++++ b/node_modules/@splunk/charting-bundle/index.js
+@@ -72845,7 +72845,7 @@
+                     firstRenderOverride: function t(e) {
+                         // make this reference available here for testing
+                         this.hcChart = e;
+-                        var i = b.default.Pointer, n = b.default.fireEvent, r = b.default.each;
++                        var i = b.default.Pointer, n = b.default.fireEvent, r = function(array, callback, context) { return Array.prototype.forEach.call(array, callback, context); };
+                         var a = e.options;
+                         /* eslint-disable */
+                         // BEGIN: copied from Highcharts source Chart#firstRender
+@@ -72891,7 +72891,7 @@
+                         /* eslint-enable */                    },
+                     // prettier-ignore
+                     renderOverride: function t(e, i) {
+-                        var n = b.default.each;
++                        var n = function(array, callback, context) { return Array.prototype.forEach.call(array, callback, context); };
+                         var r = e.axes, a = e.renderer, o = e.options;
+                         /* eslint-disable */
+                         // BEGIN: copied from Highcharts source Chart#render

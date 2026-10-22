@@ -66,13 +66,14 @@ export function sparseVisualizationOptions(type, props, schema = {}) {
             result = { ...result, majorColor: null };
         }
     }
-    if (['splunk.line', 'splunk.area'].includes(type) && directSource(options.y, dataSources)
+    const yExpression = options.y ?? schema.y?.default;
+    if (['splunk.line', 'splunk.area'].includes(type) && directSource(yExpression, dataSources)
         && (!options.yAxisScale || options.yAxisScale === 'linear')
         && automatic(options.yAxisMin) && automatic(options.yAxisMax)) {
-        const { y } = Options.evaluate({ context, options: { y: options.y } }, dataSources);
+        const { y } = Options.evaluate({ context, options: { y: yExpression } }, dataSources);
         const values = (Array.isArray(y) ? y.flat(Infinity) : []).filter(numeric).map(Number);
-        if (values.length && values.every((value) => value === values[0])) {
-            const value = values[0];
+        if (values.every((value) => value === values[0])) {
+            const value = values[0] ?? 0;
             const padding = Math.max(1, Math.abs(value) * 0.05);
             const minimum = value === 0 ? 0 : value - padding;
             const maximum = value + padding;

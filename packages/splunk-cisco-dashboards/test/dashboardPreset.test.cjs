@@ -230,7 +230,7 @@ test('constant chart series get finite nondegenerate axes without changing data 
     assert.ok(result.yAxisMin <= values[0] && result.yAxisMax >= values[0]);
     assert.equal(props.dataSources.primary.data.columns[0], values);
   }
-  for (const values of [[], [null], [1, 3]]) {
+  for (const values of [[1, 3]]) {
     const props = sparseProps(values);
     assert.equal(sparseVisualizationOptions('splunk.line', props), props.options);
   }
@@ -266,4 +266,13 @@ test('removes only rows with invalid time coordinates for charts and preserves t
   assert.deepEqual(result.primary.data.columns[0],[0,123,'2026-10-22T12:00:00Z']);
   assert.deepEqual(result.primary.data.columns[1],[0,4,7]);
   assert.equal(sources.primary.data.columns[0].length,5);
+});
+test('default Y selectors and empty numeric domains get finite axes without fabricating points', () => {
+  const schema=require('@splunk/visualization-schemas').lineOptionsSchema;
+  for(const values of [[],[null],[0],[0,0]]) {
+    const props=sparseProps(values);delete props.options.y;
+    const result=sparseModule.exports.sparseVisualizationOptions('splunk.line',props,schema);
+    assert.equal(result.yAxisMin,0);assert.equal(result.yAxisMax,1);
+    assert.equal(props.dataSources.primary.data.columns[0],values);
+  }
 });
