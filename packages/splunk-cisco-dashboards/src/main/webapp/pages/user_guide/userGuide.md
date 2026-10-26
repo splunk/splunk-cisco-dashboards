@@ -268,6 +268,8 @@ Test the workspace with a role that represents the intended audience before publ
 
 The picker opens in **Suggested** scope with searches from `splunk-cisco-dashboards` that match the active section. Select **Entire catalogue** to browse compatible searches from other installed Searchbase providers. The app filter still starts with only `splunk-cisco-dashboards` selected. Searches already configured in the section remain hidden unless the user chooses to show added searches.
 
+**SGT assignment coverage:** The catalogue includes `secure_networking_sgt_assignment_coverage_trend` and its linked detail, `secure_networking_sgt_assignment_coverage_by_site_device`. Coverage is the percentage of successful ISE authentication events with one usable, non-default SGT. Missing, default, and conflicting tag values remain in the denominator; the selected-window percentage is weighted by event count. Repeated authentications count repeatedly, so this measures reported authentication coverage rather than distinct endpoints or SGACL enforcement. An empty window reports no observations, with no coverage percentage. The detail retains missing or ambiguous site/device context and returns at most 1,000 groups; `TotalGroups` and `DetailRowsTruncated` indicate additional groups. These searches are available to add without replacing the default SGACL tile.
+
 ### Configure the Signal Rail
 
 Signal Rail membership and order are shared workspace configuration. Speed, density, and KPI text size are per-user preferences. Signal Rail searches are prioritized during initial loading. The Agentic Security Operations Center workspace also avoids dispatching searches from collapsed sections and supports a personal one-to-four concurrent-search setting.
@@ -392,6 +394,7 @@ This Markdown file is the authoritative source for the in-product release histor
 
 - Restored `r` (refresh) and `t` (cycle time range) when the surrounding Splunk dashboard panel has focus after clicking the workspace background. Typing in Cisco Cloud Control assistants and other text editors remains protected from workspace shortcuts.
 - Fixed ISE policy-family activity showing zero when policy snapshots contain repeated multivalue identifiers or counters. Equal values are normalized before grouping and hit-counter calculations; conflicting values and invalid counters are excluded instead of creating misleading activity.
+- Added SGT Assignment Coverage Trend and linked coverage by site/device searches. They measure event-weighted SGT coverage for successful ISE authentications, retain missing and conflicting tag context, and distinguish empty windows from zero coverage. Existing workspace layouts are preserved.
 
 :::
 
