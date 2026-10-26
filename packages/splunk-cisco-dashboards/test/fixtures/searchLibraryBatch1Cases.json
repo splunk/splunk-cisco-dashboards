@@ -1,0 +1,183 @@
+[
+  {
+    "id": "operations_cisco_ingestion_delay_by_source",
+    "rows": [
+      {"index":"fixture","sourcetype":"fixture","_time":{"expr":"now()-600"},"_indextime":{"expr":"now()-600+5"}},
+      {"index":"fixture","sourcetype":"fixture","_time":{"expr":"now()-600"},"_indextime":{"expr":"now()-600+15"}},
+      {"index":"fixture","sourcetype":"fixture","_time":{"expr":"now()-600"},"_indextime":{"expr":"now()-600+-3"}},
+      {"index":"fixture","sourcetype":"fixture","_time":{"expr":"now()-600"},"_indextime":null}
+    ],
+    "assertion": "Events=4 AND TimedEvents=3 AND NegativeDelayEvents=1 AND MaxDelaySeconds=15"
+  },
+  {
+    "id": "operations_cisco_feed_bucket_coverage",
+    "picker": {"windowSeconds":3600,"aligned":3600},
+    "rows": [
+      {"index":"fixture","sourcetype":"fixture","events":2,"_time":{"expr":"relative_time(now(),\"-1h@h\")"},"last_seen":{"expr":"relative_time(now(),\"-1h@h\")+5"}},
+      {"index":"fixture","sourcetype":"fixture","events":3,"_time":{"expr":"relative_time(now(),\"-1h@h\")+900"},"last_seen":{"expr":"relative_time(now(),\"-1h@h\")+905"}}
+    ],
+    "assertion": "Events=5 AND ActiveBuckets=2 AND SelectedBuckets=4 AND ActiveBucketPct=50"
+  },
+  {
+    "id": "operations_ise_multivalue_field_quality",
+    "rows": [
+      {"sourcetype":"fixture","id":["a","a"],"hitCounts":[1,1]},
+      {"sourcetype":"fixture","id":["b","c"],"hitCounts":[2,3]},
+      {"sourcetype":"fixture","id":"z","hitCounts":4}
+    ],
+    "assertion": "Observations=3 AND RepeatedValueObservations=2 AND ConflictingValueObservations=1"
+  },
+  {
+    "id": "security_zeek_certificate_expiry_inventory",
+    "rows": [
+      {"fingerprint":"a","certificate.not_valid_after":{"expr":"now()-86400"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=shared","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"b","certificate.not_valid_after":{"expr":"now()+86400*7"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=shared","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"c","certificate.not_valid_after":{"expr":"now()+86400*30"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=c","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"d","certificate.not_valid_after":{"expr":"now()+86400*90"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=d","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"e","certificate.not_valid_after":{"expr":"now()+86400*100"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=e","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"f","certificate.not_valid_after":{"expr":"now()+86400*100"},"certificate.not_valid_before":{"expr":"now()+86400"},"certificate.subject":"CN=f","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"g","certificate.not_valid_after":{"expr":"now()+86400*10"},"certificate.not_valid_before":{"expr":"now()+86400*20"},"certificate.subject":"CN=g","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"h","certificate.not_valid_after":"not-a-date","certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=h","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"i","certificate.not_valid_after":{"expr":"strftime(now()+86400*40,\"%Y-%m-%dT%H:%M:%S%z\")"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=i","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":["j","j"],"certificate.not_valid_after":[{"expr":"now()+86400*2"},{"expr":"now()+86400*2"}],"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=['j', 'j']","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"k","certificate.not_valid_after":[{"expr":"now()+86400*2"},{"expr":"now()+86400*5"}],"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=k","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"l","certificate.not_valid_after":{"expr":"now()+86400*10"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=l","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-120"}},
+      {"fingerprint":"l","certificate.not_valid_after":null,"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=l","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"m","certificate.not_valid_after":{"expr":"now()+86400*10"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=m","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"m","certificate.not_valid_after":{"expr":"now()+86400*20"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=m","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":null,"certificate.not_valid_after":{"expr":"now()+86400"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=None","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"n","certificate.not_valid_after":{"expr":"now()+86400*20"},"certificate.not_valid_before":"not-a-date","certificate.subject":"CN=n","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}}
+    ],
+    "post": "| stats count as Rows count(eval(ValidityState=\"Unknown expiry\")) as Unknown count(eval(ValidityState=\"Expired\")) as Expired count(eval(ValidityState=\"Due within 7 days\")) as Due7 count(eval(ValidityState=\"Not yet valid\")) as Future count(eval(ValidityState=\"Invalid validity range\")) as Invalid count(eval(ValidityState=\"Unknown validity start\")) as UnknownStart",
+    "assertion": "Rows=14 AND Unknown=4 AND Expired=1 AND Due7=2 AND Future=1 AND Invalid=1 AND UnknownStart=1"
+  },
+  {
+    "id": "security_zeek_certificate_expiry_summary",
+    "rows": [
+      {"fingerprint":"a","certificate.not_valid_after":{"expr":"now()-86400"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=shared","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"b","certificate.not_valid_after":{"expr":"now()+86400*7"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=shared","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"c","certificate.not_valid_after":{"expr":"now()+86400*30"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=c","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"d","certificate.not_valid_after":{"expr":"now()+86400*90"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=d","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"e","certificate.not_valid_after":{"expr":"now()+86400*100"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=e","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"f","certificate.not_valid_after":{"expr":"now()+86400*100"},"certificate.not_valid_before":{"expr":"now()+86400"},"certificate.subject":"CN=f","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"g","certificate.not_valid_after":{"expr":"now()+86400*10"},"certificate.not_valid_before":{"expr":"now()+86400*20"},"certificate.subject":"CN=g","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"h","certificate.not_valid_after":"not-a-date","certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=h","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"i","certificate.not_valid_after":{"expr":"strftime(now()+86400*40,\"%Y-%m-%dT%H:%M:%S%z\")"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=i","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":["j","j"],"certificate.not_valid_after":[{"expr":"now()+86400*2"},{"expr":"now()+86400*2"}],"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=['j', 'j']","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"k","certificate.not_valid_after":[{"expr":"now()+86400*2"},{"expr":"now()+86400*5"}],"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=k","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"l","certificate.not_valid_after":{"expr":"now()+86400*10"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=l","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-120"}},
+      {"fingerprint":"l","certificate.not_valid_after":null,"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=l","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"m","certificate.not_valid_after":{"expr":"now()+86400*10"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=m","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"m","certificate.not_valid_after":{"expr":"now()+86400*20"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=m","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":null,"certificate.not_valid_after":{"expr":"now()+86400"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=None","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"n","certificate.not_valid_after":{"expr":"now()+86400*20"},"certificate.not_valid_before":"not-a-date","certificate.subject":"CN=n","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}}
+    ],
+    "post": "| stats sum(Certificates) as Certificates max(eval(if(ValidityState=\"Unknown expiry\",Certificates,null()))) as Unknown",
+    "assertion": "Certificates=14 AND Unknown=4"
+  },
+  {
+    "id": "security_zeek_certificate_rotation_candidates",
+    "rows": [
+      {"fingerprint":"a","certificate.not_valid_after":{"expr":"now()-86400"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=shared","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"b","certificate.not_valid_after":{"expr":"now()+86400*7"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=shared","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"c","certificate.not_valid_after":{"expr":"now()+86400*30"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=c","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"d","certificate.not_valid_after":{"expr":"now()+86400*90"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=d","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"e","certificate.not_valid_after":{"expr":"now()+86400*100"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=e","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"f","certificate.not_valid_after":{"expr":"now()+86400*100"},"certificate.not_valid_before":{"expr":"now()+86400"},"certificate.subject":"CN=f","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"g","certificate.not_valid_after":{"expr":"now()+86400*10"},"certificate.not_valid_before":{"expr":"now()+86400*20"},"certificate.subject":"CN=g","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"h","certificate.not_valid_after":"not-a-date","certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=h","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"i","certificate.not_valid_after":{"expr":"strftime(now()+86400*40,\"%Y-%m-%dT%H:%M:%S%z\")"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=i","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":["j","j"],"certificate.not_valid_after":[{"expr":"now()+86400*2"},{"expr":"now()+86400*2"}],"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=['j', 'j']","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"k","certificate.not_valid_after":[{"expr":"now()+86400*2"},{"expr":"now()+86400*5"}],"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=k","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"l","certificate.not_valid_after":{"expr":"now()+86400*10"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=l","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-120"}},
+      {"fingerprint":"l","certificate.not_valid_after":null,"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=l","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"m","certificate.not_valid_after":{"expr":"now()+86400*10"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=m","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"m","certificate.not_valid_after":{"expr":"now()+86400*20"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=m","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":null,"certificate.not_valid_after":{"expr":"now()+86400"},"certificate.not_valid_before":{"expr":"now()-86400*365"},"certificate.subject":"CN=None","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}},
+      {"fingerprint":"n","certificate.not_valid_after":{"expr":"now()+86400*20"},"certificate.not_valid_before":"not-a-date","certificate.subject":"CN=n","certificate.issuer":"CN=Issuer","_time":{"expr":"now()-60"}}
+    ],
+    "assertion": "Subject=\"CN=shared\" AND Fingerprints=2 AND ExpirySpreadDays=8"
+  },
+  {
+    "id": "network_dc_mds_transmit_wait_trend",
+    "rows": [
+      {"account":"a","resource_id":"r1","resource_type":"congested_isl","vendor.pTxWait":20,"_time":{"expr":"relative_time(now(),\"-2h@h\")"}},
+      {"account":"a","resource_id":"r1","resource_type":"congested_isl","vendor.pTxWait":20,"_time":{"expr":"relative_time(now(),\"-2h@h\")"}},
+      {"account":"a","resource_id":"r1","resource_type":"congested_isl","vendor.pTxWait":30,"_time":{"expr":"relative_time(now(),\"-1h@h\")"}},
+      {"account":"a","resource_id":"r2","resource_type":"congested_isl","vendor.pTxWait":0,"_time":{"expr":"relative_time(now(),\"-2h@h\")"}},
+      {"account":"a","resource_id":"r2","resource_type":"congested_isl","vendor.pTxWait":105,"_time":{"expr":"relative_time(now(),\"-1h@h\")"}},
+      {"account":"a","resource_id":"r3","resource_type":"congested_isl","vendor.pTxWait":[40,40],"_time":{"expr":"relative_time(now(),\"-2h@h\")"}},
+      {"account":"a","resource_id":"r3","resource_type":"congested_isl","vendor.pTxWait":[40,50],"_time":{"expr":"relative_time(now(),\"-1h@h\")"}}
+    ],
+    "post": "| stats sum(Observations) as Observations sum(ValidMeasurements) as ValidMeasurements max(PeakTxWaitPct) as Peak",
+    "assertion": "Observations=7 AND ValidMeasurements=5 AND Peak=40"
+  },
+  {
+    "id": "network_dc_mds_repeated_congestion",
+    "rows": [
+      {"account":"a","resource_id":"r1","resource_type":"congested_isl","vendor.pTxWait":20,"_time":{"expr":"relative_time(now(),\"-2h@h\")"}},
+      {"account":"a","resource_id":"r1","resource_type":"congested_isl","vendor.pTxWait":20,"_time":{"expr":"relative_time(now(),\"-2h@h\")"}},
+      {"account":"a","resource_id":"r1","resource_type":"congested_isl","vendor.pTxWait":30,"_time":{"expr":"relative_time(now(),\"-1h@h\")"}},
+      {"account":"a","resource_id":"r2","resource_type":"congested_isl","vendor.pTxWait":0,"_time":{"expr":"relative_time(now(),\"-2h@h\")"}},
+      {"account":"a","resource_id":"r2","resource_type":"congested_isl","vendor.pTxWait":105,"_time":{"expr":"relative_time(now(),\"-1h@h\")"}},
+      {"account":"a","resource_id":"r3","resource_type":"congested_isl","vendor.pTxWait":[40,40],"_time":{"expr":"relative_time(now(),\"-2h@h\")"}},
+      {"account":"a","resource_id":"r3","resource_type":"congested_isl","vendor.pTxWait":[40,50],"_time":{"expr":"relative_time(now(),\"-1h@h\")"}}
+    ],
+    "assertion": "resource_id=\"r1\" AND ObservedBuckets=2 AND ElevatedBuckets=2 AND PeakTxWaitPct=30"
+  },
+  {
+    "id": "network_dc_mds_switch_resource_trend",
+    "rows": [
+      {"account":"a","resource_id":"s","vendor.cpuUsage":50,"vendor.memoryUsage":60,"_time":{"expr":"now()-60"}},
+      {"account":"a","resource_id":"s","vendor.cpuUsage":[80,80],"vendor.memoryUsage":"bad","_time":{"expr":"now()-60"}},
+      {"account":"a","resource_id":"s","vendor.cpuUsage":[80,90],"vendor.memoryUsage":70,"_time":{"expr":"now()-60"}},
+      {"account":"a","resource_id":"s","vendor.cpuUsage":-1,"vendor.memoryUsage":101,"_time":{"expr":"now()-60"}}
+    ],
+    "post": "| stats sum(Observations) as Observations sum(ValidCpuMeasurements) as CpuSamples sum(ValidMemoryMeasurements) as MemorySamples max(PeakCpuPct) as PeakCpu max(PeakMemoryPct) as PeakMemory",
+    "assertion": "Observations=4 AND CpuSamples=2 AND MemorySamples=2 AND PeakCpu=80 AND PeakMemory=70"
+  },
+  {
+    "id": "network_dc_hyperfabric_port_rate_trend",
+    "rows": [
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p1","vendor.inBitsps":0,"vendor.outBitsps":0,"_time":{"expr":"now()-60"}},
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p2","vendor.inBitsps":0,"vendor.outBitsps":100000000,"_time":{"expr":"now()-60"}},
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p3","vendor.inBitsps":100000000,"vendor.outBitsps":null,"_time":{"expr":"now()-60"}},
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p4","vendor.inBitsps":10000000,"vendor.outBitsps":20000000,"_time":{"expr":"now()-120"}},
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p4","vendor.inBitsps":null,"vendor.outBitsps":null,"_time":{"expr":"now()-60"}},
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p5","vendor.inBitsps":10000000,"vendor.outBitsps":50000000,"_time":{"expr":"now()-60"}},
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p5","vendor.inBitsps":20000000,"vendor.outBitsps":50000000,"_time":{"expr":"now()-60"}},
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p6","vendor.inBitsps":-1,"vendor.outBitsps":"bad","_time":{"expr":"now()-60"}}
+    ],
+    "post": "| stats sum(Observations) as Observations sum(ValidIngressMeasurements) as InSamples sum(ValidEgressMeasurements) as OutSamples max(PeakIngressMbps) as PeakIn max(PeakEgressMbps) as PeakOut",
+    "assertion": "Observations=8 AND InSamples=6 AND OutSamples=5 AND PeakIn=100 AND PeakOut=100"
+  },
+  {
+    "id": "network_dc_hyperfabric_directional_imbalance",
+    "rows": [
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p1","vendor.inBitsps":0,"vendor.outBitsps":0,"_time":{"expr":"now()-60"}},
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p2","vendor.inBitsps":0,"vendor.outBitsps":100000000,"_time":{"expr":"now()-60"}},
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p3","vendor.inBitsps":100000000,"vendor.outBitsps":null,"_time":{"expr":"now()-60"}},
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p4","vendor.inBitsps":10000000,"vendor.outBitsps":20000000,"_time":{"expr":"now()-120"}},
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p4","vendor.inBitsps":null,"vendor.outBitsps":null,"_time":{"expr":"now()-60"}},
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p5","vendor.inBitsps":10000000,"vendor.outBitsps":50000000,"_time":{"expr":"now()-60"}},
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p5","vendor.inBitsps":20000000,"vendor.outBitsps":50000000,"_time":{"expr":"now()-60"}},
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p6","vendor.inBitsps":-1,"vendor.outBitsps":"bad","_time":{"expr":"now()-60"}}
+    ],
+    "post": "| stats count as Ports count(eval(MeasurementState=\"Idle\")) as Idle count(eval(MeasurementState=\"Directional\")) as Directional count(eval(MeasurementState=\"Incomplete measurement\")) as Incomplete",
+    "assertion": "Ports=6 AND Idle=1 AND Directional=1 AND Incomplete=4"
+  },
+  {
+    "id": "network_dc_hyperfabric_measurement_coverage",
+    "rows": [
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p1","vendor.inBitsps":0,"vendor.outBitsps":0,"_time":{"expr":"now()-60"}},
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p2","vendor.inBitsps":0,"vendor.outBitsps":100000000,"_time":{"expr":"now()-60"}},
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p3","vendor.inBitsps":100000000,"vendor.outBitsps":null,"_time":{"expr":"now()-60"}},
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p4","vendor.inBitsps":10000000,"vendor.outBitsps":20000000,"_time":{"expr":"now()-120"}},
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p4","vendor.inBitsps":null,"vendor.outBitsps":null,"_time":{"expr":"now()-60"}},
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p5","vendor.inBitsps":10000000,"vendor.outBitsps":50000000,"_time":{"expr":"now()-60"}},
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p5","vendor.inBitsps":20000000,"vendor.outBitsps":50000000,"_time":{"expr":"now()-60"}},
+      {"account":"a","fabric_id":"f","node_id":"n","vendor.portIndex":"p6","vendor.inBitsps":-1,"vendor.outBitsps":"bad","_time":{"expr":"now()-60"}}
+    ],
+    "assertion": "ObservedCounterPorts=6 AND BothDirections=2 AND OneDirection=2 AND NeitherDirection=2 AND BothDirectionsPct=33.33"
+  }
+]

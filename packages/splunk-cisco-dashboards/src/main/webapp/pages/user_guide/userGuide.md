@@ -276,6 +276,17 @@ Signal Rail membership and order are shared workspace configuration. Speed, dens
 
 Workspace searches default to two simultaneous requests per page. When Splunk explicitly reports that search slots are exhausted, the page pauses new tile requests and retries with increasing, randomized delays, for at most four attempts per search. A server-provided retry delay is honored up to 30 seconds. If capacity remains unavailable, affected tiles show **search slots busy** instead of treating the rejection as an empty result. Wait for running searches to finish, then refresh. Other tabs and users share the server's limits; this page-level queue does not increase Splunk capacity or coordinate all sessions. Ask the administrator to review per-user, role and platform capacity for the expected simultaneous demo load.
 
+### Explore the operational search library
+
+Searchbase includes twelve additional searches for data quality, certificate lifecycle, MDS/SAN, and Hyperfabric. Search for **Networking Data**, **ISE - Repeated**, **Zeek - Observed Certificate**, **Zeek - Certificate Rotation**, **MDS**, or **Hyperfabric** in the catalogue. These searches do not add workspace tiles, schedule jobs, or enable collection automatically.
+
+- **Data quality:** Compare event time with index time, inspect fifteen-minute feed bucket occupancy, or find repeated/conflicting ISE policy scalar values. Start raw-event delay searches with a short finite window on busy deployments. Bucket occupancy is not collector uptime, and completely unobserved feeds need an expected-source inventory to detect them.
+- **Certificates:** Review expiry detail, lifecycle bands, and subjects with multiple fingerprints. Requires `zeek:x509` observations through `index_zeek`. Expiry is evaluated against the current clock; records without usable fingerprints are excluded, and missing or conflicting validity remains unknown. Multiple fingerprints suggest a rotation investigation, not proof of successful renewal or deployment.
+- **MDS/SAN:** Review sampled transmit-wait and CPU/memory trends or repeated transmit wait of at least 10% in two fifteen-minute buckets. The editable 10% threshold is for investigation. Sampled bucket counts do not measure continuous congestion duration.
+- **Hyperfabric:** Review observed port-rate trends, latest directional imbalance, and rate-field completeness. Rates are Mbps, not link utilization. Directional traffic can be normal. Missing directions remain unknown; valid zero rates mean idle only when both directions are present. Coverage includes observed counter identities, without assuming inventory IDs equal performance port indexes.
+
+Table searches return at most 1,000 groups and expose `TotalGroups` and `RowsTruncated` where applicable. Empty output guidance does not establish that the environment is healthy. The existing index macros and the user's role determine which sources are visible.
+
 ### Where workspace settings are saved {#workspaces-where-settings-are-saved}
 
 | Scope | What is saved | Location and behavior |
@@ -395,6 +406,7 @@ This Markdown file is the authoritative source for the in-product release histor
 - Restored `r` (refresh) and `t` (cycle time range) when the surrounding Splunk dashboard panel has focus after clicking the workspace background. Typing in Cisco Cloud Control assistants and other text editors remains protected from workspace shortcuts.
 - Fixed ISE policy-family activity showing zero when policy snapshots contain repeated multivalue identifiers or counters. Equal values are normalized before grouping and hit-counter calculations; conflicting values and invalid counters are excluded instead of creating misleading activity.
 - Replaced SGACL Enforcement Activity Trend in the default Secure Networking workspace with SGT Assignment Coverage and its site/device drilldown. The new searches measure event-weighted SGT coverage for successful ISE authentications, retain missing and conflicting tag context, and distinguish empty windows from zero coverage. The workspace keeps nine tiles per section; saved layout overrides and other workspaces are preserved.
+- Added twelve catalogue searches covering ingestion delay and feed quality, observed certificate expiry and rotation candidates, MDS/SAN observation trends and recurrence, and Hyperfabric port-rate trends, directionality and measurement coverage. Missing measurements remain distinct from zero; workspace layouts and collection settings are unchanged.
 
 :::
 

@@ -224,6 +224,8 @@ assert.deepEqual(numericSpanStanzas("tstats"), [
   // One-second preaggregation preserves latest timestamps; timechart stays adaptive.
   "feed_monitor_ftd_firewall_staleness",
   "it_health_composite_service_alerts",
+  // Feed occupancy counts fixed fifteen-minute observation buckets, not display bins.
+  "operations_cisco_feed_bucket_coverage",
   "teuc_fit_alert_volume_timeslot_anomaly",
   "teuc_fit_bgp_path_changes_anomaly",
   "teuc_fit_latency_calendar_profile",
