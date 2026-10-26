@@ -391,6 +391,7 @@ This Markdown file is the authoritative source for the in-product release histor
 ### Insights Workspaces
 
 - Restored `r` (refresh) and `t` (cycle time range) when the surrounding Splunk dashboard panel has focus after clicking the workspace background. Typing in Cisco Cloud Control assistants and other text editors remains protected from workspace shortcuts.
+- Fixed ISE policy-family activity showing zero when policy snapshots contain repeated multivalue identifiers or counters. Equal values are normalized before grouping and hit-counter calculations; conflicting values and invalid counters are excluded instead of creating misleading activity.
 
 :::
 
