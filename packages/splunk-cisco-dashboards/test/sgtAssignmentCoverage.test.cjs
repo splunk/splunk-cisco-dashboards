@@ -16,7 +16,7 @@ const blocks = ids.map(id => {
 });
 const queries = blocks.map(block => block.match(/^search = ([\s\S]*)/m)[1].trim().replace(/\\\n/g, "\n"));
 
-test("SGT trend and detail share classification and link without replacing default tiles", () => {
+test("SGT coverage replaces the Secure Networking SGACL tile with matching detail", () => {
   assert.equal(queries[0].split("\n").slice(0, 5).join("\n"), queries[1].split("\n").slice(0, 5).join("\n"));
   assert.match(queries[0], /^`index_identity` sourcetype="cisco:ise:syslog" log_type="Passed_Authentications"/);
   assert.match(blocks[0], new RegExp(`^drilldown_stanza_id = ${ids[1]}$`, "m"));
@@ -26,7 +26,15 @@ test("SGT trend and detail share classification and link without replacing defau
   assert.equal(JSON.parse(blocks[1].match(/^viz_options = (.+)/m)[1]).showRowNumbers, true);
   const workspace = fs.readFileSync(path.resolve(__dirname,
     "../src/main/resources/splunk/default/insights_workspaces.conf"), "utf8");
-  for (const id of ids) assert.ok(!workspace.includes(id), "creation must not change the shipped layout");
+  const layouts = new Map([...workspace.matchAll(/^\[layout\.secure_networking\.([^\]]+)\]\n([\s\S]*?)(?=^\[|(?![\s\S]))/gm)]
+    .map(match => [match[1], match[2].match(/^tiles = (.+)$/m)[1].split(",")]));
+  assert.equal(layouts.size, 5);
+  for (const tiles of layouts.values()) assert.equal(new Set(tiles).size, 9);
+  assert.equal(layouts.get("scalable_network_segmentation")[5], ids[0]);
+  assert.ok(![...layouts.values()].flat().includes("secure_networking_sgacl_enforcement_activity_trend"));
+  assert.ok(![...layouts.values()].flat().includes(ids[1]), "detail opens from the trend, not as an extra home tile");
+  const resilience = workspace.match(/^\[layout\.network_resilience_demo\.scalable_network_segmentation\]\n([\s\S]*?)(?=^\[)/m)[1];
+  assert.ok(resilience.includes("secure_networking_sgacl_enforcement_activity_trend"), "other workspaces retain their layout");
 });
 
 test("duplicate tags collapse after trimming while conflicting and default tags stay in denominator", () => {
