@@ -1,7 +1,7 @@
 ---
 exportTitle: Splunk Secure Networking Essentials User Guide
 contentOwner: splunk-cisco-dashboards
-version: 1.0.70
+version: 1.0.80
 lastUpdated: October 2026
 ---
 <!-- Single source of truth for the in-product User Guide and release history. -->
@@ -105,6 +105,7 @@ With the same restricted account and launch path used by viewers, check that:
 
 - The workspace loads and searches complete with the intended index and knowledge-object permissions.
 - Typing `r` and `t` in the Cisco Cloud Control assistant keeps the letters without refreshing the background workspace or changing its time range.
+- Clicking the workspace background, then pressing `r` or `t`, refreshes the data or cycles the time range. Repeat after moving focus to a workspace control; typing in the assistant must still leave the background unchanged.
 - Dashboard creation, personal preferences, and sharing follow the account's permissions.
 - If **Add to AI Canvas** is available, a new and an existing canvas receive the intended search and time range, and the resulting card opens successfully.
 
@@ -365,6 +366,7 @@ Ask the identity or integration owner to investigate token-exchange failures, se
 | A tile reports search slots busy | Wait for running searches to finish, then refresh. Reduce the personal simultaneous-search setting and close unused demo tabs. Ask the administrator to review search concurrency limits and stack capacity if this persists. |
 | A tile reports search failed | Open the tile's search in Splunk Search and inspect its error, permissions, and required macros, lookups, models, or commands. A failed search is not an empty result. |
 | Typing r or t in an embedded assistant refreshes the workspace or changes time | Confirm that version 1.0.70 or later is installed, refresh the page, and retest the actual assistant editor. If it persists, report the installed build and affected editor to the app owner. |
+| Workspace r and t shortcuts do nothing after clicking the dashboard background | Upgrade to version 1.0.80 or later and refresh the page. In earlier versions, moving focus to a workspace control with Tab can restore the shortcuts. Shortcuts intentionally stay inactive while typing in an assistant or text field. |
 | Splunk opens, but Cisco Cloud Control fails to load | Capture the failing request's status and error text without tokens. Compare a standard Splunk page under the same login and contact the identity or integration owner; successful SAML login does not confirm every connected service is available. |
 | A CIM panel is empty | Confirm tags, event types, CIM index macros, model permissions, required fields, and acceleration. |
 | A Cisco model search is empty | Confirm the companion app, model root and child datasets, source types, and model fields. |
@@ -383,6 +385,14 @@ Ask the identity or integration owner to investigate token-exchange failures, se
 ## What's New / Release Notes {#release-notes}
 
 This Markdown file is the authoritative source for the in-product release history.
+
+::: release Release Notes | October 2026 - Version 1.0.80
+
+### Insights Workspaces
+
+- Restored `r` (refresh) and `t` (cycle time range) when the surrounding Splunk dashboard panel has focus after clicking the workspace background. Typing in Cisco Cloud Control assistants and other text editors remains protected from workspace shortcuts.
+
+:::
 
 ::: release Release Notes | October 2026 - Version 1.0.70
 
