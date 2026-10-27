@@ -704,7 +704,7 @@
                     },
                     "display": "auto-scale",
                     "height": 1550,
-                    "width": 1440,
+                    "width": 1120,
                     "showTitleAndDescription": false
                 },
                 "structure": [
@@ -713,7 +713,7 @@
                         "position": {
                             "x": 16,
                             "y": 0,
-                            "w": 1408,
+                            "w": 1088,
                             "h": 102
                         },
                         "type": "block"
@@ -733,7 +733,7 @@
                         "position": {
                             "x": 96,
                             "y": 8,
-                            "w": 960,
+                            "w": 640,
                             "h": 86
                         },
                         "type": "block"
@@ -741,7 +741,7 @@
                     {
                         "item": "input_time_range",
                         "position": {
-                            "x": 1080,
+                            "x": 760,
                             "y": 8,
                             "w": 330,
                             "h": 80
@@ -753,7 +753,7 @@
                         "position": {
                             "x": 24,
                             "y": 112,
-                            "w": 1392,
+                            "w": 1072,
                             "h": 64
                         },
                         "type": "block"
@@ -763,7 +763,7 @@
                         "position": {
                             "x": 16,
                             "y": 188,
-                            "w": 696,
+                            "w": 536,
                             "h": 388
                         },
                         "type": "block"
@@ -773,7 +773,7 @@
                         "position": {
                             "x": 32,
                             "y": 200,
-                            "w": 548,
+                            "w": 388,
                             "h": 36
                         },
                         "type": "block"
@@ -783,7 +783,7 @@
                         "position": {
                             "x": 32,
                             "y": 240,
-                            "w": 664,
+                            "w": 504,
                             "h": 64
                         },
                         "type": "block"
@@ -793,7 +793,7 @@
                         "position": {
                             "x": 32,
                             "y": 312,
-                            "w": 664,
+                            "w": 504,
                             "h": 248
                         },
                         "type": "block"
@@ -801,7 +801,7 @@
                     {
                         "item": "viz_evidence_1_info",
                         "position": {
-                            "x": 608,
+                            "x": 448,
                             "y": 196,
                             "w": 42,
                             "h": 42
@@ -811,7 +811,7 @@
                     {
                         "item": "viz_evidence_1_action",
                         "position": {
-                            "x": 652,
+                            "x": 492,
                             "y": 196,
                             "w": 42,
                             "h": 42
@@ -821,9 +821,9 @@
                     {
                         "item": "viz_evidence_2_background",
                         "position": {
-                            "x": 728,
+                            "x": 568,
                             "y": 188,
-                            "w": 696,
+                            "w": 536,
                             "h": 388
                         },
                         "type": "block"
@@ -831,9 +831,9 @@
                     {
                         "item": "viz_evidence_2_title",
                         "position": {
-                            "x": 744,
+                            "x": 584,
                             "y": 200,
-                            "w": 548,
+                            "w": 388,
                             "h": 36
                         },
                         "type": "block"
@@ -841,9 +841,9 @@
                     {
                         "item": "viz_evidence_2_description",
                         "position": {
-                            "x": 744,
+                            "x": 584,
                             "y": 240,
-                            "w": 664,
+                            "w": 504,
                             "h": 64
                         },
                         "type": "block"
@@ -851,9 +851,9 @@
                     {
                         "item": "viz_evidence_2_table",
                         "position": {
-                            "x": 744,
+                            "x": 584,
                             "y": 312,
-                            "w": 664,
+                            "w": 504,
                             "h": 248
                         },
                         "type": "block"
@@ -861,7 +861,7 @@
                     {
                         "item": "viz_evidence_2_info",
                         "position": {
-                            "x": 1320,
+                            "x": 1000,
                             "y": 196,
                             "w": 42,
                             "h": 42
@@ -871,7 +871,7 @@
                     {
                         "item": "viz_evidence_2_action",
                         "position": {
-                            "x": 1364,
+                            "x": 1044,
                             "y": 196,
                             "w": 42,
                             "h": 42
@@ -883,7 +883,7 @@
                         "position": {
                             "x": 16,
                             "y": 592,
-                            "w": 696,
+                            "w": 536,
                             "h": 388
                         },
                         "type": "block"
@@ -893,7 +893,7 @@
                         "position": {
                             "x": 32,
                             "y": 604,
-                            "w": 548,
+                            "w": 388,
                             "h": 36
                         },
                         "type": "block"
@@ -903,7 +903,7 @@
                         "position": {
                             "x": 32,
                             "y": 644,
-                            "w": 664,
+                            "w": 504,
                             "h": 64
                         },
                         "type": "block"
@@ -913,7 +913,7 @@
                         "position": {
                             "x": 32,
                             "y": 716,
-                            "w": 664,
+                            "w": 504,
                             "h": 248
                         },
                         "type": "block"
@@ -921,7 +921,7 @@
                     {
                         "item": "viz_evidence_3_info",
                         "position": {
-                            "x": 608,
+                            "x": 448,
                             "y": 600,
                             "w": 42,
                             "h": 42
@@ -931,7 +931,7 @@
                     {
                         "item": "viz_evidence_3_action",
                         "position": {
-                            "x": 652,
+                            "x": 492,
                             "y": 600,
                             "w": 42,
                             "h": 42
@@ -941,9 +941,9 @@
                     {
                         "item": "viz_evidence_4_background",
                         "position": {
-                            "x": 728,
+                            "x": 568,
                             "y": 592,
-                            "w": 696,
+                            "w": 536,
                             "h": 388
                         },
                         "type": "block"
@@ -951,9 +951,9 @@
                     {
                         "item": "viz_evidence_4_title",
                         "position": {
-                            "x": 744,
+                            "x": 584,
                             "y": 604,
-                            "w": 548,
+                            "w": 388,
                             "h": 36
                         },
                         "type": "block"
@@ -961,9 +961,9 @@
                     {
                         "item": "viz_evidence_4_description",
                         "position": {
-                            "x": 744,
+                            "x": 584,
                             "y": 644,
-                            "w": 664,
+                            "w": 504,
                             "h": 64
                         },
                         "type": "block"
@@ -971,9 +971,9 @@
                     {
                         "item": "viz_evidence_4_table",
                         "position": {
-                            "x": 744,
+                            "x": 584,
                             "y": 716,
-                            "w": 664,
+                            "w": 504,
                             "h": 248
                         },
                         "type": "block"
@@ -981,7 +981,7 @@
                     {
                         "item": "viz_evidence_4_info",
                         "position": {
-                            "x": 1320,
+                            "x": 1000,
                             "y": 600,
                             "w": 42,
                             "h": 42
@@ -991,7 +991,7 @@
                     {
                         "item": "viz_evidence_4_action",
                         "position": {
-                            "x": 1364,
+                            "x": 1044,
                             "y": 600,
                             "w": 42,
                             "h": 42
@@ -1003,7 +1003,7 @@
                         "position": {
                             "x": 16,
                             "y": 996,
-                            "w": 696,
+                            "w": 536,
                             "h": 388
                         },
                         "type": "block"
@@ -1013,7 +1013,7 @@
                         "position": {
                             "x": 32,
                             "y": 1008,
-                            "w": 548,
+                            "w": 388,
                             "h": 36
                         },
                         "type": "block"
@@ -1023,7 +1023,7 @@
                         "position": {
                             "x": 32,
                             "y": 1048,
-                            "w": 664,
+                            "w": 504,
                             "h": 64
                         },
                         "type": "block"
@@ -1033,7 +1033,7 @@
                         "position": {
                             "x": 32,
                             "y": 1120,
-                            "w": 664,
+                            "w": 504,
                             "h": 248
                         },
                         "type": "block"
@@ -1041,7 +1041,7 @@
                     {
                         "item": "viz_evidence_5_info",
                         "position": {
-                            "x": 608,
+                            "x": 448,
                             "y": 1004,
                             "w": 42,
                             "h": 42
@@ -1051,7 +1051,7 @@
                     {
                         "item": "viz_evidence_5_action",
                         "position": {
-                            "x": 652,
+                            "x": 492,
                             "y": 1004,
                             "w": 42,
                             "h": 42
@@ -1061,9 +1061,9 @@
                     {
                         "item": "viz_evidence_6_background",
                         "position": {
-                            "x": 728,
+                            "x": 568,
                             "y": 996,
-                            "w": 696,
+                            "w": 536,
                             "h": 388
                         },
                         "type": "block"
@@ -1071,9 +1071,9 @@
                     {
                         "item": "viz_evidence_6_title",
                         "position": {
-                            "x": 744,
+                            "x": 584,
                             "y": 1008,
-                            "w": 548,
+                            "w": 388,
                             "h": 36
                         },
                         "type": "block"
@@ -1081,9 +1081,9 @@
                     {
                         "item": "viz_evidence_6_description",
                         "position": {
-                            "x": 744,
+                            "x": 584,
                             "y": 1048,
-                            "w": 664,
+                            "w": 504,
                             "h": 64
                         },
                         "type": "block"
@@ -1091,9 +1091,9 @@
                     {
                         "item": "viz_evidence_6_table",
                         "position": {
-                            "x": 744,
+                            "x": 584,
                             "y": 1120,
-                            "w": 664,
+                            "w": 504,
                             "h": 248
                         },
                         "type": "block"
@@ -1101,7 +1101,7 @@
                     {
                         "item": "viz_evidence_6_info",
                         "position": {
-                            "x": 1320,
+                            "x": 1000,
                             "y": 1004,
                             "w": 42,
                             "h": 42
@@ -1111,7 +1111,7 @@
                     {
                         "item": "viz_evidence_6_action",
                         "position": {
-                            "x": 1364,
+                            "x": 1044,
                             "y": 1004,
                             "w": 42,
                             "h": 42
@@ -1123,7 +1123,7 @@
                         "position": {
                             "x": 32,
                             "y": 1420,
-                            "w": 1250,
+                            "w": 930,
                             "h": 114
                         },
                         "type": "block"
@@ -1131,7 +1131,7 @@
                     {
                         "item": "viz_interface_action",
                         "position": {
-                            "x": 1340,
+                            "x": 1020,
                             "y": 1440,
                             "w": 56,
                             "h": 56

@@ -34,6 +34,7 @@ test('new dashboard has exactly six catalogue-backed evidence tables and bounded
     assert.equal(d.layout.options.showTitleAndDescription, false);
     assert.equal(d.inputs.input_time_range.options.defaultValue, '-24h@h,now,auto');
     const layout = d.layout.layoutDefinitions.layout_overview;
+    assert.equal(layout.options.width, 1120, 'Evidence tables should not shrink below readable desktop text in the app pane');
     for (const item of layout.structure) {
         assert.ok(d.visualizations[item.item] || d.inputs[item.item]);
         const { x, y, w, h } = item.position;
@@ -91,7 +92,8 @@ test('new dashboard is navigable, managed and uses readable width fitting', () =
     assert.match(editor, /!WIDTH_FIT_DASHBOARD_IDS.has\(viewName\)/);
     assert.match(editor, /data-dashboard-id=\{dashID\}/);
     const styles = fs.readFileSync(path.join(resources, 'appserver/static/application.css'), 'utf8');
-    assert.match(styles, /div:has\(\[data-dashboard-id="sn_network_service_investigations"\]\)[\s\S]*?min-width: 0/);
+    assert.match(styles, /div:has\(#collection_container.dashboardbuilderview \[data-dashboard-id="sn_network_service_investigations"\]\)[\s\S]*?min-width: 0/);
+    assert.match(styles, /\[data-dashboard-id="sn_network_service_investigations"\] \[data-test="cell"\] > div > span\s*\{\s*display: block/);
     const guide = fs.readFileSync(path.join(web, 'pages/user_guide/userGuide.md'), 'utf8');
     assert.match(guide, /Network service and catalogue investigations/);
     assert.match(guide, /Added \*\*Network Service Investigations\*\*/);
