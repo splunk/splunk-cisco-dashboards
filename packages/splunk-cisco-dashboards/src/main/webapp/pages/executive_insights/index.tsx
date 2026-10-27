@@ -3492,7 +3492,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   const MAP_HEIGHT_KEY = userScopedStorageKey(
     `scd_overview_map_height.${insightsWorkspace.id}`,
   );
-  const MAP_HEIGHT_DEFAULT: MapHeightMode = "compact";
+  const MAP_HEIGHT_DEFAULT: MapHeightMode = "match-workspace";
   const [mapHeightMode, setMapHeightMode] = useState<MapHeightMode>(() => {
     if (typeof window === "undefined") return MAP_HEIGHT_DEFAULT;
     try {

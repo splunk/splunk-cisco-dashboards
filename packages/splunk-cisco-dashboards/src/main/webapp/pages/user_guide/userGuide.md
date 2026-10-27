@@ -225,6 +225,8 @@ If the dashboard is saved but app sharing fails, select **Open saved dashboard**
 
 ## Insights Workspaces {#workspaces}
 
+Map height defaults to **Match workspace** for new view preferences and after a factory reset. You can select **Compact** in **Dashboard controls > Map height**; saved personal choices are preserved across upgrades.
+
 Insights Workspaces are reusable, audience-specific views of Searchbase-backed KPIs. A workspace combines header metadata, sections, default tiles, a Signal Rail, map settings, and presentation defaults. Built-in workspaces provide packaged starting points; custom workspaces store customer-specific choices without changing packaged definitions.
 
 ### Built-in workspaces
@@ -440,6 +442,7 @@ This Markdown file is the authoritative source for the in-product release histor
 
 ### Insights Workspaces
 
+- Made **Match workspace** the factory default for map height. Saved personal height preferences remain unchanged, and factory reset restores the new default.
 - Restored `r` (refresh) and `t` (cycle time range) when the surrounding Splunk dashboard panel has focus after clicking the workspace background. Typing in Cisco Cloud Control assistants and other text editors remains protected from workspace shortcuts.
 - Fixed ISE policy-family activity showing zero when policy snapshots contain repeated multivalue identifiers or counters. Equal values are normalized before grouping and hit-counter calculations; conflicting values and invalid counters are excluded instead of creating misleading activity.
 - Replaced SGACL Enforcement Activity Trend in the default Secure Networking workspace with SGT Assignment Coverage and its site/device drilldown. The new searches measure event-weighted SGT coverage for successful ISE authentications, retain missing and conflicting tag context, and distinguish empty windows from zero coverage. The workspace keeps nine tiles per section; saved layout overrides and other workspaces are preserved.
