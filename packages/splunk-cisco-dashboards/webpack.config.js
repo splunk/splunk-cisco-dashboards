@@ -103,6 +103,7 @@ class StripSourceMapDirectivesPlugin {
                         .forEach((assetName) => {
                             const asset = compilation.getAsset(assetName);
                             const source = asset.source.source().toString();
+                            if (!source.includes('sourceMappingURL')) return;
                             const stripped = source.replace(SOURCE_MAP_DIRECTIVE_PATTERN, '');
                             if (stripped !== source) {
                                 compilation.updateAsset(assetName, new webpack.sources.RawSource(stripped));
@@ -139,6 +140,16 @@ const commonConfig = webpackMerge(baseConfig, {
     // SplunkBase archives must not expose source maps. Keep this explicit so a
     // future inherited webpack-default change cannot silently publish them.
     devtool: false,
+    // This multi-entry production build values predictable memory use over
+    // retaining a compiler cache across watch rebuilds.
+    cache: false,
+    // Keep watch mode scoped to source inputs. In particular, avoid watching
+    // dependency trees and generated output, which can otherwise cause
+    // unnecessary rebuild work and retain large dependency graphs.
+    watchOptions: {
+        ignored: ['**/node_modules/**', '**/.git/**', '**/stage/**', '**/dist/**'],
+        aggregateTimeout: 300,
+    },
     entry: {
         executive_insights: path.join(
             webappRoot,
