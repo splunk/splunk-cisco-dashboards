@@ -99,8 +99,10 @@ test("all eighty definitions have reproducible populated and no-observation nati
     assert.match(e.fixture.assertion,/Records=/);
     assert.match(e.fixture.post,/MessageRows/);
   }
-  assert.equal(extraFixtures.length,11);
+  assert.equal(extraFixtures.length,28);
   assert.equal(extraFixtures.filter(f=>f.kind==='address-fallback').length,4);
+  assert.equal(extraFixtures.filter(f=>f.kind==='integer-domain').length,13);
+  assert.equal(extraFixtures.filter(f=>f.kind==='counter-context').length,4);
   assert.ok(extraFixtures.some(f=>f.kind==='discontinuity'));
   assert.ok(extraFixtures.some(f=>f.kind==='truncation'&&f.query.includes('count=1001')));
   assert.ok(extraFixtures.some(f=>f.query.includes('Conflicting process context')));
@@ -108,13 +110,30 @@ test("all eighty definitions have reproducible populated and no-observation nati
 test("CrowdStrike address aliases validate candidates against the event family",()=>{
   for(const id of ['crowdstrike_process_destinations','crowdstrike_blocked_network_events','crowdstrike_ipv6_destinations','crowdstrike_network_listeners']){
     const e=entry(id);
-    assert.equal(e.version,'1.0.1');
+    assert.equal(e.version,id==='crowdstrike_network_listeners'?'1.0.2':'1.0.1');
     assert.match(e.query,/case\(match\('event_simpleName',"IP6"\)/);
     assert.match(e.query,/if\(cidrmatch\("::\/0",'/);
     assert.match(e.query,/if\(cidrmatch\("0\.0\.0\.0\/0",'/);
   }
   assert.equal(entry('crowdstrike_dns_process_context').version,'1.0.0');
   assert.doesNotMatch(entry('traffic_application_bytes').query,/match\('event_simpleName'/);
+});
+test("integer domains validate aliases before fallback without rejecting fractional timing",()=>{
+  const entries=manifest.filter(e=>Object.keys(e.integers).length);
+  assert.equal(entries.length,13);
+  for(const e of entries){
+    for(const [target,[low,high]] of Object.entries(e.integers)){
+      assert.ok(e.fields[target]);
+      assert.ok(e.query.includes(`>=${low}`));
+      if(high!==null)assert.ok(e.query.includes(`<=${high}`));
+      for(const alias of e.fields[target].split(' '))assert.ok(e.query.includes(`tonumber('${alias}')=floor(tonumber('${alias}'))`));
+    }
+  }
+  for(const id of ['dns_response_latency','traffic_long_duration','fortinet_sdwan_probe_quality','zscaler_zpa_server_setup']){
+    assert.deepEqual(entry(id).integers,{});
+    assert.doesNotMatch(entry(id).query,/floor\(tonumber/);
+  }
+  assert.match(entry('aruba_authentication_failures').ref,/\/Aruba\/clearpass\//);
 });
 test("authoring check is deterministic and does not change repository files",()=>{
   const before=fs.readFileSync(path.join(resource,"searchbase.conf"));

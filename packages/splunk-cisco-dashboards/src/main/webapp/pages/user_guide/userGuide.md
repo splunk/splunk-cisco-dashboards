@@ -302,6 +302,8 @@ The catalogue includes **80 optional multivendor searches**: twenty vendor-neutr
 
 CrowdStrike connection, blocked-network and listener searches choose the first valid textual address matching the event's IPv4 or IPv6 family. Invalid or wrong-family aliases cannot hide a valid later address. Unspecified listener bind addresses (`0.0.0.0` and `::`) remain valid; raw integer-encoded addresses still require add-on normalization.
 
+Port, HTTP response-code, byte-count and interface-counter measurements require whole numbers within the ranges documented in each search. Each alias is validated before fallback; a valid preferred value keeps precedence. Fractional timing and signal measurements remain valid. Invalid interface reset or uptime values remain unknown and contribute to `ContinuityUnverifiedIntervals`.
+
 | Search prefix | Investigations and input requirements |
 | --- | --- |
 | **Network Essentials** (20) | Traffic/application records, explicit decisions, destination/port fan-out, remote-administration ports, durations, authentication outcomes/source diversity/method visibility, DNS outcomes/query types/latency, HTTP errors/cleartext destinations, intrusion actions, change failures, IPv6 decision visibility, and IF-MIB interface error rates. Nineteen use CIM tags and normalized fields; interface rates require flattened IF-MIB counter samples. No Cisco source or companion model is required. |
@@ -445,6 +447,7 @@ This Markdown file is the authoritative source for the in-product release histor
 - Added twelve more optional catalogue investigations for firewall NAT/resource-limit evidence and observed rule activity, Duo/CIM authentication candidates, IOS/Catalyst Center change-impact associations, and cross-vendor IPv6 and decision-field visibility. Documented thresholds, source requirements, unknown observations and the limits of traffic-only capacity/rule conclusions; existing workspace layouts remain unchanged.
 - Added eighty optional networking investigations: twenty vendor-neutral CIM/IF-MIB searches and six each for Palo Alto, Fortinet, Juniper/Aruba, Arista, Check Point, F5, Zscaler, Infoblox, CrowdStrike and Microsoft Defender. Added explicit source/field contracts, current/legacy field variants, bounded results, duplicate/conflict handling, counter-reset safeguards and endpoint process-context checks. Documented feed prerequisites and interpretation limits without changing collection, schedules, routing or workspace layouts.
 - Fixed CrowdStrike address fallback so invalid or wrong-family aliases no longer hide valid IPv4/IPv6 connection, blocked-network or listener addresses. Preserved valid unspecified listener binds and explicit missing-address guidance.
+- Hardened thirteen multivendor searches to reject fractional or out-of-range ports, HTTP codes, byte counts and counters before alias selection. Invalid reset/uptime context now remains explicitly unverified, while fractional timing measurements remain valid. Corrected the Aruba authentication source reference.
 
 :::
 

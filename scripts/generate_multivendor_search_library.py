@@ -29,13 +29,41 @@ REF = {
  'Microsoft':'https://learn.microsoft.com/en-us/defender-xdr/advanced-hunting-devicenetworkevents-table',
 }
 ENTRIES=[]
+# Explicit integer domains, not thresholds for an investigation. Validate each
+# alias before choosing it so bad preferred data cannot mask a usable fallback.
+INTEGER_FIELDS={
+ 'traffic_application_bytes':{'ByteValue':(0,None)},
+ 'pan_application_transfer':{'ByteValue':(0,None)},
+ 'zscaler_zia_transfer_sizes':{'RequestBytes':(0,None),'ResponseBytes':(0,None)},
+ 'traffic_port_fanout':{'Port':(0,65535)},
+ 'traffic_application_port_inventory':{'Port':(0,65535)},
+ 'crowdstrike_network_listeners':{'LocalPort':(0,65535)},
+ 'web_server_errors':{'Status':(100,599)},
+ 'f5_http_response_errors':{'Status':(100,599)},
+ 'zscaler_zia_http_errors':{'Status':(100,599)},
+}
+for _slug in ('interface_error_counter_rates','arista_interface_error_rates','arista_interface_discard_rates','arista_interface_transfer_rates'):
+    INTEGER_FIELDS[_slug]={'In':(0,9007199254740991),'Out':(0,9007199254740991),
+                           'Discontinuity':(0,4294967295),'Uptime':(0,4294967295)}
+REVISIONS={slug:'1.0.1' for slug in INTEGER_FIELDS}
+REVISIONS.update(crowdstrike_network_listeners='1.0.2',aruba_authentication_failures='1.0.1')
 def event(**kw): return {'host':'device-a','_time':{'expr':'now()-60'},**kw}
-def norm(mapping, defaults=(), ip_targets=(), family_field=None):
+def norm(mapping, defaults=(), ip_targets=(), family_field=None, integers=None):
     raw=list(dict.fromkeys(a for aliases in mapping.values() for a in aliases.split()))
     line="| foreach "+' '.join(raw)+" [ eval <<FIELD>>=if(coalesce(mvcount(mvdedup('<<FIELD>>')),0)=1,nullif(trim(mvindex(mvdedup('<<FIELD>>'),0)),\"\"),null()) ]"
     assigns=[]
     for target,aliases in mapping.items():
         args=["'"+x+"'" for x in aliases.split()]
+        if target in (integers or {}):
+            low,high=integers[target]
+            values=[]
+            for a in args:
+                number=f'tonumber({a})'
+                valid=f'{number}>={low} AND {number}=floor({number})'
+                if high is not None:valid+=f' AND {number}<={high}'
+                values.append(f'if({valid},{number},null())')
+            assigns.append(target+'='+('coalesce('+','.join(values)+')' if len(values)>1 else values[0]))
+            continue
         if target in ip_targets:
             # Validate each candidate before coalescing. An unrelated family or
             # placeholder in an earlier alias must not hide a usable address.
@@ -54,7 +82,13 @@ def norm(mapping, defaults=(), ip_targets=(), family_field=None):
 def src(*types): return SCOPE+' sourcetype IN ('+','.join(json.dumps(t) for t in types)+')'
 def add(group,slug,name,source,mapping,body,cols,desc,limits,rows,records,groups=1,extra='',assertion='',ref=None,defaults=(),order='- Records',ip_targets=(),family_field=None,version='1.0.0'):
     assert not any(x['id']=='mv_'+slug for x in ENTRIES),slug
-    normal=norm(mapping,defaults,ip_targets,family_field) if mapping else ''
+    integers=INTEGER_FIELDS.get(slug,{})
+    assert set(integers)<=set(mapping),slug
+    normal=norm(mapping,defaults,ip_targets,family_field,integers) if mapping else ''
+    if integers:
+        domains=', '.join(f'{k} {v[0]}..{v[1] if v[1] is not None else "unbounded"}' for k,v in integers.items())
+        limits+=' Integer fields reject fractions and out-of-range values before alias fallback: '+domains+'.'
+        if 'Uptime' in integers:limits+=' Invalid reset/uptime context remains unknown, not verified continuity.'
     bounded='''| eventstats count as TotalGroups
 | eval RowsTruncated=if(TotalGroups>1000,1,0)
 | sort 1000 '''+order+'''
@@ -62,7 +96,7 @@ def add(group,slug,name,source,mapping,body,cols,desc,limits,rows,records,groups
 | appendpipe [ stats count as _empty | where _empty=0 | eval message="No qualifying observations. Check source fields, tags, index routing, permissions, thresholds and the finite time window; this is not a health verdict." | fields message ]'''
     q='\n'.join(x.strip() for x in [source,normal,body,bounded] if x)
     ENTRIES.append(dict(id='mv_'+slug,group=group,name=name,source=source,fields=mapping,query=q,description=desc,
-        limits=limits,version=version,ref=ref or REF[group],fixture={'id':'mv_'+slug,'rows':rows,
+        limits=limits,integers=integers,version=REVISIONS.get(slug,version),ref=ref or REF[group],fixture={'id':'mv_'+slug,'rows':rows,
         'post':'| stats count as Groups count(eval(isnotnull(message))) as MessageRows sum(Records) as Records '+extra,
         'assertion':f'Groups={groups} AND MessageRows=0 AND Records={records}'+(' AND '+assertion if assertion else '')}))
 DEVICE={'Device':'dvc host'}
@@ -293,7 +327,7 @@ add('Juniper / Aruba','aruba_authentication_failures','Aruba - Access Authentica
  '| where lower(Action) IN ("failure","failed","reject","rejected")\n| stats count as Records dc(Client) as Clients by Device AccessDevice Reason',
  'Device AccessDevice Reason Records Clients','Ranks explicitly reported Aruba access-authentication failures.',
  'Requires authentication field normalization from the selected Aruba/ClearPass/Central feed. Not every Aruba syslog event exposes these fields, and rejection does not establish a wireless RF problem.',
- [event(action='failure',src='192.0.2.1',dest='ap-a',reason='credentials'),event(action='success',dest='ap-a')],1,defaults=('Device','AccessDevice','Reason'))
+ [event(action='failure',src='192.0.2.1',dest='ap-a',reason='credentials'),event(action='success',dest='ap-a')],1,defaults=('Device','AccessDevice','Reason'),ref='https://splunk.github.io/splunk-connect-for-syslog/main/sources/vendor/Aruba/clearpass/')
 add('Juniper / Aruba','aruba_client_snr','Aruba - Client Signal-to-Noise Observations',src('aruba:central:*','aruba:client:*'),
  {**DEVICE,'Client':'macaddr client_mac mac','AP':'ap_name ap_mac','SNR':'snr'},
  '| eval SNR=tonumber(SNR)\n| where isnotnull(Client) AND SNR>=-30 AND SNR<=100\n| stats count as Records median(SNR) as MedianSNRdB min(SNR) as MinSNRdB max(_time) as LastSeen by Device AP Client',
@@ -624,7 +658,7 @@ def render_docs():
             lines.append('| '+e['name']+' | `'+e['id']+'` | '+limit+' [Source reference]('+e['ref']+') |')
         lines.append('')
     lines.extend(['## Reproduce the catalogue and tests','',
-      'From the repository root, run `python3 scripts/generate_multivendor_search_library.py --check` to compare generated definitions with the catalogue, `node scripts/generate_multivendor_fixtures.cjs --extended` to emit 171 read-only native-SPL cases, and `yarn test` for repository contracts. Submit fixture queries in Splunk Search and require TestPassed=1. The helper never contacts Splunk, creates saved searches, writes indexed data or reads credentials.','',
+      'From the repository root, run `python3 scripts/generate_multivendor_search_library.py --check` to compare generated definitions with the catalogue, `node scripts/generate_multivendor_fixtures.cjs --extended` to emit 188 read-only native-SPL cases, and `yarn test` for repository contracts. Submit fixture queries in Splunk Search and require TestPassed=1. The helper never contacts Splunk, creates saved searches, writes indexed data or reads credentials.','',
       'The generator owns the final block beginning with `[mv_traffic_application_bytes]`. Review edits in the generator, regenerate using `--write`, and regenerate this reference using `--docs`. Keep source and reference together. Do not replace generated entries with manual changes or assume real-vendor execution from the fixture results.',''])
     return '\n'.join(lines)
 

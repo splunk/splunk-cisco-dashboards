@@ -54,6 +54,51 @@ const addressCases=[
     post:'| stats count as Groups sum(Records) as Records count(eval(Remote="Not reported")) as Missing count(eval(Remote="2001:db8::1")) as Valid',assertion:'Groups=2 AND Records=2 AND Missing=1 AND Valid=1'},
 ];
 extraFixtures.push(...generateFixtures(conf,addressCases).filter(f=>f.kind==='populated').map(f=>({...f,kind:'address-fallback'})));
+const numericCases=[];
+const traffic=(port)=>({host:'switch-a',src:'192.0.2.1',dest:'198.51.100.1',app:'ssh',dest_port:port});
+numericCases.push({id:'mv_traffic_port_fanout',rows:[...Array.from({length:10},(_,i)=>traffic(i)),...Array.from({length:10},(_,i)=>traffic(i+0.5))],
+  post:'| stats count as Groups sum(Records) as Records max(Ports) as Ports',assertion:'Groups=1 AND Records=10 AND Ports=10'});
+numericCases.push({id:'mv_traffic_application_port_inventory',rows:[0,65535,443.5,-1,65536,[443,444]].map(traffic),
+  post:'| stats count as Groups sum(Records) as Records min(Port) as Low max(Port) as High',assertion:'Groups=2 AND Records=2 AND Low=0 AND High=65535'});
+numericCases.push({id:'mv_crowdstrike_network_listeners',rows:[0,65535,443.5,-1,65536,[443,444]].map(LocalPort=>({aid:'a',event_simpleName:'NetworkListenIP4',LocalAddressIP4:'0.0.0.0',LocalPort})),
+  post:'| stats count as Groups sum(Records) as Records min(LocalPort) as Low max(LocalPort) as High',assertion:'Groups=2 AND Records=2 AND Low=0 AND High=65535'});
+for(const id of ['web_server_errors','f5_http_response_errors','zscaler_zia_http_errors']){
+  const rows=[100,200,400,500,599,503.5,600,-1,'invalid',[503,504]].map(status=>({host:'switch-a',dest:'app-a',status}));
+  if(id!=='web_server_errors'){
+    const fallback=id.startsWith('f5')?'http_status':'respcode';
+    rows.push({host:'switch-a',dest:'app-a',status:'unknown',[fallback]:503},
+      {host:'switch-a',dest:'app-a',status:200,[fallback]:503});
+  }
+  const expected=id==='web_server_errors'?2:4;
+  numericCases.push({id:'mv_'+id,rows,post:'| stats count as Groups sum(Records) as Records',assertion:`Records=${expected}`});
+}
+for(const id of ['traffic_application_bytes','pan_application_transfer']){
+  numericCases.push({id:'mv_'+id,rows:[0,100,100.5,-1,'invalid',[100,200]].map(bytes=>({host:'switch-a',app:'ssh',subtype:'end',bytes})),
+    post:'| stats count as Groups sum(Records) as Records sum(ObservedBytes) as Bytes',assertion:'Groups=1 AND Records=2 AND Bytes=100'});
+}
+numericCases.push({id:'mv_zscaler_zia_transfer_sizes',rows:[
+  {host:'switch-a',reqsize:0,respsize:0},{host:'switch-a',reqsize:100,respsize:100},
+  {host:'switch-a',reqsize:100.5,respsize:100.5},{host:'switch-a',reqsize:-1,respsize:-1},
+  {host:'switch-a',reqsize:'invalid',respsize:'invalid',bytes_out:200,bytes_in:300},
+  {host:'switch-a',reqsize:0,respsize:0,bytes_out:900,bytes_in:900}],
+  post:'| stats count as Groups sum(Records) as Records sum(RequestBytes) as Requests sum(ResponseBytes) as Responses',assertion:'Groups=1 AND Records=4 AND Requests=300 AND Responses=400'});
+const counterCases=[];
+for(const [id,inField,outField,multiplier,aliasIn,aliasOut] of [
+  ['interface_error_counter_rates','ifInErrors','ifOutErrors',1],
+  ['arista_interface_error_rates','ifInErrors','ifOutErrors',1,'inErrors','outErrors'],
+  ['arista_interface_discard_rates','ifInDiscards','ifOutDiscards',1,'inDiscards','outDiscards'],
+  ['arista_interface_transfer_rates','ifHCInOctets','ifHCOutOctets',0.000008,'inOctets','outOctets'],
+]){
+  const label=id.endsWith('transfer_rates')?'Mbps':'PerSecond';
+  const rows=[100,160,160.5,220,280,9007199254740992,340,400].map((value,i)=>({host:'switch-a',interface:'Ethernet1',_time:at(600-60*i),[inField]:value,[outField]:value}));
+  if(aliasIn) Object.assign(rows[0],{[inField]:'invalid',[outField]:'invalid',[aliasIn]:100,[aliasOut]:100});
+  numericCases.push({id:'mv_'+id,rows,post:`| stats count as Groups sum(Records) as Records max(PeakIn${label}) as Rate`,assertion:`Groups=1 AND Records=3 AND abs(Rate-${multiplier})<0.000000001`});
+  const contextRows=[-1,0.5,4294967296,'bad',null].map((value,i)=>({host:'bad-context',interface:'Ethernet1',_time:at(600-60*i),[inField]:100+60*i,[outField]:100+60*i,ifCounterDiscontinuityTime:value,sysUpTime:value}));
+  contextRows.push(...[0,60,4294967295,0,60].map((uptime,i)=>({host:'valid-context',interface:'Ethernet1',_time:at(600-60*i),[inField]:100+60*i,[outField]:100+60*i,ifCounterDiscontinuityTime:0,sysUpTime:uptime})));
+  counterCases.push({id:'mv_'+id,rows:contextRows,post:'| stats count as Groups sum(Records) as Records sum(ContinuityUnverifiedIntervals) as Unverified',assertion:'Groups=2 AND Records=7 AND Unverified=4'});
+}
+extraFixtures.push(...generateFixtures(conf,numericCases).filter(f=>f.kind==='populated').map(f=>({...f,kind:'integer-domain'})));
+extraFixtures.push(...generateFixtures(conf,counterCases).filter(f=>f.kind==='populated').map(f=>({...f,kind:'counter-context'})));
 const discontinuityCase={id:'mv_interface_error_counter_rates',rows:[
   {host:'switch-a',ifName:'Ethernet1',ifInErrors:100,ifOutErrors:100,ifCounterDiscontinuityTime:0,sysUpTime:10000,_time:at(600)},
   {host:'switch-a',ifName:'Ethernet1',ifInErrors:160,ifOutErrors:160,ifCounterDiscontinuityTime:1,sysUpTime:10060,_time:at(540)},
