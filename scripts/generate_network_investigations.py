@@ -127,7 +127,7 @@ def new_dashboard(template):
     description_template = template['visualizations']['viz_card_01_description']
     v['viz_scope'] = markdown(description_template, 'Counts describe observed records, not unique sessions or confirmed incidents. Empty panels can reflect missing feeds, fields or matching activity. Related investigations retain this time range and run one at a time.', 16)
     layout = {'type': 'absolute', 'options': deepcopy(template['layout']['layoutDefinitions']['layout_overview']['options']), 'structure': []}
-    layout['options'].update(width=1440, height=1550)
+    layout['options'].update(width=1440, height=1550, showTitleAndDescription=False)
     layout['structure'] = [block('viz_header_bg', 16, 0, 1408, 102), block('viz_header_icon', 28, 20, 56, 56), block('viz_header', 96, 8, 960, 86), block('input_time_range', 1080, 8, 330, 80, 'input'), block('viz_scope', 24, 112, 1392, 64)]
     d['dataSources'] = {}
     for i, (title, description, ref, targets) in enumerate(PANELS):
@@ -135,9 +135,9 @@ def new_dashboard(template):
         source = f'ds_evidence_{i+1}'
         x, y = 16 + (i%2)*712, 188 + (i//2)*404
         v[prefix+'_background'] = deepcopy(template['visualizations']['viz_card_01_background'])
-        v[prefix+'_title'] = markdown(title_template, '**'+title+'**', 20)
+        v[prefix+'_title'] = markdown(title_template, '### '+title, 20)
         v[prefix+'_description'] = markdown(description_template, description, 16)
-        v[prefix+'_table'] = {'type':'splunk.table', 'title': title, 'showProgressBar': True, 'showLastUpdated': True, 'options': {'backgroundColor': template['visualizations']['viz_card_01_background']['options']['fillColor'], 'count':5, 'showRowNumbers':False, 'showInternalFields':False, 'fontSize':'large'}, 'dataSources': {'primary':source}}
+        v[prefix+'_table'] = {'type':'splunk.table', 'title': '', 'showProgressBar': True, 'showLastUpdated': True, 'options': {'backgroundColor': template['visualizations']['viz_card_01_background']['options']['fillColor'], 'count':5, 'showRowNumbers':False, 'showInternalFields':False, 'fontSize':'large', 'tableFormat':{'textOverflow':'ellipsis'}}, 'dataSources': {'primary':source}}
         v[prefix+'_action'] = action(title, [ref]+targets)
         v[prefix+'_info'] = action(title, [ref], info=True)
         layout['structure'] += [block(prefix+'_background', x,y,696,388), block(prefix+'_title', x+16,y+12,548,36), block(prefix+'_description',x+16,y+52,664,64),block(prefix+'_table',x+16,y+124,664,248), block(prefix+'_info',x+592,y+8,42,42),block(prefix+'_action',x+636,y+8,42,42)]
@@ -145,7 +145,7 @@ def new_dashboard(template):
     v['viz_interface_text'] = markdown(title_template, '### IPv6 and interface investigations\nOpen IP-family visibility, denied-destination and interface measurement evidence separately.', 18)
     v['viz_interface_action'] = action('IPv6 and interface evidence', ['network_cross_vendor_ip_family_mix', 'mv_ipv6_decision_visibility', 'network_cross_vendor_ipv6_denied_destinations', 'network_cross_vendor_decision_field_coverage', 'mv_interface_error_counter_rates', 'mv_arista_latest_interface_state', 'mv_arista_interface_error_rates', 'mv_arista_interface_discard_rates', 'mv_arista_interface_transfer_rates', 'mv_arista_bgp_adjacency_messages', 'mv_arista_lanz_queue_observations'])
     layout['structure'] += [block('viz_interface_text', 32, 1420, 1250, 114), block('viz_interface_action', 1340, 1440, 56, 56)]
-    d['layout'] = {'globalInputs':[], 'layoutDefinitions':{'layout_overview':layout}, 'tabs':{'items':[{'label':'Service investigations','layoutId':'layout_overview'}]}}
+    d['layout'] = {'options':{'showTitleAndDescription':False}, 'globalInputs':[], 'layoutDefinitions':{'layout_overview':layout}, 'tabs':{'items':[{'label':'Service investigations','layoutId':'layout_overview'}]}}
     return d
 
 

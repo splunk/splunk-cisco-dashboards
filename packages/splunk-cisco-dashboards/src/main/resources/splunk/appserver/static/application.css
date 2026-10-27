@@ -151,6 +151,13 @@ body.scd-managed-studio-template #collection_container.dashboardbuilderview {
   min-width: 0;
 }
 
+/* The service evidence view scrolls vertically and must fit narrow app panes. */
+body.scd-managed-studio-template
+  > [role="main"]
+  > div:has([data-dashboard-id="sn_network_service_investigations"]) {
+  min-width: 0;
+}
+
 body.scd-managed-studio-template [data-test="DashboardLayoutContainer"],
 body.scd-managed-studio-template [data-test="DashboardLayoutContainer"] * {
   font-family: Inter, system-ui, sans-serif !important;

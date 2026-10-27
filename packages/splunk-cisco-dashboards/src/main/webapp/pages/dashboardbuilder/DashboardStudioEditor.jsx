@@ -2211,6 +2211,7 @@ const DashboardStudioEditor = ({
     return isCodeEditable ? null : (
       <div
         ref={dashboardViewportRef}
+        data-dashboard-id={dashID}
         className={
           useViewportFitView ? "dashboard-manager-viewport-fit" : undefined
         }
@@ -2281,6 +2282,7 @@ const DashboardStudioEditor = ({
     );
   }, [
     isCodeEditable,
+    dashID,
     dashMode,
     embeddedDashboardHeight,
     useViewportFitView,

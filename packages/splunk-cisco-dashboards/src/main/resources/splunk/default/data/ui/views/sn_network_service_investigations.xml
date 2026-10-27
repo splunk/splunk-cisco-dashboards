@@ -110,7 +110,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Application transfer observations**"
+                "markdown": "### Application transfer observations"
             }
         },
         "viz_evidence_1_description": {
@@ -128,7 +128,7 @@
         },
         "viz_evidence_1_table": {
             "type": "splunk.table",
-            "title": "Application transfer observations",
+            "title": "",
             "showProgressBar": true,
             "showLastUpdated": true,
             "options": {
@@ -136,7 +136,10 @@
                 "count": 5,
                 "showRowNumbers": false,
                 "showInternalFields": false,
-                "fontSize": "large"
+                "fontSize": "large",
+                "tableFormat": {
+                    "textOverflow": "ellipsis"
+                }
             },
             "dataSources": {
                 "primary": "ds_evidence_1"
@@ -189,7 +192,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Explicit policy decisions**"
+                "markdown": "### Explicit policy decisions"
             }
         },
         "viz_evidence_2_description": {
@@ -207,7 +210,7 @@
         },
         "viz_evidence_2_table": {
             "type": "splunk.table",
-            "title": "Explicit policy decisions",
+            "title": "",
             "showProgressBar": true,
             "showLastUpdated": true,
             "options": {
@@ -215,7 +218,10 @@
                 "count": 5,
                 "showRowNumbers": false,
                 "showInternalFields": false,
-                "fontSize": "large"
+                "fontSize": "large",
+                "tableFormat": {
+                    "textOverflow": "ellipsis"
+                }
             },
             "dataSources": {
                 "primary": "ds_evidence_2"
@@ -268,7 +274,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**DNS failure observations**"
+                "markdown": "### DNS failure observations"
             }
         },
         "viz_evidence_3_description": {
@@ -286,7 +292,7 @@
         },
         "viz_evidence_3_table": {
             "type": "splunk.table",
-            "title": "DNS failure observations",
+            "title": "",
             "showProgressBar": true,
             "showLastUpdated": true,
             "options": {
@@ -294,7 +300,10 @@
                 "count": 5,
                 "showRowNumbers": false,
                 "showInternalFields": false,
-                "fontSize": "large"
+                "fontSize": "large",
+                "tableFormat": {
+                    "textOverflow": "ellipsis"
+                }
             },
             "dataSources": {
                 "primary": "ds_evidence_3"
@@ -347,7 +356,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**DNS response time**"
+                "markdown": "### DNS response time"
             }
         },
         "viz_evidence_4_description": {
@@ -365,7 +374,7 @@
         },
         "viz_evidence_4_table": {
             "type": "splunk.table",
-            "title": "DNS response time",
+            "title": "",
             "showProgressBar": true,
             "showLastUpdated": true,
             "options": {
@@ -373,7 +382,10 @@
                 "count": 5,
                 "showRowNumbers": false,
                 "showInternalFields": false,
-                "fontSize": "large"
+                "fontSize": "large",
+                "tableFormat": {
+                    "textOverflow": "ellipsis"
+                }
             },
             "dataSources": {
                 "primary": "ds_evidence_4"
@@ -426,7 +438,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**HTTP server-error observations**"
+                "markdown": "### HTTP server-error observations"
             }
         },
         "viz_evidence_5_description": {
@@ -444,7 +456,7 @@
         },
         "viz_evidence_5_table": {
             "type": "splunk.table",
-            "title": "HTTP server-error observations",
+            "title": "",
             "showProgressBar": true,
             "showLastUpdated": true,
             "options": {
@@ -452,7 +464,10 @@
                 "count": 5,
                 "showRowNumbers": false,
                 "showInternalFields": false,
-                "fontSize": "large"
+                "fontSize": "large",
+                "tableFormat": {
+                    "textOverflow": "ellipsis"
+                }
             },
             "dataSources": {
                 "primary": "ds_evidence_5"
@@ -505,7 +520,7 @@
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
                 "customFontSize": 20,
-                "markdown": "**Remote administration observations**"
+                "markdown": "### Remote administration observations"
             }
         },
         "viz_evidence_6_description": {
@@ -523,7 +538,7 @@
         },
         "viz_evidence_6_table": {
             "type": "splunk.table",
-            "title": "Remote administration observations",
+            "title": "",
             "showProgressBar": true,
             "showLastUpdated": true,
             "options": {
@@ -531,7 +546,10 @@
                 "count": 5,
                 "showRowNumbers": false,
                 "showInternalFields": false,
-                "fontSize": "large"
+                "fontSize": "large",
+                "tableFormat": {
+                    "textOverflow": "ellipsis"
+                }
             },
             "dataSources": {
                 "primary": "ds_evidence_6"
@@ -669,6 +687,9 @@
         }
     },
     "layout": {
+        "options": {
+            "showTitleAndDescription": false
+        },
         "globalInputs": [],
         "layoutDefinitions": {
             "layout_overview": {
@@ -683,7 +704,8 @@
                     },
                     "display": "auto-scale",
                     "height": 1550,
-                    "width": 1440
+                    "width": 1440,
+                    "showTitleAndDescription": false
                 },
                 "structure": [
                     {

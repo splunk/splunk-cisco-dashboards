@@ -30,6 +30,8 @@ test('new dashboard has exactly six catalogue-backed evidence tables and bounded
     const tables = Object.values(d.visualizations).filter((v) => v.type === 'splunk.table');
     assert.equal(tables.length, 6);
     assert.ok(tables.every((v) => v.options.count === 5));
+    assert.ok(tables.every((v) => v.options.tableFormat.textOverflow === 'ellipsis'));
+    assert.equal(d.layout.options.showTitleAndDescription, false);
     assert.equal(d.inputs.input_time_range.options.defaultValue, '-24h@h,now,auto');
     const layout = d.layout.layoutDefinitions.layout_overview;
     for (const item of layout.structure) {
@@ -87,6 +89,9 @@ test('new dashboard is navigable, managed and uses readable width fitting', () =
     const editor = fs.readFileSync(path.join(web, 'pages/dashboardbuilder/DashboardStudioEditor.jsx'), 'utf8');
     assert.match(editor, /WIDTH_FIT_DASHBOARD_IDS = new Set\(\[[\s\S]*?"sn_network_service_investigations"/);
     assert.match(editor, /!WIDTH_FIT_DASHBOARD_IDS.has\(viewName\)/);
+    assert.match(editor, /data-dashboard-id=\{dashID\}/);
+    const styles = fs.readFileSync(path.join(resources, 'appserver/static/application.css'), 'utf8');
+    assert.match(styles, /div:has\(\[data-dashboard-id="sn_network_service_investigations"\]\)[\s\S]*?min-width: 0/);
     const guide = fs.readFileSync(path.join(web, 'pages/user_guide/userGuide.md'), 'utf8');
     assert.match(guide, /Network service and catalogue investigations/);
     assert.match(guide, /Added \*\*Network Service Investigations\*\*/);
