@@ -40,7 +40,7 @@ Browse the current release and recorded historical versions below. The newest re
 ### User guide
 
 - Promoted **What’s New / Release Notes** near the start of the guide, with direct links to recorded historical versions, accessible expandable notes, and working search and deep links into older releases.
-- Corrected the historical release classifications: **1.0.35** is alpha, and every recorded version from **1.0.44 through 1.0.60** is beta.
+- Corrected the historical release classifications: **1.0.35** is alpha, and every recorded version from **1.0.44 through 1.0.60** is beta. Each version expands independently, including the previously nested 1.0.51 and 1.0.50 notes.
 
 ### Insights Workspaces
 
@@ -210,6 +210,7 @@ Version 1.0.52 preserves complete large-fleet asset inventories, advances releas
 
 - After upgrading, run **Asset Inventory - Build Lookup** once or wait for its next scheduled execution to replace any previously truncated lookup.
 - No data migration or Splunk restart is required.
+:::
 
 ::: release Beta release | September 2026 - Version 1.0.51
 ### Release overview
@@ -225,6 +226,7 @@ Version 1.0.51 fixes shared Searchbase additions in Insights Workspaces.
 
 - No data migration or Splunk restart is required.
 - Shared searches added with an earlier affected version must be added again after upgrading because the empty saved references cannot be reconstructed.
+:::
 
 ::: release Beta release | September 2026 - Version 1.0.50
 ### Release overview

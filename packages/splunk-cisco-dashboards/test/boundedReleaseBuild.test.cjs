@@ -70,6 +70,7 @@ test('entry selection is allowlisted and asynchronous chunk names cannot collide
     assert.deepEqual(selected.entry, { [name]: all.entry[name] });
     assert.equal(selected.output.path, all.output.path);
     assert.match(selected.output.chunkFilename, /\[contenthash\]/);
+    assert.equal(selected.output.uniqueName, `splunk-cisco-dashboards-${name}`);
   }
   assert.throws(() => config({ buildEntry: '../unlisted' }), /Unknown build entry/);
 });

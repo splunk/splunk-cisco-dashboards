@@ -323,5 +323,9 @@ module.exports = (env = {}) => {
     return {
         ...commonConfig,
         entry: { [env.buildEntry]: commonConfig.entry[env.buildEntry] },
+        output: {
+            ...commonConfig.output,
+            uniqueName: `splunk-cisco-dashboards-${env.buildEntry}`,
+        },
     };
 };

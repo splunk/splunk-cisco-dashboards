@@ -107,6 +107,12 @@ test("renders every recorded release with stable links and only the newest expan
   }
   assert.equal(releaseTitles.get('1.0.70'), 'Release Notes');
   assert.equal(releaseTitles.get('1.0.80'), 'Release Notes');
+  let releaseDepth = 0;
+  for (const tag of html.matchAll(/<\/?details(?:\s[^>]*)?>/g)) {
+    releaseDepth += tag[0].startsWith('</') ? -1 : 1;
+    assert.ok(releaseDepth >= 0 && releaseDepth <= 1, 'Every release must expand independently');
+  }
+  assert.equal(releaseDepth, 0);
 });
 
 test("release anchors remain unique and escape metadata without counting code examples", () => {
