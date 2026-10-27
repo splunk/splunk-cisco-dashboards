@@ -87,18 +87,27 @@ function build({ minify = false } = {}) {
   if (process.env.SCD_WEBPACK_PROGRESS === "1") {
     webpackArgs.push("--progress");
   }
-  run("node_modules/.bin/webpack", webpackArgs, {
-    // Webpack's CLI mode controls its optimizer, but the inherited
-    // Splunk webpack config and Babel preset inspect these process
-    // variables while configuration is loading. Minification remains
-    // opt-in because these large multi-entry bundles can spend several
-    // minutes and gigabytes in Terser.
-    env: {
-      ...process.env,
-      NODE_ENV: "production",
-      BABEL_ENV: "production",
-    },
-  });
+  // A separate process per release entry releases the compiler graph and
+  // minifier heap before the next large dashboard starts. Watch/fast builds
+  // keep the existing multi-entry compiler for responsive development.
+  const entries = minify
+    ? Object.keys(require("../webpack.config.js")().entry)
+    : [null];
+  for (const entry of entries) {
+    if (entry) console.log(`› Minifying entry: ${entry}`);
+    const entryArgs = entry
+      ? [...webpackArgs, "--env", `buildEntry=${entry}`]
+      : webpackArgs;
+    run("node_modules/.bin/webpack", entryArgs, {
+      // The inherited config and Babel preset inspect these variables
+      // while configuration is loading, before CLI mode is applied.
+      env: {
+        ...process.env,
+        NODE_ENV: "production",
+        BABEL_ENV: "production",
+      },
+    });
+  }
   run(process.execPath, ["bin/verify_production_assets.js"]);
   console.log(`✓ App staged at ${path.relative(REPO_ROOT, STAGE_DIR)}/`);
 }

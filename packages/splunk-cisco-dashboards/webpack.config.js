@@ -204,6 +204,9 @@ const commonConfig = webpackMerge(baseConfig, {
     output: {
         path: path.join(stageRoot, 'appserver', 'static', 'pages'),
         filename: '[name].js',
+        // Independent entry compilations can assign the same numeric chunk
+        // ID to different contents. Keep their asynchronous chunks distinct.
+        chunkFilename: '[name].[contenthash].js',
     },
     stats: 'errors-warnings',
     // Webpack's default 244 KiB budget targets small public web pages. These
@@ -312,4 +315,13 @@ const commonConfig = webpackMerge(baseConfig, {
     ],
 });
 
-module.exports = commonConfig;
+module.exports = (env = {}) => {
+    if (!env.buildEntry) return commonConfig;
+    if (!Object.prototype.hasOwnProperty.call(commonConfig.entry, env.buildEntry)) {
+        throw new Error(`Unknown build entry: ${env.buildEntry}`);
+    }
+    return {
+        ...commonConfig,
+        entry: { [env.buildEntry]: commonConfig.entry[env.buildEntry] },
+    };
+};
