@@ -33,13 +33,14 @@ Use the app to:
 
 ## What’s New / Release Notes {#release-notes}
 
-Browse the current release and recorded historical versions below. The newest release opens by default. Choose a version link or expand a release to read its changes; use **Expand all** to review the full history.
+Browse the current release and recorded historical versions below. The newest release opens by default. Choose a version link or expand a release to read its changes; use **Expand all** to review the full history. Version **1.0.35** was an **alpha** release; the recorded versions **1.0.44 through 1.0.60** were **beta** releases.
 
 ::: release Release Notes | October 2026 - Version 1.0.80
 
 ### User guide
 
 - Promoted **What’s New / Release Notes** near the start of the guide, with direct links to recorded historical versions, accessible expandable notes, and working search and deep links into older releases.
+- Corrected the historical release classifications: **1.0.35** is alpha, and every recorded version from **1.0.44 through 1.0.60** is beta.
 
 ### Insights Workspaces
 
@@ -91,7 +92,7 @@ Release preparation is in progress. Final package/security review, publication, 
 - Integrated-cloud AI Canvas creation and cross-launch, restricted-user sharing, and saved CSV export contents still require final release qualification. Cloud Control identity/navigation errors remain under investigation; this release does not claim to resolve them.
 :::
 
-::: release Release Notes | October 2026 - Version 1.0.60
+::: release Beta release | October 2026 - Version 1.0.60
 ### Setup
 
 - Added a clear **Refresh status** action and last-checked time for data-model acceleration. Clarified that Splunk can still be building summaries after acceleration is enabled.
@@ -104,7 +105,7 @@ Release preparation is in progress. Final package/security review, publication, 
 - Kept both visibility choices visible, encouraged app sharing for dashboards ready for colleagues, and explained how to share a private dashboard later. Reset the creation dialog to **Private** each time it is reopened.
 :::
 
-::: release Release Notes | September 2026 - Version 1.0.55
+::: release Beta release | September 2026 - Version 1.0.55
 ### Zscaler Zero Trust Access
 
 - Added eight Zscaler searches for data coverage, private application access, policy and connection reasons, unreachable applications, connection-status trends, ZIA enforcement outcomes, blocked web activity, and named web threats.
@@ -126,7 +127,7 @@ Release preparation is in progress. Final package/security review, publication, 
 - Set Searchbase app filters to this app by default while keeping other apps available to select.
 :::
 
-::: release Release Notes | September 2026 - Version 1.0.54
+::: release Beta release | September 2026 - Version 1.0.54
 ### Release overview
 
 - Reduced the app package and JavaScript download sizes.
@@ -135,7 +136,7 @@ Release preparation is in progress. Final package/security review, publication, 
 This maintenance release includes the Dashboard Manager reliability and visualization-spacing improvements introduced in version 1.0.53.
 :::
 
-::: release Release Notes | September 2026 - Version 1.0.53
+::: release Beta release | September 2026 - Version 1.0.53
 ### Dashboard Manager
 
 - Prevented new dashboards from overwriting existing dashboard IDs or creating private copies that conflict when shared. Creation errors now remain visible in the dialog, duplicate submissions are blocked, and a saved dashboard can still be opened if sharing fails.
@@ -154,7 +155,7 @@ This maintenance release includes the Dashboard Manager reliability and visualiz
 - Deferred display enrichment until after the existing result limits for SSE event detail and FTD anomalous sessions, preserving selection and thresholds.
 :::
 
-::: release Release Notes | September 2026 - Version 1.0.52
+::: release Beta release | September 2026 - Version 1.0.52
 ### Release overview
 
 Version 1.0.52 preserves complete large-fleet asset inventories, advances release build allocation beyond the published 1.0.51 package, keeps first-run CIM discovery independent of saved allowlists, and keeps TA-owned Cisco routing definitions outside user-driven tuning.
@@ -210,7 +211,7 @@ Version 1.0.52 preserves complete large-fleet asset inventories, advances releas
 - After upgrading, run **Asset Inventory - Build Lookup** once or wait for its next scheduled execution to replace any previously truncated lookup.
 - No data migration or Splunk restart is required.
 
-::: release Release Notes | September 2026 - Version 1.0.51
+::: release Beta release | September 2026 - Version 1.0.51
 ### Release overview
 
 Version 1.0.51 fixes shared Searchbase additions in Insights Workspaces.
@@ -225,7 +226,7 @@ Version 1.0.51 fixes shared Searchbase additions in Insights Workspaces.
 - No data migration or Splunk restart is required.
 - Shared searches added with an earlier affected version must be added again after upgrading because the empty saved references cannot be reconstructed.
 
-::: release Release Notes | September 2026 - Version 1.0.50
+::: release Beta release | September 2026 - Version 1.0.50
 ### Release overview
 
 Version 1.0.50 simplifies topology link telemetry configuration, strengthens topology-save reliability, and adds reusable property-operations searches.
@@ -255,7 +256,7 @@ Version 1.0.50 simplifies topology link telemetry configuration, strengthens top
 - Grouped the telemetry choice as a labeled radio control and connected the ThousandEyes selectors to concise instructions.
 :::
 
-::: release Release Notes | September 2026 - Version 1.0.49
+::: release Beta release | September 2026 - Version 1.0.49
 ### Release overview
 
 Version 1.0.49 expands secure-networking coverage, repairs workspace and setup reliability, improves accessibility and theme consistency, and strengthens the Splunkbase release path.
@@ -315,7 +316,7 @@ Version 1.0.49 expands secure-networking coverage, repairs workspace and setup r
 4. Confirm the installed version and build in the app header before reporting a problem.
 :::
 
-::: release Release Notes | August 2026 - Version 1.0.46
+::: release Beta release | August 2026 - Version 1.0.46
 ### Published package record
 
 - Introduced the Agentic Security Operations Center workspace and accelerated network-data-model searches for its conference catalogue.
@@ -325,8 +326,8 @@ Version 1.0.49 expands secure-networking coverage, repairs workspace and setup r
 The public package listing is the authoritative record of the exact archive published for this version.
 :::
 
-::: release Initial beta release | Version 1.0.45
-This is the first beta release of Splunk App for Secure Networking. It provides Cisco-focused dashboards, configurable workspaces, and investigation tools in Splunk Enterprise.
+::: release Beta release | Version 1.0.45
+This beta release of Splunk App for Secure Networking provides Cisco-focused dashboards, configurable workspaces, and investigation tools in Splunk Enterprise.
 
 ### Highlights
 
@@ -350,8 +351,8 @@ This is the first beta release of Splunk App for Secure Networking. It provides 
 - Features, content, and compatibility can change before general availability.
 :::
 
-::: release Initial Alpha release | Version 1.0.44
-This is an Alpha release of Splunk App for Secure Networking. It provides Cisco-focused executive, network operations, security operations, infrastructure, and building-intelligence experiences within Splunk.
+::: release Beta release | Version 1.0.44
+This is a beta release of Splunk App for Secure Networking. It provides Cisco-focused executive, network operations, security operations, infrastructure, and building-intelligence experiences within Splunk.
 
 ### Highlights
 
@@ -380,14 +381,14 @@ This is an Alpha release of Splunk App for Secure Networking. It provides Cisco-
 - Includes Cisco SD-WAN controller threat hunts for suspicious access, software downgrade, certificate failures, path traversal, privilege escalation, persistence, and multi-stage activity.
 - Provides Cisco Catalyst Center, Secure Firewall, ISE, Meraki, ThousandEyes, Spaces, Duo, Cyber Vision, UCS, Intersight, SD-WAN, data-center networking, Secure Access, and XDR content where supported telemetry is present.
 
-### Alpha release considerations
+### Beta considerations
 
-- This release is available only to approved Alpha participants.
+- This release is available only to approved beta participants.
 - Splunk App for Secure Networking visualizes data already ingested into Splunk; it does not collect Cisco data directly.
 - Dashboard availability and results depend on supporting apps, source types, fields, data models, index mappings, permissions, and time ranges.
 - Not every supporting integration is required for every dashboard.
 - Some features require accelerated data models or optional supporting apps.
-- Alpha functionality, content, and compatibility may change before a generally available release.
+- Beta functionality, content, and compatibility may change before a generally available release.
 :::
 
 ::: release Initial Alpha release | Version 1.0.35

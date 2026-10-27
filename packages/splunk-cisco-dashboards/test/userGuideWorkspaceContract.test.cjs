@@ -58,7 +58,7 @@ test("keeps accessible release history in Markdown", () => {
     assert.match(markdown, new RegExp(`Version ${version.replaceAll(".", "\\.")}`));
   }
   assert.match(markdown, /Initial Alpha release[\s\S]*?Alpha release considerations/);
-  assert.match(markdown, /Initial beta release[\s\S]*?Beta considerations/i);
+  assert.match(markdown, /Beta release[\s\S]*?Beta considerations/i);
   assert.match(markdown, /Version 1\.0\.49[\s\S]*?Secure Data Center Operations[\s\S]*?Upgrade notes/);
   assert.match(markdown, /Version 1\.0\.50[\s\S]*?Property operations and inventory[\s\S]*?customer-neutral/);
   assert.match(markdown, /Version 1\.0\.50[\s\S]*?Packaging and release safety[\s\S]*?build-2089 release floor/);
@@ -100,6 +100,13 @@ test("renders every recorded release with stable links and only the newest expan
   }
   assert.equal((html.match(/aria-label="Release versions"/g) || []).length, 1);
   assert.equal((html.match(/data-release-action="expand"/g) || []).length, 1);
+  const releaseTitles = new Map([...markdown.matchAll(/^::: release (.*?) \| .*?Version (\d+\.\d+\.\d+)$/gm)].map((m) => [m[2], m[1]]));
+  assert.equal(releaseTitles.get('1.0.35'), 'Initial Alpha release');
+  for (const version of versions.slice(2, -1)) {
+    assert.equal(releaseTitles.get(version), 'Beta release', `${version} was beta`);
+  }
+  assert.equal(releaseTitles.get('1.0.70'), 'Release Notes');
+  assert.equal(releaseTitles.get('1.0.80'), 'Release Notes');
 });
 
 test("release anchors remain unique and escape metadata without counting code examples", () => {
