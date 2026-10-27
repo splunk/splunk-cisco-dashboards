@@ -31,6 +31,29 @@ extraCases.push({id:'mv_crowdstrike_process_destinations',rows:[
   {aid:'b',event_simpleName:'NetworkConnectIP4',ContextProcessId:'100',RemoteAddressIP4:'198.51.100.1',RemotePort:443}],
   post:'| stats count as Groups count(eval(ProcessName="Conflicting process context")) as Conflicts count(eval(ProcessName="Process record not observed")) as Missing',assertion:'Groups=2 AND Conflicts=1 AND Missing=1'});
 const extraFixtures=generateFixtures(conf,extraCases).filter(f=>f.kind==='populated').map(f=>({...f,kind:'adversarial'}));
+// Invalid aliases and valid addresses of the wrong family must not mask a
+// later valid candidate. Repeated conflicting values remain unusable.
+const addressCases=[
+  {id:'mv_crowdstrike_ipv6_destinations',rows:[
+    {aid:'a',event_simpleName:'NetworkConnectIP6',dest:'unknown',RemoteAddressIP4:'0.0.0.0',RemoteAddressIP6:'2001:db8::1',RemotePort:443},
+    {aid:'b',event_simpleName:'NetworkConnectIP6',dest_ip:['2001:db8::2','2001:db8::3'],RemoteAddressIP6:'2001:db8::1',RemotePort:443},
+    {aid:'c',event_simpleName:'NetworkConnectIP6',RemoteAddressIP4:'198.51.100.1',RemoteAddressIP6:'invalid',RemotePort:443}],
+    post:'| stats count as Groups sum(Records) as Records values(Remote) as Remote',assertion:'Groups=1 AND Records=2 AND Remote="2001:db8::1"'},
+  {id:'mv_crowdstrike_process_destinations',rows:[
+    {aid:'a',event_simpleName:'NetworkConnectIP4',ContextProcessId:'100',dest_ip:'invalid',dest:'2001:db8::1',RemoteAddressIP4:'198.51.100.1',RemotePort:443},
+    {aid:'a',event_simpleName:'NetworkConnectIP4',ContextProcessId:'100',dest_ip:'198.51.100.1',RemoteAddressIP4:'198.51.100.2',RemotePort:443},
+    {aid:'a',event_simpleName:'NetworkConnectIP4',ContextProcessId:'100',dest_ip:'invalid',RemoteAddressIP6:'2001:db8::1',RemotePort:443}],
+    post:'| stats count as Groups sum(Records) as Records values(Remote) as Remote',assertion:'Groups=1 AND Records=2 AND Remote="198.51.100.1"'},
+  {id:'mv_crowdstrike_network_listeners',rows:[
+    {aid:'a',event_simpleName:'NetworkListenIP6',src:'unknown',LocalAddressIP4:'0.0.0.0',LocalAddressIP6:'::',LocalPort:443},
+    {aid:'a',event_simpleName:'NetworkListenIP4',src_ip:'invalid',LocalAddressIP4:'0.0.0.0',LocalPort:443}],
+    post:'| stats count as Groups sum(Records) as Records values(Local) as Addresses',assertion:'Groups=2 AND Records=2 AND mvfind(Addresses,"^::$")>=0 AND mvfind(Addresses,"^0[.]0[.]0[.]0$")>=0'},
+  {id:'mv_crowdstrike_blocked_network_events',rows:[
+    {aid:'a',event_simpleName:'NetworkConnectIP6Blocked',dest:'unknown',RemoteAddressIP4:'0.0.0.0',RemoteAddressIP6:'2001:db8::1',RemotePort:443},
+    {aid:'a',event_simpleName:'NetworkConnectIP6Blocked',dest:'unknown',RemoteAddressIP4:'0.0.0.0',RemoteAddressIP6:'invalid',RemotePort:443}],
+    post:'| stats count as Groups sum(Records) as Records count(eval(Remote="Not reported")) as Missing count(eval(Remote="2001:db8::1")) as Valid',assertion:'Groups=2 AND Records=2 AND Missing=1 AND Valid=1'},
+];
+extraFixtures.push(...generateFixtures(conf,addressCases).filter(f=>f.kind==='populated').map(f=>({...f,kind:'address-fallback'})));
 const discontinuityCase={id:'mv_interface_error_counter_rates',rows:[
   {host:'switch-a',ifName:'Ethernet1',ifInErrors:100,ifOutErrors:100,ifCounterDiscontinuityTime:0,sysUpTime:10000,_time:at(600)},
   {host:'switch-a',ifName:'Ethernet1',ifInErrors:160,ifOutErrors:160,ifCounterDiscontinuityTime:1,sysUpTime:10060,_time:at(540)},

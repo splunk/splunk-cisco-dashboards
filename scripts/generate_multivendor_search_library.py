@@ -30,19 +30,31 @@ REF = {
 }
 ENTRIES=[]
 def event(**kw): return {'host':'device-a','_time':{'expr':'now()-60'},**kw}
-def norm(mapping, defaults=()):
+def norm(mapping, defaults=(), ip_targets=(), family_field=None):
     raw=list(dict.fromkeys(a for aliases in mapping.values() for a in aliases.split()))
     line="| foreach "+' '.join(raw)+" [ eval <<FIELD>>=if(coalesce(mvcount(mvdedup('<<FIELD>>')),0)=1,nullif(trim(mvindex(mvdedup('<<FIELD>>'),0)),\"\"),null()) ]"
     assigns=[]
     for target,aliases in mapping.items():
         args=["'"+x+"'" for x in aliases.split()]
+        if target in ip_targets:
+            # Validate each candidate before coalescing. An unrelated family or
+            # placeholder in an earlier alias must not hide a usable address.
+            def candidates(cidr):
+                values=[f'if(cidrmatch("{cidr}",{a}),{a},null())' for a in args]
+                return 'coalesce('+','.join(values)+')' if len(values)>1 else values[0]
+            ipv4,ipv6=candidates('0.0.0.0/0'),candidates('::/0')
+            value=f'coalesce({ipv4},{ipv6})'
+            if family_field:
+                value=f'case(match(\'{family_field}\',"IP6"),{ipv6},match(\'{family_field}\',"IP4"),{ipv4},true(),{value})'
+            assigns.append(target+'='+value)
+            continue
         if target in defaults:args.append('"Not reported"')
         assigns.append(target+'='+(('coalesce('+','.join(args)+')') if len(args)>1 else args[0]))
     return line+'\n| eval '+', '.join(assigns)
 def src(*types): return SCOPE+' sourcetype IN ('+','.join(json.dumps(t) for t in types)+')'
-def add(group,slug,name,source,mapping,body,cols,desc,limits,rows,records,groups=1,extra='',assertion='',ref=None,defaults=(),order='- Records'):
+def add(group,slug,name,source,mapping,body,cols,desc,limits,rows,records,groups=1,extra='',assertion='',ref=None,defaults=(),order='- Records',ip_targets=(),family_field=None,version='1.0.0'):
     assert not any(x['id']=='mv_'+slug for x in ENTRIES),slug
-    normal=norm(mapping,defaults) if mapping else ''
+    normal=norm(mapping,defaults,ip_targets,family_field) if mapping else ''
     bounded='''| eventstats count as TotalGroups
 | eval RowsTruncated=if(TotalGroups>1000,1,0)
 | sort 1000 '''+order+'''
@@ -50,7 +62,7 @@ def add(group,slug,name,source,mapping,body,cols,desc,limits,rows,records,groups
 | appendpipe [ stats count as _empty | where _empty=0 | eval message="No qualifying observations. Check source fields, tags, index routing, permissions, thresholds and the finite time window; this is not a health verdict." | fields message ]'''
     q='\n'.join(x.strip() for x in [source,normal,body,bounded] if x)
     ENTRIES.append(dict(id='mv_'+slug,group=group,name=name,source=source,fields=mapping,query=q,description=desc,
-        limits=limits,ref=ref or REF[group],fixture={'id':'mv_'+slug,'rows':rows,
+        limits=limits,version=version,ref=ref or REF[group],fixture={'id':'mv_'+slug,'rows':rows,
         'post':'| stats count as Groups count(eval(isnotnull(message))) as MessageRows sum(Records) as Records '+extra,
         'assertion':f'Groups={groups} AND MessageRows=0 AND Records={records}'+(' AND '+assertion if assertion else '')}))
 DEVICE={'Device':'dvc host'}
@@ -513,13 +525,13 @@ add('CrowdStrike','crowdstrike_process_destinations','CrowdStrike - Process and 
 | eval ProcessName=case(mvcount(ProcessNames)=1,mvindex(ProcessNames,0),mvcount(ProcessNames)>1,"Conflicting process context",true(),"Process record not observed"), Port=coalesce(Port,"Not reported")
 | stats count as Records max(_time) as LastSeen by Agent ProcessKey ProcessName Remote Port''',
  'Agent ProcessKey ProcessName Remote Port Records LastSeen','Correlates FDR network-connect records with observed process-rollup context using agent and process identifiers.',
- 'Requires FDR NetworkConnectIP4/6 and ProcessRollup2 with aid and stable ContextProcessId/TargetProcessId. These are sensor process identifiers, not an OS PID-only join. Conflicting/missing context remains explicit; rollup availability is limited to the selected window. Raw integer-encoded IPs require add-on normalization. No destination reputation or successful application request is inferred.',
- [event(aid='agent-a',event_simpleName='ProcessRollup2',TargetProcessId='100',FileName='curl'),event(aid='agent-a',event_simpleName='NetworkConnectIP4',ContextProcessId='100',RemoteAddressIP4='198.51.100.1',RemotePort=443),event(aid='agent-b',event_simpleName='ProcessRollup2',TargetProcessId='100',FileName='other')],1,extra='values(ProcessName) as ProcessName',assertion='ProcessName="curl"')
+ 'Requires FDR NetworkConnectIP4/6 and ProcessRollup2 with aid and stable ContextProcessId/TargetProcessId. These are sensor process identifiers, not an OS PID-only join. Conflicting/missing context remains explicit; rollup availability is limited to the selected window. Address aliases must be valid textual IPs matching the event family; invalid or wrong-family aliases cannot mask a valid later address. Raw integer-encoded IPs require add-on normalization. No destination reputation or successful application request is inferred.',
+ [event(aid='agent-a',event_simpleName='ProcessRollup2',TargetProcessId='100',FileName='curl'),event(aid='agent-a',event_simpleName='NetworkConnectIP4',ContextProcessId='100',RemoteAddressIP4='198.51.100.1',RemotePort=443),event(aid='agent-b',event_simpleName='ProcessRollup2',TargetProcessId='100',FileName='other')],1,extra='values(ProcessName) as ProcessName',assertion='ProcessName="curl"',ip_targets=('Remote',),family_field='event_simpleName',version='1.0.1')
 add('CrowdStrike','crowdstrike_blocked_network_events','CrowdStrike - Blocked Network Event Evidence',CS,CSMAP,
  '| where Kind IN ("NetworkConnectIP4Blocked","NetworkConnectIP6Blocked") AND isnotnull(Agent)\n| eval Remote=coalesce(Remote,"Not reported"), Port=coalesce(Port,"Not reported")\n| stats count as Records max(_time) as LastSeen by Agent Remote Port Kind',
  'Agent Remote Port Kind Records LastSeen','Summarizes explicit FDR blocked-network event families.',
- 'Requires the relevant sensor event exports. Blocked records do not represent every prevented connection or establish compromise; absent exports are not a successful-protection verdict.',
- [event(aid='agent-a',event_simpleName='NetworkConnectIP4Blocked',RemoteAddressIP4='198.51.100.1',RemotePort=443),event(aid='agent-a',event_simpleName='NetworkConnectIP4',RemoteAddressIP4='198.51.100.1')],1)
+ 'Requires the relevant sensor event exports. Address aliases are validated against the event IP family; unavailable addresses remain Not reported. Blocked records do not represent every prevented connection or establish compromise; absent exports are not a successful-protection verdict.',
+ [event(aid='agent-a',event_simpleName='NetworkConnectIP4Blocked',RemoteAddressIP4='198.51.100.1',RemotePort=443),event(aid='agent-a',event_simpleName='NetworkConnectIP4',RemoteAddressIP4='198.51.100.1')],1,ip_targets=('Remote',),family_field='event_simpleName',version='1.0.1')
 add('CrowdStrike','crowdstrike_dns_process_context','CrowdStrike - DNS Names by Sensor Process Context',CS,CSMAP,
  '| where Kind="DnsRequest" AND isnotnull(Agent) AND isnotnull(Domain)\n| eval Domain=lower(replace(Domain,"\\.$","")), Context=coalesce(Context,"Not reported")\n| stats count as Records dc(Domain) as QueryNames max(_time) as LastSeen by Agent Context',
  'Agent Context Records QueryNames LastSeen','Measures observed DNS-name diversity by agent and sensor process context.',
@@ -528,13 +540,13 @@ add('CrowdStrike','crowdstrike_dns_process_context','CrowdStrike - DNS Names by 
 add('CrowdStrike','crowdstrike_ipv6_destinations','CrowdStrike - Observed IPv6 Destinations',CS,CSMAP,
  '| where Kind="NetworkConnectIP6" AND isnotnull(Agent) AND cidrmatch("::/0",Remote)\n| eval Port=coalesce(Port,"Not reported")\n| stats count as Records dc(Agent) as Agents max(_time) as LastSeen by Remote Port',
  'Remote Port Records Agents LastSeen','Inventories valid IPv6 destinations observed in FDR IPv6 connect events.',
- 'Requires normalized textual IPv6 addresses. Event presence is not proof of policy allowance, complete IPv6 monitoring or successful application access.',
- [event(aid='agent-a',event_simpleName='NetworkConnectIP6',RemoteAddressIP6='2001:db8::1',RemotePort=443),event(aid='agent-a',event_simpleName='NetworkConnectIP6',RemoteAddressIP6='aa:bb:cc:dd:ee:ff')],1)
+ 'Requires normalized textual IPv6 addresses. Invalid and wrong-family aliases are skipped before choosing the first valid IPv6 address. Event presence is not proof of policy allowance, complete IPv6 monitoring or successful application access.',
+ [event(aid='agent-a',event_simpleName='NetworkConnectIP6',RemoteAddressIP6='2001:db8::1',RemotePort=443),event(aid='agent-a',event_simpleName='NetworkConnectIP6',RemoteAddressIP6='aa:bb:cc:dd:ee:ff')],1,ip_targets=('Remote',),family_field='event_simpleName',version='1.0.1')
 add('CrowdStrike','crowdstrike_network_listeners','CrowdStrike - Reported Network Listener Ports',CS,CSMAP,
  '| eval LocalPort=tonumber(LocalPort)\n| where Kind IN ("NetworkListenIP4","NetworkListenIP6") AND isnotnull(Agent) AND LocalPort>=0 AND LocalPort<=65535\n| eval Local=coalesce(Local,"Not reported"), Context=coalesce(Context,"Not reported")\n| stats count as Records max(_time) as LastSeen by Agent Local LocalPort Context',
  'Agent Local LocalPort Context Records LastSeen','Lists observed FDR listener events by agent, address, port and process context.',
- 'Listener events do not establish current listeners, remote reachability or firewall exposure. Requires the relevant sensor event families; port zero remains a reported value.',
- [event(aid='agent-a',event_simpleName='NetworkListenIP4',LocalAddressIP4='0.0.0.0',LocalPort=443),event(aid='agent-a',event_simpleName='NetworkListenIP4',LocalPort=70000)],1)
+ 'Address aliases are validated against the event IP family; unspecified bind addresses remain valid. Listener events do not establish current listeners, remote reachability or firewall exposure. Requires the relevant sensor event families; port zero remains a reported value.',
+ [event(aid='agent-a',event_simpleName='NetworkListenIP4',LocalAddressIP4='0.0.0.0',LocalPort=443),event(aid='agent-a',event_simpleName='NetworkListenIP4',LocalPort=70000)],1,ip_targets=('Local',),family_field='event_simpleName',version='1.0.1')
 add('CrowdStrike','crowdstrike_containment_activity','CrowdStrike - Network Containment Completion Activity',CS,CSMAP,
  '| where Kind IN ("NetworkContainmentCompleted","NetworkUncontainmentCompleted") AND isnotnull(Agent)\n| stats count as Records max(_time) as LastSeen by Agent Kind',
  'Agent Kind Records LastSeen','Separates reported network containment and uncontainment completion events.',
@@ -589,7 +601,7 @@ def render():
     for e in ENTRIES:
         category='Network' if e['group']=='Vendor neutral' else 'Security'
         if e['group'] in ('Arista','Juniper / Aruba','F5','Infoblox'):category='Network'
-        metadata=[('search_name',e['name']),('search_author','akhamis'),('updated_author','akhamis'),('version','1.0.0'),('date_created','2026-10-27'),('date_updated','2026-10-27'),('category',category),('sub_category','Multivendor Networking'),('tags',e['group']+',Multivendor,Networking'),('dispatch_context','splunk-cisco-dashboards'),('dispatch_context_force','1'),('search_hidden','0'),('default_viz','splunk.table'),('viz_options','{"showRowNumbers":true}')]
+        metadata=[('search_name',e['name']),('search_author','akhamis'),('updated_author','akhamis'),('version',e['version']),('date_created','2026-10-27'),('date_updated','2026-10-27'),('category',category),('sub_category','Multivendor Networking'),('tags',e['group']+',Multivendor,Networking'),('dispatch_context','splunk-cisco-dashboards'),('dispatch_context_force','1'),('search_hidden','0'),('default_viz','splunk.table'),('viz_options','{"showRowNumbers":true}')]
         metadata.extend((k,'<p>'+html.escape(v,quote=False)+'</p>') for k,v in [
             ('description',e['description']),('explanation',COMMON+e['limits']),
             ('solution','Use a finite time window and confirm source fields and configured index routing before interpreting results. These optional catalogue searches create no scheduled jobs or collectors. Output is limited to 1,000 groups; TotalGroups and RowsTruncated disclose omitted groups.'),
@@ -612,7 +624,7 @@ def render_docs():
             lines.append('| '+e['name']+' | `'+e['id']+'` | '+limit+' [Source reference]('+e['ref']+') |')
         lines.append('')
     lines.extend(['## Reproduce the catalogue and tests','',
-      'From the repository root, run `python3 scripts/generate_multivendor_search_library.py --check` to compare generated definitions with the catalogue, `node scripts/generate_multivendor_fixtures.cjs --extended` to emit 167 read-only native-SPL cases, and `yarn test` for repository contracts. Submit fixture queries in Splunk Search and require TestPassed=1. The helper never contacts Splunk, creates saved searches, writes indexed data or reads credentials.','',
+      'From the repository root, run `python3 scripts/generate_multivendor_search_library.py --check` to compare generated definitions with the catalogue, `node scripts/generate_multivendor_fixtures.cjs --extended` to emit 171 read-only native-SPL cases, and `yarn test` for repository contracts. Submit fixture queries in Splunk Search and require TestPassed=1. The helper never contacts Splunk, creates saved searches, writes indexed data or reads credentials.','',
       'The generator owns the final block beginning with `[mv_traffic_application_bytes]`. Review edits in the generator, regenerate using `--write`, and regenerate this reference using `--docs`. Keep source and reference together. Do not replace generated entries with manual changes or assume real-vendor execution from the fixture results.',''])
     return '\n'.join(lines)
 

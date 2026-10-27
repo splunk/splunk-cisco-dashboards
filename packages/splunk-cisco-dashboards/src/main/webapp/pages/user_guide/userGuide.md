@@ -300,6 +300,8 @@ Table searches return at most 1,000 groups and expose `TotalGroups` and `RowsTru
 
 The catalogue includes **80 optional multivendor searches**: twenty vendor-neutral investigations and six each for ten vendor ecosystems. In **Add search**, select **Entire catalogue**, enable **Show table searches** and **Show drill-down searches**, and search by the prefixes below. Review each entry's source contract and interpretation guidance in Searchbase before adding it to a workspace.
 
+CrowdStrike connection, blocked-network and listener searches choose the first valid textual address matching the event's IPv4 or IPv6 family. Invalid or wrong-family aliases cannot hide a valid later address. Unspecified listener bind addresses (`0.0.0.0` and `::`) remain valid; raw integer-encoded addresses still require add-on normalization.
+
 | Search prefix | Investigations and input requirements |
 | --- | --- |
 | **Network Essentials** (20) | Traffic/application records, explicit decisions, destination/port fan-out, remote-administration ports, durations, authentication outcomes/source diversity/method visibility, DNS outcomes/query types/latency, HTTP errors/cleartext destinations, intrusion actions, change failures, IPv6 decision visibility, and IF-MIB interface error rates. Nineteen use CIM tags and normalized fields; interface rates require flattened IF-MIB counter samples. No Cisco source or companion model is required. |
@@ -442,6 +444,7 @@ This Markdown file is the authoritative source for the in-product release histor
 - Added twelve catalogue searches covering ingestion delay and feed quality, observed certificate expiry and rotation candidates, MDS/SAN observation trends and recurrence, and Hyperfabric port-rate trends, directionality and measurement coverage. Missing measurements remain distinct from zero; workspace layouts and collection settings are unchanged.
 - Added twelve more optional catalogue investigations for firewall NAT/resource-limit evidence and observed rule activity, Duo/CIM authentication candidates, IOS/Catalyst Center change-impact associations, and cross-vendor IPv6 and decision-field visibility. Documented thresholds, source requirements, unknown observations and the limits of traffic-only capacity/rule conclusions; existing workspace layouts remain unchanged.
 - Added eighty optional networking investigations: twenty vendor-neutral CIM/IF-MIB searches and six each for Palo Alto, Fortinet, Juniper/Aruba, Arista, Check Point, F5, Zscaler, Infoblox, CrowdStrike and Microsoft Defender. Added explicit source/field contracts, current/legacy field variants, bounded results, duplicate/conflict handling, counter-reset safeguards and endpoint process-context checks. Documented feed prerequisites and interpretation limits without changing collection, schedules, routing or workspace layouts.
+- Fixed CrowdStrike address fallback so invalid or wrong-family aliases no longer hide valid IPv4/IPv6 connection, blocked-network or listener addresses. Preserved valid unspecified listener binds and explicit missing-address guidance.
 
 :::
 
