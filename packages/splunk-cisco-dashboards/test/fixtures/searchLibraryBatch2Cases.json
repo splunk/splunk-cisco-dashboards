@@ -1,0 +1,867 @@
+[
+  {
+    "id": "security_firewall_nat_resource_failure_evidence",
+    "rows": [
+      {
+        "_raw": "%ASA-3-202010: NAT pool exhausted",
+        "_time": {
+          "expr": "now()-300"
+        },
+        "host": "router-a"
+      },
+      {
+        "_raw": "%FTD-3-305006: portmap translation creation failed",
+        "_time": {
+          "expr": "now()-300"
+        },
+        "host": "router-a"
+      },
+      {
+        "_raw": "%ASA-4-710004: Connection limit exceeded",
+        "_time": {
+          "expr": "now()-300"
+        },
+        "host": "router-a"
+      },
+      {
+        "_raw": "%ASA-4-710004: unrelated diagnostic",
+        "_time": {
+          "expr": "now()-300"
+        },
+        "host": "router-a"
+      },
+      {
+        "_raw": "unrelated 202010 value",
+        "_time": {
+          "expr": "now()-300"
+        },
+        "host": "router-a"
+      }
+    ],
+    "post": "| stats sum(Records) as Records count as Groups",
+    "assertion": "Records=3 AND Groups=3"
+  },
+  {
+    "id": "network_firewall_nat_tuple_concentration",
+    "rows": [
+      {
+        "host": "fmc",
+        "NAT_InitiatorIP": "2001:db8::1",
+        "NAT_ResponderIP": "10.0.0.1",
+        "NAT_ResponderPort": 443
+      },
+      {
+        "host": "fmc",
+        "NAT_InitiatorIP": [
+          "2001:db8::1",
+          "2001:db8::1"
+        ]
+      },
+      {
+        "host": "fmc",
+        "NAT_InitiatorIP": "10.0.0.1"
+      },
+      {
+        "host": "fmc",
+        "NAT_InitiatorIP": [
+          "10.0.0.2",
+          "10.0.0.3"
+        ]
+      },
+      {
+        "host": "fmc",
+        "NAT_InitiatorIP": "0.0.0.0"
+      }
+    ],
+    "post": "| stats sum(Records) as Records max(HostNatRecords) as HostTotal max(HostRecordSharePct) as PeakShare count as Groups max(ResponderTuples) as Tuples max(ResponderAddresses) as Addresses",
+    "assertion": "Records=3 AND HostTotal=3 AND Groups=2 AND abs(PeakShare-66.67)<0.01 AND Tuples=2 AND Addresses=1"
+  },
+  {
+    "id": "security_firewall_low_activity_observed_rules",
+    "rows": [
+      {
+        "host": "fmc",
+        "FirewallPolicy": "policy",
+        "FirewallRule": "rare",
+        "_time": {
+          "expr": "now()-10"
+        }
+      },
+      {
+        "host": "fmc",
+        "FirewallRule": "unknown"
+      },
+      {
+        "host": "fmc",
+        "FirewallRule": "busy",
+        "_time": {
+          "expr": "now()-10"
+        }
+      },
+      {
+        "host": "fmc",
+        "FirewallRule": "busy",
+        "_time": {
+          "expr": "now()-10"
+        }
+      },
+      {
+        "host": "fmc",
+        "FirewallRule": "busy",
+        "_time": {
+          "expr": "now()-10"
+        }
+      },
+      {
+        "host": "fmc",
+        "FirewallRule": "busy",
+        "_time": {
+          "expr": "now()-10"
+        }
+      },
+      {
+        "host": "fmc",
+        "FirewallRule": "busy",
+        "_time": {
+          "expr": "now()-10"
+        }
+      },
+      {
+        "host": "fmc",
+        "FirewallRule": "busy",
+        "_time": {
+          "expr": "now()-10"
+        }
+      }
+    ],
+    "post": "| stats sum(Records) as Records values(Rule) as Rules count as Groups",
+    "assertion": "Records=1 AND Groups=1 AND Rules=\"rare\""
+  },
+  {
+    "id": "identity_duo_denials_before_success",
+    "rows": [
+      {
+        "txid": "d1",
+        "user.name": "alice",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "Duo Push",
+        "_raw": "d1",
+        "_time": {
+          "expr": "now()-500"
+        }
+      },
+      {
+        "txid": "d2",
+        "user.name": "alice",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "Duo Push",
+        "_raw": "d2",
+        "_time": {
+          "expr": "now()-400"
+        }
+      },
+      {
+        "txid": "d3",
+        "user.name": "alice",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "Duo Push",
+        "_raw": "d3",
+        "_time": {
+          "expr": "now()-300"
+        }
+      },
+      {
+        "txid": "d1",
+        "user.name": "alice",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "Duo Push",
+        "_raw": "d1",
+        "_time": {
+          "expr": "now()-500"
+        }
+      },
+      {
+        "txid": "s1",
+        "user.name": "alice",
+        "application.name": "vpn",
+        "result": "success",
+        "factor": "Duo Push",
+        "_raw": "s1",
+        "_time": {
+          "expr": "now()-100"
+        }
+      },
+      {
+        "txid": "eq0",
+        "user.name": "equal",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "Duo Push",
+        "_raw": "eq0",
+        "_time": {
+          "expr": "now()-100"
+        }
+      },
+      {
+        "txid": "eq1",
+        "user.name": "equal",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "Duo Push",
+        "_raw": "eq1",
+        "_time": {
+          "expr": "now()-100"
+        }
+      },
+      {
+        "txid": "eq2",
+        "user.name": "equal",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "Duo Push",
+        "_raw": "eq2",
+        "_time": {
+          "expr": "now()-100"
+        }
+      },
+      {
+        "txid": "eqs",
+        "user.name": "equal",
+        "application.name": "vpn",
+        "result": "success",
+        "factor": "Duo Push",
+        "_raw": "eqs",
+        "_time": {
+          "expr": "now()-100"
+        }
+      },
+      {
+        "txid": "old0",
+        "user.name": "old",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "Duo Push",
+        "_raw": "old0",
+        "_time": {
+          "expr": "now()-1500"
+        }
+      },
+      {
+        "txid": "old1",
+        "user.name": "old",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "Duo Push",
+        "_raw": "old1",
+        "_time": {
+          "expr": "now()-1500"
+        }
+      },
+      {
+        "txid": "old2",
+        "user.name": "old",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "Duo Push",
+        "_raw": "old2",
+        "_time": {
+          "expr": "now()-1500"
+        }
+      },
+      {
+        "txid": "olds",
+        "user.name": "old",
+        "application.name": "vpn",
+        "result": "success",
+        "factor": "Duo Push",
+        "_raw": "olds",
+        "_time": {
+          "expr": "now()-100"
+        }
+      },
+      {
+        "txid": "rev",
+        "user.name": "reverse",
+        "application.name": "vpn",
+        "result": "success",
+        "factor": "Duo Push",
+        "_raw": "rev",
+        "_time": {
+          "expr": "now()-900"
+        }
+      },
+      {
+        "txid": "rv0",
+        "user.name": "reverse",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "Duo Push",
+        "_raw": "rv0",
+        "_time": {
+          "expr": "now()-100"
+        }
+      },
+      {
+        "txid": "rv1",
+        "user.name": "reverse",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "Duo Push",
+        "_raw": "rv1",
+        "_time": {
+          "expr": "now()-100"
+        }
+      },
+      {
+        "txid": "rv2",
+        "user.name": "reverse",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "Duo Push",
+        "_raw": "rv2",
+        "_time": {
+          "expr": "now()-100"
+        }
+      }
+    ],
+    "post": "| stats count as Groups sum(PriorDenials) as Denials values(User) as Users max(SequenceSeconds) as Seconds",
+    "assertion": "Groups=1 AND Denials=3 AND Users=\"alice\" AND Seconds=400"
+  },
+  {
+    "id": "identity_duo_push_denial_bursts",
+    "rows": [
+      {
+        "txid": "push0",
+        "user.name": "alice",
+        "application.name": "vpn",
+        "result": "fraud",
+        "factor": "Duo Push",
+        "_raw": "push0",
+        "_time": {
+          "expr": "now()-20"
+        }
+      },
+      {
+        "txid": "push1",
+        "user.name": "alice",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "Duo Push",
+        "_raw": "push1",
+        "_time": {
+          "expr": "now()-20"
+        }
+      },
+      {
+        "txid": "push2",
+        "user.name": "alice",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "Duo Push",
+        "_raw": "push2",
+        "_time": {
+          "expr": "now()-20"
+        }
+      },
+      {
+        "txid": "push3",
+        "user.name": "alice",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "Duo Push",
+        "_raw": "push3",
+        "_time": {
+          "expr": "now()-20"
+        }
+      },
+      {
+        "txid": "push4",
+        "user.name": "alice",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "Duo Push",
+        "_raw": "push4",
+        "_time": {
+          "expr": "now()-20"
+        }
+      },
+      {
+        "txid": "push1",
+        "user.name": "alice",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "Duo Push",
+        "_raw": "push1",
+        "_time": {
+          "expr": "now()-20"
+        }
+      },
+      {
+        "txid": "phone0",
+        "user.name": "phone",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "phone",
+        "_raw": "phone0",
+        "_time": {
+          "expr": "now()-20"
+        }
+      },
+      {
+        "txid": "phone1",
+        "user.name": "phone",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "phone",
+        "_raw": "phone1",
+        "_time": {
+          "expr": "now()-20"
+        }
+      },
+      {
+        "txid": "phone2",
+        "user.name": "phone",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "phone",
+        "_raw": "phone2",
+        "_time": {
+          "expr": "now()-20"
+        }
+      },
+      {
+        "txid": "phone3",
+        "user.name": "phone",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "phone",
+        "_raw": "phone3",
+        "_time": {
+          "expr": "now()-20"
+        }
+      },
+      {
+        "txid": "phone4",
+        "user.name": "phone",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "phone",
+        "_raw": "phone4",
+        "_time": {
+          "expr": "now()-20"
+        }
+      },
+      {
+        "txid": "phone5",
+        "user.name": "phone",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "phone",
+        "_raw": "phone5",
+        "_time": {
+          "expr": "now()-20"
+        }
+      },
+      {
+        "txid": "bad",
+        "user.name": "conflict",
+        "application.name": "vpn",
+        "result": "failure",
+        "factor": "Duo Push",
+        "_raw": "bad",
+        "_time": {
+          "expr": "now()-20"
+        }
+      },
+      {
+        "txid": "bad",
+        "user.name": "conflict",
+        "application.name": "vpn",
+        "result": "success",
+        "factor": "Duo Push",
+        "_raw": "bad",
+        "_time": {
+          "expr": "now()-20"
+        }
+      }
+    ],
+    "post": "| stats count as Groups sum(RiskyEvents) as Risky sum(Fraud) as Fraud",
+    "assertion": "Groups=1 AND Risky=5 AND Fraud=1"
+  },
+  {
+    "id": "identity_cim_password_spray_candidates",
+    "rows": [
+      {
+        "Authentication.src": "2001:db8::1",
+        "Authentication.app": "vpn",
+        "Failures": 10,
+        "DistinctUsers": 5,
+        "_time": {
+          "expr": "now()-20"
+        }
+      },
+      {
+        "Authentication.src": "10.0.0.1",
+        "Authentication.app": "vpn",
+        "Failures": 100,
+        "DistinctUsers": 4,
+        "_time": {
+          "expr": "now()-20"
+        }
+      }
+    ],
+    "post": "| stats count as Groups sum(Failures) as Failures values(SourceFamily) as Family",
+    "assertion": "Groups=1 AND Failures=10 AND Family=\"IPv6\""
+  },
+  {
+    "id": "network_ios_link_events_after_config",
+    "rows": [
+      {
+        "_raw": "%SYS-5-CONFIG_I: configured",
+        "_time": {
+          "expr": "now()-1000"
+        },
+        "host": "router-a"
+      },
+      {
+        "_raw": "%LINK-3-UPDOWN: Interface is down",
+        "_time": {
+          "expr": "now()-900"
+        },
+        "host": "router-a"
+      },
+      {
+        "_raw": "%LINK-3-UPDOWN: Interface is down",
+        "_time": {
+          "expr": "now()-900"
+        },
+        "host": "router-a"
+      },
+      {
+        "_raw": "%LINK-3-UPDOWN: Interface is down",
+        "_time": {
+          "expr": "now()-1000"
+        },
+        "host": "router-a"
+      },
+      {
+        "_raw": "%LINK-3-UPDOWN: Interface is down",
+        "_time": {
+          "expr": "now()-100"
+        },
+        "host": "router-a"
+      },
+      {
+        "_raw": "%LINK-3-UPDOWN: Interface is down",
+        "_time": {
+          "expr": "now()+0"
+        },
+        "host": "router-a"
+      },
+      {
+        "_raw": "%LINK-3-UPDOWN: Interface is down",
+        "_time": {
+          "expr": "now()-950"
+        },
+        "host": "router-a"
+      },
+      {
+        "_raw": "%LINK-3-UPDOWN: Interface is down",
+        "_time": {
+          "expr": "now()-900"
+        },
+        "host": "other"
+      }
+    ],
+    "post": "| stats count as Groups sum(LinkEvents) as Effects min(FirstEffectSeconds) as FirstSeconds",
+    "assertion": "Groups=1 AND Effects=3 AND FirstSeconds=50"
+  },
+  {
+    "id": "network_ios_routing_events_after_config",
+    "rows": [
+      {
+        "_raw": "%SYS-5-CONFIG_I: configured",
+        "_time": {
+          "expr": "now()-1000"
+        },
+        "host": "router-a"
+      },
+      {
+        "_raw": "%BGP-5-ADJCHANGE: neighbor down",
+        "_time": {
+          "expr": "now()-900"
+        },
+        "host": "router-a"
+      },
+      {
+        "_raw": "%BGP-5-ADJCHANGE: neighbor down",
+        "_time": {
+          "expr": "now()-900"
+        },
+        "host": "router-a"
+      },
+      {
+        "_raw": "%BGP-5-ADJCHANGE: neighbor down",
+        "_time": {
+          "expr": "now()-1000"
+        },
+        "host": "router-a"
+      },
+      {
+        "_raw": "%BGP-5-ADJCHANGE: neighbor down",
+        "_time": {
+          "expr": "now()-100"
+        },
+        "host": "router-a"
+      },
+      {
+        "_raw": "%BGP-5-ADJCHANGE: neighbor down",
+        "_time": {
+          "expr": "now()+0"
+        },
+        "host": "router-a"
+      },
+      {
+        "_raw": "%BGP-5-ADJCHANGE: neighbor down",
+        "_time": {
+          "expr": "now()-950"
+        },
+        "host": "router-a"
+      },
+      {
+        "_raw": "%BGP-5-ADJCHANGE: neighbor down",
+        "_time": {
+          "expr": "now()-900"
+        },
+        "host": "other"
+      }
+    ],
+    "post": "| stats count as Groups sum(AdjacencyEvents) as Effects min(FirstEffectSeconds) as FirstSeconds",
+    "assertion": "Groups=1 AND Effects=3 AND FirstSeconds=50"
+  },
+  {
+    "id": "network_catalyst_issues_after_device_audit",
+    "rows": [
+      {
+        "host": "dnac",
+        "sourcetype": "cisco:dnac:audit:logs",
+        "name": "AUDIT_LOG",
+        "userId": "admin",
+        "network.deviceId": "dev-a",
+        "description": "Applied configuration",
+        "_time": {
+          "expr": "now()-500"
+        }
+      },
+      {
+        "host": "dnac",
+        "sourcetype": "cisco:dnac:issue",
+        "DeviceID": "dev-a",
+        "IssueID": "new",
+        "IssueStatus": "active",
+        "_time": {
+          "expr": "now()-400"
+        }
+      },
+      {
+        "host": "dnac",
+        "sourcetype": "cisco:dnac:issue",
+        "DeviceID": "dev-a",
+        "IssueID": "new",
+        "IssueStatus": "active",
+        "_time": {
+          "expr": "now()-300"
+        }
+      },
+      {
+        "host": "dnac",
+        "sourcetype": "cisco:dnac:issue",
+        "DeviceID": "dev-a",
+        "IssueID": "old",
+        "IssueStatus": "active",
+        "_time": {
+          "expr": "now()-1000"
+        }
+      },
+      {
+        "host": "dnac",
+        "sourcetype": "cisco:dnac:issue",
+        "DeviceID": "dev-a",
+        "IssueID": "old",
+        "IssueStatus": "active",
+        "_time": {
+          "expr": "now()-300"
+        }
+      },
+      {
+        "host": "dnac",
+        "sourcetype": "cisco:dnac:issue",
+        "DeviceID": "dev-a",
+        "IssueID": "equal",
+        "IssueStatus": "active",
+        "_time": {
+          "expr": "now()-500"
+        }
+      },
+      {
+        "host": "dnac",
+        "sourcetype": "cisco:dnac:issue",
+        "DeviceID": "dev-b",
+        "IssueID": "other",
+        "IssueStatus": "active",
+        "_time": {
+          "expr": "now()-300"
+        }
+      },
+      {
+        "host": "dnac",
+        "sourcetype": "cisco:dnac:audit:logs",
+        "name": "AUDIT_LOG",
+        "userId": "system",
+        "network.deviceId": "dev-b",
+        "description": "Applied configuration",
+        "_time": {
+          "expr": "now()-500"
+        }
+      }
+    ],
+    "post": "| stats count as Groups sum(FirstObservedActiveIssues) as Issues",
+    "assertion": "Groups=1 AND Issues=1"
+  },
+  {
+    "id": "network_cross_vendor_ip_family_mix",
+    "rows": [
+      {
+        "sourcetype": "pan:traffic",
+        "host": "fw",
+        "src_ip": "2001:db8::1",
+        "dest_ip": "2001:db8::2",
+        "action": "deny",
+        "dest_port": 443
+      },
+      {
+        "sourcetype": "pan:traffic",
+        "host": "fw",
+        "src_ip": "10.0.0.1",
+        "dest_ip": "10.0.0.2",
+        "action": "allow"
+      },
+      {
+        "sourcetype": "pan:traffic",
+        "host": "fw",
+        "src_ip": "aa:bb:cc:dd:ee:ff",
+        "dest_ip": "10.0.0.2",
+        "action": "reset"
+      },
+      {
+        "sourcetype": "pan:traffic",
+        "host": "fw",
+        "src_ip": "",
+        "src": "2001:db8::3",
+        "dest_ip": "2001:db8::2",
+        "action": "block"
+      },
+      {
+        "sourcetype": "zeek:conn",
+        "host": "sensor",
+        "id.orig_h": "::ffff:192.0.2.1",
+        "id.resp_h": "2001:db8::2",
+        "conn_state": "SF"
+      }
+    ],
+    "post": "| stats sum(Records) as Records sum(eval(if(Decision=\"Unknown\",Records,0))) as Unknown sum(eval(if(AddressPair=\"IPv6 pair\",Records,0))) as IPv6",
+    "assertion": "Records=5 AND Unknown=2 AND IPv6=3"
+  },
+  {
+    "id": "network_cross_vendor_ipv6_denied_destinations",
+    "rows": [
+      {
+        "sourcetype": "pan:traffic",
+        "host": "fw",
+        "src_ip": "2001:db8::1",
+        "dest_ip": "2001:db8::2",
+        "action": "deny",
+        "dest_port": 443
+      },
+      {
+        "sourcetype": "pan:traffic",
+        "host": "fw",
+        "src_ip": "10.0.0.1",
+        "dest_ip": "10.0.0.2",
+        "action": "allow"
+      },
+      {
+        "sourcetype": "pan:traffic",
+        "host": "fw",
+        "src_ip": "aa:bb:cc:dd:ee:ff",
+        "dest_ip": "10.0.0.2",
+        "action": "reset"
+      },
+      {
+        "sourcetype": "pan:traffic",
+        "host": "fw",
+        "src_ip": "",
+        "src": "2001:db8::3",
+        "dest_ip": "2001:db8::2",
+        "action": "block"
+      },
+      {
+        "sourcetype": "zeek:conn",
+        "host": "sensor",
+        "id.orig_h": "::ffff:192.0.2.1",
+        "id.resp_h": "2001:db8::2",
+        "conn_state": "SF"
+      }
+    ],
+    "post": "| stats sum(DeniedRecords) as Records max(DistinctKnownSources) as Sources count as Groups",
+    "assertion": "Records=2 AND Sources=1 AND Groups=2"
+  },
+  {
+    "id": "network_cross_vendor_decision_field_coverage",
+    "rows": [
+      {
+        "sourcetype": "pan:traffic",
+        "host": "fw",
+        "src_ip": "2001:db8::1",
+        "dest_ip": "2001:db8::2",
+        "action": "deny",
+        "dest_port": 443
+      },
+      {
+        "sourcetype": "pan:traffic",
+        "host": "fw",
+        "src_ip": "10.0.0.1",
+        "dest_ip": "10.0.0.2",
+        "action": "allow"
+      },
+      {
+        "sourcetype": "pan:traffic",
+        "host": "fw",
+        "src_ip": "aa:bb:cc:dd:ee:ff",
+        "dest_ip": "10.0.0.2",
+        "action": "reset"
+      },
+      {
+        "sourcetype": "pan:traffic",
+        "host": "fw",
+        "src_ip": "",
+        "src": "2001:db8::3",
+        "dest_ip": "2001:db8::2",
+        "action": "block"
+      },
+      {
+        "sourcetype": "zeek:conn",
+        "host": "sensor",
+        "id.orig_h": "::ffff:192.0.2.1",
+        "id.resp_h": "2001:db8::2",
+        "conn_state": "SF"
+      }
+    ],
+    "post": "| stats sum(Records) as Records sum(ValidAddressPairs) as Pairs sum(ExplicitDecisionRecords) as Decisions sum(IPv6InvolvedRecords) as IPv6",
+    "assertion": "Records=5 AND Pairs=4 AND Decisions=3 AND IPv6=3"
+  }
+]

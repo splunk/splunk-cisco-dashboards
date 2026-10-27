@@ -223,6 +223,8 @@ assert.deepEqual(numericSpanStanzas("tstats"), [
   "dashboard_netops_readiness_v1_c_issues_forecast",
   // One-second preaggregation preserves latest timestamps; timechart stays adaptive.
   "feed_monitor_ftd_firewall_staleness",
+  // Fifteen-minute authentication detection buckets are calculation cadence.
+  "identity_cim_password_spray_candidates",
   "it_health_composite_service_alerts",
   // Feed occupancy counts fixed fifteen-minute observation buckets, not display bins.
   "operations_cisco_feed_bucket_coverage",
