@@ -109,7 +109,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
-                "customFontSize": 20,
+                "customFontSize": 16,
                 "markdown": "### Application transfer observations"
             }
         },
@@ -191,7 +191,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
-                "customFontSize": 20,
+                "customFontSize": 16,
                 "markdown": "### Explicit policy decisions"
             }
         },
@@ -273,7 +273,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
-                "customFontSize": 20,
+                "customFontSize": 16,
                 "markdown": "### DNS failure observations"
             }
         },
@@ -355,7 +355,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
-                "customFontSize": 20,
+                "customFontSize": 16,
                 "markdown": "### DNS response time"
             }
         },
@@ -437,7 +437,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
-                "customFontSize": 20,
+                "customFontSize": 16,
                 "markdown": "### HTTP server-error observations"
             }
         },
@@ -519,7 +519,7 @@
                 "backgroundColor": "transparent",
                 "fontColor": "#ecf0f5",
                 "fontSize": "custom",
-                "customFontSize": 20,
+                "customFontSize": 16,
                 "markdown": "### Remote administration observations"
             }
         },

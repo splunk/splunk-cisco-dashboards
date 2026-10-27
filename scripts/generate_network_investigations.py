@@ -137,7 +137,8 @@ def new_dashboard(template):
         source = f'ds_evidence_{i+1}'
         x, y = 16 + (i%2)*(card_width+16), 188 + (i//2)*404
         v[prefix+'_background'] = deepcopy(template['visualizations']['viz_card_01_background'])
-        v[prefix+'_title'] = markdown(title_template, '### '+title, 20)
+        # Markdown h3 adds its own size multiplier; keep long card names on one line.
+        v[prefix+'_title'] = markdown(title_template, '### '+title, 16)
         v[prefix+'_description'] = markdown(description_template, description, 16)
         v[prefix+'_table'] = {'type':'splunk.table', 'title': '', 'showProgressBar': True, 'showLastUpdated': True, 'options': {'backgroundColor': template['visualizations']['viz_card_01_background']['options']['fillColor'], 'count':5, 'showRowNumbers':False, 'showInternalFields':False, 'fontSize':'large', 'tableFormat':{'textOverflow':'ellipsis'}}, 'dataSources': {'primary':source}}
         v[prefix+'_action'] = action(title, [ref]+targets)

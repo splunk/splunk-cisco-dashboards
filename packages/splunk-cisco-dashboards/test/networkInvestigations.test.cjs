@@ -35,6 +35,7 @@ test('new dashboard has exactly six catalogue-backed evidence tables and bounded
     assert.equal(d.inputs.input_time_range.options.defaultValue, '-24h@h,now,auto');
     const layout = d.layout.layoutDefinitions.layout_overview;
     assert.equal(layout.options.width, 1120, 'Evidence tables should not shrink below readable desktop text in the app pane');
+    for (let i=1; i<=6; i++) assert.equal(d.visualizations[`viz_evidence_${i}_title`].options.customFontSize, 16, 'Markdown heading multipliers must not clip long card names');
     for (const item of layout.structure) {
         assert.ok(d.visualizations[item.item] || d.inputs[item.item]);
         const { x, y, w, h } = item.position;
