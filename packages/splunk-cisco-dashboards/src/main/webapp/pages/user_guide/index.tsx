@@ -45,6 +45,7 @@ const GUIDE_GROUPS = [
     label: "Start",
     sections: [
       { id: "overview", label: "Overview" },
+      { id: "release-notes", label: "What’s New / Release Notes" },
       { id: "prerequisites", label: "Prerequisites" },
       { id: "install", label: "Day-One Setup" },
     ],
@@ -62,6 +63,7 @@ const GUIDE_GROUPS = [
       { id: "dashboards", label: "Dashboard Map" },
       { id: "workspaces", label: "Insights Workspaces" },
       { id: "site-connectivity", label: "Site Connectivity" },
+      { id: "network-service-investigations", label: "Network Investigations" },
       { id: "lookups", label: "Supporting Assets" },
     ],
   },
@@ -70,7 +72,6 @@ const GUIDE_GROUPS = [
     sections: [
       { id: "operations", label: "Operations" },
       { id: "troubleshooting", label: "Troubleshooting" },
-      { id: "release-notes", label: "Release Notes" },
     ],
   },
 ];
@@ -80,7 +81,18 @@ const GUIDE_SECTIONS = GUIDE_GROUPS.flatMap((group) =>
 );
 
 
-const SEARCHABLE_SELECTOR = "h2, h3, p, li, td, th";
+const SEARCHABLE_SELECTOR = "h2, h3, p, li, td, th, summary";
+
+const resolveGuideFragment = (id: string): string =>
+  id === "whats-new" ? "release-notes" : id;
+
+const revealGuideTarget = (target: HTMLElement): void => {
+  let panel = target.closest<HTMLDetailsElement>("details");
+  while (panel) {
+    panel.open = true;
+    panel = panel.parentElement?.closest<HTMLDetailsElement>("details") || null;
+  }
+};
 
 const sectionNumber = (id: string): number =>
   GUIDE_SECTIONS.findIndex((section) => section.id === id) + 1;
@@ -269,6 +281,7 @@ function GuidePageToc({
           >
             <a
               href={`#${entry.id}`}
+              aria-current={activeHeading === entry.id ? "location" : undefined}
               className="scd-guide-page-toc-link"
               onClick={(event) => {
                 event.preventDefault();
@@ -348,6 +361,7 @@ export default function UserGuidePage(): JSX.Element {
 
       const nextIndex = (index + matches.length) % matches.length;
       const match = matches[nextIndex];
+      revealGuideTarget(match);
       currentSearchIndexRef.current = nextIndex;
       match.classList.add("scd-guide-search-current");
       setCurrentSearchIndex(nextIndex);
@@ -359,7 +373,8 @@ export default function UserGuidePage(): JSX.Element {
       if (section?.dataset.guideSection) {
         setActiveSection(section.dataset.guideSection);
         setActiveHeading(
-          match.closest<HTMLElement>("h3[id], h4[id]")?.id ||
+          match.closest<HTMLElement>(".scd-guide-release-panel[id]")?.id ||
+            match.closest<HTMLElement>("h3[id], h4[id]")?.id ||
             section.dataset.guideSection,
         );
       }
@@ -421,6 +436,7 @@ export default function UserGuidePage(): JSX.Element {
   }, [runSearch, searchQuery, showSearchMatch]);
 
   const goToSection = useCallback((id: string) => {
+    id = resolveGuideFragment(id);
     const section = document.getElementById(id);
     if (!section) {
       return;
@@ -434,10 +450,12 @@ export default function UserGuidePage(): JSX.Element {
   }, []);
 
   const goToHeading = useCallback((id: string) => {
+    id = resolveGuideFragment(id);
     const target = document.getElementById(id);
     if (!target) {
       return;
     }
+    revealGuideTarget(target);
     const section = target.matches("[data-guide-section]")
       ? target
       : target.closest<HTMLElement>("[data-guide-section]");
@@ -446,8 +464,11 @@ export default function UserGuidePage(): JSX.Element {
     }
     setActiveHeading(id);
     target.scrollIntoView({ behavior: "auto", block: "start" });
-    target.tabIndex = -1;
-    target.focus({ preventScroll: true });
+    const focusTarget = target.matches("details")
+      ? target.querySelector<HTMLElement>("summary") || target
+      : target;
+    if (!focusTarget.matches("summary")) focusTarget.tabIndex = -1;
+    focusTarget.focus({ preventScroll: true });
     window.history.replaceState(null, "", `#${id}`);
   }, []);
 
@@ -521,7 +542,8 @@ export default function UserGuidePage(): JSX.Element {
     const tocBySection = new Map();
 
     GUIDE_SECTIONS.forEach((sectionDefinition) => {
-      const section = document.getElementById(sectionDefinition.id);
+      const section = document.getElementById(sectionDefinition.id)
+        ?.closest<HTMLElement>("[data-guide-section]");
       if (!section) {
         return;
       }
@@ -538,13 +560,22 @@ export default function UserGuidePage(): JSX.Element {
       ];
       const seenIds = new Set<string>();
 
+      if (sectionDefinition.id === "release-notes") {
+        section.querySelectorAll<HTMLElement>(".scd-guide-release-panel[id]").forEach((panel) => {
+          panel.setAttribute("data-guide-page-heading", "true");
+          entries.push({ id: panel.id, label: panel.dataset.releaseLabel || panel.id, level: 3 });
+        });
+        tocBySection.set(sectionDefinition.id, entries);
+        return;
+      }
+
       section.querySelectorAll<HTMLElement>("h3, h4").forEach((heading) => {
         const label = heading.textContent?.trim();
         if (!label) {
           return;
         }
         const baseId = `${sectionDefinition.id}-${headingSlug(label)}`;
-        let id = baseId;
+        let id = heading.id || baseId;
         let suffix = 2;
         while (
           seenIds.has(id) ||
@@ -570,8 +601,24 @@ export default function UserGuidePage(): JSX.Element {
   }, []);
 
   useEffect(() => {
+    const followFragment = () => {
+      let id: string;
+      try {
+        id = resolveGuideFragment(decodeURIComponent(window.location.hash.slice(1)));
+      } catch (_error) {
+        return;
+      }
+      const target = document.getElementById(id);
+      if (target && guideContentRef.current?.contains(target)) goToHeading(id);
+    };
+    followFragment();
+    window.addEventListener("hashchange", followFragment);
+    return () => window.removeEventListener("hashchange", followFragment);
+  }, [goToHeading]);
+
+  useEffect(() => {
     const sections = GUIDE_SECTIONS.map((section) =>
-      document.getElementById(section.id),
+      document.getElementById(section.id)?.closest<HTMLElement>("[data-guide-section]"),
     ).filter((section): section is HTMLElement => Boolean(section));
 
     let frame = 0;
@@ -584,9 +631,10 @@ export default function UserGuidePage(): JSX.Element {
             .find((section) => section.getBoundingClientRect().top <= 220) ||
           sections[0];
         if (active) {
-          setActiveSection(active.id);
+          const activeId = active.dataset.guideSection || active.id;
+          setActiveSection(activeId);
           const headingNodes = [
-            active,
+            active.querySelector<HTMLElement>("h2[id]") || active,
             ...Array.from(
               active.querySelectorAll<HTMLElement>("[data-guide-page-heading]"),
             ),
@@ -596,7 +644,7 @@ export default function UserGuidePage(): JSX.Element {
               .reverse()
               .find((heading) => heading.getBoundingClientRect().top <= 220) ||
             active;
-          setActiveHeading(visibleHeading.id);
+          setActiveHeading(visibleHeading.id || activeId);
         }
       });
     };

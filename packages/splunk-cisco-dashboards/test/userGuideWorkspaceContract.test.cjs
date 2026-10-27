@@ -2,6 +2,8 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
+const vm = require("node:vm");
+const ts = require("typescript");
 
 const root = path.resolve(__dirname, "..");
 const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
@@ -10,6 +12,11 @@ const markdown = read("src/main/webapp/pages/user_guide/userGuide.md");
 const parser = read("src/main/webapp/pages/user_guide/markdownGuide.ts");
 const webpack = read("webpack.config.js");
 const css = read("src/main/webapp/pages/user_guide/user-guide.css");
+const parserScope = { exports: {} };
+vm.runInNewContext(ts.transpileModule(parser, {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+}).outputText, parserScope);
+const parseGuide = parserScope.exports.parseGuideMarkdown;
 
 test("uses Markdown as the customer-guide source of truth", () => {
   assert.match(page, /import guideMarkdown from "\.\/userGuide\.md"/);
@@ -68,4 +75,42 @@ test("documents the full setup, dashboard, and workspace operating model", () =>
 
 test("does not link customers to the intentionally excluded Searchbase Canvas", () => {
   assert.doesNotMatch(markdown, /searchbase_canvas/);
+});
+
+test("promotes release history while keeping contents and document order aligned", () => {
+  const groups = page.match(/const GUIDE_GROUPS = \[([\s\S]*?)\n\];/)[1];
+  const ids = [...groups.matchAll(/\{ id: "([^"]+)", label: "[^"]+" \}/g)].map((m) => m[1]);
+  const parsedIds = Array.from(parseGuide(markdown).sections, (s) => s.id);
+  assert.deepEqual(ids, parsedIds, 'Contents must include every guide section in document order');
+  assert.equal(ids.indexOf('release-notes'), 1);
+  assert.match(groups, /What’s New \/ Release Notes/);
+});
+
+test("renders every recorded release with stable links and only the newest expanded", () => {
+  const html = parseGuide(markdown).html;
+  const panels = [...html.matchAll(/<details class="scd-guide-release-panel" id="([^"]+)" data-release-label="([^"]+)"( open)?>/g)];
+  const versions = ['1.0.80', '1.0.70', '1.0.60', '1.0.55', '1.0.54', '1.0.53', '1.0.52', '1.0.51', '1.0.50', '1.0.49', '1.0.46', '1.0.45', '1.0.44', '1.0.35'];
+  assert.deepEqual(panels.map((m) => m[2]), versions.map((v) => `Version ${v}`));
+  assert.equal(panels.filter((m) => m[3]).length, 1);
+  assert.ok(panels[0][3]);
+  for (const version of versions) {
+    const id = `release-${version.replaceAll('.', '-')}`;
+    assert.ok(panels.some((p) => p[1] === id));
+    assert.ok(html.includes(`href="#${id}"`));
+  }
+  assert.equal((html.match(/aria-label="Release versions"/g) || []).length, 1);
+  assert.equal((html.match(/data-release-action="expand"/g) || []).length, 1);
+});
+
+test("release anchors remain unique and escape metadata without counting code examples", () => {
+  const source = '## Notes {#release-notes}\n\n```text\n::: release Example | Version 9.9.9\n```\n\n::: release <Title> | Version 1.2.3\nSafe <script> text\n:::\n\n::: release Other | Version 1.2.3\nOld notes\n:::\n';
+  const html = parseGuide(source).html;
+  assert.equal((html.match(/<details class="scd-guide-release-panel"/g) || []).length, 2);
+  assert.match(html, /id="release-1-2-3"/);
+  assert.match(html, /id="release-1-2-3-2"/);
+  assert.doesNotMatch(html, /<script>|<Title>|id="release-9-9-9"/);
+  assert.match(page, /id === "whats-new" \? "release-notes" : id/);
+  assert.match(page, /hashchange[\s\S]*?followFragment/);
+  assert.match(page, /revealGuideTarget\(match\)/);
+  assert.match(page, /revealGuideTarget\(target\)/);
 });
