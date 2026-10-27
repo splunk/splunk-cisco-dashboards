@@ -130,7 +130,9 @@ def new_dashboard(template):
     canvas_width = 1120
     card_width = (canvas_width - 48) // 2
     layout['options'].update(width=canvas_width, height=1550, showTitleAndDescription=False)
-    layout['structure'] = [block('viz_header_bg', 16, 0, canvas_width-32, 102), block('viz_header_icon', 28, 20, 56, 56), block('viz_header', 96, 8, canvas_width-480, 86), block('input_time_range', canvas_width-360, 8, 330, 80, 'input'), block('viz_scope', 24, 112, canvas_width-48, 64)]
+    # Six native buttons need 360px; also reserve the right edge for the
+    # collapsed Manager toolbar, which overlays width-fitted dashboards.
+    layout['structure'] = [block('viz_header_bg', 16, 0, canvas_width-32, 102), block('viz_header_icon', 28, 20, 56, 56), block('viz_header', 96, 8, canvas_width-660, 86), block('input_time_range', canvas_width-520, 8, 370, 80, 'input'), block('viz_scope', 24, 112, canvas_width-48, 64)]
     d['dataSources'] = {}
     for i, (title, description, ref, targets) in enumerate(PANELS):
         prefix = f'viz_evidence_{i+1}'

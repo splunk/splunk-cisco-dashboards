@@ -34,6 +34,10 @@ test('new dashboard has exactly six catalogue-backed evidence tables and bounded
     assert.equal(d.layout.options.showTitleAndDescription, false);
     assert.equal(d.inputs.input_time_range.options.defaultValue, '-24h@h,now,auto');
     const layout = d.layout.layoutDefinitions.layout_overview;
+    const timePosition = layout.structure.find(({ item }) => item === 'input_time_range').position;
+    assert.equal(d.inputs.input_time_range.options.showAdvanced, true);
+    assert.ok(timePosition.w >= 360, 'All five shortcuts and the custom-range button need to fit');
+    assert.ok(layout.options.width-timePosition.x-timePosition.w >= 100, 'Keep the custom-range button clear of the overlaid Manager toolbar');
     assert.equal(layout.options.width, 1120, 'Evidence tables should not shrink below readable desktop text in the app pane');
     for (let i=1; i<=6; i++) assert.equal(d.visualizations[`viz_evidence_${i}_title`].options.customFontSize, 16, 'Markdown heading multipliers must not clip long card names');
     for (const item of layout.structure) {

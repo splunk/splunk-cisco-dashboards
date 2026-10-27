@@ -733,7 +733,7 @@
                         "position": {
                             "x": 96,
                             "y": 8,
-                            "w": 640,
+                            "w": 460,
                             "h": 86
                         },
                         "type": "block"
@@ -741,9 +741,9 @@
                     {
                         "item": "input_time_range",
                         "position": {
-                            "x": 760,
+                            "x": 600,
                             "y": 8,
-                            "w": 330,
+                            "w": 370,
                             "h": 80
                         },
                         "type": "input"

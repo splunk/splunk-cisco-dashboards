@@ -378,6 +378,8 @@ Open **Secure Infrastructure > Network Service Investigations** for six evidence
 
 Use **Investigate** beside a table to open related vendor-specific or neutral searches, including IPv6 visibility, denied destinations and interface observations. **About** explains the source contract and interpretation. Details retain the dashboard time range. One selected detail search runs at a time; changing the detail page selects a different investigation. These are separate evidence views, not automatically correlated users, devices or sessions. No per-row entity filter is inferred when moving between different source schemas.
 
+Use **Advanced time range** beside the **30d** shortcut to select a custom time range and span, using the same selector as the other managed dashboards.
+
 Existing dashboards also expose the new catalogue searches through **Investigate drivers**: authentication and remote-access details in Zero Trust Posture and Authentication and Policy Enforcement; NAT, rule/action and threat evidence in Threat Detection and Enforcement; and change, probe, routing and interface details in SD-WAN and Network Health Monitoring. Their existing overview metrics and searches are preserved.
 
 Three additional tabs provide investigations without running new overview searches:
@@ -458,6 +460,7 @@ This Markdown file is the authoritative source for the in-product release histor
 
 ### Insights Workspaces
 
+- Fixed the **Advanced time range** button being clipped and covered by the Dashboard Manager toolbar on Network Service Investigations. Custom ranges and span selection remain accessible beside the quick time shortcuts.
 - Added **Network Service Investigations** under Secure Infrastructure with six vendor-neutral evidence tables and related vendor, IPv6 and interface investigations. Added catalogue drilldowns to existing Zero Trust, firewall and WAN dashboards plus on-demand SAN/fabric, certificate and telemetry tabs. Preserved existing overview searches and index routing, retained time context, and documented source requirements and missing-data limits.
 - Made **Match workspace** the factory default for map height. Saved personal height preferences remain unchanged, and factory reset restores the new default.
 - Restored `r` (refresh) and `t` (cycle time range) when the surrounding Splunk dashboard panel has focus after clicking the workspace background. Typing in Cisco Cloud Control assistants and other text editors remains protected from workspace shortcuts.
