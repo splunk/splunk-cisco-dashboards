@@ -5,6 +5,7 @@ const webpack = require('webpack');
 const { merge: webpackMerge } = require('webpack-merge');
 const baseConfig = require('@splunk/webpack-configs').default;
 const CopyPlugin = require('copy-webpack-plugin');
+const MinimizerPlugin = require('minimizer-webpack-plugin');
 
 /**
  * Inject the app version from the repo-root VERSION file and a unique build
@@ -143,6 +144,16 @@ const commonConfig = webpackMerge(baseConfig, {
     // This multi-entry production build values predictable memory use over
     // retaining a compiler cache across watch rebuilds.
     cache: false,
+    // Each dashboard entry includes large shared dependencies. Serial
+    // minification avoids multiplying their ASTs across worker processes.
+    // Keep webpack's default compression passes and the existing --no-
+    // optimization-minimize fast-build override.
+    optimization: {
+        minimizer: [new MinimizerPlugin({
+            parallel: false,
+            terserOptions: { compress: { passes: 2 } },
+        })],
+    },
     // Keep watch mode scoped to source inputs. In particular, avoid watching
     // dependency trees and generated output, which can otherwise cause
     // unnecessary rebuild work and retain large dependency graphs.
