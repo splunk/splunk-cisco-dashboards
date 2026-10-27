@@ -1130,6 +1130,89 @@
             "containerOptions": {},
             "showProgressBar": false,
             "showLastUpdated": false
+        },
+        "viz_library_header": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "markdown": "# Certificate investigations\nOpen an investigation to run it for the selected time range. Related feeds are separate evidence, not components of the overview metric.",
+                "fontSize": "custom",
+                "customFontSize": 20
+            }
+        },
+        "viz_library_1_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_library_1_text": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "markdown": "## Certificate lifecycle\nInspect observed Zeek certificate expiry bands and individual validity dates. Observed certificates are not a complete estate inventory.\n\nUse the investigation button to open the available searches.",
+                "fontSize": "custom",
+                "customFontSize": 20
+            }
+        },
+        "viz_library_1_action": {
+            "type": "splunk.cisco_drilldown_action",
+            "options": {
+                "label": "Investigate Certificate lifecycle"
+            },
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Certificate%20lifecycle&target=security_zeek_certificate_expiry_summary,security_zeek_certificate_expiry_inventory"
+                    }
+                }
+            ]
+        },
+        "viz_library_2_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_library_2_text": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "markdown": "## Certificate rotation candidates\nCompare fingerprints observed for the same subject. Multiple certificates can be legitimate and do not establish a failed rotation.\n\nUse the investigation button to open the available searches.",
+                "fontSize": "custom",
+                "customFontSize": 20
+            }
+        },
+        "viz_library_2_action": {
+            "type": "splunk.cisco_drilldown_action",
+            "options": {
+                "label": "Investigate Certificate rotation candidates"
+            },
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Certificate%20rotation%20candidates&target=security_zeek_certificate_rotation_candidates"
+                    }
+                }
+            ]
         }
     },
     "dataSources": {
@@ -1745,6 +1828,113 @@
                     }
                 ],
                 "type": "absolute"
+            },
+            "layout_catalogue_investigations": {
+                "type": "absolute",
+                "options": {
+                    "backgroundColor": "#0f1117",
+                    "backgroundImage": {
+                        "sizeType": "contain",
+                        "src": "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjEyODgiIHZpZXdCb3g9IjAgMCAyMDAwIDEyODgiIHdpZHRoPSIyMDAwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIj48ZmlsdGVyIGlkPSJhIiBjb2xvci1pbnRlcnBvbGF0aW9uLWZpbHRlcnM9InNSR0IiIGZpbHRlclVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgaGVpZ2h0PSIxNTg0IiB3aWR0aD0iMjAwMCIgeD0iMCIgeT0iLTI4MCI+PGZlRmxvb2QgZmxvb2Qtb3BhY2l0eT0iMCIgcmVzdWx0PSJCYWNrZ3JvdW5kSW1hZ2VGaXgiLz48ZmVCbGVuZCBpbj0iU291cmNlR3JhcGhpYyIgaW4yPSJCYWNrZ3JvdW5kSW1hZ2VGaXgiIG1vZGU9Im5vcm1hbCIgcmVzdWx0PSJzaGFwZSIvPjxmZUdhdXNzaWFuQmx1ciByZXN1bHQ9ImVmZmVjdDFfZm9yZWdyb3VuZEJsdXJfNjU1MTZfNjgiIHN0ZERldmlhdGlvbj0iMTQwIi8+PC9maWx0ZXI+PGNsaXBQYXRoIGlkPSJiIj48cGF0aCBkPSJtMjgwIDBoMTQ0MHYxMDI0aC0xNDQweiIvPjwvY2xpcFBhdGg+PGcgZmlsdGVyPSJ1cmwoI2EpIiBvcGFjaXR5PSIuNSI+PGcgY2xpcC1wYXRoPSJ1cmwoI2IpIiBmaWxsLW9wYWNpdHk9Ii41Ij48ZWxsaXBzZSBjeD0iNTY2LjAwMSIgY3k9IjEwNDguMTYiIGZpbGw9IiNmZjkwMDAiIHJ4PSI0MjIiIHJ5PSIxNTQiIHRyYW5zZm9ybT0ibWF0cml4KC0xIC0wIDAgLTEgMTEzMi4wMDIgMjA5Ni4zMikiLz48ZWxsaXBzZSBjeD0iMTE4MSIgY3k9IjEwNzAuMTYiIGZpbGw9IiNmZjAwN2YiIHJ4PSI1OTIiIHJ5PSIyMjMiIHRyYW5zZm9ybT0ibWF0cml4KC0xIC0wIDAgLTEgMjM2MiAyMTQwLjMyKSIvPjxnIGZpbGw9IiNmZjkwMDAiPjxlbGxpcHNlIGN4PSIyNDIuMDEyIiBjeT0iMTU1LjYyMiIgcng9IjI0Mi4wMTIiIHJ5PSIxNTUuNjIyIiB0cmFuc2Zvcm09Im1hdHJpeCgtLjg2MTk2NyAtLjUwNjk2NCAuODIzNDEgLS41Njc0NDcgMTY2OC44NiAxMTgyKSIvPjxlbGxpcHNlIGN4PSI2NzcuMDAxIiBjeT0iMTA0Ny42NiIgcng9IjIyNyIgcnk9Ijk2LjUiIHRyYW5zZm9ybT0ibWF0cml4KC0xIC0wIDAgLTEgMTM1NC4wMDIgMjA5NS4zMikiLz48L2c+PC9nPjwvZz48L3N2Zz4=",
+                        "x": 0,
+                        "y": 0
+                    },
+                    "display": "auto-scale",
+                    "height": 1024,
+                    "width": 1920
+                },
+                "structure": [
+                    {
+                        "item": "viz_header_bg",
+                        "position": {
+                            "x": 20,
+                            "y": 0,
+                            "w": 1880,
+                            "h": 110
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_library_header",
+                        "position": {
+                            "x": 44,
+                            "y": 10,
+                            "w": 1400,
+                            "h": 96
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "input_time_range",
+                        "position": {
+                            "x": 1514,
+                            "y": 8,
+                            "w": 370,
+                            "h": 80
+                        },
+                        "type": "input"
+                    },
+                    {
+                        "item": "viz_library_1_background",
+                        "position": {
+                            "x": 20,
+                            "y": 140,
+                            "w": 1880,
+                            "h": 270
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_library_1_text",
+                        "position": {
+                            "x": 44,
+                            "y": 160,
+                            "w": 1730,
+                            "h": 230
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_library_1_action",
+                        "position": {
+                            "x": 1796,
+                            "y": 164,
+                            "w": 64,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_library_2_background",
+                        "position": {
+                            "x": 20,
+                            "y": 450,
+                            "w": 1880,
+                            "h": 270
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_library_2_text",
+                        "position": {
+                            "x": 44,
+                            "y": 470,
+                            "w": 1730,
+                            "h": 230
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_library_2_action",
+                        "position": {
+                            "x": 1796,
+                            "y": 474,
+                            "w": 64,
+                            "h": 64
+                        },
+                        "type": "block"
+                    }
+                ]
             }
         },
         "options": {
@@ -1757,6 +1947,10 @@
                 {
                     "label": "overview",
                     "layoutId": "layout_overview"
+                },
+                {
+                    "label": "Certificate investigations",
+                    "layoutId": "layout_catalogue_investigations"
                 }
             ]
         }

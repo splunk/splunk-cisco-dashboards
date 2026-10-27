@@ -372,6 +372,22 @@ The topology editor controls the workspace map title, subtitle, center, zoom, si
 
 The editor first checks its offline city list. For an unmatched site, enter explicit coordinates. Customer site text is never sent to a public geocoder. A bound ThousandEyes test can retain its permalink or construct a link from the test and account IDs. Keep the Leaflet and active map-provider credits available through **Map credits**.
 
+## Network service and catalogue investigations {#network-service-investigations}
+
+Open **Secure Infrastructure > Network Service Investigations** for six evidence tables: application transfer observations, explicit policy decisions, DNS NXDOMAIN responses, DNS response time, HTTP server errors and allowed remote-administration port observations. The dashboard uses compatible CIM-tagged data across vendors. It needs the corresponding add-ons, extracted fields, tags, index routing and search permissions; it does not onboard these sources.
+
+Use **Investigate** beside a table to open related vendor-specific or neutral searches, including IPv6 visibility, denied destinations and interface observations. **About** explains the source contract and interpretation. Details retain the dashboard time range. One selected detail search runs at a time; changing the detail page selects a different investigation. These are separate evidence views, not automatically correlated users, devices or sessions. No per-row entity filter is inferred when moving between different source schemas.
+
+Existing dashboards also expose the new catalogue searches through **Investigate drivers**: authentication and remote-access details in Zero Trust Posture and Authentication and Policy Enforcement; NAT, rule/action and threat evidence in Threat Detection and Enforcement; and change, probe, routing and interface details in SD-WAN and Network Health Monitoring. Their existing overview metrics and searches are preserved.
+
+Three additional tabs provide investigations without running new overview searches:
+
+- **Secure Data Center Operations > SAN and fabric investigations**: MDS transmit wait, recurring congestion, resource measurements and Hyperfabric rates, directionality and measurement coverage.
+- **Infrastructure Posture > Certificate investigations**: observed certificate lifecycle, expiry inventory and rotation candidates from Zeek x509 data.
+- **Operational Intelligence > Telemetry investigations**: ingestion delay, observed feed-bucket coverage and repeated/conflicting ISE policy fields.
+
+Start with a short time range on busy feeds. The new dashboard has six overview searches; opening a detail adds one active search. Returned catalogue groups are capped at 1,000 and disclose truncation, but this does not bound scanned events or aggregation memory. Missing observations can reflect absent sources, missing fields, permissions, routing, unmet conditions or the selected window; they do not establish a healthy state. Record totals may overlap across logging feeds and must not be treated as unique sessions or incidents. CrowdStrike/Defender endpoint network dashboards remain deferred until their required network/process exports are available.
+
 ## Supporting assets {#lookups}
 
 | Asset | Purpose |
@@ -442,6 +458,7 @@ This Markdown file is the authoritative source for the in-product release histor
 
 ### Insights Workspaces
 
+- Added **Network Service Investigations** under Secure Infrastructure with six vendor-neutral evidence tables and related vendor, IPv6 and interface investigations. Added catalogue drilldowns to existing Zero Trust, firewall and WAN dashboards plus on-demand SAN/fabric, certificate and telemetry tabs. Preserved existing overview searches and index routing, retained time context, and documented source requirements and missing-data limits.
 - Made **Match workspace** the factory default for map height. Saved personal height preferences remain unchanged, and factory reset restores the new default.
 - Restored `r` (refresh) and `t` (cycle time range) when the surrounding Splunk dashboard panel has focus after clicking the workspace background. Typing in Cisco Cloud Control assistants and other text editors remains protected from workspace shortcuts.
 - Fixed ISE policy-family activity showing zero when policy snapshots contain repeated multivalue identifiers or counters. Equal values are normalized before grouping and hit-counter calculations; conflicting values and invalid counters are excluded instead of creating misleading activity.

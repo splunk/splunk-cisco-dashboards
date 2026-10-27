@@ -14,6 +14,7 @@ export const DASHBOARD_MANAGER_FRAMEWORK_VIEW_NAMES = new Set([
   "sn_hmf_enforcement",
   "sn_hmf_sdwan_network_health",
   "sn_hmf_threat_detection_enforcement",
+  "sn_network_service_investigations",
   "sn_secure_infrastructure_posture",
   "sn_secure_infrastructure_status",
   "sn_segmentation_operations",

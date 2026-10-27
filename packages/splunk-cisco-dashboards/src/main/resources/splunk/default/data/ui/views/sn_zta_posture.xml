@@ -394,7 +394,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Authentication%20Friction&target=Secure%20Networking%20-%20ZTA%20ISE%20Auth%20Failure%20Rate%20by%20Network%20Device"
+                        "url": "/drilldown?origin=Authentication%20Friction&target=Secure%20Networking%20-%20ZTA%20ISE%20Auth%20Failure%20Rate%20by%20Network%20Device,mv_authentication_application_outcomes,mv_authentication_method_visibility,identity_cim_password_spray_candidates"
                     }
                 }
             ],
@@ -584,7 +584,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Private%20Access%20Status&target=Secure%20Networking%20-%20ZTA%20ZTNA%20Application%20Access%20Summary,Secure%20Networking%20-%20ZTA%20ZTNA%20Blocked%20Access%20Reasons,secure_networking_zscaler_zpa_application_access,secure_networking_zscaler_zpa_policy_activity,secure_networking_zscaler_zpa_connection_status_trend"
+                        "url": "/drilldown?origin=Private%20Access%20Status&target=Secure%20Networking%20-%20ZTA%20ZTNA%20Application%20Access%20Summary,Secure%20Networking%20-%20ZTA%20ZTNA%20Blocked%20Access%20Reasons,secure_networking_zscaler_zpa_application_access,secure_networking_zscaler_zpa_policy_activity,secure_networking_zscaler_zpa_connection_status_trend,mv_zscaler_zpa_server_setup,mv_zscaler_zpa_public_ip_changes,mv_zscaler_zpa_private_ip_visibility,mv_zscaler_zpa_encryption_labels"
                     }
                 }
             ],
@@ -764,7 +764,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Remote%20Access%20Health&target=secure_networking_zta_ravpn_sessions_by_profile,secure_networking_zta_ravpn_failure_reasons,secure_networking_zta_ravpn_posture_alerts"
+                        "url": "/drilldown?origin=Remote%20Access%20Health&target=secure_networking_zta_ravpn_sessions_by_profile,secure_networking_zta_ravpn_failure_reasons,secure_networking_zta_ravpn_posture_alerts,mv_pan_globalprotect_failures,mv_fortinet_vpn_transitions,mv_checkpoint_vpn_failure_evidence,mv_f5_apm_access_denials"
                     }
                 }
             ],
@@ -902,7 +902,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Risky%20MFA%20Outcomes&target=Secure%20Networking%20-%20ZTA%20Risky%20MFA%20Outcomes%20by%20Application%20and%20Factor,Secure%20Networking%20-%20Duo%20Blocked%20Posture%20and%20Identity%20Events"
+                        "url": "/drilldown?origin=Risky%20MFA%20Outcomes&target=Secure%20Networking%20-%20ZTA%20Risky%20MFA%20Outcomes%20by%20Application%20and%20Factor,Secure%20Networking%20-%20Duo%20Blocked%20Posture%20and%20Identity%20Events,identity_duo_denials_before_success,identity_duo_push_denial_bursts,mv_authentication_source_changes"
                     }
                 }
             ],

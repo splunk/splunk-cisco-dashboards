@@ -1,0 +1,1133 @@
+<dashboard version="2" theme="dark" stylesheet="application.css" isVisible="false">
+    <label>Secure Infrastructure - Network Service Investigations</label>
+    <description>Investigate applications, policy decisions, DNS and web observations across compatible networking sources.</description>
+    <definition><![CDATA[
+{
+    "title": "Network Service Investigations",
+    "description": "Investigate applications, policy decisions, DNS and web observations across compatible networking sources.",
+    "inputs": {
+        "input_time_range": {
+            "options": {
+                "defaultValue": "-24h@h,now,auto",
+                "showAdvanced": true,
+                "selections": [
+                    {
+                        "value": "-4h,now,auto",
+                        "label": "4h"
+                    },
+                    {
+                        "value": "-24h@h,now,auto",
+                        "label": "24h"
+                    },
+                    {
+                        "value": "-48h,now,auto",
+                        "label": "48h"
+                    },
+                    {
+                        "value": "-7d@d,now,auto",
+                        "label": "7d"
+                    },
+                    {
+                        "value": "-30d@d,now,auto",
+                        "label": "30d"
+                    }
+                ],
+                "token": "time_tok"
+            },
+            "title": "Time range",
+            "type": "input.simpleTimePicker"
+        }
+    },
+    "defaults": {
+        "visualizations": {
+            "global": {
+                "showLastUpdated": true,
+                "showProgressBar": true
+            }
+        }
+    },
+    "applicationProperties": {
+        "collapseNavigation": true,
+        "hideEdit": true,
+        "hideExport": false
+    },
+    "visualizations": {
+        "viz_header_bg": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#1c2738",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 10
+            }
+        },
+        "viz_header_icon": {
+            "type": "splunk.image",
+            "title": "Network Service Investigations",
+            "options": {
+                "preserveAspectRatio": true,
+                "src": "/static/app/splunk-cisco-dashboards/images/nav-icons/ServerBrackets.svg"
+            }
+        },
+        "viz_header": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "markdown": "# Network Service Investigations\nApplications, policy decisions, DNS and web evidence across compatible sources."
+            }
+        },
+        "viz_scope": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 16,
+                "markdown": "Counts describe observed records, not unique sessions or confirmed incidents. Empty panels can reflect missing feeds, fields or matching activity. Related investigations retain this time range and run one at a time."
+            }
+        },
+        "viz_evidence_1_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_evidence_1_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Application transfer observations**"
+            }
+        },
+        "viz_evidence_1_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 16,
+                "markdown": "Reported bytes by device and application; overlapping feeds can repeat session totals."
+            }
+        },
+        "viz_evidence_1_table": {
+            "type": "splunk.table",
+            "title": "Application transfer observations",
+            "showProgressBar": true,
+            "showLastUpdated": true,
+            "options": {
+                "backgroundColor": "#131a23",
+                "count": 5,
+                "showRowNumbers": false,
+                "showInternalFields": false,
+                "fontSize": "large"
+            },
+            "dataSources": {
+                "primary": "ds_evidence_1"
+            }
+        },
+        "viz_evidence_1_action": {
+            "type": "splunk.cisco_drilldown_action",
+            "options": {
+                "label": "Investigate Application transfer observations"
+            },
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Application%20transfer%20observations&target=mv_traffic_application_bytes,mv_traffic_application_port_inventory,mv_traffic_destination_fanout,mv_traffic_port_fanout,mv_traffic_long_duration,mv_pan_application_transfer,mv_pan_session_end_reasons,mv_zscaler_zia_transfer_sizes"
+                    }
+                }
+            ]
+        },
+        "viz_evidence_1_info": {
+            "type": "splunk.cisco_drilldown_action",
+            "options": {
+                "label": "About Application transfer observations",
+                "action": "metric-info"
+            },
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Application%20transfer%20observations&target=mv_traffic_application_bytes"
+                    }
+                }
+            ]
+        },
+        "viz_evidence_2_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_evidence_2_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Explicit policy decisions**"
+            }
+        },
+        "viz_evidence_2_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 16,
+                "markdown": "Allowed, denied and unknown record shares by device; these are not unique session failure rates."
+            }
+        },
+        "viz_evidence_2_table": {
+            "type": "splunk.table",
+            "title": "Explicit policy decisions",
+            "showProgressBar": true,
+            "showLastUpdated": true,
+            "options": {
+                "backgroundColor": "#131a23",
+                "count": 5,
+                "showRowNumbers": false,
+                "showInternalFields": false,
+                "fontSize": "large"
+            },
+            "dataSources": {
+                "primary": "ds_evidence_2"
+            }
+        },
+        "viz_evidence_2_action": {
+            "type": "splunk.cisco_drilldown_action",
+            "options": {
+                "label": "Investigate Explicit policy decisions"
+            },
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Explicit%20policy%20decisions&target=mv_traffic_decision_rates,mv_pan_denied_zone_boundaries,mv_fortinet_policy_denials,mv_junos_srx_denials,mv_checkpoint_denied_services,mv_checkpoint_rule_action_inventory"
+                    }
+                }
+            ]
+        },
+        "viz_evidence_2_info": {
+            "type": "splunk.cisco_drilldown_action",
+            "options": {
+                "label": "About Explicit policy decisions",
+                "action": "metric-info"
+            },
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Explicit%20policy%20decisions&target=mv_traffic_decision_rates"
+                    }
+                }
+            ]
+        },
+        "viz_evidence_3_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_evidence_3_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**DNS failure observations**"
+            }
+        },
+        "viz_evidence_3_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 16,
+                "markdown": "Explicit NXDOMAIN responses by client. Query-only feeds cannot establish response outcomes."
+            }
+        },
+        "viz_evidence_3_table": {
+            "type": "splunk.table",
+            "title": "DNS failure observations",
+            "showProgressBar": true,
+            "showLastUpdated": true,
+            "options": {
+                "backgroundColor": "#131a23",
+                "count": 5,
+                "showRowNumbers": false,
+                "showInternalFields": false,
+                "fontSize": "large"
+            },
+            "dataSources": {
+                "primary": "ds_evidence_3"
+            }
+        },
+        "viz_evidence_3_action": {
+            "type": "splunk.cisco_drilldown_action",
+            "options": {
+                "label": "Investigate DNS failure observations"
+            },
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=DNS%20failure%20observations&target=mv_dns_nxdomain_clients,mv_dns_servfail_resolvers,mv_dns_unusual_query_types,mv_infoblox_nxdomain_clients,mv_infoblox_servfail_resolvers,mv_infoblox_query_name_diversity,mv_infoblox_txt_null_queries,mv_infoblox_threat_actions,mv_infoblox_dhcp_nak_messages"
+                    }
+                }
+            ]
+        },
+        "viz_evidence_3_info": {
+            "type": "splunk.cisco_drilldown_action",
+            "options": {
+                "label": "About DNS failure observations",
+                "action": "metric-info"
+            },
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=DNS%20failure%20observations&target=mv_dns_nxdomain_clients"
+                    }
+                }
+            ]
+        },
+        "viz_evidence_4_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_evidence_4_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**DNS response time**"
+            }
+        },
+        "viz_evidence_4_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 16,
+                "markdown": "Reported CIM response times in seconds by resolver; missing measurements are excluded."
+            }
+        },
+        "viz_evidence_4_table": {
+            "type": "splunk.table",
+            "title": "DNS response time",
+            "showProgressBar": true,
+            "showLastUpdated": true,
+            "options": {
+                "backgroundColor": "#131a23",
+                "count": 5,
+                "showRowNumbers": false,
+                "showInternalFields": false,
+                "fontSize": "large"
+            },
+            "dataSources": {
+                "primary": "ds_evidence_4"
+            }
+        },
+        "viz_evidence_4_action": {
+            "type": "splunk.cisco_drilldown_action",
+            "options": {
+                "label": "Investigate DNS response time"
+            },
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=DNS%20response%20time&target=mv_dns_response_latency,mv_dns_servfail_resolvers,mv_dns_nxdomain_clients"
+                    }
+                }
+            ]
+        },
+        "viz_evidence_4_info": {
+            "type": "splunk.cisco_drilldown_action",
+            "options": {
+                "label": "About DNS response time",
+                "action": "metric-info"
+            },
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=DNS%20response%20time&target=mv_dns_response_latency"
+                    }
+                }
+            ]
+        },
+        "viz_evidence_5_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_evidence_5_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**HTTP server-error observations**"
+            }
+        },
+        "viz_evidence_5_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 16,
+                "markdown": "Reported 5xx responses by destination. Proxy responses can differ from origin application failures."
+            }
+        },
+        "viz_evidence_5_table": {
+            "type": "splunk.table",
+            "title": "HTTP server-error observations",
+            "showProgressBar": true,
+            "showLastUpdated": true,
+            "options": {
+                "backgroundColor": "#131a23",
+                "count": 5,
+                "showRowNumbers": false,
+                "showInternalFields": false,
+                "fontSize": "large"
+            },
+            "dataSources": {
+                "primary": "ds_evidence_5"
+            }
+        },
+        "viz_evidence_5_action": {
+            "type": "splunk.cisco_drilldown_action",
+            "options": {
+                "label": "Investigate HTTP server-error observations"
+            },
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=HTTP%20server-error%20observations&target=mv_web_server_errors,mv_web_cleartext_destinations,mv_f5_http_response_errors,mv_zscaler_zia_http_errors,mv_f5_tls_handshake_failures,mv_f5_pool_member_health_messages"
+                    }
+                }
+            ]
+        },
+        "viz_evidence_5_info": {
+            "type": "splunk.cisco_drilldown_action",
+            "options": {
+                "label": "About HTTP server-error observations",
+                "action": "metric-info"
+            },
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=HTTP%20server-error%20observations&target=mv_web_server_errors"
+                    }
+                }
+            ]
+        },
+        "viz_evidence_6_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#131a23",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 12
+            }
+        },
+        "viz_evidence_6_title": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 20,
+                "markdown": "**Remote administration observations**"
+            }
+        },
+        "viz_evidence_6_description": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#a6adb6",
+                "fontSize": "custom",
+                "customFontSize": 16,
+                "markdown": "Allowed records on selected ports; port numbers alone do not establish application identity or unauthorized access."
+            }
+        },
+        "viz_evidence_6_table": {
+            "type": "splunk.table",
+            "title": "Remote administration observations",
+            "showProgressBar": true,
+            "showLastUpdated": true,
+            "options": {
+                "backgroundColor": "#131a23",
+                "count": 5,
+                "showRowNumbers": false,
+                "showInternalFields": false,
+                "fontSize": "large"
+            },
+            "dataSources": {
+                "primary": "ds_evidence_6"
+            }
+        },
+        "viz_evidence_6_action": {
+            "type": "splunk.cisco_drilldown_action",
+            "options": {
+                "label": "Investigate Remote administration observations"
+            },
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Remote%20administration%20observations&target=mv_traffic_remote_administration,mv_traffic_application_port_inventory,mv_traffic_destination_fanout,mv_traffic_port_fanout"
+                    }
+                }
+            ]
+        },
+        "viz_evidence_6_info": {
+            "type": "splunk.cisco_drilldown_action",
+            "options": {
+                "label": "About Remote administration observations",
+                "action": "metric-info"
+            },
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/metric-info?origin=Remote%20administration%20observations&target=mv_traffic_remote_administration"
+                    }
+                }
+            ]
+        },
+        "viz_interface_text": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "fontSize": "custom",
+                "customFontSize": 18,
+                "markdown": "### IPv6 and interface investigations\nOpen IP-family visibility, denied-destination and interface measurement evidence separately."
+            }
+        },
+        "viz_interface_action": {
+            "type": "splunk.cisco_drilldown_action",
+            "options": {
+                "label": "Investigate IPv6 and interface evidence"
+            },
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=IPv6%20and%20interface%20evidence&target=network_cross_vendor_ip_family_mix,mv_ipv6_decision_visibility,network_cross_vendor_ipv6_denied_destinations,network_cross_vendor_decision_field_coverage,mv_interface_error_counter_rates,mv_arista_latest_interface_state,mv_arista_interface_error_rates,mv_arista_interface_discard_rates,mv_arista_interface_transfer_rates,mv_arista_bgp_adjacency_messages,mv_arista_lanz_queue_observations"
+                    }
+                }
+            ]
+        }
+    },
+    "dataSources": {
+        "ds_evidence_1": {
+            "type": "ds.searchbase",
+            "name": "Application transfer observations",
+            "options": {
+                "ref": "mv_traffic_application_bytes",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
+                }
+            }
+        },
+        "ds_evidence_2": {
+            "type": "ds.searchbase",
+            "name": "Explicit policy decisions",
+            "options": {
+                "ref": "mv_traffic_decision_rates",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
+                }
+            }
+        },
+        "ds_evidence_3": {
+            "type": "ds.searchbase",
+            "name": "DNS failure observations",
+            "options": {
+                "ref": "mv_dns_nxdomain_clients",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
+                }
+            }
+        },
+        "ds_evidence_4": {
+            "type": "ds.searchbase",
+            "name": "DNS response time",
+            "options": {
+                "ref": "mv_dns_response_latency",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
+                }
+            }
+        },
+        "ds_evidence_5": {
+            "type": "ds.searchbase",
+            "name": "HTTP server-error observations",
+            "options": {
+                "ref": "mv_web_server_errors",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
+                }
+            }
+        },
+        "ds_evidence_6": {
+            "type": "ds.searchbase",
+            "name": "Remote administration observations",
+            "options": {
+                "ref": "mv_traffic_remote_administration",
+                "queryParameters": {
+                    "earliest": "$time_tok.earliest$",
+                    "latest": "$time_tok.latest$",
+                    "span": "$time_tok.span$"
+                }
+            }
+        }
+    },
+    "layout": {
+        "globalInputs": [],
+        "layoutDefinitions": {
+            "layout_overview": {
+                "type": "absolute",
+                "options": {
+                    "backgroundColor": "#0f1117",
+                    "backgroundImage": {
+                        "sizeType": "contain",
+                        "src": "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjEyODgiIHZpZXdCb3g9IjAgMCAyMDAwIDEyODgiIHdpZHRoPSIyMDAwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hsaW5rIj48ZmlsdGVyIGlkPSJhIiBjb2xvci1pbnRlcnBvbGF0aW9uLWZpbHRlcnM9InNSR0IiIGZpbHRlclVuaXRzPSJ1c2VyU3BhY2VPblVzZSIgaGVpZ2h0PSIxNTg0IiB3aWR0aD0iMjAwMCIgeD0iMCIgeT0iLTI4MCI+PGZlRmxvb2QgZmxvb2Qtb3BhY2l0eT0iMCIgcmVzdWx0PSJCYWNrZ3JvdW5kSW1hZ2VGaXgiLz48ZmVCbGVuZCBpbj0iU291cmNlR3JhcGhpYyIgaW4yPSJCYWNrZ3JvdW5kSW1hZ2VGaXgiIG1vZGU9Im5vcm1hbCIgcmVzdWx0PSJzaGFwZSIvPjxmZUdhdXNzaWFuQmx1ciByZXN1bHQ9ImVmZmVjdDFfZm9yZWdyb3VuZEJsdXJfNjU1MTZfNjgiIHN0ZERldmlhdGlvbj0iMTQwIi8+PC9maWx0ZXI+PGNsaXBQYXRoIGlkPSJiIj48cGF0aCBkPSJtMjgwIDBoMTQ0MHYxMDI0aC0xNDQweiIvPjwvY2xpcFBhdGg+PGcgZmlsdGVyPSJ1cmwoI2EpIiBvcGFjaXR5PSIuNSI+PGcgY2xpcC1wYXRoPSJ1cmwoI2IpIiBmaWxsLW9wYWNpdHk9Ii41Ij48ZWxsaXBzZSBjeD0iNTY2LjAwMSIgY3k9IjEwNDguMTYiIGZpbGw9IiNmZjkwMDAiIHJ4PSI0MjIiIHJ5PSIxNTQiIHRyYW5zZm9ybT0ibWF0cml4KC0xIC0wIDAgLTEgMTEzMi4wMDIgMjA5Ni4zMikiLz48ZWxsaXBzZSBjeD0iMTE4MSIgY3k9IjEwNzAuMTYiIGZpbGw9IiNmZjAwN2YiIHJ4PSI1OTIiIHJ5PSIyMjMiIHRyYW5zZm9ybT0ibWF0cml4KC0xIC0wIDAgLTEgMjM2MiAyMTQwLjMyKSIvPjxnIGZpbGw9IiNmZjkwMDAiPjxlbGxpcHNlIGN4PSIyNDIuMDEyIiBjeT0iMTU1LjYyMiIgcng9IjI0Mi4wMTIiIHJ5PSIxNTUuNjIyIiB0cmFuc2Zvcm09Im1hdHJpeCgtLjg2MTk2NyAtLjUwNjk2NCAuODIzNDEgLS41Njc0NDcgMTY2OC44NiAxMTgyKSIvPjxlbGxpcHNlIGN4PSI2NzcuMDAxIiBjeT0iMTA0Ny42NiIgcng9IjIyNyIgcnk9Ijk2LjUiIHRyYW5zZm9ybT0ibWF0cml4KC0xIC0wIDAgLTEgMTM1NC4wMDIgMjA5NS4zMikiLz48L2c+PC9nPjwvZz48L3N2Zz4=",
+                        "x": 0,
+                        "y": 0
+                    },
+                    "display": "auto-scale",
+                    "height": 1550,
+                    "width": 1440
+                },
+                "structure": [
+                    {
+                        "item": "viz_header_bg",
+                        "position": {
+                            "x": 16,
+                            "y": 0,
+                            "w": 1408,
+                            "h": 102
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_header_icon",
+                        "position": {
+                            "x": 28,
+                            "y": 20,
+                            "w": 56,
+                            "h": 56
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_header",
+                        "position": {
+                            "x": 96,
+                            "y": 8,
+                            "w": 960,
+                            "h": 86
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "input_time_range",
+                        "position": {
+                            "x": 1080,
+                            "y": 8,
+                            "w": 330,
+                            "h": 80
+                        },
+                        "type": "input"
+                    },
+                    {
+                        "item": "viz_scope",
+                        "position": {
+                            "x": 24,
+                            "y": 112,
+                            "w": 1392,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_1_background",
+                        "position": {
+                            "x": 16,
+                            "y": 188,
+                            "w": 696,
+                            "h": 388
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_1_title",
+                        "position": {
+                            "x": 32,
+                            "y": 200,
+                            "w": 548,
+                            "h": 36
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_1_description",
+                        "position": {
+                            "x": 32,
+                            "y": 240,
+                            "w": 664,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_1_table",
+                        "position": {
+                            "x": 32,
+                            "y": 312,
+                            "w": 664,
+                            "h": 248
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_1_info",
+                        "position": {
+                            "x": 608,
+                            "y": 196,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_1_action",
+                        "position": {
+                            "x": 652,
+                            "y": 196,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_2_background",
+                        "position": {
+                            "x": 728,
+                            "y": 188,
+                            "w": 696,
+                            "h": 388
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_2_title",
+                        "position": {
+                            "x": 744,
+                            "y": 200,
+                            "w": 548,
+                            "h": 36
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_2_description",
+                        "position": {
+                            "x": 744,
+                            "y": 240,
+                            "w": 664,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_2_table",
+                        "position": {
+                            "x": 744,
+                            "y": 312,
+                            "w": 664,
+                            "h": 248
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_2_info",
+                        "position": {
+                            "x": 1320,
+                            "y": 196,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_2_action",
+                        "position": {
+                            "x": 1364,
+                            "y": 196,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_3_background",
+                        "position": {
+                            "x": 16,
+                            "y": 592,
+                            "w": 696,
+                            "h": 388
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_3_title",
+                        "position": {
+                            "x": 32,
+                            "y": 604,
+                            "w": 548,
+                            "h": 36
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_3_description",
+                        "position": {
+                            "x": 32,
+                            "y": 644,
+                            "w": 664,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_3_table",
+                        "position": {
+                            "x": 32,
+                            "y": 716,
+                            "w": 664,
+                            "h": 248
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_3_info",
+                        "position": {
+                            "x": 608,
+                            "y": 600,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_3_action",
+                        "position": {
+                            "x": 652,
+                            "y": 600,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_4_background",
+                        "position": {
+                            "x": 728,
+                            "y": 592,
+                            "w": 696,
+                            "h": 388
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_4_title",
+                        "position": {
+                            "x": 744,
+                            "y": 604,
+                            "w": 548,
+                            "h": 36
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_4_description",
+                        "position": {
+                            "x": 744,
+                            "y": 644,
+                            "w": 664,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_4_table",
+                        "position": {
+                            "x": 744,
+                            "y": 716,
+                            "w": 664,
+                            "h": 248
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_4_info",
+                        "position": {
+                            "x": 1320,
+                            "y": 600,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_4_action",
+                        "position": {
+                            "x": 1364,
+                            "y": 600,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_5_background",
+                        "position": {
+                            "x": 16,
+                            "y": 996,
+                            "w": 696,
+                            "h": 388
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_5_title",
+                        "position": {
+                            "x": 32,
+                            "y": 1008,
+                            "w": 548,
+                            "h": 36
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_5_description",
+                        "position": {
+                            "x": 32,
+                            "y": 1048,
+                            "w": 664,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_5_table",
+                        "position": {
+                            "x": 32,
+                            "y": 1120,
+                            "w": 664,
+                            "h": 248
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_5_info",
+                        "position": {
+                            "x": 608,
+                            "y": 1004,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_5_action",
+                        "position": {
+                            "x": 652,
+                            "y": 1004,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_6_background",
+                        "position": {
+                            "x": 728,
+                            "y": 996,
+                            "w": 696,
+                            "h": 388
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_6_title",
+                        "position": {
+                            "x": 744,
+                            "y": 1008,
+                            "w": 548,
+                            "h": 36
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_6_description",
+                        "position": {
+                            "x": 744,
+                            "y": 1048,
+                            "w": 664,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_6_table",
+                        "position": {
+                            "x": 744,
+                            "y": 1120,
+                            "w": 664,
+                            "h": 248
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_6_info",
+                        "position": {
+                            "x": 1320,
+                            "y": 1004,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_evidence_6_action",
+                        "position": {
+                            "x": 1364,
+                            "y": 1004,
+                            "w": 42,
+                            "h": 42
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_interface_text",
+                        "position": {
+                            "x": 32,
+                            "y": 1420,
+                            "w": 1250,
+                            "h": 114
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_interface_action",
+                        "position": {
+                            "x": 1340,
+                            "y": 1440,
+                            "w": 56,
+                            "h": 56
+                        },
+                        "type": "block"
+                    }
+                ]
+            }
+        },
+        "tabs": {
+            "items": [
+                {
+                    "label": "Service investigations",
+                    "layoutId": "layout_overview"
+                }
+            ]
+        }
+    }
+}
+    ]]></definition>
+</dashboard>

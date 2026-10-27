@@ -204,7 +204,7 @@ const expectedCardContracts = {
   "authentication-friction": {
     searchId: "secure_networking_zta_ise_auth_failure_rate_trend",
     headlineField: "WindowFailureRatePct",
-    drilldownIds: ["secure_networking_zta_ise_auth_by_device_fail_rate"],
+    drilldownIds: ["secure_networking_zta_ise_auth_by_device_fail_rate", "mv_authentication_application_outcomes", "mv_authentication_method_visibility", "identity_cim_password_spray_candidates"],
   },
   "private-access-status": {
     searchId: "secure_networking_zta_ztna_connection_status_trend",
@@ -215,6 +215,10 @@ const expectedCardContracts = {
       "secure_networking_zscaler_zpa_application_access",
       "secure_networking_zscaler_zpa_policy_activity",
       "secure_networking_zscaler_zpa_connection_status_trend",
+      "mv_zscaler_zpa_server_setup",
+      "mv_zscaler_zpa_public_ip_changes",
+      "mv_zscaler_zpa_private_ip_visibility",
+      "mv_zscaler_zpa_encryption_labels",
     ],
   },
   "remote-access-health": {
@@ -224,6 +228,10 @@ const expectedCardContracts = {
       "secure_networking_zta_ravpn_sessions_by_profile",
       "secure_networking_zta_ravpn_failure_reasons",
       "secure_networking_zta_ravpn_posture_alerts",
+      "mv_pan_globalprotect_failures",
+      "mv_fortinet_vpn_transitions",
+      "mv_checkpoint_vpn_failure_evidence",
+      "mv_f5_apm_access_denials",
     ],
   },
   "risky-mfa-outcomes": {
@@ -232,6 +240,9 @@ const expectedCardContracts = {
     drilldownIds: [
       "secure_networking_zta_risky_mfa_outcomes_by_application_factor",
       "secure_networking_infra_duo_blocked_posture_identity",
+      "identity_duo_denials_before_success",
+      "identity_duo_push_denial_bursts",
+      "mv_authentication_source_changes",
     ],
   },
   "control-telemetry-volume": {
@@ -579,8 +590,8 @@ const pillarViewNames = Array.from(
 );
 assert.equal(
   pillarViewNames.length,
-  18,
-  "The Secure Networking collections must retain 18 Studio dashboards",
+  19,
+  "The Secure Networking collections must include the 19 Studio dashboards",
 );
 let pillarVisibleTrendCount = 0;
 for (const viewName of pillarViewNames) {
@@ -614,7 +625,7 @@ for (const viewName of pillarViewNames) {
       sparklineValues: options.sparklineValues,
     }));
   }
-  const expectedKpiCount = viewName === "sn_data_center_operations" ? 15 : 6;
+  const expectedKpiCount = viewName === "sn_network_service_investigations" ? 0 : viewName === "sn_data_center_operations" ? 15 : 6;
   assert.equal(
     bindingSignatures.length,
     expectedKpiCount,
@@ -645,6 +656,7 @@ assert.deepEqual(
     "Data Center Security",
     "Runtime Security",
     "Runtime Investigation",
+    "SAN and fabric investigations",
   ],
   "Secure Data Center Operations must use the standard story-card dashboard journey",
 );
@@ -859,7 +871,7 @@ for (const fileName of studioViewFiles) {
 }
 assert.equal(
   studioViewFiles.length,
-  27,
+  28,
   "the color audit must cover every shipped Studio dashboard",
 );
 assert.equal(

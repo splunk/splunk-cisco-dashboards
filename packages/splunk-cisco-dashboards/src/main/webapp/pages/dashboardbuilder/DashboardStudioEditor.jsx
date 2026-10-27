@@ -127,8 +127,17 @@ import { bindPanelFullscreenFocus } from "./fullscreenFocus";
 
 const ENABLE_EXPERIMENTAL_SPACE_MANAGER = false;
 const DASHBOARD_STUDIO_HEIGHT = 1200;
-const VIEWPORT_FIT_DASHBOARD_IDS = DASHBOARD_MANAGER_FRAMEWORK_VIEW_NAMES;
-const WIDTH_FIT_DASHBOARD_IDS = MANAGER_ROUTED_STUDIO_VIEW_NAMES;
+// Investigation tables retain readable rows and scroll vertically rather than
+// shrinking the entire multi-row dashboard into the available viewport height.
+const WIDTH_FIT_DASHBOARD_IDS = new Set([
+  ...MANAGER_ROUTED_STUDIO_VIEW_NAMES,
+  "sn_network_service_investigations",
+]);
+const VIEWPORT_FIT_DASHBOARD_IDS = new Set(
+  [...DASHBOARD_MANAGER_FRAMEWORK_VIEW_NAMES].filter(
+    (viewName) => !WIDTH_FIT_DASHBOARD_IDS.has(viewName),
+  ),
+);
 const VIEWPORT_FIT_PADDING = 16;
 const MANAGED_STUDIO_CHROME_HEIGHT = 56;
 

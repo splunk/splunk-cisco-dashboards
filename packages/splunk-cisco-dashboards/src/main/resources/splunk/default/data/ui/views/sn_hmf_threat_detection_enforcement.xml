@@ -196,7 +196,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Firewall%20Decisions&target=Security%20Resilience%20-%20Firewall%20Base%20Search,Secure%20Networking%20-%20FMC%20Blocked%20Connection%20Detail"
+                        "url": "/drilldown?origin=Firewall%20Decisions&target=Security%20Resilience%20-%20Firewall%20Base%20Search,Secure%20Networking%20-%20FMC%20Blocked%20Connection%20Detail,security_firewall_nat_resource_failure_evidence,network_firewall_nat_tuple_concentration,security_firewall_low_activity_observed_rules,mv_pan_denied_zone_boundaries,mv_fortinet_policy_denials,mv_junos_srx_denials,mv_checkpoint_denied_services,mv_checkpoint_rule_action_inventory,mv_checkpoint_nat_observed_addresses,mv_ipv6_decision_visibility,network_cross_vendor_decision_field_coverage"
                     }
                 }
             ],
@@ -849,7 +849,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Branch%20IPS%20Pressure&target=Security%20Resilience%20-%20SD-WAN%20UTD%20Top%20IPS%20Signatures"
+                        "url": "/drilldown?origin=Branch%20IPS%20Pressure&target=Security%20Resilience%20-%20SD-WAN%20UTD%20Top%20IPS%20Signatures,mv_pan_threat_enforcement,mv_fortinet_ips_actions,mv_checkpoint_ips_signature_evidence,mv_f5_waf_blocked_violations,mv_intrusion_alert_actions"
                     }
                 }
             ],

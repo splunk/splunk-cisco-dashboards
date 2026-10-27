@@ -223,7 +223,12 @@ export const ZERO_TRUST_CARDS: readonly PillarCardDefinition[] = [
             healthyMax: 5,
             warningMax: 15,
         },
-        drilldownIds: ['secure_networking_zta_ise_auth_by_device_fail_rate'],
+        drilldownIds: [
+            'secure_networking_zta_ise_auth_by_device_fail_rate',
+            'mv_authentication_application_outcomes',
+            'mv_authentication_method_visibility',
+            'identity_cim_password_spray_candidates',
+        ],
     },
     {
         id: 'private-access-status',
@@ -254,6 +259,10 @@ export const ZERO_TRUST_CARDS: readonly PillarCardDefinition[] = [
             'secure_networking_zscaler_zpa_application_access',
             'secure_networking_zscaler_zpa_policy_activity',
             'secure_networking_zscaler_zpa_connection_status_trend',
+            'mv_zscaler_zpa_server_setup',
+            'mv_zscaler_zpa_public_ip_changes',
+            'mv_zscaler_zpa_private_ip_visibility',
+            'mv_zscaler_zpa_encryption_labels',
         ],
     },
     {
@@ -281,6 +290,10 @@ export const ZERO_TRUST_CARDS: readonly PillarCardDefinition[] = [
             'secure_networking_zta_ravpn_sessions_by_profile',
             'secure_networking_zta_ravpn_failure_reasons',
             'secure_networking_zta_ravpn_posture_alerts',
+            'mv_pan_globalprotect_failures',
+            'mv_fortinet_vpn_transitions',
+            'mv_checkpoint_vpn_failure_evidence',
+            'mv_f5_apm_access_denials',
         ],
     },
     {
@@ -299,6 +312,9 @@ export const ZERO_TRUST_CARDS: readonly PillarCardDefinition[] = [
         drilldownIds: [
             'secure_networking_zta_risky_mfa_outcomes_by_application_factor',
             'secure_networking_infra_duo_blocked_posture_identity',
+            'identity_duo_denials_before_success',
+            'identity_duo_push_denial_bursts',
+            'mv_authentication_source_changes',
         ],
     },
     {
