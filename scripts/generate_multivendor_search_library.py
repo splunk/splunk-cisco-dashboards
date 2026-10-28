@@ -47,6 +47,8 @@ for _slug in ('interface_error_counter_rates','arista_interface_error_rates','ar
                            'Discontinuity':(0,4294967295),'Uptime':(0,4294967295)}
 REVISIONS={slug:'1.0.1' for slug in INTEGER_FIELDS}
 REVISIONS.update(crowdstrike_network_listeners='1.0.2',aruba_authentication_failures='1.0.1')
+REVISIONS['dns_unusual_query_types']='1.0.1'
+REVISIONS['infoblox_txt_null_queries']='1.0.1'
 def event(**kw): return {'host':'device-a','_time':{'expr':'now()-60'},**kw}
 def norm(mapping, defaults=(), ip_targets=(), family_field=None, integers=None):
     raw=list(dict.fromkeys(a for aliases in mapping.values() for a in aliases.split()))
@@ -175,11 +177,17 @@ for slug,name,code,field in [('dns_nxdomain_clients','NXDOMAIN Client Hotspots',
       f'Device {field} Records Queries LastSeen',f'Ranks observed {code} responses by {field.lower()}.',
       'Requires response data; query-only logging cannot establish response outcomes. Retries are separate records and no service-wide failure rate is inferred.',
       [event(src='192.0.2.1',dest='192.0.2.53',query='example.test',reply_code=code),event(src='192.0.2.1',dest='192.0.2.53',query='example.test',reply_code='NOERROR')],1,ref='dns',defaults=('Device',))
-neutral('dns_unusual_query_types','TXT and NULL Query Observations',CD,DNS,
+neutral('dns_unusual_query_types','TXT and NULL Query Observations',CD,{**DNS,'QueryType':'record_type query_type'},
  '| where upper(QueryType) IN ("TXT","NULL","16","10") AND isnotnull(Client)\n| stats count as Records dc(Query) as DistinctQueries by Device Client QueryType',
  'Device Client QueryType Records DistinctQueries','Inventories observed TXT/NULL query-type records by client.',
- 'TXT is common for legitimate verification and mail security. No tunneling verdict is inferred, and query/response pairs may both be present.',
- [event(src='192.0.2.1',query_type='TXT',query='example.test'),event(src='192.0.2.1',query_type='A',query='example.test')],1,ref='dns',defaults=('Device',))
+ 'Prefers CIM record_type because query_type may report an opcode such as Query; query_type remains a fallback for older resource-type mappings. TXT is common for legitimate verification and mail security. No tunneling verdict is inferred, and query/response pairs may both be present.',
+ [event(src='192.0.2.1',record_type='TXT',query_type='Query',query='example.test'),
+  event(src='192.0.2.1',record_type='NULL',query_type='Query',query='example.test'),
+  event(src='192.0.2.1',query_type='TXT',query='example.test'),
+  event(src='192.0.2.1',record_type=['TXT','TXT'],query_type='Query',query='example.test'),
+  event(src='192.0.2.1',record_type='A',query_type='TXT',query='example.test'),
+  event(src='192.0.2.1',record_type=['TXT','NULL'],query_type='Query',query='example.test'),
+  event(src='192.0.2.1',query_type='Query',query='example.test')],4,groups=2,ref='dns',defaults=('Device',))
 neutral('dns_response_latency','DNS Response-Time Observations',CD,DNS,
  '| eval Seconds=tonumber(Latency)\n| where Seconds>=0 AND isnotnull(Resolver)\n| stats count as Records median(Seconds) as MedianSeconds perc95(Seconds) as P95Seconds max(Seconds) as MaxSeconds by Device Resolver',
  'Device Resolver Records MedianSeconds P95Seconds MaxSeconds','Summarizes valid observed DNS response times by resolver.',
@@ -536,11 +544,14 @@ add('Infoblox','infoblox_query_name_diversity','Infoblox - Client Query-Name Div
  '_time Device Client Records QueryNames','Finds clients with fifty or more distinct observed query names in fifteen minutes.',
  'Names are case-normalized and one trailing dot is removed. Resolver aggregation, browsers and service discovery can be legitimate; this is not DGA or tunneling proof.',
  [event(src='192.0.2.1',query=f'name{i}.example.test.') for i in range(50)]+[event(src='192.0.2.2')],50,extra='max(QueryNames) as N',assertion='N=50',defaults=('Device',))
-add('Infoblox','infoblox_txt_null_queries','Infoblox - TXT and NULL Query Activity',IBDNS,DNS,
+add('Infoblox','infoblox_txt_null_queries','Infoblox - TXT and NULL Query Activity',IBDNS,{**DNS,'QueryType':'record_type query_type'},
  '| where upper(QueryType) IN ("TXT","NULL","16","10") AND isnotnull(Client)\n| stats count as Records dc(Query) as QueryNames by Device Client QueryType',
  'Device Client QueryType Records QueryNames','Inventories observed Infoblox TXT/NULL query-type activity.',
  'TXT is widely used legitimately. Query type and volume alone do not establish tunneling; query/response duplicates affect record counts.',
- [event(src='192.0.2.1',query_type='TXT',query='example.test'),event(src='192.0.2.1',query_type='A',query='example.test')],1,defaults=('Device',))
+ [event(src='192.0.2.1',record_type='TXT',query_type='Query',query='example.test'),
+  event(src='192.0.2.1',record_type='NULL',query='example.test'),
+  event(src='192.0.2.1',query_type='TXT',query='example.test'),
+  event(src='192.0.2.1',record_type='A',query_type='TXT',query='example.test')],3,groups=2,defaults=('Device',))
 add('Infoblox','infoblox_dhcp_nak_messages','Infoblox - DHCPv4 NAK Message Evidence',src('infoblox:dhcp'),DEVICE,
  '| where match(_raw,"\\bDHCPNAK\\b")\n| rex field=_raw "(?i)DHCPNAK on (?<LeaseAddress>[0-9.]+) to (?<ClientMAC>[0-9a-f:]+)"\n| eval LeaseAddress=coalesce(LeaseAddress,"Not reported"), ClientMAC=coalesce(lower(ClientMAC),"Not reported")\n| stats count as Records max(_time) as LastSeen by Device ClientMAC LeaseAddress',
  'Device ClientMAC LeaseAddress Records LastSeen','Counts explicit DHCPv4 NAK message evidence with available lease/client context.',
@@ -635,7 +646,8 @@ def render():
     for e in ENTRIES:
         category='Network' if e['group']=='Vendor neutral' else 'Security'
         if e['group'] in ('Arista','Juniper / Aruba','F5','Infoblox'):category='Network'
-        metadata=[('search_name',e['name']),('search_author','akhamis'),('updated_author','akhamis'),('version',e['version']),('date_created','2026-10-27'),('date_updated','2026-10-27'),('category',category),('sub_category','Multivendor Networking'),('tags',e['group']+',Multivendor,Networking'),('dispatch_context','splunk-cisco-dashboards'),('dispatch_context_force','1'),('search_hidden','0'),('default_viz','splunk.table'),('viz_options','{"showRowNumbers":true}')]
+        updated='2026-10-28' if e['id'] in ('mv_dns_unusual_query_types','mv_infoblox_txt_null_queries') else '2026-10-27'
+        metadata=[('search_name',e['name']),('search_author','akhamis'),('updated_author','akhamis'),('version',e['version']),('date_created','2026-10-27'),('date_updated',updated),('category',category),('sub_category','Multivendor Networking'),('tags',e['group']+',Multivendor,Networking'),('dispatch_context','splunk-cisco-dashboards'),('dispatch_context_force','1'),('search_hidden','0'),('default_viz','splunk.table'),('viz_options','{"showRowNumbers":true}')]
         metadata.extend((k,'<p>'+html.escape(v,quote=False)+'</p>') for k,v in [
             ('description',e['description']),('explanation',COMMON+e['limits']),
             ('solution','Use a finite time window and confirm source fields and configured index routing before interpreting results. These optional catalogue searches create no scheduled jobs or collectors. Output is limited to 1,000 groups; TotalGroups and RowsTruncated disclose omitted groups.'),

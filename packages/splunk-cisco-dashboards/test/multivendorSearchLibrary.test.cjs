@@ -91,6 +91,20 @@ test("unknown evidence is not silently converted into zero or a health verdict",
   assert.match(entry('checkpoint_rule_action_inventory').limits,/cannot identify never-used or shadowed/);
   assert.match(entry('f5_pool_member_health_messages').limits,/not application availability/);
 });
+test("DNS record types take precedence over opcode-style query types",()=>{
+  const e=entry('dns_unusual_query_types');
+  assert.equal(e.fields.QueryType,'record_type query_type');
+  assert.match(e.query,/QueryType=coalesce\('record_type','query_type'\)/);
+  assert.equal(e.version,'1.0.1');
+  assert.match(e.fixture.assertion,/Groups=2 AND MessageRows=0 AND Records=4/);
+  assert.ok(e.fixture.rows.some(row=>row.record_type==='TXT'&&row.query_type==='Query'));
+  assert.ok(e.fixture.rows.some(row=>row.record_type==='A'&&row.query_type==='TXT'));
+  assert.ok(e.fixture.rows.some(row=>Array.isArray(row.record_type)&&row.record_type.length===2));
+  assert.equal(entry('infoblox_txt_null_queries').fields.QueryType,'record_type query_type');
+  assert.match(entry('infoblox_txt_null_queries').fixture.assertion,/Groups=2 AND MessageRows=0 AND Records=3/);
+  assert.equal(entry('dns_response_latency').fields.Latency,'response_time');
+  assert.match(entry('intrusion_alert_actions').source,/tag=ids tag=attack$/);
+});
 test("all eighty definitions have reproducible populated and no-observation native SPL fixtures",()=>{
   assert.equal(fixtures.length,160);
   for(const e of manifest){

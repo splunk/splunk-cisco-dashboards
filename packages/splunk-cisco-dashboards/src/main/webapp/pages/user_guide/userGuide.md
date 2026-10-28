@@ -37,6 +37,8 @@ Browse the current release and recorded historical versions below. The newest re
 
 ::: release Release Notes | October 2026 - Version 1.0.80
 
+- Corrected the vendor-neutral and Infoblox TXT/NULL DNS investigations to prefer CIM `record_type` when `query_type` contains an opcode such as Query, while preserving older query-type mappings and the existing output columns. Added field-readiness guidance for DNS response measurements, intrusion tags, missing vendor feeds and unmet investigation conditions. Missing measurements remain unknown; no thresholds or collection settings were changed.
+
 ### User guide
 
 - Promoted **What’s New / Release Notes** near the start of the guide, with direct links to recorded historical versions, accessible expandable notes, and working search and deep links into older releases.
@@ -723,6 +725,10 @@ Port, HTTP response-code, byte-count and interface-counter measurements require 
 | **Microsoft Defender** (6) | Process network events, connection failures, Network Protection blocks, remote-administration ports, public-destination fan-out and remote-session process activity. Requires exported advanced-hunting events. Direct rows and nested `properties` fields are supported; Network Protection blocks can arrive in DeviceEvents rather than DeviceNetworkEvents. |
 
 These searches use the existing network, firewall, security, F5 and Windows index macros. An administrator must include the actual source indexes in those scopes; adding a catalogue entry does not change routing, install an add-on, enable collection or grant access. CIM searches use event tags and field normalization without requiring accelerated data models.
+
+For TXT/NULL investigations, `record_type` takes precedence because `query_type` can contain a DNS opcode such as Query; older resource-type mappings through `query_type` remain supported. DNS response-time investigations require an actual `response_time` measurement in seconds and a resolver. Query-only logs and TTL values cannot provide that measurement. Missing latency remains unknown rather than zero.
+
+The intrusion alert-only investigation needs both `ids` and `attack` tags, a signature, and an explicit alert/detected action. If an intrusion feed exists but these tags are absent, have the add-on owner check its eventtype source predicate, enabled tags and sharing in this app context. Block-only events should not appear as alert-only observations. For any empty investigation, first verify the exact source family, then usable fields, then the documented conditions. An absent feed needs collection; a threshold-based investigation can correctly remain empty until its conditions occur. Keep controlled fixture checks separate from indexed vendor data and do not lower thresholds simply to populate a panel.
 
 Start with a short, finite window on busy systems. Each search returns at most 1,000 groups and exposes `TotalGroups` and `RowsTruncated`. Missing/conflicting values remain unknown. Counts describe observations or explicitly labeled valid measurement intervals, rather than unique sessions, incidents, current states or outages. Counter rates require successive samples for the same device/interface; counter decreases, reported discontinuities/uptime decreases, missing/conflicting snapshots, intervals over one hour and counters beyond exact integer precision are excluded. `ContinuityUnverifiedIntervals` flags missing discontinuity/uptime context; a reset that occurs and recovers between observations can still affect rates. Rates are not link utilization or packet-loss percentages. LANZ queue and ZPA setup measurements retain source units where stated; verify exporter units before comparison.
 
