@@ -105,6 +105,18 @@ test("DNS record types take precedence over opcode-style query types",()=>{
   assert.equal(entry('dns_response_latency').fields.Latency,'response_time');
   assert.match(entry('intrusion_alert_actions').source,/tag=ids tag=attack$/);
 });
+test("intrusion non-blocking evidence includes CIM allowed and preserves exclusions",()=>{
+  const e=entry('intrusion_alert_actions');
+  assert.match(e.name,/Non-Blocking Action Evidence/);
+  assert.match(e.query,/lower\(Action\) IN \("allowed","alert","alerted","detected"\)/);
+  assert.match(e.source,/tag=ids tag=attack$/);
+  assert.equal(e.version,'1.0.1');
+  assert.match(e.fixture.assertion,/Groups=4 AND MessageRows=0 AND Records=5/);
+  assert.ok(e.fixture.rows.some(r=>r.action==='blocked'));
+  assert.ok(e.fixture.rows.some(r=>r.action==='unknown'));
+  assert.ok(e.fixture.rows.some(r=>Array.isArray(r.action)&&new Set(r.action).size===2));
+  assert.match(e.limits,/not passage through every control/);
+});
 test("all eighty definitions have reproducible populated and no-observation native SPL fixtures",()=>{
   assert.equal(fixtures.length,160);
   for(const e of manifest){

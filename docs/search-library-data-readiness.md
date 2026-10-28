@@ -33,7 +33,7 @@ If the raw feed contains a documented response measurement, repair its search-ti
 
 ## Intrusion tags and actions
 
-`mv_intrusion_alert_actions` requires **both** `ids` and `attack` CIM tags, a usable signature, and an explicit `alert`, `alerted` or `detected` action. A populated intrusion feed can still produce an empty result when its actions are all blocks. Do not relax the source to every security event or reclassify blocked traffic as alert-only to populate a panel.
+`mv_intrusion_alert_actions` is displayed as **Intrusion Non-Blocking Action Evidence**. It requires **both** `ids` and `attack` CIM tags, a usable signature, and the CIM `allowed` action or a legacy `alert`, `alerted` or `detected` action. The earlier filter incorrectly omitted CIM `allowed`; the stanza ID and result columns are preserved. A populated intrusion feed can still produce an empty result when its actions are all blocks. Do not relax the source to every security event or reclassify blocked traffic to populate a panel. These labels describe the reporting IDS action, not passage through every control or a successful exploit.
 
 First check the required tag intersection:
 
@@ -47,7 +47,7 @@ tag=ids tag=attack earliest=-15m latest=now
 
 If no tagged events appear, inventory the expected intrusion sourcetype with the same finite window and index scope, then inspect its eventtype predicate, disabled status, tag assignment and knowledge-object sharing in the **owning add-on**. A generated source label may not satisfy an eventtype that also requires a particular `source` value. Validate that these are actual intrusion events before mapping them. This app intentionally ships no broad replacement eventtype or tag override for another add-on.
 
-When tagged events exist, inspect normalized action counts before interpreting the alert-only investigation:
+When tagged events exist, inspect normalized action counts before interpreting the non-blocking investigation:
 
 ```spl
 (`index_network` OR `index_firewall` OR `index_security` OR `index_f5` OR `index_windows`)
@@ -60,7 +60,7 @@ tag=ids tag=attack earliest=-15m latest=now
 
 ## Missing vendor feeds and unmet conditions
 
-The October 28, 2026 assessment of the 104 additions used one fixed 24-hour event window. Twenty-six searches populated; sixty-seven had no observed matching source family; eight had no qualifying conditions; two lacked usable DNS measurements; one lacked required intrusion-tag population. No SPL execution errors were detected. This is an environment-specific baseline before the DNS record-type correction, not a permanent support or health classification. It executed source SPL on a stack running 1.0.70; installed 1.0.80 dashboard acceptance remains separate after that stack is upgraded.
+The October 28, 2026 assessment of the 104 additions used one fixed 24-hour event window. Twenty-six searches populated; sixty-seven had no observed matching source family; eight had no qualifying conditions; two lacked usable DNS measurements; one intrusion search was empty. No SPL execution errors were detected. Follow-up inspection superseded the initial missing-intrusion-tags classification: the current tags and global eventtype are enabled and match events, but the investigation excluded the standard CIM `allowed` action. This is an environment-specific baseline before the DNS and intrusion filter corrections, not a permanent support or health classification. It executed source SPL on a stack running 1.0.70; installed 1.0.80 dashboard acceptance remains separate after that stack is upgraded.
 
 Missing families included Zeek certificates, MDS, Hyperfabric, SNMP, Palo Alto GlobalProtect/threat/system events, and the Fortinet, Juniper/Aruba, Arista, Check Point, F5, Zscaler, Infoblox, CrowdStrike and Defender network-event packs. Palo Alto traffic alone does not populate its threat or remote-access searches. Defender alert samples do not replace DeviceNetworkEvents. Enable the actual matching feed/export and its supported add-on through the collection owner; a configured dataset is not proof of ingestion. Keep existing index-routing decisions separate from absent source data.
 

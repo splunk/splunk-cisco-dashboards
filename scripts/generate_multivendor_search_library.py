@@ -49,6 +49,7 @@ REVISIONS={slug:'1.0.1' for slug in INTEGER_FIELDS}
 REVISIONS.update(crowdstrike_network_listeners='1.0.2',aruba_authentication_failures='1.0.1')
 REVISIONS['dns_unusual_query_types']='1.0.1'
 REVISIONS['infoblox_txt_null_queries']='1.0.1'
+REVISIONS['intrusion_alert_actions']='1.0.1'
 def event(**kw): return {'host':'device-a','_time':{'expr':'now()-60'},**kw}
 def norm(mapping, defaults=(), ip_targets=(), family_field=None, integers=None):
     raw=list(dict.fromkeys(a for aliases in mapping.values() for a in aliases.split()))
@@ -205,11 +206,19 @@ neutral('web_cleartext_destinations','Observed Cleartext HTTP Destinations',SCOP
  'URL scheme alone does not establish end-to-end encryption, sensitive data transfer or policy noncompliance. Proxy visibility and URL redaction affect coverage.',
  [event(dest='app-a',url='http://app-a/'),event(dest='app-a',url='https://app-a/')],1,ref='web',defaults=('Device',))
 IDS={**DEVICE,'Signature':'signature signature_id','Severity':'severity','Action':'action','Destination':'dest dest_ip','Source':'src src_ip'}
-neutral('intrusion_alert_actions','Intrusion Alert-Only Action Evidence',SCOPE+' tag=ids tag=attack',IDS,
- '| where lower(Action) IN ("alert","alerted","detected") AND isnotnull(Signature)\n| stats count as Records dc(Destination) as Destinations by Device Signature Severity Action',
- 'Device Signature Severity Action Records Destinations','Finds intrusion records whose reported action is alert/detected.',
- 'These labels do not prove packets passed all controls or that an exploit succeeded. Inspect source action semantics and other enforcement layers.',
- [event(signature='sig-1',action='detected',severity='high'),event(signature='sig-1',action='blocked',severity='high')],1,ref='ids',defaults=('Device','Severity'))
+neutral('intrusion_alert_actions','Intrusion Non-Blocking Action Evidence',SCOPE+' tag=ids tag=attack',IDS,
+ '| where lower(Action) IN ("allowed","alert","alerted","detected") AND isnotnull(Signature)\n| stats count as Records dc(Destination) as Destinations by Device Signature Severity Action',
+ 'Device Signature Severity Action Records Destinations','Finds intrusion records with the CIM allowed action or a legacy alert/detected action.',
+ 'CIM allowed and legacy alert/detected labels describe the reporting IDS action, not passage through every control or a successful exploit. Blocked, unknown and conflicting actions are excluded. Inspect source action semantics and other enforcement layers.',
+ [event(signature='sig-1',action='allowed',severity='high'),
+  event(signature='sig-1',action=['allowed','allowed'],severity='high'),
+  event(signature='sig-1',action='alert',severity='high'),
+  event(signature='sig-1',action='alerted',severity='high'),
+  event(signature='sig-1',action='detected',severity='high'),
+  event(signature='sig-1',action='blocked',severity='high'),
+  event(signature='sig-1',action='unknown',severity='high'),
+  event(signature='sig-1',action=['allowed','blocked'],severity='high'),
+  event(action='allowed',severity='high')],5,groups=4,ref='ids',defaults=('Device','Severity'))
 
 CH={**DEVICE,'Actor':'src_user user','Object':'object object_path object_id','Category':'object_category','Status':'status','Action':'action'}
 neutral('change_failure_records','Recorded Change Failures',SCOPE+' tag=change',CH,
@@ -646,7 +655,7 @@ def render():
     for e in ENTRIES:
         category='Network' if e['group']=='Vendor neutral' else 'Security'
         if e['group'] in ('Arista','Juniper / Aruba','F5','Infoblox'):category='Network'
-        updated='2026-10-28' if e['id'] in ('mv_dns_unusual_query_types','mv_infoblox_txt_null_queries') else '2026-10-27'
+        updated='2026-10-28' if e['id'] in ('mv_dns_unusual_query_types','mv_infoblox_txt_null_queries','mv_intrusion_alert_actions') else '2026-10-27'
         metadata=[('search_name',e['name']),('search_author','akhamis'),('updated_author','akhamis'),('version',e['version']),('date_created','2026-10-27'),('date_updated',updated),('category',category),('sub_category','Multivendor Networking'),('tags',e['group']+',Multivendor,Networking'),('dispatch_context','splunk-cisco-dashboards'),('dispatch_context_force','1'),('search_hidden','0'),('default_viz','splunk.table'),('viz_options','{"showRowNumbers":true}')]
         metadata.extend((k,'<p>'+html.escape(v,quote=False)+'</p>') for k,v in [
             ('description',e['description']),('explanation',COMMON+e['limits']),
