@@ -22,5 +22,11 @@ layout(
         theme: 'dark',
         themeDensity: 'comfortable',
         themeFamily: 'prisma',
+        onLayoutStart: ({ bodyContainer }: { bodyContainer: HTMLDivElement }) => {
+            // Allow the native flex item to shrink beside the side navigation.
+            // Otherwise max-content charts can widen it and make skip-link
+            // focus scroll the document horizontally.
+            Object.assign(bodyContainer.style, { minWidth: '0' });
+        },
     },
 );

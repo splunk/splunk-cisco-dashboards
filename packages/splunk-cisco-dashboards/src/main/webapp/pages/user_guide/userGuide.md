@@ -37,7 +37,7 @@ Browse the current release and recorded historical versions below. The newest re
 
 ::: release Release Notes | October 2026 - Version 1.0.80
 
-- Moved Insights Workspace to native React startup before Splunk navigation and Cisco Cloud Control initialize. This removes the legacy Simple XML loader race behind the shared header's two optional Emotion dependency errors while preserving workspace URLs, setup, navigation, theme choices and the update badge. Other classic pages also receive an early dependency bridge; no error handlers, authentication or permissions are disabled.
+- Moved Insights Workspace to native React startup before Splunk navigation and Cisco Cloud Control initialize. This removes the legacy Simple XML loader race behind the shared header's two optional Emotion dependency errors while preserving workspace URLs, setup, navigation, theme choices and the update badge. Native content stays within the available width beside navigation, including when using the skip link. Other classic pages also receive an early dependency bridge; no error handlers, authentication or permissions are disabled.
 - Aligned React Router and React Router DOM at version 7.18.5 so their declared, locked and packaged versions agree.
 
 - Corrected the intrusion investigation to include the standard CIM `allowed` action alongside legacy alert/detected labels. Renamed its display label to **Intrusion Non-Blocking Action Evidence**, preserving the stanza ID, drill-down links and output columns. Blocked, unknown and conflicting actions remain excluded; the result describes the reporting IDS action rather than end-to-end enforcement or exploit success.

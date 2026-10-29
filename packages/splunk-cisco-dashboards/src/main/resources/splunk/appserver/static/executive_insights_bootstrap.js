@@ -1,10 +1,9 @@
 /**
- * Shared Simple XML bootstrap for the Executive Insights React experience.
+ * Shared bootstrap for the native workspace and legacy Executive Insights.
  *
- * workspace_insights.xml loads this file and provides the #scan-root mount for
- * the workspace selected by its query parameter or the default configuration.
- * Keeping this outside appserver/templates makes a first install immediately
- * usable without requiring Splunk Web to restart its Mako template loader.
+ * The native workspace template selects its dedicated entrypoint, whose Layout
+ * API provides #scan-root. Older Executive Insights hosts retain their existing
+ * entrypoint and mount. Both paths share setup gating and version helpers here.
  */
 var SCD_EXECUTIVE_INSIGHTS_APP_NAME = 'splunk-cisco-dashboards';
 var SCD_EXECUTIVE_INSIGHTS_UPDATE_HOST_SELECTOR =

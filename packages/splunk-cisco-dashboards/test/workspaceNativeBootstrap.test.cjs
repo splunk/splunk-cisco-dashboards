@@ -202,6 +202,13 @@ test('native React entry installs compatibility before invoking the native layou
     assert.equal(options.theme, 'dark');
     assert.equal(options.themeDensity, 'comfortable');
     assert.equal(options.themeFamily, 'prisma');
+    const bodyContainer = { style: { flexGrow: '1', overflow: '' } };
+    const headerContainer = { style: { width: '100%' } };
+    options.onLayoutStart({ bodyContainer, headerContainer });
+    assert.equal(bodyContainer.style.minWidth, '0', 'Native content must shrink beside navigation');
+    assert.equal(bodyContainer.style.flexGrow, '1');
+    assert.equal(bodyContainer.style.overflow, '');
+    assert.deepEqual(headerContainer.style, { width: '100%' });
 });
 
 test('webpack packages the native workspace entry separately from the executive fallback', () => {
