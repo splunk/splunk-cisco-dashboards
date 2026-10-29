@@ -35,7 +35,7 @@
         "react-dom": "18.3.1",
         "@types/react": "18.3.31",
         "@types/react-dom": "18.3.7",
-        "react-router": "^7.18.2",
+        "react-router": "7.18.5",
         "@xmldom/xmldom": "0.8.15",
         "colord": "^2.9.4",
         "**/js-yaml": "^4.3.2",

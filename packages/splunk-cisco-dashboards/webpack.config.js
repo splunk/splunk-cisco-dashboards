@@ -162,6 +162,16 @@ const commonConfig = webpackMerge(baseConfig, {
         aggregateTimeout: 300,
     },
     entry: {
+        // Simple XML loads its default extension before view scripts. Bundle
+        // the real optional C3 dependency here, ahead of setup and React, with
+        // no extra network round trip or changes to shared platform files.
+        dashboard_compat: {
+            import: [
+                path.join(webappRoot, 'common/shims/requirejs-emotion-shim.ts'),
+                path.join(splunkRoot, 'appserver/static/dashboard.js'),
+            ],
+            filename: '../dashboard.js',
+        },
         executive_insights: path.join(
             webappRoot,
             'pages/executive_insights/render.tsx'
@@ -284,6 +294,7 @@ const commonConfig = webpackMerge(baseConfig, {
                         // below src/main/resources/splunk so a clean Git status cannot
                         // mask an archive-only secret.
                         ignore: [
+                            '**/appserver/static/dashboard.js',
                             '**/.DS_Store',
                             '**/__pycache__/**',
                             '**/*.pyc',

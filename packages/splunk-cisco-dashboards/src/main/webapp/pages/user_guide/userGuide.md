@@ -37,6 +37,9 @@ Browse the current release and recorded historical versions below. The newest re
 
 ::: release Release Notes | October 2026 - Version 1.0.80
 
+- Moved the optional Emotion dependency bridge into the small dashboard startup bundle so Cisco Cloud Control can load before the workspace's React bundle. This addresses the two missing-module dashboard notifications caused by the shared header's Motion dependencies. The bridge provides the bundled validator and primes RequireJS without hiding unrelated errors or changing authentication and permissions.
+- Aligned React Router and React Router DOM at version 7.18.5 so their declared, locked and packaged versions agree.
+
 - Corrected the intrusion investigation to include the standard CIM `allowed` action alongside legacy alert/detected labels. Renamed its display label to **Intrusion Non-Blocking Action Evidence**, preserving the stanza ID, drill-down links and output columns. Blocked, unknown and conflicting actions remain excluded; the result describes the reporting IDS action rather than end-to-end enforcement or exploit success.
 - Corrected the vendor-neutral and Infoblox TXT/NULL DNS investigations to prefer CIM `record_type` when `query_type` contains an opcode such as Query, while preserving older query-type mappings and the existing output columns. Added field-readiness guidance for DNS response measurements, intrusion tags, missing vendor feeds and unmet investigation conditions. Missing measurements remain unknown; no thresholds or collection settings were changed.
 
@@ -833,6 +836,8 @@ For integrations that assign a demo account at launch, confirm whether the accou
 ### Diagnose integrated sign-in and navigation
 
 A SAML sign-in can succeed while additional Cisco Cloud Control identity or navigation requests fail. When reporting an integration issue, include the launch path, installed app version/build, account type and role, time of failure, and the failing service's status and error text. Compare the app with a standard Splunk page under the same login to help identify the affected component. Remove session tokens and credentials from any evidence you share.
+
+Two dashboard notifications accompanied by `Module name "@emotion/is-prop-valid" has not been loaded yet` identify a dependency-loading race in the shared header, separate from identity or permissions failures. Version 1.0.80 loads the real dependency bridge in the default dashboard startup extension, before setup and the larger React page. After upgrading, reload the page and confirm the installed version/build. Studio navigation HTTP 403, SCIM/CORS failures and token-exchange errors require separate integration investigation; this dependency fix does not grant access to those services.
 
 Ask the identity or integration owner to investigate token-exchange failures, service authorization errors, and cross-origin request failures. An app upgrade does not by itself change identity-provider settings, service permissions, browser cross-origin policy, or Splunk search quotas.
 
