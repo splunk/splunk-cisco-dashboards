@@ -26,6 +26,7 @@ const BUILD_SCRIPT_SOURCE = path.resolve(PACKAGE_ROOT, "..", "..", "build.sh");
 const REPOSITORY_ROOT = path.resolve(PACKAGE_ROOT, "..", "..");
 const PRODUCTION_ENTRY_NAMES = [
   "executive_insights",
+  "workspace_insights",
   "health_monitoring",
   "topology_canvas_v1",
   "network_diagram",
@@ -859,7 +860,7 @@ function exerciseProductionVerifierCacheRejection() {
     );
     assert.match(
       splunkbaseOutput,
-      /Verified 10 splunkbase production bundles/,
+      /Verified 11 splunkbase production bundles/,
       "The Splunkbase verifier must accept the profile-filtered entry set",
     );
     writeFile(
@@ -878,7 +879,7 @@ function exerciseProductionVerifierCacheRejection() {
     );
     assert.match(
       run("node", [VERIFY_SCRIPT_SOURCE, stage, "preview"], { cwd: root }),
-      /Verified 11 preview production bundles/,
+      /Verified 12 preview production bundles/,
       "The preview verifier must accept the Canvas bundle alongside shipped entries",
     );
   } finally {

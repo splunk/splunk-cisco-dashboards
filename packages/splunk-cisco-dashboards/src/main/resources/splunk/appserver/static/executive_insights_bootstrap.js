@@ -239,17 +239,20 @@ function scdLoadExecutiveInsightsBundle() {
         'data-scd-executive-insights-bundle',
         'true'
     );
+    var scdEntryName = window.scdExecutiveInsightsNativeShell === true
+        ? 'workspace_insights'
+        : 'executive_insights';
     scdExecutiveInsightsScript.src =
-        '/static/app/splunk-cisco-dashboards/pages/executive_insights.js?v=' +
+        '/static/app/splunk-cisco-dashboards/pages/' + scdEntryName + '.js?v=' +
         scdAssetVersion;
     document.body.appendChild(scdExecutiveInsightsScript);
 }
 
 function scdLoadExecutiveInsightsWhenConfigured() {
-    // Simple XML loads application.js before its view script, so the normal
-    // path waits for the app-wide first-run gate. Fail open if a nonstandard
-    // shell omitted the gate, matching application.js's endpoint-failure
-    // behavior and avoiding a blank dashboard.
+    // Both the native workspace shell and Simple XML executive view load
+    // application.js first. Wait for their shared first-run gate. Fail open
+    // if a nonstandard shell omitted it, matching application.js's existing
+    // endpoint-failure behavior and avoiding a blank dashboard.
     var setupGate = window.scdSetupGatePromise;
     Promise.resolve(setupGate).then(function (canLoadApp) {
         if (canLoadApp !== false) scdLoadExecutiveInsightsBundle();

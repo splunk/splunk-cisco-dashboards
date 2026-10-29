@@ -176,6 +176,10 @@ const commonConfig = webpackMerge(baseConfig, {
             webappRoot,
             'pages/executive_insights/render.tsx'
         ),
+        workspace_insights: path.join(
+            webappRoot,
+            'pages/workspace_insights/render.tsx'
+        ),
         health_monitoring: path.join(
             webappRoot,
             'pages/health_monitoring/render.tsx'
