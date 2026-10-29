@@ -2016,6 +2016,89 @@
             "containerOptions": {},
             "showProgressBar": false,
             "showLastUpdated": false
+        },
+        "viz_library_header": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "markdown": "# SAN and fabric investigations\nOpen an investigation to run it for the selected time range. Related feeds are separate evidence, not components of the overview metric.",
+                "fontSize": "custom",
+                "customFontSize": 20
+            }
+        },
+        "viz_library_1_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#1c2738",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 10
+            }
+        },
+        "viz_library_1_text": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "markdown": "## SAN congestion evidence\nObserved MDS transmit wait and recurring congestion. Missing CPU or memory measurements stay unavailable.\n\nUse the investigation button to open the available searches.",
+                "fontSize": "custom",
+                "customFontSize": 20
+            }
+        },
+        "viz_library_1_action": {
+            "type": "splunk.cisco_drilldown_action",
+            "options": {
+                "label": "Investigate SAN congestion evidence"
+            },
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=SAN%20congestion%20evidence&target=network_dc_mds_transmit_wait_trend,network_dc_mds_repeated_congestion,network_dc_mds_switch_resource_trend"
+                    }
+                }
+            ]
+        },
+        "viz_library_2_background": {
+            "type": "splunk.rectangle",
+            "options": {
+                "fillColor": "#1c2738",
+                "strokeColor": "rgba(100,158,245,0.28)",
+                "rx": 10
+            }
+        },
+        "viz_library_2_text": {
+            "type": "splunk.markdown",
+            "title": "",
+            "showLastUpdated": false,
+            "showProgressBar": false,
+            "options": {
+                "backgroundColor": "transparent",
+                "fontColor": "#ecf0f5",
+                "markdown": "## Hyperfabric port evidence\nObserved port rates, directional imbalance and measurement coverage. These are not link-capacity or headroom estimates.\n\nUse the investigation button to open the available searches.",
+                "fontSize": "custom",
+                "customFontSize": 20
+            }
+        },
+        "viz_library_2_action": {
+            "type": "splunk.cisco_drilldown_action",
+            "options": {
+                "label": "Investigate Hyperfabric port evidence"
+            },
+            "eventHandlers": [
+                {
+                    "type": "drilldown.customUrl",
+                    "options": {
+                        "url": "/drilldown?origin=Hyperfabric%20port%20evidence&target=network_dc_hyperfabric_port_rate_trend,network_dc_hyperfabric_directional_imbalance,network_dc_hyperfabric_measurement_coverage"
+                    }
+                }
+            ]
         }
     },
     "dataSources": {
@@ -3630,6 +3713,107 @@
                         "type": "block"
                     }
                 ]
+            },
+            "layout_catalogue_investigations": {
+                "type": "absolute",
+                "options": {
+                    "backgroundColor": "#0f1117",
+                    "display": "auto-scale",
+                    "height": 1024,
+                    "width": 1920
+                },
+                "structure": [
+                    {
+                        "item": "viz_header_bg",
+                        "position": {
+                            "x": 20,
+                            "y": 0,
+                            "w": 1880,
+                            "h": 110
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_library_header",
+                        "position": {
+                            "x": 44,
+                            "y": 10,
+                            "w": 1400,
+                            "h": 96
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "input_time_range",
+                        "position": {
+                            "x": 1514,
+                            "y": 8,
+                            "w": 370,
+                            "h": 80
+                        },
+                        "type": "input"
+                    },
+                    {
+                        "item": "viz_library_1_background",
+                        "position": {
+                            "x": 20,
+                            "y": 140,
+                            "w": 1880,
+                            "h": 270
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_library_1_text",
+                        "position": {
+                            "x": 44,
+                            "y": 160,
+                            "w": 1730,
+                            "h": 230
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_library_1_action",
+                        "position": {
+                            "x": 1796,
+                            "y": 164,
+                            "w": 64,
+                            "h": 64
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_library_2_background",
+                        "position": {
+                            "x": 20,
+                            "y": 450,
+                            "w": 1880,
+                            "h": 270
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_library_2_text",
+                        "position": {
+                            "x": 44,
+                            "y": 470,
+                            "w": 1730,
+                            "h": 230
+                        },
+                        "type": "block"
+                    },
+                    {
+                        "item": "viz_library_2_action",
+                        "position": {
+                            "x": 1796,
+                            "y": 474,
+                            "w": 64,
+                            "h": 64
+                        },
+                        "type": "block"
+                    }
+                ]
             }
         },
         "options": {
@@ -3654,6 +3838,10 @@
                 {
                     "label": "Runtime Investigation",
                     "layoutId": "layout_investigation"
+                },
+                {
+                    "label": "SAN and fabric investigations",
+                    "layoutId": "layout_catalogue_investigations"
                 }
             ]
         }

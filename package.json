@@ -7,12 +7,12 @@
         "packages/*"
     ],
     "scripts": {
-        "build": "yarn workspaces run build",
+        "build": "NODE_OPTIONS=--max-old-space-size=4096 yarn workspaces run build",
         "setup": "yarn && yarn workspaces run build",
-        "start": "cd packages/splunk-cisco-dashboards && yarn start",
+        "start": "cd packages/splunk-cisco-dashboards && NODE_OPTIONS=--max-old-space-size=4096 yarn start",
         "lint": "yarn workspaces run lint",
         "clean": "yarn workspaces run clean",
-        "clean:build": "yarn workspaces run clean:build",
+        "clean:build": "NODE_OPTIONS=--max-old-space-size=4096 yarn workspaces run clean:build",
         "package:app": "cd packages/splunk-cisco-dashboards && yarn package:app",
         "postinstall": "patch-package --error-on-fail",
         "test": "node --test packages/splunk-cisco-dashboards/test/*.test.cjs && node scripts/test_build_deploy_contract.cjs"

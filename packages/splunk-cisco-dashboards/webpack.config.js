@@ -5,6 +5,7 @@ const webpack = require('webpack');
 const { merge: webpackMerge } = require('webpack-merge');
 const baseConfig = require('@splunk/webpack-configs').default;
 const CopyPlugin = require('copy-webpack-plugin');
+const MinimizerPlugin = require('minimizer-webpack-plugin');
 
 /**
  * Inject the app version from the repo-root VERSION file and a unique build
@@ -103,6 +104,7 @@ class StripSourceMapDirectivesPlugin {
                         .forEach((assetName) => {
                             const asset = compilation.getAsset(assetName);
                             const source = asset.source.source().toString();
+                            if (!source.includes('sourceMappingURL')) return;
                             const stripped = source.replace(SOURCE_MAP_DIRECTIVE_PATTERN, '');
                             if (stripped !== source) {
                                 compilation.updateAsset(assetName, new webpack.sources.RawSource(stripped));
@@ -139,6 +141,26 @@ const commonConfig = webpackMerge(baseConfig, {
     // SplunkBase archives must not expose source maps. Keep this explicit so a
     // future inherited webpack-default change cannot silently publish them.
     devtool: false,
+    // This multi-entry production build values predictable memory use over
+    // retaining a compiler cache across watch rebuilds.
+    cache: false,
+    // Each dashboard entry includes large shared dependencies. Serial
+    // minification avoids multiplying their ASTs across worker processes.
+    // Keep webpack's default compression passes and the existing --no-
+    // optimization-minimize fast-build override.
+    optimization: {
+        minimizer: [new MinimizerPlugin({
+            parallel: false,
+            terserOptions: { compress: { passes: 2 } },
+        })],
+    },
+    // Keep watch mode scoped to source inputs. In particular, avoid watching
+    // dependency trees and generated output, which can otherwise cause
+    // unnecessary rebuild work and retain large dependency graphs.
+    watchOptions: {
+        ignored: ['**/node_modules/**', '**/.git/**', '**/stage/**', '**/dist/**'],
+        aggregateTimeout: 300,
+    },
     entry: {
         executive_insights: path.join(
             webappRoot,
@@ -182,6 +204,9 @@ const commonConfig = webpackMerge(baseConfig, {
     output: {
         path: path.join(stageRoot, 'appserver', 'static', 'pages'),
         filename: '[name].js',
+        // Independent entry compilations can assign the same numeric chunk
+        // ID to different contents. Keep their asynchronous chunks distinct.
+        chunkFilename: '[name].[contenthash].js',
     },
     stats: 'errors-warnings',
     // Webpack's default 244 KiB budget targets small public web pages. These
@@ -290,4 +315,17 @@ const commonConfig = webpackMerge(baseConfig, {
     ],
 });
 
-module.exports = commonConfig;
+module.exports = (env = {}) => {
+    if (!env.buildEntry) return commonConfig;
+    if (!Object.prototype.hasOwnProperty.call(commonConfig.entry, env.buildEntry)) {
+        throw new Error(`Unknown build entry: ${env.buildEntry}`);
+    }
+    return {
+        ...commonConfig,
+        entry: { [env.buildEntry]: commonConfig.entry[env.buildEntry] },
+        output: {
+            ...commonConfig.output,
+            uniqueName: `splunk-cisco-dashboards-${env.buildEntry}`,
+        },
+    };
+};

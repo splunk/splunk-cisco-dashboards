@@ -387,6 +387,38 @@
     overflow: hidden;
 }
 
+#scan-root .scd-guide-release-versions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 14px;
+    gap: 8px;
+    margin: 12px 0 18px;
+}
+
+#scan-root .scd-guide-release-versions > span {
+    flex-basis: 100%;
+    font-weight: 700;
+}
+
+#scan-root .scd-guide-release-versions a {
+    border: 1px solid var(--scd-guide-border-strong);
+    border-radius: 4px;
+    color: var(--scd-guide-accent);
+    padding: 5px 9px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+#scan-root .scd-guide-release-versions a:hover {
+    background: var(--sui-interactive-hover);
+}
+
+#scan-root .scd-guide-release-versions a:focus-visible {
+    outline: 2px solid var(--scd-guide-focus-ring);
+    outline-offset: 2px;
+}
+
 #scan-root .scd-guide-release-summary {
     align-items: center;
     background: var(--scd-guide-page-bg);

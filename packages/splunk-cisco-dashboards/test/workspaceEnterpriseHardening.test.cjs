@@ -1215,7 +1215,7 @@ assert.doesNotMatch(
   "The dashboard actions menu must not duplicate the contextual Signal Rail control",
 );
 
-assert.match(profile, /const MAP_HEIGHT_DEFAULT: MapHeightMode = "compact"/);
+assert.match(profile, /const MAP_HEIGHT_DEFAULT: MapHeightMode = "match-workspace"/);
 assert.match(profile, /<Menu\.Heading>Map height<\/Menu\.Heading>/);
 assert.match(profile, />\s*Match workspace\s*<\/Menu\.Item>/);
 assert.match(profile, />\s*Compact\s*<\/Menu\.Item>/);

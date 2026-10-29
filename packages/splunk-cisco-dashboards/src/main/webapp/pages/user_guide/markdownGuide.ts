@@ -30,8 +30,10 @@ const releasePanel = (
   meta: string,
   body: string,
   open: boolean,
+  id: string,
+  label: string,
 ): string =>
-  `<details class="scd-guide-release-panel"${open ? " open" : ""}><summary class="scd-guide-release-summary"><span class="scd-guide-release-indicator" aria-hidden="true">›</span><span class="scd-guide-release-title-block"><span class="scd-guide-release-title">${renderInline(title)}</span><span class="scd-guide-release-meta">${renderInline(meta)}</span></span></summary><div class="scd-guide-release-body">${body}</div></details>`;
+  `<details class="scd-guide-release-panel" id="${id}" data-release-label="${escapeHtml(label)}"${open ? " open" : ""}><summary class="scd-guide-release-summary"><span class="scd-guide-release-indicator" aria-hidden="true">›</span><span class="scd-guide-release-title-block"><span class="scd-guide-release-title">${renderInline(title)}</span><span class="scd-guide-release-meta">${renderInline(meta)}</span></span></summary><div class="scd-guide-release-body">${body}</div></details>`;
 
 export function parseGuideMarkdown(markdown: string): {
   headings: GuideHeading[]; html: string; sections: GuideHeading[];
@@ -39,6 +41,7 @@ export function parseGuideMarkdown(markdown: string): {
   const lines = markdown.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "")
     .replace(/\r\n?/g, "\n").split("\n");
   const headings: GuideHeading[] = [];
+  const releases: Array<{ id: string; label: string; version: string }> = [];
   const used = new Set<string>();
   let releaseCount = 0;
   let releaseControlsRendered = false;
@@ -66,8 +69,13 @@ export function parseGuideMarkdown(markdown: string): {
         if (!releaseControlsRendered) {
           out.push('<div class="scd-guide-release-controls scd-guide-no-print" aria-label="Release note controls"><button type="button" data-release-action="expand">Expand all</button><button type="button" data-release-action="collapse">Collapse all</button></div>');
           releaseControlsRendered = true;
+          out.push('<!--scd-release-versions-->');
         }
-        out.push(releasePanel(directive[1], directive[2], render(body), releaseCount === 0));
+        const version = directive[2].match(/\bVersion\s+(\d+(?:\.\d+)*)\b/i)?.[1];
+        const label = version ? `Version ${version}` : plainText(directive[2]);
+        const id = uniqueId(`release ${version || directive[2]}`);
+        releases.push({ id, label, version: version || label });
+        out.push(releasePanel(directive[1], directive[2], render(body), releaseCount === 0, id, label));
         releaseCount += 1;
         continue;
       }
@@ -136,6 +144,10 @@ export function parseGuideMarkdown(markdown: string): {
     if (sectionOpen) out.push("</div></section>");
     return out.join("\n");
   };
-  const html = render(lines, true);
+  const rendered = render(lines, true);
+  const releaseNavigation = releases.length
+    ? `<nav class="scd-guide-release-versions scd-guide-no-print" aria-label="Release versions"><span>Jump to a version</span>${releases.map(({ id, label, version }) => `<a href="#${id}" aria-label="Release notes for ${escapeHtml(label.toLowerCase())}">${escapeHtml(version)}</a>`).join('')}</nav>`
+    : '';
+  const html = rendered.replace('<!--scd-release-versions-->', releaseNavigation);
   return { headings, html, sections: headings.filter((heading) => heading.level === 2) };
 }

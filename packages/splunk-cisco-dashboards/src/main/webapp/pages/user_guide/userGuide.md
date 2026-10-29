@@ -1,7 +1,7 @@
 ---
 exportTitle: Splunk Secure Networking Essentials User Guide
 contentOwner: splunk-cisco-dashboards
-version: 1.0.70
+version: 1.0.80
 lastUpdated: October 2026
 ---
 <!-- Single source of truth for the in-product User Guide and release history. -->
@@ -30,6 +30,411 @@ Use the app to:
 | Save a layout for every viewer | Select **Publish workspace layout** |
 | Configure the shared KPI strip | Select **Configure Signal Rail** |
 | Investigate a dashboard card | Select **About this metric**, **Investigate drivers**, or **Open in Search** |
+
+## What’s New / Release Notes {#release-notes}
+
+Browse the current release and recorded historical versions below. The newest release opens by default. Choose a version link or expand a release to read its changes; use **Expand all** to review the full history. Version **1.0.35** was an **alpha** release; the recorded versions **1.0.44 through 1.0.60** were **beta** releases.
+
+::: release Release Notes | October 2026 - Version 1.0.80
+
+- Corrected the intrusion investigation to include the standard CIM `allowed` action alongside legacy alert/detected labels. Renamed its display label to **Intrusion Non-Blocking Action Evidence**, preserving the stanza ID, drill-down links and output columns. Blocked, unknown and conflicting actions remain excluded; the result describes the reporting IDS action rather than end-to-end enforcement or exploit success.
+- Corrected the vendor-neutral and Infoblox TXT/NULL DNS investigations to prefer CIM `record_type` when `query_type` contains an opcode such as Query, while preserving older query-type mappings and the existing output columns. Added field-readiness guidance for DNS response measurements, intrusion tags, missing vendor feeds and unmet investigation conditions. Missing measurements remain unknown; no thresholds or collection settings were changed.
+
+### User guide
+
+- Promoted **What’s New / Release Notes** near the start of the guide, with direct links to recorded historical versions, accessible expandable notes, and working search and deep links into older releases.
+- Corrected the historical release classifications: **1.0.35** is alpha, and every recorded version from **1.0.44 through 1.0.60** is beta. Each version expands independently, including the previously nested 1.0.51 and 1.0.50 notes.
+
+### Insights Workspaces
+
+- Fixed the **Advanced time range** button being clipped and covered by the Dashboard Manager toolbar on Network Service Investigations. Custom ranges and span selection remain accessible beside the quick time shortcuts.
+- Added **Network Service Investigations** under Secure Infrastructure with six vendor-neutral evidence tables and related vendor, IPv6 and interface investigations. Added catalogue drilldowns to existing Zero Trust, firewall and WAN dashboards plus on-demand SAN/fabric, certificate and telemetry tabs. Preserved existing overview searches and index routing, retained time context, and documented source requirements and missing-data limits.
+- Made **Match workspace** the factory default for map height. Saved personal height preferences remain unchanged, and factory reset restores the new default.
+- Restored `r` (refresh) and `t` (cycle time range) when the surrounding Splunk dashboard panel has focus after clicking the workspace background. Typing in Cisco Cloud Control assistants and other text editors remains protected from workspace shortcuts.
+- Fixed ISE policy-family activity showing zero when policy snapshots contain repeated multivalue identifiers or counters. Equal values are normalized before grouping and hit-counter calculations; conflicting values and invalid counters are excluded instead of creating misleading activity.
+- Replaced SGACL Enforcement Activity Trend in the default Secure Networking workspace with SGT Assignment Coverage and its site/device drilldown. The new searches measure event-weighted SGT coverage for successful ISE authentications, retain missing and conflicting tag context, and distinguish empty windows from zero coverage. The workspace keeps nine tiles per section; saved layout overrides and other workspaces are preserved.
+- Added twelve catalogue searches covering ingestion delay and feed quality, observed certificate expiry and rotation candidates, MDS/SAN observation trends and recurrence, and Hyperfabric port-rate trends, directionality and measurement coverage. Missing measurements remain distinct from zero; workspace layouts and collection settings are unchanged.
+- Added twelve more optional catalogue investigations for firewall NAT/resource-limit evidence and observed rule activity, Duo/CIM authentication candidates, IOS/Catalyst Center change-impact associations, and cross-vendor IPv6 and decision-field visibility. Documented thresholds, source requirements, unknown observations and the limits of traffic-only capacity/rule conclusions; existing workspace layouts remain unchanged.
+- Added eighty optional networking investigations: twenty vendor-neutral CIM/IF-MIB searches and six each for Palo Alto, Fortinet, Juniper/Aruba, Arista, Check Point, F5, Zscaler, Infoblox, CrowdStrike and Microsoft Defender. Added explicit source/field contracts, current/legacy field variants, bounded results, duplicate/conflict handling, counter-reset safeguards and endpoint process-context checks. Documented feed prerequisites and interpretation limits without changing collection, schedules, routing or workspace layouts.
+- Fixed CrowdStrike address fallback so invalid or wrong-family aliases no longer hide valid IPv4/IPv6 connection, blocked-network or listener addresses. Preserved valid unspecified listener binds and explicit missing-address guidance.
+- Hardened thirteen multivendor searches to reject fractional or out-of-range ports, HTTP codes, byte counts and counters before alias selection. Invalid reset/uptime context now remains explicitly unverified, while fractional timing measurements remain valid. Corrected the Aruba authentication source reference.
+
+:::
+
+::: release Release Notes | October 2026 - Version 1.0.70
+
+- Removed the Beta label from the app name and navigation labels.
+- **Search quota assessment:** Searchbase now includes Search Quota Impact by Cloud Label, separating disk, user, role, and instance limits, normalizing MB measurements, and preserving missing telemetry. Select the desired assessment period in the time picker; labels use the latest 15 minutes of introspection data.
+
+Release preparation is in progress. Final package/security review, publication, and integrated-cloud validation are pending.
+
+### Insights Workspaces
+
+- Fixed workspace shortcuts intercepting text entered in the Cisco Cloud Control assistant and other embedded editors. Typing keeps its letters, and workspace shortcuts remain available from the workspace and unfocused page background.
+- Added a shared page-level pause and bounded retries when Splunk rejects searches because concurrent-search slots are exhausted. Affected tiles distinguish **search slots busy** from empty results after retries are exhausted; other dispatch and job failures now report **search failed**. Server quotas and permissions remain under administrator control.
+
+### Setup
+
+- Restored **Refresh status** and the last-checked time in the current **Configure data** step, so acceleration can be checked again without leaving setup or saving the draft plan. The check confirms that acceleration is enabled; summary building may still be in progress.
+
+### Dashboard Manager
+
+- Aligned the default and **24h** shortcut on the 18 Secure Networking dashboards with the advanced time picker's **Last 24 hours** preset (`-24h@h` through `now`). Custom ranges remain unchanged.
+- Chart-library debug messages are quiet during normal use. To troubleshoot, add `canvasDebug=1` to the page URL query, before any `#` fragment, and enable the browser console's debug/verbose level. Remove the parameter to disable diagnostics. Warnings and errors remain visible. Diagnostic output can contain chart data; review it before sharing logs.
+- Dashboard Manager hides unavailable KPI comparisons when fewer than two valid numeric trend samples exist, including inherited default trends on null or timestamp-only results. Headline values remain unchanged, and unavailable headline colors use the theme default. Constant line and area series receive finite axis bounds; time-based charts omit rows without a valid time coordinate from rendering. Tables and searches keep their original records, and charts add no synthetic samples.
+- Extended finite-axis handling to inherited chart series and empty numeric domains, covering affected NetOps Readiness, Data Center runtime, and Spaces capacity views. Removed deprecated iteration calls in the packaged chart adapter used by Building Intelligence.
+
+- Fixed focus after leaving a fullscreen visualization opened with the keyboard or mouse: focus returns to that panel's native **Fullscreen** button, keeping keyboard navigation in context even when the toolbar was hidden.
+- Fixed native Studio conversion for older and Searchbase-backed dashboards: copied searches keep their SPL and time range, native time pickers no longer leave unresolved span parameters, and saved conversions appear in Splunk's dashboard list with native editing enabled. Convert remains available for partially converted copies. The dialog explains that Manager-only investigation controls are removed and that required macros, lookups, commands, and data must still exist.
+- Matched the native Dashboard Studio panel toolbar order: **Open in Search**, **Inspect**, **Fullscreen**, **Refresh**, **Add to AI Canvas**, and **Export**. Inspect opens the running search job. On eligible Cisco Cloud Control integrations, AI Canvas supports native and Searchbase-backed panels, carries their resolved search and time range with a bounded result preview, and offers new or existing canvases. Canvas availability and access remain controlled by Splunk and Cisco Cloud Control.
+
+### Upgrade and integration notes
+
+- After upgrading, confirm the installed version/build and test with a representative restricted user, including typing in the actual embedded assistant. Local verification does not establish integrated-cloud behavior.
+- Added shared-demo capacity and sign-in troubleshooting guidance. Workspace retries do not increase per-user, role, or stack limits; administrators must size and test expected simultaneous usage.
+- Integrated-cloud AI Canvas creation and cross-launch, restricted-user sharing, and saved CSV export contents still require final release qualification. Cloud Control identity/navigation errors remain under investigation; this release does not claim to resolve them.
+:::
+
+::: release Beta release | October 2026 - Version 1.0.60
+### Setup
+
+- Added a clear **Refresh status** action and last-checked time for data-model acceleration. Clarified that Splunk can still be building summaries after acceleration is enabled.
+
+### Dashboard Manager
+
+- Added **Sharing** to dashboard cards and the library table so users can see **Private**, **App**, or **All apps** at a glance. Labels refresh after a permission change.
+- Added **Permissions** to dashboard cards and table rows. Owners with the required Splunk permissions can promote a private dashboard to **Shared in App** or make it private again without leaving Dashboard Manager. The dialog checks current permissions and preserves ownership and existing edit access.
+- Defaulted new dashboards to **Private**, matching standard Splunk creation and avoiding an automatic app-sharing request for users without sharing permission.
+- Kept both visibility choices visible, encouraged app sharing for dashboards ready for colleagues, and explained how to share a private dashboard later. Reset the creation dialog to **Private** each time it is reopened.
+:::
+
+::: release Beta release | September 2026 - Version 1.0.55
+### Zscaler Zero Trust Access
+
+- Added eight Zscaler searches for data coverage, private application access, policy and connection reasons, unreachable applications, connection-status trends, ZIA enforcement outcomes, blocked web activity, and named web threats.
+- Distinguished repeated ZPA log records from distinct connection IDs and kept normal connection closures separate from explicit reachability failures.
+- Used the configurable security index scope and documented the required Zscaler add-on fields and interpretation limits.
+- Fixed Setup discovery to find Zscaler feeds outside existing index scopes and propose their indexes for `index_security`; administrators review and save the routing change.
+- Added recommended placement in existing ZTA dashboards to each Zscaler search description, including guidance for complementary ZPA panels on the remote-access dashboard.
+- Added Zscaler investigations to relevant cards across all six ZTA dashboards, preserving the six-card layouts and existing investigation choices. Labeled the Zscaler views as separate source detail.
+
+### Insights Workspaces
+
+- Restored the update badge beside the installed version when Splunk reports a newer app release.
+
+### Dashboard Manager
+
+- Added a **Shared** library tab to find dashboards shared in the app, including dashboards created by other users.
+- Kept new shared dashboards associated with their creator so they also appear under **Yours**. Editing dashboard metadata preserves existing sharing permissions.
+- Opened the linked Searchbase search from the dashboard data-source editor and improved dark-mode text and trend contrast.
+- Set Searchbase app filters to this app by default while keeping other apps available to select.
+:::
+
+::: release Beta release | September 2026 - Version 1.0.54
+### Release overview
+
+- Reduced the app package and JavaScript download sizes.
+- Added troubleshooting guidance for app update notifications.
+
+This maintenance release includes the Dashboard Manager reliability and visualization-spacing improvements introduced in version 1.0.53.
+:::
+
+::: release Beta release | September 2026 - Version 1.0.53
+### Dashboard Manager
+
+- Prevented new dashboards from overwriting existing dashboard IDs or creating private copies that conflict when shared. Creation errors now remain visible in the dialog, duplicate submissions are blocked, and a saved dashboard can still be opened if sharing fails.
+- Kept Dashboard Manager error notifications in front of open dialogs and previews until dismissed, with one notification host shared across the library and editor.
+- Corrected Network Graph option types to eliminate repeated schema-validation warnings when opening Dashboard Manager and its editor, while preserving validation of graph settings.
+- Preserved spacing between Dashboard Manager visualizations by sizing chart content to the space remaining beneath wrapped titles and descriptions.
+
+### Map usability
+
+- Prevented transparent site-marker padding from intercepting nearby link clicks, widened link selection targets, and added keyboard activation with visible focus for map links.
+
+### Search performance
+
+- Replaced raw FTD feed-freshness, WSA volume, SD-WAN audit volume, and total SSE event scans with indexed-metadata `tstats` searches.
+- Added model-backed aggregation for ThousandEyes page completion and path-quality detail, plus Catalyst interface spike, drop, and asymmetry candidates. These searches require their companion models and honor the shared summary-coverage setting.
+- Deferred display enrichment until after the existing result limits for SSE event detail and FTD anomalous sessions, preserving selection and thresholds.
+:::
+
+::: release Beta release | September 2026 - Version 1.0.52
+### Release overview
+
+Version 1.0.52 preserves complete large-fleet asset inventories, advances release build allocation beyond the published 1.0.51 package, keeps first-run CIM discovery independent of saved allowlists, and keeps TA-owned Cisco routing definitions outside user-driven tuning.
+
+- Made Insights and Dashboard Manager drill-downs use the workspace's navy, cyan, and purple atmosphere instead of a flat black panel, with a consistent dimmed backdrop instead of an ambiguous transparency slider.
+
+- Moved the Site Roles, View, and Map credits controls into a dedicated rail below the topology viewport, so compact maps keep every site visible and the full map surface remains draggable.
+
+### Workspace usability
+
+- Kept tile information popovers concise on hover and focus, while clicking the same information control reveals the parent tile's complete Searchbase description, explanation, operator action, references, and execution plan.
+- Kept the separate tile detail control dedicated to associated drill-down searches and each drill-down search's own metadata.
+- Added responsive sizing, safe wrapping for long identifiers, viewport-bounded scrolling, pointer persistence, and Escape dismissal to tile information popovers.
+- Prioritized Searchbase-bound topology link searches immediately after the Signal Rail, so live link status and ThousandEyes metrics populate without waiting behind ordinary dashboard sections.
+
+### Asset inventory
+
+- Removed the implicit 10,000-row limit from the **Asset Inventory - Build Lookup** saved search so fleets larger than Splunk's default `sort` limit are written completely to `asset_inventory.csv`.
+- Removed the same implicit limit from the **Full Inventory** dashboard table so every row in the generated lookup remains available for display and filtering.
+- Added regression coverage for both inventory paths.
+
+### Guided Setup
+
+- Fixed first-run CIM discovery so tagged events are found before a CIM index
+  allowlist has been saved, including Umbrella DNS events in `cisco_umbrella`.
+- Kept TA-owned Cisco DC Networking routing macros and the Cisco Enterprise
+  Networking sourcetype allow-list outside the Setup tuning and save path so
+  their static definitions remain managed by the owning TA.
+- Grouped the final Settings to be saved review by target app so multiple
+  macros and settings remain easy to scan without repeating the app name on
+  every row.
+
+### Searchbase catalogue
+
+- Moved the executive **Threat sources** tile from a raw firewall-event scan to the accelerated CIM **Blocked Traffic** dataset. The tile keeps its selected-window distinct-source headline and source scope while avoiding the high-volume distributed-peer failures seen with the previous raw pipeline.
+- Restored the missing Searchbase binding for the **Active TE alerts** workspace tile so its Major/Critical alert total, trend, and baseline dispatch with the rest of the IT Health section.
+- Corrected Catalyst wireless protocol and SSID traffic charts so punctuation-bearing series names such as `802.11ax` are handled as fields instead of causing a templatized-search parse failure.
+- Corrected the Cisco Spaces **Client health by site** chart so duplicate multivalue Catalyst health and site fields are scalarized before numeric filtering and site normalization, restoring the named per-site series instead of an anonymous aggregate.
+- Corrected Catalyst client-health handling across IT Critical Systems and Cisco Spaces Network Impact: `-1` and zero-client records are treated as unavailable, single-value tiles show the latest valid score with its reported age, and trend/correlation charts exclude unavailable samples.
+- Aligned the Security Resilience **Details & KPI Reference** narrative with the full dashboard section so its guidance remains on one line without an unnecessary scrollbar.
+- Corrected dotted-field quoting in Cisco Spaces device counts, Meraki VPN peer status, and Catalyst client-experience aggregations so Dashboard Studio and Searchbase searches resolve their nested fields instead of returning empty metrics.
+- Corrected first-time topology saves so a workspace without an existing map stanza uses the create endpoint directly instead of producing an expected 404 before retrying.
+- Hardened topology editing against stale-tab overwrites and damaged shared configuration, blocked editing until the canonical map has loaded, preserved intentionally empty maps, and added confirmations for draft discard and factory reset.
+- Added 31 validated searches to Splunkbase packages: Zeek SSH authentication pressure, wired NAC vendor-MAC review, eight SD-WAN security analyses, firewall NAT activity, Meraki blocked destinations, and 19 Cyber Vision asset, event, and syslog views.
+- Kept searches without populated validation results or with unresolved macro, data-model, lookup, REST, token, or MLTK dependencies in developer packages until their source contracts can be verified.
+
+### Packaging and release safety
+
+- Recorded published build 2095 as the durable release-history floor so future packages allocate build 2096 or later even when earlier archives are absent from `dist/`.
+
+### Upgrade notes
+
+- After upgrading, run **Asset Inventory - Build Lookup** once or wait for its next scheduled execution to replace any previously truncated lookup.
+- No data migration or Splunk restart is required.
+:::
+
+::: release Beta release | September 2026 - Version 1.0.51
+### Release overview
+
+Version 1.0.51 fixes shared Searchbase additions in Insights Workspaces.
+
+### Workspace behavior
+
+- Fixed **Add for everyone** so shared Searchbase additions remain in the workspace after a page reload and are available to every viewer.
+- Retained validation and de-duplication for both persisted CSV values and in-memory search-reference arrays.
+
+### Upgrade notes
+
+- No data migration or Splunk restart is required.
+- Shared searches added with an earlier affected version must be added again after upgrading because the empty saved references cannot be reconstructed.
+:::
+
+::: release Beta release | September 2026 - Version 1.0.50
+### Release overview
+
+Version 1.0.50 simplifies topology link telemetry configuration, strengthens topology-save reliability, and adds reusable property-operations searches.
+
+### Workspace and dashboard behavior
+
+- Replaced the simultaneous Searchbase and ThousandEyes A2A link controls with one explicit **Telemetry source** choice.
+- Kept the telemetry-source options visibly circular and consistently sized at every editor width.
+- Show only the active setup path: select a reusable Searchbase search, or select an observed ThousandEyes A2A test directly and optionally narrow it by source and target agent.
+- Prioritize the A2A inventory immediately after the signal rail so the direct test list is ready without waiting for every dashboard section to load.
+- Removed internal A2A confidence percentages from author-facing choices and clarified the inventory and selection guidance.
+- Fixed false stale-edit conflicts when saving topology Searchbase bindings and retained the saved selection after reopening or reloading a workspace.
+
+### Property operations and inventory
+
+- Added reusable AKIPS searches for device availability, inventory location, interface saturation, and interface-error hotspots.
+- Added Catalyst Center property views for active issues and client experience, including health, RSSI, onboarding time, and poor-client counts.
+- Added Cisco IQ lifecycle-risk views and enriched the unified device inventory with AKIPS location, lifecycle findings, and explainable critical or non-critical classification.
+- Kept the searches customer-neutral: no customer index, property, or workspace name is hard-coded, and missing locations remain visible as **Unmapped**.
+
+### Packaging and release safety
+
+- Preserved the verified build-2089 release floor in tracked release history so removing local package artifacts cannot cause a later Splunkbase build number to decrease.
+
+### Accessibility
+
+- Grouped the telemetry choice as a labeled radio control and connected the ThousandEyes selectors to concise instructions.
+:::
+
+::: release Beta release | September 2026 - Version 1.0.49
+### Release overview
+
+Version 1.0.49 expands secure-networking coverage, repairs workspace and setup reliability, improves accessibility and theme consistency, and strengthens the Splunkbase release path.
+
+### Highlights
+
+- **Secure Data Center Operations:** added a focused dashboard for ACI fabric health, critical faults, capacity, interface anomalies, policy enforcement, Secure Firewall IPS, Isovalent runtime security, and change intelligence.
+- Added **About this metric** and **Investigate drivers** actions to every Secure Data Center Operations story card.
+- Standardized the secure-networking Dashboard Studio experience around compact story cards, shared searches, on-demand investigations, and adaptive time ranges.
+- Dashboard Manager now makes Edit visible immediately after same-tab edit-route changes. Searchbase pickers start with compact rows and let users reveal full metadata on demand.
+- Added and refined built-in Insights Workspaces for secure networking, zero trust, network resilience, security operations, executive briefing, and the Agentic Security Operations Center.
+- Fixed custom workspace creation and duplication, including shared layouts, section choices, and Signal Rail membership.
+- Added readable light and dark appearance across workspace editors, map controls, drawers, fields, notifications, and Setup.
+- Kept the installed app version and build visible in the workspace header and moved required Leaflet and basemap attribution into **Map credits**.
+
+### Setup and data readiness
+
+- Changed CIM discovery to one bounded search per data model, with two searches in flight, visible progress, cancellation, and preservation of completed results.
+- Added an explicit **Skip CIM tuning** path when no CIM model is selected.
+- Added Cisco Security and Cisco Intersight data-model discovery and readiness coverage while retaining raw searches where vendor model fields cannot preserve the required meaning.
+- Applied CIM-first search selection where compatible and retained Cisco app or add-on models for vendor-specific fields.
+- Updated operational timecharts to follow the selected range automatically while preserving fixed spans for forecasts, cadence analysis, and interval-dependent calculations.
+- Added self-contained native statistical baselines for IOS-XR CPU and interface-error anomaly searches.
+
+### Workspace and dashboard behavior
+
+- Added shared workspace management through the `ssne_manage_insights_workspaces` capability for `admin`, `sc_admin`, and deliberately delegated custom roles.
+- Kept built-in `user` and `power` roles read-only for shared workspace, topology, and background configuration while preserving personal preferences.
+- Added **Add for me** and **Add for everyone** tile visibility choices.
+- Add search now opens and resets with only this app selected. Entire catalogue remains available for searches from other installed apps.
+- Added configurable Signal Rails, search concurrency, map placement, map height, tile density, typography, section focus, and shared publishing.
+- Agentic SOC section headers no longer expose actions that targeted the development-only Searchbase Canvas. Splunkbase packages omit its customer-inaccessible resources, while explicit developer builds retain the internal surface.
+- Open in Search accepts only dashboard-defined safe filter values.
+- Custom Insights workspaces can now be created through the bounded persistence endpoint, and template choices retain circular radio controls.
+- Topology Searchbase bindings now save without false stale-edit conflicts and remain selected after reopening or reloading a workspace.
+- Insights workspace editors, drawers, map controls, Signal Rail controls, topology actions, and Setup retain readable Splunk UI colors in both appearances.
+
+### Accessibility, security, and delivery
+
+- Topology palette items and key manager/KPI dialogs now support complete keyboard operation. Workspace layers also restore focus when they close.
+- Improved non-color selection cues, focus indicators, control labels, and responsive light and dark contrast.
+- Removed public geocoding of customer site text; site placement uses an offline city list or explicit coordinates.
+- Shared workspace and bounded Dashboard Builder background management support narrow capability delegation.
+- **Dependency security:** patched published npm advisories by upgrading DOMPurify, fast-uri, source-map-js, postcss-selector-parser, and brace-expansion; removing sprintf-js from ESLint's dependency tree; and retaining the MapLibre GL JS XSS remediation, while ensuring Splunk visualizations continue to compile. A maintained local security patch mitigates the build-time braces stack-exhaustion advisory by rejecting brace/parenthesis nesting and AST traversal beyond 100 levels. Installation automatically applies the patch and fails if it cannot be applied; Dependabot may still flag the upstream version until a patched release is published.
+- `build.sh --install` and `--deploy` use the SplunkBase profile by default. Use `--developer` only when internal development resources are required; the explicit `--fast` workflow remains developer-only.
+- SplunkBase build, install, deploy, and remote-install workflows share one clean-source packaging path and apply the exact release-eligible archive.
+- A successful SplunkBase install creates one upload-ready archive; the target's installed build does not affect package allocation.
+- For a release, change and commit only the repository-root VERSION file. Source app.conf and app.manifest retain placeholders, and generated packages allocate the next build automatically.
+- Added profile-manifest enforcement so Splunkbase packages omit internal-only files that the release does not use.
+- Moved the complete guide and release history into this Markdown source and restored accessible release disclosures, Expand all and Collapse all controls, navigation, search, and complete PDF export.
+
+### Upgrade notes
+
+1. Preserve customer-managed `local` configuration through the upgrade process.
+2. Open Setup and review supporting packages, routing macros, optional CIM allow lists, and acceleration readiness.
+3. Test representative dashboards and shared workspaces with the roles that use them.
+4. Confirm the installed version and build in the app header before reporting a problem.
+:::
+
+::: release Beta release | August 2026 - Version 1.0.46
+### Published package record
+
+- Introduced the Agentic Security Operations Center workspace and accelerated network-data-model searches for its conference catalogue.
+- Added the narrow `ssne_manage_insights_workspaces` capability for shared workspace and topology management.
+- Strengthened package provenance, shared image boundaries, Dashboard Manager editing, and workspace accessibility.
+
+The public package listing is the authoritative record of the exact archive published for this version.
+:::
+
+::: release Beta release | Version 1.0.45
+This beta release of Splunk App for Secure Networking provides Cisco-focused dashboards, configurable workspaces, and investigation tools in Splunk Enterprise.
+
+### Highlights
+
+- Organizes secure networking content around Zero Trust Access, Secure Infrastructure, Scalable Network Segmentation, Hybrid Mesh Firewalling, and Agentic Ops.
+- Includes 16 Cisco-themed Dashboard Studio views for executive insights, network and security operations, infrastructure health, workplace intelligence, and investigations.
+- Provides configurable Insights Workspaces with KPI tiles, layouts, signal rails, connectivity maps, themes, and audience-specific views.
+- Includes Dashboard Manager tools for creating, editing, cloning, exporting, and presenting dashboards.
+- Adds interactive topology tools, drilldowns, Open in Search actions, and a searchable catalogue of shared searches.
+
+### Setup and data readiness
+
+- Guides users through supporting-app validation, Cisco source-type discovery, index-macro configuration, and data-model acceleration checks.
+- Supports macro configuration for Cisco networking, security, observability, infrastructure, and workplace integrations.
+- Includes an in-app User Guide for setup, dependencies, performance readiness, and troubleshooting.
+
+### Beta considerations
+
+- This release is available only to approved beta participants.
+- The app visualizes data already indexed in Splunk Enterprise; it does not collect Cisco data.
+- Dashboard results depend on the integrations, source types, fields, data models, index mappings, permissions, and time ranges available in each environment.
+- Features, content, and compatibility can change before general availability.
+:::
+
+::: release Beta release | Version 1.0.44
+This is a beta release of Splunk App for Secure Networking. It provides Cisco-focused executive, network operations, security operations, infrastructure, and building-intelligence experiences within Splunk.
+
+### Highlights
+
+- Introduces Secure Networking experiences organized around Zero Trust Access, Secure Infrastructure, Scalable Network Segmentation, Hybrid Mesh Firewalling, and Agentic Ops.
+- Includes 16 Cisco-themed Dashboard Studio views containing executive KPIs, operational trends, security findings, topology context, and investigation workflows.
+- Provides executive briefing, IT health, security, Asset Inventory, NetOps Readiness, Cisco Spaces, workplace, and building-intelligence views.
+- Adds configurable Insights Workspaces with selectable KPI tiles, layouts, signal rails, site-connectivity maps, presentation themes, and audience-specific views.
+- Includes Dashboard Manager tools for viewing, editing, cloning, exporting, and presenting supported dashboards.
+- Provides interactive customer-site topology and network-diagram tools.
+- Adds drilldowns and **Open in Search** actions for investigating dashboard results directly in Splunk Search.
+- Includes a searchable catalogue of shared search definitions for dashboard, workspace, and investigation workflows.
+
+### Data configuration and readiness
+
+- Adds guided setup for validating supporting apps, discovering Cisco source types, and configuring index macros.
+- Provides Macro Index Tuning for mapping dashboard searches to indexes used by the local Splunk environment.
+- Supports separate discovery and configuration of Splunk Common Information Model index macros.
+- Reports required and recommended data-model acceleration readiness, with links to the applicable Splunk management pages.
+- Supports companion macro configuration for Cisco Enterprise Networking, Cisco Security Cloud, Cisco ThousandEyes, Cisco Meraki, Cisco Intersight, and Cisco Spaces integrations.
+- Includes an in-app User Guide covering setup, data dependencies, macro tuning, workspaces, site connectivity, performance readiness, and troubleshooting.
+
+### Security and operational content
+
+- Includes authentication, policy-enforcement, user-activity, remote-access VPN, segmentation, infrastructure-health, firewall, and threat-detection dashboards.
+- Provides Palo Alto policy-outcome and Cisco ISE Security Group Tag correlation content where the required data is available.
+- Includes Cisco SD-WAN controller threat hunts for suspicious access, software downgrade, certificate failures, path traversal, privilege escalation, persistence, and multi-stage activity.
+- Provides Cisco Catalyst Center, Secure Firewall, ISE, Meraki, ThousandEyes, Spaces, Duo, Cyber Vision, UCS, Intersight, SD-WAN, data-center networking, Secure Access, and XDR content where supported telemetry is present.
+
+### Beta considerations
+
+- This release is available only to approved beta participants.
+- Splunk App for Secure Networking visualizes data already ingested into Splunk; it does not collect Cisco data directly.
+- Dashboard availability and results depend on supporting apps, source types, fields, data models, index mappings, permissions, and time ranges.
+- Not every supporting integration is required for every dashboard.
+- Some features require accelerated data models or optional supporting apps.
+- Beta functionality, content, and compatibility may change before a generally available release.
+:::
+
+::: release Initial Alpha release | Version 1.0.35
+This is the first Alpha release of Splunk App for Secure Networking. It provides Cisco-focused executive, network operations, security operations, infrastructure, and building-intelligence experiences within Splunk.
+
+### Highlights
+
+- Introduces Secure Networking experiences organized around Zero Trust Access, Secure Infrastructure, Scalable Network Segmentation, Hybrid Mesh Firewalling, and Agentic Ops.
+- Includes 16 Cisco-themed Dashboard Studio views containing executive KPIs, operational trends, security findings, topology context, and investigation workflows.
+- Provides executive briefing, IT health, security, Asset Inventory, NetOps Readiness, Cisco Spaces, workplace, and building-intelligence views.
+- Adds configurable Insights Workspaces with selectable KPI tiles, layouts, signal rails, site-connectivity maps, presentation themes, and audience-specific views.
+- Includes Dashboard Manager tools for viewing, editing, cloning, exporting, and presenting supported dashboards.
+- Provides interactive customer-site topology and network-diagram tools.
+- Adds drilldowns and **Open in Search** actions for investigating dashboard results directly in Splunk Search.
+- Includes a searchable catalogue of shared search definitions for dashboard, workspace, and investigation workflows.
+
+### Data configuration and readiness
+
+- Adds guided setup for validating supporting apps, discovering Cisco source types, and configuring index macros.
+- Provides Macro Index Tuning for mapping dashboard searches to indexes used by the local Splunk environment.
+- Supports separate discovery and configuration of Splunk Common Information Model index macros.
+- Reports required and recommended data-model acceleration readiness, with links to applicable Splunk management pages.
+- Supports companion macro configuration for Cisco Enterprise Networking, Cisco Security Cloud, Cisco ThousandEyes, Cisco Meraki, Cisco Intersight, and Cisco Spaces integrations.
+- Includes an in-app User Guide covering setup, data dependencies, macro tuning, workspaces, site connectivity, performance readiness, and troubleshooting.
+
+### Security and operational content
+
+- Includes authentication, policy-enforcement, user-activity, remote-access VPN, segmentation, infrastructure-health, firewall, and threat-detection dashboards.
+- Provides Palo Alto policy-outcome and Cisco ISE Security Group Tag correlation content where the required data is available.
+- Includes Cisco SD-WAN controller threat hunts for suspicious access, software downgrade, certificate failures, path traversal, privilege escalation, persistence, and multi-stage activity.
+- Provides Cisco Catalyst Center, Secure Firewall, ISE, Meraki, ThousandEyes, Spaces, Duo, Cyber Vision, UCS, Intersight, SD-WAN, data-center networking, Secure Access, and XDR content where supported telemetry is present.
+
+### Alpha release considerations
+
+- This release is available only to approved Alpha participants.
+- Splunk App for Secure Networking visualizes data already ingested into Splunk; it does not collect Cisco data directly.
+- Dashboard availability and results depend on supporting apps, source types, fields, data models, index mappings, permissions, and time ranges.
+- Not every supporting integration is required for every dashboard.
+- Some features require accelerated data models or optional supporting apps.
+- Alpha functionality, content, and compatibility may change before a generally available release.
+:::
 
 ## Prerequisites {#prerequisites}
 
@@ -105,6 +510,7 @@ With the same restricted account and launch path used by viewers, check that:
 
 - The workspace loads and searches complete with the intended index and knowledge-object permissions.
 - Typing `r` and `t` in the Cisco Cloud Control assistant keeps the letters without refreshing the background workspace or changing its time range.
+- Clicking the workspace background, then pressing `r` or `t`, refreshes the data or cycles the time range. Repeat after moving focus to a workspace control; typing in the assistant must still leave the background unchanged.
 - Dashboard creation, personal preferences, and sharing follow the account's permissions.
 - If **Add to AI Canvas** is available, a new and an existing canvas receive the intended search and time range, and the resulting card opens successfully.
 
@@ -224,6 +630,8 @@ If the dashboard is saved but app sharing fails, select **Open saved dashboard**
 
 ## Insights Workspaces {#workspaces}
 
+Map height defaults to **Match workspace** for new view preferences and after a factory reset. You can select **Compact** in **Dashboard controls > Map height**; saved personal choices are preserved across upgrades.
+
 Insights Workspaces are reusable, audience-specific views of Searchbase-backed KPIs. A workspace combines header metadata, sections, default tiles, a Signal Rail, map settings, and presentation defaults. Built-in workspaces provide packaged starting points; custom workspaces store customer-specific choices without changing packaged definitions.
 
 ### Built-in workspaces
@@ -267,11 +675,65 @@ Test the workspace with a role that represents the intended audience before publ
 
 The picker opens in **Suggested** scope with searches from `splunk-cisco-dashboards` that match the active section. Select **Entire catalogue** to browse compatible searches from other installed Searchbase providers. The app filter still starts with only `splunk-cisco-dashboards` selected. Searches already configured in the section remain hidden unless the user chooses to show added searches.
 
+**SGT assignment coverage:** The Secure Networking workspace includes `secure_networking_sgt_assignment_coverage_trend` in Scalable Network Segmentation, replacing SGACL Enforcement Activity Trend. Select **View coverage by site/device** to open `secure_networking_sgt_assignment_coverage_by_site_device`. Coverage is the percentage of successful ISE authentication events with one usable, non-default SGT. Missing, default, and conflicting tag values remain in the denominator; the selected-window percentage is weighted by event count. Repeated authentications count repeatedly, so this measures reported authentication coverage rather than distinct endpoints or SGACL enforcement. An empty window reports no observations, with no coverage percentage. The detail retains missing or ambiguous site/device context and returns at most 1,000 groups; `TotalGroups` and `DetailRowsTruncated` indicate additional groups. Existing shared or personal layout overrides retain their saved tiles; a workspace manager can replace the old tile and publish the layout to adopt this change.
+
 ### Configure the Signal Rail
 
 Signal Rail membership and order are shared workspace configuration. Speed, density, and KPI text size are per-user preferences. Signal Rail searches are prioritized during initial loading. The Agentic Security Operations Center workspace also avoids dispatching searches from collapsed sections and supports a personal one-to-four concurrent-search setting.
 
 Workspace searches default to two simultaneous requests per page. When Splunk explicitly reports that search slots are exhausted, the page pauses new tile requests and retries with increasing, randomized delays, for at most four attempts per search. A server-provided retry delay is honored up to 30 seconds. If capacity remains unavailable, affected tiles show **search slots busy** instead of treating the rejection as an empty result. Wait for running searches to finish, then refresh. Other tabs and users share the server's limits; this page-level queue does not increase Splunk capacity or coordinate all sessions. Ask the administrator to review per-user, role and platform capacity for the expected simultaneous demo load.
+
+### Explore the operational search library
+
+Searchbase includes twelve additional searches for data quality, certificate lifecycle, MDS/SAN, and Hyperfabric. Search for **Networking Data**, **ISE - Repeated**, **Zeek - Observed Certificate**, **Zeek - Certificate Rotation**, **MDS**, or **Hyperfabric** in the catalogue. These searches do not add workspace tiles, schedule jobs, or enable collection automatically.
+
+A second set adds twelve optional investigations. Search for **ASA and FTD**, **FMC - Observed NAT**, **FMC - Low-Activity**, **Duo - Repeated Denials**, **Duo - Push**, **CIM Authentication - Password Spray**, **IOS - Link State**, **IOS - Routing Adjacency**, **Catalyst Center - First Active Issues**, or **Cross-Vendor Traffic**.
+
+- **Firewall operations:** Inspect explicit NAT/resource-limit messages, observed NAT tuple concentration, and rules seen in five or fewer connection records. These require the documented ASA/FTD syslog or FMC/eStreamer fields. Traffic records cannot identify never-used or shadowed rules, measure appliance capacity headroom, or justify removing a rule. Translation creation failures are not automatically pool exhaustion.
+- **Identity sequences:** Find at least three Duo denials before success within ten minutes, five denied/fraud push events in a fifteen-minute bucket, or CIM authentication sources with at least ten failures across five users in fifteen minutes. These editable thresholds identify investigation candidates. Duo events are deduplicated by usable transaction ID or event hash, with conflicting identities excluded; equal timestamps do not establish earlier ordering. The password-spray search requires the CIM Authentication model and follows `scd_summariesonly`.
+- **Change-impact candidates:** Review IOS link or BGP/OSPF messages within fifteen minutes after observed configuration activity, or first selected-window active Catalyst Center issues after administrative audit activity. Correlation requires the same reporting host; Catalyst Center also requires an exact device ID on both feeds. Repeated issue polls cannot create a new post-audit issue. Temporal association does not prove cause, disruption, or a successful change.
+- **Cross-vendor and IPv6 visibility:** Compare observed IPv4/IPv6 record mix, IPv6-involved denied destinations, and address/decision field coverage across supported FTD/eStreamer, Palo Alto traffic, Zeek connection, and Zscaler ZIA feeds. Only explicit vendor actions establish allow/deny decisions; Zeek connection state and TCP reset alone do not. Unknown decisions and invalid addresses remain in coverage denominators. These are record counts, not unique sessions or comparable vendor traffic totals.
+
+All twelve investigations return at most 1,000 groups, with `TotalGroups` and `RowsTruncated` indicating omitted groups. Use a finite window and start short on busy systems, especially for searches that order events. Streamstats history limits can undercount high-volume sequences. A no-observation result can reflect missing source fields, index routing, permissions, the data model, or unmet thresholds; it is not a healthy-state verdict. These additions do not change workspace layouts, schedules, index macros, or collection settings.
+
+- **Data quality:** Compare event time with index time, inspect fifteen-minute feed bucket occupancy, or find repeated/conflicting ISE policy scalar values. Start raw-event delay searches with a short finite window on busy deployments. Bucket occupancy is not collector uptime, and completely unobserved feeds need an expected-source inventory to detect them.
+- **Certificates:** Review expiry detail, lifecycle bands, and subjects with multiple fingerprints. Requires `zeek:x509` observations through `index_zeek`. Expiry is evaluated against the current clock; records without usable fingerprints are excluded, and missing or conflicting validity remains unknown. Multiple fingerprints suggest a rotation investigation, not proof of successful renewal or deployment.
+- **MDS/SAN:** Review sampled transmit-wait and CPU/memory trends or repeated transmit wait of at least 10% in two fifteen-minute buckets. The editable 10% threshold is for investigation. Sampled bucket counts do not measure continuous congestion duration.
+- **Hyperfabric:** Review observed port-rate trends, latest directional imbalance, and rate-field completeness. Rates are Mbps, not link utilization. Directional traffic can be normal. Missing directions remain unknown; valid zero rates mean idle only when both directions are present. Coverage includes observed counter identities, without assuming inventory IDs equal performance port indexes.
+
+Table searches return at most 1,000 groups and expose `TotalGroups` and `RowsTruncated` where applicable. Empty output guidance does not establish that the environment is healthy. The existing index macros and the user's role determine which sources are visible.
+
+### Explore multivendor networking searches {#multivendor-search-library}
+
+The catalogue includes **80 optional multivendor searches**: twenty vendor-neutral investigations and six each for ten vendor ecosystems. In **Add search**, select **Entire catalogue**, enable **Show table searches** and **Show drill-down searches**, and search by the prefixes below. Review each entry's source contract and interpretation guidance in Searchbase before adding it to a workspace.
+
+CrowdStrike connection, blocked-network and listener searches choose the first valid textual address matching the event's IPv4 or IPv6 family. Invalid or wrong-family aliases cannot hide a valid later address. Unspecified listener bind addresses (`0.0.0.0` and `::`) remain valid; raw integer-encoded addresses still require add-on normalization.
+
+Port, HTTP response-code, byte-count and interface-counter measurements require whole numbers within the ranges documented in each search. Each alias is validated before fallback; a valid preferred value keeps precedence. Fractional timing and signal measurements remain valid. Invalid interface reset or uptime values remain unknown and contribute to `ContinuityUnverifiedIntervals`.
+
+| Search prefix | Investigations and input requirements |
+| --- | --- |
+| **Network Essentials** (20) | Traffic/application records, explicit decisions, destination/port fan-out, remote-administration ports, durations, authentication outcomes/source diversity/method visibility, DNS outcomes/query types/latency, HTTP errors/cleartext destinations, intrusion actions, change failures, IPv6 decision visibility, and IF-MIB interface error rates. Nineteen use CIM tags and normalized fields; interface rates require flattened IF-MIB counter samples. No Cisco source or companion model is required. |
+| **Palo Alto** (6) | Terminal application bytes, denied zone/rule boundaries, GlobalProtect failures, threat actions, terminal-session reasons and HA system messages. Requires the matching PAN traffic, GlobalProtect, threat and system feeds with their parsed fields. |
+| **Fortinet** (6) | VDOM policy denials, VPN transition messages, SD-WAN probe measurements, IPS actions, configuration audit paths and reported application risk. Supports `fgt_*`, `fortinet_*` and `fortigate_*` traffic/event/UTM families; verify the names and fields used by the deployed add-on. |
+| **Juniper / Aruba** (6) | Four **Juniper** searches inspect SRX denied/closed flows, BGP state messages and commit activity. Two **Aruba** searches inspect access-authentication failures and client SNR. Junos, Aruba/ClearPass authentication and flattened Central client metrics are separate contracts; Junos syslog alone does not provide Aruba client measurements. |
+| **Arista** (6) | Interface error/discard/octet counter rates, latest observed interface state, BGP adjacency messages and LANZ queue measurements. Counter/state searches need flattened metric snapshots; LANZ needs an event exporter. EOS syslog alone does not supply these measurements. |
+| **Check Point** (6) | Denied services, VPN failures, IPS signatures, policy-install audit messages, observed NAT pairs and rule-action inventory. Requires the chosen Log Exporter parser and the appropriate traffic, blade or management-audit fields. Both `cp_log:syslog` and legacy `cp_log` are recognized. The older Splunk Log Exporter add-on is archived; confirm a suitable ingestion/parser route for the deployment. |
+| **F5** (6) | Pool-member monitor messages, HTTP response errors, ASM blocked violations, APM policy denials, TLS handshake failures and HA role messages. Requires the corresponding BIG-IP syslog, iRule, ASM or APM logging formats. |
+| **Zscaler** (6) | ZIA HTTP errors and request/response sizes; ZPA server-setup measurements, user public-IP diversity, private-IP field visibility and double-encryption labels. Requires the selected NSS/LSS feeds and fields. Connection status and encryption labels do not independently establish policy allowance or end-to-end protection. |
+| **Infoblox** (6) | NXDOMAIN and SERVFAIL evidence, threat-protection actions, query-name diversity, TXT/NULL activity and DHCPv4 NAK messages. Requires the corresponding DNS response, threat or DHCP feeds. Historical query-only DNS mappings cannot establish response outcomes. |
+| **CrowdStrike** (6) | Process/destination context, blocked-network evidence, DNS-name diversity, IPv6 destinations, listener ports and containment completion activity. Requires the relevant Falcon FDR sensor event families; detections alone are insufficient. Process context uses agent plus stable sensor process identifiers and retains missing/conflicting rollup context. |
+| **Microsoft Defender** (6) | Process network events, connection failures, Network Protection blocks, remote-administration ports, public-destination fan-out and remote-session process activity. Requires exported advanced-hunting events. Direct rows and nested `properties` fields are supported; Network Protection blocks can arrive in DeviceEvents rather than DeviceNetworkEvents. |
+
+These searches use the existing network, firewall, security, F5 and Windows index macros. An administrator must include the actual source indexes in those scopes; adding a catalogue entry does not change routing, install an add-on, enable collection or grant access. CIM searches use event tags and field normalization without requiring accelerated data models.
+
+For TXT/NULL investigations, `record_type` takes precedence because `query_type` can contain a DNS opcode such as Query; older resource-type mappings through `query_type` remain supported. DNS response-time investigations require an actual `response_time` measurement in seconds and a resolver. Query-only logs and TTL values cannot provide that measurement. Missing latency remains unknown rather than zero.
+
+The **Intrusion Non-Blocking Action Evidence** investigation needs both `ids` and `attack` tags, a signature, and the CIM `allowed` action or a legacy alert/detected action. The label describes the reporting IDS action, not passage through every control or a successful exploit. Blocked, unknown and conflicting actions remain excluded. If an intrusion feed exists but its tags are absent, have the add-on owner check its eventtype source predicate, enabled tags and sharing in this app context. For any empty investigation, first verify the exact source family, then usable fields, then the documented conditions. An absent feed needs collection; a threshold-based investigation can correctly remain empty until its conditions occur. Keep controlled fixture checks separate from indexed vendor data and do not lower thresholds simply to populate a panel.
+
+Start with a short, finite window on busy systems. Each search returns at most 1,000 groups and exposes `TotalGroups` and `RowsTruncated`. Missing/conflicting values remain unknown. Counts describe observations or explicitly labeled valid measurement intervals, rather than unique sessions, incidents, current states or outages. Counter rates require successive samples for the same device/interface; counter decreases, reported discontinuities/uptime decreases, missing/conflicting snapshots, intervals over one hour and counters beyond exact integer precision are excluded. `ContinuityUnverifiedIntervals` flags missing discontinuity/uptime context; a reset that occurs and recovers between observations can still affect rates. Rates are not link utilization or packet-loss percentages. LANZ queue and ZPA setup measurements retain source units where stated; verify exporter units before comparison.
+
+The definitions do not automatically add tiles or schedule searches. The result cap bounds returned rows, not scanned events or grouping memory; qualify high-volume deployments using short representative windows. A tested query is not proof that a particular vendor feed is populated or fully qualified. True unused/shadowed-rule analysis and appliance capacity headroom still require configuration inventory and capacity counters.
 
 ### Where workspace settings are saved {#workspaces-where-settings-are-saved}
 
@@ -319,6 +781,24 @@ The topology editor controls the workspace map title, subtitle, center, zoom, si
 
 The editor first checks its offline city list. For an unmatched site, enter explicit coordinates. Customer site text is never sent to a public geocoder. A bound ThousandEyes test can retain its permalink or construct a link from the test and account IDs. Keep the Leaflet and active map-provider credits available through **Map credits**.
 
+## Network service and catalogue investigations {#network-service-investigations}
+
+Open **Secure Infrastructure > Network Service Investigations** for six evidence tables: application transfer observations, explicit policy decisions, DNS NXDOMAIN responses, DNS response time, HTTP server errors and allowed remote-administration port observations. The dashboard uses compatible CIM-tagged data across vendors. It needs the corresponding add-ons, extracted fields, tags, index routing and search permissions; it does not onboard these sources.
+
+Use **Investigate** beside a table to open related vendor-specific or neutral searches, including IPv6 visibility, denied destinations and interface observations. **About** explains the source contract and interpretation. Details retain the dashboard time range. One selected detail search runs at a time; changing the detail page selects a different investigation. These are separate evidence views, not automatically correlated users, devices or sessions. No per-row entity filter is inferred when moving between different source schemas.
+
+Use **Advanced time range** beside the **30d** shortcut to select a custom time range and span, using the same selector as the other managed dashboards.
+
+Existing dashboards also expose the new catalogue searches through **Investigate drivers**: authentication and remote-access details in Zero Trust Posture and Authentication and Policy Enforcement; NAT, rule/action and threat evidence in Threat Detection and Enforcement; and change, probe, routing and interface details in SD-WAN and Network Health Monitoring. Their existing overview metrics and searches are preserved.
+
+Three additional tabs provide investigations without running new overview searches:
+
+- **Secure Data Center Operations > SAN and fabric investigations**: MDS transmit wait, recurring congestion, resource measurements and Hyperfabric rates, directionality and measurement coverage.
+- **Infrastructure Posture > Certificate investigations**: observed certificate lifecycle, expiry inventory and rotation candidates from Zeek x509 data.
+- **Operational Intelligence > Telemetry investigations**: ingestion delay, observed feed-bucket coverage and repeated/conflicting ISE policy fields.
+
+Start with a short time range on busy feeds. The new dashboard has six overview searches; opening a detail adds one active search. Returned catalogue groups are capped at 1,000 and disclose truncation, but this does not bound scanned events or aggregation memory. Missing observations can reflect absent sources, missing fields, permissions, routing, unmet conditions or the selected window; they do not establish a healthy state. Record totals may overlap across logging feeds and must not be treated as unique sessions or incidents. CrowdStrike/Defender endpoint network dashboards remain deferred until their required network/process exports are available.
+
 ## Supporting assets {#lookups}
 
 | Asset | Purpose |
@@ -365,6 +845,7 @@ Ask the identity or integration owner to investigate token-exchange failures, se
 | A tile reports search slots busy | Wait for running searches to finish, then refresh. Reduce the personal simultaneous-search setting and close unused demo tabs. Ask the administrator to review search concurrency limits and stack capacity if this persists. |
 | A tile reports search failed | Open the tile's search in Splunk Search and inspect its error, permissions, and required macros, lookups, models, or commands. A failed search is not an empty result. |
 | Typing r or t in an embedded assistant refreshes the workspace or changes time | Confirm that version 1.0.70 or later is installed, refresh the page, and retest the actual assistant editor. If it persists, report the installed build and affected editor to the app owner. |
+| Workspace r and t shortcuts do nothing after clicking the dashboard background | Upgrade to version 1.0.80 or later and refresh the page. In earlier versions, moving focus to a workspace control with Tab can restore the shortcuts. Shortcuts intentionally stay inactive while typing in an assistant or text field. |
 | Splunk opens, but Cisco Cloud Control fails to load | Capture the failing request's status and error text without tokens. Compare a standard Splunk page under the same login and contact the identity or integration owner; successful SAML login does not confirm every connected service is available. |
 | A CIM panel is empty | Confirm tags, event types, CIM index macros, model permissions, required fields, and acceleration. |
 | A Cisco model search is empty | Confirm the companion app, model root and child datasets, source types, and model fields. |
@@ -379,380 +860,3 @@ Ask the identity or integration owner to investigate token-exchange failures, se
 | A field projection changes search behavior | Open the search and disable search optimization for a pipeline affected by optimizer field pruning. |
 | New JavaScript or dashboard definitions do not appear | Refresh Splunk Web. Ask the Splunk administrator whether the deployment process requires a restart after endpoint changes. |
 | A new release has no Update link | Confirm the installed app version, **Check for Updates**, and the release's compatibility with your Splunk platform version. Ask your administrator to check Splunkbase connectivity and the app update-check interval. A release appearing on Splunkbase does not by itself confirm that the instance has discovered it. |
-
-## What's New / Release Notes {#release-notes}
-
-This Markdown file is the authoritative source for the in-product release history.
-
-::: release Release Notes | October 2026 - Version 1.0.70
-
-- Removed the Beta label from the app name and navigation labels.
-- **Search quota assessment:** Searchbase now includes Search Quota Impact by Cloud Label, separating disk, user, role, and instance limits, normalizing MB measurements, and preserving missing telemetry. Select the desired assessment period in the time picker; labels use the latest 15 minutes of introspection data.
-
-Release preparation is in progress. Final package/security review, publication, and integrated-cloud validation are pending.
-
-### Insights Workspaces
-
-- Fixed workspace shortcuts intercepting text entered in the Cisco Cloud Control assistant and other embedded editors. Typing keeps its letters, and workspace shortcuts remain available from the workspace and unfocused page background.
-- Added a shared page-level pause and bounded retries when Splunk rejects searches because concurrent-search slots are exhausted. Affected tiles distinguish **search slots busy** from empty results after retries are exhausted; other dispatch and job failures now report **search failed**. Server quotas and permissions remain under administrator control.
-
-### Setup
-
-- Restored **Refresh status** and the last-checked time in the current **Configure data** step, so acceleration can be checked again without leaving setup or saving the draft plan. The check confirms that acceleration is enabled; summary building may still be in progress.
-
-### Dashboard Manager
-
-- Aligned the default and **24h** shortcut on the 18 Secure Networking dashboards with the advanced time picker's **Last 24 hours** preset (`-24h@h` through `now`). Custom ranges remain unchanged.
-- Chart-library debug messages are quiet during normal use. To troubleshoot, add `canvasDebug=1` to the page URL query, before any `#` fragment, and enable the browser console's debug/verbose level. Remove the parameter to disable diagnostics. Warnings and errors remain visible. Diagnostic output can contain chart data; review it before sharing logs.
-- Dashboard Manager hides unavailable KPI comparisons when fewer than two valid numeric trend samples exist, including inherited default trends on null or timestamp-only results. Headline values remain unchanged, and unavailable headline colors use the theme default. Constant line and area series receive finite axis bounds; time-based charts omit rows without a valid time coordinate from rendering. Tables and searches keep their original records, and charts add no synthetic samples.
-- Extended finite-axis handling to inherited chart series and empty numeric domains, covering affected NetOps Readiness, Data Center runtime, and Spaces capacity views. Removed deprecated iteration calls in the packaged chart adapter used by Building Intelligence.
-
-- Fixed focus after leaving a fullscreen visualization opened with the keyboard or mouse: focus returns to that panel's native **Fullscreen** button, keeping keyboard navigation in context even when the toolbar was hidden.
-- Fixed native Studio conversion for older and Searchbase-backed dashboards: copied searches keep their SPL and time range, native time pickers no longer leave unresolved span parameters, and saved conversions appear in Splunk's dashboard list with native editing enabled. Convert remains available for partially converted copies. The dialog explains that Manager-only investigation controls are removed and that required macros, lookups, commands, and data must still exist.
-- Matched the native Dashboard Studio panel toolbar order: **Open in Search**, **Inspect**, **Fullscreen**, **Refresh**, **Add to AI Canvas**, and **Export**. Inspect opens the running search job. On eligible Cisco Cloud Control integrations, AI Canvas supports native and Searchbase-backed panels, carries their resolved search and time range with a bounded result preview, and offers new or existing canvases. Canvas availability and access remain controlled by Splunk and Cisco Cloud Control.
-
-### Upgrade and integration notes
-
-- After upgrading, confirm the installed version/build and test with a representative restricted user, including typing in the actual embedded assistant. Local verification does not establish integrated-cloud behavior.
-- Added shared-demo capacity and sign-in troubleshooting guidance. Workspace retries do not increase per-user, role, or stack limits; administrators must size and test expected simultaneous usage.
-- Integrated-cloud AI Canvas creation and cross-launch, restricted-user sharing, and saved CSV export contents still require final release qualification. Cloud Control identity/navigation errors remain under investigation; this release does not claim to resolve them.
-:::
-
-::: release Release Notes | October 2026 - Version 1.0.60
-### Setup
-
-- Added a clear **Refresh status** action and last-checked time for data-model acceleration. Clarified that Splunk can still be building summaries after acceleration is enabled.
-
-### Dashboard Manager
-
-- Added **Sharing** to dashboard cards and the library table so users can see **Private**, **App**, or **All apps** at a glance. Labels refresh after a permission change.
-- Added **Permissions** to dashboard cards and table rows. Owners with the required Splunk permissions can promote a private dashboard to **Shared in App** or make it private again without leaving Dashboard Manager. The dialog checks current permissions and preserves ownership and existing edit access.
-- Defaulted new dashboards to **Private**, matching standard Splunk creation and avoiding an automatic app-sharing request for users without sharing permission.
-- Kept both visibility choices visible, encouraged app sharing for dashboards ready for colleagues, and explained how to share a private dashboard later. Reset the creation dialog to **Private** each time it is reopened.
-:::
-
-::: release Release Notes | September 2026 - Version 1.0.55
-### Zscaler Zero Trust Access
-
-- Added eight Zscaler searches for data coverage, private application access, policy and connection reasons, unreachable applications, connection-status trends, ZIA enforcement outcomes, blocked web activity, and named web threats.
-- Distinguished repeated ZPA log records from distinct connection IDs and kept normal connection closures separate from explicit reachability failures.
-- Used the configurable security index scope and documented the required Zscaler add-on fields and interpretation limits.
-- Fixed Setup discovery to find Zscaler feeds outside existing index scopes and propose their indexes for `index_security`; administrators review and save the routing change.
-- Added recommended placement in existing ZTA dashboards to each Zscaler search description, including guidance for complementary ZPA panels on the remote-access dashboard.
-- Added Zscaler investigations to relevant cards across all six ZTA dashboards, preserving the six-card layouts and existing investigation choices. Labeled the Zscaler views as separate source detail.
-
-### Insights Workspaces
-
-- Restored the update badge beside the installed version when Splunk reports a newer app release.
-
-### Dashboard Manager
-
-- Added a **Shared** library tab to find dashboards shared in the app, including dashboards created by other users.
-- Kept new shared dashboards associated with their creator so they also appear under **Yours**. Editing dashboard metadata preserves existing sharing permissions.
-- Opened the linked Searchbase search from the dashboard data-source editor and improved dark-mode text and trend contrast.
-- Set Searchbase app filters to this app by default while keeping other apps available to select.
-:::
-
-::: release Release Notes | September 2026 - Version 1.0.54
-### Release overview
-
-- Reduced the app package and JavaScript download sizes.
-- Added troubleshooting guidance for app update notifications.
-
-This maintenance release includes the Dashboard Manager reliability and visualization-spacing improvements introduced in version 1.0.53.
-:::
-
-::: release Release Notes | September 2026 - Version 1.0.53
-### Dashboard Manager
-
-- Prevented new dashboards from overwriting existing dashboard IDs or creating private copies that conflict when shared. Creation errors now remain visible in the dialog, duplicate submissions are blocked, and a saved dashboard can still be opened if sharing fails.
-- Kept Dashboard Manager error notifications in front of open dialogs and previews until dismissed, with one notification host shared across the library and editor.
-- Corrected Network Graph option types to eliminate repeated schema-validation warnings when opening Dashboard Manager and its editor, while preserving validation of graph settings.
-- Preserved spacing between Dashboard Manager visualizations by sizing chart content to the space remaining beneath wrapped titles and descriptions.
-
-### Map usability
-
-- Prevented transparent site-marker padding from intercepting nearby link clicks, widened link selection targets, and added keyboard activation with visible focus for map links.
-
-### Search performance
-
-- Replaced raw FTD feed-freshness, WSA volume, SD-WAN audit volume, and total SSE event scans with indexed-metadata `tstats` searches.
-- Added model-backed aggregation for ThousandEyes page completion and path-quality detail, plus Catalyst interface spike, drop, and asymmetry candidates. These searches require their companion models and honor the shared summary-coverage setting.
-- Deferred display enrichment until after the existing result limits for SSE event detail and FTD anomalous sessions, preserving selection and thresholds.
-:::
-
-::: release Release Notes | September 2026 - Version 1.0.52
-### Release overview
-
-Version 1.0.52 preserves complete large-fleet asset inventories, advances release build allocation beyond the published 1.0.51 package, keeps first-run CIM discovery independent of saved allowlists, and keeps TA-owned Cisco routing definitions outside user-driven tuning.
-
-- Made Insights and Dashboard Manager drill-downs use the workspace's navy, cyan, and purple atmosphere instead of a flat black panel, with a consistent dimmed backdrop instead of an ambiguous transparency slider.
-
-- Moved the Site Roles, View, and Map credits controls into a dedicated rail below the topology viewport, so compact maps keep every site visible and the full map surface remains draggable.
-
-### Workspace usability
-
-- Kept tile information popovers concise on hover and focus, while clicking the same information control reveals the parent tile's complete Searchbase description, explanation, operator action, references, and execution plan.
-- Kept the separate tile detail control dedicated to associated drill-down searches and each drill-down search's own metadata.
-- Added responsive sizing, safe wrapping for long identifiers, viewport-bounded scrolling, pointer persistence, and Escape dismissal to tile information popovers.
-- Prioritized Searchbase-bound topology link searches immediately after the Signal Rail, so live link status and ThousandEyes metrics populate without waiting behind ordinary dashboard sections.
-
-### Asset inventory
-
-- Removed the implicit 10,000-row limit from the **Asset Inventory - Build Lookup** saved search so fleets larger than Splunk's default `sort` limit are written completely to `asset_inventory.csv`.
-- Removed the same implicit limit from the **Full Inventory** dashboard table so every row in the generated lookup remains available for display and filtering.
-- Added regression coverage for both inventory paths.
-
-### Guided Setup
-
-- Fixed first-run CIM discovery so tagged events are found before a CIM index
-  allowlist has been saved, including Umbrella DNS events in `cisco_umbrella`.
-- Kept TA-owned Cisco DC Networking routing macros and the Cisco Enterprise
-  Networking sourcetype allow-list outside the Setup tuning and save path so
-  their static definitions remain managed by the owning TA.
-- Grouped the final Settings to be saved review by target app so multiple
-  macros and settings remain easy to scan without repeating the app name on
-  every row.
-
-### Searchbase catalogue
-
-- Moved the executive **Threat sources** tile from a raw firewall-event scan to the accelerated CIM **Blocked Traffic** dataset. The tile keeps its selected-window distinct-source headline and source scope while avoiding the high-volume distributed-peer failures seen with the previous raw pipeline.
-- Restored the missing Searchbase binding for the **Active TE alerts** workspace tile so its Major/Critical alert total, trend, and baseline dispatch with the rest of the IT Health section.
-- Corrected Catalyst wireless protocol and SSID traffic charts so punctuation-bearing series names such as `802.11ax` are handled as fields instead of causing a templatized-search parse failure.
-- Corrected the Cisco Spaces **Client health by site** chart so duplicate multivalue Catalyst health and site fields are scalarized before numeric filtering and site normalization, restoring the named per-site series instead of an anonymous aggregate.
-- Corrected Catalyst client-health handling across IT Critical Systems and Cisco Spaces Network Impact: `-1` and zero-client records are treated as unavailable, single-value tiles show the latest valid score with its reported age, and trend/correlation charts exclude unavailable samples.
-- Aligned the Security Resilience **Details & KPI Reference** narrative with the full dashboard section so its guidance remains on one line without an unnecessary scrollbar.
-- Corrected dotted-field quoting in Cisco Spaces device counts, Meraki VPN peer status, and Catalyst client-experience aggregations so Dashboard Studio and Searchbase searches resolve their nested fields instead of returning empty metrics.
-- Corrected first-time topology saves so a workspace without an existing map stanza uses the create endpoint directly instead of producing an expected 404 before retrying.
-- Hardened topology editing against stale-tab overwrites and damaged shared configuration, blocked editing until the canonical map has loaded, preserved intentionally empty maps, and added confirmations for draft discard and factory reset.
-- Added 31 validated searches to Splunkbase packages: Zeek SSH authentication pressure, wired NAC vendor-MAC review, eight SD-WAN security analyses, firewall NAT activity, Meraki blocked destinations, and 19 Cyber Vision asset, event, and syslog views.
-- Kept searches without populated validation results or with unresolved macro, data-model, lookup, REST, token, or MLTK dependencies in developer packages until their source contracts can be verified.
-
-### Packaging and release safety
-
-- Recorded published build 2095 as the durable release-history floor so future packages allocate build 2096 or later even when earlier archives are absent from `dist/`.
-
-### Upgrade notes
-
-- After upgrading, run **Asset Inventory - Build Lookup** once or wait for its next scheduled execution to replace any previously truncated lookup.
-- No data migration or Splunk restart is required.
-
-::: release Release Notes | September 2026 - Version 1.0.51
-### Release overview
-
-Version 1.0.51 fixes shared Searchbase additions in Insights Workspaces.
-
-### Workspace behavior
-
-- Fixed **Add for everyone** so shared Searchbase additions remain in the workspace after a page reload and are available to every viewer.
-- Retained validation and de-duplication for both persisted CSV values and in-memory search-reference arrays.
-
-### Upgrade notes
-
-- No data migration or Splunk restart is required.
-- Shared searches added with an earlier affected version must be added again after upgrading because the empty saved references cannot be reconstructed.
-
-::: release Release Notes | September 2026 - Version 1.0.50
-### Release overview
-
-Version 1.0.50 simplifies topology link telemetry configuration, strengthens topology-save reliability, and adds reusable property-operations searches.
-
-### Workspace and dashboard behavior
-
-- Replaced the simultaneous Searchbase and ThousandEyes A2A link controls with one explicit **Telemetry source** choice.
-- Kept the telemetry-source options visibly circular and consistently sized at every editor width.
-- Show only the active setup path: select a reusable Searchbase search, or select an observed ThousandEyes A2A test directly and optionally narrow it by source and target agent.
-- Prioritize the A2A inventory immediately after the signal rail so the direct test list is ready without waiting for every dashboard section to load.
-- Removed internal A2A confidence percentages from author-facing choices and clarified the inventory and selection guidance.
-- Fixed false stale-edit conflicts when saving topology Searchbase bindings and retained the saved selection after reopening or reloading a workspace.
-
-### Property operations and inventory
-
-- Added reusable AKIPS searches for device availability, inventory location, interface saturation, and interface-error hotspots.
-- Added Catalyst Center property views for active issues and client experience, including health, RSSI, onboarding time, and poor-client counts.
-- Added Cisco IQ lifecycle-risk views and enriched the unified device inventory with AKIPS location, lifecycle findings, and explainable critical or non-critical classification.
-- Kept the searches customer-neutral: no customer index, property, or workspace name is hard-coded, and missing locations remain visible as **Unmapped**.
-
-### Packaging and release safety
-
-- Preserved the verified build-2089 release floor in tracked release history so removing local package artifacts cannot cause a later Splunkbase build number to decrease.
-
-### Accessibility
-
-- Grouped the telemetry choice as a labeled radio control and connected the ThousandEyes selectors to concise instructions.
-:::
-
-::: release Release Notes | September 2026 - Version 1.0.49
-### Release overview
-
-Version 1.0.49 expands secure-networking coverage, repairs workspace and setup reliability, improves accessibility and theme consistency, and strengthens the Splunkbase release path.
-
-### Highlights
-
-- **Secure Data Center Operations:** added a focused dashboard for ACI fabric health, critical faults, capacity, interface anomalies, policy enforcement, Secure Firewall IPS, Isovalent runtime security, and change intelligence.
-- Added **About this metric** and **Investigate drivers** actions to every Secure Data Center Operations story card.
-- Standardized the secure-networking Dashboard Studio experience around compact story cards, shared searches, on-demand investigations, and adaptive time ranges.
-- Dashboard Manager now makes Edit visible immediately after same-tab edit-route changes. Searchbase pickers start with compact rows and let users reveal full metadata on demand.
-- Added and refined built-in Insights Workspaces for secure networking, zero trust, network resilience, security operations, executive briefing, and the Agentic Security Operations Center.
-- Fixed custom workspace creation and duplication, including shared layouts, section choices, and Signal Rail membership.
-- Added readable light and dark appearance across workspace editors, map controls, drawers, fields, notifications, and Setup.
-- Kept the installed app version and build visible in the workspace header and moved required Leaflet and basemap attribution into **Map credits**.
-
-### Setup and data readiness
-
-- Changed CIM discovery to one bounded search per data model, with two searches in flight, visible progress, cancellation, and preservation of completed results.
-- Added an explicit **Skip CIM tuning** path when no CIM model is selected.
-- Added Cisco Security and Cisco Intersight data-model discovery and readiness coverage while retaining raw searches where vendor model fields cannot preserve the required meaning.
-- Applied CIM-first search selection where compatible and retained Cisco app or add-on models for vendor-specific fields.
-- Updated operational timecharts to follow the selected range automatically while preserving fixed spans for forecasts, cadence analysis, and interval-dependent calculations.
-- Added self-contained native statistical baselines for IOS-XR CPU and interface-error anomaly searches.
-
-### Workspace and dashboard behavior
-
-- Added shared workspace management through the `ssne_manage_insights_workspaces` capability for `admin`, `sc_admin`, and deliberately delegated custom roles.
-- Kept built-in `user` and `power` roles read-only for shared workspace, topology, and background configuration while preserving personal preferences.
-- Added **Add for me** and **Add for everyone** tile visibility choices.
-- Add search now opens and resets with only this app selected. Entire catalogue remains available for searches from other installed apps.
-- Added configurable Signal Rails, search concurrency, map placement, map height, tile density, typography, section focus, and shared publishing.
-- Agentic SOC section headers no longer expose actions that targeted the development-only Searchbase Canvas. Splunkbase packages omit its customer-inaccessible resources, while explicit developer builds retain the internal surface.
-- Open in Search accepts only dashboard-defined safe filter values.
-- Custom Insights workspaces can now be created through the bounded persistence endpoint, and template choices retain circular radio controls.
-- Topology Searchbase bindings now save without false stale-edit conflicts and remain selected after reopening or reloading a workspace.
-- Insights workspace editors, drawers, map controls, Signal Rail controls, topology actions, and Setup retain readable Splunk UI colors in both appearances.
-
-### Accessibility, security, and delivery
-
-- Topology palette items and key manager/KPI dialogs now support complete keyboard operation. Workspace layers also restore focus when they close.
-- Improved non-color selection cues, focus indicators, control labels, and responsive light and dark contrast.
-- Removed public geocoding of customer site text; site placement uses an offline city list or explicit coordinates.
-- Shared workspace and bounded Dashboard Builder background management support narrow capability delegation.
-- **Dependency security:** patched published npm advisories by upgrading DOMPurify, fast-uri, source-map-js, postcss-selector-parser, and brace-expansion; removing sprintf-js from ESLint's dependency tree; and retaining the MapLibre GL JS XSS remediation, while ensuring Splunk visualizations continue to compile. A maintained local security patch mitigates the build-time braces stack-exhaustion advisory by rejecting brace/parenthesis nesting and AST traversal beyond 100 levels. Installation automatically applies the patch and fails if it cannot be applied; Dependabot may still flag the upstream version until a patched release is published.
-- `build.sh --install` and `--deploy` use the SplunkBase profile by default. Use `--developer` only when internal development resources are required; the explicit `--fast` workflow remains developer-only.
-- SplunkBase build, install, deploy, and remote-install workflows share one clean-source packaging path and apply the exact release-eligible archive.
-- A successful SplunkBase install creates one upload-ready archive; the target's installed build does not affect package allocation.
-- For a release, change and commit only the repository-root VERSION file. Source app.conf and app.manifest retain placeholders, and generated packages allocate the next build automatically.
-- Added profile-manifest enforcement so Splunkbase packages omit internal-only files that the release does not use.
-- Moved the complete guide and release history into this Markdown source and restored accessible release disclosures, Expand all and Collapse all controls, navigation, search, and complete PDF export.
-
-### Upgrade notes
-
-1. Preserve customer-managed `local` configuration through the upgrade process.
-2. Open Setup and review supporting packages, routing macros, optional CIM allow lists, and acceleration readiness.
-3. Test representative dashboards and shared workspaces with the roles that use them.
-4. Confirm the installed version and build in the app header before reporting a problem.
-:::
-
-::: release Release Notes | August 2026 - Version 1.0.46
-### Published package record
-
-- Introduced the Agentic Security Operations Center workspace and accelerated network-data-model searches for its conference catalogue.
-- Added the narrow `ssne_manage_insights_workspaces` capability for shared workspace and topology management.
-- Strengthened package provenance, shared image boundaries, Dashboard Manager editing, and workspace accessibility.
-
-The public package listing is the authoritative record of the exact archive published for this version.
-:::
-
-::: release Initial beta release | Version 1.0.45
-This is the first beta release of Splunk App for Secure Networking. It provides Cisco-focused dashboards, configurable workspaces, and investigation tools in Splunk Enterprise.
-
-### Highlights
-
-- Organizes secure networking content around Zero Trust Access, Secure Infrastructure, Scalable Network Segmentation, Hybrid Mesh Firewalling, and Agentic Ops.
-- Includes 16 Cisco-themed Dashboard Studio views for executive insights, network and security operations, infrastructure health, workplace intelligence, and investigations.
-- Provides configurable Insights Workspaces with KPI tiles, layouts, signal rails, connectivity maps, themes, and audience-specific views.
-- Includes Dashboard Manager tools for creating, editing, cloning, exporting, and presenting dashboards.
-- Adds interactive topology tools, drilldowns, Open in Search actions, and a searchable catalogue of shared searches.
-
-### Setup and data readiness
-
-- Guides users through supporting-app validation, Cisco source-type discovery, index-macro configuration, and data-model acceleration checks.
-- Supports macro configuration for Cisco networking, security, observability, infrastructure, and workplace integrations.
-- Includes an in-app User Guide for setup, dependencies, performance readiness, and troubleshooting.
-
-### Beta considerations
-
-- This release is available only to approved beta participants.
-- The app visualizes data already indexed in Splunk Enterprise; it does not collect Cisco data.
-- Dashboard results depend on the integrations, source types, fields, data models, index mappings, permissions, and time ranges available in each environment.
-- Features, content, and compatibility can change before general availability.
-:::
-
-::: release Initial Alpha release | Version 1.0.44
-This is an Alpha release of Splunk App for Secure Networking. It provides Cisco-focused executive, network operations, security operations, infrastructure, and building-intelligence experiences within Splunk.
-
-### Highlights
-
-- Introduces Secure Networking experiences organized around Zero Trust Access, Secure Infrastructure, Scalable Network Segmentation, Hybrid Mesh Firewalling, and Agentic Ops.
-- Includes 16 Cisco-themed Dashboard Studio views containing executive KPIs, operational trends, security findings, topology context, and investigation workflows.
-- Provides executive briefing, IT health, security, Asset Inventory, NetOps Readiness, Cisco Spaces, workplace, and building-intelligence views.
-- Adds configurable Insights Workspaces with selectable KPI tiles, layouts, signal rails, site-connectivity maps, presentation themes, and audience-specific views.
-- Includes Dashboard Manager tools for viewing, editing, cloning, exporting, and presenting supported dashboards.
-- Provides interactive customer-site topology and network-diagram tools.
-- Adds drilldowns and **Open in Search** actions for investigating dashboard results directly in Splunk Search.
-- Includes a searchable catalogue of shared search definitions for dashboard, workspace, and investigation workflows.
-
-### Data configuration and readiness
-
-- Adds guided setup for validating supporting apps, discovering Cisco source types, and configuring index macros.
-- Provides Macro Index Tuning for mapping dashboard searches to indexes used by the local Splunk environment.
-- Supports separate discovery and configuration of Splunk Common Information Model index macros.
-- Reports required and recommended data-model acceleration readiness, with links to the applicable Splunk management pages.
-- Supports companion macro configuration for Cisco Enterprise Networking, Cisco Security Cloud, Cisco ThousandEyes, Cisco Meraki, Cisco Intersight, and Cisco Spaces integrations.
-- Includes an in-app User Guide covering setup, data dependencies, macro tuning, workspaces, site connectivity, performance readiness, and troubleshooting.
-
-### Security and operational content
-
-- Includes authentication, policy-enforcement, user-activity, remote-access VPN, segmentation, infrastructure-health, firewall, and threat-detection dashboards.
-- Provides Palo Alto policy-outcome and Cisco ISE Security Group Tag correlation content where the required data is available.
-- Includes Cisco SD-WAN controller threat hunts for suspicious access, software downgrade, certificate failures, path traversal, privilege escalation, persistence, and multi-stage activity.
-- Provides Cisco Catalyst Center, Secure Firewall, ISE, Meraki, ThousandEyes, Spaces, Duo, Cyber Vision, UCS, Intersight, SD-WAN, data-center networking, Secure Access, and XDR content where supported telemetry is present.
-
-### Alpha release considerations
-
-- This release is available only to approved Alpha participants.
-- Splunk App for Secure Networking visualizes data already ingested into Splunk; it does not collect Cisco data directly.
-- Dashboard availability and results depend on supporting apps, source types, fields, data models, index mappings, permissions, and time ranges.
-- Not every supporting integration is required for every dashboard.
-- Some features require accelerated data models or optional supporting apps.
-- Alpha functionality, content, and compatibility may change before a generally available release.
-:::
-
-::: release Initial Alpha release | Version 1.0.35
-This is the first Alpha release of Splunk App for Secure Networking. It provides Cisco-focused executive, network operations, security operations, infrastructure, and building-intelligence experiences within Splunk.
-
-### Highlights
-
-- Introduces Secure Networking experiences organized around Zero Trust Access, Secure Infrastructure, Scalable Network Segmentation, Hybrid Mesh Firewalling, and Agentic Ops.
-- Includes 16 Cisco-themed Dashboard Studio views containing executive KPIs, operational trends, security findings, topology context, and investigation workflows.
-- Provides executive briefing, IT health, security, Asset Inventory, NetOps Readiness, Cisco Spaces, workplace, and building-intelligence views.
-- Adds configurable Insights Workspaces with selectable KPI tiles, layouts, signal rails, site-connectivity maps, presentation themes, and audience-specific views.
-- Includes Dashboard Manager tools for viewing, editing, cloning, exporting, and presenting supported dashboards.
-- Provides interactive customer-site topology and network-diagram tools.
-- Adds drilldowns and **Open in Search** actions for investigating dashboard results directly in Splunk Search.
-- Includes a searchable catalogue of shared search definitions for dashboard, workspace, and investigation workflows.
-
-### Data configuration and readiness
-
-- Adds guided setup for validating supporting apps, discovering Cisco source types, and configuring index macros.
-- Provides Macro Index Tuning for mapping dashboard searches to indexes used by the local Splunk environment.
-- Supports separate discovery and configuration of Splunk Common Information Model index macros.
-- Reports required and recommended data-model acceleration readiness, with links to applicable Splunk management pages.
-- Supports companion macro configuration for Cisco Enterprise Networking, Cisco Security Cloud, Cisco ThousandEyes, Cisco Meraki, Cisco Intersight, and Cisco Spaces integrations.
-- Includes an in-app User Guide covering setup, data dependencies, macro tuning, workspaces, site connectivity, performance readiness, and troubleshooting.
-
-### Security and operational content
-
-- Includes authentication, policy-enforcement, user-activity, remote-access VPN, segmentation, infrastructure-health, firewall, and threat-detection dashboards.
-- Provides Palo Alto policy-outcome and Cisco ISE Security Group Tag correlation content where the required data is available.
-- Includes Cisco SD-WAN controller threat hunts for suspicious access, software downgrade, certificate failures, path traversal, privilege escalation, persistence, and multi-stage activity.
-- Provides Cisco Catalyst Center, Secure Firewall, ISE, Meraki, ThousandEyes, Spaces, Duo, Cyber Vision, UCS, Intersight, SD-WAN, data-center networking, Secure Access, and XDR content where supported telemetry is present.
-
-### Alpha release considerations
-
-- This release is available only to approved Alpha participants.
-- Splunk App for Secure Networking visualizes data already ingested into Splunk; it does not collect Cisco data directly.
-- Dashboard availability and results depend on supporting apps, source types, fields, data models, index mappings, permissions, and time ranges.
-- Not every supporting integration is required for every dashboard.
-- Some features require accelerated data models or optional supporting apps.
-- Alpha functionality, content, and compatibility may change before a generally available release.
-:::

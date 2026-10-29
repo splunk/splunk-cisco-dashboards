@@ -165,12 +165,12 @@ assert.match(
 );
 assert.match(
   editor,
-  /VIEWPORT_FIT_DASHBOARD_IDS = DASHBOARD_MANAGER_FRAMEWORK_VIEW_NAMES/,
-  "Every included Dashboard Manager view must use the approved viewport fit",
+  /VIEWPORT_FIT_DASHBOARD_IDS = new Set\([\s\S]*?DASHBOARD_MANAGER_FRAMEWORK_VIEW_NAMES[\s\S]*?!WIDTH_FIT_DASHBOARD_IDS.has\(viewName\)/,
+  "Included metric dashboards must use viewport fit while readable tables use width fit",
 );
 assert.match(
   editor,
-  /WIDTH_FIT_DASHBOARD_IDS = MANAGER_ROUTED_STUDIO_VIEW_NAMES/,
+  /WIDTH_FIT_DASHBOARD_IDS = new Set\(\[[\s\S]*?MANAGER_ROUTED_STUDIO_VIEW_NAMES/,
   "Native Studio views routed through Dashboard Manager must use width fitting",
 );
 assert.match(
@@ -457,7 +457,7 @@ assert.match(
   "Help copy must use an explicit semantic foreground token",
 );
 
-assert.equal(frameworkViews.length, 18, "The rollout must cover 18 included dashboards");
+assert.equal(frameworkViews.length, 19, "The library must cover 19 included dashboards");
 assert.match(
   timeRangeUtils,
   /DEFAULT_SPAN = 'auto'/,
@@ -999,7 +999,7 @@ const assertHiddenYAxis = (viewName, trendId, options) => {
 };
 
 assert.deepEqual(
-  [...Object.keys(dashboardCardContracts), "sn_data_center_operations"].sort(),
+  [...Object.keys(dashboardCardContracts), "sn_data_center_operations", "sn_network_service_investigations"].sort(),
   frameworkViews,
   "The semantic card contracts must cover every managed dashboard",
 );
@@ -1017,7 +1017,7 @@ const rolloutTypeCounts = {
 // The Secure Data Center dashboard retains its purpose-built 15-KPI layout;
 // secureDataCenterDashboard.test.cjs owns that distinct semantic contract.
 const sixCardFrameworkViews = frameworkViews.filter(
-  (viewName) => viewName !== "sn_data_center_operations",
+  (viewName) => !["sn_data_center_operations", "sn_network_service_investigations"].includes(viewName),
 );
 sixCardFrameworkViews.forEach((viewName) => {
   const definition = readDefinition(viewName);
@@ -1034,9 +1034,9 @@ sixCardFrameworkViews.forEach((viewName) => {
     viewName + " must have 52 layout items",
   );
   assert.equal(
-    Object.keys(definition.visualizations).length,
+    overview.structure.filter(({ item }) => definition.visualizations[item]).length,
     51,
-    viewName + " must have 51 visualizations",
+    viewName + " must retain 51 overview visualizations",
   );
   assert.equal(
     primaryDataSources.length,
@@ -1369,5 +1369,5 @@ assert.match(
 );
 
 console.log(
-  "Dashboard Studio route, Manager scope, help, and 18-dashboard rollout checks passed.",
+  "Dashboard Studio route, Manager scope, help, and 19-dashboard library checks passed.",
 );

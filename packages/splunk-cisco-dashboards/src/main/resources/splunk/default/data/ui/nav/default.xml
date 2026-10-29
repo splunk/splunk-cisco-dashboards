@@ -27,6 +27,7 @@
         <a href="dashboard_manager#/sn_secure_infrastructure_status">Secure Infrastructure Status</a>
         <a href="dashboard_manager#/sn_data_center_operations">Secure Data Center Operations</a>
         <a href="dashboard_manager#/sn_hmf_sdwan_network_health">SD-WAN and Network Health Monitoring</a>
+        <a href="dashboard_manager#/sn_network_service_investigations">Network Service Investigations</a>
     </collection>
 
     <collection label="Scalable Network Segmentation" icon="GlobeDivision">

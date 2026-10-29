@@ -220,7 +220,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Authentication%20Failure%20Rate&target=Secure%20Networking%20-%20ZTA%20ISE%20Auth%20Failure%20Rate%20by%20Network%20Device"
+                        "url": "/drilldown?origin=Authentication%20Failure%20Rate&target=Secure%20Networking%20-%20ZTA%20ISE%20Auth%20Failure%20Rate%20by%20Network%20Device,mv_authentication_application_outcomes,mv_authentication_method_visibility,mv_aruba_authentication_failures"
                     }
                 }
             ],
@@ -936,7 +936,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Duo%20Policy%20Outcomes&target=Secure%20Networking%20-%20ZTA%20Duo%20Authentication%20Outcomes%20by%20Application,Secure%20Networking%20-%20ZTA%20Duo%20Admin%20Activity%20by%20Outcome"
+                        "url": "/drilldown?origin=Duo%20Policy%20Outcomes&target=Secure%20Networking%20-%20ZTA%20Duo%20Authentication%20Outcomes%20by%20Application,Secure%20Networking%20-%20ZTA%20Duo%20Admin%20Activity%20by%20Outcome,identity_duo_denials_before_success,identity_duo_push_denial_bursts,mv_authentication_source_changes"
                     }
                 }
             ],

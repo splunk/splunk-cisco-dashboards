@@ -196,7 +196,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Site%20Health&target=Monitoring%20-%20SD-WAN%20-%20Site%20Health%20Table,Monitoring%20-%20SD-WAN%20-%20Site%20Health%20Map"
+                        "url": "/drilldown?origin=Site%20Health&target=Monitoring%20-%20SD-WAN%20-%20Site%20Health%20Table,Monitoring%20-%20SD-WAN%20-%20Site%20Health%20Map,network_catalyst_issues_after_device_audit,mv_aruba_client_snr"
                     }
                 }
             ],
@@ -701,7 +701,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Application%20Health&target=Secure%20Networking%20-%20SD-WAN%20Site%20View"
+                        "url": "/drilldown?origin=Application%20Health&target=Secure%20Networking%20-%20SD-WAN%20Site%20View,mv_fortinet_sdwan_probe_quality,mv_f5_pool_member_health_messages,mv_f5_tls_handshake_failures"
                     }
                 }
             ],
@@ -878,7 +878,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Path%20Loss&target=Secure%20Networking%20-%20ThousandEyes%20Latency%20by%20Agent%20Location,Secure%20Networking%20-%20SD-WAN%20Tunnel%20Health%20Status%20Log"
+                        "url": "/drilldown?origin=Path%20Loss&target=Secure%20Networking%20-%20ThousandEyes%20Latency%20by%20Agent%20Location,Secure%20Networking%20-%20SD-WAN%20Tunnel%20Health%20Status%20Log,network_ios_link_events_after_config,mv_interface_error_counter_rates,mv_arista_interface_error_rates,mv_arista_interface_discard_rates,mv_arista_interface_transfer_rates,mv_arista_latest_interface_state,mv_arista_lanz_queue_observations"
                     }
                 }
             ],
@@ -1053,7 +1053,7 @@
                 {
                     "type": "drilldown.customUrl",
                     "options": {
-                        "url": "/drilldown?origin=Routing%20Stability&target=Secure%20Networking%20-%20ThousandEyes%20BGP%20Path%20Change%20Detail"
+                        "url": "/drilldown?origin=Routing%20Stability&target=Secure%20Networking%20-%20ThousandEyes%20BGP%20Path%20Change%20Detail,network_ios_routing_events_after_config,mv_junos_bgp_state_messages,mv_junos_commit_audit,mv_arista_bgp_adjacency_messages,mv_fortinet_configuration_audit,mv_change_failure_records"
                     }
                 }
             ],

@@ -56,12 +56,18 @@ export const useKeyboardShortcuts = (
             const isPageBackground =
                 (e.target === document.body || e.target === document.documentElement) &&
                 (document.activeElement === document.body || document.activeElement === document.documentElement);
+            // Classic Splunk dashboards focus their enclosing panel when a
+            // non-focusable workspace surface is clicked. Accept that panel's
+            // background, but not sibling controls or embedded editor hosts.
+            const owningPanel = scopeRef?.current?.closest('.dashboard-panel');
+            const isPanelBackground = Boolean(owningPanel &&
+                e.target === owningPanel && document.activeElement === owningPanel);
             if (
                 e.defaultPrevented || e.isComposing || e.repeat ||
                 e.metaKey || e.ctrlKey || e.altKey ||
                 path.some(isEditable) || isEditable(e.target) ||
                 (scopeRef && (!scopeRef.current ||
-                    (!path.includes(scopeRef.current) && !isPageBackground)))
+                    (!path.includes(scopeRef.current) && !isPageBackground && !isPanelBackground)))
             ) {
                 resetGoMode();
                 return;
