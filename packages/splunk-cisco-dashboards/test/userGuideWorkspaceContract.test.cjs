@@ -121,7 +121,7 @@ test("release anchors remain unique and escape metadata without counting code ex
   assert.equal((html.match(/<details class="scd-guide-release-panel"/g) || []).length, 2);
   assert.match(html, /id="release-1-2-3"/);
   assert.match(html, /id="release-1-2-3-2"/);
-  assert.doesNotMatch(html, /<script>|<Title>|id="release-9-9-9"/);
+  assert.doesNotMatch(html, /<script>|<title>|id="release-9-9-9"/i);
   assert.match(page, /id === "whats-new" \? "release-notes" : id/);
   assert.match(page, /hashchange[\s\S]*?followFragment/);
   assert.match(page, /revealGuideTarget\(match\)/);
