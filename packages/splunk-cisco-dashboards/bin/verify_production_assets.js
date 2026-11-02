@@ -20,6 +20,7 @@ const APACHE_LICENSE_SHA256 =
 
 const ENTRY_NAMES = [
     'executive_insights',
+    'workspace_insights',
     'health_monitoring',
     'topology_canvas_v1',
     'network_diagram',

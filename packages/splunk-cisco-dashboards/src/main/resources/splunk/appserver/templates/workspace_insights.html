@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html class="no-js" lang="${i18n.current_lang()[0]|h}">
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="x-ua-compatible" content="ie=edge" />
+        <title>SSNE | Insights Workspace</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <script>
+            // This app owns startup: the React entry installs its compatibility
+            // bridge before asking Splunk's Layout API to load navigation/C3.
+            window.scdExecutiveInsightsNativeShell = true;
+            (function loadWorkspaceStylesheet() {
+                const localeMatch = window.location.pathname.match(
+                    /^\/([a-z]{2}-[A-Z]{2})(?:\/|$)/,
+                );
+                const localePrefix = localeMatch ? '/' + localeMatch[1] : '';
+                const appStaticBase =
+                    localePrefix + '/static/app/splunk-cisco-dashboards/';
+                const stylesheet = document.createElement('link');
+                stylesheet.rel = 'stylesheet';
+                stylesheet.href = appStaticBase + 'application.css?v=' + Date.now();
+                document.head.appendChild(stylesheet);
+                window.scdExecutiveInsightsAssetBase = appStaticBase;
+            })();
+        </script>
+    </head>
+    <body>
+        <script src="${make_url('/config?autoload=1')}" crossorigin="use-credentials"></script>
+        <script src="${make_url('/static/js/i18n.js')}"></script>
+        <script src="${make_url('/i18ncatalog?autoload=1')}"></script>
+        <script>
+            __splunkd_partials__ = ${json_decode(splunkd)};
+        </script>
+        <script>
+            function loadWorkspaceBootstrap() {
+                const bootstrap = document.createElement('script');
+                bootstrap.src =
+                    window.scdExecutiveInsightsAssetBase +
+                    'executive_insights_bootstrap.js?v=' +
+                    Date.now();
+                document.body.appendChild(bootstrap);
+            }
+
+            const setupGate = document.createElement('script');
+            setupGate.src =
+                window.scdExecutiveInsightsAssetBase +
+                'application.js?v=' +
+                Date.now();
+            // The shared bootstrap waits for the setup promise, including its
+            // existing fail-open behavior if configuration cannot be read.
+            setupGate.onload = loadWorkspaceBootstrap;
+            setupGate.onerror = loadWorkspaceBootstrap;
+            document.body.appendChild(setupGate);
+        </script>
+    </body>
+</html>
