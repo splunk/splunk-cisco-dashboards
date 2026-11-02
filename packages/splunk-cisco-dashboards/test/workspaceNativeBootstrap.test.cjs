@@ -44,7 +44,7 @@ function runBootstrap(state) { vm.runInContext(bootstrapSource, state.context, {
 function bundleScripts(state) { return state.bodyNodes.filter(node => node.attributes?.['data-scd-executive-insights-bundle']); }
 
 function runTemplate(state) {
-    for (const match of templateSource.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)) {
+    for (const match of templateSource.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script(?:\s[^>]*)?>/gi)) {
         const code = match[1].replace('${json_decode(splunkd)}', JSON.stringify({ preserved: 'server partials' }));
         if (code.trim()) vm.runInContext(code, state.context, { timeout: 2000 });
     }
