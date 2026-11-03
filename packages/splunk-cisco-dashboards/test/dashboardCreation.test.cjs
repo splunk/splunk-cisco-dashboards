@@ -156,7 +156,7 @@ test("the create dialog blocks repeat submissions while saving and opens the edi
   assert.equal(calls, 1);
   resolve({ status: 201 });
   await first;
-  assert.deepEqual(state.routes, ["/scd_Creation_test/edit"]);
+  assert.deepEqual(state.routes, ["/creation_test/edit"]);
   assert.deepEqual(state.pending, [true, false]);
 });
 
@@ -171,7 +171,7 @@ test("the create dialog retains a visible actionable collision message", async (
 test("the create dialog offers access to a saved dashboard after sharing failure", async () => {
   const { handler, state } = createHandler(async () => ({ status: 403, dashboardSaved: true }));
   await handler();
-  assert.deepEqual(state.savedIds, ["scd_Creation_test"]);
+  assert.deepEqual(state.savedIds, ["creation_test"]);
   assert.match(state.errors.at(-1), /was saved.*sharing/);
   assert.equal(state.refreshes, 1);
   assert.match(home, /label="Open saved dashboard"/);
@@ -298,17 +298,20 @@ test('permission requests encode the dashboard namespace without falling back to
   assert.equal(api.calls[0].url.pathname, '/en-US/splunkd/__raw/servicesNS/owner%40example.com/another%20app/data/ui/views/view%2Fone');
 });
 
-test('automatic IDs retain the existing case, spaces and hash behavior and track title changes', () => {
-  assert.equal(getNewDashboardId(' FDEM #Security Metrics '), 'scd_FDEM_Security_Metrics');
-  assert.equal(getNewDashboardId('New title'), 'scd_New_title');
+test('automatic IDs match native Splunk title guessing without a prefix', () => {
+  assert.equal(getNewDashboardId('Dashboard ABC'), 'dashboard_abc');
+  assert.equal(getNewDashboardId(' Dashboard\tABC! '), 'dashboard_abc');
+  assert.equal(getNewDashboardId('Dashboard - ABC.#'), 'dashboard__abc');
+  assert.equal(getNewDashboardId(' FDEM #Security Metrics '), 'fdem_security_metrics');
+  assert.equal(getNewDashboardId('New title'), 'new_title');
 });
 
 test('manual IDs survive title changes, including an explicit empty override', () => {
   for (const title of ['Original title', 'Revised title', '']) {
-    assert.equal(getNewDashboardId(title, 'fdem_stable-ID_2'), 'fdem_stable-ID_2');
+    assert.equal(getNewDashboardId(title, 'fdem_stable-ID_2'), 'fdem_stable-id_2');
     assert.equal(getNewDashboardId(title, ''), '');
   }
-  assert.equal(getNewDashboardId('Revised title', null), 'scd_Revised_title');
+  assert.equal(getNewDashboardId('Revised title', null), 'revised_title');
 });
 
 test('view ID validation accepts native characters and rejects unsafe names without normalizing them', () => {
@@ -320,21 +323,21 @@ test('view ID validation accepts native characters and rejects unsafe names with
   }
 });
 
-test('custom IDs reach persistence and editor navigation unchanged with independent title metadata', async () => {
+test('custom IDs are lowercased before persistence and navigation with independent title metadata', async () => {
   let args;
   const { handler, state } = createHandler(async (...values) => { args = values; return { status: 201 }; }, {
     title: ' Friendly title ', description: 'Details', override: 'portable_FDEM-2',
   });
   await handler();
-  assert.equal(args[0], 'portable_FDEM-2');
+  assert.equal(args[0], 'portable_fdem-2');
   assert.equal(JSON.parse(args[1]).title, 'Friendly title');
   assert.equal(JSON.parse(args[1]).description, 'Details');
   assert.equal(args[2], 'Friendly title');
-  assert.deepEqual(state.routes, ['/portable_FDEM-2/edit']);
+  assert.deepEqual(state.routes, ['/portable_fdem-2/edit']);
 });
 
 test('invalid generated or manual IDs fail before persistence and release no pending requests', async () => {
-  for (const fields of [{ override: '' }, { override: '../view' }, { title: 'Bad/title' }]) {
+  for (const fields of [{ override: '' }, { override: '../view' }, { title: '#!' }]) {
     const { handler, state } = createHandler(() => assert.fail('Invalid IDs must not be submitted'), fields);
     await handler();
     assert.match(state.errors.at(-1), /Dashboard ID/);
@@ -427,15 +430,15 @@ function creationDialog(responses) {
 test('the dialog preview follows titles until Edit ID, and restores generation explicitly', async () => {
   const dialog = creationDialog([]);
   dialog.change('Dashboard title', 'First #Title');
-  assert.equal(dialog.find('aria-label', 'Dashboard ID').value, 'scd_First_Title');
+  assert.equal(dialog.find('aria-label', 'Dashboard ID').value, 'first_title');
   assert.equal(dialog.find('aria-label', 'Dashboard ID').disabled, 'dimmed');
   await dialog.click('Edit ID');
   assert.equal(dialog.find('aria-label', 'Dashboard ID').disabled, false);
-  dialog.change('Dashboard ID', 'portable_dashboard');
+  dialog.change('Dashboard ID', 'Portable_Dashboard');
   dialog.change('Dashboard title', 'Changed title');
   assert.equal(dialog.find('aria-label', 'Dashboard ID').value, 'portable_dashboard');
   await dialog.click('Use generated ID');
-  assert.equal(dialog.find('aria-label', 'Dashboard ID').value, 'scd_Changed_title');
+  assert.equal(dialog.find('aria-label', 'Dashboard ID').value, 'changed_title');
   assert.equal(dialog.find('aria-label', 'Dashboard ID').disabled, 'dimmed');
 });
 
@@ -473,5 +476,17 @@ test('cancel resets the custom ID for the next creation session', async () => {
   await dialog.click('Cancel');
   dialog.change('Dashboard title', 'Next title');
   assert.equal(dialog.find('aria-label', 'Dashboard ID').disabled, 'dimmed');
-  assert.equal(dialog.find('aria-label', 'Dashboard ID').value, 'scd_Next_title');
+  assert.equal(dialog.find('aria-label', 'Dashboard ID').value, 'next_title');
+});
+
+
+test('lowercase identity is used for collision checks before any create request', async () => {
+  const api = persistence([{ entry: [{ name: 'portable_fdem-2' }] }]);
+  const { handler, state } = createHandler(api.addDash, { override: 'Portable_FDEM-2' });
+  await handler();
+  assert.equal(api.calls.length, 1);
+  assert.equal(api.calls[0].method, 'GET');
+  assert.equal(api.calls[0].url.searchParams.get('search'), 'name="portable_fdem-2"');
+  assert.match(state.errors.at(-1), /portable_fdem-2.*already exists/);
+  assert.deepEqual(state.routes, []);
 });

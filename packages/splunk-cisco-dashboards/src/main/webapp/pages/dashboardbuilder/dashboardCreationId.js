@@ -1,7 +1,9 @@
-// Keep the existing automatic naming convention, including its case and prefix.
+// Match Splunk's native nameFromString guesser for the trimmed dashboard title.
 // null means automatic; even an empty string is an explicit manual override.
 export const getNewDashboardId = (title, override = null) =>
-  override ?? `scd_${title.trim().replaceAll(" ", "_").replaceAll("#", "")}`;
+  override !== null
+    ? override.toLowerCase()
+    : title.trim().toLowerCase().replace(/\s/g, "_").replace(/\W/g, "");
 
 // Matches the view-name rules exposed by Splunk's native dashboard dialog.
 export const getDashboardIdError = (id) => {

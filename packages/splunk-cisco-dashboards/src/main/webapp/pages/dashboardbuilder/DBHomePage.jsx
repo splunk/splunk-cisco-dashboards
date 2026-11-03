@@ -370,7 +370,8 @@ export default function DBHomePage() {
     if (createInFlight.current || createdDashboardId || !dashboardTitle.trim()) {
       return;
     }
-    const idError = getDashboardIdError(dashboardId);
+    const dashid = dashboardId.toLowerCase();
+    const idError = getDashboardIdError(dashid);
     if (idError) {
       setDashboardCreateError(idError);
       return;
@@ -379,7 +380,6 @@ export default function DBHomePage() {
     setIsCreatingDashboard(true);
     setDashboardCreateError("");
     const title = dashboardTitle.trim();
-    const dashid = dashboardId;
     const jsonDefinition = cloneDeep(initialDefinition);
     jsonDefinition.title = title;
     jsonDefinition.description = dashboardDescription;
@@ -855,8 +855,9 @@ export default function DBHomePage() {
                 />
                 <p>
                   Used in the dashboard URL. Choose a stable ID when moving
-                  dashboards between stacks. Use letters, numbers, hyphens, and
-                  underscores. The ID cannot be changed after creation.
+                  dashboards between stacks. IDs are saved in lowercase. Use
+                  letters, numbers, hyphens, and underscores. The ID cannot be
+                  changed after creation.
                 </p>
               </SplunkControlGroup>
             </div>
