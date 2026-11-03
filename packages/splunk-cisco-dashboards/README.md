@@ -10,6 +10,12 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Dashboard Manager now previews the dashboard ID during creation and offers
+  **Edit ID** for choosing a stable ID across stacks. Automatic IDs keep the
+  existing naming format; custom IDs survive title changes. Invalid IDs and
+  collisions show actionable errors without clearing the form. Existing
+  dashboards are not renamed, and source JSON remains independent of the ID.
+
 - Added a Searchbase quota-impact assessment grouped by Splunk Cloud label, user, search type, and reported limit, with MB normalization and explicit missing-measurement reporting.
 
 - Added an explicit **Refresh status** action and last-checked time to Setup's data-model acceleration panel. Clarified that enabled acceleration can still be building summaries in the background.

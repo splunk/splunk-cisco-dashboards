@@ -88,3 +88,10 @@ test("the library exposes Shared as the third keyboard-accessible tab", () => {
     assert.equal(focused.at(-1), `dashboard-manager-scope-${expected}`);
   }
 });
+
+
+test("tagged dashboards with custom IDs remain visible in Yours and Shared", () => {
+  const custom = managed({ title: "portable-dashboard" });
+  assert.equal(getDashboardManagerScope(custom, "alice"), "yours");
+  assert.equal(getDashboardManagerScope(custom, "bob"), "shared");
+});

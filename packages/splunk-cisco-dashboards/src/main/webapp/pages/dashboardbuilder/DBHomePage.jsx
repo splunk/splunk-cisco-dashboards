@@ -29,6 +29,7 @@ import { useNavigate } from "react-router-dom";
 import DashboardStudioEditor from "./DashboardStudioEditor";
 import { GridSVG, AbsolutSVG } from "./DashboardStudioEditor";
 import { addDash } from "../../common/lib/splunk";
+import { getNewDashboardId, getDashboardIdError } from "./dashboardCreationId";
 
 import { cloneDeep } from "lodash-es";
 import Trash from "@splunk/react-icons/enterprise/Trash";
@@ -232,6 +233,8 @@ export default function DBHomePage() {
   const [searchText, setSearchText] = useState("");
   const [openCreateDashboard, setOpenCreateDashboard] = useState(false);
   const [dashboardTitle, setDashboardTitle] = useState("");
+  const [dashboardIdOverride, setDashboardIdOverride] = useState(null);
+  const dashboardId = getNewDashboardId(dashboardTitle, dashboardIdOverride);
   const [dashboardDescription, setDashboardDescription] = useState("");
   const [dashboardSharing, setDashboardSharing] = useState("user");
   const [isCreatingDashboard, setIsCreatingDashboard] = useState(false);
@@ -367,11 +370,16 @@ export default function DBHomePage() {
     if (createInFlight.current || createdDashboardId || !dashboardTitle.trim()) {
       return;
     }
+    const idError = getDashboardIdError(dashboardId);
+    if (idError) {
+      setDashboardCreateError(idError);
+      return;
+    }
     createInFlight.current = true;
     setIsCreatingDashboard(true);
     setDashboardCreateError("");
     const title = dashboardTitle.trim();
-    const dashid = `scd_${title.replaceAll(" ", "_").replaceAll("#", "")}`;
+    const dashid = dashboardId;
     const jsonDefinition = cloneDeep(initialDefinition);
     jsonDefinition.title = title;
     jsonDefinition.description = dashboardDescription;
@@ -422,7 +430,7 @@ export default function DBHomePage() {
         } else {
           setDashboardCreateError(
             response.status === 409
-              ? "A dashboard with this ID already exists. Choose a different title, or cancel and open the existing dashboard to edit it."
+              ? `A dashboard with ID "${dashid}" already exists. Edit the ID, use a different generated ID, or cancel and open the existing dashboard.`
               : `Unable to create the dashboard. ${detail}`,
           );
         }
@@ -539,6 +547,7 @@ export default function DBHomePage() {
     // kh 2026-05-10: Reset builder metadata and mode-specific state so the next modal session starts from a clean default configuration.
     setOpenCreateDashboard(false);
     setDashboardTitle("");
+    setDashboardIdOverride(null);
     setDashboardDescription("");
     setDashboardSharing("user");
     setDashboardCreateError("");
@@ -809,6 +818,7 @@ export default function DBHomePage() {
                   labelPosition="top"
                 >
                   <Text
+                    aria-label="Dashboard title"
                     value={dashboardTitle}
                     disabled={isCreatingDashboard || Boolean(createdDashboardId)}
                     onChange={(e, { value }) => {
@@ -818,6 +828,37 @@ export default function DBHomePage() {
                   />
                 </SplunkControlGroup>
               </div>
+            </div>
+            <div className="dashboard-builder-description-group">
+              <SplunkControlGroup label="Dashboard ID" labelPosition="top">
+                <Text
+                  aria-label="Dashboard ID"
+                  value={dashboardId}
+                  disabled={
+                    isCreatingDashboard || Boolean(createdDashboardId)
+                      ? true
+                      : dashboardIdOverride === null ? "dimmed" : false
+                  }
+                  onChange={(e, { value }) => {
+                    setDashboardIdOverride(value);
+                    setDashboardCreateError("");
+                  }}
+                />
+                <Button
+                  appearance="link"
+                  label={dashboardIdOverride === null ? "Edit ID" : "Use generated ID"}
+                  disabled={isCreatingDashboard || Boolean(createdDashboardId)}
+                  onClick={() => {
+                    setDashboardIdOverride(dashboardIdOverride === null ? dashboardId : null);
+                    setDashboardCreateError("");
+                  }}
+                />
+                <p>
+                  Used in the dashboard URL. Choose a stable ID when moving
+                  dashboards between stacks. Use letters, numbers, hyphens, and
+                  underscores. The ID cannot be changed after creation.
+                </p>
+              </SplunkControlGroup>
             </div>
             <div className="dashboard-builder-description-group">
               <SplunkControlGroup
@@ -834,6 +875,7 @@ export default function DBHomePage() {
                 labelPosition="top"
               >
                 <TextArea
+                  aria-label="Dashboard description"
                   value={dashboardDescription}
                   disabled={isCreatingDashboard || Boolean(createdDashboardId)}
                   onChange={(e, { value }) => {
@@ -848,6 +890,7 @@ export default function DBHomePage() {
               help="Share in the app when your dashboard is ready so colleagues can benefit. You can also start privately and use Permissions in Dashboard Manager later, if your role allows app sharing."
             >
               <RadioList
+                aria-label="Dashboard sharing"
                 value={dashboardSharing}
                 disabled={isCreatingDashboard || Boolean(createdDashboardId)}
                 onChange={(event, { value }) => setDashboardSharing(value)}
