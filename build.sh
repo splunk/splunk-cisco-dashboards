@@ -1082,6 +1082,11 @@ if [[ "$no_build" -eq 0 ]]; then
     fi
 fi
 
+# Capture the exact package from this invocation in an isolated result directory.
+package_result_dir="$(mktemp -d)"
+trap 'rm -rf "$package_result_dir"' EXIT
+export SCD_PACKAGE_RESULT_FILE="${package_result_dir}/archive-path"
+
 if [[ "$no_build" -eq 1 ]]; then
     hdr "Reusing existing tarball (--no-build)..."
 elif [[ "$from_stage" -eq 1 ]]; then
@@ -1134,9 +1139,20 @@ elif [[ "$preview_profile" -eq 1 ]]; then
 else
     package_profile="splunkbase"
 fi
-if ! package_path="$(find_release_archive "$source_package_id" "$build_version" "$package_profile")"; then
-    exit 1
+if [[ "$no_build" -eq 1 ]]; then
+    if ! package_path="$(find_release_archive "$source_package_id" "$build_version" "$package_profile")"; then
+        exit 1
+    fi
+else
+    if [[ ! -s "$SCD_PACKAGE_RESULT_FILE" ]]; then
+        err "ERROR: Packaging did not return an exact archive path."
+        exit 1
+    fi
+    package_path="$(cat "$SCD_PACKAGE_RESULT_FILE")"
 fi
+
+rm -rf "$package_result_dir"
+trap - EXIT
 
 if [[ -z "$package_path" ]]; then
     if [[ "$no_build" -eq 1 ]]; then

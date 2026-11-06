@@ -1,0 +1,26 @@
+name: Reserve Dashboards build number
+run-name: Reserve Dashboards build v1 ${{ inputs.request_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      request_id:
+        description: Unique request identifier supplied by build.sh
+        required: true
+        type: string
+
+# The workflow's run_number is assigned by GitHub before a runner starts.
+# Keep this filename and the permanent offset 2113 in reserve_package_build.py.
+# No checkout, shared mutable counter, concurrency lock, or secret is needed.
+# Reruns keep the same reservation; each NEW dispatch spends a new number.
+permissions: {}
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Record reservation
+        env:
+          SEQUENCE: ${{ github.run_number }}
+        run: echo "Reserved Dashboards build $((2113 + SEQUENCE))" >> "$GITHUB_STEP_SUMMARY"

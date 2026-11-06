@@ -593,6 +593,21 @@ function makePackageFixture() {
   fs.mkdirSync(path.dirname(packageScript), { recursive: true });
   fs.copyFileSync(PACKAGE_SCRIPT_SOURCE, packageScript);
   fs.chmodSync(packageScript, 0o755);
+  writeFile(path.join(root, "scripts", "ensure_build_dependencies.py"), "# Fixture compiler requires no external dependencies.\n");
+  writeFile(path.join(root, "scripts", "reserve_package_build.py"), [
+    "import argparse, pathlib",
+    "p=argparse.ArgumentParser(); p.add_argument('--receipts', type=pathlib.Path); p.add_argument('--floor', type=int); p.add_argument('--claim', type=int); a=p.parse_args()",
+    "a.receipts.mkdir(parents=True, exist_ok=True)",
+    "if a.claim is not None:",
+    "    (a.receipts / (str(a.claim)+'.claimed')).open('x').close()",
+    "else:",
+    "    counter=a.receipts/'fixture-sequence'",
+    "    n=int(counter.read_text())+1 if counter.exists() else 8",
+    "    counter.write_text(str(n))",
+    "    assert n > a.floor, 'simulated reservation below archive floor'",
+    "    print(n)", ""
+  ].join("\n"));
+
   fs.copyFileSync(
     RELEASE_IDENTITY_VALIDATOR_SOURCE,
     path.join(packageRoot, "bin", "validate_release_identity.js"),
@@ -986,7 +1001,7 @@ function exercisePackagingProfiles() {
 
     const reservedIdentity = path.join(
       distDir,
-      `.${APP_NAME}-build8.lock`,
+      `.packaging.lock`,
     );
     fs.mkdirSync(reservedIdentity);
     const reservationFailure = runExpectFailure(
@@ -996,7 +1011,7 @@ function exercisePackagingProfiles() {
     );
     assert.match(
       reservationFailure,
-      /build 8 is currently being packaged/,
+      /Another package build owns/,
       "An active build reservation must prevent a concurrent duplicate package",
     );
     fs.rmdirSync(reservedIdentity);
@@ -1481,6 +1496,7 @@ function makeRootBuildFixture() {
       '(cd "${WORK_DIR}" && tar czf "${ARCHIVE_TMP}" "${APP_NAME}")',
       'ARCHIVE="${ROOT_DIR}/dist/${APP_NAME}-${VERSION}-${BUILD}${SUFFIX}.tar.gz"',
       'mv "${ARCHIVE_TMP}" "${ARCHIVE}"',
+      "printf '%s\\n' \"${ARCHIVE}\" > \"${SCD_PACKAGE_RESULT_FILE}\"",
       "",
     ].join("\n"),
     0o755,
@@ -1508,6 +1524,10 @@ function exerciseRootBuildArchiveResolution() {
     fs.mkdirSync(path.dirname(retainedArchive), { recursive: true });
     fs.renameSync(path.join(fixture.root, "dist", standardArchive), retainedArchive);
     fs.appendFileSync(retainedArchive, "tampered");
+    // A reuse operation must never invoke packaging/reservation.
+    const packageCommand = path.join(fixture.root, "packages", APP_NAME, "bin", "package_app.sh");
+    const savedPackageCommand = fs.readFileSync(packageCommand);
+    fs.writeFileSync(packageCommand, "#!/usr/bin/env bash\necho 'UNEXPECTED RESERVATION' >&2\nexit 99\n");
     const tamperFailure = runExpectFailure(
       "bash",
       [fixture.buildPath, "--no-build", "--install", "--auth", "fixture:password"],
@@ -1519,6 +1539,7 @@ function exerciseRootBuildArchiveResolution() {
       "The root wrapper must find a nested archived package and reject corruption before any install action",
     );
 
+    fs.writeFileSync(packageCommand, savedPackageCommand);
     const developerOutput = run("bash", [fixture.buildPath, "--developer"], {
       cwd: fixture.root,
     });
@@ -1551,6 +1572,28 @@ function exerciseRootBuildArchiveResolution() {
     );
   } finally {
     removeTempRoot(emptyFixture.root);
+  }
+}
+
+function exerciseExactGeneratedArchive() {
+  const fixture = makeRootBuildFixture();
+  try {
+    const script = path.join(fixture.root, "packages", APP_NAME, "bin", "package_app.sh");
+    // Simulate another client's valid, higher build appearing after this build.
+    fs.appendFileSync(script, [
+      'sed \'s/build = 1/build = 999/\' "${WORK_DIR}/${APP_NAME}/default/app.conf" > "${WORK_DIR}/conf"',
+      'mv "${WORK_DIR}/conf" "${WORK_DIR}/${APP_NAME}/default/app.conf"',
+      'sed \'s/"build":1,/"build":999,/\' "${WORK_DIR}/${APP_NAME}/release-provenance.json" > "${WORK_DIR}/provenance"',
+      'mv "${WORK_DIR}/provenance" "${WORK_DIR}/${APP_NAME}/release-provenance.json"',
+      '(cd "${WORK_DIR}" && tar czf "${ROOT_DIR}/dist/${APP_NAME}-${VERSION}-999.tar.gz" "${APP_NAME}")',
+      ""
+    ].join("\n"));
+    const output = run("bash", [fixture.buildPath], { cwd: fixture.root });
+    assert.match(output, /Tarball: .*splunk-cisco-dashboards-1\.2\.3-1\.tar\.gz/,
+      "The wrapper must pass this invocation's exact archive, even when a newer package appears");
+    assert.ok(fs.existsSync(path.join(fixture.root, "dist", `${APP_NAME}-1.2.3-999.tar.gz`)));
+  } finally {
+    removeTempRoot(fixture.root);
   }
 }
 
@@ -2116,8 +2159,8 @@ assert.doesNotMatch(
 );
 assert.match(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
-  /history_build="\$\(resolve_release_history_build_floor\)"[\s\S]*?dist_build=0[\s\S]*?new_build=\$\(\(build_floor \+ 1\)\)/,
-  "Packaging must allocate the next build from release history and dist artifacts",
+  /history_build="\$\(resolve_release_history_build_floor\)"[\s\S]*?dist_build=0[\s\S]*?new_build="\$\(python3[^\n]+reserve_package_build\.py[^\n]+--floor "\$build_floor"\)"/,
+  "Packaging must reserve a shared build with history and archives as safety floors",
 );
 assert.doesNotMatch(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
@@ -2126,8 +2169,8 @@ assert.doesNotMatch(
 );
 assert.match(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
-  /IDENTITY_LOCK="\$\{DIST_DIR\}\/\.\$\{APP_NAME\}-build\$\{new_build\}\.lock"[\s\S]*?mkdir "\$IDENTITY_LOCK"/,
-  "Packaging must reserve the globally allocated build atomically during creation",
+  /reserve_package_build\.py[^\n]+--claim "\$new_build"/,
+  "Packaging must consume the reservation once before compilation",
 );
 assert.match(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
@@ -2222,7 +2265,7 @@ assert.match(
 assert.match(
   buildScript,
   /package_path="\$\(find_release_archive "\$source_package_id" "\$build_version" "\$package_profile"\)"/,
-  "A fresh root build must select the highest archive produced for VERSION and profile",
+  "Existing-package reuse may select the highest matching archive",
 );
 assert.doesNotMatch(
   buildScript,
@@ -2250,6 +2293,7 @@ exercisePreviewArchivesCannotBecomeReleases();
 exercisePostBuildSourceVerification();
 exerciseProductionVerifierCacheRejection();
 exerciseRootBuildArchiveResolution();
+exerciseExactGeneratedArchive();
 exerciseArchivedBuildAllocation();
 exerciseReadOnlyReleasePreflight();
 exerciseLocalInstallProfileDefaults();

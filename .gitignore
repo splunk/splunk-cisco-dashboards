@@ -18,7 +18,10 @@
 # Local workspace and repository-only reference material.
 /.claude/
 /.cursor/
-/.github/
+/.github/*
+!/.github/workflows/
+/.github/workflows/*
+!/.github/workflows/reserve-build-number.yml
 /.vscode/
 /artifacts/
 /docs/

@@ -195,8 +195,8 @@ networking pillars and workplace scenarios.
 - Simplified release preparation to one operator-maintained value: change the
   repository-root `VERSION` file while source `app.conf` and `app.manifest`
   retain placeholders. Generated packages stamp the release metadata and
-  automatically allocate the next build above release history, readable local
-  artifacts, and the installed target when available.
+  reserve a shared GitHub Actions build number before compilation.
+  Historical records and local archives are safety floors only.
 - Made Dashboard Manager easier to resume: library cards and preview dialogs
   now expose direct edit actions, and Searchbase picker rows start compact with
   a toggle for full search metadata. New dashboards default to Private,
@@ -513,8 +513,10 @@ production-React bundles.
 
 For a release, edit only the repository-root `VERSION` file. Source `app.conf`
 and `app.manifest` keep `0.0.0`/`0` placeholders and are never bumped by the
-operator. Packaging stamps generated output and automatically chooses the next
-build above the historical ledger and readable `dist/` artifacts. The
+operator. Packaging reserves a shared GitHub Actions build before compilation
+and stamps it into generated output. History and archives are safety floors.
+The canonical workflow requires activation on GitHub’s default branch; see the
+[root build-number documentation](../../README.md#installation). The
 installation target does not influence package allocation. The committed ledger at
 [`../../releases/splunkbase-9257.json`](../../releases/splunkbase-9257.json) is
 publication history and a build floor, not a manual `current` allocation.

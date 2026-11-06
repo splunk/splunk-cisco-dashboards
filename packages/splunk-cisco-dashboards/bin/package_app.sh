@@ -3,6 +3,7 @@
 # Ensures stage exists (runs clean:build if not), then creates a tar.gz with the
 # correct top-level directory name for Splunk installation.
 set -euo pipefail
+export NODE_OPTIONS=--max-old-space-size=4096
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PKG_ROOT="${SCRIPT_DIR}/.."
 STAGE_DIR="${PKG_ROOT}/stage"
@@ -164,6 +165,8 @@ if [[ ! "$VERSION" =~ ^[A-Za-z0-9][A-Za-z0-9._+-]*$ ]]; then
   echo "ERROR: VERSION contains unsupported artifact-name characters: ${VERSION}" >&2
   exit 1
 fi
+command -v python3 >/dev/null || { echo "ERROR: Dependency failure: Python 3 is required." >&2; exit 1; }
+command -v node >/dev/null || { echo "ERROR: Dependency failure: Node.js >=20 is required." >&2; exit 1; }
 node "${PKG_ROOT}/bin/validate_release_identity.js"
 
 DIST_DIR="${PKG_ROOT}/../../dist"
@@ -292,6 +295,44 @@ elif [[ "$APP_PROFILE" == "splunkbase" ]]; then
   MINIFY=1
 fi
 
+# stage/ and dependency installation are shared within a checkout. Independent
+# checkouts can build concurrently; fail closed for overlapping local builds.
+LOCAL_BUILD_LOCK="${DIST_DIR}/.packaging.lock"
+if ! mkdir "$LOCAL_BUILD_LOCK"; then
+  echo "ERROR: Another package build owns ${LOCAL_BUILD_LOCK}; inspect a stale lock before removing it." >&2
+  exit 1
+fi
+trap 'rmdir "$LOCAL_BUILD_LOCK" 2>/dev/null || true' EXIT
+
+# Reserve and consume exactly once before dependency installation or compilation.
+# Existing archives and history are safety floors, never local allocators.
+source_build="$(read_app_conf_build "$APP_CONF")"
+if [[ ! "$source_build" =~ ^[0-9]+$ ]]; then
+  echo "ERROR: source app.conf must contain a non-negative numeric [install] build template." >&2
+  exit 1
+fi
+history_build="$(resolve_release_history_build_floor)"
+if [[ ! "$history_build" =~ ^[0-9]+$ ]]; then
+  echo "ERROR: could not resolve a numeric build floor from the release ledger." >&2
+  exit 1
+fi
+dist_build=0
+while IFS= read -r -d '' prev_tar; do
+  previous_identity="$(archive_identity "$prev_tar" || true)"
+  [[ -n "$previous_identity" ]] || continue
+  IFS=$'\t' read -r previous_version previous_build <<< "$previous_identity"
+  if [[ "$previous_build" =~ ^[0-9]+$ ]] && (( previous_build > dist_build )); then
+    dist_build="$previous_build"
+  fi
+done < <(find "$DIST_DIR" -type f -name "${APP_NAME}-*.tar.gz" -print0)
+build_floor="$source_build"
+(( history_build > build_floor )) && build_floor="$history_build"
+(( dist_build > build_floor )) && build_floor="$dist_build"
+RECEIPT_DIR="${DIST_DIR}/build-reservations"
+new_build="$(python3 "${ROOT_DIR}/scripts/reserve_package_build.py" --receipts "$RECEIPT_DIR" --floor "$build_floor")"
+python3 "${ROOT_DIR}/scripts/reserve_package_build.py" --receipts "$RECEIPT_DIR" --claim "$new_build"
+python3 "${ROOT_DIR}/scripts/ensure_build_dependencies.py"
+
 if [[ "$FROM_STAGE" -eq 1 ]]; then
   if [[ ! -d "$STAGE_DIR" ]]; then
     echo "ERROR: --from-stage requested but stage/ does not exist." >&2
@@ -356,11 +397,10 @@ fi
 # Stage into a temp directory with the correct app directory name
 TMP_DIR="$(mktemp -d)"
 ARCHIVE_TMP=""
-IDENTITY_LOCK=""
 cleanup_package_temp() {
   rm -rf "$TMP_DIR"
   [[ -z "$ARCHIVE_TMP" ]] || rm -f "$ARCHIVE_TMP"
-  [[ -z "$IDENTITY_LOCK" ]] || rmdir "$IDENTITY_LOCK" 2>/dev/null || true
+  rmdir "$LOCAL_BUILD_LOCK" 2>/dev/null || true
 }
 trap cleanup_package_temp EXIT
 cp -R "$STAGE_DIR" "${TMP_DIR}/${APP_NAME}"
@@ -430,47 +470,8 @@ if [[ -f "$META_FILE" ]]; then
   echo "[package] default.meta: ensured app-wide export is 'none'"
 fi
 
-# Allocate the next build into the package output only. VERSION is the sole
-# operator-maintained release value; source app.conf deliberately stays at the
-# build-zero template used by the sibling TA. Historical release records keep a
-# clean checkout above recorded builds. Scan all of dist/, including archived
-# packages and profile directories, to preserve local progress after files move.
-# The installation target never influences package construction.
+# Stamp only the reserved identity into the temporary package copy.
 PKG_APP_CONF="${TMP_DIR}/${APP_NAME}/default/app.conf"
-source_build="$(read_app_conf_build "$APP_CONF")"
-if [[ ! "$source_build" =~ ^[0-9]+$ ]]; then
-  echo "ERROR: source app.conf must contain a non-negative numeric [install] build template." >&2
-  exit 1
-fi
-history_build="$(resolve_release_history_build_floor)"
-if [[ ! "$history_build" =~ ^[0-9]+$ ]]; then
-  echo "ERROR: could not resolve a numeric build floor from the release ledger." >&2
-  exit 1
-fi
-dist_build=0
-while IFS= read -r -d '' prev_tar; do
-  previous_identity="$(archive_identity "$prev_tar" || true)"
-  [[ -n "$previous_identity" ]] || continue
-  IFS=$'\t' read -r previous_version previous_build <<< "$previous_identity"
-  if [[ "$previous_build" =~ ^[0-9]+$ ]] && (( previous_build > dist_build )); then
-    dist_build="$previous_build"
-  fi
-done < <(find "$DIST_DIR" -type f -name "${APP_NAME}-*.tar.gz" -print0)
-build_floor="$source_build"
-(( history_build > build_floor )) && build_floor="$history_build"
-(( dist_build > build_floor )) && build_floor="$dist_build"
-new_build=$((build_floor + 1))
-
-# Reserve the version/build identity atomically until this command exits. A
-# stale reservation is intentionally fail-closed and must be inspected
-# explicitly.
-IDENTITY_LOCK="${DIST_DIR}/.${APP_NAME}-build${new_build}.lock"
-if ! mkdir "$IDENTITY_LOCK"; then
-  echo "ERROR: build ${new_build} is currently being packaged." >&2
-  echo "       Inspect ${IDENTITY_LOCK}; remove it only after confirming no package command is active." >&2
-  IDENTITY_LOCK=""
-  exit 1
-fi
 # sed -i has different syntax on macOS (BSD) vs Linux (GNU). Detect once
 # so this script keeps working in CI containers as well as on developer macs.
 if sed --version >/dev/null 2>&1; then
@@ -632,4 +633,9 @@ SIZE=$(du -h "$PKG_PATH" | cut -f1 | xargs)
 echo "Created ${PKG_PATH} (${SIZE})"
 if [[ "$APP_PROFILE" == "preview" ]]; then
   echo "[package] Splunkbase content preview only; do not upload this file to Splunkbase."
+fi
+
+# The wrapper reads this invocation-specific result, never the newest dist file.
+if [[ -n "${SCD_PACKAGE_RESULT_FILE:-}" ]]; then
+  printf '%s\n' "$PKG_PATH" > "$SCD_PACKAGE_RESULT_FILE"
 fi

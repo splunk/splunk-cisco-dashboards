@@ -31,7 +31,9 @@ The tracked production-hardening backlog is documented in
 
 ## Installation
 
-Install workspace dependencies from the repository root:
+For single-command packaging, run `./build.sh`; missing build dependencies are
+installed automatically. For optional manual development setup, install from
+the repository root:
 
 ```bash
 yarn install
@@ -74,16 +76,49 @@ workflow.
 For a release, edit only the root [`VERSION`](VERSION) file and run the build.
 Source `app.conf` and `app.manifest` intentionally retain `0.0.0`/`0`
 placeholders. Packaging stamps VERSION and the release date into generated
-output, then automatically allocates the next build above release history and
-readable artifacts anywhere under `dist/`, including `dist/archive/` and the
-profile directories. The installation target never influences package
-construction.
-The [`releases/splunkbase-9257.json`](releases/splunkbase-9257.json) ledger is
-historical publication evidence and a safe build floor; it is not a manual
-pre-build allocation step. Every package allocates above the ledger's greatest
-recorded build even when `dist/` is empty. Keep verified release history in
-this ledger before discarding artifacts; allocation cannot recover unrecorded
-builds once their archives are deleted.
+output. Each package reserves a repository-wide number using GitHub Actions
+before installing missing dependencies or compiling. Numbers continue across
+VERSION changes. Existing archives and release history are safety floors;
+they never allocate a number locally. The installation target has no influence.
+
+**Activation required:** `.github/workflows/reserve-build-number.yml` must reach
+GitHub's default branch (`main`) and Actions must permit it to run. A push to a
+development branch alone does not activate dispatch. Developers can subsequently
+build from development branches. No live reservations were performed during
+implementation. Until activation, packaging deliberately fails before compilation.
+
+The canonical repository is `splunk/splunk-cisco-dashboards`. Keep the workflow
+filename, run-name prefix and permanent offset **2113** unchanged. GitHub assigns
+`run_number`; package build = 2113 + run_number, starting at 2114 above all known
+retained archives. Never recreate/reset the workflow or use a fork's counter.
+Before activation, reconcile any builds produced by other machines above 2113.
+The [`release ledger`](releases/splunkbase-9257.json) remains historical evidence.
+
+Install Node.js >=20, Python 3, Yarn Classic 1.22.22 (or Corepack), and GitHub CLI;
+sign in with `gh auth login --hostname github.com` using repository/Actions write
+access. `./build.sh` installs missing compilation dependencies, including dev
+packages, with `yarn install --frozen-lockfile --production=false --non-interactive`.
+It never updates the lockfile or package-manager configuration. Installed build
+dependencies are reused. Postinstall security patches remain enabled.
+
+Each request has a UUID and matches its own workflow run, even with concurrent
+clients. Intent and reservation receipts are retained under
+`dist/build-reservations/`; a reservation is atomically claimed once before a
+package attempt. Failed/cancelled builds spend numbers. A lost dispatch response
+is uncertain: inspect its request receipt and GitHub run; never resubmit the same
+identity. Start a new build with a new identity instead. Do not delete claim files
+or copy receipts to reuse a number. No local fallback or manual override exists.
+Concurrent builds in one checkout fail at `.packaging.lock` to protect stage/;
+independent checkouts reserve concurrently. Inspect stale locks before removal.
+
+`--no-build` reuses a verified existing package without contacting the allocator.
+A newly built archive's exact path is returned directly to installation/deployment,
+so another client's newer archive cannot replace the selected output.
+
+Build date stamps affect generated release metadata only. Package build numbers,
+application VERSION and independently published catalog revisions remain separate;
+catalog publication formats and older sync-command compatibility are unchanged.
+
 Artifacts use the operator-readable name
 `splunk-cisco-dashboards-<version>-<build>.tar.gz` (plus `-developer` for an
 explicitly selected developer profile, or `-preview` for a Splunkbase preview).

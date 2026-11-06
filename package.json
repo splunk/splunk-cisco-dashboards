@@ -3,6 +3,7 @@
     "version": "1.0.0",
     "license": "Apache-2.0",
     "private": true,
+    "packageManager": "yarn@1.22.22",
     "workspaces": [
         "packages/*"
     ],
@@ -15,7 +16,7 @@
         "clean:build": "NODE_OPTIONS=--max-old-space-size=4096 yarn workspaces run clean:build",
         "package:app": "cd packages/splunk-cisco-dashboards && yarn package:app",
         "postinstall": "patch-package --error-on-fail",
-        "test": "node --test packages/splunk-cisco-dashboards/test/*.test.cjs && node scripts/test_build_deploy_contract.cjs"
+        "test": "node --test packages/splunk-cisco-dashboards/test/*.test.cjs && node scripts/test_build_deploy_contract.cjs && python3 -m unittest discover -s scripts -p 'test_*build*.py'"
     },
     "resolutions": {
         "qs": "^6.16.0",
