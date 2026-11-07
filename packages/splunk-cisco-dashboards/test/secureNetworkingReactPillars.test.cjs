@@ -871,7 +871,7 @@ for (const fileName of studioViewFiles) {
 }
 assert.equal(
   studioViewFiles.length,
-  28,
+  29,
   "the color audit must cover every shipped Studio dashboard",
 );
 assert.equal(

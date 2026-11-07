@@ -50,6 +50,8 @@ Browse the current release and recorded historical versions below. The newest re
 
 ### Insights Workspaces
 
+- Added the **DC Networking** workspace and **DC Networking Operations** Dashboard Manager companion, backed by eighteen visible library searches. Review five-product lab coverage, exact inventory matches, reported connections, product details and measurement gaps with shared time and scope filters.
+
 - Fixed the **Advanced time range** button being clipped and covered by the Dashboard Manager toolbar on Network Service Investigations. Custom ranges and span selection remain accessible beside the quick time shortcuts.
 - Added **Network Service Investigations** under Secure Infrastructure with six vendor-neutral evidence tables and related vendor, IPv6 and interface investigations. Added catalogue drilldowns to existing Zero Trust, firewall and WAN dashboards plus on-demand SAN/fabric, certificate and telemetry tabs. Preserved existing overview searches and index routing, retained time context, and documented source requirements and missing-data limits.
 - Made **Match workspace** the factory default for map height. Saved personal height preferences remain unchanged, and factory reset restores the new default.
@@ -642,11 +644,22 @@ Insights Workspaces are reusable, audience-specific views of Searchbase-backed K
 | Workspace | Initial focus |
 | --- | --- |
 | Secure Networking | All five secure-networking pillars |
+| DC Networking | Attention, data coverage, relationships, and five data-center products |
 | Zero Trust Access | Identity, infrastructure, and agentic operations |
 | Network Resilience | Infrastructure, segmentation, firewalling, and agentic operations |
 | Agentic Security Operations Center | DNS, firewall, network detection, and unified investigation |
 | Security Operations | Security, IT health, and custom executive content |
 | Executive Briefing | IT health, security, and building intelligence |
+
+### DC Networking {#workspaces-dc-networking}
+
+Open **DC Networking** from the workspace switcher. Start with **What needs my attention?**, confirm five-product coverage and observation age, then follow **Investigate related evidence** into product details and related observations. The packaged sections cover Nexus Dashboard, ACI, Nexus 9000, MDS / SAN Analytics through NDFC, and Nexus Hyperfabric. This demo labels its existing observations as lab data.
+
+Use exact account/controller, fabric/site or device/address filters; leave blank for all. The same filters apply to tiles, details and Open in Search. **Open DC Networking dashboard** carries that context into the saved **DC Networking Operations** companion in Dashboard Manager. The `dc_workspace_indexes` macro delegates to the existing `index_dc` mapping unless locally overridden to verified lab indexes; this changes search scope only.
+
+Missing data remains unknown. Hyperfabric administrative enablement does not establish availability, and a counter record without measured rates does not establish throughput. SAN Analytics capability inventory does not establish flow performance. Exact serial matches identify shared inventory; reported endpoint/port records identify connections. Neither establishes a traffic path or proves the cause of an incident.
+
+To demonstrate quick dashboard creation, select **Dashboard Manager > Create New**, then **Add Searchbase**. Search **DC Networking Workspace**, select the questions you need, and choose **Add selected**. The searches bring their SPL, descriptions and visualization defaults. Save the new dashboard with a separate name to preserve the companion. Scoped DC dashboards stay in Dashboard Manager so native conversion cannot drop their filters.
 
 ### Create a workspace {#workspaces-create-a-workspace}
 

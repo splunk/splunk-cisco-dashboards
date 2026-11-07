@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActionButton } from '@splunk/dashboard-action-buttons';
 import { getSearches } from '../../common/lib/searchbase';
+import { applyDcNetworkingScope } from '../../common/lib/dcNetworkingScope';
 import {
     resolveOpenSearchQuery,
     resolveOpenSearchToken,
@@ -116,7 +117,13 @@ const CustomOpenSearch = ({ itemId, dashboardApi, itemDefinition, dataSources })
                             (s) => s.name === primaryDataSource.options.ref,
                         );
                         if (search) {
-                            spl = search.content.search;
+                            const resolvedOptions = dataSourceRegistry.getDataSourceController(primaryDataSourceId)?.def?.options || primaryDataSource.options;
+                            try {
+                                spl = applyDcNetworkingScope(search.content.search, resolvedOptions.dcScope);
+                            } catch {
+                                setDisabled(true);
+                                return;
+                            }
                             setSearchApp(resolveSearchApp(search.content.dispatch_context));
                             setResolvedTimeRange(
                                 dataSourceRegistry.getDataSourceController(primaryDataSourceId)?.def

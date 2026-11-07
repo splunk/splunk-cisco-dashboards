@@ -12,6 +12,7 @@ import { pick, get } from 'lodash';
 import { Observable } from 'rxjs';
 import moment from '@splunk/moment';
 import { app } from '@splunk/splunk-utils/config';
+import { applyDcNetworkingScope } from '../../common/lib/dcNetworkingScope';
 import { getSearchBaseConfStanza } from '../../common/lib/searchbase';
 
 const deprecatedSearchMetas = ['resultCount', 'isDone', 'dispatchState'];
@@ -269,6 +270,7 @@ class SearchBaseSearch extends DataSource {
         const { ownerApp, ...searchbaseOptions } = options;
         const { span, ...queryParameters } = searchbaseOptions.queryParameters || {};
         this.ownerApp = ownerApp;
+        this.dcScope = options.dcScope;
         this.spanOverride = normalizeSpanOverride(span);
         this.context = getEnterpriseSearchContext(this.context);
         this.options = {
@@ -283,6 +285,12 @@ class SearchBaseSearch extends DataSource {
         }
 
         this.meta = meta;
+    }
+
+    equals(other) {
+        return super.equals(other) && ['account', 'fabric', 'device'].every(
+            (key) => this.dcScope?.[key] === other.dcScope?.[key],
+        );
     }
 
     async setup() {
@@ -306,7 +314,7 @@ class SearchBaseSearch extends DataSource {
                 this.emptyResultMessage = getEmptyResultMessage(content, this.options.ref);
                 this.options = {
                     ...this.options,
-                    search: applySpanOverride(content.search, this.spanOverride),
+                    search: applyDcNetworkingScope(applySpanOverride(content.search, this.spanOverride), this.dcScope),
                 };
 
                 const dispatchContext = normalizeDispatchContext(content);

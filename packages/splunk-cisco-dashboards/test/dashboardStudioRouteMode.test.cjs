@@ -457,7 +457,7 @@ assert.match(
   "Help copy must use an explicit semantic foreground token",
 );
 
-assert.equal(frameworkViews.length, 19, "The library must cover 19 included dashboards");
+assert.equal(frameworkViews.length, 20, "The library must cover 20 included dashboards");
 assert.match(
   timeRangeUtils,
   /DEFAULT_SPAN = 'auto'/,
@@ -999,7 +999,7 @@ const assertHiddenYAxis = (viewName, trendId, options) => {
 };
 
 assert.deepEqual(
-  [...Object.keys(dashboardCardContracts), "sn_data_center_operations", "sn_network_service_investigations"].sort(),
+  [...Object.keys(dashboardCardContracts), "sn_data_center_operations", "sn_network_service_investigations", "dc_networking_operations"].sort(),
   frameworkViews,
   "The semantic card contracts must cover every managed dashboard",
 );
@@ -1017,7 +1017,7 @@ const rolloutTypeCounts = {
 // The Secure Data Center dashboard retains its purpose-built 15-KPI layout;
 // secureDataCenterDashboard.test.cjs owns that distinct semantic contract.
 const sixCardFrameworkViews = frameworkViews.filter(
-  (viewName) => !["sn_data_center_operations", "sn_network_service_investigations"].includes(viewName),
+  (viewName) => !["sn_data_center_operations", "sn_network_service_investigations", "dc_networking_operations"].includes(viewName),
 );
 sixCardFrameworkViews.forEach((viewName) => {
   const definition = readDefinition(viewName);
@@ -1369,5 +1369,5 @@ assert.match(
 );
 
 console.log(
-  "Dashboard Studio route, Manager scope, help, and 19-dashboard library checks passed.",
+  "Dashboard Studio route, Manager scope, help, and 20-dashboard library checks passed.",
 );

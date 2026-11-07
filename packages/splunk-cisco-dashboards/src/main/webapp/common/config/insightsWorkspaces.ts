@@ -7,7 +7,10 @@ export const SECURE_NETWORKING_WORKSPACE_SOURCE_ID =
   "secure_networking" as const;
 export const AGENTIC_SOC_WORKSPACE_SOURCE_ID = "agentic_soc" as const;
 
+export const DC_NETWORKING_WORKSPACE_SOURCE_ID = "dc_networking" as const;
+
 export const WORKSPACE_SOURCE_IDS = [
+  DC_NETWORKING_WORKSPACE_SOURCE_ID,
   EXECUTIVE_WORKSPACE_SOURCE_ID,
   SECURE_NETWORKING_WORKSPACE_SOURCE_ID,
   AGENTIC_SOC_WORKSPACE_SOURCE_ID,
@@ -19,6 +22,7 @@ export type WorkspaceMapPosition = "right" | "below" | "above";
 export type WorkspaceRegionalView = "map" | "table";
 
 export const ALL_WORKSPACE_SECTION_IDS = [
+  "dc_attention", "dc_nd", "dc_aci", "dc_nexus", "dc_san", "dc_hyperfabric",
   "it_health",
   "security",
   "building",
@@ -279,7 +283,22 @@ const AGENTIC_SOC_SECTIONS: readonly WorkspaceSectionMeta[] = [
  * Networking workspace add real IT Operations or Security Operations content
  * (and vice versa) without duplicating searches or creating empty sections.
  */
+const DC_NETWORKING_SECTIONS: readonly WorkspaceSectionMeta[] = [
+  { id: "dc_attention", title: "What needs my attention?", linkText: "Open DC Networking dashboard", href: "dashboard_manager#/dc_networking_operations", icon: "activity" },
+  { id: "dc_nd", title: "Nexus Dashboard · Fabric assurance", linkText: "Open DC Networking dashboard", href: "dashboard_manager#/dc_networking_operations", icon: "network" },
+  { id: "dc_aci", title: "ACI · Health and faults", linkText: "Open DC Networking dashboard", href: "dashboard_manager#/dc_networking_operations", icon: "shield-check" },
+  { id: "dc_nexus", title: "Nexus 9000 · Resources and hardware", linkText: "Open DC Networking dashboard", href: "dashboard_manager#/dc_networking_operations", icon: "server-cog" },
+  { id: "dc_san", title: "MDS / SAN Analytics · Through NDFC", linkText: "Open DC Networking dashboard", href: "dashboard_manager#/dc_networking_operations", icon: "servers" },
+  { id: "dc_hyperfabric", title: "Nexus Hyperfabric · Inventory and measurements", linkText: "Open DC Networking dashboard", href: "dashboard_manager#/dc_networking_operations", icon: "network" },
+];
+
 export const WORKSPACE_SECTION_SOURCE: Record<SectionId, WorkspaceSourceId> = {
+  dc_attention: DC_NETWORKING_WORKSPACE_SOURCE_ID,
+  dc_nd: DC_NETWORKING_WORKSPACE_SOURCE_ID,
+  dc_aci: DC_NETWORKING_WORKSPACE_SOURCE_ID,
+  dc_nexus: DC_NETWORKING_WORKSPACE_SOURCE_ID,
+  dc_san: DC_NETWORKING_WORKSPACE_SOURCE_ID,
+  dc_hyperfabric: DC_NETWORKING_WORKSPACE_SOURCE_ID,
   it_health: EXECUTIVE_WORKSPACE_SOURCE_ID,
   security: EXECUTIVE_WORKSPACE_SOURCE_ID,
   building: EXECUTIVE_WORKSPACE_SOURCE_ID,
@@ -300,6 +319,7 @@ export const getWorkspaceSectionSource = (
 ): WorkspaceSourceId => WORKSPACE_SECTION_SOURCE[sectionId];
 
 const ALL_WORKSPACE_SECTIONS: readonly WorkspaceSectionMeta[] = [
+  ...DC_NETWORKING_SECTIONS,
   ...SECURE_NETWORKING_SECTIONS,
   ...CROSS_DOMAIN_SECTIONS,
   ...AGENTIC_SOC_SECTIONS,
@@ -316,6 +336,16 @@ const AGENTIC_SOC_DEFAULT_SECTION_IDS = AGENTIC_SOC_SECTIONS.map(
 );
 
 export const WORKSPACE_SOURCES: Record<WorkspaceSourceId, WorkspaceSource> = {
+  dc_networking: {
+    id: DC_NETWORKING_WORKSPACE_SOURCE_ID,
+    sections: DC_NETWORKING_SECTIONS,
+    defaultSectionIds: DC_NETWORKING_SECTIONS.map((section) => section.id),
+    defaultVisibleSections: DC_NETWORKING_SECTIONS.map((section) => section.id),
+    maxVisibleSections: 6,
+    minTileCount: 1,
+    maxTileCount: 3,
+    fallbackTileCount: 3,
+  },
   executive: {
     id: EXECUTIVE_WORKSPACE_SOURCE_ID,
     sections: ALL_WORKSPACE_SECTIONS,
@@ -512,6 +542,11 @@ export const toWorkspaceDefinitionInput = (
 });
 
 export const PACKAGED_WORKSPACE_FALLBACKS: readonly InsightsWorkspace[] = [
+  createInsightsWorkspace({
+    id: "dc_networking", label: "DC Networking", sourceWorkspace: "dc_networking",
+    headerTitle: "DC Networking", headerSubtitle: "What needs my attention? · Lab observations across five products",
+    hideDefaultLogo: true, isBuiltIn: true, sortOrder: 30, mapVisible: false,
+  }),
   createInsightsWorkspace({
     id: "secure_networking",
     label: "Secure Networking",

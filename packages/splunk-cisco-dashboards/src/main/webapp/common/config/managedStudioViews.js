@@ -6,6 +6,7 @@ export const DASHBOARD_MANAGER_TAG = "dashboard_manager";
 // Routing an ordinary Studio view through the Manager shell does not make it a
 // Dashboard Manager framework dashboard.
 export const DASHBOARD_MANAGER_FRAMEWORK_VIEW_NAMES = new Set([
+  "dc_networking_operations",
   "sn_agentic_ops_executive_assurance",
   "sn_agentic_ops_operational_intelligence",
   "sn_agentic_ops_secure_networking_assurance",

@@ -123,12 +123,14 @@ const copyDraft = (
 };
 
 const sourceLabel = (sourceWorkspace: WorkspaceSourceId): string => {
+    if (sourceWorkspace === 'dc_networking') return 'DC Networking';
     if (sourceWorkspace === 'secure_networking') return 'Secure Networking';
     if (sourceWorkspace === 'agentic_soc') return 'Agentic Security Operations Center';
     return 'Executive Briefing';
 };
 
 const sourceDescription = (sourceWorkspace: WorkspaceSourceId): string => {
+    if (sourceWorkspace === 'dc_networking') return 'Starts with attention, coverage, shared inventory and five data center product investigations.';
     if (sourceWorkspace === 'secure_networking') {
         return 'Starts with access, infrastructure, segmentation, firewalling, and agentic operations.';
     }
