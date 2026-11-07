@@ -55,12 +55,24 @@ def check_semantics(client):
                     apic_host='apic-a', serial='different-serial', name='leaf-a', event_time=stamp)]
     results, _ = client.search(ephemeral_fixture(SEARCHES['inventory_matches']['query'], serials))
     assert len(results) == 1 and results[0]['Serial'] == 'SERIAL-A', results
+    links = [dict(sourcetype='cisco:dc:nd:operational', account='lab', nd_host='nd',
+                  fabricName='fabric-a', dataset='topology', topology_kind='link',
+                  topology_id='a-b', source_name='leaf-a', source_id='id-a',
+                  destination_name='leaf-b', destination_id='id-b', event_time=stamp)]
+    for endpoint, expected in [('leaf-a', 1), ('leaf-b', 1), ('unrelated', 0)]:
+        scoped = SEARCHES['reported_links']['query'].replace('| eval DCWorkspaceScope=1',
+            '| eval DCWorkspaceScope=1\n| where lower(Device)="' + endpoint + '" OR lower(DevicePeer)="' + endpoint + '"')
+        results, _ = client.search(ephemeral_fixture(scoped, links))
+        assert len(results) == expected, (endpoint, results)
     return dict(status='passed', method='Ephemeral makeresults fixtures; no events indexed',
                 checks=['latest cleared state excluded', 'controller collisions remain independent',
                         'acknowledged anomalies retained', 'unknown expiry excluded',
                         'attention queue is populated from explicit active state',
                         'absent rates stay unknown', 'serial matches are case normalized',
-                        'matching device names alone do not establish inventory identity'])
+                        'matching device names alone do not establish inventory identity',
+                        'topology scope matches the local endpoint',
+                        'topology scope matches the remote endpoint',
+                        'topology scope excludes unrelated devices'])
 
 
 class LabClient:
