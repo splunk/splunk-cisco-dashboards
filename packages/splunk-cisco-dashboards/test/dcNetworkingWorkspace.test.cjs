@@ -42,12 +42,18 @@ test('DC scope is exact, bounded, injected before aggregation, and rejects SPL/m
 test('time and all scope identities survive the workspace-to-Manager handoff', () => {
     const url = new URL(scope.dcScopeDashboardUrl({ account: 'Javi_ND', fabric: 'FAB 1', device: '10.1.1.1' }, '-4h@h', 'now'), 'https://example.test/app/ssne/');
     assert.equal(url.hash, '#/dc_networking_operations');
-    const hydrated = scope.applyDcDashboardHandoff(definition, url.searchParams);
+    const scopedDefinition = { ...definition, inputs: { ...definition.inputs,
+        input_account: { options: { token: 'dc_account', defaultValue: '*' } },
+        input_fabric: { options: { token: 'dc_fabric', defaultValue: '*' } },
+        input_device: { options: { token: 'dc_device', defaultValue: '*' } },
+    } };
+    const hydrated = scope.applyDcDashboardHandoff(scopedDefinition, url.searchParams);
     assert.equal(hydrated.inputs.input_time.options.defaultValue, '-4h@h,now,auto');
     assert.equal(hydrated.inputs.input_account.options.defaultValue, 'javi_nd');
     assert.equal(hydrated.inputs.input_fabric.options.defaultValue, 'fab 1');
     assert.equal(hydrated.inputs.input_device.options.defaultValue, '10.1.1.1');
-    assert.equal(definition.inputs.input_account.options.defaultValue, '*');
+    assert.equal(scopedDefinition.inputs.input_account.options.defaultValue, '*');
+    assert.equal(scope.applyDcDashboardHandoff(definition, url.searchParams).inputs.input_time.options.defaultValue, '-4h@h,now,auto');
     const unrelated = { inputs: {}, dataSources: {} };
     assert.equal(scope.applyDcDashboardHandoff(unrelated, url.searchParams), unrelated);
 });
@@ -77,12 +83,13 @@ test('packaged workspace has all six sections and every tile/drilldown resolves'
 
 test('Manager dashboard uses visible library sources, global time/scope and dark styling', () => {
     assert.equal(Object.keys(definition.dataSources).length, 14);
+    assert.deepEqual(Object.keys(definition.inputs), ['input_time']);
     for (const source of Object.values(definition.dataSources)) {
         assert.equal(source.type, 'ds.searchbase');
         assert.ok(stanzas.has(source.options.ref));
         assert.equal(source.options.queryParameters.earliest, '$time_tok.earliest$');
         assert.equal(source.options.queryParameters.latest, '$time_tok.latest$');
-        assert.deepEqual(source.options.dcScope, { account: '$dc_account$', fabric: '$dc_fabric$', device: '$dc_device$' });
+        assert.equal(source.options.dcScope, undefined);
     }
     for (const block of definition.layout.structure) {
         assert.ok(block.position.x + block.position.w <= definition.layout.options.width);
@@ -198,4 +205,16 @@ test('non-additive bars omit the summed headline while existing count bars retai
     assert.match(measured, />90</);
     const counted = renderToStaticMarkup(React.createElement(BarBreakdownTile, props));
     assert.match(counted, /Total 150/);
+});
+
+test('all DC searches honor the existing index macro without literal index routing', () => {
+    for (const id of stanzas.keys()) {
+        assert.ok(spl(id).startsWith('`index_dc` '), id);
+        assert.doesNotMatch(spl(id), /\bindex\s*(?:=|IN\s*\()/i, id);
+        assert.ok(!spl(id).includes('dc_workspace_indexes'), id);
+    }
+    const macros = fs.readFileSync(path.join(root, 'src/main/resources/splunk/default/macros.conf'), 'utf8');
+    assert.ok(!macros.includes('[dc_workspace_indexes]'));
+    const page = fs.readFileSync(path.join(root, 'src/main/webapp/pages/executive_insights/index.tsx'), 'utf8');
+    assert.ok(!page.includes('DcNetworkingScopeBar'));
 });

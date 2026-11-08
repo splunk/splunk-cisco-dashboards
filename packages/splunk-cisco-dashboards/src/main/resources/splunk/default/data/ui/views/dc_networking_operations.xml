@@ -28,30 +28,6 @@
         ],
         "showAdvanced": true
       }
-    },
-    "input_account": {
-      "type": "input.text",
-      "title": "Account / controller",
-      "options": {
-        "token": "dc_account",
-        "defaultValue": "*"
-      }
-    },
-    "input_fabric": {
-      "type": "input.text",
-      "title": "Fabric / site",
-      "options": {
-        "token": "dc_fabric",
-        "defaultValue": "*"
-      }
-    },
-    "input_device": {
-      "type": "input.text",
-      "title": "Device / address",
-      "options": {
-        "token": "dc_device",
-        "defaultValue": "*"
-      }
     }
   },
   "dataSources": {
@@ -61,11 +37,6 @@
       "options": {
         "ref": "dc_workspace_attention_history",
         "ownerApp": "splunk-cisco-dashboards",
-        "dcScope": {
-          "account": "$dc_account$",
-          "fabric": "$dc_fabric$",
-          "device": "$dc_device$"
-        },
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
           "latest": "$time_tok.latest$"
@@ -78,11 +49,6 @@
       "options": {
         "ref": "dc_workspace_attention_products",
         "ownerApp": "splunk-cisco-dashboards",
-        "dcScope": {
-          "account": "$dc_account$",
-          "fabric": "$dc_fabric$",
-          "device": "$dc_device$"
-        },
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
           "latest": "$time_tok.latest$"
@@ -95,11 +61,6 @@
       "options": {
         "ref": "dc_workspace_coverage_age",
         "ownerApp": "splunk-cisco-dashboards",
-        "dcScope": {
-          "account": "$dc_account$",
-          "fabric": "$dc_fabric$",
-          "device": "$dc_device$"
-        },
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
           "latest": "$time_tok.latest$"
@@ -112,11 +73,6 @@
       "options": {
         "ref": "dc_workspace_inventory_products",
         "ownerApp": "splunk-cisco-dashboards",
-        "dcScope": {
-          "account": "$dc_account$",
-          "fabric": "$dc_fabric$",
-          "device": "$dc_device$"
-        },
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
           "latest": "$time_tok.latest$"
@@ -129,11 +85,6 @@
       "options": {
         "ref": "dc_workspace_nd_active_history",
         "ownerApp": "splunk-cisco-dashboards",
-        "dcScope": {
-          "account": "$dc_account$",
-          "fabric": "$dc_fabric$",
-          "device": "$dc_device$"
-        },
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
           "latest": "$time_tok.latest$"
@@ -146,11 +97,6 @@
       "options": {
         "ref": "dc_workspace_nd_reachability_history",
         "ownerApp": "splunk-cisco-dashboards",
-        "dcScope": {
-          "account": "$dc_account$",
-          "fabric": "$dc_fabric$",
-          "device": "$dc_device$"
-        },
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
           "latest": "$time_tok.latest$"
@@ -163,11 +109,6 @@
       "options": {
         "ref": "dc_workspace_aci_tenant_health_history",
         "ownerApp": "splunk-cisco-dashboards",
-        "dcScope": {
-          "account": "$dc_account$",
-          "fabric": "$dc_fabric$",
-          "device": "$dc_device$"
-        },
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
           "latest": "$time_tok.latest$"
@@ -180,11 +121,6 @@
       "options": {
         "ref": "dc_workspace_aci_fault_history",
         "ownerApp": "splunk-cisco-dashboards",
-        "dcScope": {
-          "account": "$dc_account$",
-          "fabric": "$dc_fabric$",
-          "device": "$dc_device$"
-        },
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
           "latest": "$time_tok.latest$"
@@ -197,11 +133,6 @@
       "options": {
         "ref": "dc_workspace_nexus_cpu_history",
         "ownerApp": "splunk-cisco-dashboards",
-        "dcScope": {
-          "account": "$dc_account$",
-          "fabric": "$dc_fabric$",
-          "device": "$dc_device$"
-        },
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
           "latest": "$time_tok.latest$"
@@ -214,11 +145,6 @@
       "options": {
         "ref": "dc_workspace_nexus_temperature_history",
         "ownerApp": "splunk-cisco-dashboards",
-        "dcScope": {
-          "account": "$dc_account$",
-          "fabric": "$dc_fabric$",
-          "device": "$dc_device$"
-        },
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
           "latest": "$time_tok.latest$"
@@ -231,11 +157,6 @@
       "options": {
         "ref": "dc_workspace_san_health_history",
         "ownerApp": "splunk-cisco-dashboards",
-        "dcScope": {
-          "account": "$dc_account$",
-          "fabric": "$dc_fabric$",
-          "device": "$dc_device$"
-        },
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
           "latest": "$time_tok.latest$"
@@ -248,11 +169,6 @@
       "options": {
         "ref": "dc_workspace_san_wait_history",
         "ownerApp": "splunk-cisco-dashboards",
-        "dcScope": {
-          "account": "$dc_account$",
-          "fabric": "$dc_fabric$",
-          "device": "$dc_device$"
-        },
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
           "latest": "$time_tok.latest$"
@@ -265,11 +181,6 @@
       "options": {
         "ref": "dc_workspace_hf_nodes_history",
         "ownerApp": "splunk-cisco-dashboards",
-        "dcScope": {
-          "account": "$dc_account$",
-          "fabric": "$dc_fabric$",
-          "device": "$dc_device$"
-        },
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
           "latest": "$time_tok.latest$"
@@ -282,11 +193,6 @@
       "options": {
         "ref": "dc_workspace_hf_ports_history",
         "ownerApp": "splunk-cisco-dashboards",
-        "dcScope": {
-          "account": "$dc_account$",
-          "fabric": "$dc_fabric$",
-          "device": "$dc_device$"
-        },
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
           "latest": "$time_tok.latest$"
@@ -298,7 +204,7 @@
     "header": {
       "type": "splunk.markdown",
       "options": {
-        "markdown": "# DC Networking Operations\nLab observations \u00b7 Start with attention, confirm coverage, then follow product evidence.\n\nUse exact scope values or `*` for all. Administrative enablement is not availability. Blank measurements are unknown. Shared timing does not prove cause.",
+        "markdown": "# DC Networking Operations\nLab observations \u00b7 Start with attention, confirm coverage, then follow product evidence.\n\nThe configured DC index macro and selected time window define this overview. Administrative enablement is not availability. Blank measurements are unknown. Shared timing does not prove cause.",
         "backgroundColor": "#1c2738",
         "fontColor": "#ecf0f5"
       }
@@ -329,7 +235,7 @@
         {
           "type": "drilldown.customUrl",
           "options": {
-            "url": "/drilldown?origin=attention_history&target=dc_workspace_attention,dc_workspace_nd_anomalies,dc_workspace_aci_faults,dc_workspace_events&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+            "url": "/drilldown?origin=attention_history&target=dc_workspace_attention,dc_workspace_nd_anomalies,dc_workspace_aci_faults,dc_workspace_events"
           }
         }
       ]
@@ -360,7 +266,7 @@
         {
           "type": "drilldown.customUrl",
           "options": {
-            "url": "/drilldown?origin=attention_products&target=dc_workspace_attention,dc_workspace_events&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+            "url": "/drilldown?origin=attention_products&target=dc_workspace_attention,dc_workspace_events"
           }
         }
       ]
@@ -391,7 +297,7 @@
         {
           "type": "drilldown.customUrl",
           "options": {
-            "url": "/drilldown?origin=coverage_age&target=dc_workspace_coverage,dc_workspace_hf_measurements,dc_workspace_san_analytics&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+            "url": "/drilldown?origin=coverage_age&target=dc_workspace_coverage,dc_workspace_hf_measurements,dc_workspace_san_analytics"
           }
         }
       ]
@@ -422,7 +328,7 @@
         {
           "type": "drilldown.customUrl",
           "options": {
-            "url": "/drilldown?origin=inventory_products&target=dc_workspace_inventory_matches,dc_workspace_reported_links&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+            "url": "/drilldown?origin=inventory_products&target=dc_workspace_inventory_matches,dc_workspace_reported_links"
           }
         }
       ]
@@ -453,7 +359,7 @@
         {
           "type": "drilldown.customUrl",
           "options": {
-            "url": "/drilldown?origin=nd_active_history&target=dc_workspace_nd_anomalies,dc_workspace_events&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+            "url": "/drilldown?origin=nd_active_history&target=dc_workspace_nd_anomalies,dc_workspace_events"
           }
         }
       ]
@@ -484,7 +390,7 @@
         {
           "type": "drilldown.customUrl",
           "options": {
-            "url": "/drilldown?origin=nd_reachability_history&target=dc_workspace_nd_fabrics,dc_workspace_events&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+            "url": "/drilldown?origin=nd_reachability_history&target=dc_workspace_nd_fabrics,dc_workspace_events"
           }
         }
       ]
@@ -515,7 +421,7 @@
         {
           "type": "drilldown.customUrl",
           "options": {
-            "url": "/drilldown?origin=aci_tenant_health_history&target=dc_workspace_aci_health,dc_workspace_aci_faults&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+            "url": "/drilldown?origin=aci_tenant_health_history&target=dc_workspace_aci_health,dc_workspace_aci_faults"
           }
         }
       ]
@@ -546,7 +452,7 @@
         {
           "type": "drilldown.customUrl",
           "options": {
-            "url": "/drilldown?origin=aci_fault_history&target=dc_workspace_aci_faults,dc_workspace_events&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+            "url": "/drilldown?origin=aci_fault_history&target=dc_workspace_aci_faults,dc_workspace_events"
           }
         }
       ]
@@ -577,7 +483,7 @@
         {
           "type": "drilldown.customUrl",
           "options": {
-            "url": "/drilldown?origin=nexus_cpu_history&target=dc_workspace_nexus_resources,dc_workspace_events&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+            "url": "/drilldown?origin=nexus_cpu_history&target=dc_workspace_nexus_resources,dc_workspace_events"
           }
         }
       ]
@@ -608,7 +514,7 @@
         {
           "type": "drilldown.customUrl",
           "options": {
-            "url": "/drilldown?origin=nexus_temperature_history&target=dc_workspace_nexus_sensors&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+            "url": "/drilldown?origin=nexus_temperature_history&target=dc_workspace_nexus_sensors"
           }
         }
       ]
@@ -639,7 +545,7 @@
         {
           "type": "drilldown.customUrl",
           "options": {
-            "url": "/drilldown?origin=san_health_history&target=dc_workspace_san_health,dc_workspace_san_congestion&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+            "url": "/drilldown?origin=san_health_history&target=dc_workspace_san_health,dc_workspace_san_congestion"
           }
         }
       ]
@@ -670,7 +576,7 @@
         {
           "type": "drilldown.customUrl",
           "options": {
-            "url": "/drilldown?origin=san_wait_history&target=dc_workspace_san_congestion,dc_workspace_san_analytics&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+            "url": "/drilldown?origin=san_wait_history&target=dc_workspace_san_congestion,dc_workspace_san_analytics"
           }
         }
       ]
@@ -701,7 +607,7 @@
         {
           "type": "drilldown.customUrl",
           "options": {
-            "url": "/drilldown?origin=hf_nodes_history&target=dc_workspace_hf_inventory,dc_workspace_reported_links,dc_workspace_hf_measurements&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+            "url": "/drilldown?origin=hf_nodes_history&target=dc_workspace_hf_inventory,dc_workspace_reported_links,dc_workspace_hf_measurements"
           }
         }
       ]
@@ -732,7 +638,7 @@
         {
           "type": "drilldown.customUrl",
           "options": {
-            "url": "/drilldown?origin=hf_ports_history&target=dc_workspace_hf_inventory,dc_workspace_reported_links,dc_workspace_hf_measurements&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+            "url": "/drilldown?origin=hf_ports_history&target=dc_workspace_hf_inventory,dc_workspace_reported_links,dc_workspace_hf_measurements"
           }
         }
       ]
@@ -1065,10 +971,7 @@
       }
     ],
     "globalInputs": [
-      "input_time",
-      "input_account",
-      "input_fabric",
-      "input_device"
+      "input_time"
     ]
   }
 }

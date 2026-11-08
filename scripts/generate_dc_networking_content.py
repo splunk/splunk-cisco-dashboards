@@ -22,7 +22,7 @@ CONTEXT = '''| eval Product=case(match(sourcetype,"^cisco:dc:nd:"),"Nexus Dashbo
 
 
 def base(selector):
-    return '`dc_workspace_indexes` ' + selector + '\n' + CONTEXT
+    return '`index_dc` ' + selector + '\n' + CONTEXT
 
 
 def latest(keys):
@@ -275,10 +275,6 @@ def generate():
         stanza += '\nsearch = ' + record['query'].replace('\n', '\\\n')
         stanzas.append(stanza)
     outputs = [block_file('searchbase.conf', '\n\n'.join(stanzas))]
-    outputs.append(block_file('macros.conf', '''[dc_workspace_indexes]
-definition = `index_dc`
-iseval = 0
-description = DC Networking workspace indexes. Uses the existing SSNE index_dc mapping by default. For a lab rehearsal, override only this search macro to verified live lab indexes; exclude fixture/replay indexes. Does not change collection.'''))
     sections = ['dc_attention', 'dc_nd', 'dc_aci', 'dc_nexus', 'dc_san', 'dc_hyperfabric']
     layout = '''[workspace.dc_networking]
 label = DC Networking
@@ -314,15 +310,13 @@ regional_view = table
                       defaults={'visualizations': {'global': {'showLastUpdated': True, 'showProgressBar': True}}},
                       layout={'type': 'absolute', 'options': {'width': 1440, 'height': 2920, 'display': 'auto-scale', 'backgroundColor': '#0b1018'}, 'structure': [], 'globalInputs': []})
     definition['inputs']['input_time'] = {'type': 'input.simpleTimePicker', 'title': 'Time range', 'options': {'token': 'time_tok', 'defaultValue': '-4h,now,auto', 'selections': [{'label': '4h', 'value': '-4h,now,auto'}, {'label': '24h', 'value': '-24h,now,auto'}, {'label': '7d', 'value': '-7d,now,auto'}], 'showAdvanced': True}}
-    for key in ['account', 'fabric', 'device']:
-        definition['inputs']['input_' + key] = {'type': 'input.text', 'title': {'account': 'Account / controller', 'fabric': 'Fabric / site', 'device': 'Device / address'}[key], 'options': {'token': 'dc_' + key, 'defaultValue': '*'}}
     definition['layout']['globalInputs'] = list(definition['inputs'])
 
     def viz(key, value, x, y, w, h):
         definition['visualizations'][key] = value
         definition['layout']['structure'].append({'item': key, 'type': 'block', 'position': {'x': x, 'y': y, 'w': w, 'h': h}})
 
-    viz('header', {'type': 'splunk.markdown', 'options': {'markdown': '# DC Networking Operations\nLab observations · Start with attention, confirm coverage, then follow product evidence.\n\nUse exact scope values or `*` for all. Administrative enablement is not availability. Blank measurements are unknown. Shared timing does not prove cause.', 'backgroundColor': '#1c2738', 'fontColor': '#ecf0f5'}}, 20, 20, 1400, 150)
+    viz('header', {'type': 'splunk.markdown', 'options': {'markdown': '# DC Networking Operations\nLab observations · Start with attention, confirm coverage, then follow product evidence.\n\nThe configured DC index macro and selected time window define this overview. Administrative enablement is not availability. Blank measurements are unknown. Shared timing does not prove cause.', 'backgroundColor': '#1c2738', 'fontColor': '#ecf0f5'}}, 20, 20, 1400, 150)
     rows = [('attention_history', 'attention_products'), ('coverage_age', 'inventory_products'),
             ('nd_active_history', 'nd_reachability_history'), ('aci_tenant_health_history', 'aci_fault_history'),
             ('nexus_cpu_history', 'nexus_temperature_history'), ('san_health_history', 'san_wait_history'),
@@ -332,7 +326,6 @@ regional_view = table
             ds = 'ds_' + key
             definition['dataSources'][ds] = {'type': 'ds.searchbase', 'name': SEARCHES[key]['title'],
                 'options': {'ref': 'dc_workspace_' + key, 'ownerApp': 'splunk-cisco-dashboards',
-                            'dcScope': {k: '$dc_' + k + '$' for k in ['account', 'fabric', 'device']},
                             'queryParameters': {'earliest': '$time_tok.earliest$', 'latest': '$time_tok.latest$'}}}
             # Search opens the resolved, scoped Searchbase query through Manager's
             # standard visualization toolbar. Avoid an unrelated global URL pivot.
@@ -341,7 +334,7 @@ regional_view = table
                               'options': {'backgroundColor': '#131a23', 'seriesColors': ['#649ef5', '#4cbf7f'], 'legendDisplay': 'off', 'yAxisTitleText': SEARCHES[key].get('unit') or 'Observed entities'}},
                 20 + column * 710, 190 + row * 330, 690, 310)
             targets = ",".join("dc_workspace_" + ref for ref in SEARCHES[key]["related"])
-            viz("detail_" + key, {"type": "splunk.cisco_drilldown_action", "options": {"label": "Investigate " + SEARCHES[key]["title"]}, "eventHandlers": [{"type": "drilldown.customUrl", "options": {"url": "/drilldown?origin=" + key + "&target=" + targets + "&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"}}]}, 658 + column * 710, 200 + row * 330, 42, 42)
+            viz("detail_" + key, {"type": "splunk.cisco_drilldown_action", "options": {"label": "Investigate " + SEARCHES[key]["title"]}, "eventHandlers": [{"type": "drilldown.customUrl", "options": {"url": "/drilldown?origin=" + key + "&target=" + targets}}]}, 658 + column * 710, 200 + row * 330, 42, 42)
     viz('notes', {'type': 'splunk.markdown', 'options': {'markdown': '### Continue the investigation\nUse the panel menu to open its resolved query in Search. Review **Shared switch inventory** for exact serial matches and **Reported topology** for endpoint/port evidence. Neither establishes a traffic path.\n\n**Optional expansion:** Search the library for ISE, Secure Firewall, SD-WAN, Meraki or ThousandEyes. Only link records when exact device, IP, session or test identities agree; review address reuse and scope first.', 'backgroundColor': '#1c2738', 'fontColor': '#ecf0f5'}}, 20, 2520, 1400, 180)
     definition['layout']['options']['height'] = 2720
     xml = '<dashboard version="2" theme="dark" isVisible="false">\n<label>DC Networking Operations</label>\n<description>Five-product lab investigation built from the SSNE search library.</description>\n<definition><![CDATA[\n' + json.dumps(definition, indent=2) + '\n]]></definition>\n</dashboard>\n'

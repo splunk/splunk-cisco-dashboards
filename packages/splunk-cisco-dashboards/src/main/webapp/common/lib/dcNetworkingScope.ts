@@ -42,7 +42,7 @@ export const applyDcDashboardHandoff = <T extends {
     inputs?: Record<string, { options?: Record<string, unknown> }>;
     dataSources?: Record<string, { options?: Record<string, unknown> }>;
 }>(definition: T, params: URLSearchParams): T => {
-    if (!Object.values(definition.dataSources || {}).some((source) => source.options?.dcScope)) { return definition; }
+    if (!Object.values(definition.dataSources || {}).some((source) => source.options?.dcScope || String(source.options?.ref || '').startsWith('dc_workspace_'))) { return definition; }
     const inputs = { ...definition.inputs };
     Object.entries(inputs).forEach(([id, input]) => {
         const token = String(input.options?.token || '');

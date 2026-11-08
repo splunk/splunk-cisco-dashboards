@@ -1,6 +1,5 @@
 import WorkspaceDefaultIcon from "@/common/components/workspace/WorkspaceDefaultIcon";
-import DcNetworkingScopeBar from "@/common/components/workspace/DcNetworkingScopeBar";
-import { applyDcNetworkingScope, dcScopeDashboardUrl, type DcNetworkingScope } from "@/common/lib/dcNetworkingScope";
+import { dcScopeDashboardUrl } from "@/common/lib/dcNetworkingScope";
 import React, {
   useCallback,
   useEffect,
@@ -2752,7 +2751,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   ]);
 
   const isDcNetworking = insightsWorkspace.sourceWorkspace === "dc_networking";
-  const [dcScope, setDcScope] = useState<DcNetworkingScope>({});
+
 
   // ------------------------------ Time + refresh ------------------------------
   const [timeRange, setTimeRange] = useState<TimeRange>(
@@ -2829,18 +2828,18 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   //
   // `null` is the loading sentinel — tiles defer dispatch until Splunk
   // returns the conf records.
-  const [searchbaseRecordsRaw, setSearchbaseRecords] = useState<
+  const [searchbaseRecords, setSearchbaseRecords] = useState<
     SearchbaseRecord[] | null
   >(null);
-  const [searchbaseByNameRaw, setSearchbaseByName] = useState<Map<
+  const [searchbaseByName, setSearchbaseByName] = useState<Map<
     string,
     SearchbaseRecord
   > | null>(null);
-  const [searchbaseByIdRaw, setSearchbaseById] = useState<Map<
+  const [searchbaseById, setSearchbaseById] = useState<Map<
     string,
     SearchbaseRecord
   > | null>(null);
-  const [allSearchbaseRecordsRaw, setAllSearchbaseRecords] = useState<
+  const [allSearchbaseRecords, setAllSearchbaseRecords] = useState<
     SearchbaseRecord[] | null
   >(null);
 
@@ -2898,14 +2897,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       cancelled = true;
     };
   }, [searchbaseRefreshToken]);
-
-  const scopeDcRecord = useCallback((record: SearchbaseRecord): SearchbaseRecord =>
-    isDcNetworking ? { ...record, search: applyDcNetworkingScope(record.search, dcScope) } : record,
-    [dcScope, isDcNetworking]);
-  const searchbaseRecords = useMemo(() => searchbaseRecordsRaw?.map(scopeDcRecord) ?? null, [searchbaseRecordsRaw, scopeDcRecord]);
-  const allSearchbaseRecords = useMemo(() => allSearchbaseRecordsRaw?.map(scopeDcRecord) ?? null, [allSearchbaseRecordsRaw, scopeDcRecord]);
-  const searchbaseByName = useMemo(() => searchbaseByNameRaw === null ? null : new Map(Array.from(searchbaseByNameRaw, ([key, record]) => [key, scopeDcRecord(record)])), [searchbaseByNameRaw, scopeDcRecord]);
-  const searchbaseById = useMemo(() => searchbaseByIdRaw === null ? null : new Map(Array.from(searchbaseByIdRaw, ([key, record]) => [key, scopeDcRecord(record)])), [searchbaseByIdRaw, scopeDcRecord]);
 
   const currentSearchbaseOwnerApp =
     searchbaseRecords?.find((record) => record.ownerApp)?.ownerApp ?? APP_NAME;
@@ -5542,9 +5533,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         </div>
       ) : null}
 
-      {isDcNetworking && <DcNetworkingScopeBar scope={dcScope} onChange={setDcScope}
-        dashboardUrl={dcScopeDashboardUrl(dcScope, timeRange.earliest, timeRange.latest)} />}
-
       {/* Edge-to-edge layout: no `max-w` clamp and only a thin
                 horizontal gutter. The previous `max-w-[1600px] mx-auto`
                 left half-inch margins on either side at executive-
@@ -5752,7 +5740,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   key={section}
                   title={meta.title}
                   linkText={meta.linkText}
-                  href={isDcNetworking ? dcScopeDashboardUrl(dcScope, timeRange.earliest, timeRange.latest) : meta.href}
+                  href={isDcNetworking ? dcScopeDashboardUrl({}, timeRange.earliest, timeRange.latest) : meta.href}
                   // Height level influences both
                   // proportional growth on roomy
                   // screens and the hard min-height

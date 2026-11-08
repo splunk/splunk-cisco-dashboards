@@ -18,7 +18,7 @@ import xml.etree.ElementTree as ET
 
 from generate_dc_networking_content import SEARCHES, PRODUCTS
 
-LAB_INDEXES = 'index IN (nd,aci,nexus,mds,hyperfabric)'
+LAB_INDEXES = '`index_dc`'
 
 
 def ephemeral_fixture(query, rows):
@@ -119,7 +119,6 @@ class LabClient:
             conn.close()
 
     def search(self, query, earliest='-4h', latest='now'):
-        query = query.replace('`dc_workspace_indexes`', LAB_INDEXES)
         if not query.lstrip().startswith('|'):
             query = 'search ' + query
         root = '/servicesNS/admin/splunk-cisco-dashboards/search/jobs'
@@ -159,7 +158,7 @@ def main():
     earliest = str(int(latest) - 4 * 3600)
     report = dict(host='AKKHAMIS-M-3QD9', server='forge', target='/opt/splunk',
                   data='Existing lab observations; no customer claims or ingestion',
-                  indexes=LAB_INDEXES, earliest=earliest, latest=latest,
+                  indexes=LAB_INDEXES, index_definition=json.loads(client.request('GET', '/servicesNS/nobody/splunk-cisco-dashboards/configs/conf-macros/index_dc?output_mode=json'))['entry'][0]['content']['definition'], earliest=earliest, latest=latest,
                   certificate='CA chain validated; local server certificate pinned per connection', searches={})
     failed = False
     for key, record in SEARCHES.items():
