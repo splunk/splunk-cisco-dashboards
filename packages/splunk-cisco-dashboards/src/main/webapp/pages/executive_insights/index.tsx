@@ -1,3 +1,4 @@
+import WorkspaceDefaultIcon from "@/common/components/workspace/WorkspaceDefaultIcon";
 import DcNetworkingScopeBar from "@/common/components/workspace/DcNetworkingScopeBar";
 import { applyDcNetworkingScope, dcScopeDashboardUrl, type DcNetworkingScope } from "@/common/lib/dcNetworkingScope";
 import React, {
@@ -263,18 +264,6 @@ const HEADER_REFRESH_RATE_WIDTH_PX = 140;
 // out-of-the-box value for fresh deployments.
 const DEFAULT_HEADER_SUBTITLE = "Splunk Secure Networking Essentials";
 const DEFAULT_HEADER_TITLE_FALLBACK = "Your Organization Name";
-const DEFAULT_LOGO_DATA_URI =
-  "data:image/svg+xml;utf8," +
-  encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" ' +
-      'stroke="white" stroke-width="1.8" stroke-linecap="round" ' +
-      'stroke-linejoin="round"><circle cx="12" cy="12" r="2.25"/>' +
-      '<circle cx="5.5" cy="7" r="1.65"/><circle cx="18.5" cy="7" r="1.65"/>' +
-      '<circle cx="5.5" cy="17" r="1.65"/><circle cx="18.5" cy="17" r="1.65"/>' +
-      '<path d="M7 8.2 10.2 10.7M16.9 8.2 13.8 10.7M7 15.8 10.2 13.3M16.9 15.8 13.8 13.3"/>' +
-      '<path d="M4 12h3M17 12h3"/></svg>',
-  );
-
 const splunkLocalePrefix = (): string => {
   if (typeof window === "undefined") return "/en-US";
   const match = window.location.pathname.match(
@@ -2721,8 +2710,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   const [logoSrc, setLogoSrc] = useState<string>(() =>
     insightsWorkspace.hideDefaultLogo
       ? ""
-      : normalizeSharedImageSource(insightsWorkspace.defaultLogoSrc) ||
-        DEFAULT_LOGO_DATA_URI,
+      : normalizeSharedImageSource(insightsWorkspace.defaultLogoSrc) || "",
   );
   const [appVersionLabel, setAppVersionLabel] =
     useState<string>(APP_VERSION_LABEL);
@@ -2752,8 +2740,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     setLogoSrc(
       insightsWorkspace.hideDefaultLogo
         ? ""
-        : normalizeSharedImageSource(insightsWorkspace.defaultLogoSrc) ||
-          DEFAULT_LOGO_DATA_URI,
+        : normalizeSharedImageSource(insightsWorkspace.defaultLogoSrc) || "",
     );
   }, [
     insightsWorkspace.defaultLogoSrc,
@@ -5128,26 +5115,11 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             effectiveLogoSrc ? "gap-3" : "gap-0",
           )}
         >
-          {effectiveLogoSrc ? (
-            <div className="w-9 h-9 sui-bg-notification-info rounded-lg flex items-center justify-center sui-color-active overflow-hidden p-1 flex-shrink-0">
-              <img
-                src={effectiveLogoSrc}
-                alt="Dashboard logo"
-                className="w-full h-full object-contain"
-                onError={() => {
-                  // If a future non-data default logo fails to
-                  // load, recover to the neutral built-in mark
-                  // instead of leaving a broken image in the
-                  // executive header. User-uploaded data URIs
-                  // are self-contained and managed by the
-                  // branding editor.
-                  if (logoSrc !== DEFAULT_LOGO_DATA_URI) {
-                    setLogoSrc(DEFAULT_LOGO_DATA_URI);
-                  }
-                }}
-              />
-            </div>
-          ) : null}
+          <div className="w-9 h-9 sui-bg-notification-info rounded-lg flex items-center justify-center sui-color-active overflow-hidden p-1 flex-shrink-0">
+            {effectiveLogoSrc ? <img src={effectiveLogoSrc} alt={`${insightsWorkspace.label} icon`}
+              className="w-full h-full object-contain" onError={() => setLogoSrc("")} /> :
+              <WorkspaceDefaultIcon workspace={insightsWorkspace} />}
+          </div>
           <div className="min-w-0">
             <div
               className="flex min-w-0 items-center"
@@ -5177,6 +5149,9 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   {workspaces.map((workspace) => (
                     <Menu.Item
                       key={workspace.id}
+                      startAdornment={<span className="inline-flex w-5 h-5 sui-color-info">
+                        {normalizeSharedImageSource(workspace.defaultLogoSrc) ? <img src={normalizeSharedImageSource(workspace.defaultLogoSrc)} alt="" className="w-full h-full object-contain" /> : <WorkspaceDefaultIcon workspace={workspace} />}
+                      </span>}
                       onClick={() =>
                         rememberLastWorkspace(workspace.id, workspaces)
                       }
@@ -6355,14 +6330,15 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
         subtitlePlaceholder={
           insightsWorkspace.headerSubtitle || DEFAULT_HEADER_SUBTITLE
         }
-        logoFallbackSrc={logoSrc}
+        logoFallbackSrc=""
+        defaultIcon={<WorkspaceDefaultIcon workspace={insightsWorkspace} />}
         onSave={async (next) => {
           if (!canManageWorkspaceConfig) return false;
           const saved = await persistWorkspacePatch({
             headerTitle: next.title,
             headerSubtitle: next.subtitle,
             defaultLogoSrc:
-              next.logoDataUri ?? insightsWorkspace.defaultLogoSrc,
+              next.logoDataUri ?? "",
             hideDefaultLogo: next.logoDataUri
               ? false
               : insightsWorkspace.hideDefaultLogo,
@@ -8575,6 +8551,7 @@ interface BrandingEditorModalProps {
   /** Image src to display in the "current logo" preview when no
    * override logo is set. Lets the user see what they're replacing. */
   logoFallbackSrc: string;
+  defaultIcon: React.ReactNode;
   onSave: (next: BrandingOverride) => boolean | Promise<boolean>;
   onResetToDefaults: () => void;
 }
@@ -8604,6 +8581,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
   titlePlaceholder,
   subtitlePlaceholder,
   logoFallbackSrc,
+  defaultIcon,
   onSave,
   onResetToDefaults,
 }) => {
@@ -8777,9 +8755,7 @@ const BrandingEditorModal: React.FC<BrandingEditorModalProps> = ({
                   className="w-full h-full object-contain"
                 />
               ) : (
-                <span className="text-center text-xs font-bold leading-tight">
-                  No logo
-                </span>
+                <>{defaultIcon}</>
               )}
             </div>
             <div className="flex flex-col gap-1.5">

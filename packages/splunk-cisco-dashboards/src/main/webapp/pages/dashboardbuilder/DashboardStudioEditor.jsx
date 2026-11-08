@@ -115,7 +115,7 @@ import {
 } from "./searchbaseDefinitionUtils";
 import { repairSearchbaseTimeQueryParameters } from "./dashboardTimeUtils";
 import DashboardStudioDrilldownModal from "./DashboardStudioDrilldownModal";
-import { applyDcDashboardHandoff } from "../../common/lib/dcNetworkingScope";
+import { applyDcDashboardHandoff, dcScopeFromDrilldownUrl } from "../../common/lib/dcNetworkingScope";
 import {
   DEFAULT_DASHBOARD_DRILLDOWN_TIME_RANGE,
   getDashboardDrilldownInitialTimeRange,
@@ -1976,7 +1976,10 @@ const DashboardStudioEditor = ({
       }
 
       event.preventDefault?.();
+      let dcScope;
+      try { dcScope = dcScopeFromDrilldownUrl(event.url); } catch { return; }
       setDashboardDrilldown({
+        dcScope,
         ...parsedAction,
         mode: parsedMetricInfo ? "metric-info" : "drilldown",
         timeRange: dashboardDrilldownTimeRange,
@@ -2747,6 +2750,7 @@ const DashboardStudioEditor = ({
         open={Boolean(dashboardDrilldown)}
         origin={dashboardDrilldown?.origin || ""}
         targetIds={dashboardDrilldown?.targetIds || []}
+        dcScope={dashboardDrilldown?.dcScope}
         ownerApp={currentDashboard?.app}
         timeRange={
           dashboardDrilldown?.timeRange ||

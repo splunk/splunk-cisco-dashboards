@@ -50,7 +50,10 @@ Browse the current release and recorded historical versions below. The newest re
 
 ### Insights Workspaces
 
-- Added the **DC Networking** workspace and **DC Networking Operations** Dashboard Manager companion, backed by eighteen visible library searches. Review five-product lab coverage, exact inventory matches, reported connections, product details and measurement gaps with shared time and scope filters.
+- Changed DC Networking to chart-first overviews with 27 chart searches and 18 table investigations. Sections start with three charts and support up to nine searches. Trends deduplicate observations within 15-minute buckets; missing data is not filled with zero.
+- Added appropriate React SUI default icons for every workspace and the workspace switcher. Upload a replacement in **Edit branding**; **Clear (use default)** restores the workspace's SUI icon without discarding its title or subtitle.
+
+- Added the **DC Networking** workspace and **DC Networking Operations** Dashboard Manager companion, backed by forty-five visible library searches. Review five-product lab coverage, exact inventory matches, reported connections, product details and measurement gaps with shared time and scope filters.
 
 - Fixed the **Advanced time range** button being clipped and covered by the Dashboard Manager toolbar on Network Service Investigations. Custom ranges and span selection remain accessible beside the quick time shortcuts.
 - Added **Network Service Investigations** under Secure Infrastructure with six vendor-neutral evidence tables and related vendor, IPv6 and interface investigations. Added catalogue drilldowns to existing Zero Trust, firewall and WAN dashboards plus on-demand SAN/fabric, certificate and telemetry tabs. Preserved existing overview searches and index routing, retained time context, and documented source requirements and missing-data limits.
@@ -658,6 +661,10 @@ Open **DC Networking** from the workspace switcher. Start with **What needs my a
 Use exact account/controller, fabric/site or device/address filters; leave blank for all. The same filters apply to tiles, details and Open in Search. **Open DC Networking dashboard** carries that context into the saved **DC Networking Operations** companion in Dashboard Manager. The `dc_workspace_indexes` macro delegates to the existing `index_dc` mapping unless locally overridden to verified lab indexes; this changes search scope only.
 
 Missing data remains unknown. Hyperfabric administrative enablement does not establish availability, and a counter record without measured rates does not establish throughput. SAN Analytics capability inventory does not establish flow performance. Exact serial matches identify shared inventory; reported endpoint/port records identify connections. Neither establishes a traffic path or proves the cause of an incident.
+
+DC sections support up to **nine searches**, with three charts shown initially. Use the section tile-count control and **Add search** to expand or customize the selection. Tables remain available through **Investigate related evidence**. Trends show latest observations per entity in each 15-minute bucket, not a guaranteed continuous snapshot; empty buckets stay unavailable.
+
+Each workspace has an appropriate **React SUI icon** by default. Open **Edit branding** to upload an image. Uploaded images take precedence; **Clear (use default)** and saving restores the SUI icon while keeping the other branding fields.
 
 To demonstrate quick dashboard creation, select **Dashboard Manager > Create New**, then **Add Searchbase**. Search **DC Networking Workspace**, select the questions you need, and choose **Add selected**. The searches bring their SPL, descriptions and visualization defaults. Save the new dashboard with a separate name to preserve the companion. Scoped DC dashboards stay in Dashboard Manager so native conversion cannot drop their filters.
 

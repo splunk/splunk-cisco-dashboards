@@ -343,7 +343,7 @@ export const WORKSPACE_SOURCES: Record<WorkspaceSourceId, WorkspaceSource> = {
     defaultVisibleSections: DC_NETWORKING_SECTIONS.map((section) => section.id),
     maxVisibleSections: 6,
     minTileCount: 1,
-    maxTileCount: 3,
+    maxTileCount: 9,
     fallbackTileCount: 3,
   },
   executive: {
@@ -545,7 +545,7 @@ export const PACKAGED_WORKSPACE_FALLBACKS: readonly InsightsWorkspace[] = [
   createInsightsWorkspace({
     id: "dc_networking", label: "DC Networking", sourceWorkspace: "dc_networking",
     headerTitle: "DC Networking", headerSubtitle: "What needs my attention? · Lab observations across five products",
-    hideDefaultLogo: true, isBuiltIn: true, sortOrder: 30, mapVisible: false,
+    hideDefaultLogo: false, isBuiltIn: true, sortOrder: 30, mapVisible: false,
   }),
   createInsightsWorkspace({
     id: "secure_networking",
@@ -553,7 +553,7 @@ export const PACKAGED_WORKSPACE_FALLBACKS: readonly InsightsWorkspace[] = [
     sourceWorkspace: "secure_networking",
     headerTitle: "Splunk Secure Networking Essentials",
     headerSubtitle: "Secure Networking Executive Insights",
-    hideDefaultLogo: true,
+    hideDefaultLogo: false,
     isBuiltIn: true,
     sortOrder: 10,
   }),
@@ -565,7 +565,7 @@ export const PACKAGED_WORKSPACE_FALLBACKS: readonly InsightsWorkspace[] = [
     defaultVisibleSections: ["zta", "secure_infrastructure", "agentic_ops"],
     headerTitle: "Zero Trust Access Demo",
     headerSubtitle: "Identity, authentication, and access-policy enforcement",
-    hideDefaultLogo: true,
+    hideDefaultLogo: false,
     isBuiltIn: true,
     sortOrder: 20,
   }),
@@ -582,7 +582,7 @@ export const PACKAGED_WORKSPACE_FALLBACKS: readonly InsightsWorkspace[] = [
     headerTitle: "Network Resilience Demo",
     headerSubtitle:
       "Infrastructure health, segmentation, and threat containment",
-    hideDefaultLogo: true,
+    hideDefaultLogo: false,
     isBuiltIn: true,
     sortOrder: 30,
   }),
@@ -593,7 +593,7 @@ export const PACKAGED_WORKSPACE_FALLBACKS: readonly InsightsWorkspace[] = [
     headerTitle: "Agentic Security Operations Center",
     headerSubtitle:
       "Live conference DNS, firewall, packet, detection, and investigation telemetry",
-    hideDefaultLogo: true,
+    hideDefaultLogo: false,
     isBuiltIn: true,
     sortOrder: 40,
     mapVisible: false,

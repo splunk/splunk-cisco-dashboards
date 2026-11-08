@@ -58,7 +58,8 @@ test('packaged workspace has all six sections and every tile/drilldown resolves'
     assert.equal(dc.sections.length, 6);
     assert.equal(dc.sections[0].title, 'What needs my attention?');
     assert.equal(dc.mapVisible, false);
-    assert.equal(stanzas.size, 18);
+    assert.equal(stanzas.size, 45);
+    assert.equal(dc.maxTileCount, 9);
     for (const [id, body] of stanzas) {
         assert.match(body, /^search_type = display$/m);
         assert.match(body, /^search_hidden = 0$/m);
@@ -75,7 +76,7 @@ test('packaged workspace has all six sections and every tile/drilldown resolves'
 });
 
 test('Manager dashboard uses visible library sources, global time/scope and dark styling', () => {
-    assert.equal(Object.keys(definition.dataSources).length, 16);
+    assert.equal(Object.keys(definition.dataSources).length, 14);
     for (const source of Object.values(definition.dataSources)) {
         assert.equal(source.type, 'ds.searchbase');
         assert.ok(stanzas.has(source.options.ref));
@@ -123,4 +124,56 @@ test('fault state, counter gaps and relationship types remain distinct in SPL', 
     assert.match(spl('dc_workspace_san_analytics'), /units and flow identity unreported/);
     assert.match(spl('dc_workspace_inventory_matches'), /ProductCount>1/);
     assert.match(spl('dc_workspace_reported_links'), /Reported topology; not classified as a physical connection/);
+});
+
+test('overview uses charts, supports nine searches per section, and keeps tables as evidence', () => {
+    let charts = 0;
+    const sections = new Map();
+    for (const [id, body] of stanzas) {
+        const options = JSON.parse(body.match(/^viz_options = (.+)$/m)[1]);
+        if (!options.overview) continue;
+        charts += 1;
+        assert.match(body, /^default_viz = splunk\.(line|bar)$/m);
+        const section = options.overview[0].section;
+        sections.set(section, (sections.get(section) || 0) + 1);
+        for (const target of body.match(/^drilldown_stanza_ids = (.+)$/m)[1].split(',')) {
+            assert.match(stanzas.get(target), /^default_viz = splunk.table$/m, `${id} must open detailed evidence`);
+        }
+        if (body.includes('default_viz = splunk.line')) {
+            assert.match(spl(id), /by .* Bucket/);
+            assert.match(spl(id), /where isnotnull\(Metric\)/);
+            assert.doesNotMatch(spl(id), /fillnull|timechart/);
+        }
+    }
+    assert.equal(charts, 27);
+    assert.equal(sections.size, 6);
+    assert.ok([...sections.values()].every((count) => count >= 3 && count <= 9));
+    assert.equal(Object.values(definition.visualizations).filter((v) => v.type === 'splunk.table').length, 0);
+    assert.equal(Object.values(definition.visualizations).filter((v) => v.type === 'splunk.cisco_drilldown_action').length, 14);
+});
+
+test('SUI defaults distinguish workspaces and uploaded branding remains replaceable', () => {
+    const iconNames = ['Briefcase', 'ShieldKeyhole', 'Shield', 'FingerprintNodes', 'Pulse', 'NetworkDevices', 'RobotFaceSparkle'];
+    const icons = load('src/main/webapp/common/components/workspace/WorkspaceDefaultIcon.tsx', Object.fromEntries(
+        iconNames.map((name) => [`@splunk/react-icons/${name}`, function Icon() { return null; }]),
+    ));
+    const config = load('src/main/webapp/common/config/insightsWorkspaces.ts');
+    const expected = { dc_networking: 'network', secure_networking: 'secure', zero_trust_access_demo: 'access',
+        network_resilience_demo: 'pulse', agentic_security_operations_center: 'soc', security_operations_demo: 'security', executive: 'executive' };
+    for (const workspace of config.PACKAGED_WORKSPACE_FALLBACKS) {
+        assert.equal(icons.workspaceIconName(workspace), expected[workspace.id]);
+        assert.equal(workspace.hideDefaultLogo, false);
+    }
+    const page = fs.readFileSync(path.join(root, 'src/main/webapp/pages/executive_insights/index.tsx'), 'utf8');
+    assert.match(page, /next\.logoDataUri \?\? ""/);
+    assert.match(page, /defaultIcon=\{<WorkspaceDefaultIcon workspace=\{insightsWorkspace\}/);
+    assert.match(page, /readImageAsDataUri\(file\)/);
+    assert.match(page, /dataUri.length > BRANDING_LOGO_DATA_URI_MAX_BYTES/);
+});
+
+test('Manager drilldown URLs carry validated exact scope and reject injected values', () => {
+    assert.deepEqual(scope.dcScopeFromDrilldownUrl('/drilldown?target=x&dc_account=Javi_ND&dc_fabric=FAB1&dc_device=Leaf-1'),
+        { account: 'javi_nd', fabric: 'fab1', device: 'leaf-1' });
+    assert.equal(scope.dcScopeFromDrilldownUrl('/drilldown?target=x'), undefined);
+    assert.throws(() => scope.dcScopeFromDrilldownUrl('/drilldown?target=x&dc_account=%60bad%60'));
 });

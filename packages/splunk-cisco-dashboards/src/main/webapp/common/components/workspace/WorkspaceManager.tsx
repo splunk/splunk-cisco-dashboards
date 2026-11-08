@@ -480,8 +480,7 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                 headerSubtitle: draft.headerSubtitle,
                 defaultLogoSrc: existing?.defaultLogoSrc,
                 hideDefaultLogo:
-                    existing?.hideDefaultLogo ??
-                    draft.sourceWorkspace === 'secure_networking',
+                    existing?.hideDefaultLogo ?? false,
                 legacyViewNames: existing?.legacyViewNames,
                 isBuiltIn: existing?.isBuiltIn ?? false,
                 enabled: true,

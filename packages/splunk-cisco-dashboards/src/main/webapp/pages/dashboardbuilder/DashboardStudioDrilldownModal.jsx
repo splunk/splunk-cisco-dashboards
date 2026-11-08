@@ -1,3 +1,4 @@
+import { applyDcNetworkingScope } from '../../common/lib/dcNetworkingScope';
 /* eslint-disable react/prop-types */
 import React, {
     useCallback,
@@ -74,6 +75,7 @@ const DashboardStudioDrilldownModal = ({
     targetIds,
     timeRange,
     ownerApp,
+    dcScope,
     preset,
     featureFlags,
     iconRegistry,
@@ -129,8 +131,14 @@ const DashboardStudioDrilldownModal = ({
     }, [open, ownerApp, searchEntries]);
 
     const { resolvedSearches, missingTargetIds } = useMemo(
-        () => resolveDashboardDrilldownSearches(searchEntries || [], targetIds),
-        [searchEntries, targetIds],
+        () => {
+            const resolved = resolveDashboardDrilldownSearches(searchEntries || [], targetIds);
+            if (!dcScope) return resolved;
+            return { ...resolved, resolvedSearches: resolved.resolvedSearches.map((entry) => ({
+                ...entry, content: { ...entry.content, search: applyDcNetworkingScope(entry.content.search, dcScope) },
+            })) };
+        },
+        [searchEntries, targetIds, dcScope],
     );
 
     useEffect(() => {
@@ -147,16 +155,14 @@ const DashboardStudioDrilldownModal = ({
     }, [activeIndex, resolvedSearches.length]);
 
     const activeSearch = resolvedSearches[activeIndex] || resolvedSearches[0];
-    const activeDefinition = useMemo(
-        () =>
-            activeSearch && !isMetricInfo
-                ? buildDashboardDrilldownDefinition(activeSearch, timeRange, {
-                      width: resultWidth,
-                      height: DRILLDOWN_RESULT_HEIGHT,
-                  })
-                : undefined,
-        [activeSearch, isMetricInfo, resultWidth, timeRange],
-    );
+    const activeDefinition = useMemo(() => {
+        if (!activeSearch || isMetricInfo) return undefined;
+        const definition = buildDashboardDrilldownDefinition(activeSearch, timeRange, {
+            width: resultWidth, height: DRILLDOWN_RESULT_HEIGHT,
+        });
+        if (dcScope) definition.dataSources.ds_drilldown_target.options.dcScope = dcScope;
+        return definition;
+    }, [activeSearch, isMetricInfo, resultWidth, timeRange, dcScope]);
     const activeMetadata = useMemo(
         () => getDashboardDrilldownMetadata(activeSearch),
         [activeSearch],

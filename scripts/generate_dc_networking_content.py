@@ -6,6 +6,7 @@ touches its marked config blocks and its own dashboard; it never contacts Splunk
 """
 import argparse
 import json
+from dc_networking_charts import add_charts
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -222,6 +223,8 @@ add('relationships', 'What relationships can I verify?', 'dc_attention',
     SEARCHES['inventory_matches']['query'], ('inventory_matches', 'reported_links', 'events'))
 
 
+add_charts(SEARCHES, base)
+
 def block_file(name, body):
     path = DEFAULT / name
     existing = path.read_text() if path.exists() else ''
@@ -245,22 +248,26 @@ def generate():
     stanzas = []
     for key, record in SEARCHES.items():
         viz = dict(showRowNumbers=False, emptyMessage='No qualifying observations in this scope and time. Check coverage; absence does not establish health.')
+        chart = record.get('viz', 'splunk.table')
+        if chart != 'splunk.table':
+            viz.update(seriesColors=['#649ef5', '#4cbf7f', '#f0c243'], legendDisplay='off')
         if record['section']:
-            viz['overviewColumns'] = OVERVIEW_COLUMNS[key]
+            if key in OVERVIEW_COLUMNS:
+                viz['overviewColumns'] = OVERVIEW_COLUMNS[key]
             viz['overview'] = [dict(workspace='dc_networking', section=record['section'], tileId='dc_workspace_' + key,
-                                    label=record['title'], subLabel=record['question'], valueField='Observations',
-                                    color='#649ef5', thresholdNote='Latest observed evidence in the selected window; missing measurements remain unknown.')]
+                                    label=record['title'], subLabel=record['question'], valueField=record.get('value_field', 'Observations'), unit=record.get('unit', ''), comparePeriod=False,
+                                    color='#649ef5', thresholdNote=record.get('note', 'Latest observed evidence in the selected window; missing measurements remain unknown.'))]
         metadata = dict(search_name='DC Networking Workspace - ' + record['title'], search_author='akhamis',
                         updated_author='akhamis', version='1.0.0', date_created='2026-11-07', date_updated='2026-11-07',
                         category='Data Center', sub_category='DC Networking Workspace', search_type='display',
                         tags='DC Networking Workspace,' + ','.join(PRODUCTS), dispatch_context='splunk-cisco-dashboards',
-                        dispatch_context_force='1', search_hidden='0', default_viz='splunk.table',
+                        dispatch_context_force='1', search_hidden='0', default_viz=chart,
                         viz_options=json.dumps(viz, separators=(',', ':')),
                         description='<p>' + record['question'] + '</p>',
                         explanation='<p>Uses lab observations, controller-scoped identities and the selected time and exact scope. Latest observed state is not a complete current snapshot. Repeated polls are not distinct faults. Missing fields remain unknown.</p>',
                         solution='<p>Review product, fabric/site, device and observation age. Open the related product detail, then related observations or Search. Shared timing is context, not proof of cause.</p>',
                         related_info='<p>' + ('Reuses the field and state semantics of shipped Searchbase stanza <code>' + record['reuse'] + '</code>. ' if record['reuse'] else '') + 'Inventory serial matches do not imply adjacency. Physical connections require reported endpoint/port evidence. A traffic path requires traffic/path observations.</p>')
-        related = ([key] if record['section'] else []) + list(record['related'])
+        related = ([key] if record['section'] and chart == 'splunk.table' else []) + list(record['related'])
         if related:
             metadata['drilldown_stanza_ids'] = ','.join('dc_workspace_' + ref for ref in dict.fromkeys(related))
             metadata['drilldown_button_title'] = 'Investigate related evidence'
@@ -279,11 +286,11 @@ source_workspace = dc_networking
 sections = ''' + ','.join(sections) + '\ndefault_visible_sections = ' + ','.join(sections) + '''
 max_visible_sections = 6
 min_tile_count = 1
-max_tile_count = 3
+max_tile_count = 9
 default_tile_count = 3
 header_title = DC Networking
 header_subtitle = What needs my attention? · Lab observations across five products
-hide_default_logo = 1
+hide_default_logo = 0
 is_builtin = 1
 enabled = 1
 sort_order = 30
@@ -293,9 +300,13 @@ regional_view = table
 '''
     for section in sections:
         ids = ['dc_workspace_' + key for key, r in SEARCHES.items() if r['section'] == section]
-        if section == 'dc_attention':
-            ids = ['dc_workspace_attention', 'dc_workspace_coverage', 'dc_workspace_relationships']
-        layout += f'\n[layout.dc_networking.{section}]\ntiles = ' + ','.join(ids) + f'\nvisible_count = {len(ids)}\n'
+        preferred = {
+            'dc_nexus': ['dc_workspace_nexus_cpu_history', 'dc_workspace_nexus_temperature_history', 'dc_workspace_nexus_cpu_comparison'],
+            'dc_san': ['dc_workspace_san_health_history', 'dc_workspace_san_wait_history', 'dc_workspace_san_cpu_history'],
+            'dc_hyperfabric': ['dc_workspace_hf_nodes_history', 'dc_workspace_hf_ports_history', 'dc_workspace_hf_connections_history'],
+        }.get(section, [])
+        ids = preferred + [tile for tile in ids if tile not in preferred]
+        layout += f'\n[layout.dc_networking.{section}]\ntiles = ' + ','.join(ids) + f'\nvisible_count = {min(3, len(ids))}\n'
     layout += '\n[signal_rail.dc_networking]\nenabled = 0\n'
     outputs.append(block_file('insights_workspaces.conf', layout))
     definition = dict(title='DC Networking Operations', description='Lab observations · Five products, one investigation. Missing data is unknown.',
@@ -312,9 +323,10 @@ regional_view = table
         definition['layout']['structure'].append({'item': key, 'type': 'block', 'position': {'x': x, 'y': y, 'w': w, 'h': h}})
 
     viz('header', {'type': 'splunk.markdown', 'options': {'markdown': '# DC Networking Operations\nLab observations · Start with attention, confirm coverage, then follow product evidence.\n\nUse exact scope values or `*` for all. Administrative enablement is not availability. Blank measurements are unknown. Shared timing does not prove cause.', 'backgroundColor': '#1c2738', 'fontColor': '#ecf0f5'}}, 20, 20, 1400, 150)
-    rows = [('attention', 'coverage'), ('nd_anomalies', 'nd_fabrics'), ('aci_health', 'aci_faults'),
-            ('nexus_resources', 'nexus_sensors'), ('san_health', 'san_congestion'),
-            ('san_analytics', 'hf_measurements'), ('hf_inventory', 'reported_links'), ('inventory_matches', 'events')]
+    rows = [('attention_history', 'attention_products'), ('coverage_age', 'inventory_products'),
+            ('nd_active_history', 'nd_reachability_history'), ('aci_tenant_health_history', 'aci_fault_history'),
+            ('nexus_cpu_history', 'nexus_temperature_history'), ('san_health_history', 'san_wait_history'),
+            ('hf_nodes_history', 'hf_ports_history')]
     for row, keys in enumerate(rows):
         for column, key in enumerate(keys):
             ds = 'ds_' + key
@@ -324,12 +336,14 @@ regional_view = table
                             'queryParameters': {'earliest': '$time_tok.earliest$', 'latest': '$time_tok.latest$'}}}
             # Search opens the resolved, scoped Searchbase query through Manager's
             # standard visualization toolbar. Avoid an unrelated global URL pivot.
-            viz('viz_' + key, {'type': 'splunk.table', 'title': SEARCHES[key]['title'],
+            viz('viz_' + key, {'type': SEARCHES[key].get('viz', 'splunk.table'), 'title': SEARCHES[key]['title'],
                               'description': SEARCHES[key]['question'], 'dataSources': {'primary': ds},
-                              'options': {'count': 8, 'wrap': True, 'backgroundColor': '#131a23'}},
+                              'options': {'backgroundColor': '#131a23', 'seriesColors': ['#649ef5', '#4cbf7f'], 'legendDisplay': 'off', 'yAxisTitleText': SEARCHES[key].get('unit') or 'Observed entities'}},
                 20 + column * 710, 190 + row * 330, 690, 310)
-    viz('notes', {'type': 'splunk.markdown', 'options': {'markdown': '### Continue the investigation\nUse the panel menu to open its resolved query in Search. Review **Shared switch inventory** for exact serial matches and **Reported topology** for endpoint/port evidence. Neither establishes a traffic path.\n\n**Optional expansion:** Search the library for ISE, Secure Firewall, SD-WAN, Meraki or ThousandEyes. Only link records when exact device, IP, session or test identities agree; review address reuse and scope first.', 'backgroundColor': '#1c2738', 'fontColor': '#ecf0f5'}}, 20, 2840, 1400, 180)
-    definition['layout']['options']['height'] = 3040
+            targets = ",".join("dc_workspace_" + ref for ref in SEARCHES[key]["related"])
+            viz("detail_" + key, {"type": "splunk.cisco_drilldown_action", "options": {"label": "Investigate " + SEARCHES[key]["title"]}, "eventHandlers": [{"type": "drilldown.customUrl", "options": {"url": "/drilldown?origin=" + key + "&target=" + targets + "&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"}}]}, 658 + column * 710, 200 + row * 330, 42, 42)
+    viz('notes', {'type': 'splunk.markdown', 'options': {'markdown': '### Continue the investigation\nUse the panel menu to open its resolved query in Search. Review **Shared switch inventory** for exact serial matches and **Reported topology** for endpoint/port evidence. Neither establishes a traffic path.\n\n**Optional expansion:** Search the library for ISE, Secure Firewall, SD-WAN, Meraki or ThousandEyes. Only link records when exact device, IP, session or test identities agree; review address reuse and scope first.', 'backgroundColor': '#1c2738', 'fontColor': '#ecf0f5'}}, 20, 2520, 1400, 180)
+    definition['layout']['options']['height'] = 2720
     xml = '<dashboard version="2" theme="dark" isVisible="false">\n<label>DC Networking Operations</label>\n<description>Five-product lab investigation built from the SSNE search library.</description>\n<definition><![CDATA[\n' + json.dumps(definition, indent=2) + '\n]]></definition>\n</dashboard>\n'
     outputs.append((DEFAULT / 'data/ui/views/dc_networking_operations.xml', xml))
     return outputs

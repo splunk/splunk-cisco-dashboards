@@ -55,11 +55,11 @@
     }
   },
   "dataSources": {
-    "ds_attention": {
+    "ds_attention_history": {
       "type": "ds.searchbase",
-      "name": "What needs my attention?",
+      "name": "Observed active faults and anomalies",
       "options": {
-        "ref": "dc_workspace_attention",
+        "ref": "dc_workspace_attention_history",
         "ownerApp": "splunk-cisco-dashboards",
         "dcScope": {
           "account": "$dc_account$",
@@ -72,11 +72,11 @@
         }
       }
     },
-    "ds_coverage": {
+    "ds_attention_products": {
       "type": "ds.searchbase",
-      "name": "Five-product data coverage and freshness",
+      "name": "Reported items to review by product",
       "options": {
-        "ref": "dc_workspace_coverage",
+        "ref": "dc_workspace_attention_products",
         "ownerApp": "splunk-cisco-dashboards",
         "dcScope": {
           "account": "$dc_account$",
@@ -89,11 +89,11 @@
         }
       }
     },
-    "ds_nd_anomalies": {
+    "ds_coverage_age": {
       "type": "ds.searchbase",
-      "name": "Open Nexus Dashboard anomalies",
+      "name": "How old is each product\u2019s latest observation?",
       "options": {
-        "ref": "dc_workspace_nd_anomalies",
+        "ref": "dc_workspace_coverage_age",
         "ownerApp": "splunk-cisco-dashboards",
         "dcScope": {
           "account": "$dc_account$",
@@ -106,11 +106,11 @@
         }
       }
     },
-    "ds_nd_fabrics": {
+    "ds_inventory_products": {
       "type": "ds.searchbase",
-      "name": "Fabric availability reported by Nexus Dashboard",
+      "name": "Shared inventory: products reporting each switch",
       "options": {
-        "ref": "dc_workspace_nd_fabrics",
+        "ref": "dc_workspace_inventory_products",
         "ownerApp": "splunk-cisco-dashboards",
         "dcScope": {
           "account": "$dc_account$",
@@ -123,11 +123,11 @@
         }
       }
     },
-    "ds_aci_health": {
+    "ds_nd_active_history": {
       "type": "ds.searchbase",
-      "name": "ACI fabric and tenant health",
+      "name": "Nexus Dashboard active-anomaly history",
       "options": {
-        "ref": "dc_workspace_aci_health",
+        "ref": "dc_workspace_nd_active_history",
         "ownerApp": "splunk-cisco-dashboards",
         "dcScope": {
           "account": "$dc_account$",
@@ -140,11 +140,11 @@
         }
       }
     },
-    "ds_aci_faults": {
+    "ds_nd_reachability_history": {
       "type": "ds.searchbase",
-      "name": "ACI latest active faults",
+      "name": "Reported fabric reachability",
       "options": {
-        "ref": "dc_workspace_aci_faults",
+        "ref": "dc_workspace_nd_reachability_history",
         "ownerApp": "splunk-cisco-dashboards",
         "dcScope": {
           "account": "$dc_account$",
@@ -157,11 +157,11 @@
         }
       }
     },
-    "ds_nexus_resources": {
+    "ds_aci_tenant_health_history": {
       "type": "ds.searchbase",
-      "name": "Nexus 9000 CPU headroom",
+      "name": "ACI observed tenant health",
       "options": {
-        "ref": "dc_workspace_nexus_resources",
+        "ref": "dc_workspace_aci_tenant_health_history",
         "ownerApp": "splunk-cisco-dashboards",
         "dcScope": {
           "account": "$dc_account$",
@@ -174,11 +174,11 @@
         }
       }
     },
-    "ds_nexus_sensors": {
+    "ds_aci_fault_history": {
       "type": "ds.searchbase",
-      "name": "Nexus 9000 reported sensor thresholds",
+      "name": "ACI active-fault history",
       "options": {
-        "ref": "dc_workspace_nexus_sensors",
+        "ref": "dc_workspace_aci_fault_history",
         "ownerApp": "splunk-cisco-dashboards",
         "dcScope": {
           "account": "$dc_account$",
@@ -191,11 +191,11 @@
         }
       }
     },
-    "ds_san_health": {
+    "ds_nexus_cpu_history": {
       "type": "ds.searchbase",
-      "name": "MDS switch health through NDFC",
+      "name": "Nexus 9000 mean CPU busy",
       "options": {
-        "ref": "dc_workspace_san_health",
+        "ref": "dc_workspace_nexus_cpu_history",
         "ownerApp": "splunk-cisco-dashboards",
         "dcScope": {
           "account": "$dc_account$",
@@ -208,11 +208,11 @@
         }
       }
     },
-    "ds_san_congestion": {
+    "ds_nexus_temperature_history": {
       "type": "ds.searchbase",
-      "name": "MDS SAN transmit wait and utilization",
+      "name": "Nexus 9000 peak reported temperature (Celsius)",
       "options": {
-        "ref": "dc_workspace_san_congestion",
+        "ref": "dc_workspace_nexus_temperature_history",
         "ownerApp": "splunk-cisco-dashboards",
         "dcScope": {
           "account": "$dc_account$",
@@ -225,11 +225,11 @@
         }
       }
     },
-    "ds_san_analytics": {
+    "ds_san_health_history": {
       "type": "ds.searchbase",
-      "name": "SAN Analytics evidence and measurement gaps",
+      "name": "MDS observed switch health",
       "options": {
-        "ref": "dc_workspace_san_analytics",
+        "ref": "dc_workspace_san_health_history",
         "ownerApp": "splunk-cisco-dashboards",
         "dcScope": {
           "account": "$dc_account$",
@@ -242,11 +242,11 @@
         }
       }
     },
-    "ds_hf_measurements": {
+    "ds_san_wait_history": {
       "type": "ds.searchbase",
-      "name": "Nexus Hyperfabric measurement availability",
+      "name": "SAN highest reported transmit wait",
       "options": {
-        "ref": "dc_workspace_hf_measurements",
+        "ref": "dc_workspace_san_wait_history",
         "ownerApp": "splunk-cisco-dashboards",
         "dcScope": {
           "account": "$dc_account$",
@@ -259,11 +259,11 @@
         }
       }
     },
-    "ds_hf_inventory": {
+    "ds_hf_nodes_history": {
       "type": "ds.searchbase",
-      "name": "Nexus Hyperfabric observed ports",
+      "name": "Hyperfabric observed nodes",
       "options": {
-        "ref": "dc_workspace_hf_inventory",
+        "ref": "dc_workspace_hf_nodes_history",
         "ownerApp": "splunk-cisco-dashboards",
         "dcScope": {
           "account": "$dc_account$",
@@ -276,45 +276,11 @@
         }
       }
     },
-    "ds_reported_links": {
+    "ds_hf_ports_history": {
       "type": "ds.searchbase",
-      "name": "Reported topology and physical connection evidence",
+      "name": "Hyperfabric observed ports",
       "options": {
-        "ref": "dc_workspace_reported_links",
-        "ownerApp": "splunk-cisco-dashboards",
-        "dcScope": {
-          "account": "$dc_account$",
-          "fabric": "$dc_fabric$",
-          "device": "$dc_device$"
-        },
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      }
-    },
-    "ds_inventory_matches": {
-      "type": "ds.searchbase",
-      "name": "Shared switch inventory by exact serial",
-      "options": {
-        "ref": "dc_workspace_inventory_matches",
-        "ownerApp": "splunk-cisco-dashboards",
-        "dcScope": {
-          "account": "$dc_account$",
-          "fabric": "$dc_fabric$",
-          "device": "$dc_device$"
-        },
-        "queryParameters": {
-          "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
-        }
-      }
-    },
-    "ds_events": {
-      "type": "ds.searchbase",
-      "name": "Related DC observations in the selected scope",
-      "options": {
-        "ref": "dc_workspace_events",
+        "ref": "dc_workspace_hf_ports_history",
         "ownerApp": "splunk-cisco-dashboards",
         "dcScope": {
           "account": "$dc_account$",
@@ -337,213 +303,439 @@
         "fontColor": "#ecf0f5"
       }
     },
-    "viz_attention": {
-      "type": "splunk.table",
-      "title": "What needs my attention?",
-      "description": "Which explicit faults or measured pressures should I investigate first?",
+    "viz_attention_history": {
+      "type": "splunk.line",
+      "title": "Observed active faults and anomalies",
+      "description": "Observed active faults and anomalies",
       "dataSources": {
-        "primary": "ds_attention"
+        "primary": "ds_attention_history"
       },
       "options": {
-        "count": 8,
-        "wrap": true,
-        "backgroundColor": "#131a23"
+        "backgroundColor": "#131a23",
+        "seriesColors": [
+          "#649ef5",
+          "#4cbf7f"
+        ],
+        "legendDisplay": "off",
+        "yAxisTitleText": "Observed entities"
       }
     },
-    "viz_coverage": {
-      "type": "splunk.table",
-      "title": "Five-product data coverage and freshness",
-      "description": "What data was observed, how old is it, and what is missing?",
+    "detail_attention_history": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "label": "Investigate Observed active faults and anomalies"
+      },
+      "eventHandlers": [
+        {
+          "type": "drilldown.customUrl",
+          "options": {
+            "url": "/drilldown?origin=attention_history&target=dc_workspace_attention,dc_workspace_nd_anomalies,dc_workspace_aci_faults,dc_workspace_events&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+          }
+        }
+      ]
+    },
+    "viz_attention_products": {
+      "type": "splunk.bar",
+      "title": "Reported items to review by product",
+      "description": "Reported items to review by product",
       "dataSources": {
-        "primary": "ds_coverage"
+        "primary": "ds_attention_products"
       },
       "options": {
-        "count": 8,
-        "wrap": true,
-        "backgroundColor": "#131a23"
+        "backgroundColor": "#131a23",
+        "seriesColors": [
+          "#649ef5",
+          "#4cbf7f"
+        ],
+        "legendDisplay": "off",
+        "yAxisTitleText": "Observed entities"
       }
     },
-    "viz_nd_anomalies": {
-      "type": "splunk.table",
-      "title": "Open Nexus Dashboard anomalies",
-      "description": "Which reported anomalies still need investigation?",
+    "detail_attention_products": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "label": "Investigate Reported items to review by product"
+      },
+      "eventHandlers": [
+        {
+          "type": "drilldown.customUrl",
+          "options": {
+            "url": "/drilldown?origin=attention_products&target=dc_workspace_attention,dc_workspace_events&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+          }
+        }
+      ]
+    },
+    "viz_coverage_age": {
+      "type": "splunk.bar",
+      "title": "How old is each product\u2019s latest observation?",
+      "description": "How old is each product\u2019s latest observation?",
       "dataSources": {
-        "primary": "ds_nd_anomalies"
+        "primary": "ds_coverage_age"
       },
       "options": {
-        "count": 8,
-        "wrap": true,
-        "backgroundColor": "#131a23"
+        "backgroundColor": "#131a23",
+        "seriesColors": [
+          "#649ef5",
+          "#4cbf7f"
+        ],
+        "legendDisplay": "off",
+        "yAxisTitleText": "min"
       }
     },
-    "viz_nd_fabrics": {
-      "type": "splunk.table",
-      "title": "Fabric availability reported by Nexus Dashboard",
-      "description": "Which fabrics are reachable and is telemetry enabled?",
+    "detail_coverage_age": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "label": "Investigate How old is each product\u2019s latest observation?"
+      },
+      "eventHandlers": [
+        {
+          "type": "drilldown.customUrl",
+          "options": {
+            "url": "/drilldown?origin=coverage_age&target=dc_workspace_coverage,dc_workspace_hf_measurements,dc_workspace_san_analytics&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+          }
+        }
+      ]
+    },
+    "viz_inventory_products": {
+      "type": "splunk.bar",
+      "title": "Shared inventory: products reporting each switch",
+      "description": "Shared inventory: products reporting each switch",
       "dataSources": {
-        "primary": "ds_nd_fabrics"
+        "primary": "ds_inventory_products"
       },
       "options": {
-        "count": 8,
-        "wrap": true,
-        "backgroundColor": "#131a23"
+        "backgroundColor": "#131a23",
+        "seriesColors": [
+          "#649ef5",
+          "#4cbf7f"
+        ],
+        "legendDisplay": "off",
+        "yAxisTitleText": "Observed entities"
       }
     },
-    "viz_aci_health": {
-      "type": "splunk.table",
-      "title": "ACI fabric and tenant health",
-      "description": "Which APIC fabric or tenant reports degraded health?",
+    "detail_inventory_products": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "label": "Investigate Shared inventory: products reporting each switch"
+      },
+      "eventHandlers": [
+        {
+          "type": "drilldown.customUrl",
+          "options": {
+            "url": "/drilldown?origin=inventory_products&target=dc_workspace_inventory_matches,dc_workspace_reported_links&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+          }
+        }
+      ]
+    },
+    "viz_nd_active_history": {
+      "type": "splunk.line",
+      "title": "Nexus Dashboard active-anomaly history",
+      "description": "Nexus Dashboard active-anomaly history",
       "dataSources": {
-        "primary": "ds_aci_health"
+        "primary": "ds_nd_active_history"
       },
       "options": {
-        "count": 8,
-        "wrap": true,
-        "backgroundColor": "#131a23"
+        "backgroundColor": "#131a23",
+        "seriesColors": [
+          "#649ef5",
+          "#4cbf7f"
+        ],
+        "legendDisplay": "off",
+        "yAxisTitleText": "Observed entities"
       }
     },
-    "viz_aci_faults": {
-      "type": "splunk.table",
-      "title": "ACI latest active faults",
-      "description": "Which fault, object and APIC need attention?",
+    "detail_nd_active_history": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "label": "Investigate Nexus Dashboard active-anomaly history"
+      },
+      "eventHandlers": [
+        {
+          "type": "drilldown.customUrl",
+          "options": {
+            "url": "/drilldown?origin=nd_active_history&target=dc_workspace_nd_anomalies,dc_workspace_events&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+          }
+        }
+      ]
+    },
+    "viz_nd_reachability_history": {
+      "type": "splunk.line",
+      "title": "Reported fabric reachability",
+      "description": "Reported fabric reachability",
       "dataSources": {
-        "primary": "ds_aci_faults"
+        "primary": "ds_nd_reachability_history"
       },
       "options": {
-        "count": 8,
-        "wrap": true,
-        "backgroundColor": "#131a23"
+        "backgroundColor": "#131a23",
+        "seriesColors": [
+          "#649ef5",
+          "#4cbf7f"
+        ],
+        "legendDisplay": "off",
+        "yAxisTitleText": "%"
       }
     },
-    "viz_nexus_resources": {
-      "type": "splunk.table",
-      "title": "Nexus 9000 CPU headroom",
-      "description": "Which device and CPU have the least remaining headroom?",
+    "detail_nd_reachability_history": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "label": "Investigate Reported fabric reachability"
+      },
+      "eventHandlers": [
+        {
+          "type": "drilldown.customUrl",
+          "options": {
+            "url": "/drilldown?origin=nd_reachability_history&target=dc_workspace_nd_fabrics,dc_workspace_events&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+          }
+        }
+      ]
+    },
+    "viz_aci_tenant_health_history": {
+      "type": "splunk.line",
+      "title": "ACI observed tenant health",
+      "description": "ACI observed tenant health",
       "dataSources": {
-        "primary": "ds_nexus_resources"
+        "primary": "ds_aci_tenant_health_history"
       },
       "options": {
-        "count": 8,
-        "wrap": true,
-        "backgroundColor": "#131a23"
+        "backgroundColor": "#131a23",
+        "seriesColors": [
+          "#649ef5",
+          "#4cbf7f"
+        ],
+        "legendDisplay": "off",
+        "yAxisTitleText": "%"
       }
     },
-    "viz_nexus_sensors": {
-      "type": "splunk.table",
-      "title": "Nexus 9000 reported sensor thresholds",
-      "description": "Are any sensors at or above a reported major threshold?",
+    "detail_aci_tenant_health_history": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "label": "Investigate ACI observed tenant health"
+      },
+      "eventHandlers": [
+        {
+          "type": "drilldown.customUrl",
+          "options": {
+            "url": "/drilldown?origin=aci_tenant_health_history&target=dc_workspace_aci_health,dc_workspace_aci_faults&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+          }
+        }
+      ]
+    },
+    "viz_aci_fault_history": {
+      "type": "splunk.line",
+      "title": "ACI active-fault history",
+      "description": "ACI active-fault history",
       "dataSources": {
-        "primary": "ds_nexus_sensors"
+        "primary": "ds_aci_fault_history"
       },
       "options": {
-        "count": 8,
-        "wrap": true,
-        "backgroundColor": "#131a23"
+        "backgroundColor": "#131a23",
+        "seriesColors": [
+          "#649ef5",
+          "#4cbf7f"
+        ],
+        "legendDisplay": "off",
+        "yAxisTitleText": "Observed entities"
       }
     },
-    "viz_san_health": {
-      "type": "splunk.table",
-      "title": "MDS switch health through NDFC",
-      "description": "Which SAN switches report warnings or resource pressure?",
+    "detail_aci_fault_history": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "label": "Investigate ACI active-fault history"
+      },
+      "eventHandlers": [
+        {
+          "type": "drilldown.customUrl",
+          "options": {
+            "url": "/drilldown?origin=aci_fault_history&target=dc_workspace_aci_faults,dc_workspace_events&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+          }
+        }
+      ]
+    },
+    "viz_nexus_cpu_history": {
+      "type": "splunk.line",
+      "title": "Nexus 9000 mean CPU busy",
+      "description": "Nexus 9000 mean CPU busy",
       "dataSources": {
-        "primary": "ds_san_health"
+        "primary": "ds_nexus_cpu_history"
       },
       "options": {
-        "count": 8,
-        "wrap": true,
-        "backgroundColor": "#131a23"
+        "backgroundColor": "#131a23",
+        "seriesColors": [
+          "#649ef5",
+          "#4cbf7f"
+        ],
+        "legendDisplay": "off",
+        "yAxisTitleText": "%"
       }
     },
-    "viz_san_congestion": {
-      "type": "splunk.table",
-      "title": "MDS SAN transmit wait and utilization",
-      "description": "Where is transmit wait reported and which interface is affected?",
+    "detail_nexus_cpu_history": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "label": "Investigate Nexus 9000 mean CPU busy"
+      },
+      "eventHandlers": [
+        {
+          "type": "drilldown.customUrl",
+          "options": {
+            "url": "/drilldown?origin=nexus_cpu_history&target=dc_workspace_nexus_resources,dc_workspace_events&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+          }
+        }
+      ]
+    },
+    "viz_nexus_temperature_history": {
+      "type": "splunk.line",
+      "title": "Nexus 9000 peak reported temperature (Celsius)",
+      "description": "Nexus 9000 peak reported temperature (Celsius)",
       "dataSources": {
-        "primary": "ds_san_congestion"
+        "primary": "ds_nexus_temperature_history"
       },
       "options": {
-        "count": 8,
-        "wrap": true,
-        "backgroundColor": "#131a23"
+        "backgroundColor": "#131a23",
+        "seriesColors": [
+          "#649ef5",
+          "#4cbf7f"
+        ],
+        "legendDisplay": "off",
+        "yAxisTitleText": "\u00b0C"
       }
     },
-    "viz_san_analytics": {
-      "type": "splunk.table",
-      "title": "SAN Analytics evidence and measurement gaps",
-      "description": "What analytics evidence did NDFC actually return?",
+    "detail_nexus_temperature_history": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "label": "Investigate Nexus 9000 peak reported temperature (Celsius)"
+      },
+      "eventHandlers": [
+        {
+          "type": "drilldown.customUrl",
+          "options": {
+            "url": "/drilldown?origin=nexus_temperature_history&target=dc_workspace_nexus_sensors&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+          }
+        }
+      ]
+    },
+    "viz_san_health_history": {
+      "type": "splunk.line",
+      "title": "MDS observed switch health",
+      "description": "MDS observed switch health",
       "dataSources": {
-        "primary": "ds_san_analytics"
+        "primary": "ds_san_health_history"
       },
       "options": {
-        "count": 8,
-        "wrap": true,
-        "backgroundColor": "#131a23"
+        "backgroundColor": "#131a23",
+        "seriesColors": [
+          "#649ef5",
+          "#4cbf7f"
+        ],
+        "legendDisplay": "off",
+        "yAxisTitleText": "%"
       }
     },
-    "viz_hf_measurements": {
-      "type": "splunk.table",
-      "title": "Nexus Hyperfabric measurement availability",
-      "description": "Do the reported counters contain usable rates?",
+    "detail_san_health_history": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "label": "Investigate MDS observed switch health"
+      },
+      "eventHandlers": [
+        {
+          "type": "drilldown.customUrl",
+          "options": {
+            "url": "/drilldown?origin=san_health_history&target=dc_workspace_san_health,dc_workspace_san_congestion&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+          }
+        }
+      ]
+    },
+    "viz_san_wait_history": {
+      "type": "splunk.line",
+      "title": "SAN highest reported transmit wait",
+      "description": "SAN highest reported transmit wait",
       "dataSources": {
-        "primary": "ds_hf_measurements"
+        "primary": "ds_san_wait_history"
       },
       "options": {
-        "count": 8,
-        "wrap": true,
-        "backgroundColor": "#131a23"
+        "backgroundColor": "#131a23",
+        "seriesColors": [
+          "#649ef5",
+          "#4cbf7f"
+        ],
+        "legendDisplay": "off",
+        "yAxisTitleText": "%"
       }
     },
-    "viz_hf_inventory": {
-      "type": "splunk.table",
-      "title": "Nexus Hyperfabric observed ports",
-      "description": "Which fabrics and nodes have observed ports and administrative state?",
+    "detail_san_wait_history": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "label": "Investigate SAN highest reported transmit wait"
+      },
+      "eventHandlers": [
+        {
+          "type": "drilldown.customUrl",
+          "options": {
+            "url": "/drilldown?origin=san_wait_history&target=dc_workspace_san_congestion,dc_workspace_san_analytics&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+          }
+        }
+      ]
+    },
+    "viz_hf_nodes_history": {
+      "type": "splunk.line",
+      "title": "Hyperfabric observed nodes",
+      "description": "Hyperfabric observed nodes",
       "dataSources": {
-        "primary": "ds_hf_inventory"
+        "primary": "ds_hf_nodes_history"
       },
       "options": {
-        "count": 8,
-        "wrap": true,
-        "backgroundColor": "#131a23"
+        "backgroundColor": "#131a23",
+        "seriesColors": [
+          "#649ef5",
+          "#4cbf7f"
+        ],
+        "legendDisplay": "off",
+        "yAxisTitleText": "Observed entities"
       }
     },
-    "viz_reported_links": {
-      "type": "splunk.table",
-      "title": "Reported topology and physical connection evidence",
-      "description": "Which relationships include ports, and which are logical topology?",
+    "detail_hf_nodes_history": {
+      "type": "splunk.cisco_drilldown_action",
+      "options": {
+        "label": "Investigate Hyperfabric observed nodes"
+      },
+      "eventHandlers": [
+        {
+          "type": "drilldown.customUrl",
+          "options": {
+            "url": "/drilldown?origin=hf_nodes_history&target=dc_workspace_hf_inventory,dc_workspace_reported_links,dc_workspace_hf_measurements&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+          }
+        }
+      ]
+    },
+    "viz_hf_ports_history": {
+      "type": "splunk.line",
+      "title": "Hyperfabric observed ports",
+      "description": "Hyperfabric observed ports",
       "dataSources": {
-        "primary": "ds_reported_links"
+        "primary": "ds_hf_ports_history"
       },
       "options": {
-        "count": 8,
-        "wrap": true,
-        "backgroundColor": "#131a23"
+        "backgroundColor": "#131a23",
+        "seriesColors": [
+          "#649ef5",
+          "#4cbf7f"
+        ],
+        "legendDisplay": "off",
+        "yAxisTitleText": "Observed entities"
       }
     },
-    "viz_inventory_matches": {
-      "type": "splunk.table",
-      "title": "Shared switch inventory by exact serial",
-      "description": "Which switches are reported by more than one product?",
-      "dataSources": {
-        "primary": "ds_inventory_matches"
-      },
+    "detail_hf_ports_history": {
+      "type": "splunk.cisco_drilldown_action",
       "options": {
-        "count": 8,
-        "wrap": true,
-        "backgroundColor": "#131a23"
-      }
-    },
-    "viz_events": {
-      "type": "splunk.table",
-      "title": "Related DC observations in the selected scope",
-      "description": "What did the selected sources report in this time window?",
-      "dataSources": {
-        "primary": "ds_events"
+        "label": "Investigate Hyperfabric observed ports"
       },
-      "options": {
-        "count": 8,
-        "wrap": true,
-        "backgroundColor": "#131a23"
-      }
+      "eventHandlers": [
+        {
+          "type": "drilldown.customUrl",
+          "options": {
+            "url": "/drilldown?origin=hf_ports_history&target=dc_workspace_hf_inventory,dc_workspace_reported_links,dc_workspace_hf_measurements&dc_account=$dc_account$&dc_fabric=$dc_fabric$&dc_device=$dc_device$"
+          }
+        }
+      ]
     },
     "notes": {
       "type": "splunk.markdown",
@@ -566,7 +758,7 @@
     "type": "absolute",
     "options": {
       "width": 1440,
-      "height": 3040,
+      "height": 2720,
       "display": "auto-scale",
       "backgroundColor": "#0b1018"
     },
@@ -582,7 +774,7 @@
         }
       },
       {
-        "item": "viz_attention",
+        "item": "viz_attention_history",
         "type": "block",
         "position": {
           "x": 20,
@@ -592,7 +784,17 @@
         }
       },
       {
-        "item": "viz_coverage",
+        "item": "detail_attention_history",
+        "type": "block",
+        "position": {
+          "x": 658,
+          "y": 200,
+          "w": 42,
+          "h": 42
+        }
+      },
+      {
+        "item": "viz_attention_products",
         "type": "block",
         "position": {
           "x": 730,
@@ -602,7 +804,17 @@
         }
       },
       {
-        "item": "viz_nd_anomalies",
+        "item": "detail_attention_products",
+        "type": "block",
+        "position": {
+          "x": 1368,
+          "y": 200,
+          "w": 42,
+          "h": 42
+        }
+      },
+      {
+        "item": "viz_coverage_age",
         "type": "block",
         "position": {
           "x": 20,
@@ -612,7 +824,17 @@
         }
       },
       {
-        "item": "viz_nd_fabrics",
+        "item": "detail_coverage_age",
+        "type": "block",
+        "position": {
+          "x": 658,
+          "y": 530,
+          "w": 42,
+          "h": 42
+        }
+      },
+      {
+        "item": "viz_inventory_products",
         "type": "block",
         "position": {
           "x": 730,
@@ -622,7 +844,17 @@
         }
       },
       {
-        "item": "viz_aci_health",
+        "item": "detail_inventory_products",
+        "type": "block",
+        "position": {
+          "x": 1368,
+          "y": 530,
+          "w": 42,
+          "h": 42
+        }
+      },
+      {
+        "item": "viz_nd_active_history",
         "type": "block",
         "position": {
           "x": 20,
@@ -632,7 +864,17 @@
         }
       },
       {
-        "item": "viz_aci_faults",
+        "item": "detail_nd_active_history",
+        "type": "block",
+        "position": {
+          "x": 658,
+          "y": 860,
+          "w": 42,
+          "h": 42
+        }
+      },
+      {
+        "item": "viz_nd_reachability_history",
         "type": "block",
         "position": {
           "x": 730,
@@ -642,7 +884,17 @@
         }
       },
       {
-        "item": "viz_nexus_resources",
+        "item": "detail_nd_reachability_history",
+        "type": "block",
+        "position": {
+          "x": 1368,
+          "y": 860,
+          "w": 42,
+          "h": 42
+        }
+      },
+      {
+        "item": "viz_aci_tenant_health_history",
         "type": "block",
         "position": {
           "x": 20,
@@ -652,7 +904,17 @@
         }
       },
       {
-        "item": "viz_nexus_sensors",
+        "item": "detail_aci_tenant_health_history",
+        "type": "block",
+        "position": {
+          "x": 658,
+          "y": 1190,
+          "w": 42,
+          "h": 42
+        }
+      },
+      {
+        "item": "viz_aci_fault_history",
         "type": "block",
         "position": {
           "x": 730,
@@ -662,7 +924,17 @@
         }
       },
       {
-        "item": "viz_san_health",
+        "item": "detail_aci_fault_history",
+        "type": "block",
+        "position": {
+          "x": 1368,
+          "y": 1190,
+          "w": 42,
+          "h": 42
+        }
+      },
+      {
+        "item": "viz_nexus_cpu_history",
         "type": "block",
         "position": {
           "x": 20,
@@ -672,7 +944,17 @@
         }
       },
       {
-        "item": "viz_san_congestion",
+        "item": "detail_nexus_cpu_history",
+        "type": "block",
+        "position": {
+          "x": 658,
+          "y": 1520,
+          "w": 42,
+          "h": 42
+        }
+      },
+      {
+        "item": "viz_nexus_temperature_history",
         "type": "block",
         "position": {
           "x": 730,
@@ -682,7 +964,17 @@
         }
       },
       {
-        "item": "viz_san_analytics",
+        "item": "detail_nexus_temperature_history",
+        "type": "block",
+        "position": {
+          "x": 1368,
+          "y": 1520,
+          "w": 42,
+          "h": 42
+        }
+      },
+      {
+        "item": "viz_san_health_history",
         "type": "block",
         "position": {
           "x": 20,
@@ -692,7 +984,17 @@
         }
       },
       {
-        "item": "viz_hf_measurements",
+        "item": "detail_san_health_history",
+        "type": "block",
+        "position": {
+          "x": 658,
+          "y": 1850,
+          "w": 42,
+          "h": 42
+        }
+      },
+      {
+        "item": "viz_san_wait_history",
         "type": "block",
         "position": {
           "x": 730,
@@ -702,7 +1004,17 @@
         }
       },
       {
-        "item": "viz_hf_inventory",
+        "item": "detail_san_wait_history",
+        "type": "block",
+        "position": {
+          "x": 1368,
+          "y": 1850,
+          "w": 42,
+          "h": 42
+        }
+      },
+      {
+        "item": "viz_hf_nodes_history",
         "type": "block",
         "position": {
           "x": 20,
@@ -712,7 +1024,17 @@
         }
       },
       {
-        "item": "viz_reported_links",
+        "item": "detail_hf_nodes_history",
+        "type": "block",
+        "position": {
+          "x": 658,
+          "y": 2180,
+          "w": 42,
+          "h": 42
+        }
+      },
+      {
+        "item": "viz_hf_ports_history",
         "type": "block",
         "position": {
           "x": 730,
@@ -722,23 +1044,13 @@
         }
       },
       {
-        "item": "viz_inventory_matches",
+        "item": "detail_hf_ports_history",
         "type": "block",
         "position": {
-          "x": 20,
-          "y": 2500,
-          "w": 690,
-          "h": 310
-        }
-      },
-      {
-        "item": "viz_events",
-        "type": "block",
-        "position": {
-          "x": 730,
-          "y": 2500,
-          "w": 690,
-          "h": 310
+          "x": 1368,
+          "y": 2180,
+          "w": 42,
+          "h": 42
         }
       },
       {
@@ -746,7 +1058,7 @@
         "type": "block",
         "position": {
           "x": 20,
-          "y": 2840,
+          "y": 2520,
           "w": 1400,
           "h": 180
         }

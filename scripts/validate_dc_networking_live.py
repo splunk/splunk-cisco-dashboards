@@ -31,7 +31,7 @@ def ephemeral_fixture(query, rows):
 
 
 def check_semantics(client):
-    stamp = int(time.time()) - 30
+    stamp = (int(time.time()) // 900 - 1) * 900 + 100
     nd = dict(sourcetype='cisco:dc:nd:anomalies', nd_account='lab', nd_host='controller-a',
               fabricName='fabric-a', anomalyId='same-id', event_time=stamp, cleared='false',
               expired='false', severity='major', entityName='leaf-a', anomalyType='test')
@@ -43,6 +43,12 @@ def check_semantics(client):
     assert sorted(r['SignalId'] for r in results) == ['acknowledged', 'same-id'], results
     queue, _ = client.search(ephemeral_fixture(SEARCHES['attention']['query'], rows))
     assert len(queue) == 2, queue
+    trend, _ = client.search(ephemeral_fixture(SEARCHES['nd_active_history']['query'], rows + [rows[2]]))
+    assert len(trend) == 1 and float(trend[0]['Metric']) == 2, trend
+    cleared, _ = client.search(ephemeral_fixture(SEARCHES['nd_active_history']['query'], [rows[1]]))
+    assert len(cleared) == 1 and float(cleared[0]['Metric']) == 0, cleared
+    absent, _ = client.search(ephemeral_fixture(SEARCHES['nd_active_history']['query'], [rows[-1]]))
+    assert not absent, absent
     hf = dict(sourcetype='cisco:dc:hyperfabric:performance', account='lab', fabric_name='hf-a',
               fabric_id='hf-id', resource_type='node_counter', event_time=stamp)
     results, _ = client.search(ephemeral_fixture(SEARCHES['hf_measurements']['query'], [hf]))
@@ -72,7 +78,10 @@ def check_semantics(client):
                         'matching device names alone do not establish inventory identity',
                         'topology scope matches the local endpoint',
                         'topology scope matches the remote endpoint',
-                        'topology scope excludes unrelated devices'])
+                        'topology scope excludes unrelated devices',
+                        'trend deduplicates polls per entity and bucket',
+                        'observed cleared state produces a measured zero',
+                        'unknown state creates no fabricated zero bucket'])
 
 
 class LabClient:

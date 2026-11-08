@@ -7,6 +7,13 @@ export interface DcNetworkingScope {
 
 export const DC_SCOPE_MARKER = '| eval DCWorkspaceScope=1';
 
+export const dcScopeFromDrilldownUrl = (url: string): DcNetworkingScope | undefined => {
+    const params = new URL(url, 'https://workspace.invalid').searchParams;
+    if (!['account', 'fabric', 'device'].some((key) => params.has(`dc_${key}`))) return undefined;
+    return Object.fromEntries(['account', 'fabric', 'device'].map((key) =>
+        [key, normalizeDcScopeValue(params.get(`dc_${key}`))]));
+};
+
 export const normalizeDcScopeValue = (raw: unknown): string => {
     if (raw === undefined || raw === null || raw === '' || raw === '*') { return ''; }
     // A positive character allowlist prevents SPL, macro and token injection.
