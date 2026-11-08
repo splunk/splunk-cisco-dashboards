@@ -21,7 +21,9 @@ export const workspaceIconName = (workspace: Pick<InsightsWorkspace, 'id' | 'sou
 const icons = { network: NetworkDevices, access: FingerprintNodes, pulse: Pulse,
     soc: RobotFaceSparkle, security: Shield, secure: ShieldKeyhole, executive: Briefcase };
 
-export default function WorkspaceDefaultIcon({ workspace }: { workspace: Pick<InsightsWorkspace, 'id' | 'sourceWorkspace'> }) {
+export default function WorkspaceDefaultIcon({ workspace, size = 28 }: { size?: number; workspace: Pick<InsightsWorkspace, 'id' | 'sourceWorkspace'> }) {
     const Icon = icons[workspaceIconName(workspace)];
-    return <Icon aria-hidden="true" width="100%" height="100%" />;
+    return <span aria-hidden="true" style={{ display: 'inline-flex', width: size, height: size, flex: '0 0 auto', overflow: 'hidden' }}>
+        <Icon style={{ width: size, height: size, flex: '0 0 auto' }} />
+    </span>;
 }

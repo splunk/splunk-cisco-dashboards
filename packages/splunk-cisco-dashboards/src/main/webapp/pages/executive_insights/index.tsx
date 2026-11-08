@@ -253,7 +253,7 @@ import { cn } from "@/common/lib/utils";
 // =============================================================================
 
 const APP_NAME = "splunk-cisco-dashboards";
-const WORKSPACE_MENU_WIDTH_PX = 200;
+const WORKSPACE_MENU_WIDTH_PX = 280;
 const HEADER_REFRESH_RATE_WIDTH_PX = 140;
 
 // Default subtitle shown beneath the workspace title when no per-user
@@ -5143,8 +5143,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   {workspaces.map((workspace) => (
                     <Menu.Item
                       key={workspace.id}
-                      startAdornment={<span className="inline-flex w-5 h-5 sui-color-info">
-                        {normalizeSharedImageSource(workspace.defaultLogoSrc) ? <img src={normalizeSharedImageSource(workspace.defaultLogoSrc)} alt="" className="w-full h-full object-contain" /> : <WorkspaceDefaultIcon workspace={workspace} />}
+                      startAdornment={<span className="sui-color-info" style={{ display: "inline-flex", width: 20, height: 20, flex: "0 0 20px", overflow: "hidden" }}>
+                        {normalizeSharedImageSource(workspace.defaultLogoSrc) ? <img src={normalizeSharedImageSource(workspace.defaultLogoSrc)} alt="" style={{ width: 20, height: 20, objectFit: "contain" }} /> : <WorkspaceDefaultIcon workspace={workspace} size={20} />}
                       </span>}
                       onClick={() =>
                         rememberLastWorkspace(workspace.id, workspaces)

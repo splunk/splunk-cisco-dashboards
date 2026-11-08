@@ -70,8 +70,22 @@ def check_semantics(client):
             '| eval DCWorkspaceScope=1\n| where lower(Device)="' + endpoint + '" OR lower(DevicePeer)="' + endpoint + '"')
         results, _ = client.search(ephemeral_fixture(scoped, links))
         assert len(results) == expected, (endpoint, results)
+    # Gauges must not manufacture zero when no classified readings exist.
+    unknown_node = dict(sourcetype='cisco:dc:hyperfabric:inventory', account='lab',
+                        fabric_id='hf-id', resource_type='node', event_time=stamp,
+                        **{'vendor.nodeId': 'node-a'})
+    results, _ = client.search(ephemeral_fixture(SEARCHES['hf_node_enabled_now']['query'], [unknown_node]))
+    assert not results, results
+    disabled_node = dict(unknown_node, **{'vendor.enabled': 'false'})
+    results, _ = client.search(ephemeral_fixture(SEARCHES['hf_node_enabled_now']['query'], [disabled_node]))
+    assert len(results) == 1 and float(results[0]['Metric']) == 0, results
+    enabled_node = dict(unknown_node, **{'vendor.enabled': 'true'})
+    results, _ = client.search(ephemeral_fixture(SEARCHES['hf_node_enabled_now']['query'], [enabled_node]))
+    assert len(results) == 1 and float(results[0]['Metric']) == 100, results
+    results, _ = client.search(ephemeral_fixture(SEARCHES['attention_critical_history']['query'], [dict(row, severity='critical') for row in rows + [rows[2]]]))
+    assert len(results) == 1 and float(results[0]['Metric']) == 2, results
     return dict(status='passed', method='Ephemeral makeresults fixtures; no events indexed',
-                checks=['latest cleared state excluded', 'controller collisions remain independent',
+                checks=['unknown administrative state produces no gauge value', 'reported disabled state produces measured zero', 'reported enabled state produces measured 100', 'critical history deduplicates repeated polls', 'latest cleared state excluded', 'controller collisions remain independent',
                         'acknowledged anomalies retained', 'unknown expiry excluded',
                         'attention queue is populated from explicit active state',
                         'absent rates stay unknown', 'serial matches are case normalized',

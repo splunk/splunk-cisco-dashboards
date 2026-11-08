@@ -223,6 +223,19 @@ add('relationships', 'What relationships can I verify?', 'dc_attention',
     SEARCHES['inventory_matches']['query'], ('inventory_matches', 'reported_links', 'events'))
 
 
+add('hf_nodes', 'Hyperfabric node inventory and administrative state', None,
+    'Which node, role and administrative setting support the summary?',
+    base('sourcetype="cisco:dc:hyperfabric:inventory" resource_type=node') + "\n| eval NodeId='vendor.nodeId' | where isnotnull(NodeId)" + latest('Account FabricId NodeId') + """
+| eval Node=coalesce('vendor.name',NodeId), Roles=coalesce(mvjoin('vendor.roles{}',", "),"Unreported"), AdminEnabled=coalesce('vendor.enabled',"Unreported"), Model=coalesce('vendor.modelName',"Unreported")
+| table Account Fabric Node NodeId Roles AdminEnabled Model AgeMinutes Observed""",
+    ('reported_links', 'hf_measurements', 'events'))
+add('hf_ports', 'Hyperfabric port inventory and administrative state', None,
+    'Which reported port has this administrative setting?',
+    base('sourcetype="cisco:dc:hyperfabric:inventory" resource_type=port') + "\n| eval PortId='vendor.id' | where isnotnull(PortId)" + latest('Account FabricId node_id PortId') + """
+| eval Port=coalesce('vendor.name',PortId), AdminEnabled=coalesce('vendor.enabled',"Unreported"), ReportedMaxSpeed='vendor.maxSpeed'
+| table Account Fabric node_id Port PortId AdminEnabled ReportedMaxSpeed AgeMinutes Observed""",
+    ('reported_links', 'hf_measurements', 'events'))
+
 add_charts(SEARCHES, base)
 
 def block_file(name, body):
@@ -251,6 +264,8 @@ def generate():
         chart = record.get('viz', 'splunk.table')
         if chart != 'splunk.table':
             viz.update(seriesColors=['#649ef5', '#4cbf7f', '#f0c243'], legendDisplay='off', showTotal=False)
+        if chart in ('splunk.singlevalueradial', 'splunk.fillergauge'):
+            viz.update(valueField='Metric', min=0, max=100, showDelta=False, valueSuffix='%', decimals=1)
         if record['section']:
             if key in OVERVIEW_COLUMNS:
                 viz['overviewColumns'] = OVERVIEW_COLUMNS[key]
@@ -283,7 +298,7 @@ sections = ''' + ','.join(sections) + '\ndefault_visible_sections = ' + ','.join
 max_visible_sections = 6
 min_tile_count = 1
 max_tile_count = 9
-default_tile_count = 3
+default_tile_count = 9
 header_title = DC Networking
 header_subtitle = What needs my attention? · Lab observations across five products
 hide_default_logo = 0
@@ -301,8 +316,9 @@ regional_view = table
             'dc_san': ['dc_workspace_san_health_history', 'dc_workspace_san_wait_history', 'dc_workspace_san_cpu_history'],
             'dc_hyperfabric': ['dc_workspace_hf_nodes_history', 'dc_workspace_hf_ports_history', 'dc_workspace_hf_connections_history'],
         }.get(section, [])
+        assert len(ids) == 9, (section, len(ids))
         ids = preferred + [tile for tile in ids if tile not in preferred]
-        layout += f'\n[layout.dc_networking.{section}]\ntiles = ' + ','.join(ids) + f'\nvisible_count = {min(3, len(ids))}\n'
+        layout += f'\n[layout.dc_networking.{section}]\ntiles = ' + ','.join(ids) + f'\nvisible_count = {len(ids)}\n'
     layout += '\n[signal_rail.dc_networking]\nenabled = 0\n'
     outputs.append(block_file('insights_workspaces.conf', layout))
     definition = dict(title='DC Networking Operations', description='Lab observations · Five products, one investigation. Missing data is unknown.',

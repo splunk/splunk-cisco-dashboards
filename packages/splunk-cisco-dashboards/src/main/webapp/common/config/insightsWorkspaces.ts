@@ -344,7 +344,7 @@ export const WORKSPACE_SOURCES: Record<WorkspaceSourceId, WorkspaceSource> = {
     maxVisibleSections: 6,
     minTileCount: 1,
     maxTileCount: 9,
-    fallbackTileCount: 3,
+    fallbackTileCount: 9,
   },
   executive: {
     id: EXECUTIVE_WORKSPACE_SOURCE_ID,

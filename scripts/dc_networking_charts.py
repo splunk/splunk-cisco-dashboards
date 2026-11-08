@@ -112,4 +112,96 @@ def add_charts(searches, base):
             'Account FabricId node_id vendor.portIndex', "tonumber('vendor.outBitsps')/1000000",
             'max(Metric)', ['hf_rates', 'hf_measurements'], 'Mbps')
 
+    # Keep the optional rate query available, but do not spend a factory tile on
+    # a measurement this lab does not report.
+    searches['hf_rate_history']['section'] = None
+
+    def current(key, title, section, source, transform, details, viz='splunk.bar', unit=''):
+        snapshot(key, title, section, source, transform, details, unit)
+        searches[key]['viz'] = viz
+
+    def percent(key, title, section, source, expression, details, viz='splunk.singlevalueradial'):
+        current(key, title, section, source,
+                '| eval Reading=' + expression + '\n| where Reading>=0 AND Reading<=100\n| stats avg(Reading) as Metric | where isnotnull(Metric)',
+                details, viz, '%')
+
+    current('attention_severity', 'Items to review by reported severity', 'dc_attention', 'attention',
+            '| stats count as Metric by Severity', ['attention'])
+    current('attention_fabrics', 'Where are the reported attention items?', 'dc_attention', 'attention',
+            '| stats count as Metric by Product Account Fabric | eval Scope=Product." / ".Account." / ".Fabric | table Scope Metric', ['attention', 'events'])
+    current('attention_devices', 'Which devices have the most attention items?', 'dc_attention', 'attention',
+            '| stats count as Metric by Product Account Device | eval Scope=Product." / ".Account." / ".Device | sort 20 - Metric | table Scope Metric', ['attention', 'inventory_matches'])
+    register('attention_critical_history', 'Observed active critical faults and anomalies', 'dc_attention',
+             searches['attention_history']['query'].replace('| stats sum(Metric)',
+                 '| eval Metric=if(Metric=1,if(lower(severity)="critical",1,0),Metric)\n| stats sum(Metric)'),
+             ['attention', 'nd_anomalies', 'aci_faults', 'events'], 'splunk.column')
+    percent('attention_critical_share', 'Critical share of classified attention items', 'dc_attention', 'attention',
+            'case(Severity="critical",100,Severity IN ("major","minor","warning","info","information"),0,true(),null())', ['attention'])
+
+    current('nd_types', 'Which anomaly types need investigation?', 'dc_nd', 'nd_anomalies',
+            '| stats count as Metric by Signal | sort 20 - Metric', ['nd_anomalies'])
+    current('nd_scores', 'Highest reported anomaly score by fabric', 'dc_nd', 'nd_anomalies',
+            '| stats max(Score) as Metric by Account Fabric | eval Scope=Account." / ".Fabric | table Scope Metric', ['nd_anomalies'])
+    current('nd_fabric_types', 'Observed fabrics by management type', 'dc_nd', 'nd_fabrics',
+            '| stats count as Metric by FabricType', ['nd_fabrics'])
+    percent('nd_reachable_now', 'Latest observed fabric reachability', 'dc_nd', 'nd_fabrics',
+            'case(lower(Connectivity)="up",100,lower(Connectivity)="down",0,true(),null())', ['nd_fabrics'])
+    history('nd_critical_history', 'Nexus Dashboard active critical anomalies', 'dc_nd', nd, nd_id,
+            'if((' + active + ')=1,if(lower(severity)="critical",1,0),' + active + ')',
+            'sum(Metric)', ['nd_anomalies', 'events'])
+
+    current('aci_fault_tenants', 'Which ACI tenants have active faults?', 'dc_aci', 'aci_faults',
+            '| rex field=Entity "uni/tn-(?<Tenant>[^/]+)" | eval Tenant=coalesce(Tenant,"Tenant not reported") | stats count as Metric by Account Tenant | eval Scope=Account." / ".Tenant | table Scope Metric', ['aci_faults'])
+    current('aci_health_bands', 'Observed tenant health score distribution', 'dc_aci', 'aci_health',
+            '| where component="fvTenant" AND HealthPct>=0 AND HealthPct<=100 | eval ScoreBand=case(HealthPct<25,"0–24",HealthPct<50,"25–49",HealthPct<75,"50–74",true(),"75–100") | stats count as Metric by ScoreBand', ['aci_health'])
+    percent('aci_tenant_health_now', 'Latest observed mean tenant health', 'dc_aci', 'aci_health',
+            'if(component="fvTenant",HealthPct,null())', ['aci_health', 'aci_faults'], 'splunk.fillergauge')
+    percent('aci_fabric_health_now', 'Latest observed mean fabric health', 'dc_aci', 'aci_health',
+            'if(component="fabricHealthTotal",HealthPct,null())', ['aci_health', 'aci_faults'])
+    history('aci_critical_history', 'ACI active critical-fault history', 'dc_aci', aci, 'Account Controller dn',
+            'if((' + aci_active + ')=1,if(severity="critical",1,0),' + aci_active + ')',
+            'sum(Metric)', ['aci_faults', 'events'])
+
+    current('nexus_temperature_comparison', 'Which Celsius sensors are warmest?', 'dc_nexus', 'nexus_sensors',
+            '| where lower(Unit) IN ("c","celsius","degrees c") | eval Scope=Account." / ".Device." / ".Sensor | rename Temperature as Metric | sort 20 - Metric | table Scope Metric', ['nexus_sensors'], unit='°C')
+    current('nexus_sensor_states', 'Sensors relative to their reported thresholds', 'dc_nexus', 'nexus_sensors',
+            '| stats count as Metric by State', ['nexus_sensors'])
+    percent('nexus_cpu_now', 'Latest observed mean CPU busy', 'dc_nexus', 'nexus_resources', 'BusyPct', ['nexus_resources'])
+    percent('nexus_headroom_now', 'Latest observed mean CPU headroom', 'dc_nexus', 'nexus_resources', 'if(isnotnull(BusyPct),IdlePct,null())', ['nexus_resources'], 'splunk.fillergauge')
+    history('nexus_hot_sensor_history', 'Sensors at or above their reported major threshold', 'dc_nexus',
+            'sourcetype="cisco:dc:nexus9k:dme" component=eqptSensor', 'Controller DeviceAddress SensorKey',
+            "if(isnotnull(tonumber('Row_info.tempValue')) AND isnotnull(tonumber('Row_info.majorThresh')),if(tonumber('Row_info.tempValue')>=tonumber('Row_info.majorThresh'),1,0),null())",
+            'sum(Metric)', ['nexus_sensors'])
+    searches['nexus_hot_sensor_history']['query'] = searches['nexus_hot_sensor_history']['query'].replace('| eval Bucket=', "| eval SensorKey='Row_info.dn'\n| eval Bucket=", 1)
+
+    current('san_status', 'MDS switches by reported status', 'dc_san', 'san_health',
+            '| stats count as Metric by Status', ['san_health', 'san_analytics'])
+    percent('san_health_now', 'Latest observed mean MDS switch health', 'dc_san', 'san_health', 'HealthPct', ['san_health', 'san_analytics'])
+    current('san_interface_wait', 'Which SAN interfaces report the most transmit wait?', 'dc_san', 'san_congestion',
+            '| eval Scope=Account." / ".coalesce(Entity,"Unreported")." / ".coalesce(Interface,"Unreported") | stats max(TxWaitPct) as Metric by Scope | sort 20 - Metric', ['san_congestion', 'san_analytics'], unit='%')
+
+    hf_port = base('sourcetype="cisco:dc:hyperfabric:inventory" resource_type=port') + "\n| eventstats max(_time) as LastObserved by Account FabricId node_id vendor.id | where _time=LastObserved | dedup Account FabricId node_id vendor.id"
+    hf_node = base('sourcetype="cisco:dc:hyperfabric:inventory" resource_type=node') + "\n| eventstats max(_time) as LastObserved by Account FabricId vendor.nodeId | where _time=LastObserved | dedup Account FabricId vendor.nodeId"
+    for key, title, query in [
+        ('hf_port_states', 'Hyperfabric port administrative states', hf_port + "\n| eval State=case(lower('vendor.enabled')=\"true\",\"Enabled\",lower('vendor.enabled')=\"false\",\"Disabled\",true(),\"Unreported\") | stats count as Metric by State"),
+        ('hf_ports_by_fabric', 'Observed Hyperfabric ports by fabric', hf_port + '\n| stats count as Metric by Account Fabric | eval Scope=Account." / ".Fabric | table Scope Metric'),
+        ('hf_node_roles', 'Observed Hyperfabric node role combinations', hf_node + "\n| eval Roles=coalesce(mvjoin('vendor.roles{}',\", \"),\"Unreported\") | stats count as Metric by Roles"),
+        ('hf_node_enabled_now', 'Hyperfabric nodes administratively enabled', hf_node + "\n| eval Reading=case(lower('vendor.enabled')=\"true\",100,lower('vendor.enabled')=\"false\",0,true(),null()) | stats avg(Reading) as Metric"),
+        ('hf_connections_by_fabric', 'Reported Hyperfabric physical connections by fabric', base('sourcetype="cisco:dc:hyperfabric:inventory" resource_type=connection') + "\n| eventstats max(_time) as LastObserved by Account FabricId vendor.id | where _time=LastObserved | dedup Account FabricId vendor.id | where len('vendor.local.portName')>0 AND len('vendor.remote.portName')>0 | stats count as Metric by Account Fabric | eval Scope=Account.\" / \".Fabric | table Scope Metric"),
+    ]:
+        register(key, title, 'dc_hyperfabric', query + '\n| where isnotnull(Metric)',
+                 ['hf_nodes' if key in ('hf_node_roles', 'hf_node_enabled_now') else 'hf_ports' if key in ('hf_port_states', 'hf_ports_by_fabric') else 'reported_links', 'hf_inventory', 'hf_measurements', 'events'],
+                 'splunk.singlevalueradial' if key == 'hf_node_enabled_now' else 'splunk.bar',
+                 '%' if key == 'hf_node_enabled_now' else '',
+                 'Latest observed inventory, not a traffic path or operational availability. Administrative state is not link health. Missing measurements stay unknown.')
+
+    # Match the visual grammar to the question: filled history for volume,
+    # columns for discrete bucket counts, lines for continuous measurements,
+    # ranked bars for entities, and bounded gauges only for measured percentages.
+    for key in ['attention_history', 'nd_active_history', 'aci_fabric_health_history',
+                'nexus_cpu_history', 'san_health_history', 'san_memory_history', 'hf_ports_history']:
+        searches[key]['viz'] = 'splunk.area'
+    for key in ['nd_critical_history', 'aci_fault_history', 'aci_critical_history',
+                'nexus_hot_sensor_history', 'san_wait_history', 'hf_enabled_history']:
+        searches[key]['viz'] = 'splunk.column'
     return searches

@@ -210,7 +210,7 @@
       }
     },
     "viz_attention_history": {
-      "type": "splunk.line",
+      "type": "splunk.area",
       "title": "Observed active faults and anomalies",
       "description": "Observed active faults and anomalies",
       "dataSources": {
@@ -334,7 +334,7 @@
       ]
     },
     "viz_nd_active_history": {
-      "type": "splunk.line",
+      "type": "splunk.area",
       "title": "Nexus Dashboard active-anomaly history",
       "description": "Nexus Dashboard active-anomaly history",
       "dataSources": {
@@ -427,7 +427,7 @@
       ]
     },
     "viz_aci_fault_history": {
-      "type": "splunk.line",
+      "type": "splunk.column",
       "title": "ACI active-fault history",
       "description": "ACI active-fault history",
       "dataSources": {
@@ -458,7 +458,7 @@
       ]
     },
     "viz_nexus_cpu_history": {
-      "type": "splunk.line",
+      "type": "splunk.area",
       "title": "Nexus 9000 mean CPU busy",
       "description": "Nexus 9000 mean CPU busy",
       "dataSources": {
@@ -520,7 +520,7 @@
       ]
     },
     "viz_san_health_history": {
-      "type": "splunk.line",
+      "type": "splunk.area",
       "title": "MDS observed switch health",
       "description": "MDS observed switch health",
       "dataSources": {
@@ -551,7 +551,7 @@
       ]
     },
     "viz_san_wait_history": {
-      "type": "splunk.line",
+      "type": "splunk.column",
       "title": "SAN highest reported transmit wait",
       "description": "SAN highest reported transmit wait",
       "dataSources": {
@@ -613,7 +613,7 @@
       ]
     },
     "viz_hf_ports_history": {
-      "type": "splunk.line",
+      "type": "splunk.area",
       "title": "Hyperfabric observed ports",
       "description": "Hyperfabric observed ports",
       "dataSources": {

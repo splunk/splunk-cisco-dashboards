@@ -64,7 +64,7 @@ test('packaged workspace has all six sections and every tile/drilldown resolves'
     assert.equal(dc.sections.length, 6);
     assert.equal(dc.sections[0].title, 'What needs my attention?');
     assert.equal(dc.mapVisible, false);
-    assert.equal(stanzas.size, 45);
+    assert.equal(stanzas.size, 75);
     assert.equal(dc.maxTileCount, 9);
     for (const [id, body] of stanzas) {
         assert.match(body, /^search_type = display$/m);
@@ -142,7 +142,7 @@ test('overview uses charts, supports nine searches per section, and keeps tables
         charts += 1;
         assert.equal(options.showTotal, false, 'Do not sum percentages or ages into a headline');
         assert.match(spl(id), /where isnotnull\(Metric\)/);
-        assert.match(body, /^default_viz = splunk\.(line|bar)$/m);
+        assert.match(body, /^default_viz = splunk\.(line|area|column|bar|singlevalueradial|fillergauge)$/m);
         const section = options.overview[0].section;
         sections.set(section, (sections.get(section) || 0) + 1);
         for (const target of body.match(/^drilldown_stanza_ids = (.+)$/m)[1].split(',')) {
@@ -154,9 +154,18 @@ test('overview uses charts, supports nine searches per section, and keeps tables
             assert.doesNotMatch(spl(id), /fillnull|timechart/);
         }
     }
-    assert.equal(charts, 27);
+    for (const section of sections.keys()) {
+        const types = new Set([...stanzas.values()].filter(body => body.includes(`"section":"${section}"`)).map(body => body.match(/^default_viz = (.+)$/m)[1]));
+        assert.ok(types.size >= 4, `${section} needs visual variety`);
+    }
+    assert.equal(charts, 54);
     assert.equal(sections.size, 6);
-    assert.ok([...sections.values()].every((count) => count >= 3 && count <= 9));
+    const config = load('src/main/webapp/common/config/insightsWorkspaces.ts');
+    assert.equal(config.WORKSPACE_SOURCES.dc_networking.fallbackTileCount, 9);
+    const layouts = fs.readFileSync(path.join(root, 'src/main/resources/splunk/default/insights_workspaces.conf'), 'utf8');
+    assert.equal([...layouts.matchAll(/\[layout.dc_networking.[^\]]+\][^[]*visible_count = 9/g)].length, 6);
+    assert.equal(new Set([...stanzas.values()].filter(b => b.includes('\"overview\"')).map(b => b.match(/^default_viz = (.+)$/m)[1])).size, 6);
+    assert.ok([...sections.values()].every((count) => count === 9));
     assert.equal(Object.values(definition.visualizations).filter((v) => v.type === 'splunk.table').length, 0);
     assert.equal(Object.values(definition.visualizations).filter((v) => v.type === 'splunk.cisco_drilldown_action').length, 14);
 });
@@ -218,3 +227,15 @@ test('all DC searches honor the existing index macro without literal index routi
     const page = fs.readFileSync(path.join(root, 'src/main/webapp/pages/executive_insights/index.tsx'), 'utf8');
     assert.ok(!page.includes('DcNetworkingScopeBar'));
 });
+
+ test('workspace icons have bounded pixel dimensions in the switcher', () => {
+    const React = require('react');
+    const { renderToStaticMarkup } = require('react-dom/server');
+    const mocks = Object.fromEntries(['Briefcase','ShieldKeyhole','Shield','FingerprintNodes','Pulse','NetworkDevices','RobotFaceSparkle'].map(name => [`@splunk/react-icons/${name}`, props => React.createElement('svg', props)]));
+    const Icon = load('src/main/webapp/common/components/workspace/WorkspaceDefaultIcon.tsx', mocks).default;
+    for (const size of [20, 28]) {
+        const html = renderToStaticMarkup(React.createElement(Icon, { workspace: {id:'dc_networking',sourceWorkspace:'dc_networking'},size }));
+        assert.match(html, new RegExp(`width:${size}px;height:${size}px`));
+        assert.doesNotMatch(html, /100%/);
+    }
+ });

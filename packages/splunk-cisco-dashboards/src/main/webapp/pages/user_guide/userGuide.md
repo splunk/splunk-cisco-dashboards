@@ -662,7 +662,7 @@ Use the shared time picker to change the overview window; the same time applies 
 
 Missing data remains unknown. Hyperfabric administrative enablement does not establish availability, and a counter record without measured rates does not establish throughput. SAN Analytics capability inventory does not establish flow performance. Exact serial matches identify shared inventory; reported endpoint/port records identify connections. Neither establishes a traffic path or proves the cause of an incident.
 
-DC sections support up to **nine searches**, with three charts shown initially. Use the section tile-count control and **Add search** to expand or customize the selection. Tables remain available through **Investigate related evidence**. Trends show latest observations per entity in each 15-minute bucket, not a guaranteed continuous snapshot; empty buckets stay unavailable.
+Each DC section ships with **nine selected searches and nine visible tiles**. Line and area trends, bucket columns, ranked bars, radial gauges and fill gauges match the question being asked. Gauges use measured percentages only. Use the section tile-count control and **Add search** to customize the selection; existing personal tile-count preferences remain in place until reset. Tables remain available through **Investigate related evidence**. Trends show latest observations per entity in each 15-minute bucket, not a guaranteed continuous snapshot; empty buckets stay unavailable.
 
 Each workspace has an appropriate **React SUI icon** by default. Open **Edit branding** to upload an image. Uploaded images take precedence; **Clear (use default)** and saving restores the SUI icon while keeping the other branding fields.
 
