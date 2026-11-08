@@ -250,7 +250,7 @@ def generate():
         viz = dict(showRowNumbers=False, emptyMessage='No qualifying observations in this scope and time. Check coverage; absence does not establish health.')
         chart = record.get('viz', 'splunk.table')
         if chart != 'splunk.table':
-            viz.update(seriesColors=['#649ef5', '#4cbf7f', '#f0c243'], legendDisplay='off')
+            viz.update(seriesColors=['#649ef5', '#4cbf7f', '#f0c243'], legendDisplay='off', showTotal=False)
         if record['section']:
             if key in OVERVIEW_COLUMNS:
                 viz['overviewColumns'] = OVERVIEW_COLUMNS[key]

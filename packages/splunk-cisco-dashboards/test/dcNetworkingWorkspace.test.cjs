@@ -133,6 +133,8 @@ test('overview uses charts, supports nine searches per section, and keeps tables
         const options = JSON.parse(body.match(/^viz_options = (.+)$/m)[1]);
         if (!options.overview) continue;
         charts += 1;
+        assert.equal(options.showTotal, false, 'Do not sum percentages or ages into a headline');
+        assert.match(spl(id), /where isnotnull\(Metric\)/);
         assert.match(body, /^default_viz = splunk\.(line|bar)$/m);
         const section = options.overview[0].section;
         sections.set(section, (sections.get(section) || 0) + 1);
@@ -176,4 +178,24 @@ test('Manager drilldown URLs carry validated exact scope and reject injected val
         { account: 'javi_nd', fabric: 'fab1', device: 'leaf-1' });
     assert.equal(scope.dcScopeFromDrilldownUrl('/drilldown?target=x'), undefined);
     assert.throws(() => scope.dcScopeFromDrilldownUrl('/drilldown?target=x&dc_account=%60bad%60'));
+});
+
+test('non-additive bars omit the summed headline while existing count bars retain it', () => {
+    const React = require('react');
+    const { renderToStaticMarkup } = require('react-dom/server');
+    const { BarBreakdownTile } = load('src/main/webapp/common/components/workspace/BarBreakdownTile.tsx', {
+        './ChartFocusDialog': { ChartFocusDialog: () => null },
+        './InfoTooltip': { InfoTooltip: () => null },
+        './TileActionMenu': { TileActionMenu: () => null, TileDrilldownButton: () => null },
+        '@/common/lib/utils': { cn: (...values) => values.filter(Boolean).join(' ') },
+        '@/common/lib/metricValueFormat': { formatCompactMetricNumber: String },
+    });
+    const props = { label: 'CPU comparison', rows: [{ Cpu: 'one', Metric: '60' }, { Cpu: 'two', Metric: '90' }], columns: ['Cpu', 'Metric'], source: 'live' };
+    const measured = renderToStaticMarkup(React.createElement(BarBreakdownTile, { ...props, showTotal: false }));
+    assert.doesNotMatch(measured, /Total 150|>150</);
+    assert.match(measured, /Individual category measurements/);
+    assert.match(measured, />60</);
+    assert.match(measured, />90</);
+    const counted = renderToStaticMarkup(React.createElement(BarBreakdownTile, props));
+    assert.match(counted, /Total 150/);
 });

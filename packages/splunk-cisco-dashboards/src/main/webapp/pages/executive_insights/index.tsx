@@ -1921,6 +1921,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
   if (showBarBreakdown) {
     return (
       <BarBreakdownCardLeaf
+        sbRecord={sbRecord}
         effective={effective}
         dispatchedConfig={dispatchedConfig}
         searchbaseId={sbRecord?.id}
@@ -2321,6 +2322,7 @@ const TableCardLeaf: React.FC<CommonLeafProps> = ({
  * aggregate health badge math is unchanged.
  */
 const BarBreakdownCardLeaf: React.FC<CommonLeafProps> = ({
+  sbRecord,
   effective,
   dispatchedConfig,
   searchbaseId,
@@ -2351,6 +2353,7 @@ const BarBreakdownCardLeaf: React.FC<CommonLeafProps> = ({
 
   return (
     <BarBreakdownTile
+      showTotal={sbRecord?.vizOptions?.showTotal !== false}
       label={effective.label}
       subLabel={effective.subLabel}
       description={effective.description}

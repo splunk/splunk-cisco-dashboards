@@ -26,7 +26,7 @@ def add_charts(searches, base):
         register(key, title, section, query, detail, unit=unit)
 
     def snapshot(key, title, section, source, transform, details, unit=''):
-        query = searches[source]['query'].rsplit('\n| table ', 1)[0] + '\n' + transform
+        query = searches[source]['query'].rsplit('\n| table ', 1)[0] + '\n' + transform + '\n| where isnotnull(Metric)'
         register(key, title, section, query, details, 'splunk.bar', unit,
                  'Latest observed entities in the selected scope/time, not a historical series. Missing values are not zero.')
 

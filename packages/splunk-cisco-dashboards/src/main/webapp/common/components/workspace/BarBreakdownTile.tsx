@@ -43,6 +43,8 @@ import type { DataSource, NoDataReason } from "@/common/hooks/useMetric";
 
 interface BarBreakdownTileProps {
   label: string;
+  /** Hide totals for non-additive measurements such as percentages and ages. */
+  showTotal?: boolean;
   subLabel?: string;
   description?: string;
   infoSections?: readonly InfoTooltipDetailSection[];
@@ -191,6 +193,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
   noDataReason,
   rangeLabel,
   visibleRowCap = DEFAULT_VISIBLE_ROW_CAP,
+  showTotal = true,
   className,
 }) => {
   const [isFocusOpen, setIsFocusOpen] = useState(false);
@@ -332,9 +335,7 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
       {hasData ? (
         <div
           role="img"
-          aria-label={`${label} bar chart. Total ${formatCount(
-            aggregated.total,
-          )}.`}
+          aria-label={showTotal ? `${label} bar chart. Total ${formatCount(aggregated.total)}.` : `${label} bar chart. Individual category measurements.`}
           title="Category values are shown beside each bar"
           data-tile-control="true"
           className="mt-0.5 flex min-h-[116px] max-h-36 flex-1 flex-col p-1"
@@ -345,11 +346,11 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                         sum-to-headline mapping deliberately ignores
                         the visibleRowCap, so when the cap kicks in the
                         headline still reflects the full result set. */}
-          <div className="flex items-baseline gap-2 mb-1">
+          {showTotal && <div className="flex items-baseline gap-2 mb-1">
             <span className="text-4xl font-black tracking-tighter leading-none  sui-color-active">
               {formatCount(aggregated.total)}
             </span>
-          </div>
+          </div>}
 
           {/* Bar list. flex-1 + min-h-[72px] + max-h-28 so
                         the row of bars consumes the same slot as the
@@ -421,14 +422,12 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
       >
         <div
           role="img"
-          aria-label={`Expanded ${label} bar chart. Total ${formatCount(
-            aggregated.total,
-          )}.`}
+          aria-label={showTotal ? `Expanded ${label} bar chart. Total ${formatCount(aggregated.total)}.` : `Expanded ${label} bar chart. Individual category measurements.`}
           className="flex h-full min-h-[320px] flex-col rounded-[10px] border sui-border-default sui-bg-section p-5"
         >
-          <span className="text-5xl font-black tracking-tighter leading-none sui-color-active">
+          {showTotal && <span className="text-5xl font-black tracking-tighter leading-none sui-color-active">
             {formatCount(aggregated.total)}
-          </span>
+          </span>}
           <div className="mt-7 flex flex-1 flex-col gap-4 overflow-y-auto">
             {focusEntries.map((entry) => {
               const widthPct =
