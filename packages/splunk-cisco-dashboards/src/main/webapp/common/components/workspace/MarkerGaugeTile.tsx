@@ -4,6 +4,7 @@
  */
 
 import React, { useMemo } from 'react';
+import { formatPlainMetricNumber } from '@/common/lib/metricValueFormat';
 import { CanvasScalarTileChrome } from './CanvasScalarTileChrome';
 import {
     clampToRange,
@@ -182,7 +183,7 @@ export const MarkerGaugeTile: React.FC<MarkerGaugeTileProps> = ({
                 <>
                     <div className="flex items-baseline gap-2 mb-1">
                         <span className="text-4xl font-black tracking-tighter leading-none  sui-color-active tabular-nums">
-                            {value}
+                            {numeric !== null ? formatPlainMetricNumber(numeric) : value}
                             {unit}
                         </span>
                     </div>

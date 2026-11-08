@@ -379,10 +379,10 @@ export const SingleValueRadialTile: React.FC<SingleValueRadialTileProps> = ({
     // that need a unit append it via `unit` (legacy) or via
     // `valueSuffix` (new viz_option, more obvious).
     let valueText: string;
-    if (typeof value === 'string') {
-        valueText = value;
-    } else if (numeric !== null) {
+    if (numeric !== null) {
         valueText = formatNumber(numeric, decimals);
+    } else if (typeof value === 'string') {
+        valueText = value;
     } else {
         valueText = '0';
     }

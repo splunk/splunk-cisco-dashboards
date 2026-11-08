@@ -11,6 +11,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { useSplunkTheme } from '@splunk/themes';
+import { formatPlainMetricNumber } from '@/common/lib/metricValueFormat';
 import { ChartFocusDialog } from './ChartFocusDialog';
 import {
     InfoTooltip,
@@ -70,7 +71,7 @@ const coerceNumber = (raw: unknown): number => {
 };
 
 const formatCount = (n: number): string =>
-    n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    formatPlainMetricNumber(n);
 
 const NoDataState: React.FC<{
     noDataReason?: NoDataReason;

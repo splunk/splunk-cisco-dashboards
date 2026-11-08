@@ -14,6 +14,7 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
+import { formatPlainMetricNumber } from '@/common/lib/metricValueFormat';
 import type { TimeRange } from '@/common/hooks/useMetric';
 
 /**
@@ -252,7 +253,7 @@ const formatTimestamp = (epoch: number, range?: TimeRange): string => {
 };
 
 const defaultFormatValue = (value: number): string =>
-    Number.isFinite(value) ? value.toLocaleString() : '—';
+    Number.isFinite(value) ? formatPlainMetricNumber(value) : '—';
 
 interface ValueMarkerProps {
     cx?: number;

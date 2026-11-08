@@ -265,7 +265,7 @@ def generate():
         if chart != 'splunk.table':
             viz.update(seriesColors=[record.get('color', '#649ef5'), '#4cbf7f', '#f0c243'], legendDisplay='off', showTotal=False)
         if chart in ('splunk.singlevalueradial', 'splunk.fillergauge'):
-            viz.update(valueField='Metric', min=0, max=100, showDelta=False, valueSuffix='%', decimals=1)
+            viz.update(valueField='Metric', min=0, max=100, showDelta=False, valueSuffix='%', decimals=2)
         if record['section']:
             if key in OVERVIEW_COLUMNS:
                 viz['overviewColumns'] = OVERVIEW_COLUMNS[key]

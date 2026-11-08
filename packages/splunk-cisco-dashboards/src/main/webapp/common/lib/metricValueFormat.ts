@@ -32,7 +32,7 @@ const formatScaled = (value: number, divisor: number): string => {
 export const formatPlainMetricNumber = (value: number): string =>
     Number.isInteger(value)
         ? value.toLocaleString()
-        : value.toLocaleString(undefined, { maximumFractionDigits: 1 });
+        : value.toLocaleString(undefined, { maximumFractionDigits: 2 });
 
 export const formatCompactMetricNumber = (value: number): string => {
     if (!Number.isFinite(value)) return '--';
@@ -64,4 +64,15 @@ export const formatMetricNumber = (value: number, unit = ''): string => {
         return `${formatPlainMetricNumber(value)}${unit}`;
     }
     return `${formatCompactMetricNumber(value)}${unit}`;
+};
+
+/** Display rounding only; preserve nonnumeric labels and the original search values. */
+export const formatMetricDisplayValue = (value: string | number, unit = '', abbreviate = true): string => {
+    const numeric = toFiniteMetricNumber(value);
+    if (numeric === null) {
+        return `${value}${unit}`;
+    }
+    return abbreviate
+        ? formatMetricNumber(numeric, unit)
+        : `${formatPlainMetricNumber(numeric)}${unit}`;
 };

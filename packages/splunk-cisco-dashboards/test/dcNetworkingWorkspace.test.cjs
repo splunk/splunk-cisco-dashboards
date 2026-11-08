@@ -203,8 +203,8 @@ test('non-additive bars omit the summed headline while existing count bars retai
         './ChartFocusDialog': { ChartFocusDialog: () => null },
         './InfoTooltip': { InfoTooltip: () => null },
         './TileActionMenu': { TileActionMenu: () => null, TileDrilldownButton: () => null },
-        '@/common/lib/utils': { cn: (...values) => values.filter(Boolean).join(' ') },
         '@/common/lib/metricValueFormat': { formatCompactMetricNumber: String },
+        '@/common/lib/utils': { cn: (...values) => values.filter(Boolean).join(' ') },
     });
     const props = { label: 'CPU comparison', rows: [{ Cpu: 'one', Metric: '60' }, { Cpu: 'two', Metric: '90' }], columns: ['Cpu', 'Metric'], source: 'live' };
     const measured = renderToStaticMarkup(React.createElement(BarBreakdownTile, { ...props, showTotal: false }));
@@ -270,7 +270,6 @@ function loadChart(file, extras = {}) {
         './InfoTooltip': { InfoTooltip: () => null },
         './TileActionMenu': { TileActionMenu: () => null, TileDrilldownButton: () => null },
         '@/common/lib/utils': { cn: (...values) => values.filter(Boolean).join(' ') },
-        '@/common/lib/metricValueFormat': { formatCompactMetricNumber: String },
         react: { ...React, lazy: () => props => React.createElement('div', { 'data-native-theme': props.themeKey, 'data-native-background': props.options.backgroundColor }) },
         ...extras,
     };
@@ -340,6 +339,32 @@ test('sparkline baselines, annotations and point outlines follow the active them
     assert.match(source, /var\(--sui-content-active/);
     assert.match(source, /var\(--sui-background-section/);
     assert.doesNotMatch(source, /fill="#0f172a"|--baseline-stroke:#cbd5e1/);
+});
+
+
+test('display rounding defaults to two decimal places without rounding the search data', () => {
+    const format = loadChart('common/lib/metricValueFormat.ts');
+    for (const input of [93.55172413793103, '93.55172413793103']) {
+        assert.equal(format.formatMetricDisplayValue(input, '%'), '93.55%');
+        assert.equal(format.formatMetricDisplayValue(input, '%', false), '93.55%');
+    }
+    assert.equal(format.formatMetricDisplayValue(1.642499999999998, '%'), '1.64%');
+    assert.equal(format.formatMetricDisplayValue(10.931034482758621, '%'), '10.93%');
+    assert.equal(format.formatMetricDisplayValue(76), '76');
+    assert.equal(format.formatMetricDisplayValue('Unavailable'), 'Unavailable');
+    assert.equal(format.formatMetricDisplayValue(0, '%'), '0%');
+    assert.equal(format.formatMetricDisplayValue(-1.2345, 'ms'), '-1.23ms');
+    const options = loadChart(dir+'canvasVizOptions.ts');
+    assert.equal(options.resolveDecimals(undefined), 2);
+    assert.equal(options.resolveDecimals({decimals:1}), 1);
+    const {SingleValueRadialTile} = loadChart(dir+'SingleValueRadialTile.tsx');
+    const {FillerGaugeTile} = loadChart(dir+'FillerGaugeTile.tsx');
+    const {MarkerGaugeTile} = loadChart(dir+'MarkerGaugeTile.tsx');
+    for (const Gauge of [SingleValueRadialTile,FillerGaugeTile,MarkerGaugeTile]) {
+        const {html}=render(Gauge,{label:'Precision',value:'93.55172413793103',unit:'%'},'dark');
+        assert.match(html,/93\.55/);
+        assert.doesNotMatch(html,/>93\.551724/);
+    }
 });
 
 }
