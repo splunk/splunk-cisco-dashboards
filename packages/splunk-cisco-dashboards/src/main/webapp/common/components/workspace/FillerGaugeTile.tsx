@@ -147,11 +147,12 @@ export const FillerGaugeTile: React.FC<FillerGaugeTileProps> = ({
                         data-tile-control="true"
                         className="flex-1 min-h-[48px] max-h-20 flex flex-col justify-center gap-1 pt-1"
                     >
-                        <div className="h-3 w-full rounded-sm  sui-bg-popup overflow-hidden">
+                        <div className="h-3 w-full rounded-sm overflow-hidden"
+                            style={{ backgroundColor: 'var(--sui-content-disabled, #89919c)' }}>
                             <div
                                 className="h-full rounded-sm transition-[width]"
                                 style={{
-                                    width: `${Math.max(2, widthPct)}%`,
+                                    width: `${widthPct}%`,
                                     backgroundColor: fillColor,
                                 }}
                             />

@@ -130,16 +130,10 @@ const arcPathLength = (r: number, arcDegrees: number): number => {
 const formatNumber = (n: number, decimals: number): string =>
     Number.isFinite(n) ? n.toFixed(decimals) : '0';
 
-// Match the chrome's universal accent fallback so the radial knows when
-// the caller's `accentColor` is the default sky-blue (i.e. the stanza
-// did not override `seriesColors`) and we should drop to a DS-style
-// near-black fill instead.
+// Keep the arc visible in both SUI modes. The old near-black fallback
+// replaced the standard blue accent and disappeared against dark panels.
 const DEFAULT_ACCENT_FALLBACK = C3_VISUALIZATION_COLORS.info;
-// DS scoreboard fill: dark slate, near-black, theme primary.
-const RADIAL_DEFAULT_FILL = '#131a23';
-// DS-style neutral track. Hex-equivalent of Tailwind slate-200 so the
-// custom override and the default render at the same lightness.
-const RADIAL_DEFAULT_TRACK = '#e2e8f0';
+const RADIAL_DEFAULT_TRACK = 'var(--sui-content-disabled, #89919c)';
 
 const resolveRadialColors = (
     vizOptions: Record<string, unknown> | undefined,
@@ -147,33 +141,11 @@ const resolveRadialColors = (
     bands: ReturnType<typeof resolveColorBands>,
     numeric: number | null
 ): { fillColor: string; trackColor: string } => {
-    const trackOverride = resolveTrackColor(vizOptions);
-    const fillOverride = resolveFillColorOverride(vizOptions);
-
-    let fillColor: string;
-    if (fillOverride) {
-        fillColor = fillOverride;
-    } else if (numeric !== null && bands.length > 0) {
-        // colorForValueInBands returns the fallback when no band
-        // matches; pass an empty sentinel so we can detect "no match"
-        // and fall through to the accent / radial default chain.
-        const banded = colorForValueInBands(numeric, bands, '');
-        if (banded.length > 0) {
-            fillColor = banded;
-        } else if (accentColor && accentColor !== DEFAULT_ACCENT_FALLBACK) {
-            fillColor = accentColor;
-        } else {
-            fillColor = RADIAL_DEFAULT_FILL;
-        }
-    } else if (accentColor && accentColor !== DEFAULT_ACCENT_FALLBACK) {
-        fillColor = accentColor;
-    } else {
-        fillColor = RADIAL_DEFAULT_FILL;
-    }
-
+    const fallback = accentColor || DEFAULT_ACCENT_FALLBACK;
     return {
-        fillColor,
-        trackColor: trackOverride ?? RADIAL_DEFAULT_TRACK,
+        fillColor: resolveFillColorOverride(vizOptions) ??
+            (numeric !== null ? colorForValueInBands(numeric, bands, fallback) : fallback),
+        trackColor: resolveTrackColor(vizOptions) ?? RADIAL_DEFAULT_TRACK,
     };
 };
 

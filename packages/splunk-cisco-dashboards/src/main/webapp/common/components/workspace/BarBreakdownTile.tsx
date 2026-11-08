@@ -107,22 +107,22 @@ const SEVERITY_PRIORITY: Record<string, number> = {
  * Order matters: more specific terms win over generic ones. MAJOR/MINOR
  * are the Cisco_ThousandEyes enum equivalents of high/medium.
  */
-const SEVERITY_COLOR_MAP: Array<{ match: RegExp; tw: string }> = [
-  { match: /critical|fatal|p1\b/i, tw: "bg-rose-500" },
-  { match: /error|high|major|p2\b/i, tw: "bg-orange-500" },
-  { match: /warn|medium|moderate|minor|p3\b/i, tw: "bg-amber-500" },
-  { match: /low|p4\b/i, tw: "bg-yellow-500" },
-  { match: /notice|info|p5\b/i, tw: "bg-emerald-500" },
+const SEVERITY_COLOR_MAP: Array<{ match: RegExp; color: string }> = [
+  { match: /critical|fatal|p1\b/i, color: "var(--sui-content-negative, #fa5762)" },
+  { match: /error|high|major|p2\b/i, color: "var(--sui-content-negative, #f7782f)" },
+  { match: /warn|medium|moderate|minor|p3\b/i, color: "var(--sui-content-warning, #f0c243)" },
+  { match: /low|p4\b/i, color: "var(--sui-content-warning, #f0c243)" },
+  { match: /notice|info|p5\b/i, color: "var(--sui-content-info, #649ef5)" },
 ];
 
-const FALLBACK_COLOR_TW = "bg-sky-500";
+const FALLBACK_COLOR = "var(--sui-content-info, #649ef5)";
 
 const colorForLabel = (label: string): string => {
-  if (typeof label !== "string" || label.length === 0) return FALLBACK_COLOR_TW;
+  if (typeof label !== "string" || label.length === 0) return FALLBACK_COLOR;
   for (const entry of SEVERITY_COLOR_MAP) {
-    if (entry.match.test(label)) return entry.tw;
+    if (entry.match.test(label)) return entry.color;
   }
-  return FALLBACK_COLOR_TW;
+  return FALLBACK_COLOR;
 };
 
 const dimensionPriority = (label: string): number => {
@@ -385,9 +385,8 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                     <div
                       className={cn(
                         "h-full rounded-sm",
-                        colorForLabel(entry.key),
                       )}
-                      style={{ width: `${widthPct}%` }}
+                      style={{ width: `${widthPct}%`, backgroundColor: colorForLabel(entry.key) }}
                     />
                   </div>
                   <span className="w-8 text-right  sui-color-active font-semibold tabular-nums">
@@ -444,8 +443,8 @@ export const BarBreakdownTile: React.FC<BarBreakdownTileProps> = ({
                   </span>
                   <div className="h-5 min-w-0 flex-1 overflow-hidden rounded sui-bg-popup">
                     <div
-                      className={cn("h-full rounded", colorForLabel(entry.key))}
-                      style={{ width: `${widthPct}%` }}
+                      className="h-full rounded"
+                      style={{ width: `${widthPct}%`, backgroundColor: colorForLabel(entry.key) }}
                     />
                   </div>
                   <span className="w-20 text-right font-bold tabular-nums sui-color-active">

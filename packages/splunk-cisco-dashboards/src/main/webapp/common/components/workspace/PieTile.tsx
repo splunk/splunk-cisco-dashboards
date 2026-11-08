@@ -10,6 +10,7 @@
  */
 
 import React, { useMemo, useState } from 'react';
+import { useSplunkTheme } from '@splunk/themes';
 import { ChartFocusDialog } from './ChartFocusDialog';
 import {
     InfoTooltip,
@@ -128,6 +129,8 @@ export const PieTile: React.FC<PieTileProps> = ({
     className,
 }) => {
     const [isFocusOpen, setIsFocusOpen] = useState(false);
+    const theme = useSplunkTheme();
+    const chartThemeKey = theme.colorScheme === 'dark' ? 'enterpriseDark' : 'enterprise';
     const dimensionCol = columns[0];
     const valueCol = columns[1];
 
@@ -209,13 +212,13 @@ export const PieTile: React.FC<PieTileProps> = ({
             showXMajorGridLines: false,
             showYMajorGridLines: false,
             seriesColors: colors,
-            backgroundColor: '#131a23',
+            backgroundColor: theme.backgroundColorSection,
         }),
-        [colors]
+        [colors, theme.backgroundColorSection]
     );
     const focusStudioOptions = useMemo(
-        () => ({ ...studioOptions, backgroundColor: '#131a23' }),
-        [studioOptions]
+        () => ({ ...studioOptions, backgroundColor: theme.backgroundColorSection }),
+        [studioOptions, theme.backgroundColorSection]
     );
     return (
         <div
@@ -293,7 +296,7 @@ export const PieTile: React.FC<PieTileProps> = ({
                         <StudioBar
                             width="100%"
                             height="100%"
-                            themeKey="enterpriseDark"
+                            themeKey={chartThemeKey}
                             options={studioOptions}
                             dataSources={studioDataSources}
                         />
@@ -333,7 +336,7 @@ export const PieTile: React.FC<PieTileProps> = ({
                         <StudioBar
                             width="100%"
                             height="100%"
-                            themeKey="enterpriseDark"
+                            themeKey={chartThemeKey}
                             options={focusStudioOptions}
                             dataSources={studioDataSources}
                         />

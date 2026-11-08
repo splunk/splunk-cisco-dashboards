@@ -45,9 +45,9 @@ export interface MarkerGaugeTileProps {
 }
 
 const DEFAULT_MARKER_BANDS: ColorBand[] = [
-    { to: 50, value: '#dc2626' },
-    { from: 50, to: 80, value: '#eab308' },
-    { from: 80, value: '#16a34a' },
+    { to: 50, value: 'var(--sui-content-negative, #fa5762)' },
+    { from: 50, to: 80, value: 'var(--sui-content-warning, #f0c243)' },
+    { from: 80, value: 'var(--sui-content-positive, #4cbf7f)' },
 ];
 
 const toFiniteNumber = (value: string | number): number | null => {
@@ -62,7 +62,7 @@ const buildTrackSegments = (
     range: GaugeRange
 ): Array<{ leftPct: number; widthPct: number; color: string }> => {
     if (bands.length === 0) {
-        return [{ leftPct: 0, widthPct: 100, color: '#94a3b8' }];
+        return [{ leftPct: 0, widthPct: 100, color: 'var(--sui-content-disabled, #89919c)' }];
     }
     const span = range.max - range.min;
     if (span <= 0) return [{ leftPct: 0, widthPct: 100, color: bands[0].value }];

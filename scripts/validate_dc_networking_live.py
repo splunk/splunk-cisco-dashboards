@@ -84,8 +84,17 @@ def check_semantics(client):
     assert len(results) == 1 and float(results[0]['Metric']) == 100, results
     results, _ = client.search(ephemeral_fixture(SEARCHES['attention_critical_history']['query'], [dict(row, severity='critical') for row in rows + [rows[2]]]))
     assert len(results) == 1 and float(results[0]['Metric']) == 2, results
+    share_rows = [dict(nd, anomalyId='critical', severity='critical'),
+                  dict(nd, anomalyId='medium', severity='medium'),
+                  dict(nd, anomalyId='major', severity='major'),
+                  dict(nd, anomalyId='closed', severity='critical', cleared='true'),
+                  dict(nd, anomalyId='unclassified', severity=None)]
+    share, _ = client.search(ephemeral_fixture(SEARCHES['attention_critical_share']['query'], share_rows + [share_rows[0]]))
+    assert len(share) == 1 and abs(float(share[0]['Metric']) - 100/3) < 0.01, share
+    share, _ = client.search(ephemeral_fixture(SEARCHES['attention_critical_share']['query'], share_rows[-2:]))
+    assert not share, share
     return dict(status='passed', method='Ephemeral makeresults fixtures; no events indexed',
-                checks=['unknown administrative state produces no gauge value', 'reported disabled state produces measured zero', 'reported enabled state produces measured 100', 'critical history deduplicates repeated polls', 'latest cleared state excluded', 'controller collisions remain independent',
+                checks=['critical share includes medium severity and deduplicates polls', 'critical share excludes cleared and unclassified states without fabricating zero', 'unknown administrative state produces no gauge value', 'reported disabled state produces measured zero', 'reported enabled state produces measured 100', 'critical history deduplicates repeated polls', 'latest cleared state excluded', 'controller collisions remain independent',
                         'acknowledged anomalies retained', 'unknown expiry excluded',
                         'attention queue is populated from explicit active state',
                         'absent rates stay unknown', 'serial matches are case normalized',

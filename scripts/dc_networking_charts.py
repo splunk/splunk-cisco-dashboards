@@ -135,8 +135,12 @@ def add_charts(searches, base):
              searches['attention_history']['query'].replace('| stats sum(Metric)',
                  '| eval Metric=if(Metric=1,if(lower(severity)="critical",1,0),Metric)\n| stats sum(Metric)'),
              ['attention', 'nd_anomalies', 'aci_faults', 'events'], 'splunk.column')
-    percent('attention_critical_share', 'Critical share of classified attention items', 'dc_attention', 'attention',
-            'case(Severity="critical",100,Severity IN ("major","minor","warning","info","information"),0,true(),null())', ['attention'])
+    register('attention_critical_share', 'Critical share of classified active faults and anomalies', 'dc_attention',
+             searches['attention_history']['query'].replace('| stats sum(Metric)',
+                 '| eval Metric=if(Metric=1,case(lower(severity)="critical",100,lower(severity) IN ("major","minor","warning","high","medium","low","info","information","error"),0,true(),null()),null())\n| where isnotnull(Metric)\n| stats avg(Metric)'),
+             ['attention', 'nd_anomalies', 'aci_faults', 'events'], 'splunk.line', '%',
+             'Critical share among classified, active ND anomalies and ACI faults observed in each 15-minute bucket. Cleared and unclassified states are excluded; no observations remain unknown.')
+    searches['attention_critical_share']['color'] = '#fa5762'
 
     current('nd_types', 'Which anomaly types need investigation?', 'dc_nd', 'nd_anomalies',
             '| stats count as Metric by Signal | sort 20 - Metric', ['nd_anomalies'])

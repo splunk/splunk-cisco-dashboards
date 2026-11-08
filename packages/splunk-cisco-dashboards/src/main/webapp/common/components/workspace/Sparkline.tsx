@@ -331,7 +331,7 @@ const ValueMarker: React.FC<ValueMarkerProps> = ({
                 strokeWidth={1.5}
                 strokeDasharray="3 2"
             />
-            <circle cx={cx} cy={cy} r={3.5} fill={color} stroke="#ffffff" strokeWidth={1.5} />
+            <circle cx={cx} cy={cy} r={3.5} fill={color} stroke="var(--sui-background-section, #1b1c20)" strokeWidth={1.5} />
             <rect
                 x={bubbleX}
                 y={bubbleY}
@@ -339,7 +339,7 @@ const ValueMarker: React.FC<ValueMarkerProps> = ({
                 ry={6}
                 width={width}
                 height={bubbleHeight}
-                fill="#0f172a"
+                fill="var(--sui-background-popup, #25272a)"
                 opacity={0.92}
             />
             <text
@@ -348,7 +348,7 @@ const ValueMarker: React.FC<ValueMarkerProps> = ({
                 textAnchor="middle"
                 fontSize="10"
                 fontWeight="700"
-                fill="#ffffff"
+                fill="var(--sui-content-active, #f2f4f8)"
             >
                 {label}
             </text>
@@ -662,7 +662,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
                 y={latestPoint.value}
                 r={2.75}
                 fill={color}
-                stroke="#ffffff"
+                stroke="var(--sui-background-section, #1b1c20)"
                 strokeWidth={1}
                 isFront
             />
@@ -712,7 +712,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
                     <Line
                         type="monotone"
                         dataKey="previous"
-                        stroke="var(--baseline-stroke)"
+                        stroke="var(--sui-content-disabled, #89919c)"
                         strokeWidth={2.25}
                         strokeDasharray="8 4"
                         strokeOpacity={0.9}
@@ -831,7 +831,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
                     <Line
                         type="monotone"
                         dataKey="previous"
-                        stroke="var(--baseline-stroke)"
+                        stroke="var(--sui-content-disabled, #89919c)"
                         strokeWidth={2.25}
                         strokeDasharray="8 4"
                         strokeOpacity={0.9}
@@ -851,7 +851,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
                     <Line
                         type="monotone"
                         dataKey="previous"
-                        stroke="var(--baseline-stroke)"
+                        stroke="var(--sui-content-disabled, #89919c)"
                         strokeWidth={2.25}
                         strokeDasharray="8 4"
                         strokeOpacity={0.9}
@@ -881,7 +881,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
                 <Line
                     type="monotone"
                     dataKey="previous"
-                    stroke="var(--baseline-stroke)"
+                    stroke="var(--sui-content-disabled, #89919c)"
                     strokeWidth={2.25}
                     strokeDasharray="8 4"
                     strokeOpacity={0.9}
@@ -968,7 +968,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
               * "row of pixels" at small chart heights — the previous
               * style melted into the gridline noise on the dashboard
               * landing page (Alan flagged on 2026-05-13). */}
-            <div className="flex flex-col h-full w-full [--baseline-stroke:#cbd5e1]">
+            <div className="flex flex-col h-full w-full">
                 <div className="flex-1 min-h-0">
                     <ResponsiveContainer width="100%" height="100%">
                         {chartElement}

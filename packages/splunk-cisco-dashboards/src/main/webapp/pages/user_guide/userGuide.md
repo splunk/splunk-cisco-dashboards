@@ -664,6 +664,8 @@ Missing data remains unknown. Hyperfabric administrative enablement does not est
 
 Each DC section ships with **nine selected searches and nine visible tiles**. Line and area trends, bucket columns, ranked bars, radial gauges and fill gauges match the question being asked. Gauges use measured percentages only. Use the section tile-count control and **Add search** to customize the selection; existing personal tile-count preferences remain in place until reset. Tables remain available through **Investigate related evidence**. Trends show latest observations per entity in each 15-minute bucket, not a guaranteed continuous snapshot; empty buckets stay unavailable.
 
+Critical share shows a percentage headline with a red trend for classified active Nexus Dashboard anomalies and ACI faults. Recognized severities, including Medium, form the denominator; cleared and unclassified observations are excluded. Gauges, chart annotations and composition views follow the active app theme; explicit configured gauge colors remain supported.
+
 Each workspace has an appropriate **React SUI icon** by default. Open **Edit branding** to upload an image. Uploaded images take precedence; **Clear (use default)** and saving restores the SUI icon while keeping the other branding fields.
 
 To demonstrate quick dashboard creation, select **Dashboard Manager > Create New**, then **Add Searchbase**. Search **DC Networking Workspace**, select the questions you need, and choose **Add selected**. The searches bring their SPL, descriptions and visualization defaults. Save the new dashboard with a separate name to preserve the companion. Scoped DC dashboards stay in Dashboard Manager so native conversion cannot drop their filters.

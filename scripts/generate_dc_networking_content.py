@@ -263,7 +263,7 @@ def generate():
         viz = dict(showRowNumbers=False, emptyMessage='No qualifying observations in this scope and time. Check coverage; absence does not establish health.')
         chart = record.get('viz', 'splunk.table')
         if chart != 'splunk.table':
-            viz.update(seriesColors=['#649ef5', '#4cbf7f', '#f0c243'], legendDisplay='off', showTotal=False)
+            viz.update(seriesColors=[record.get('color', '#649ef5'), '#4cbf7f', '#f0c243'], legendDisplay='off', showTotal=False)
         if chart in ('splunk.singlevalueradial', 'splunk.fillergauge'):
             viz.update(valueField='Metric', min=0, max=100, showDelta=False, valueSuffix='%', decimals=1)
         if record['section']:
@@ -271,7 +271,7 @@ def generate():
                 viz['overviewColumns'] = OVERVIEW_COLUMNS[key]
             viz['overview'] = [dict(workspace='dc_networking', section=record['section'], tileId='dc_workspace_' + key,
                                     label=record['title'], subLabel=record['question'], valueField=record.get('value_field', 'Observations'), unit=record.get('unit', ''), comparePeriod=False,
-                                    color='#649ef5', thresholdNote=record.get('note', 'Latest observed evidence in the selected window; missing measurements remain unknown.'))]
+                                    color=record.get('color', '#649ef5'), thresholdNote=record.get('note', 'Latest observed evidence in the selected window; missing measurements remain unknown.'))]
         metadata = dict(search_name='DC Networking Workspace - ' + record['title'], search_author='akhamis',
                         updated_author='akhamis', version='1.0.0', date_created='2026-11-07', date_updated='2026-11-07',
                         category='Data Center', sub_category='DC Networking Workspace', search_type='display',

@@ -239,3 +239,107 @@ test('all DC searches honor the existing index macro without literal index routi
         assert.doesNotMatch(html, /100%/);
     }
  });
+
+test('critical share is a severity-colored headline trend with a classified active denominator', () => {
+    const body=stanzas.get('dc_workspace_attention_critical_share');
+    assert.match(body, /^default_viz = splunk.line$/m);
+    const options=JSON.parse(body.match(/^viz_options = (.+)$/m)[1]);
+    assert.equal(options.seriesColors[0], '#fa5762');
+    assert.equal(options.overview[0].unit, '%');
+    assert.match(spl('dc_workspace_attention_critical_share'), /stats avg\(Metric\) as Metric by Bucket/);
+    assert.match(spl('dc_workspace_attention_critical_share'), /"medium"/);
+});
+
+// Shared chart mode regressions; isolated loader for native renderer adapters.
+{
+const assert = require('node:assert/strict');
+const { test } = require('node:test');
+const fs = require('node:fs');
+const path = require('node:path');
+const ts = require('typescript');
+const React = require('react');
+const { renderToStaticMarkup } = require('react-dom/server');
+const { SplunkThemeProvider, useSplunkTheme } = require('@splunk/themes');
+const root = path.resolve(__dirname, '../src/main/webapp');
+const dir = 'common/components/workspace/';
+
+function loadChart(file, extras = {}) {
+    const mocks = {
+        './CanvasScalarTileChrome': { CanvasScalarTileChrome: ({ children }) => React.createElement('div', null, children) },
+        './ChartFocusDialog': { ChartFocusDialog: () => null },
+        './InfoTooltip': { InfoTooltip: () => null },
+        './TileActionMenu': { TileActionMenu: () => null, TileDrilldownButton: () => null },
+        '@/common/lib/utils': { cn: (...values) => values.filter(Boolean).join(' ') },
+        '@/common/lib/metricValueFormat': { formatCompactMetricNumber: String },
+        react: { ...React, lazy: () => props => React.createElement('div', { 'data-native-theme': props.themeKey, 'data-native-background': props.options.backgroundColor }) },
+        ...extras,
+    };
+    const source = fs.readFileSync(path.join(root, file), 'utf8');
+    const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.React, esModuleInterop: true } }).outputText;
+    const module = { exports: {} };
+    new Function('require', 'module', 'exports', js)(id => {
+        if (Object.hasOwn(mocks, id)) return mocks[id];
+        if (id.startsWith('./')) return loadChart(path.posix.join(path.posix.dirname(file), `${id}.ts`), extras);
+        if (id.startsWith('@/')) return loadChart(`${id.slice(2)}.ts`, extras);
+        return require(id);
+    }, module, module.exports);
+    return module.exports;
+}
+
+function render(component, props, mode) {
+    let theme;
+    function Probe() { theme = useSplunkTheme(); return React.createElement(component, props); }
+    const html = renderToStaticMarkup(React.createElement(SplunkThemeProvider, { family: 'prisma', colorScheme: mode, density: 'compact' }, React.createElement(Probe)));
+    return { html, theme };
+}
+
+for (const mode of ['dark', 'light']) {
+    test(`radial arc stays visible in ${mode} mode at zero, partial and full values`, () => {
+        const { SingleValueRadialTile: Gauge } = loadChart(dir + 'SingleValueRadialTile.tsx');
+        for (const value of [0, 50, 100]) {
+            const { html } = render(Gauge, { label: 'Measured percentage', value, source: 'live' }, mode);
+            assert.match(html, /stroke="#649ef5"/);
+            assert.match(html, /stroke="var\(--sui-content-disabled, #89919c\)"/);
+            assert.doesNotMatch(html, /stroke="#131a23"/);
+            assert.match(html, /sui-fill-active/);
+        }
+        const { html } = render(Gauge, { label:'Unknown', value:NaN, noDataReason:'empty_rows' }, mode);
+        assert.doesNotMatch(html, /<svg/);
+        assert.match(html, /—/);
+    });
+    test(`radial explicit colors and threshold bands retain precedence in ${mode} mode`, () => {
+        const { SingleValueRadialTile: Gauge } = loadChart(dir + 'SingleValueRadialTile.tsx');
+        let { html } = render(Gauge, { label:'Custom', value:80, accentColor:'#123456', vizOptions:{ fillColor:'#abcdef', trackColor:'#654321' } }, mode);
+        assert.match(html, /stroke="#abcdef"/);
+        assert.match(html, /stroke="#654321"/);
+        ({ html } = render(Gauge, { label:'Threshold', value:80, vizOptions:{ thresholds:[{from:50,to:100,value:'#fa5762'}] } }, mode));
+        assert.match(html, /stroke="#fa5762"/);
+    });
+    test(`fill, marker, categorical and native composition renderers use ${mode} theme roles`, () => {
+        const { FillerGaugeTile } = loadChart(dir + 'FillerGaugeTile.tsx');
+        let { html } = render(FillerGaugeTile, { label:'Measured zero',value:0 }, mode);
+        assert.match(html, /width:0%/);
+        assert.match(html, /var\(--sui-content-disabled/);
+        const { MarkerGaugeTile } = loadChart(dir + 'MarkerGaugeTile.tsx');
+        ({ html } = render(MarkerGaugeTile, {label:'Bounded measure',value:90}, mode));
+        assert.match(html, /var\(--sui-content-positive/);
+        const { BarBreakdownTile } = loadChart(dir + 'BarBreakdownTile.tsx');
+        ({ html } = render(BarBreakdownTile, {label:'Severity',rows:[{Severity:'Critical',Metric:2}],columns:['Severity','Metric']}, mode));
+        assert.match(html, /var\(--sui-content-negative/);
+        const { PieTile } = loadChart(dir + 'PieTile.tsx');
+        const native = render(PieTile, {label:'Composition',rows:[{Product:'ACI',Metric:2}],columns:['Product','Metric']}, mode);
+        assert.match(native.html, new RegExp(`data-native-theme="${mode==='dark'?'enterpriseDark':'enterprise'}"`));
+        assert.ok(native.html.includes(`data-native-background="${native.theme.backgroundColorSection}"`));
+    });
+}
+
+test('sparkline baselines, annotations and point outlines follow the active theme', () => {
+    const source=fs.readFileSync(path.join(root,dir+'Sparkline.tsx'),'utf8');
+    assert.match(source, /var\(--sui-content-disabled/);
+    assert.match(source, /var\(--sui-background-popup/);
+    assert.match(source, /var\(--sui-content-active/);
+    assert.match(source, /var\(--sui-background-section/);
+    assert.doesNotMatch(source, /fill="#0f172a"|--baseline-stroke:#cbd5e1/);
+});
+
+}
