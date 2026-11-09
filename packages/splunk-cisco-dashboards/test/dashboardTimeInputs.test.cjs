@@ -74,3 +74,38 @@ test('native Studio pickers retain their intentional lookback but must use nativ
     assert.notEqual(invalid.status, 0);
     assert.match(invalid.stdout, /native time range requires/);
 });
+
+test('all shared presets submit their event and token value synchronously', () => {
+    const React = require('react');
+    const babel = require('@babel/core');
+    const vm = require('node:vm');
+    const file = path.join(root, 'packages/splunk-cisco-dashboards/src/main/webapp/pages/dashboardbuilder/custominput/SimpleTimePicker.jsx');
+    const code = babel.transformSync(fs.readFileSync(file, 'utf8'), { plugins: ['@babel/plugin-transform-react-jsx', '@babel/plugin-transform-modules-commonjs'] }).code;
+    const hooks = { ...React, useState: (v) => [v, () => {}], useEffect() {}, useRef: (v) => ({ current: v }), useCallback: (f) => f, useMemo: (f) => f() };
+    const stub = new Proxy(() => null, { get: () => stub });
+    const record = { exports: {} };
+    const split = (value = '') => { const [earliest, latest, span = 'auto'] = value.split(','); return { earliest, latest, span }; };
+    vm.runInNewContext(`(function(require,module,exports){${code}\n})`)((id) => {
+        if (id === 'react') return { __esModule: true, default: hooks, ...hooks };
+        if (id === '@splunk/dashboard-inputs') return { BaseInput: { defaultProps: {} }, withInputWrapper: (c) => c };
+        if (id === './timeRangeUtils') return { DEFAULT_SPAN: 'auto', isValidTimeSpan: () => true, parseTimeRangeValue: split, toTimeRangeValue: (v) => `${v.earliest},${v.latest},${v.span}` };
+        if (id.startsWith('lodash/')) return require(id);
+        return new Proxy({ __esModule: true, default: stub }, { get: (t, k) => k in t ? t[k] : stub });
+    }, record, record.exports);
+    const Picker = record.exports.default;
+    const calls = [];
+    const tree = Picker({ id: 'time', options: standard.options, value: '-4h,now,auto', onValueChange: (event, value) => calls.push({ event, value }) });
+    const nodes = (node) => Array.isArray(node) ? node.flatMap(nodes) : node && typeof node === 'object' ? [node, ...nodes(node.props?.children)] : [];
+    for (const selection of standard.options.selections) {
+        const button = nodes(tree).find((n) => n.props?.value === selection.value);
+        assert.ok(button, selection.label);
+        const event = { preventDefault() {}, stopPropagation() {} };
+        button.props.onClick(event, { value: selection.value });
+        assert.equal(calls.at(-1)?.value, selection.value, 'Dispatch must happen before the input event lifecycle ends');
+        assert.equal(calls.at(-1)?.event, event);
+        assert.deepEqual({ ...Picker.valueToTokens(selection.value, standard.options) }, {
+            'time_tok.earliest': selection.value.split(',')[0], 'time_tok.latest': 'now', 'time_tok.span': 'auto',
+        });
+    }
+    assert.equal(calls.length, 5);
+});

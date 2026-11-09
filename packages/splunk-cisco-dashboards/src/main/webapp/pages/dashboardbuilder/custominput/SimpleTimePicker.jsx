@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { BaseInput, withInputWrapper } from '@splunk/dashboard-inputs';
 import ButtonGroup from '@splunk/react-ui/ButtonGroup';
 import Button from '@splunk/react-ui/Button';
 import get from 'lodash/get';
-import debounce from 'lodash/debounce';
 import isString from 'lodash/isString';
 import isPlainObject from 'lodash/isPlainObject';
 import some from 'lodash/some';
@@ -53,7 +52,6 @@ const presets = [
 ];
 
 const SimpleTimePicker = ({ id, options, value, onValueChange }) => {
-    // Here we debounce onValueChange to prevent rapid changes to token values as a result of rapid clicking or typing
     const [openAdvancedModal, setopenAdvancedModal] = useState(false);
     const { earliest, latest, span } = parseTimeRangeValue(value);
     const [advancedTR, setAdvancedTR] = useState({
@@ -67,8 +65,10 @@ const SimpleTimePicker = ({ id, options, value, onValueChange }) => {
     let cancelableEarliestTimeParserRef = useRef(null);
     let cancelableLatestTimeParserRef = useRef(null);
 
-    const handleChange = useMemo(
-        () => debounce((e, payload) => onValueChange(e, payload.value), 250),
+    // Presets and validated Advanced ranges are discrete submissions. Forward
+    // the event synchronously, matching Studio's native time input contract.
+    const handleChange = useCallback(
+        (e, payload) => onValueChange(e, payload.value),
         [onValueChange]
     );
     // If selections are not provided, use the default options as the selections
