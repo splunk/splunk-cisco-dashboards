@@ -26,6 +26,7 @@
         <divider />
         <a href="dashboard_manager#/sn_secure_infrastructure_status">Secure Infrastructure Status</a>
         <a href="dashboard_manager#/sn_data_center_operations">Secure Data Center Operations</a>
+        <a href="dashboard_manager#/dc_networking_operations">DC Networking Operations</a>
         <a href="dashboard_manager#/sn_hmf_sdwan_network_health">SD-WAN and Network Health Monitoring</a>
         <a href="dashboard_manager#/sn_network_service_investigations">Network Service Investigations</a>
     </collection>
@@ -72,6 +73,7 @@
         </collection>
 
         <collection label="Workplace Intelligence">
+            <a href="workplace_m365_activity_monitoring">M365 Activity Monitoring</a>
             <a href="dashboard_manager#/workplace_building_intelligence">Building Intelligence</a>
             <a href="dashboard_manager#/workplace_spaces_intelligence">Cisco Spaces - Intelligence</a>
             <a href="dashboard_manager#/workplace_operations_overview">Workplace - Single Pane of Glass</a>
