@@ -6,7 +6,7 @@
   "title": "DC Networking Operations",
   "description": "Lab observations \u00b7 Five products, one investigation. Missing data is unknown.",
   "inputs": {
-    "input_time": {
+    "input_time_range": {
       "options": {
         "defaultValue": "-24h@h,now,auto",
         "showAdvanced": true,
@@ -700,7 +700,7 @@
         },
         "structure": [
           {
-            "item": "input_time",
+            "item": "input_time_range",
             "type": "input",
             "position": {
               "x": 940,

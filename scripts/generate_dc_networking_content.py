@@ -325,8 +325,8 @@ regional_view = table
                       inputs={}, dataSources={}, visualizations={},
                       defaults={'visualizations': {'global': {'showLastUpdated': True, 'showProgressBar': True}}},
                       layout={'type': 'absolute', 'options': {'width': 1440, 'height': 2920, 'display': 'auto-scale', 'backgroundColor': '#0b1018'}, 'structure': [], 'globalInputs': []})
-    definition['inputs']['input_time'] = json.loads((ROOT / 'scripts/dashboard_time_range.json').read_text())
-    definition['layout']['structure'].append({'item': 'input_time', 'type': 'input', 'position': {'x': 940, 'y': 20, 'w': 400, 'h': 80}})
+    definition['inputs']['input_time_range'] = json.loads((ROOT / 'scripts/dashboard_time_range.json').read_text())
+    definition['layout']['structure'].append({'item': 'input_time_range', 'type': 'input', 'position': {'x': 940, 'y': 20, 'w': 400, 'h': 80}})
 
     def viz(key, value, x, y, w, h):
         definition['visualizations'][key] = value

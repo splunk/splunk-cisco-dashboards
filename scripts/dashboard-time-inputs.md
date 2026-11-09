@@ -22,3 +22,8 @@ Run the audit and dashboardTimeInputs tests. Check the installed UI, including
 Advanced, URL/handoff ranges and search token propagation. App-wrapper Simple
 XML pages and React workspaces do not contain Studio time definitions and are
 outside this validator's scope.
+
+Use the input key `input_time_range` and register new Manager dashboards in the
+managed-template routes in `appserver/static/dashboard.js`. Both are required
+for the compact dark header and blue selected preset; matching presets alone
+does not establish visual compliance.

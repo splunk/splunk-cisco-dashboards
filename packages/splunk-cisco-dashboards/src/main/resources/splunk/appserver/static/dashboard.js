@@ -47,6 +47,7 @@
  */
 (function setManagedStudioTemplate() {
   const managedDashboards = new Set([
+    "dc_networking_operations",
     "admin_asset_inventory",
     "workplace_building_intelligence",
     "netops_critical_systems_health",

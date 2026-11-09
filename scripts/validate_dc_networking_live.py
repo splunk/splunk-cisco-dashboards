@@ -93,8 +93,27 @@ def check_semantics(client):
     assert len(share) == 1 and abs(float(share[0]['Metric']) - 100/3) < 0.01, share
     share, _ = client.search(ephemeral_fixture(SEARCHES['attention_critical_share']['query'], share_rows[-2:]))
     assert not share, share
+    port = dict(sourcetype='cisco:dc:hyperfabric:inventory', account='lab',
+                fabric_id='fabric-a', node_id='node-a', resource_type='port',
+                event_time=stamp, **{'vendor.id': 'port-a', 'vendor.enabled': 'true'})
+    ports = [port, port, dict(port, event_time=stamp + 1, **{'vendor.enabled': 'false'}),
+             dict(port, node_id='node-b'), dict(port, fabric_id='fabric-b'),
+             dict(port, account='other'),
+             dict(port, **{'vendor.id': 'unknown-latest'}),
+             dict(port, event_time=stamp + 2, **{'vendor.id': 'unknown-latest', 'vendor.enabled': None})]
+    for key, expected in [('hf_ports_history', 5), ('hf_enabled_history', 3)]:
+        result, messages = client.search(ephemeral_fixture(SEARCHES[key]['query'], ports))
+        assert len(result) == 1 and float(result[0]['Metric']) == expected, (key, result)
+        assert not messages, (key, messages)
+    for state, expected in [('false', 0), (None, None)]:
+        result, _ = client.search(ephemeral_fixture(SEARCHES['hf_enabled_history']['query'],
+                                  [dict(port, **{'vendor.enabled': state})]))
+        if expected is None:
+            assert not result, result
+        else:
+            assert len(result) == 1 and float(result[0]['Metric']) == expected, result
     return dict(status='passed', method='Ephemeral makeresults fixtures; no events indexed',
-                checks=['critical share includes medium severity and deduplicates polls', 'critical share excludes cleared and unclassified states without fabricating zero', 'unknown administrative state produces no gauge value', 'reported disabled state produces measured zero', 'reported enabled state produces measured 100', 'critical history deduplicates repeated polls', 'latest cleared state excluded', 'controller collisions remain independent',
+                checks=['port history deduplicates polls and preserves account/fabric/node identity', 'latest unknown port state does not resurrect older enablement', 'disabled ports produce zero; unknown-only buckets stay absent', 'critical share includes medium severity and deduplicates polls', 'critical share excludes cleared and unclassified states without fabricating zero', 'unknown administrative state produces no gauge value', 'reported disabled state produces measured zero', 'reported enabled state produces measured 100', 'critical history deduplicates repeated polls', 'latest cleared state excluded', 'controller collisions remain independent',
                         'acknowledged anomalies retained', 'unknown expiry excluded',
                         'attention queue is populated from explicit active state',
                         'absent rates stay unknown', 'serial matches are case normalized',

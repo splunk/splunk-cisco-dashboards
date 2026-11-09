@@ -107,6 +107,20 @@ def add_charts(searches, base):
         ('hf_connections_history', 'Hyperfabric reported physical connections', 'sourcetype="cisco:dc:hyperfabric:inventory" resource_type=connection', 'Account FabricId vendor.id', 'if(isnotnull(\'vendor.local.portName\') AND isnotnull(\'vendor.remote.portName\'),1,null())'),
     ]:
         history(key, label, 'dc_hyperfabric', selector, identity, value, 'sum(Metric)', ['hf_inventory', 'reported_links', 'hf_measurements'])
+        if key in ('hf_ports_history', 'hf_enabled_history'):
+            # Collapse repeated polls on the indexers instead of retaining full
+            # port events in eventstats' bounded in-memory result buffer.
+            # Encode unknown state before latest(): it skips nulls and would
+            # otherwise resurrect an older enabled/disabled reading.
+            searches[key]['query'] = base(selector) + '''
+| eval Bucket=floor(_time/900)*900, Reading=coalesce(''' + value + ''',-1)
+| fields _time Account FabricId node_id vendor.id Bucket Reading
+| stats latest(Reading) as Metric by Account FabricId node_id vendor.id Bucket
+| where isnotnull(Metric) AND Metric>=0
+| stats sum(Metric) as Metric by Bucket
+| eval _time=Bucket
+| sort 0 _time
+| table _time Metric'''
     history('hf_rate_history', 'Hyperfabric measured port egress rate', 'dc_hyperfabric',
             'sourcetype="cisco:dc:hyperfabric:performance" resource_type=port_counter',
             'Account FabricId node_id vendor.portIndex', "tonumber('vendor.outBitsps')/1000000",

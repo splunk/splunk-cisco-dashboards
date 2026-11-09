@@ -31,6 +31,8 @@ def validate(definition):
             continue
         if value != STANDARD:
             errors.append(f'{key}: shared time picker must match dashboard_time_range.json')
+        if key != 'input_time_range':
+            errors.append(f'{key}: use input_time_range so the standard header styling applies')
         layout = definition.get('layout', {})
         if not layout.get('layoutDefinitions'):
             errors.append(f'{key}: shared picker requires the standard layoutDefinitions schema')

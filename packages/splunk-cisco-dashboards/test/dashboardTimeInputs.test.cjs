@@ -24,12 +24,12 @@ test('all shipped Studio dashboards pass the time-input audit', () => {
     assert.match(result.stdout, /shared pickers, \d+ native pickers/);
 });
 test('DC uses all standard presets and header placement without changing search time token identities', () => {
-    assert.deepEqual(dc.inputs.input_time, standard);
+    assert.deepEqual(dc.inputs.input_time_range, standard);
     assert.deepEqual(standard.options.selections.map((s) => s.label), ['4h', '24h', '48h', '7d', '30d']);
     assert.equal(standard.options.defaultValue, '-24h@h,now,auto');
     assert.equal(standard.options.showAdvanced, true);
     assert.deepEqual(dc.layout.globalInputs, []);
-    const picker = dc.layout.layoutDefinitions.layout_1.structure.find((s) => s.item === 'input_time').position;
+    const picker = dc.layout.layoutDefinitions.layout_1.structure.find((s) => s.item === 'input_time_range').position;
     const header = dc.layout.layoutDefinitions.layout_1.structure.find((s) => s.item === 'header').position;
     assert.ok(header.x + header.w <= picker.x, 'Header text must not overlap the picker');
     assert.ok(dc.layout.layoutDefinitions.layout_1.options.width - picker.x - picker.w >= 100, 'Keep clear of the Manager toolbar');
@@ -39,9 +39,9 @@ test('DC uses all standard presets and header placement without changing search 
 });
 test('packaging rejects preset, Advanced and default-value drift', () => {
     for (const mutate of [
-        (d) => d.inputs.input_time.options.selections.pop(),
-        (d) => { d.inputs.input_time.options.showAdvanced = false; },
-        (d) => { d.inputs.input_time.options.defaultValue = '-4h,now,auto'; },
+        (d) => d.inputs.input_time_range.options.selections.pop(),
+        (d) => { d.inputs.input_time_range.options.showAdvanced = false; },
+        (d) => { d.inputs.input_time_range.options.defaultValue = '-4h,now,auto'; },
     ]) {
         const result = fixture(mutate);
         assert.notEqual(result.status, 0);
@@ -50,12 +50,13 @@ test('packaging rejects preset, Advanced and default-value drift', () => {
 });
 test('packaging rejects unbound tokens, compressed controls and misplaced pickers', () => {
     for (const [mutate, message] of [
+        [(d) => { d.inputs.other_time = d.inputs.input_time_range; delete d.inputs.input_time_range; }, /use input_time_range/],
         [(d) => { Object.values(d.dataSources)[0].options.queryParameters.earliest = '$wrong_time.earliest$'; }, /unbound time token/],
-        [(d) => { d.layout.layoutDefinitions.layout_1.structure.find((s) => s.item === 'input_time').position.w = 200; }, /too small/],
-        [(d) => { d.layout.globalInputs = ['input_time']; }, /not globalInputs/],
+        [(d) => { d.layout.layoutDefinitions.layout_1.structure.find((s) => s.item === 'input_time_range').position.w = 200; }, /too small/],
+        [(d) => { d.layout.globalInputs = ['input_time_range']; }, /not globalInputs/],
         [(d) => { d.layout.options.submitButton = true; }, /immediate submission/],
         [(d) => { d.layout.options.submitOnDashboardLoad = false; }, /submission on load/],
-        [(d) => { d.layout.layoutDefinitions.layout_1.structure = d.layout.layoutDefinitions.layout_1.structure.filter((s) => s.item !== 'input_time'); }, /expected one positioned/],
+        [(d) => { d.layout.layoutDefinitions.layout_1.structure = d.layout.layoutDefinitions.layout_1.structure.filter((s) => s.item !== 'input_time_range'); }, /expected one positioned/],
     ]) {
         const result = fixture(mutate);
         assert.notEqual(result.status, 0);

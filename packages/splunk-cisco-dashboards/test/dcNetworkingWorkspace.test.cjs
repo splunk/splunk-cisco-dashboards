@@ -48,12 +48,12 @@ test('time and all scope identities survive the workspace-to-Manager handoff', (
         input_device: { options: { token: 'dc_device', defaultValue: '*' } },
     } };
     const hydrated = scope.applyDcDashboardHandoff(scopedDefinition, url.searchParams);
-    assert.equal(hydrated.inputs.input_time.options.defaultValue, '-4h@h,now,auto');
+    assert.equal(hydrated.inputs.input_time_range.options.defaultValue, '-4h@h,now,auto');
     assert.equal(hydrated.inputs.input_account.options.defaultValue, 'javi_nd');
     assert.equal(hydrated.inputs.input_fabric.options.defaultValue, 'fab 1');
     assert.equal(hydrated.inputs.input_device.options.defaultValue, '10.1.1.1');
     assert.equal(scopedDefinition.inputs.input_account.options.defaultValue, '*');
-    assert.equal(scope.applyDcDashboardHandoff(definition, url.searchParams).inputs.input_time.options.defaultValue, '-4h@h,now,auto');
+    assert.equal(scope.applyDcDashboardHandoff(definition, url.searchParams).inputs.input_time_range.options.defaultValue, '-4h@h,now,auto');
     const unrelated = { inputs: {}, dataSources: {} };
     assert.equal(scope.applyDcDashboardHandoff(unrelated, url.searchParams), unrelated);
 });
@@ -83,7 +83,7 @@ test('packaged workspace has all six sections and every tile/drilldown resolves'
 
 test('Manager dashboard uses visible library sources, global time/scope and dark styling', () => {
     assert.equal(Object.keys(definition.dataSources).length, 14);
-    assert.deepEqual(Object.keys(definition.inputs), ['input_time']);
+    assert.deepEqual(Object.keys(definition.inputs), ['input_time_range']);
     for (const source of Object.values(definition.dataSources)) {
         assert.equal(source.type, 'ds.searchbase');
         assert.ok(stanzas.has(source.options.ref));
@@ -368,3 +368,21 @@ test('display rounding defaults to two decimal places without rounding the searc
 });
 
 }
+
+test('port timelines aggregate narrow latest readings without retaining raw poll events', () => {
+    for (const id of ['dc_workspace_hf_ports_history', 'dc_workspace_hf_enabled_history']) {
+        const query = spl(id);
+        assert.doesNotMatch(query, /eventstats|dedup|mvexpand/);
+        assert.match(query, /fields _time Account FabricId node_id vendor.id Bucket Reading/);
+        assert.match(query, /stats latest\(Reading\) as Metric by Account FabricId node_id vendor.id Bucket/);
+        assert.ok(query.indexOf('DCWorkspaceScope=1') < query.indexOf('| fields'));
+        assert.match(query, /Reading=coalesce\([\s\S]*,-1\)/);
+        assert.match(query, /where isnotnull\(Metric\) AND Metric>=0/);
+    }
+});
+
+test('DC time picker receives the same route styling as the standard dashboards', () => {
+    const chrome = fs.readFileSync(path.join(root, 'src/main/resources/splunk/appserver/static/dashboard.js'), 'utf8');
+    assert.match(chrome, /managedDashboards = new Set\(\[[\s\S]*?"dc_networking_operations"/);
+    assert.ok(definition.inputs.input_time_range);
+});
