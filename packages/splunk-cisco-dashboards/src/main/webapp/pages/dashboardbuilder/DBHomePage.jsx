@@ -829,36 +829,39 @@ export default function DBHomePage() {
                 </SplunkControlGroup>
               </div>
             </div>
-            <div className="dashboard-builder-description-group">
-              <SplunkControlGroup label="Dashboard ID" labelPosition="top">
-                <Text
-                  aria-label="Dashboard ID"
-                  value={dashboardId}
-                  disabled={
-                    isCreatingDashboard || Boolean(createdDashboardId)
-                      ? true
-                      : dashboardIdOverride === null ? "dimmed" : false
-                  }
-                  onChange={(e, { value }) => {
-                    setDashboardIdOverride(value);
-                    setDashboardCreateError("");
-                  }}
-                />
-                <Button
-                  appearance="link"
-                  label={dashboardIdOverride === null ? "Edit ID" : "Use generated ID"}
-                  disabled={isCreatingDashboard || Boolean(createdDashboardId)}
-                  onClick={() => {
-                    setDashboardIdOverride(dashboardIdOverride === null ? dashboardId : null);
-                    setDashboardCreateError("");
-                  }}
-                />
-                <p>
-                  Used in the dashboard URL. Choose a stable ID when moving
-                  dashboards between stacks. IDs are saved in lowercase. Use
-                  letters, numbers, hyphens, and underscores. The ID cannot be
-                  changed after creation.
-                </p>
+            <div className="dashboard-builder-id-group">
+              <SplunkControlGroup
+                label="Dashboard ID"
+                labelPosition="top"
+                help="Used in the dashboard URL. Choose a stable ID when moving dashboards between stacks. IDs are saved in lowercase. Use letters, numbers, hyphens, and underscores. The ID cannot be changed after creation."
+              >
+                <div className="dashboard-builder-id-row">
+                  <Text
+                    className="dashboard-builder-id-input"
+                    aria-label="Dashboard ID"
+                    value={dashboardId}
+                    disabled={
+                      isCreatingDashboard || Boolean(createdDashboardId)
+                        ? true
+                        : dashboardIdOverride === null ? "dimmed" : false
+                    }
+                    onChange={(e, { value }) => {
+                      setDashboardIdOverride(value);
+                      setDashboardCreateError("");
+                    }}
+                  />
+                  <Button
+                    className="dashboard-builder-id-action"
+                    appearance="link"
+                    icon={dashboardIdOverride === null ? <Pencil /> : undefined}
+                    label={dashboardIdOverride === null ? "Edit ID" : "Use generated ID"}
+                    disabled={isCreatingDashboard || Boolean(createdDashboardId)}
+                    onClick={() => {
+                      setDashboardIdOverride(dashboardIdOverride === null ? dashboardId : null);
+                      setDashboardCreateError("");
+                    }}
+                  />
+                </div>
               </SplunkControlGroup>
             </div>
             <div className="dashboard-builder-description-group">

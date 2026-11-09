@@ -10,6 +10,9 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Fixed the dashboard creation dialog's compressed ID input and truncated Edit ID
+  action. The ID and action share a horizontal row, with guidance below them.
+
 - Dashboard Manager now previews the dashboard ID during creation and offers
   **Edit ID** for choosing a stable ID across stacks. Automatic IDs follow
   Splunk's native title guesser (`Dashboard ABC` becomes `dashboard_abc`),
