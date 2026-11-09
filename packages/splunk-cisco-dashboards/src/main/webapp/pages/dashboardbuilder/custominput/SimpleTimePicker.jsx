@@ -264,10 +264,12 @@ const SimpleTimePicker = ({ id, options, value, onValueChange }) => {
                         key={s.value}
                         value={s.value}
                         selected={selected === s.value}
-                        onClick={(e, payload) => {
+                        onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            handleChange(e, payload);
+                            // Bind the selected range directly; toolkit click
+                            // metadata is not the dashboard input value contract.
+                            handleChange(e, { value: s.value });
                         }}
                         style={{
                             minWidth: '60px',

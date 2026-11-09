@@ -100,7 +100,7 @@ test('all shared presets submit their event and token value synchronously', () =
         const button = nodes(tree).find((n) => n.props?.value === selection.value);
         assert.ok(button, selection.label);
         const event = { preventDefault() {}, stopPropagation() {} };
-        button.props.onClick(event, { value: selection.value });
+        button.props.onClick(event, {});
         assert.equal(calls.at(-1)?.value, selection.value, 'Dispatch must happen before the input event lifecycle ends');
         assert.equal(calls.at(-1)?.event, event);
         assert.deepEqual({ ...Picker.valueToTokens(selection.value, standard.options) }, {
