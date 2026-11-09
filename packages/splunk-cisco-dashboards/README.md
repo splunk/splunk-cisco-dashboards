@@ -10,6 +10,10 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- DC Networking Operations now uses the standard header time selector with
+  4h, 24h, 48h, 7d, and 30d shortcuts and Advanced selection. New visits default
+  to 24h; explicit time ranges carried from another dashboard remain honored.
+
 - Fixed the dashboard creation dialog's compressed ID input and truncated Edit ID
   action. The ID and action share a horizontal row, with guidance below them.
 

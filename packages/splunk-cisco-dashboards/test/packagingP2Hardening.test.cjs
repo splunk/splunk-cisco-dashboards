@@ -592,6 +592,10 @@ function makePackageFixture() {
 
   fs.mkdirSync(path.dirname(packageScript), { recursive: true });
   fs.copyFileSync(PACKAGE_SCRIPT_SOURCE, packageScript);
+  fs.mkdirSync(path.join(root, "scripts"), { recursive: true });
+  for (const file of ["validate_dashboard_time_inputs.py", "dashboard_time_range.json"]) {
+    fs.copyFileSync(path.join(REPOSITORY_ROOT, "scripts", file), path.join(root, "scripts", file));
+  }
   fs.chmodSync(packageScript, 0o755);
   writeFile(path.join(root, "scripts", "ensure_build_dependencies.py"), "# Fixture compiler requires no external dependencies.\n");
   writeFile(path.join(root, "scripts", "reserve_package_build.py"), [

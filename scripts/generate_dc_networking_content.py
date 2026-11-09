@@ -325,14 +325,15 @@ regional_view = table
                       inputs={}, dataSources={}, visualizations={},
                       defaults={'visualizations': {'global': {'showLastUpdated': True, 'showProgressBar': True}}},
                       layout={'type': 'absolute', 'options': {'width': 1440, 'height': 2920, 'display': 'auto-scale', 'backgroundColor': '#0b1018'}, 'structure': [], 'globalInputs': []})
-    definition['inputs']['input_time'] = {'type': 'input.simpleTimePicker', 'title': 'Time range', 'options': {'token': 'time_tok', 'defaultValue': '-4h,now,auto', 'selections': [{'label': '4h', 'value': '-4h,now,auto'}, {'label': '24h', 'value': '-24h,now,auto'}, {'label': '7d', 'value': '-7d,now,auto'}], 'showAdvanced': True}}
-    definition['layout']['globalInputs'] = list(definition['inputs'])
+    definition['inputs']['input_time'] = json.loads((ROOT / 'scripts/dashboard_time_range.json').read_text())
+    definition['layout']['options']['showTitleAndDescription'] = False
+    definition['layout']['structure'].append({'item': 'input_time', 'type': 'input', 'position': {'x': 940, 'y': 20, 'w': 400, 'h': 80}})
 
     def viz(key, value, x, y, w, h):
         definition['visualizations'][key] = value
         definition['layout']['structure'].append({'item': key, 'type': 'block', 'position': {'x': x, 'y': y, 'w': w, 'h': h}})
 
-    viz('header', {'type': 'splunk.markdown', 'options': {'markdown': '# DC Networking Operations\nLab observations · Start with attention, confirm coverage, then follow product evidence.\n\nThe configured DC index macro and selected time window define this overview. Administrative enablement is not availability. Blank measurements are unknown. Shared timing does not prove cause.', 'backgroundColor': '#1c2738', 'fontColor': '#ecf0f5'}}, 20, 20, 1400, 150)
+    viz('header', {'type': 'splunk.markdown', 'options': {'markdown': '# DC Networking Operations\nLab observations · Start with attention, confirm coverage, then follow product evidence.\n\nThe configured DC index macro and selected time window define this overview. Administrative enablement is not availability. Blank measurements are unknown. Shared timing does not prove cause.', 'backgroundColor': '#1c2738', 'fontColor': '#ecf0f5'}}, 20, 20, 900, 150)
     rows = [('attention_history', 'attention_products'), ('coverage_age', 'inventory_products'),
             ('nd_active_history', 'nd_reachability_history'), ('aci_tenant_health_history', 'aci_fault_history'),
             ('nexus_cpu_history', 'nexus_temperature_history'), ('san_health_history', 'san_wait_history'),
@@ -342,7 +343,7 @@ regional_view = table
             ds = 'ds_' + key
             definition['dataSources'][ds] = {'type': 'ds.searchbase', 'name': SEARCHES[key]['title'],
                 'options': {'ref': 'dc_workspace_' + key, 'ownerApp': 'splunk-cisco-dashboards',
-                            'queryParameters': {'earliest': '$time_tok.earliest$', 'latest': '$time_tok.latest$'}}}
+                            'queryParameters': {'earliest': '$time_tok.earliest$', 'latest': '$time_tok.latest$', 'span': '$time_tok.span$'}}}
             # Search opens the resolved, scoped Searchbase query through Manager's
             # standard visualization toolbar. Avoid an unrelated global URL pivot.
             viz('viz_' + key, {'type': SEARCHES[key].get('viz', 'splunk.table'), 'title': SEARCHES[key]['title'],

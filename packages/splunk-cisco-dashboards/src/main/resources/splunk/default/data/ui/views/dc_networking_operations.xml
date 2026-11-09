@@ -7,27 +7,35 @@
   "description": "Lab observations \u00b7 Five products, one investigation. Missing data is unknown.",
   "inputs": {
     "input_time": {
-      "type": "input.simpleTimePicker",
-      "title": "Time range",
       "options": {
-        "token": "time_tok",
-        "defaultValue": "-4h,now,auto",
+        "defaultValue": "-24h@h,now,auto",
+        "showAdvanced": true,
         "selections": [
           {
-            "label": "4h",
-            "value": "-4h,now,auto"
+            "value": "-4h,now,auto",
+            "label": "4h"
           },
           {
-            "label": "24h",
-            "value": "-24h,now,auto"
+            "value": "-24h@h,now,auto",
+            "label": "24h"
           },
           {
-            "label": "7d",
-            "value": "-7d,now,auto"
+            "value": "-48h,now,auto",
+            "label": "48h"
+          },
+          {
+            "value": "-7d@d,now,auto",
+            "label": "7d"
+          },
+          {
+            "value": "-30d@d,now,auto",
+            "label": "30d"
           }
         ],
-        "showAdvanced": true
-      }
+        "token": "time_tok"
+      },
+      "title": "Time range",
+      "type": "input.simpleTimePicker"
     }
   },
   "dataSources": {
@@ -39,7 +47,8 @@
         "ownerApp": "splunk-cisco-dashboards",
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
+          "latest": "$time_tok.latest$",
+          "span": "$time_tok.span$"
         }
       }
     },
@@ -51,7 +60,8 @@
         "ownerApp": "splunk-cisco-dashboards",
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
+          "latest": "$time_tok.latest$",
+          "span": "$time_tok.span$"
         }
       }
     },
@@ -63,7 +73,8 @@
         "ownerApp": "splunk-cisco-dashboards",
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
+          "latest": "$time_tok.latest$",
+          "span": "$time_tok.span$"
         }
       }
     },
@@ -75,7 +86,8 @@
         "ownerApp": "splunk-cisco-dashboards",
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
+          "latest": "$time_tok.latest$",
+          "span": "$time_tok.span$"
         }
       }
     },
@@ -87,7 +99,8 @@
         "ownerApp": "splunk-cisco-dashboards",
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
+          "latest": "$time_tok.latest$",
+          "span": "$time_tok.span$"
         }
       }
     },
@@ -99,7 +112,8 @@
         "ownerApp": "splunk-cisco-dashboards",
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
+          "latest": "$time_tok.latest$",
+          "span": "$time_tok.span$"
         }
       }
     },
@@ -111,7 +125,8 @@
         "ownerApp": "splunk-cisco-dashboards",
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
+          "latest": "$time_tok.latest$",
+          "span": "$time_tok.span$"
         }
       }
     },
@@ -123,7 +138,8 @@
         "ownerApp": "splunk-cisco-dashboards",
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
+          "latest": "$time_tok.latest$",
+          "span": "$time_tok.span$"
         }
       }
     },
@@ -135,7 +151,8 @@
         "ownerApp": "splunk-cisco-dashboards",
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
+          "latest": "$time_tok.latest$",
+          "span": "$time_tok.span$"
         }
       }
     },
@@ -147,7 +164,8 @@
         "ownerApp": "splunk-cisco-dashboards",
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
+          "latest": "$time_tok.latest$",
+          "span": "$time_tok.span$"
         }
       }
     },
@@ -159,7 +177,8 @@
         "ownerApp": "splunk-cisco-dashboards",
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
+          "latest": "$time_tok.latest$",
+          "span": "$time_tok.span$"
         }
       }
     },
@@ -171,7 +190,8 @@
         "ownerApp": "splunk-cisco-dashboards",
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
+          "latest": "$time_tok.latest$",
+          "span": "$time_tok.span$"
         }
       }
     },
@@ -183,7 +203,8 @@
         "ownerApp": "splunk-cisco-dashboards",
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
+          "latest": "$time_tok.latest$",
+          "span": "$time_tok.span$"
         }
       }
     },
@@ -195,7 +216,8 @@
         "ownerApp": "splunk-cisco-dashboards",
         "queryParameters": {
           "earliest": "$time_tok.earliest$",
-          "latest": "$time_tok.latest$"
+          "latest": "$time_tok.latest$",
+          "span": "$time_tok.span$"
         }
       }
     }
@@ -666,16 +688,27 @@
       "width": 1440,
       "height": 2720,
       "display": "auto-scale",
-      "backgroundColor": "#0b1018"
+      "backgroundColor": "#0b1018",
+      "showTitleAndDescription": false
     },
     "structure": [
+      {
+        "item": "input_time",
+        "type": "input",
+        "position": {
+          "x": 940,
+          "y": 20,
+          "w": 400,
+          "h": 80
+        }
+      },
       {
         "item": "header",
         "type": "block",
         "position": {
           "x": 20,
           "y": 20,
-          "w": 1400,
+          "w": 900,
           "h": 150
         }
       },
@@ -970,9 +1003,7 @@
         }
       }
     ],
-    "globalInputs": [
-      "input_time"
-    ]
+    "globalInputs": []
   }
 }
 ]]></definition>

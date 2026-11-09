@@ -168,6 +168,7 @@ fi
 command -v python3 >/dev/null || { echo "ERROR: Dependency failure: Python 3 is required." >&2; exit 1; }
 command -v node >/dev/null || { echo "ERROR: Dependency failure: Node.js >=20 is required." >&2; exit 1; }
 node "${PKG_ROOT}/bin/validate_release_identity.js"
+python3 "${ROOT_DIR}/scripts/validate_dashboard_time_inputs.py"
 
 DIST_DIR="${PKG_ROOT}/../../dist"
 OUTPUT_DIR="$DIST_DIR"
