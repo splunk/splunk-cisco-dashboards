@@ -688,7 +688,9 @@
     },
     "layout": {
         "options": {
-            "showTitleAndDescription": false
+            "showTitleAndDescription": false,
+            "submitButton": false,
+            "submitOnDashboardLoad": true
         },
         "globalInputs": [],
         "layoutDefinitions": {

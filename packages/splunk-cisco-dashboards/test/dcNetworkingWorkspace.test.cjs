@@ -91,11 +91,11 @@ test('Manager dashboard uses visible library sources, global time/scope and dark
         assert.equal(source.options.queryParameters.latest, '$time_tok.latest$');
         assert.equal(source.options.dcScope, undefined);
     }
-    for (const block of definition.layout.structure) {
-        assert.ok(block.position.x + block.position.w <= definition.layout.options.width);
-        assert.ok(block.position.y + block.position.h <= definition.layout.options.height);
+    for (const block of definition.layout.layoutDefinitions.layout_1.structure) {
+        assert.ok(block.position.x + block.position.w <= definition.layout.layoutDefinitions.layout_1.options.width);
+        assert.ok(block.position.y + block.position.h <= definition.layout.layoutDefinitions.layout_1.options.height);
     }
-    assert.equal(definition.layout.options.backgroundColor, '#0b1018');
+    assert.equal(definition.layout.layoutDefinitions.layout_1.options.backgroundColor, '#0b1018');
 });
 
 test('Searchbase runtime scopes actual SPL and fails before dispatch on invalid scope', async () => {

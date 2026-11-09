@@ -5,7 +5,8 @@ Shared Dashboard Manager time pickers use `scripts/dashboard_time_range.json`:
 earliest/latest/span. The DC generator reads this definition rather than
 inventing its own shortcut list. Explicit URL/handoff time ranges still win.
 
-Position shared pickers in each layout's header, with at least 360×60 canvas
+Use the standard layoutDefinitions/tabs schema, disable the submit button, and
+enable submission on load. Position shared pickers in each layout's header, with at least 360×60 canvas
 units and enough room for Advanced and the Manager toolbar. Reserve separate
 space for header text. Do not place this component in `globalInputs`.
 

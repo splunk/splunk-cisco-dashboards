@@ -326,7 +326,6 @@ regional_view = table
                       defaults={'visualizations': {'global': {'showLastUpdated': True, 'showProgressBar': True}}},
                       layout={'type': 'absolute', 'options': {'width': 1440, 'height': 2920, 'display': 'auto-scale', 'backgroundColor': '#0b1018'}, 'structure': [], 'globalInputs': []})
     definition['inputs']['input_time'] = json.loads((ROOT / 'scripts/dashboard_time_range.json').read_text())
-    definition['layout']['options']['showTitleAndDescription'] = False
     definition['layout']['structure'].append({'item': 'input_time', 'type': 'input', 'position': {'x': 940, 'y': 20, 'w': 400, 'h': 80}})
 
     def viz(key, value, x, y, w, h):
@@ -354,6 +353,9 @@ regional_view = table
             viz("detail_" + key, {"type": "splunk.cisco_drilldown_action", "options": {"label": "Investigate " + SEARCHES[key]["title"]}, "eventHandlers": [{"type": "drilldown.customUrl", "options": {"url": "/drilldown?origin=" + key + "&target=" + targets}}]}, 658 + column * 710, 200 + row * 330, 42, 42)
     viz('notes', {'type': 'splunk.markdown', 'options': {'markdown': '### Continue the investigation\nUse the panel menu to open its resolved query in Search. Review **Shared switch inventory** for exact serial matches and **Reported topology** for endpoint/port evidence. Neither establishes a traffic path.\n\n**Optional expansion:** Search the library for ISE, Secure Firewall, SD-WAN, Meraki or ThousandEyes. Only link records when exact device, IP, session or test identities agree; review address reuse and scope first.', 'backgroundColor': '#1c2738', 'fontColor': '#ecf0f5'}}, 20, 2520, 1400, 180)
     definition['layout']['options']['height'] = 2720
+    canvas = definition['layout']
+    canvas.pop('globalInputs', None)
+    definition['layout'] = {'options': {'showTitleAndDescription': False, 'submitButton': False, 'submitOnDashboardLoad': True}, 'globalInputs': [], 'layoutDefinitions': {'layout_1': canvas}, 'tabs': {'items': [{'label': 'Overview', 'layoutId': 'layout_1'}]}}
     xml = '<dashboard version="2" theme="dark" isVisible="false">\n<label>DC Networking Operations</label>\n<description>Five-product lab investigation built from the SSNE search library.</description>\n<definition><![CDATA[\n' + json.dumps(definition, indent=2) + '\n]]></definition>\n</dashboard>\n'
     outputs.append((DEFAULT / 'data/ui/views/dc_networking_operations.xml', xml))
     return outputs

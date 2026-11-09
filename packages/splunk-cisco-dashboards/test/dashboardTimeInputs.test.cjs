@@ -29,10 +29,10 @@ test('DC uses all standard presets and header placement without changing search 
     assert.equal(standard.options.defaultValue, '-24h@h,now,auto');
     assert.equal(standard.options.showAdvanced, true);
     assert.deepEqual(dc.layout.globalInputs, []);
-    const picker = dc.layout.structure.find((s) => s.item === 'input_time').position;
-    const header = dc.layout.structure.find((s) => s.item === 'header').position;
+    const picker = dc.layout.layoutDefinitions.layout_1.structure.find((s) => s.item === 'input_time').position;
+    const header = dc.layout.layoutDefinitions.layout_1.structure.find((s) => s.item === 'header').position;
     assert.ok(header.x + header.w <= picker.x, 'Header text must not overlap the picker');
-    assert.ok(dc.layout.options.width - picker.x - picker.w >= 100, 'Keep clear of the Manager toolbar');
+    assert.ok(dc.layout.layoutDefinitions.layout_1.options.width - picker.x - picker.w >= 100, 'Keep clear of the Manager toolbar');
     for (const source of Object.values(dc.dataSources)) assert.deepEqual(source.options.queryParameters, {
         earliest: '$time_tok.earliest$', latest: '$time_tok.latest$', span: '$time_tok.span$',
     });
@@ -51,9 +51,11 @@ test('packaging rejects preset, Advanced and default-value drift', () => {
 test('packaging rejects unbound tokens, compressed controls and misplaced pickers', () => {
     for (const [mutate, message] of [
         [(d) => { Object.values(d.dataSources)[0].options.queryParameters.earliest = '$wrong_time.earliest$'; }, /unbound time token/],
-        [(d) => { d.layout.structure.find((s) => s.item === 'input_time').position.w = 200; }, /too small/],
+        [(d) => { d.layout.layoutDefinitions.layout_1.structure.find((s) => s.item === 'input_time').position.w = 200; }, /too small/],
         [(d) => { d.layout.globalInputs = ['input_time']; }, /not globalInputs/],
-        [(d) => { d.layout.structure = d.layout.structure.filter((s) => s.item !== 'input_time'); }, /expected one positioned/],
+        [(d) => { d.layout.options.submitButton = true; }, /immediate submission/],
+        [(d) => { d.layout.options.submitOnDashboardLoad = false; }, /submission on load/],
+        [(d) => { d.layout.layoutDefinitions.layout_1.structure = d.layout.layoutDefinitions.layout_1.structure.filter((s) => s.item !== 'input_time'); }, /expected one positioned/],
     ]) {
         const result = fixture(mutate);
         assert.notEqual(result.status, 0);

@@ -150,7 +150,7 @@ def new_dashboard(template):
     v['viz_interface_text'] = markdown(title_template, '### IPv6 and interface investigations\nOpen IP-family visibility, denied-destination and interface measurement evidence separately.', 18)
     v['viz_interface_action'] = action('IPv6 and interface evidence', ['network_cross_vendor_ip_family_mix', 'mv_ipv6_decision_visibility', 'network_cross_vendor_ipv6_denied_destinations', 'network_cross_vendor_decision_field_coverage', 'mv_interface_error_counter_rates', 'mv_arista_latest_interface_state', 'mv_arista_interface_error_rates', 'mv_arista_interface_discard_rates', 'mv_arista_interface_transfer_rates', 'mv_arista_bgp_adjacency_messages', 'mv_arista_lanz_queue_observations'])
     layout['structure'] += [block('viz_interface_text', 32, 1420, canvas_width-190, 114), block('viz_interface_action', canvas_width-100, 1440, 56, 56)]
-    d['layout'] = {'options':{'showTitleAndDescription':False}, 'globalInputs':[], 'layoutDefinitions':{'layout_overview':layout}, 'tabs':{'items':[{'label':'Service investigations','layoutId':'layout_overview'}]}}
+    d['layout'] = {'options':{'showTitleAndDescription':False, 'submitButton':False, 'submitOnDashboardLoad':True}, 'globalInputs':[], 'layoutDefinitions':{'layout_overview':layout}, 'tabs':{'items':[{'label':'Service investigations','layoutId':'layout_overview'}]}}
     return d
 
 

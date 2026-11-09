@@ -32,6 +32,10 @@ def validate(definition):
         if value != STANDARD:
             errors.append(f'{key}: shared time picker must match dashboard_time_range.json')
         layout = definition.get('layout', {})
+        if not layout.get('layoutDefinitions'):
+            errors.append(f'{key}: shared picker requires the standard layoutDefinitions schema')
+        if layout.get('options', {}).get('submitButton') is not False or layout.get('options', {}).get('submitOnDashboardLoad') is not True:
+            errors.append(f'{key}: shared picker requires immediate submission and submission on load')
         if key in layout.get('globalInputs', []):
             errors.append(f'{key}: shared picker belongs in the dashboard header, not globalInputs')
         for name, page in layout.get('layoutDefinitions', {'main': layout}).items():
