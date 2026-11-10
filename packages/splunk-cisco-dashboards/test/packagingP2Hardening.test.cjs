@@ -32,6 +32,7 @@ const PRODUCTION_ENTRY_NAMES = [
   "network_diagram",
   "searchbase_canvas",
   "m365_activity_monitoring",
+  "expandable_search_example",
   "macro_index_tuning",
   "user_guide",
   "secure_operations_glass",
@@ -188,7 +189,10 @@ function exerciseExcludedViewLinkSafety() {
       "appserver/static/pages/searchbase_canvas.js",
       "appserver/static/pages/searchbase_canvas.js.LICENSE.txt",
       "appserver/static/searchbase_canvas_bootstrap.js",
-    ],
+      "appserver/static/pages/expandable_search_example.js",
+      "appserver/static/pages/expandable_search_example.js.LICENSE.txt",
+      "appserver/static/expandable_search_example_bootstrap.js",
+    ].sort(),
     "The Splunkbase profile must exclude the complete Searchbase Canvas web surface",
   );
   assert.deepEqual(
@@ -458,8 +462,8 @@ function exercisePreviewRetainedResources() {
     );
     assert.deepEqual(
       previewResult.removedStaticAssets,
-      [],
-      "The manifest currently retains the whole Canvas web surface",
+      manifest.developing.staticAssets.filter((asset) => !manifest.previewRetained.staticAssets.includes(asset)).sort(),
+      "Preview retains Canvas while excluding the expandable prototype web surface",
     );
     assert.deepEqual(
       previewResult.removedSearchbaseStanzaIds,
@@ -865,6 +869,8 @@ function exerciseProductionVerifierCacheRejection() {
       /searchbase_canvas\.js/,
       "The developer verifier must still require the internal Canvas bundle",
     );
+    // Preview excludes the expandable prototype while retaining Canvas.
+    fs.rmSync(path.join(stage, "appserver", "static", "pages", "expandable_search_example.js"));
     const previewMissingCanvasFailure = runExpectFailure(
       "node",
       [VERIFY_SCRIPT_SOURCE, stage, "preview"],
