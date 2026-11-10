@@ -10,6 +10,10 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Catalyst Operations and Security Operations Overview are now available as
+  Preview dashboards. Try their workflows and share what works, what is
+  confusing, or what is missing.
+
 - Corrected Catalyst Operations client-health totals, unavailable health readings,
   healthy-client headlines, and executive percentage tiles. Detail filters now
   identify their scope separately from all-site summary panels.

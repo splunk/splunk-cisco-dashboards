@@ -69,7 +69,7 @@
 
         <collection label="Security Operations">
             <a href="dashboard_manager#/secops_resilience">Security Resilience</a>
-            <a href="secops_overview">Security Operations Overview</a>
+            <a href="secops_overview">Security Operations Overview (Preview)</a>
         </collection>
 
         <collection label="Workplace Intelligence">
@@ -81,7 +81,7 @@
 
         <collection label="Catalyst Operations">
             <a href="dashboard_manager#/netops_catalyst_health">Catalyst Health</a>
-            <a href="dashboard_manager#/netops_catalyst_operations">Catalyst Operations</a>
+            <a href="dashboard_manager#/netops_catalyst_operations">Catalyst Operations (Preview)</a>
         </collection>
 
         <collection label="Visual Labs">

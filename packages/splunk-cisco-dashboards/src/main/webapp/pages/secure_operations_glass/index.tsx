@@ -2345,11 +2345,12 @@ const SecureOperationsGlassPage = (): JSX.Element => {
                 <div className="scd-glass-title-block">
                     <div className="scd-glass-title-row">
                         <div>
-                            <h1>Cisco Secure Networking — Operations Glass</h1>
+                            <h1>Security Operations Overview (Preview)</h1>
                             <p>
                                 Security Operations · Identity · Firewall ·
                                 Health · Investigation
                             </p>
+                            <p role="note">Preview—try this dashboard and let us know what works, what’s confusing, or what’s missing.</p>
                         </div>
                     </div>
                     <div className="scd-glass-time">

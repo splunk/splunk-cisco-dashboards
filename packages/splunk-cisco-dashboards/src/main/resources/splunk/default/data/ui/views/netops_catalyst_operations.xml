@@ -1,11 +1,11 @@
 
 <dashboard version="2" theme="dark" stylesheet="application.css">
-    <label>NetOps - Catalyst Operations</label>
-    <description>Modern Dashboard Studio JSON conversion of netops_catalyst_health.xml with tabbed layout, refreshed searches, token filters, drilldown detail panels, and enterprise network monitoring visuals.</description>
+    <label>Catalyst Operations (Preview)</label>
+    <description>Preview of client health, device health and issue investigation for Catalyst Center.</description>
     <definition><![CDATA[
 {
-	"title": "Enterprise Operations - Modern Dashboard Studio",
-	"description": "Modern Dashboard Studio JSON conversion of netops_catalyst_health.xml with tabbed layout, refreshed searches, token filters, drilldown detail panels, and enterprise network monitoring visuals.",
+	"title": "Catalyst Operations (Preview)",
+	"description": "Preview of client health, device health and issue investigation for Catalyst Center.",
 	"inputs": {
 		"input_client_type": {
 			"options": {
@@ -782,7 +782,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "## About This Dashboard\nSource, design, and operational notes for the enterprise network operations dashboard."
+				"markdown": "## Catalyst Operations (Preview) \u2014 About\nSource, design, and operational notes for the enterprise network operations dashboard.\n\n**Preview\u2014try this dashboard and let us know what works, what\u2019s confusing, or what\u2019s missing.**"
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
@@ -793,7 +793,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "## Client Summary\nComprehensive client health, distribution, activity, and top-client details for operational troubleshooting.\n\nSummary health/count panels cover all sites and client types. Site and Client type filter the OS, location, traffic/detail and onboarding panels. Seven-day charts keep their labeled fixed window."
+				"markdown": "## Catalyst Operations (Preview) \u2014 Client\nComprehensive client health, distribution, activity, and top-client details for operational troubleshooting.\n\nSummary health/count panels cover all sites and client types. Site and Client type filter the OS, location, traffic/detail and onboarding panels. Seven-day charts keep their labeled fixed window.\n\n**Preview\u2014try this dashboard and let us know what works, what\u2019s confusing, or what\u2019s missing.**"
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
@@ -804,7 +804,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "## Overall Health Summary - Network Devices\nExecutive view of device health, inventory, and active Catalyst Center issues across the enterprise environment."
+				"markdown": "## Catalyst Operations (Preview) \u2014 Exec\nExecutive view of device health, inventory, and active Catalyst Center issues across the enterprise environment.\n\n**Preview\u2014try this dashboard and let us know what works, what\u2019s confusing, or what\u2019s missing.**"
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
@@ -815,7 +815,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "## General Overview\nMonitor enterprise wired and wireless client health across all sites. Use the filters above to narrow client views by site or connection type.\n\nSummary health/count panels cover all sites and client types. Site and Client type filter the OS, location, traffic/detail and onboarding panels. Seven-day charts keep their labeled fixed window."
+				"markdown": "## Catalyst Operations (Preview) \u2014 Overview\nMonitor enterprise wired and wireless client health across all sites. Use the filters above to narrow client views by site or connection type.\n\nSummary health/count panels cover all sites and client types. Site and Client type filter the OS, location, traffic/detail and onboarding panels. Seven-day charts keep their labeled fixed window.\n\n**Preview\u2014try this dashboard and let us know what works, what\u2019s confusing, or what\u2019s missing.**"
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
@@ -1502,7 +1502,7 @@
 				"options": {
 					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
-					"height": 900,
+					"height": 960,
 					"width": 1440,
 					"backgroundImage": {
 						"sizeType": "contain",
@@ -1515,7 +1515,7 @@
 					{
 						"item": "viz_header_about",
 						"position": {
-							"h": 90,
+							"h": 150,
 							"w": 1400,
 							"x": 20,
 							"y": 0
@@ -1528,7 +1528,7 @@
 							"h": 760,
 							"w": 1400,
 							"x": 20,
-							"y": 110
+							"y": 170
 						},
 						"type": "block"
 					}
@@ -1539,7 +1539,7 @@
 				"options": {
 					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
-					"height": 1990,
+					"height": 2050,
 					"width": 1440,
 					"backgroundImage": {
 						"sizeType": "contain",
@@ -1552,7 +1552,7 @@
 					{
 						"item": "viz_header_client",
 						"position": {
-							"h": 150,
+							"h": 210,
 							"w": 1400,
 							"x": 20,
 							"y": 0
@@ -1565,7 +1565,7 @@
 							"h": 190,
 							"w": 453,
 							"x": 20,
-							"y": 170
+							"y": 230
 						},
 						"type": "block"
 					},
@@ -1575,7 +1575,7 @@
 							"h": 190,
 							"w": 453,
 							"x": 493,
-							"y": 170
+							"y": 230
 						},
 						"type": "block"
 					},
@@ -1585,7 +1585,7 @@
 							"h": 190,
 							"w": 454,
 							"x": 966,
-							"y": 170
+							"y": 230
 						},
 						"type": "block"
 					},
@@ -1595,7 +1595,7 @@
 							"h": 380,
 							"w": 1400,
 							"x": 20,
-							"y": 380
+							"y": 440
 						},
 						"type": "block"
 					},
@@ -1605,7 +1605,7 @@
 							"h": 340,
 							"w": 690,
 							"x": 20,
-							"y": 780
+							"y": 840
 						},
 						"type": "block"
 					},
@@ -1615,7 +1615,7 @@
 							"h": 340,
 							"w": 690,
 							"x": 730,
-							"y": 780
+							"y": 840
 						},
 						"type": "block"
 					},
@@ -1625,7 +1625,7 @@
 							"h": 450,
 							"w": 1400,
 							"x": 20,
-							"y": 1140
+							"y": 1200
 						},
 						"type": "block"
 					},
@@ -1635,7 +1635,7 @@
 							"h": 360,
 							"w": 1400,
 							"x": 20,
-							"y": 1610
+							"y": 1670
 						},
 						"type": "block"
 					}
@@ -1646,7 +1646,7 @@
 				"options": {
 					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
-					"height": 1530,
+					"height": 1590,
 					"width": 1440,
 					"backgroundImage": {
 						"sizeType": "contain",
@@ -1659,7 +1659,7 @@
 					{
 						"item": "viz_header_exec",
 						"position": {
-							"h": 90,
+							"h": 150,
 							"w": 1400,
 							"x": 20,
 							"y": 0
@@ -1672,7 +1672,7 @@
 							"h": 170,
 							"w": 335,
 							"x": 20,
-							"y": 110
+							"y": 170
 						},
 						"type": "block"
 					},
@@ -1682,7 +1682,7 @@
 							"h": 170,
 							"w": 335,
 							"x": 375,
-							"y": 110
+							"y": 170
 						},
 						"type": "block"
 					},
@@ -1692,7 +1692,7 @@
 							"h": 170,
 							"w": 335,
 							"x": 730,
-							"y": 110
+							"y": 170
 						},
 						"type": "block"
 					},
@@ -1702,7 +1702,7 @@
 							"h": 170,
 							"w": 335,
 							"x": 1085,
-							"y": 110
+							"y": 170
 						},
 						"type": "block"
 					},
@@ -1712,7 +1712,7 @@
 							"h": 330,
 							"w": 1400,
 							"x": 20,
-							"y": 300
+							"y": 360
 						},
 						"type": "block"
 					},
@@ -1722,7 +1722,7 @@
 							"h": 350,
 							"w": 690,
 							"x": 20,
-							"y": 650
+							"y": 710
 						},
 						"type": "block"
 					},
@@ -1732,7 +1732,7 @@
 							"h": 350,
 							"w": 690,
 							"x": 730,
-							"y": 650
+							"y": 710
 						},
 						"type": "block"
 					},
@@ -1742,7 +1742,7 @@
 							"h": 480,
 							"w": 1400,
 							"x": 20,
-							"y": 1020
+							"y": 1080
 						},
 						"type": "block"
 					},
@@ -1752,7 +1752,7 @@
 							"h": 480,
 							"w": 1400,
 							"x": 20,
-							"y": 1020
+							"y": 1080
 						},
 						"type": "block"
 					},
@@ -1762,7 +1762,7 @@
 							"h": 70,
 							"w": 170,
 							"x": 1240,
-							"y": 1030
+							"y": 1090
 						},
 						"type": "input"
 					}
@@ -1773,7 +1773,7 @@
 				"options": {
 					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
-					"height": 1660,
+					"height": 1720,
 					"width": 1440,
 					"backgroundImage": {
 						"sizeType": "contain",
@@ -1786,7 +1786,7 @@
 					{
 						"item": "viz_header_overview",
 						"position": {
-							"h": 150,
+							"h": 210,
 							"w": 1400,
 							"x": 20,
 							"y": 10
@@ -1799,7 +1799,7 @@
 							"h": 170,
 							"w": 453,
 							"x": 20,
-							"y": 170
+							"y": 230
 						},
 						"type": "block"
 					},
@@ -1809,7 +1809,7 @@
 							"h": 170,
 							"w": 453,
 							"x": 493,
-							"y": 170
+							"y": 230
 						},
 						"type": "block"
 					},
@@ -1819,7 +1819,7 @@
 							"h": 170,
 							"w": 454,
 							"x": 966,
-							"y": 170
+							"y": 230
 						},
 						"type": "block"
 					},
@@ -1829,7 +1829,7 @@
 							"h": 170,
 							"w": 453,
 							"x": 20,
-							"y": 360
+							"y": 420
 						},
 						"type": "block"
 					},
@@ -1839,7 +1839,7 @@
 							"h": 170,
 							"w": 453,
 							"x": 493,
-							"y": 360
+							"y": 420
 						},
 						"type": "block"
 					},
@@ -1849,7 +1849,7 @@
 							"h": 170,
 							"w": 454,
 							"x": 966,
-							"y": 360
+							"y": 420
 						},
 						"type": "block"
 					},
@@ -1859,7 +1859,7 @@
 							"h": 330,
 							"w": 690,
 							"x": 20,
-							"y": 550
+							"y": 610
 						},
 						"type": "block"
 					},
@@ -1869,7 +1869,7 @@
 							"h": 330,
 							"w": 690,
 							"x": 730,
-							"y": 550
+							"y": 610
 						},
 						"type": "block"
 					},
@@ -1879,7 +1879,7 @@
 							"h": 360,
 							"w": 1400,
 							"x": 20,
-							"y": 900
+							"y": 960
 						},
 						"type": "block"
 					},
@@ -1889,7 +1889,7 @@
 							"h": 360,
 							"w": 1400,
 							"x": 20,
-							"y": 1280
+							"y": 1340
 						},
 						"type": "block"
 					}

@@ -175,6 +175,9 @@ function sha256(filePath) {
 
 function exerciseExcludedViewLinkSafety() {
   const manifest = JSON.parse(fs.readFileSync(BUILD_PROFILE_MANIFEST_SOURCE, "utf8"));
+  for (const view of ["netops_catalyst_operations", "secops_overview"]) {
+    assert.ok(!manifest.developing.views.includes(view), `${view} must ship as Preview`);
+  }
   assert.ok(
     manifest.developing.views.includes("searchbase_canvas"),
     "Searchbase Canvas must remain excluded from the Splunkbase profile",

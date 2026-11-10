@@ -7,7 +7,7 @@
 -->
 <dashboard version="1.1" theme="dark" hideEdit="true" hideExport="true" hideTitle="true"
            script="secure_operations_glass_bootstrap.js">
-    <label>Security Operations Overview</label>
+    <label>Security Operations Overview (Preview)</label>
     <description>Unified operational view of Secure Networking identity, firewall, site health, and investigation telemetry.</description>
     <row>
         <panel>
