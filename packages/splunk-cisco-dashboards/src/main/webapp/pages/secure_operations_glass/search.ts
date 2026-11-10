@@ -205,12 +205,14 @@ export const getScalarValue = (
     rows: SearchRow[],
     preferredFields: string[] = []
 ): number | null => {
+    if (getTelemetryMessage(rows)) return null;
     const first = rows[0];
     if (!first) return null;
     for (const field of preferredFields) {
         const value = asNumber(first[field]);
         if (value !== null) return value;
     }
+    if (preferredFields.length) return null;
     for (const [key, rawValue] of Object.entries(first)) {
         if (key === '_time') continue;
         const value = asNumber(rawValue);
@@ -251,3 +253,50 @@ export const sanitizeSearchValue = (value: string): string =>
 
 export const sanitizeWildcardSearchValue = (value: string): string =>
     value.replace(/[^A-Za-z0-9@._:\-\s*]/g, '').trim().slice(0, 128);
+
+
+// Fallback rows carry source-coverage guidance, not measured zeroes.
+export const getTelemetryMessage = (rows: SearchRow[]): string | null => {
+    for (const row of rows) {
+        for (const key of ['data_status', 'Data Status', 'message']) {
+            if (typeof row[key] === 'string' && String(row[key]).trim()) return String(row[key]);
+        }
+        for (const value of Object.values(row)) {
+            if (typeof value === 'string' && /^No matching (telemetry|data)/i.test(value)) return value;
+        }
+    }
+    return null;
+};
+
+export const dnsCategoryMetricSearch = (spl: string): string => `${spl}
+| where isnotnull(Category) AND isnotnull('Block Count')
+| stats dc(Category) as category_count, count as classified_rows
+| where classified_rows>0`;
+
+export const dlpFindingMetricSearch = (spl: string): string => `${spl}
+| where isnotnull(Events)
+| stats sum(Events) as finding_count, count as classified_rows
+| where classified_rows>0`;
+
+export const identityActivitySearch = (spl: string, identity: string): string => {
+    const safe = sanitizeWildcardSearchValue(identity).replace(/\s+/g, ' ');
+    if (!safe) throw new Error('An identity is required.');
+    const marker = '\n| stats count as event_count';
+    if (!spl.includes(marker) || !spl.includes('identity_context=')) {
+        throw new Error('Identity activity search shape is unsupported.');
+    }
+    return spl.replace(marker, `\n| search identity_context="${safe}"${marker}`);
+};
+
+export const summarizeIdentityActivity = (rows: SearchRow[]) => {
+    const valid = rows.filter((row) => asNumber(row['Total Events']) !== null);
+    const sources = new Set(valid.map((r) => String(r['Source Layer'] ?? '')).filter(Boolean));
+    const identities = new Set(valid.map((r) => String(r['Identity / Security Context'] ?? '')).filter(Boolean));
+    const blocked = new Set(valid.filter((r) => (asNumber(r['Failures / Blocks']) ?? 0)>0)
+        .map((r) => String(r['Identity / Security Context'] ?? '')).filter(Boolean));
+    return { totalEvents: valid.length ? valid.reduce((sum, r) => sum + (asNumber(r['Total Events']) ?? 0), 0) : null,
+        secondLabel: 'Matching identities / contexts', secondValue: valid.length ? identities.size : null,
+        thirdLabel: 'Identities / contexts with blocks', thirdValue: valid.length ? blocked.size : null,
+        sources: [...sources].join(', '),
+        lastSeen: valid.map((r) => String(r['Last Seen'] ?? '')).sort().slice(-1)[0] ?? '' };
+};

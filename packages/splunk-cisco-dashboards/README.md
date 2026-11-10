@@ -10,6 +10,13 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Corrected Catalyst Operations client-health totals, unavailable health readings,
+  healthy-client headlines, and executive percentage tiles. Detail filters now
+  identify their scope separately from all-site summary panels.
+- Corrected Security Operations identity investigation, DNS category and DLP
+  event totals, and headline field selection. Missing telemetry retains its
+  explanation instead of appearing as a measured zero.
+
 - DC Networking Operations now uses the standard header time selector with
   4h, 24h, 48h, 7d, and 30d shortcuts and Advanced selection. New visits default
   to 24h; explicit time ranges carried from another dashboard remain honored.

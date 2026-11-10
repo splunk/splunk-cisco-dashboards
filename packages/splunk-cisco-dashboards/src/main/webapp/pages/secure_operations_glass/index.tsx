@@ -77,6 +77,11 @@ import {
     getLabelKey,
     getNumericKeys,
     getScalarValue,
+    getTelemetryMessage,
+    dnsCategoryMetricSearch,
+    dlpFindingMetricSearch,
+    identityActivitySearch,
+    summarizeIdentityActivity,
     sanitizeSearchValue,
     sanitizeWildcardSearchValue,
     type SearchRow,
@@ -128,6 +133,7 @@ interface SearchMetricProps {
     searchId: string;
     label: string;
     preferredFields?: string[];
+    transformSearch?: (spl: string) => string;
     suffix?: string;
     tone?: Tone;
     icon?: SuiIcon;
@@ -575,6 +581,7 @@ const SearchMetric = ({
     searchId,
     label,
     preferredFields = [],
+    transformSearch,
     suffix = '',
     tone = 'default',
     icon: Icon = Activity,
@@ -585,7 +592,9 @@ const SearchMetric = ({
         earliest: context.earliest,
         refreshToken: context.refreshToken,
         count: 10,
+        transformSearch,
     });
+    const telemetryMessage = getTelemetryMessage(state.rows);
     const value = getScalarValue(state.rows, preferredFields);
     const trend = metricTrendForRow(state.rows[0]);
     const TrendIcon =
@@ -603,6 +612,7 @@ const SearchMetric = ({
             <SearchActions
                 context={context}
                 searchId={searchId}
+                transformSearch={transformSearch}
             />
             <div className="scd-glass-metric-label">
                 <Icon size={16} strokeWidth={2} />
@@ -611,7 +621,7 @@ const SearchMetric = ({
             <strong>{state.loading ? '…' : formatNumber(value, suffix)}</strong>
             <span className="scd-glass-metric-status">
                 <span>
-                    {state.error ? 'Search unavailable' : 'Live Searchbase result'}
+                    {state.error ? 'Search unavailable' : telemetryMessage ?? (value === null ? 'No reported measurement for this time range' : 'Live Searchbase result')}
                 </span>
                 {!state.loading && !state.error && trend ? (
                     <span
@@ -944,7 +954,8 @@ const OverviewTab = ({ context }: { context: PageContext }): JSX.Element => (
                 context={context}
                 searchId="secure_networking_sse_dns_blocked_categories"
                 label="DNS Threat Categories"
-                preferredFields={['Block Count']}
+                preferredFields={['category_count']}
+                transformSearch={dnsCategoryMetricSearch}
                 tone="warning"
                 icon={Globe2}
             />
@@ -1034,7 +1045,7 @@ const IdentityTab = ({ context }: { context: PageContext }): JSX.Element => (
                 context={context}
                 searchId="secure_networking_sgt_total_assignments_count"
                 label="SGT Assignments"
-                preferredFields={['sgt_assignments']}
+                preferredFields={['total_assignments']}
                 icon={Network}
             />
             <SearchMetric
@@ -1049,7 +1060,7 @@ const IdentityTab = ({ context }: { context: PageContext }): JSX.Element => (
                 context={context}
                 searchId="secure_networking_zta_ztna_session_count"
                 label="ZTNA Sessions"
-                preferredFields={['session_count']}
+                preferredFields={['ztna_sessions']}
                 tone="good"
                 icon={CheckCircle2}
             />
@@ -1269,7 +1280,8 @@ const FirewallTab = ({ context }: { context: PageContext }): JSX.Element => {
                     context={context}
                     searchId="secure_networking_sse_dns_blocked_categories"
                     label="DNS Block Categories"
-                    preferredFields={['Block Count']}
+                    preferredFields={['category_count']}
+                    transformSearch={dnsCategoryMetricSearch}
                     tone="warning"
                     icon={Globe2}
                 />
@@ -1285,7 +1297,8 @@ const FirewallTab = ({ context }: { context: PageContext }): JSX.Element => {
                     context={context}
                     searchId="secure_networking_secure_access_dlp_findings"
                     label="DLP Policy Hits"
-                    preferredFields={['finding_count', 'total_findings']}
+                    preferredFields={['finding_count']}
+                    transformSearch={dlpFindingMetricSearch}
                     tone="warning"
                     icon={Cloud}
                 />
@@ -1847,14 +1860,14 @@ const NetworkTab = ({
                 context={context}
                 searchId="secure_networking_meraki_wired_client_count"
                 label="Wired Clients"
-                preferredFields={['wired_clients']}
+                preferredFields={['wired_client_count']}
                 icon={Server}
             />
             <SearchMetric
                 context={context}
                 searchId="secure_networking_meraki_wireless_client_count"
                 label="Wireless Clients"
-                preferredFields={['wireless_clients']}
+                preferredFields={['wireless_client_count']}
                 icon={Wifi}
             />
         </div>
@@ -1939,19 +1952,9 @@ const UserInvestigationTab = ({
     const [draftUser, setDraftUser] = useState('');
     const [appliedUser, setAppliedUser] = useState('');
     const safeUser = sanitizeWildcardSearchValue(appliedUser);
-    const isWildcardSearch = safeUser.includes('*');
     const transformSearch = useMemo(() => {
         if (!safeUser) return undefined;
-        return (spl: string): string => {
-            const aggregateMarker = '\n| stats count as event_count';
-            if (spl.includes(aggregateMarker)) {
-                return spl.replace(
-                    aggregateMarker,
-                    `\n| search identity="${safeUser}"${aggregateMarker}`
-                );
-            }
-            return `${spl}\n| search "Identity"="${safeUser}"`;
-        };
+        return (spl: string): string => identityActivitySearch(spl, safeUser);
     }, [safeUser]);
     const activity = useSearchbaseRows({
         catalogue: context.catalogue,
@@ -1962,52 +1965,8 @@ const UserInvestigationTab = ({
         transformSearch,
         count: 100,
     });
-    const row = activity.rows[0] ?? {};
     const columns = getColumns(activity.rows);
-    const summary = useMemo(() => {
-        if (!isWildcardSearch) {
-            return {
-                totalEvents: row['Total Events'],
-                secondLabel: 'Layers Seen',
-                secondValue: row['Layers Seen'],
-                thirdLabel: 'Fail / Block Layers',
-                thirdValue: row['Fail/Block Layers'],
-                sources: row.Sources,
-                lastSeen: row['Last Seen'],
-            };
-        }
-
-        const sourceSet = new Set<string>();
-        let totalEvents = 0;
-        let identitiesWithBlocks = 0;
-        let lastSeen = '';
-
-        activity.rows.forEach((activityRow) => {
-            totalEvents += asNumber(activityRow['Total Events']) ?? 0;
-            if ((asNumber(activityRow['Fail/Block Layers']) ?? 0) > 0) {
-                identitiesWithBlocks += 1;
-            }
-            String(activityRow.Sources ?? '')
-                .split(',')
-                .map((source) => source.trim())
-                .filter(Boolean)
-                .forEach((source) => sourceSet.add(source));
-            const candidateLastSeen = String(activityRow['Last Seen'] ?? '');
-            if (candidateLastSeen > lastSeen) {
-                lastSeen = candidateLastSeen;
-            }
-        });
-
-        return {
-            totalEvents,
-            secondLabel: 'Matching Identities',
-            secondValue: activity.rows.length,
-            thirdLabel: 'Identities with Blocks',
-            thirdValue: identitiesWithBlocks,
-            sources: Array.from(sourceSet).join(', '),
-            lastSeen,
-        };
-    }, [activity.rows, isWildcardSearch, row]);
+    const summary = useMemo(() => summarizeIdentityActivity(activity.rows), [activity.rows]);
 
     const submit = (event: React.FormEvent): void => {
         event.preventDefault();
@@ -2023,12 +1982,10 @@ const UserInvestigationTab = ({
                     <UserRoundSearch size={28} />
                     <div>
                         <h2>
-                            Trace a user session across Campus Wireless → ISE
-                            Auth → Cloud Firewall → Web Proxy → ZTNA
+                            Review observed identity activity across ISE, ZTNA and firewall sources
                         </h2>
                         <p>
-                            Enter an identity to correlate its activity across
-                            the Secure Networking enforcement stack. Use * for
+                            Enter an identity to review matching observations. Shared identity or timing does not prove a single session or traffic path. Use * for
                             wildcard matches, for example user47*.
                         </p>
                     </div>

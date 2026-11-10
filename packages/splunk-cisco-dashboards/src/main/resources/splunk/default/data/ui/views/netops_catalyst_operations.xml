@@ -26,7 +26,7 @@
 				],
 				"token": "client_type_tok"
 			},
-			"title": "Client Type",
+			"title": "Client type (detail panels)",
 			"type": "input.dropdown"
 		},
 		"input_close_issue": {
@@ -87,7 +87,7 @@
 				"defaultValue": "*",
 				"token": "site_tok"
 			},
-			"title": "Site Filter",
+			"title": "Site (detail panels)",
 			"type": "input.text"
 		},
 		"input_time_range": {
@@ -158,7 +158,7 @@
 			"options": {
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
-				"markdown": "### Purpose\n\nThis Dashboard Studio definition modernizes `netops_catalyst_health.xml` into a four-tab operational view for enterprise network operations.\n\n### Preserved searches\n\nAll SPL data sources embedded in the existing `netops_catalyst_health.xml` CDATA definition are copied into this JSON. New `ds_mod_*` searches add tokenized filters, reusable base searches, 60-second refresh behavior, issue drilldowns, and the executive health distribution panels.\n\n### Data sources\n\n- `cisco:dnac:clienthealth`: wired and wireless health KPIs, client counts, 24-hour and 7-day trends.\n- `cisco:dnac:client`: SSID, OS, site, traffic, onboarding, and per-client detail tables.\n- `cisco:dnac:devicehealth`: device type KPIs, health distribution, inventory, and total fleet summary.\n- `cisco:dnac:issue`: active issue summaries and row-click detail panels.\n\n### Interaction model\n\n- Global time range controls dashboard searches through `$time_tok$`.\n- Refresh rate defaults to 60 seconds through `$refresh_tok$`.\n- Client Type and Site Filter tokens narrow client distribution/detail searches.\n- Selecting an issue row sets `$selected_issue$` and opens the Issue Detail panel. Use Close Details to clear the token.\n\n### Health color policy\n\n- `>=95%`: green `#4cbf7f`.\n- `80-95%`: yellow `#f0c243`.\n- `<80%`: red `#fa5762`.\n\n### Studio schema notes\n\nDashboard Studio source JSON uses `splunk.*` visualization type IDs. The old `viz.*` syntax is legacy and is migrated by Splunk when opened in current Studio. JSON does not support comments, so implementation notes are encoded here and in visualization descriptions to keep this definition importable."
+				"markdown": "### Catalyst Operations\n\nReview wired and wireless client health, device reachability and manageability, client activity, and observed Catalyst Center issues.\n\n### Time and scope\n\nThe time selector controls panels unless a panel explicitly states a fixed seven-day window. Refresh controls how often observations are requested. Summary health and client counts cover all sites and client types. Site and Client type apply to OS, location, traffic/detail, and onboarding panels only.\n\n### Interpret the measurements\n\nClient Distribution combines the latest reported wired and wireless counts in each health category. A blank value means no usable measurement was reported; unavailable health scores are not displayed as negative percentages. Healthy-client headlines show the latest observed count in the selected window. Connected-client summaries are reported snapshots, not distinct clients across the entire interval.\n\nDevice percentages describe the share of observed inventory that is reachable and managed. They do not measure application availability. Select an issue row for its reported details; Close Details returns to the issue list.\n\n### Data requirements\n\nThe configured Catalyst index must contain the relevant client, client-health, device-health and issue observations. Site detail panels use the configured site topology lookup. Missing data does not establish a healthy or unhealthy condition."
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
@@ -350,7 +350,7 @@
 			"dataSources": {
 				"primary": "ds_kpi_cs_health"
 			},
-			"description": "Average client health score across wired and wireless clients.",
+			"description": "Latest reported all-site client health score; unavailable readings remain blank.",
 			"options": {
 				"backgroundColor": "#131a23",
 				"majorColor": "> majorValue | rangeValue(healthColorRange)",
@@ -416,7 +416,7 @@
 			"dataSources": {
 				"primary": "ds_kpi_cs_total"
 			},
-			"description": "Total unique connected clients in the selected time range.",
+			"description": "Latest reported all-site connected client count, not distinct clients across the entire time window.",
 			"options": {
 				"backgroundColor": "#131a23",
 				"majorColor": "#ecf0f5",
@@ -461,14 +461,15 @@
 			"description": "Reachable and managed access points as a percentage of total AP inventory.",
 			"options": {
 				"backgroundColor": "#131a23",
-				"gaugeColor": "> primary | seriesByName('health_pct') | lastPoint() | rangeValue(healthColorRange)",
-				"labelDisplay": "percentage",
-				"orientation": "horizontal",
-				"value": "> primary | seriesByName('health_pct') | lastPoint()",
-				"valueDisplay": "percentage"
+				"majorValue": "> primary | seriesByName('health_pct') | lastPoint()",
+				"majorColor": "> majorValue | rangeValue(healthColorRange)",
+				"majorFontSize": 38,
+				"unit": "%",
+				"sparklineDisplay": "off",
+				"trendDisplay": "off"
 			},
 			"title": "Access Points",
-			"type": "splunk.fillergauge"
+			"type": "splunk.singlevalue"
 		},
 		"viz_ex_device_health_distribution": {
 			"dataSources": {
@@ -594,14 +595,15 @@
 			"description": "Reachable and managed firewalls as a percentage of total firewall inventory.",
 			"options": {
 				"backgroundColor": "#131a23",
-				"gaugeColor": "> primary | seriesByName('health_pct') | lastPoint() | rangeValue(healthColorRange)",
-				"labelDisplay": "percentage",
-				"orientation": "horizontal",
-				"value": "> primary | seriesByName('health_pct') | lastPoint()",
-				"valueDisplay": "percentage"
+				"majorValue": "> primary | seriesByName('health_pct') | lastPoint()",
+				"majorColor": "> majorValue | rangeValue(healthColorRange)",
+				"majorFontSize": 38,
+				"unit": "%",
+				"sparklineDisplay": "off",
+				"trendDisplay": "off"
 			},
 			"title": "Firewalls",
-			"type": "splunk.fillergauge"
+			"type": "splunk.singlevalue"
 		},
 		"viz_ex_issue_detail_modal": {
 			"containerOptions": {
@@ -731,14 +733,15 @@
 			"description": "Reachable and managed routers as a percentage of total router inventory.",
 			"options": {
 				"backgroundColor": "#131a23",
-				"gaugeColor": "> primary | seriesByName('health_pct') | lastPoint() | rangeValue(healthColorRange)",
-				"labelDisplay": "percentage",
-				"orientation": "horizontal",
-				"value": "> primary | seriesByName('health_pct') | lastPoint()",
-				"valueDisplay": "percentage"
+				"majorValue": "> primary | seriesByName('health_pct') | lastPoint()",
+				"majorColor": "> majorValue | rangeValue(healthColorRange)",
+				"majorFontSize": 38,
+				"unit": "%",
+				"sparklineDisplay": "off",
+				"trendDisplay": "off"
 			},
 			"title": "Routers",
-			"type": "splunk.fillergauge"
+			"type": "splunk.singlevalue"
 		},
 		"viz_ex_switch_health": {
 			"context": {
@@ -764,14 +767,15 @@
 			"description": "Reachable and managed switches as a percentage of total switch inventory.",
 			"options": {
 				"backgroundColor": "#131a23",
-				"gaugeColor": "> primary | seriesByName('health_pct') | lastPoint() | rangeValue(healthColorRange)",
-				"labelDisplay": "percentage",
-				"orientation": "horizontal",
-				"value": "> primary | seriesByName('health_pct') | lastPoint()",
-				"valueDisplay": "percentage"
+				"majorValue": "> primary | seriesByName('health_pct') | lastPoint()",
+				"majorColor": "> majorValue | rangeValue(healthColorRange)",
+				"majorFontSize": 38,
+				"unit": "%",
+				"sparklineDisplay": "off",
+				"trendDisplay": "off"
 			},
 			"title": "Switches",
-			"type": "splunk.fillergauge"
+			"type": "splunk.singlevalue"
 		},
 		"viz_header_about": {
 			"options": {
@@ -789,7 +793,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "## Client Summary\nComprehensive client health, distribution, activity, and top-client details for operational troubleshooting."
+				"markdown": "## Client Summary\nComprehensive client health, distribution, activity, and top-client details for operational troubleshooting.\n\nSummary health/count panels cover all sites and client types. Site and Client type filter the OS, location, traffic/detail and onboarding panels. Seven-day charts keep their labeled fixed window."
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
@@ -811,7 +815,7 @@
 				"backgroundColor": "#131a23",
 				"fontColor": "#ecf0f5",
 				"fontSize": "small",
-				"markdown": "## General Overview\nMonitor enterprise wired and wireless client health across all sites. Use the filters above to narrow client views by site or connection type."
+				"markdown": "## General Overview\nMonitor enterprise wired and wireless client health across all sites. Use the filters above to narrow client views by site or connection type.\n\nSummary health/count panels cover all sites and client types. Site and Client type filter the OS, location, traffic/detail and onboarding panels. Seven-day charts keep their labeled fixed window."
 			},
 			"showLastUpdated": false,
 			"showProgressBar": false,
@@ -942,7 +946,7 @@
 			"dataSources": {
 				"primary": "ds_wired_trend_24h"
 			},
-			"description": "Wired clients currently in healthy status.",
+			"description": "Latest observed healthy client count in the selected window. Gaps remain unreported.",
 			"options": {
 				"backgroundColor": "#131a23",
 				"majorColor": "#4cbf7f",
@@ -1081,7 +1085,7 @@
 			"dataSources": {
 				"primary": "ds_wireless_trend_24h"
 			},
-			"description": "Wireless clients currently in healthy status.",
+			"description": "Latest observed healthy client count in the selected window. Gaps remain unreported.",
 			"options": {
 				"backgroundColor": "#131a23",
 				"majorColor": "#4cbf7f",
@@ -1175,7 +1179,7 @@
 		"ds_cs_health_trend": {
 			"name": "Client Health Score Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\" scoreType=\"ALL\" | timechart fixedrange=false latest(scoreValue) as \"Client Health Score\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\" scoreType=\"ALL\" | timechart fixedrange=false cont=false latest(scoreValue) as \"Client Health Score\"\n| eval \"Client Health Score\"=if(tonumber('Client Health Score')>=0 AND tonumber('Client Health Score')<=100,tonumber('Client Health Score'),null())",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1186,7 +1190,7 @@
 		"ds_cs_total_trend": {
 			"name": "Total Connected Clients Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\" scoreType=\"ALL\" | timechart fixedrange=false latest(clientCount) as \"Total Connected Clients\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"ALL\" scoreType=\"ALL\" | timechart fixedrange=false cont=false latest(clientCount) as \"Total Connected Clients\"",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1278,7 +1282,7 @@
 		"ds_mod_client_distribution_score": {
 			"name": "Modern - Client good-health distribution score",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| stats latest(clientCount) as clients by scoreType\n| stats sum(eval(if(scoreType=\"GOOD\",clients,0))) as healthy, sum(clients) as total\n| eval healthy_pct=if(total>0, round(healthy/total*100, 1), 0)\n| fields healthy_pct healthy total",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| eval clientCount=if(tonumber(clientCount)>=0,tonumber(clientCount),-1)\n| stats latest(clientCount) as clients by clientType scoreType\n| where clients>=0\n| stats sum(eval(if(scoreType=\"GOOD\",clients,0))) as healthy, sum(clients) as total\n| eval healthy_pct=if(total>0, round(healthy/total*100, 1), null())\n| fields healthy_pct healthy total",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1312,7 +1316,7 @@
 			"name": "Modern - Access Points health percent",
 			"options": {
 				"extend": "ds_mod_base_device_health",
-				"query": "| search DeviceType=\"Access Points\"\n| stats count as total, sum(healthy) as healthy\n| eval health_pct=if(total>0, round(healthy/total*100, 1), 0)\n| fields health_pct healthy total"
+				"query": "| search DeviceType=\"Access Points\"\n| stats count as total, sum(healthy) as healthy\n| eval health_pct=if(total>0, round(healthy/total*100, 1), null())\n| fields health_pct healthy total"
 			},
 			"type": "ds.chain"
 		},
@@ -1328,7 +1332,7 @@
 			"name": "Modern - Firewalls health percent",
 			"options": {
 				"extend": "ds_mod_base_device_health",
-				"query": "| search DeviceType=\"Firewalls\"\n| stats count as total, sum(healthy) as healthy\n| eval health_pct=if(total>0, round(healthy/total*100, 1), 0)\n| fields health_pct healthy total"
+				"query": "| search DeviceType=\"Firewalls\"\n| stats count as total, sum(healthy) as healthy\n| eval health_pct=if(total>0, round(healthy/total*100, 1), null())\n| fields health_pct healthy total"
 			},
 			"type": "ds.chain"
 		},
@@ -1336,7 +1340,7 @@
 			"name": "Modern - Routers health percent",
 			"options": {
 				"extend": "ds_mod_base_device_health",
-				"query": "| search DeviceType=\"Routers\"\n| stats count as total, sum(healthy) as healthy\n| eval health_pct=if(total>0, round(healthy/total*100, 1), 0)\n| fields health_pct healthy total"
+				"query": "| search DeviceType=\"Routers\"\n| stats count as total, sum(healthy) as healthy\n| eval health_pct=if(total>0, round(healthy/total*100, 1), null())\n| fields health_pct healthy total"
 			},
 			"type": "ds.chain"
 		},
@@ -1344,7 +1348,7 @@
 			"name": "Modern - Switches health percent",
 			"options": {
 				"extend": "ds_mod_base_device_health",
-				"query": "| search DeviceType=\"Switches\"\n| stats count as total, sum(healthy) as healthy\n| eval health_pct=if(total>0, round(healthy/total*100, 1), 0)\n| fields health_pct healthy total"
+				"query": "| search DeviceType=\"Switches\"\n| stats count as total, sum(healthy) as healthy\n| eval health_pct=if(total>0, round(healthy/total*100, 1), null())\n| fields health_pct healthy total"
 			},
 			"type": "ds.chain"
 		},
@@ -1360,7 +1364,7 @@
 			"name": "Modern - Total device summary",
 			"options": {
 				"extend": "ds_mod_base_device_health",
-				"query": "| stats count as total, sum(healthy) as healthy\n| eval health_pct=if(total>0, round(healthy/total*100, 1), 0)\n| fields total healthy health_pct"
+				"query": "| stats count as total, sum(healthy) as healthy\n| eval health_pct=if(total>0, round(healthy/total*100, 1), null())\n| fields total healthy health_pct"
 			},
 			"type": "ds.chain"
 		},
@@ -1400,7 +1404,7 @@
 		"ds_mod_wired_client_trend_health": {
 			"name": "Modern - Wired client trend with health threshold overlays",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" (scoreType=\"ALL\" OR scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType=\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType=\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType=\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType=\"IDLE\" OR scoreType=\"NODATA\",clientCount,null()))) as \"No Data\", latest(eval(if(scoreType=\"ALL\",scoreValue,null()))) as \"Wired Health\"\n| eval \"Warning Threshold\"=80, \"Healthy Threshold\"=95",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" (scoreType=\"ALL\" OR scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart fixedrange=false cont=false latest(eval(if(scoreType=\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType=\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType=\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType=\"IDLE\" OR scoreType=\"NODATA\",clientCount,null()))) as \"No Data\", latest(eval(if(scoreType=\"ALL\",scoreValue,null()))) as \"Wired Health\"\n| eval \"Warning Threshold\"=80, \"Healthy Threshold\"=95\n| eval \"Wired Health\"=if(tonumber('Wired Health')>=0 AND tonumber('Wired Health')<=100,tonumber('Wired Health'),null())",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1411,7 +1415,7 @@
 		"ds_mod_wireless_client_trend_health": {
 			"name": "Modern - Wireless client trend with health threshold overlays",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" (scoreType=\"ALL\" OR scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType=\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType=\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType=\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType=\"IDLE\" OR scoreType=\"NODATA\",clientCount,null()))) as \"No Data\", latest(eval(if(scoreType=\"ALL\",scoreValue,null()))) as \"Wireless Health\"\n| eval \"Warning Threshold\"=80, \"Healthy Threshold\"=95",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" (scoreType=\"ALL\" OR scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart fixedrange=false cont=false latest(eval(if(scoreType=\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType=\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType=\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType=\"IDLE\" OR scoreType=\"NODATA\",clientCount,null()))) as \"No Data\", latest(eval(if(scoreType=\"ALL\",scoreValue,null()))) as \"Wireless Health\"\n| eval \"Warning Threshold\"=80, \"Healthy Threshold\"=95\n| eval \"Wireless Health\"=if(tonumber('Wireless Health')>=0 AND tonumber('Wireless Health')<=100,tonumber('Wireless Health'),null())",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1422,7 +1426,7 @@
 		"ds_wired_health_trend": {
 			"name": "Wired Health Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" scoreType=\"ALL\" | timechart fixedrange=false latest(scoreValue) as \"Wired Health\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" scoreType=\"ALL\" | timechart fixedrange=false cont=false latest(scoreValue) as \"Wired Health\"\n| eval \"Wired Health\"=if(tonumber('Wired Health')>=0 AND tonumber('Wired Health')<=100,tonumber('Wired Health'),null())",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1433,7 +1437,7 @@
 		"ds_wired_total_trend": {
 			"name": "Wired Clients Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" scoreType=\"ALL\" | timechart fixedrange=false latest(clientCount) as \"Wired Clients\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" scoreType=\"ALL\" | timechart fixedrange=false cont=false latest(clientCount) as \"Wired Clients\"",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1444,7 +1448,7 @@
 		"ds_wired_trend_24h": {
 			"name": "Enterprise - Wired Client Trend 24h",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",clientCount,null()))) as \"No Data\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRED\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart fixedrange=false cont=false latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",clientCount,null()))) as \"No Data\"\n| where isnotnull(Healthy)",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1455,7 +1459,7 @@
 		"ds_wireless_health_trend": {
 			"name": "Wireless Health Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" scoreType=\"ALL\" | timechart fixedrange=false latest(scoreValue) as \"Wireless Health\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" scoreType=\"ALL\" | timechart fixedrange=false cont=false latest(scoreValue) as \"Wireless Health\"\n| eval \"Wireless Health\"=if(tonumber('Wireless Health')>=0 AND tonumber('Wireless Health')<=100,tonumber('Wireless Health'),null())",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1466,7 +1470,7 @@
 		"ds_wireless_total_trend": {
 			"name": "Wireless Clients Trend",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" scoreType=\"ALL\" | timechart fixedrange=false latest(clientCount) as \"Wireless Clients\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" scoreType=\"ALL\" | timechart fixedrange=false cont=false latest(clientCount) as \"Wireless Clients\"",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1477,7 +1481,7 @@
 		"ds_wireless_trend_24h": {
 			"name": "Enterprise - Wireless Client Trend 24h",
 			"options": {
-				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",clientCount,null()))) as \"No Data\"",
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" clientType=\"WIRELESS\" (scoreType=\"GOOD\" OR scoreType=\"FAIR\" OR scoreType=\"POOR\" OR scoreType=\"IDLE\" OR scoreType=\"NODATA\")\n| timechart fixedrange=false cont=false latest(eval(if(scoreType==\"GOOD\",clientCount,null()))) as Healthy, latest(eval(if(scoreType==\"FAIR\",clientCount,null()))) as Fair, latest(eval(if(scoreType==\"POOR\",clientCount,null()))) as Poor, latest(eval(if(scoreType==\"IDLE\" OR scoreType==\"NODATA\",clientCount,null()))) as \"No Data\"\n| where isnotnull(Healthy)",
 				"queryParameters": {
 					"earliest": "$time_tok.earliest$",
 					"latest": "$time_tok.latest$"
@@ -1535,7 +1539,7 @@
 				"options": {
 					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
-					"height": 1930,
+					"height": 1990,
 					"width": 1440,
 					"backgroundImage": {
 						"sizeType": "contain",
@@ -1548,7 +1552,7 @@
 					{
 						"item": "viz_header_client",
 						"position": {
-							"h": 90,
+							"h": 150,
 							"w": 1400,
 							"x": 20,
 							"y": 0
@@ -1561,7 +1565,7 @@
 							"h": 190,
 							"w": 453,
 							"x": 20,
-							"y": 110
+							"y": 170
 						},
 						"type": "block"
 					},
@@ -1571,7 +1575,7 @@
 							"h": 190,
 							"w": 453,
 							"x": 493,
-							"y": 110
+							"y": 170
 						},
 						"type": "block"
 					},
@@ -1581,7 +1585,7 @@
 							"h": 190,
 							"w": 454,
 							"x": 966,
-							"y": 110
+							"y": 170
 						},
 						"type": "block"
 					},
@@ -1591,7 +1595,7 @@
 							"h": 380,
 							"w": 1400,
 							"x": 20,
-							"y": 320
+							"y": 380
 						},
 						"type": "block"
 					},
@@ -1601,7 +1605,7 @@
 							"h": 340,
 							"w": 690,
 							"x": 20,
-							"y": 720
+							"y": 780
 						},
 						"type": "block"
 					},
@@ -1611,7 +1615,7 @@
 							"h": 340,
 							"w": 690,
 							"x": 730,
-							"y": 720
+							"y": 780
 						},
 						"type": "block"
 					},
@@ -1621,7 +1625,7 @@
 							"h": 450,
 							"w": 1400,
 							"x": 20,
-							"y": 1080
+							"y": 1140
 						},
 						"type": "block"
 					},
@@ -1631,7 +1635,7 @@
 							"h": 360,
 							"w": 1400,
 							"x": 20,
-							"y": 1550
+							"y": 1610
 						},
 						"type": "block"
 					}
@@ -1769,7 +1773,7 @@
 				"options": {
 					"backgroundColor": "#0f1117",
 					"display": "auto-scale",
-					"height": 1600,
+					"height": 1660,
 					"width": 1440,
 					"backgroundImage": {
 						"sizeType": "contain",
@@ -1782,7 +1786,7 @@
 					{
 						"item": "viz_header_overview",
 						"position": {
-							"h": 90,
+							"h": 150,
 							"w": 1400,
 							"x": 20,
 							"y": 10
@@ -1795,7 +1799,7 @@
 							"h": 170,
 							"w": 453,
 							"x": 20,
-							"y": 110
+							"y": 170
 						},
 						"type": "block"
 					},
@@ -1805,7 +1809,7 @@
 							"h": 170,
 							"w": 453,
 							"x": 493,
-							"y": 110
+							"y": 170
 						},
 						"type": "block"
 					},
@@ -1815,7 +1819,7 @@
 							"h": 170,
 							"w": 454,
 							"x": 966,
-							"y": 110
+							"y": 170
 						},
 						"type": "block"
 					},
@@ -1825,7 +1829,7 @@
 							"h": 170,
 							"w": 453,
 							"x": 20,
-							"y": 300
+							"y": 360
 						},
 						"type": "block"
 					},
@@ -1835,7 +1839,7 @@
 							"h": 170,
 							"w": 453,
 							"x": 493,
-							"y": 300
+							"y": 360
 						},
 						"type": "block"
 					},
@@ -1845,7 +1849,7 @@
 							"h": 170,
 							"w": 454,
 							"x": 966,
-							"y": 300
+							"y": 360
 						},
 						"type": "block"
 					},
@@ -1855,7 +1859,7 @@
 							"h": 330,
 							"w": 690,
 							"x": 20,
-							"y": 490
+							"y": 550
 						},
 						"type": "block"
 					},
@@ -1865,7 +1869,7 @@
 							"h": 330,
 							"w": 690,
 							"x": 730,
-							"y": 490
+							"y": 550
 						},
 						"type": "block"
 					},
@@ -1875,7 +1879,7 @@
 							"h": 360,
 							"w": 1400,
 							"x": 20,
-							"y": 840
+							"y": 900
 						},
 						"type": "block"
 					},
@@ -1885,7 +1889,7 @@
 							"h": 360,
 							"w": 1400,
 							"x": 20,
-							"y": 1220
+							"y": 1280
 						},
 						"type": "block"
 					}
