@@ -37,7 +37,7 @@ const TopologyCanvasPage: React.FC = () => {
                 <div className="min-w-0">
                     <div className="flex items-center gap-2">
                         <h1 className="text-base font-semibold tracking-tight truncate">
-                            Network Topology Canvas
+                            Network Topology Canvas (Under Dev)
                         </h1>
                         <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium sui-bg-notification-warning sui-color-active">
                             <Sparkles className="w-2.5 h-2.5" aria-hidden />

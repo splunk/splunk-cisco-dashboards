@@ -358,7 +358,7 @@ const DashboardContent: React.FC = () => {
                             Your Organization Name
                         </h1>
                         <p className="mt-1 text-sm font-semibold  sui-color-default">
-                            Health Monitoring Dashboard
+                            Health Monitoring Dashboard (Under Dev)
                         </p>
                     </div>
                     <div className="flex flex-shrink-0 items-center gap-3">

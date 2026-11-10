@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <dashboard version="1.1" theme="dark" hideEdit="true" hideExport="true" hideTitle="true"
            script="searchbase_canvas_bootstrap.js">
-    <label>Searchbase Canvas</label>
+    <label>Searchbase Canvas (Under Dev)</label>
     <row>
         <panel>
             <html>
