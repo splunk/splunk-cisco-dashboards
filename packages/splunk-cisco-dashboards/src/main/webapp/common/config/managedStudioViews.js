@@ -32,6 +32,7 @@ export const DASHBOARD_MANAGER_FRAMEWORK_VIEW_NAMES = new Set([
 // compatibility only. They are intentionally excluded from its library.
 export const MANAGER_ROUTED_STUDIO_VIEW_NAMES = new Set([
   "admin_asset_inventory",
+  "netops_catalyst_health",
   "netops_critical_systems_health",
   "netops_readiness",
   "secops_resilience",

@@ -29,6 +29,7 @@
   "developing": {
     "views": [
       "expandable_search_example",
+      "netops_catalyst_health",
       "netops_health_monitoring",
       "network_diagram",
       "secure_networking_pillars",

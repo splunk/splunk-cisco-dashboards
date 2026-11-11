@@ -122,6 +122,8 @@ const readDefinition = (viewName) => {
 
 for (const viewName of [
   "admin_asset_inventory",
+  "netops_catalyst_health",
+  "netops_catalyst_operations",
   "netops_critical_systems_health",
   "netops_readiness",
   "secops_resilience",

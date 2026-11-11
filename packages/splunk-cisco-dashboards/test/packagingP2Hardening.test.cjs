@@ -33,7 +33,6 @@ const PRODUCTION_ENTRY_NAMES = [
   "searchbase_canvas",
   "m365_activity_monitoring",
   "expandable_search_example",
-  "catalyst_operations",
   "macro_index_tuning",
   "user_guide",
   "secure_operations_glass",
@@ -889,7 +888,7 @@ function exerciseProductionVerifierCacheRejection() {
     );
     assert.match(
       splunkbaseOutput,
-      /Verified 12 splunkbase production bundles/,
+      /Verified 11 splunkbase production bundles/,
       "The Splunkbase verifier must accept the profile-filtered entry set",
     );
     writeFile(
@@ -908,7 +907,7 @@ function exerciseProductionVerifierCacheRejection() {
     );
     assert.match(
       run("node", [VERIFY_SCRIPT_SOURCE, stage, "preview"], { cwd: root }),
-      /Verified 13 preview production bundles/,
+      /Verified 12 preview production bundles/,
       "The preview verifier must accept the Canvas bundle alongside shipped entries",
     );
   } finally {
@@ -1924,13 +1923,13 @@ function exerciseThreatSourcesAcceleration() {
 }
 
 function exerciseOperationalSearchSurfaceValidator() {
-  const catalystHealth = JSON.parse(fs.readFileSync(path.join(PACKAGE_ROOT, "src/main/webapp/pages/catalyst_operations/sourceDefinitions.json"), "utf8")).health.dataSources.ds_cs_traffic_by_protocol.options.query;
+  const catalystHealth = fs.readFileSync(CATALYST_HEALTH_SOURCE, "utf8");
   assert.doesNotMatch(
     catalystHealth,
     /round\(<<FIELD>>\//,
     "Dynamic timechart fields must be quoted because protocol and SSID values can contain punctuation",
   );
-  assert.match(catalystHealth, /latest\(traffic\.usage\)/);
+  assert.match(catalystHealth, /round\('\<\<FIELD\>\>'\/1073741824/);
 
   const criticalSystemsHealth = fs.readFileSync(
     CRITICAL_SYSTEMS_HEALTH_SOURCE,

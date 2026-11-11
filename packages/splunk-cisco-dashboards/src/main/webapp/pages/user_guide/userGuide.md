@@ -39,8 +39,8 @@ Browse the current release and recorded historical versions below. The newest re
 
 ### Dashboards and investigations
 
-- **Catalyst Operations (Preview)** combines Catalyst Health and Catalyst Operations into **Overview**, **Executive Summary**, and **Client Summary**. Detailed sections load searches only when opened; closing a section or changing tabs requests cancellation. Old Catalyst Health links open the consolidated dashboard. Unfinished bandwidth placeholders are removed. This expandable layout does not support editing in Dashboard Studio.
-- Corrected Catalyst client and device health, site rankings, issue lifecycle summaries, and reported traffic, session and onboarding measurements. Repeated polls do not inflate snapshot totals, and missing measurements remain unknown. Detail filters identify their scope separately from all-site summaries; weekly comparisons retain their labeled fixed windows.
+- **Catalyst Operations (Preview)** provides Dashboard Studio monitoring through **Overview**, **Executive Summary**, and **Client Summary** tabs plus **About**, with client health, device health and issue investigations.
+- Corrected Catalyst client-health totals, unavailable health readings, healthy-client headlines and executive percentage tiles. Detail filters identify their scope separately from all-site summary panels.
 - **Security Operations Overview (Preview)** is available for feedback. Corrected identity investigations, distinct DNS-category and DLP-event totals, and headline measurements. Missing telemetry retains its explanation instead of appearing as zero.
 - Added **DC Networking Operations** under **Secure Infrastructure**. It uses the standard header time selector: **4h**, **24h**, **48h**, **7d**, **30d**, and Advanced selection. New visits default to 24h; explicit time context remains honored.
 - Reduced memory consumption in the Hyperfabric observed-port and administratively-enabled-port history searches by aggregating the latest reading per port and time bucket. No search memory-limit increase is required.
@@ -641,13 +641,11 @@ If the dashboard is saved but app sharing fails, select **Open saved dashboard**
 
 ### Catalyst Operations (Preview)
 
-Catalyst Operations combines the earlier Catalyst Health and Catalyst Operations views into three tabs: **Overview**, **Executive Summary**, and **Client Summary**. Old Catalyst Health links open this consolidated dashboard.
+Catalyst Operations is a Dashboard Studio dashboard with **Overview**, **Executive Summary**, and **Client Summary** tabs plus **About**. Open it from **More > Catalyst Operations > Catalyst Operations (Preview)**. Dashboard Manager provides supported search, investigation and editing actions according to your permissions.
 
-Headline panels load for the active tab. Expand a detail section to load its charts and tables; closing it or changing tabs requests cancellation of active detail searches. Reopening requests fresh results. Refresh and time-range changes apply to visible panels. Weekly comparisons retain their labeled fixed windows. The optional auto-refresh control refreshes visible panels only.
+The Site and Client type controls apply to the labeled detail panels; all-site summary panels retain their reported scope. Missing or invalid health readings remain unavailable rather than appearing as measured zero. Use the time selector to choose the investigation window.
 
-The Site and Client type controls apply to the filtered client location, OS, traffic/detail, and onboarding panels. Other panels retain their reported all-site scope. Missing observations do not establish a healthy or unhealthy condition. Issue summaries use the latest reported state in the selected window. Traffic and session panels use reported per-client snapshots and are not bandwidth measurements or a completed-session ledger.
-
-Use **Show data**, **Download CSV**, or **Open in Search** to inspect a result. Results are capped at 500 displayed rows; a notice identifies capped results. Select an issue name in an issue table to review its detail. **Close all details** leaves headline panels visible. Layout editing in Dashboard Studio is not supported for this expandable view.
+Catalyst Health remains a separate **Under Dev** dashboard where available; it has not been merged into Catalyst Operations.
 
 ## Insights Workspaces {#workspaces}
 

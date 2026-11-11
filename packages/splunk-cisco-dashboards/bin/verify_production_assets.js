@@ -27,7 +27,6 @@ const ENTRY_NAMES = [
     'searchbase_canvas',
     'm365_activity_monitoring',
     'expandable_search_example',
-    'catalyst_operations',
     'macro_index_tuning',
     'user_guide',
     'secure_operations_glass',

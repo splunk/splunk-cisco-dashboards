@@ -871,12 +871,12 @@ for (const fileName of studioViewFiles) {
 }
 assert.equal(
   studioViewFiles.length,
-  27,
+  29,
   "the color audit must cover every shipped Studio dashboard",
 );
 assert.equal(
   allVisibleTrendCount,
-  88,
+  107,
   "the color audit must cover every visible Studio trend value",
 );
 console.log("Secure Networking React pillar dashboard checks passed.");

@@ -10,13 +10,6 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
-- Catalyst Operations now consolidates the client, device, site-health and issue
-  investigations previously split across two dashboards. Detailed charts and
-  tables load when their sections open; closed sections do not request searches.
-  Catalyst Health links now open Catalyst Operations. The three operational tabs
-  remain, with the unfinished bandwidth placeholders removed. The consolidated
-  monitoring layout does not support editing in Dashboard Studio.
-
 - Catalyst Operations and Security Operations Overview are now available as
   Preview dashboards. Try their workflows and share what works, what is
   confusing, or what is missing.

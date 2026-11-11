@@ -41,7 +41,8 @@ test('category and DLP headlines aggregate before the UI result cap',()=>{
  assert.match(api.dnsCategoryMetricSearch('search index=x'),/stats dc\(Category\) as category_count/);
  assert.match(api.dlpFindingMetricSearch('search index=x'),/stats sum\(Events\) as finding_count/);
 });
-const d=JSON.parse(fs.readFileSync(path.join(root,'src/main/webapp/pages/catalyst_operations/sourceDefinitions.json'),'utf8')).operations;
+const xml=fs.readFileSync(path.join(root,'src/main/resources/splunk/default/data/ui/views/netops_catalyst_operations.xml'),'utf8');
+const d=JSON.parse(xml.match(/<!\[CDATA\[([\s\S]*?)\]\]>/)[1]);
 test('Catalyst preserves client type grain, unknown readings, and observed time buckets',()=>{
  const q=d.dataSources.ds_mod_client_distribution_score.options.query;
  assert.match(q,/by clientType scoreType/);assert.doesNotMatch(q,/dedup|eventstats/);
@@ -52,3 +53,19 @@ test('Catalyst preserves client type grain, unknown readings, and observed time 
 });
 // Export the exact production transforms for the native-SPL fixture runner.
 if(process.env.OPS_FIXTURE_EXPORT)fs.writeFileSync(process.env.OPS_FIXTURE_EXPORT,JSON.stringify({dns:api.dnsCategoryMetricSearch('| makeresults'),dlp:api.dlpFindingMetricSearch('| makeresults'),identity:api.identityActivitySearch('search index=x\n| eval identity_context=UserName\n| stats count as event_count by identity_context','user47*')}));
+
+
+test('Catalyst dashboards retain native Studio definitions and separate manager routes',()=>{
+ for(const [view,title] of [['netops_catalyst_operations','Catalyst Operations (Preview)'],['netops_catalyst_health','Catalyst Health (Under Dev)']]) {
+  const text=fs.readFileSync(path.join(root,'src/main/resources/splunk/default/data/ui/views',view+'.xml'),'utf8');
+  assert.match(text,/<dashboard version="2"/);
+  assert.doesNotMatch(text,/catalyst_operations_bootstrap|catalyst_operations_legacy_redirect/);
+  const studio=JSON.parse(text.match(/<!\[CDATA\[([\s\S]*?)\]\]>/)[1]);
+  assert.equal(studio.title,title);
+  assert.deepEqual(studio.layout.tabs.items.map(t=>t.label),['Overview','Executive Summary','Client Summary','About']);
+  assert.ok(Object.keys(studio.dataSources).length>0);
+  const nav=fs.readFileSync(path.join(root,'src/main/resources/splunk/default/data/ui/nav/default.xml'),'utf8');
+  assert.ok(nav.includes('dashboard_manager#/'+view));
+ }
+ assert.ok(!fs.existsSync(path.join(root,'src/main/webapp/pages/catalyst_operations')));
+});
