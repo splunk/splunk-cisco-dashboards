@@ -61,9 +61,8 @@ test("keeps accessible release history in Markdown", () => {
   assert.match(markdown, /Beta release[\s\S]*?Beta considerations/i);
   assert.match(markdown, /Version 1\.0\.49[\s\S]*?Secure Data Center Operations[\s\S]*?Upgrade notes/);
   assert.match(markdown, /Version 1\.0\.50[\s\S]*?Property operations and inventory[\s\S]*?customer-neutral/);
-  assert.match(markdown, /Version 1\.0\.50[\s\S]*?Packaging and release safety[\s\S]*?build-2089 release floor/);
   assert.match(markdown, /Version 1\.0\.51[\s\S]*?Add for everyone[\s\S]*?No data migration or Splunk restart is required/);
-  assert.match(markdown, /Version 1\.0\.52[\s\S]*?10,000-row limit[\s\S]*?build 2096 or later/);
+  assert.match(markdown, /Version 1\.0\.52[\s\S]*?10,000-row limit[\s\S]*?Asset Inventory - Build Lookup/);
 });
 
 test("documents the full setup, dashboard, and workspace operating model", () => {
@@ -89,7 +88,7 @@ test("promotes release history while keeping contents and document order aligned
 test("renders every recorded release with stable links and only the newest expanded", () => {
   const html = parseGuide(markdown).html;
   const panels = [...html.matchAll(/<details class="scd-guide-release-panel" id="([^"]+)" data-release-label="([^"]+)"( open)?>/g)];
-  const versions = ['1.0.80', '1.0.70', '1.0.60', '1.0.55', '1.0.54', '1.0.53', '1.0.52', '1.0.51', '1.0.50', '1.0.49', '1.0.46', '1.0.45', '1.0.44', '1.0.35'];
+  const versions = ['1.0.90', '1.0.80', '1.0.70', '1.0.60', '1.0.55', '1.0.54', '1.0.53', '1.0.52', '1.0.51', '1.0.50', '1.0.49', '1.0.46', '1.0.45', '1.0.44', '1.0.35'];
   assert.deepEqual(panels.map((m) => m[2]), versions.map((v) => `Version ${v}`));
   assert.equal(panels.filter((m) => m[3]).length, 1);
   assert.ok(panels[0][3]);
@@ -102,7 +101,7 @@ test("renders every recorded release with stable links and only the newest expan
   assert.equal((html.match(/data-release-action="expand"/g) || []).length, 1);
   const releaseTitles = new Map([...markdown.matchAll(/^::: release (.*?) \| .*?Version (\d+\.\d+\.\d+)$/gm)].map((m) => [m[2], m[1]]));
   assert.equal(releaseTitles.get('1.0.35'), 'Initial Alpha release');
-  for (const version of versions.slice(2, -1)) {
+  for (const version of versions.slice(3, -1)) {
     assert.equal(releaseTitles.get(version), 'Beta release', `${version} was beta`);
   }
   assert.equal(releaseTitles.get('1.0.70'), 'Release Notes');
@@ -126,4 +125,18 @@ test("release anchors remain unique and escape metadata without counting code ex
   assert.match(page, /hashchange[\s\S]*?followFragment/);
   assert.match(page, /revealGuideTarget\(match\)/);
   assert.match(page, /revealGuideTarget\(target\)/);
+});
+
+
+test("customer release notes exclude repository and delivery processes", () => {
+  const notes = read('README.md').split('## Release notes')[1].split('## Runtime prerequisites')[0];
+  const history = markdown.split('## What’s New / Release Notes')[1].split('## Prerequisites')[0];
+  const internal = /build\.sh|GitHub|\brepositor(?:y|ies)\b|\bworktree\b|git commits?|commit hash|commit workflow|\bwebpack\b|\bCI\/CD\b|release_eligible|build-profile-manifest|repository-root VERSION|VERSION file|version.stamping|build.(?:allocation|floor)|build.number allocation|release.history floor|yarn test|npm advisories|Node\.js|@types\/react|React Router|Dependabot|ESLint|source.map directives|package provenance/i;
+  assert.doesNotMatch(notes, internal, 'package release notes describe customer behavior only');
+  assert.doesNotMatch(history, internal, 'all historical in-app release notes describe customer behavior only');
+  const version = fs.readFileSync(path.resolve(root, '../../VERSION'), 'utf8').trim();
+  assert.match(markdown, new RegExp(`^version: ${version.replaceAll('.', '\\.')}$`, 'm'));
+  const releases = [...history.matchAll(/^::: release .*?Version (\d+\.\d+\.\d+)$/gm)];
+  assert.equal(releases[0][1], version, 'latest customer release notes match the app version');
+  assert.match(history, /Catalyst Operations \(Preview\)[\s\S]*?Security Operations Overview \(Preview\)/);
 });

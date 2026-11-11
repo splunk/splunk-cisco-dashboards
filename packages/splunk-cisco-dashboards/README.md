@@ -28,6 +28,11 @@ networking pillars and workplace scenarios.
   event totals, and headline field selection. Missing telemetry retains its
   explanation instead of appearing as a measured zero.
 
+- Added DC Networking Operations to the Secure Infrastructure menu.
+- Reduced memory consumption in Hyperfabric observed-port and administratively
+  enabled-port history searches by aggregating the latest reading per port and
+  time bucket, without increasing search memory limits.
+
 - DC Networking Operations now uses the standard header time selector with
   4h, 24h, 48h, 7d, and 30d shortcuts and Advanced selection. New visits default
   to 24h; explicit time ranges carried from another dashboard remain honored.
@@ -92,22 +97,8 @@ networking pillars and workplace scenarios.
   were updated to the same wording, and stale panel text that described
   annotation milestones the app no longer emits now names the real ones
   (Start, Checkpoint 1, Checkpoint 2, Close).
-- Added `./build.sh --splunkbase-preview`, which applies the released-resources-only
-  Splunkbase filter to an uncommitted worktree and writes a `-preview` tarball
-  recording `release_eligible: false`. Previews can be installed locally but are
-  refused by the Splunkbase release and install gates even when renamed, so
-  developing resources can be excluded and verified before a commit. The new
-  `previewRetained` block in `config/build-profile-manifest.json` carves the
-  Searchbase Canvas authoring surface out of that filter, keeping Canvas usable
-  for inspecting the catalogue a preview contains.
-- Local `./build.sh --install` now proceeds with the developer profile when
-  the Git worktree has uncommitted changes; `--splunkbase` still requires a
-  clean committed source state for an upload-ready archive.
-- Kept the app on React 18.3.1, the latest 18.x line Splunk UI supports, and
-  pinned `@types/react` so styled-components types cannot pull React 19 typings.
-- Patched known npm advisories in the shipped JavaScript dependency tree,
-  including a critical MapLibre GL JS XSS fix, and kept Splunk visualizations
-  compiling against MapLibre 6's ESM-only package.
+- Addressed security vulnerabilities in the map visualization components.
+
 - Rebuilt the in-app User Guide around the complete Insights Workspaces
   workflow: creating and duplicating workspaces, publishing shared layouts and
   Signal Rail membership, adding private or shared searches, permissions, and
@@ -115,14 +106,8 @@ networking pillars and workplace scenarios.
   Release history now uses accessible collapsible panels with expand and
   collapse controls, and the intentionally unreleased Searchbase Canvas is no
   longer linked from customer-facing guidance.
-- Removed the four Agentic SOC section-header actions that targeted the
-  development-only Searchbase Canvas, preventing dead links in Splunkbase
-  packages while no released section overview exists. The Splunkbase build
-  profile now also removes the Canvas bundle, license fragment, bootstrap,
-  persistence files, and reload/replication declarations; the complete surface
-  remains available only in explicit developer builds. Final bundle validation
-  follows the selected profile so it requires the Canvas in developer packages
-  and rejects it in Splunkbase packages.
+- Removed unavailable section-header actions from Agentic SOC, preventing links to tools that are not included in the app.
+
 - Restored readable light and dark appearance across Insights workspace
   editors, drawers, map controls, Signal Rail controls, topology and diagram
   actions, and related setup surfaces by keeping complete Splunk UI foreground,
@@ -146,12 +131,6 @@ networking pillars and workplace scenarios.
   six-item Signal Rail instead of expanding to the global 24-item fallback,
   while preserving the copied section layouts and cleaning up the cloned rail
   when the workspace is deleted.
-- Unified Splunkbase build and install packaging so a successful
-  `--install --splunkbase` run creates one clean, release-eligible artifact and
-  installs that exact tarball. The target's installed build no longer changes
-  package allocation; uncommitted `./build.sh --install` runs now select the
-  developer profile automatically, while `--splunkbase` still requires a
-  clean committed worktree.
 - Restored the Guided Setup finish-confirmation copy in light mode by using
   theme-aware Splunk UI paragraphs, preventing the no-change explanation from
   rendering white on the dialog's white background. The completion action now
@@ -192,21 +171,11 @@ networking pillars and workplace scenarios.
   searches until their model children preserve the required data.
 - Focused the Insights Workspace's App details and upgrades action on exact
   Secure Networking Essentials catalog results, filtered to the app's IT
-  operations, network security, developer-support, and CIM 8.x metadata.
+  operations, network security, and CIM compatibility metadata.
 - Restored readable semantic trend colors across all 17 managed Secure
   Networking dashboards. Visible single-value deltas now apply their configured
   positive, neutral, negative, or informational palette instead of falling back
-  to black on dark cards, with a color and contrast contract covering every
-  shipped dark Dashboard Studio view.
-- Made package artifacts operator-readable as
-  `splunk-cisco-dashboards-<version>-<build>.tar.gz`, with no separate checksum
-  sidecar and with immutable collision checks retained. Packaging validates the
-  completed archive internally before publication. Build, install, deploy, and
-  remote workflows now default to one clean-source, released-resources-only
-  SplunkBase profile. Install and deploy apply the exact release-eligible archive
-  produced by that path, and the installed target never affects package build
-  allocation. Uncommitted local iterations require `--developer` or the explicit
-  `--fast` workflow.
+  to black on dark cards.
 - Restored Street, Terrain, Satellite, Dark Ops, Navigation, and Offline Grid
   map styles with normal interactive zoom. Topology placement remains restricted
   to the offline city list or explicit coordinates, so operator-entered location
@@ -217,11 +186,6 @@ networking pillars and workplace scenarios.
   Built-in `user` and `power` roles remain read-only for shared configuration
   while retaining personal workspace preferences. The delegated capability is
   named `ssne_manage_insights_workspaces` to match the SSNE product acronym.
-- Simplified release preparation to one operator-maintained value: change the
-  repository-root `VERSION` file while source `app.conf` and `app.manifest`
-  retain placeholders. Generated packages stamp the release metadata and
-  reserve a shared GitHub Actions build number before compilation.
-  Historical records and local archives are safety floors only.
 - Made Dashboard Manager easier to resume: library cards and preview dialogs
   now expose direct edit actions, and Searchbase picker rows start compact with
   a toggle for full search metadata. New dashboards default to Private,
@@ -232,18 +196,10 @@ networking pillars and workplace scenarios.
 - Applied the same shared image-source boundary to Cisco Spaces floor-plan
   visualizations, so stored map images cannot cause viewer browsers to fetch
   arbitrary network or local URLs.
-- Made release staging reject ignored Splunk resource inputs and exclude common
-  local-secret files before they can reach a watcher-linked app or SplunkBase
-  archive.
-- Bound the update-discovery package ID and archive provenance to the numeric
-  SplunkBase listing ID recorded in the committed release ledger.
 - Documented the bounded, capability-protected Dashboard Builder background
   registry and its Search Head Cluster behavior.
-- Aligned staged app metadata with the canonical release version, preserved
-  package-time version stamping, enabled app-upgrade notifications, and added
-  a reproducible root `yarn test` contract suite.
-- Upgraded React Router to the supported 7.18.2 line and raised the supported
-  Node.js development/build baseline to 20.
+- Enabled app-upgrade notifications when Splunk discovers a newer available version.
+
 - Made the CIM-tuning footer reflect discovery and selection state, blocked
   continuation while discovery is running, and restored readable semantic
   colors for routing and CIM definition previews in dark mode.
@@ -254,10 +210,6 @@ networking pillars and workplace scenarios.
   points to the tile action menu and explicit section link users actually see.
 - Added contextual help actions to Configure tile option panels, with concise
   explanations and direct links to the matching official Splunk documentation.
-- Added a complete native React Secure Networking Pillars dashboard with five
-  URL-backed tabs and 30 Searchbase-powered cards. The workspace mirrors the
-  home-page design system, supports light and dark appearance, and provides
-  contextual investigation dialogs while retaining direct Studio comparison.
 - Clarified Configure tile search filtering by removing the tag-vocabulary total
   from `All tags`, adding a live matching-search count, and correcting singular
   and plural wording in per-tag counts.
@@ -290,9 +242,8 @@ networking pillars and workplace scenarios.
   when they use the Manager route for presentation compatibility. The library
   and editor introduce the `Dashboards in 60 Seconds` promise, explain how
   Searchbase and Dashboard Studio support dashboard building without writing
-  SPL or code, and call out guided drilldown wiring as a key extension. The help
-  also identifies the custom preset and editor integration for technical
-  readers. The workflow uses dashboard ACL ownership for `Yours` and provides a
+  SPL or code, and call out guided drilldown wiring as a key extension.
+  The workflow uses dashboard ACL ownership for `Yours` and provides a
   clear empty state. Dashboard Manager help is concise, keyboard-accessible,
   and uses semantic colors in both light and dark mode.
 - Dashboard Manager now marks a saved dashboard `isVisible="false"` whenever
@@ -329,7 +280,7 @@ networking pillars and workplace scenarios.
   aggregate-to-aggregate pivots with event-level firewall, wireless, and SD-WAN
   detail searches, clarified tile-level action labels, and preserved each
   destination's configured visualization in Insights Workspace.
-- Live-validated all five Secure Networking pillars and replaced empty
+- Replaced empty
   site-connectivity, SGACL-denial, and RaVPN-posture pivots with populated,
   multi-source investigation paths spanning site health, link and tunnel state,
   policy and SGT evidence, and posture-aware session detail.
@@ -344,7 +295,7 @@ networking pillars and workplace scenarios.
 - Added Home's account-scoped Light and Dark Appearance choices to the User
   Guide, including the same official Splunk Sun and Moon icons. Setup now uses
   the matching Splunk Sun icon beside its Light mode control in both the static
-  readiness steps and the integrated React steps.
+  Setup steps.
 - Expanded setup performance readiness to cover 14 supported data models,
   including Cisco Intersight, the eight DC Networking models, and CIM
   Authentication and Network Traffic, while requiring product-specific models

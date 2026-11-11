@@ -1,8 +1,8 @@
 ---
 exportTitle: Splunk Secure Networking Essentials User Guide
 contentOwner: splunk-cisco-dashboards
-version: 1.0.80
-lastUpdated: October 2026
+version: 1.0.90
+lastUpdated: November 2026
 ---
 <!-- Single source of truth for the in-product User Guide and release history. -->
 
@@ -35,10 +35,29 @@ Use the app to:
 
 Browse the current release and recorded historical versions below. The newest release opens by default. Choose a version link or expand a release to read its changes; use **Expand all** to review the full history. Version **1.0.35** was an **alpha** release; the recorded versions **1.0.44 through 1.0.60** were **beta** releases.
 
+::: release Release Notes | November 2026 - Version 1.0.90
+
+### Dashboards and investigations
+
+- **Catalyst Operations (Preview)** combines Catalyst Health and Catalyst Operations into **Overview**, **Executive Summary**, and **Client Summary**. Detailed sections load searches only when opened; closing a section or changing tabs requests cancellation. Old Catalyst Health links open the consolidated dashboard. Unfinished bandwidth placeholders are removed. This expandable layout does not support editing in Dashboard Studio.
+- Corrected Catalyst client and device health, site rankings, issue lifecycle summaries, and reported traffic, session and onboarding measurements. Repeated polls do not inflate snapshot totals, and missing measurements remain unknown. Detail filters identify their scope separately from all-site summaries; weekly comparisons retain their labeled fixed windows.
+- **Security Operations Overview (Preview)** is available for feedback. Corrected identity investigations, distinct DNS-category and DLP-event totals, and headline measurements. Missing telemetry retains its explanation instead of appearing as zero.
+- Added **DC Networking Operations** under **Secure Infrastructure**. It uses the standard header time selector: **4h**, **24h**, **48h**, **7d**, **30d**, and Advanced selection. New visits default to 24h; explicit time context remains honored.
+- Reduced memory consumption in the Hyperfabric observed-port and administratively-enabled-port history searches by aggregating the latest reading per port and time bucket. No search memory-limit increase is required.
+
+### Dashboard creation
+
+- New dashboard IDs follow the title automatically: `Dashboard ABC` becomes `dashboard_abc`. Use **Edit ID** to choose a stable custom ID; IDs are saved in lowercase. The ID field and Edit ID action share a horizontal row with guidance below. Invalid IDs and collisions preserve the form for correction; existing dashboards are not renamed.
+
+### Preview feedback
+
+- Catalyst Operations and Security Operations Overview show **Preview** in their titles. Try the workflows and share what works, what is confusing, or what is missing. Dashboards that remain experimental are labeled **Under Dev** where available and are not part of the released dashboard set.
+
+:::
+
 ::: release Release Notes | October 2026 - Version 1.0.80
 
-- Moved Insights Workspace to native React startup before Splunk navigation and Cisco Cloud Control initialize. This removes the legacy Simple XML loader race behind the shared header's two optional Emotion dependency errors while preserving workspace URLs, setup, navigation, theme choices and the update badge. Native content stays within the available width beside navigation, including when using the skip link. Other classic pages also receive an early dependency bridge; no error handlers, authentication or permissions are disabled.
-- Aligned React Router and React Router DOM at version 7.18.5 so their declared, locked and packaged versions agree.
+- Fixed intermittent Insights Workspace startup and shared-header errors. Workspace URLs, Setup, theme choices and update notifications remain available, and content fits beside the navigation.
 
 - Corrected the intrusion investigation to include the standard CIM `allowed` action alongside legacy alert/detected labels. Renamed its display label to **Intrusion Non-Blocking Action Evidence**, preserving the stanza ID, drill-down links and output columns. Blocked, unknown and conflicting actions remain excluded; the result describes the reporting IDS action rather than end-to-end enforcement or exploit success.
 - Corrected the vendor-neutral and Infoblox TXT/NULL DNS investigations to prefer CIM `record_type` when `query_type` contains an opcode such as Query, while preserving older query-type mappings and the existing output columns. Added field-readiness guidance for DNS response measurements, intrusion tags, missing vendor feeds and unmet investigation conditions. Missing measurements remain unknown; no thresholds or collection settings were changed.
@@ -51,7 +70,7 @@ Browse the current release and recorded historical versions below. The newest re
 ### Insights Workspaces
 
 - Changed DC Networking to chart-first overviews with 27 chart searches and 18 table investigations. Sections start with three charts and support up to nine searches. Trends deduplicate observations within 15-minute buckets; missing data is not filled with zero.
-- Added appropriate React SUI default icons for every workspace and the workspace switcher. Upload a replacement in **Edit branding**; **Clear (use default)** restores the workspace's SUI icon without discarding its title or subtitle.
+- Added appropriate default workspace icons for every workspace and the workspace switcher. Upload a replacement in **Edit branding**; **Clear (use default)** restores the workspace's SUI icon without discarding its title or subtitle.
 
 - Added the **DC Networking** workspace and **DC Networking Operations** Dashboard Manager companion, backed by forty-five visible library searches. Review five-product lab coverage, exact inventory matches, reported connections, product details and measurement gaps with a shared time picker and the configured DC index mapping.
 
@@ -74,8 +93,6 @@ Browse the current release and recorded historical versions below. The newest re
 - Removed the Beta label from the app name and navigation labels.
 - **Search quota assessment:** Searchbase now includes Search Quota Impact by Cloud Label, separating disk, user, role, and instance limits, normalizing MB measurements, and preserving missing telemetry. Select the desired assessment period in the time picker; labels use the latest 15 minutes of introspection data.
 
-Release preparation is in progress. Final package/security review, publication, and integrated-cloud validation are pending.
-
 ### Insights Workspaces
 
 - Fixed workspace shortcuts intercepting text entered in the Cisco Cloud Control assistant and other embedded editors. Typing keeps its letters, and workspace shortcuts remain available from the workspace and unfocused page background.
@@ -90,7 +107,7 @@ Release preparation is in progress. Final package/security review, publication, 
 - Aligned the default and **24h** shortcut on the 18 Secure Networking dashboards with the advanced time picker's **Last 24 hours** preset (`-24h@h` through `now`). Custom ranges remain unchanged.
 - Chart-library debug messages are quiet during normal use. To troubleshoot, add `canvasDebug=1` to the page URL query, before any `#` fragment, and enable the browser console's debug/verbose level. Remove the parameter to disable diagnostics. Warnings and errors remain visible. Diagnostic output can contain chart data; review it before sharing logs.
 - Dashboard Manager hides unavailable KPI comparisons when fewer than two valid numeric trend samples exist, including inherited default trends on null or timestamp-only results. Headline values remain unchanged, and unavailable headline colors use the theme default. Constant line and area series receive finite axis bounds; time-based charts omit rows without a valid time coordinate from rendering. Tables and searches keep their original records, and charts add no synthetic samples.
-- Extended finite-axis handling to inherited chart series and empty numeric domains, covering affected NetOps Readiness, Data Center runtime, and Spaces capacity views. Removed deprecated iteration calls in the packaged chart adapter used by Building Intelligence.
+- Extended finite-axis handling to inherited chart series and empty numeric domains, covering affected NetOps Readiness, Data Center runtime, and Spaces capacity views.
 
 - Fixed focus after leaving a fullscreen visualization opened with the keyboard or mouse: focus returns to that panel's native **Fullscreen** button, keeping keyboard navigation in context even when the toolbar was hidden.
 - Fixed native Studio conversion for older and Searchbase-backed dashboards: copied searches keep their SPL and time range, native time pickers no longer leave unresolved span parameters, and saved conversions appear in Splunk's dashboard list with native editing enabled. Convert remains available for partially converted copies. The dialog explains that Manager-only investigation controls are removed and that required macros, lookups, commands, and data must still exist.
@@ -100,7 +117,7 @@ Release preparation is in progress. Final package/security review, publication, 
 
 - After upgrading, confirm the installed version/build and test with a representative restricted user, including typing in the actual embedded assistant. Local verification does not establish integrated-cloud behavior.
 - Added shared-demo capacity and sign-in troubleshooting guidance. Workspace retries do not increase per-user, role, or stack limits; administrators must size and test expected simultaneous usage.
-- Integrated-cloud AI Canvas creation and cross-launch, restricted-user sharing, and saved CSV export contents still require final release qualification. Cloud Control identity/navigation errors remain under investigation; this release does not claim to resolve them.
+- For integrated Splunk Cloud deployments, verify AI Canvas access, sharing permissions and exported data with the roles that use them. Cloud Control identity and navigation errors are not resolved by these changes.
 :::
 
 ::: release Beta release | October 2026 - Version 1.0.60
@@ -169,7 +186,7 @@ This maintenance release includes the Dashboard Manager reliability and visualiz
 ::: release Beta release | September 2026 - Version 1.0.52
 ### Release overview
 
-Version 1.0.52 preserves complete large-fleet asset inventories, advances release build allocation beyond the published 1.0.51 package, keeps first-run CIM discovery independent of saved allowlists, and keeps TA-owned Cisco routing definitions outside user-driven tuning.
+Version 1.0.52 preserves complete large-fleet asset inventories, keeps first-run CIM discovery independent of saved allowlists, and keeps TA-owned Cisco routing definitions outside user-driven tuning.
 
 - Made Insights and Dashboard Manager drill-downs use the workspace's navy, cyan, and purple atmosphere instead of a flat black panel, with a consistent dimmed backdrop instead of an ambiguous transparency slider.
 
@@ -210,12 +227,7 @@ Version 1.0.52 preserves complete large-fleet asset inventories, advances releas
 - Corrected dotted-field quoting in Cisco Spaces device counts, Meraki VPN peer status, and Catalyst client-experience aggregations so Dashboard Studio and Searchbase searches resolve their nested fields instead of returning empty metrics.
 - Corrected first-time topology saves so a workspace without an existing map stanza uses the create endpoint directly instead of producing an expected 404 before retrying.
 - Hardened topology editing against stale-tab overwrites and damaged shared configuration, blocked editing until the canonical map has loaded, preserved intentionally empty maps, and added confirmations for draft discard and factory reset.
-- Added 31 validated searches to Splunkbase packages: Zeek SSH authentication pressure, wired NAC vendor-MAC review, eight SD-WAN security analyses, firewall NAT activity, Meraki blocked destinations, and 19 Cyber Vision asset, event, and syslog views.
-- Kept searches without populated validation results or with unresolved macro, data-model, lookup, REST, token, or MLTK dependencies in developer packages until their source contracts can be verified.
-
-### Packaging and release safety
-
-- Recorded published build 2095 as the durable release-history floor so future packages allocate build 2096 or later even when earlier archives are absent from `dist/`.
+- Added 31 searches: Zeek SSH authentication pressure, wired NAC vendor-MAC review, eight SD-WAN security analyses, firewall NAT activity, Meraki blocked destinations, and 19 Cyber Vision asset, event, and syslog views.
 
 ### Upgrade notes
 
@@ -260,10 +272,6 @@ Version 1.0.50 simplifies topology link telemetry configuration, strengthens top
 - Added Cisco IQ lifecycle-risk views and enriched the unified device inventory with AKIPS location, lifecycle findings, and explainable critical or non-critical classification.
 - Kept the searches customer-neutral: no customer index, property, or workspace name is hard-coded, and missing locations remain visible as **Unmapped**.
 
-### Packaging and release safety
-
-- Preserved the verified build-2089 release floor in tracked release history so removing local package artifacts cannot cause a later Splunkbase build number to decrease.
-
 ### Accessibility
 
 - Grouped the telemetry choice as a labeled radio control and connected the ThousandEyes selectors to concise instructions.
@@ -272,7 +280,7 @@ Version 1.0.50 simplifies topology link telemetry configuration, strengthens top
 ::: release Beta release | September 2026 - Version 1.0.49
 ### Release overview
 
-Version 1.0.49 expands secure-networking coverage, repairs workspace and setup reliability, improves accessibility and theme consistency, and strengthens the Splunkbase release path.
+Version 1.0.49 expands secure-networking coverage, repairs workspace and setup reliability, and improves accessibility, theme consistency and shared configuration security.
 
 ### Highlights
 
@@ -301,25 +309,20 @@ Version 1.0.49 expands secure-networking coverage, repairs workspace and setup r
 - Added **Add for me** and **Add for everyone** tile visibility choices.
 - Add search now opens and resets with only this app selected. Entire catalogue remains available for searches from other installed apps.
 - Added configurable Signal Rails, search concurrency, map placement, map height, tile density, typography, section focus, and shared publishing.
-- Agentic SOC section headers no longer expose actions that targeted the development-only Searchbase Canvas. Splunkbase packages omit its customer-inaccessible resources, while explicit developer builds retain the internal surface.
+- Removed unavailable Agentic SOC section-header actions.
 - Open in Search accepts only dashboard-defined safe filter values.
 - Custom Insights workspaces can now be created through the bounded persistence endpoint, and template choices retain circular radio controls.
 - Topology Searchbase bindings now save without false stale-edit conflicts and remain selected after reopening or reloading a workspace.
 - Insights workspace editors, drawers, map controls, Signal Rail controls, topology actions, and Setup retain readable Splunk UI colors in both appearances.
 
-### Accessibility, security, and delivery
+### Accessibility and security
 
 - Topology palette items and key manager/KPI dialogs now support complete keyboard operation. Workspace layers also restore focus when they close.
 - Improved non-color selection cues, focus indicators, control labels, and responsive light and dark contrast.
 - Removed public geocoding of customer site text; site placement uses an offline city list or explicit coordinates.
 - Shared workspace and bounded Dashboard Builder background management support narrow capability delegation.
-- **Dependency security:** patched published npm advisories by upgrading DOMPurify, fast-uri, source-map-js, postcss-selector-parser, and brace-expansion; removing sprintf-js from ESLint's dependency tree; and retaining the MapLibre GL JS XSS remediation, while ensuring Splunk visualizations continue to compile. A maintained local security patch mitigates the build-time braces stack-exhaustion advisory by rejecting brace/parenthesis nesting and AST traversal beyond 100 levels. Installation automatically applies the patch and fails if it cannot be applied; Dependabot may still flag the upstream version until a patched release is published.
-- `build.sh --install` and `--deploy` use the SplunkBase profile by default. Use `--developer` only when internal development resources are required; the explicit `--fast` workflow remains developer-only.
-- SplunkBase build, install, deploy, and remote-install workflows share one clean-source packaging path and apply the exact release-eligible archive.
-- A successful SplunkBase install creates one upload-ready archive; the target's installed build does not affect package allocation.
-- For a release, change and commit only the repository-root VERSION file. Source app.conf and app.manifest retain placeholders, and generated packages allocate the next build automatically.
-- Added profile-manifest enforcement so Splunkbase packages omit internal-only files that the release does not use.
-- Moved the complete guide and release history into this Markdown source and restored accessible release disclosures, Expand all and Collapse all controls, navigation, search, and complete PDF export.
+- Addressed security vulnerabilities in the map visualization and HTML-sanitization components.
+- Restored accessible release disclosures, Expand all and Collapse all controls, navigation, search, and complete PDF export.
 
 ### Upgrade notes
 
@@ -334,7 +337,7 @@ Version 1.0.49 expands secure-networking coverage, repairs workspace and setup r
 
 - Introduced the Agentic Security Operations Center workspace and accelerated network-data-model searches for its conference catalogue.
 - Added the narrow `ssne_manage_insights_workspaces` capability for shared workspace and topology management.
-- Strengthened package provenance, shared image boundaries, Dashboard Manager editing, and workspace accessibility.
+- Strengthened shared image safeguards, Dashboard Manager editing, and workspace accessibility.
 
 The public package listing is the authoritative record of the exact archive published for this version.
 :::
@@ -629,12 +632,22 @@ The **More** menu contains IT Health, NetOps Readiness, Security Resilience, Bui
 The library has three tabs: **Included** contains supplied dashboards, **Yours** contains managed dashboards owned by you, and **Shared** contains managed dashboards shared in the app that you have permission to read, including other users' dashboards. A dashboard you own and share appears in both **Yours** and **Shared**. Existing app-owned dashboards appear in **Shared**. Private dashboards do not appear in **Shared**.
 
 1. Open **More > Dashboard Manager** and select **Create New**.
-2. Enter a title and optional description, then choose who can see the dashboard: **Private** (selected initially) or **Shared in App**. Share a ready dashboard in the app so colleagues can benefit; app sharing requires permission to publish dashboards in this app. You can start privately and change its permissions on Splunk's **Dashboards** page to share it later if your role permits. Select an **Absolute** or **Grid** layout.
+2. Enter a title and optional description. The dashboard ID follows the title in lowercase (`Dashboard ABC` becomes `dashboard_abc`). Select **Edit ID** to choose a custom ID before saving; it stays unchanged when the title changes and cannot be renamed after creation. Then choose who can see the dashboard: **Private** (selected initially) or **Shared in App**. Share a ready dashboard in the app so colleagues can benefit; app sharing requires permission to publish dashboards in this app. You can start privately and change its permissions on Splunk's **Dashboards** page to share it later if your role permits. Select an **Absolute** or **Grid** layout.
 3. Select **Create** once. The button shows **Creating…** while the request is in progress, and the editor opens when creation succeeds.
 
-If the title produces an existing dashboard ID, choose a different title or cancel and open the existing dashboard to edit it. Creating a dashboard does not overwrite the existing one. Creation errors remain visible inside the dialog.
+If an ID already exists, change the ID or title, or cancel and open the existing dashboard to edit it. Creating a dashboard does not overwrite the existing one. Creation errors remain visible inside the dialog.
 
 If the dashboard is saved but app sharing fails, select **Open saved dashboard** to continue with the saved dashboard. If the request cannot be confirmed, check the dashboard library before trying again. Other Dashboard Manager error notifications appear above open dialogs and previews and remain until dismissed.
+
+### Catalyst Operations (Preview)
+
+Catalyst Operations combines the earlier Catalyst Health and Catalyst Operations views into three tabs: **Overview**, **Executive Summary**, and **Client Summary**. Old Catalyst Health links open this consolidated dashboard.
+
+Headline panels load for the active tab. Expand a detail section to load its charts and tables; closing it or changing tabs requests cancellation of active detail searches. Reopening requests fresh results. Refresh and time-range changes apply to visible panels. Weekly comparisons retain their labeled fixed windows. The optional auto-refresh control refreshes visible panels only.
+
+The Site and Client type controls apply to the filtered client location, OS, traffic/detail, and onboarding panels. Other panels retain their reported all-site scope. Missing observations do not establish a healthy or unhealthy condition. Issue summaries use the latest reported state in the selected window. Traffic and session panels use reported per-client snapshots and are not bandwidth measurements or a completed-session ledger.
+
+Use **Show data**, **Download CSV**, or **Open in Search** to inspect a result. Results are capped at 500 displayed rows; a notice identifies capped results. Select an issue name in an issue table to review its detail. **Close all details** leaves headline panels visible. Layout editing in Dashboard Studio is not supported for this expandable view.
 
 ## Insights Workspaces {#workspaces}
 
@@ -887,14 +900,3 @@ Ask the identity or integration owner to investigate token-exchange failures, se
 | A field projection changes search behavior | Open the search and disable search optimization for a pipeline affected by optimizer field pruning. |
 | New JavaScript or dashboard definitions do not appear | Refresh Splunk Web. Ask the Splunk administrator whether the deployment process requires a restart after endpoint changes. |
 | A new release has no Update link | Confirm the installed app version, **Check for Updates**, and the release's compatibility with your Splunk platform version. Ask your administrator to check Splunkbase connectivity and the app update-check interval. A release appearing on Splunkbase does not by itself confirm that the instance has discovered it. |
-
-
-### Catalyst Operations (Preview)
-
-Catalyst Operations combines the earlier Catalyst Health and Catalyst Operations views into three tabs: **Overview**, **Executive Summary**, and **Client Summary**. Old Catalyst Health links open this consolidated dashboard.
-
-Headline panels load for the active tab. Expand a detail section to load its charts and tables; closing it or changing tabs requests cancellation of active detail searches. Reopening requests fresh results. Refresh and time-range changes apply to visible panels. Weekly comparisons retain their labeled fixed windows. The optional auto-refresh control refreshes visible panels only.
-
-The Site and Client type controls apply to the filtered client location, OS, traffic/detail, and onboarding panels. Other panels retain their reported all-site scope. Missing observations do not establish a healthy or unhealthy condition. Issue summaries use the latest reported state in the selected window. Traffic and session panels use reported per-client snapshots and are not bandwidth measurements or a completed-session ledger.
-
-Use **Show data**, **Download CSV**, or **Open in Search** to inspect a result. Results are capped at 500 displayed rows; a notice identifies capped results. Select an issue name in an issue table to review its detail. **Close all details** leaves headline panels visible. Layout editing in Dashboard Studio is not supported for this expandable view.
