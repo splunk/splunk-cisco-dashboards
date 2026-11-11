@@ -64,6 +64,8 @@ import {
     YAxis,
 } from 'recharts';
 
+import { runManagedSearch } from '@/common/services/splunkSearchService';
+import { metricInvestigationTargets, startMetricInvestigation, type MetricInvestigation } from './metricInvestigation';
 import type { SearchbaseRecord } from '@/common/services/searchbaseCatalogue';
 import { splunkSearchAppUrl } from '@/common/lib/splunkSearchUrl';
 import {
@@ -116,6 +118,7 @@ interface PageContext {
     refreshToken: number;
     filters: Filters;
     showSearchInfo: (record: SearchbaseRecord) => void;
+    showMetricInvestigation: (request: MetricInvestigation) => void;
 }
 
 interface SearchPanelProps {
@@ -434,21 +437,64 @@ const SearchActions = ({
         <div className="scd-glass-search-actions">
             <Button
                 appearance="subtle"
+                label={`Information about ${record.searchName}`}
+                hideLabel
                 title={`About ${record.searchName}`}
                 aria-label={`Information about ${record.searchName}`}
                 onClick={() => context.showSearchInfo(record)}
                 icon={<Info size={16} aria-hidden />}
             />
-            <Button
-                appearance="subtle"
-                to={searchUrl}
-                openInNewContext
+            <a
+                href={searchUrl}
+                target="_blank"
+                rel="noopener noreferrer"
                 title={`Open ${record.searchName} in Search`}
-                aria-label={`Open ${record.searchName} in Search`}
-                icon={<ExternalLink size={16} aria-hidden />}
-            />
+                aria-label={`Open ${record.searchName} in Search (opens new window)`}
+            ><ExternalLink size={16} aria-hidden /></a>
         </div>
     );
+};
+
+const MetricInvestigationDialog = ({context, request, onClose, returnFocus}: {
+    context: PageContext; request: MetricInvestigation; onClose: () => void;
+    returnFocus: React.MutableRefObject<HTMLElement | null>;
+}): JSX.Element => {
+    const source = context.catalogue!.get(request.searchId)!;
+    const targets = useMemo(() => metricInvestigationTargets(source, context.catalogue!), [source, context.catalogue]);
+    const [selected, setSelected] = useState(targets[1]?.id ?? source.id);
+    const record = targets.find(r => r.id === selected) ?? source;
+    const transform = record.id === source.id ? request.transformSearch : undefined;
+    const [result, setResult] = useState<{rows: SearchRow[]; loading: boolean; error: boolean}>({rows: [], loading: true, error: false});
+    useEffect(() => {
+        setResult({rows: [], loading: true, error: false});
+        return startMetricInvestigation(record, context.earliest, transform, async options => {
+                const response = await runManagedSearch(options);
+                return {...response, results: response.results as SearchRow[]};
+            },
+            rows => setResult({rows, loading: false, error: false}),
+            () => setResult({rows: [], loading: false, error: true}));
+    }, [record, context.earliest, context.refreshToken, transform]);
+    const rows = result.rows.slice(0, 200);
+    const columns = [...new Set(rows.flatMap(row => Object.keys(row)))].filter(k => !k.startsWith('_') || k === '_time');
+    return <Modal open closeOnClickAway divider="both" onRequestClose={onClose} returnFocus={returnFocus}
+        style={{width: 'min(1100px, calc(100vw - 32px))'}}>
+        <Modal.Header title={request.label + ' — investigation'} subtitle={source.searchName}/>
+        <Modal.Body className="scd-glass-info-body">
+            <p>Time range: {context.earliest} to now. Headline searches keep their reported scope; sidebar filters do not narrow these totals. Supporting investigations retain their own search conditions and may describe a subset of the headline.</p>
+            <label>Investigation <Select value={record.id} onChange={(_event, {value}) => setSelected(String(value))}>
+                {targets.map(target => <Select.Option key={target.id} value={target.id} label={(target.id === source.id ? 'Headline result — ' : 'Supporting detail — ') + target.searchName}/>) }
+            </Select></label>
+            <p>{plainTextFromHtml(record.explanation || record.description)}</p>
+            <SearchActions context={context} searchId={record.id} transformSearch={transform}/>
+            {result.loading ? <p role="status">Loading investigation…</p> : result.error ?
+                <p role="alert">Search unavailable or timed out. Partial results are not shown. Use Open in Search to investigate.</p> : rows.length === 0 ?
+                <p role="status">No observations returned for this time range. Missing measurements are unknown.</p> :
+                <div className="scd-glass-metric-detail-table"><table><thead><tr>{columns.map(column => <th key={column}>{humanizeColumnLabel(column)}</th>)}</tr></thead>
+                    <tbody>{rows.map((row, index) => <tr key={index}>{columns.map(column => <td key={column}>{displayCell(row[column])}</td>)}</tr>)}</tbody></table></div>}
+            {result.rows.length > 200 && <p role="status">Showing the first 200 rows. Open in Search for the complete result.</p>}
+        </Modal.Body>
+        <Modal.Footer><Button label="Close" onClick={onClose}/></Modal.Footer>
+    </Modal>;
 };
 
 const SearchInfoDialog = ({
@@ -618,7 +664,13 @@ const SearchMetric = ({
                 <Icon size={16} strokeWidth={2} />
                 <span>{label}</span>
             </div>
-            <strong>{state.loading ? '…' : formatNumber(value, suffix)}</strong>
+            <button type="button" className="scd-glass-metric-drilldown"
+                disabled={!context.catalogue?.has(searchId)}
+                aria-label={`Investigate ${label}`} title={`Investigate ${label}`}
+                onClick={() => context.showMetricInvestigation({searchId, label, transformSearch})}>
+                <strong>{state.loading ? '…' : formatNumber(value, suffix)}</strong>
+                <Search size={15} aria-hidden />
+            </button>
             <span className="scd-glass-metric-status">
                 <span>
                     {state.error ? 'Search unavailable' : telemetryMessage ?? (value === null ? 'No reported measurement for this time range' : 'Live Searchbase result')}
@@ -2022,7 +2074,11 @@ const UserInvestigationTab = ({
                         )}`}
                     >
                         <span className="scd-glass-metric-label">{label}</span>
-                        <strong>{safeUser ? displayCell(value) : '—'}</strong>
+                        <button type="button" className="scd-glass-metric-drilldown" disabled={!safeUser}
+                            aria-label={`Investigate ${label}`} title={`Investigate ${label}`}
+                            onClick={() => context.showMetricInvestigation({searchId: 'secure_networking_zta_user_activity_cross_source', label, transformSearch})}>
+                            <strong>{safeUser ? displayCell(value) : '—'}</strong><Search size={15} aria-hidden />
+                        </button>
                         <span className="scd-glass-metric-status">
                             {safeUser ? safeUser : 'Waiting for a username'}
                         </span>
@@ -2280,6 +2336,13 @@ const SecureOperationsGlassPage = (): JSX.Element => {
     const [refreshToken, setRefreshToken] = useState(0);
     const [infoRecord, setInfoRecord] = useState<SearchbaseRecord | null>(null);
     const infoReturnFocusRef = useRef<HTMLElement | null>(null);
+    const metricReturnFocusRef = useRef<HTMLElement | null>(null);
+    const [metricRequest, setMetricRequest] = useState<MetricInvestigation | null>(null);
+    const showMetricInvestigation = useCallback((request: MetricInvestigation): void => {
+        metricReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        setMetricRequest(request);
+    }, []);
+    useEffect(() => setMetricRequest(null), [activeTab, earliest, filters]);
     const { catalogue, error: catalogueError } = useSearchbaseCatalogueMap();
 
     useEffect(() => {
@@ -2312,8 +2375,9 @@ const SecureOperationsGlassPage = (): JSX.Element => {
             refreshToken,
             filters,
             showSearchInfo,
+            showMetricInvestigation,
         }),
-        [catalogue, earliest, refreshToken, filters, showSearchInfo]
+        [catalogue, earliest, refreshToken, filters, showSearchInfo, showMetricInvestigation]
     );
 
     const renderTab = (): React.ReactNode => {
@@ -2475,6 +2539,10 @@ const SecureOperationsGlassPage = (): JSX.Element => {
             <span className="scd-glass-view-id" aria-hidden="true">
                 {titleFromPath()}
             </span>
+            {metricRequest && catalogue?.has(metricRequest.searchId) ? (
+                <MetricInvestigationDialog context={context} request={metricRequest}
+                    onClose={() => setMetricRequest(null)} returnFocus={metricReturnFocusRef}/>
+            ) : null}
             {infoRecord ? (
                 <SearchInfoDialog
                     record={infoRecord}

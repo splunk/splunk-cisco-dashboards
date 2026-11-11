@@ -363,7 +363,8 @@
     white-space: nowrap;
 }
 
-#scan-root .scd-glass-metric > strong {
+#scan-root .scd-glass-metric > strong,
+#scan-root .scd-glass-metric-drilldown strong {
     color: var(--glass-text);
     font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
     font-size: clamp(23px, 2vw, 31px);
@@ -484,21 +485,25 @@
 }
 
 #scan-root .scd-glass-tone-good > strong,
+#scan-root .scd-glass-tone-good .scd-glass-metric-drilldown strong,
 #scan-root .scd-glass-tone-good .scd-glass-metric-label svg {
     color: var(--glass-good);
 }
 
 #scan-root .scd-glass-tone-warning > strong,
+#scan-root .scd-glass-tone-warning .scd-glass-metric-drilldown strong,
 #scan-root .scd-glass-tone-warning .scd-glass-metric-label svg {
     color: var(--glass-warning);
 }
 
 #scan-root .scd-glass-tone-critical > strong,
+#scan-root .scd-glass-tone-critical .scd-glass-metric-drilldown strong,
 #scan-root .scd-glass-tone-critical .scd-glass-metric-label svg {
     color: var(--glass-critical);
 }
 
 #scan-root .scd-glass-tone-info > strong,
+#scan-root .scd-glass-tone-info .scd-glass-metric-drilldown strong,
 #scan-root .scd-glass-tone-info .scd-glass-metric-label svg {
     color: var(--glass-info);
 }
@@ -1928,3 +1933,32 @@
         animation: none;
     }
 }
+
+#scan-root .scd-glass-metric-drilldown {
+    align-items: center;
+    background: transparent;
+    border: 0;
+    border-radius: 4px;
+    color: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    gap: 10px;
+    max-width: 100%;
+    padding: 0;
+    text-align: left;
+}
+
+#scan-root .scd-glass-metric-drilldown strong {
+    min-width: 0;
+    margin-top: 0;
+}
+
+#scan-root .scd-glass-metric-drilldown svg { flex-shrink: 0; }
+#scan-root .scd-glass-metric-drilldown:hover { text-decoration: underline; }
+#scan-root .scd-glass-metric-drilldown:focus-visible { outline: 2px solid #00bceb; outline-offset: 4px; }
+#scan-root .scd-glass-metric-drilldown:disabled { cursor: default; }
+
+.scd-glass-metric-detail-table { max-height: 52vh; overflow: auto; }
+.scd-glass-metric-detail-table table { border-collapse: collapse; min-width: 100%; font-size: 13px; }
+.scd-glass-metric-detail-table th,
+.scd-glass-metric-detail-table td { border-bottom: 1px solid var(--sui-border-color, #66717c); padding: 8px 12px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }

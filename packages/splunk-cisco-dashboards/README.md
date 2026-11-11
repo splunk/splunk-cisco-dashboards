@@ -10,6 +10,13 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Security Operations Overview now opens an investigation dialog from each
+  headline value. Review its result and configured supporting investigations
+  within the selected time range, with up to 200 displayed rows and access to
+  the complete search. Open in Search displays one new-window icon.
+- Fixed clipped Connected Devices and Active Users values in Building
+  Intelligence by expanding the KPI area and spacing the daily trends below it.
+
 - Catalyst Operations and Security Operations Overview are now available as
   Preview dashboards. Try their workflows and share what works, what is
   confusing, or what is missing.

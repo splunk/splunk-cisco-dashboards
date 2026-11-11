@@ -39,6 +39,9 @@ Browse the current release and recorded historical versions below. The newest re
 
 ### Dashboards and investigations
 
+- Security Operations Overview headline values open pop-up investigations with the selected time range and configured supporting detail. Open in Search actions display one new-window icon.
+- Fixed clipped Connected Devices and Active Users values in Building Intelligence by increasing KPI space and repositioning the daily trends.
+
 - **Catalyst Operations (Preview)** provides Dashboard Studio monitoring through **Overview**, **Executive Summary**, and **Client Summary** tabs plus **About**, with client health, device health and issue investigations.
 - Corrected Catalyst client-health totals, unavailable health readings, healthy-client headlines and executive percentage tiles. Detail filters identify their scope separately from all-site summary panels.
 - **Security Operations Overview (Preview)** is available for feedback. Corrected identity investigations, distinct DNS-category and DLP-event totals, and headline measurements. Missing telemetry retains its explanation instead of appearing as zero.
@@ -638,6 +641,12 @@ The library has three tabs: **Included** contains supplied dashboards, **Yours**
 If an ID already exists, change the ID or title, or cancel and open the existing dashboard to edit it. Creating a dashboard does not overwrite the existing one. Creation errors remain visible inside the dialog.
 
 If the dashboard is saved but app sharing fails, select **Open saved dashboard** to continue with the saved dashboard. If the request cannot be confirmed, check the dashboard library before trying again. Other Dashboard Manager error notifications appear above open dialogs and previews and remain until dismissed.
+
+### Security Operations Overview (Preview)
+
+Select a headline value to open its investigation. The dialog offers the headline result and any configured supporting detail. Supporting searches can describe a subset of the headline, so their row counts may differ. The selected time range is retained; sidebar filters do not narrow the all-site headline totals. Identity investigation values retain the applied username or wildcard.
+
+The dialog loads on demand and requests cancellation when closed. Changing the dashboard tab, time range or sidebar filters closes it. Up to 200 rows are displayed; use **Open in Search** for the complete result. Empty observations and unavailable searches have separate messages. Use **Information** to review the search's meaning.
 
 ### Catalyst Operations (Preview)
 

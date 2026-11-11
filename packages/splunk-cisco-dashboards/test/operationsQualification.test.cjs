@@ -69,3 +69,49 @@ test('Catalyst dashboards retain native Studio definitions and separate manager 
  }
  assert.ok(!fs.existsSync(path.join(root,'src/main/webapp/pages/catalyst_operations')));
 });
+
+const investigationModule={exports:{}};
+new Function('exports',ts.transpileModule(fs.readFileSync(path.join(root,'src/main/webapp/pages/secure_operations_glass/metricInvestigation.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText)(investigationModule.exports);
+const investigations=investigationModule.exports;
+test('metric investigations resolve configured IDs and legacy names without inventing detail searches',()=>{
+ const source={id:'headline',searchName:'Headline',drilldownSearchNames:['detail','Detail label','missing','headline']};
+ const detail={id:'detail',searchName:'Detail label'};
+ assert.deepEqual(investigations.metricInvestigationTargets(source,new Map([['headline',source],['detail',detail]])),[source,detail]);
+ assert.deepEqual(investigations.metricInvestigationTargets({...source,drilldownSearchNames:[],drilldownSearchName:'detail'},new Map([['detail',detail]])).map(r=>r.id),['headline','detail']);
+ assert.equal(investigations.metricInvestigationTargets({...source,drilldownSearchNames:undefined},new Map()).length,1);
+});
+test('metric dialog searches start on demand, abort on close and suppress late or partial results',async()=>{
+ const record={id:'headline',search:'| makeresults',dispatchContext:'source_app'};
+ let calls=0,received=0,errors=0,request,finish;
+ const run=async options=>{calls++;request=options;return new Promise(resolve=>{finish=resolve;});};
+ const open=()=>investigations.startMetricInvestigation(record,'-24h@h',spl=>spl+' | head 1',run,()=>received++,()=>errors++);
+ const unopened=open();unopened();await Promise.resolve();assert.equal(calls,0);
+ const close=open();await Promise.resolve();assert.equal(calls,1);assert.equal(request.appContext,'source_app');assert.equal(request.earliestTime,'-24h@h');assert.equal(request.count,201);assert.equal(request.maxTimeSeconds,45);assert.match(request.spl,/head 1$/);
+ close();assert.equal(request.signal.aborted,true);finish({results:[{value:1}]});await new Promise(setImmediate);assert.equal(received,0);
+ investigations.startMetricInvestigation(record,'-4h',undefined,async()=>({results:[{value:1}],timedOut:true}),()=>received++,()=>errors++);
+ await new Promise(setImmediate);assert.equal(errors,1);assert.equal(received,0);
+ investigations.startMetricInvestigation({...record,search:'search user=$user$'},'-4h',undefined,run,()=>received++,()=>errors++);
+ await new Promise(setImmediate);assert.equal(calls,1);assert.equal(errors,2);
+ const reopened=open();await Promise.resolve();assert.equal(calls,2);finish({results:[{value:2}]});await new Promise(setImmediate);assert.equal(received,1);reopened();
+});
+test('Open in Search renders exactly one icon with safe new-window semantics',()=>{
+ const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');
+ const Button=require('@splunk/react-ui/Button').default;
+ const page=fs.readFileSync(path.join(root,'src/main/webapp/pages/secure_operations_glass/index.tsx'),'utf8');
+ const component=page.slice(page.indexOf('const SearchActions ='),page.indexOf('const MetricInvestigationDialog ='));
+ const scope={exports:{}};
+ new Function('React','Button','Info','ExternalLink','splunkSearchAppUrl','exports',ts.transpileModule(component+'\nexport {SearchActions};',{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.React}}).outputText)(React,Button,()=>React.createElement('svg',{'data-icon':'info'}),()=>React.createElement('svg',{'data-icon':'external'}),()=>'/search?q=test',scope.exports);
+ const markup=renderToStaticMarkup(React.createElement(scope.exports.SearchActions,{context:{catalogue:new Map([['test',{searchName:'Example',search:'| makeresults',dispatchContext:'app'}]]),earliest:'-4h'},searchId:'test'}));
+ const anchor=markup.match(/<a\b[\s\S]*?<\/a>/)[0];assert.equal((anchor.match(/<svg\b/g)||[]).length,1);assert.match(anchor,/target="_blank"/);assert.match(anchor,/rel="noopener noreferrer"/);assert.match(anchor,/Open Example in Search/);
+});
+test('Building Intelligence gives descriptive KPIs room without covering daily trends or location panels',()=>{
+ const text=fs.readFileSync(path.join(root,'src/main/resources/splunk/default/data/ui/views/workplace_building_intelligence.xml'),'utf8');assert.match(text,/<dashboard version="2"/);
+ const studio=JSON.parse(text.match(/<!\[CDATA\[([\s\S]*?)\]\]>/)[1]);const layout=studio.layout.layoutDefinitions.layout_overview;
+ const position=id=>layout.structure.find(item=>item.item===id).position;
+ for(const id of ['viz_kpi_devices','viz_kpi_users','viz_kpi_occupancy','viz_kpi_ssids','viz_kpi_webex']){
+  const metric=position(id),chart=position(id+'_chart');assert.ok(metric.h>=150);assert.ok(metric.y+metric.h<=chart.y,id+' fits above its trend');
+  assert.ok(chart.y+chart.h<=position('viz_box_kpi').y+position('viz_box_kpi').h,id+' remains inside KPI area');
+ }
+ assert.ok(position('viz_box_kpi').y+position('viz_box_kpi').h<position('viz_box_location').y);
+ assert.ok(layout.options.height>=1760);
+});
