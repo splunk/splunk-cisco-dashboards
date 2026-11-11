@@ -317,20 +317,14 @@ if [[ ! "$history_build" =~ ^[0-9]+$ ]]; then
   echo "ERROR: could not resolve a numeric build floor from the release ledger." >&2
   exit 1
 fi
-dist_build=0
-while IFS= read -r -d '' prev_tar; do
-  previous_identity="$(archive_identity "$prev_tar" || true)"
-  [[ -n "$previous_identity" ]] || continue
-  IFS=$'\t' read -r previous_version previous_build <<< "$previous_identity"
-  if [[ "$previous_build" =~ ^[0-9]+$ ]] && (( previous_build > dist_build )); then
-    dist_build="$previous_build"
-  fi
-done < <(find "$DIST_DIR" -type f -name "${APP_NAME}-*.tar.gz" -print0)
 build_floor="$source_build"
 (( history_build > build_floor )) && build_floor="$history_build"
-(( dist_build > build_floor )) && build_floor="$dist_build"
 RECEIPT_DIR="${DIST_DIR}/build-reservations"
-new_build="$(python3 "${ROOT_DIR}/scripts/reserve_package_build.py" --receipts "$RECEIPT_DIR" --floor "$build_floor")"
+new_build="$(python3 "${ROOT_DIR}/scripts/reserve_package_build.py" \
+  --receipts "$RECEIPT_DIR" --floor "$build_floor" --app-conf "$APP_CONF" \
+  --release-ledger "${ROOT_DIR}/releases/splunkbase-9257.json" --dist "$DIST_DIR" \
+  --target-app-conf "${SPLUNK_HOME:-/opt/splunk}/etc/apps/${APP_NAME}/default/app.conf" \
+  --stage-app-conf "${STAGE_DIR}/default/app.conf")"
 python3 "${ROOT_DIR}/scripts/reserve_package_build.py" --receipts "$RECEIPT_DIR" --claim "$new_build"
 python3 "${ROOT_DIR}/scripts/ensure_build_dependencies.py"
 
@@ -481,7 +475,7 @@ else
   sed_i=( sed -i '' )
 fi
 "${sed_i[@]}" -E "s/^([[:space:]]*build[[:space:]]*=[[:space:]]*)[0-9]+/\\1${new_build}/" "$PKG_APP_CONF"
-echo "[package] app.conf: stamped build ${new_build} into package output (source=${source_build}, history=${history_build}, dist=${dist_build})"
+echo "[package] app.conf: stamped build ${new_build} into package output (source=${source_build}, history=${history_build}; retained archive, target and reservation floors checked)"
 
 # Keep source provenance in a standalone package manifest rather than
 # app.conf. This records the source commit and release eligibility without

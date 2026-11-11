@@ -606,15 +606,19 @@ function makePackageFixture() {
   fs.chmodSync(packageScript, 0o755);
   writeFile(path.join(root, "scripts", "ensure_build_dependencies.py"), "# Fixture compiler requires no external dependencies.\n");
   writeFile(path.join(root, "scripts", "reserve_package_build.py"), [
-    "import argparse, pathlib",
-    "p=argparse.ArgumentParser(); p.add_argument('--receipts', type=pathlib.Path); p.add_argument('--floor', type=int); p.add_argument('--claim', type=int); a=p.parse_args()",
+    "import argparse, pathlib, json",
+    "p=argparse.ArgumentParser(); p.add_argument('--receipts', type=pathlib.Path); p.add_argument('--floor', type=int); p.add_argument('--claim', type=int)",
+    "for key in ['app-conf', 'release-ledger', 'dist', 'target-app-conf', 'stage-app-conf']: p.add_argument('--'+key)",
+    "a=p.parse_args()",
     "a.receipts.mkdir(parents=True, exist_ok=True)",
+    "counter=a.receipts/'current.json'",
+    "state=json.loads(counter.read_text()) if counter.exists() else {'build':7,'claimed':True}",
     "if a.claim is not None:",
-    "    (a.receipts / (str(a.claim)+'.claimed')).open('x').close()",
+    "    assert state['build']==a.claim and not state['claimed']",
+    "    state['claimed']=True; counter.write_text(json.dumps(state))",
     "else:",
-    "    counter=a.receipts/'fixture-sequence'",
-    "    n=int(counter.read_text())+1 if counter.exists() else 8",
-    "    counter.write_text(str(n))",
+    "    n=state['build']+1",
+    "    counter.write_text(json.dumps({'build':n,'claimed':False}))",
     "    assert n > a.floor, 'simulated reservation below archive floor'",
     "    print(n)", ""
   ].join("\n"));
@@ -1739,7 +1743,7 @@ function exerciseLocalInstallProfileDefaults() {
     assert.match(
       splunkbaseOutput,
       /v1\.2\.3 \(build 1\)/,
-      "A Splunkbase install must allocate independently of the target's installed build",
+      "The wrapper must use the exact build emitted by the fixture packager",
     );
     assert.match(
       splunkbaseOutput,
@@ -2172,13 +2176,13 @@ assert.doesNotMatch(
 );
 assert.match(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
-  /history_build="\$\(resolve_release_history_build_floor\)"[\s\S]*?dist_build=0[\s\S]*?new_build="\$\(python3[^\n]+reserve_package_build\.py[^\n]+--floor "\$build_floor"\)"/,
-  "Packaging must reserve a shared build with history and archives as safety floors",
+  /history_build="\$\(resolve_release_history_build_floor\)"[\s\S]*?new_build="\$\(python3[\s\S]*?reserve_package_build\.py[\s\S]*?--floor "\$build_floor"[\s\S]*?--dist "\$DIST_DIR"[\s\S]*?--target-app-conf[\s\S]*?--stage-app-conf/,
+  "Packaging must pass history, archive, installed target and stage metadata to the shared allocator",
 );
 assert.doesNotMatch(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
   /SCD_PACKAGE_BUILD_FLOOR|target_build|--local-validation|LOCAL_VALIDATION/,
-  "Package construction must not depend on an installation target or local-validation mode",
+  "Package construction must not use the retired validation-only allocator mode",
 );
 assert.match(
   fs.readFileSync(PACKAGE_SCRIPT_SOURCE, "utf8"),
@@ -2263,7 +2267,7 @@ assert.match(
 assert.doesNotMatch(
   buildScript,
   /local_splunkbase_validation|--local-validation|SCD_PACKAGE_BUILD_FLOOR|package_build_floor|installed_app_conf/,
-  "Install and deploy targets must not alter Splunkbase package construction",
+  "Install and deploy must preserve release identity and avoid validation-only allocation paths",
 );
 assert.match(
   buildScript,
@@ -2283,7 +2287,7 @@ assert.match(
 assert.doesNotMatch(
   buildScript,
   /app_conf_build\(\)|installed_build=/,
-  "The target's installed build must not influence package allocation",
+  "The root wrapper must delegate build-floor validation to the canonical packager",
 );
 assert.doesNotMatch(buildScript, /-sha256-/, "The root build wrapper must not require hash-qualified filenames");
 assert.match(
