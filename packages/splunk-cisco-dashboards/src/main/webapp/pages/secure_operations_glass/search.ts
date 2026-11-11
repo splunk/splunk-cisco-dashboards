@@ -11,6 +11,31 @@ import {
 
 export type SearchRow = Record<string, unknown>;
 
+const chartDate = (value: unknown): Date | null => {
+    if (value === null || value === undefined || value === '') return null;
+    const text = String(value);
+    const numeric = typeof value === 'number' || /^\d+(?:\.\d+)?$/.test(text);
+    if (!numeric && !/^\d{4}-\d{2}-\d{2}[T ]/.test(text)) return null;
+    const amount = Number(value);
+    const date = new Date(numeric ? amount * (Math.abs(amount) < 1e12 ? 1000 : 1) : text);
+    return Number.isFinite(date.getTime()) ? date : null;
+};
+
+export const chartTimeLabels = (values: unknown[], locale?: string, timeZone?: string) => {
+    const dates = values.map(chartDate).filter((date): date is Date => date !== null);
+    const span = dates.length ? Math.max(...dates.map(Number)) - Math.min(...dates.map(Number)) : 0;
+    const common = { timeZone, hourCycle: 'h23' as const };
+    const ticks = new Intl.DateTimeFormat(locale, span <= 86400000
+        ? { ...common, hour: '2-digit', minute: '2-digit' }
+        : { ...common, month: 'short', day: 'numeric' });
+    const detail = new Intl.DateTimeFormat(locale, { ...common, year: 'numeric', month: 'short',
+        day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' });
+    return {
+        tick: (value: unknown): string => { const date = chartDate(value); return date ? ticks.format(date) : String(value ?? 'Unknown'); },
+        tooltip: (value: unknown): string => { const date = chartDate(value); return date ? detail.format(date) : String(value ?? 'Unknown'); },
+    };
+};
+
 export interface SearchState {
     rows: SearchRow[];
     loading: boolean;

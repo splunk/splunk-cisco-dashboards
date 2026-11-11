@@ -10,6 +10,13 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Security Operations time charts now show compact, readable time or date labels;
+  hover displays the complete timestamp and timezone.
+- Catalyst Operations pairs total and healthy wired/wireless client counts from
+  matching controller-wide source snapshots. Late-arriving older observations
+  no longer mix reporting windows. Missing or conflicting healthy readings remain
+  unavailable instead of exceeding the total.
+
 - Fixed black hover text on dark Security Operations charts. Hover labels and
   values now remain readable, including Cloud Firewall Verdicts.
 

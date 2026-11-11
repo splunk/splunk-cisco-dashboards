@@ -878,7 +878,7 @@
 			"dataSources": {
 				"primary": "ds_kpi_wired_total"
 			},
-			"description": "Total wired clients currently connected.",
+			"description": "Latest global total per controller. Healthy counts use the same source window.",
 			"options": {
 				"backgroundColor": "#131a23",
 				"majorColor": "#9b5ff5",
@@ -944,9 +944,9 @@
 		},
 		"viz_ov_wired_healthy": {
 			"dataSources": {
-				"primary": "ds_wired_trend_24h"
+				"primary": "ds_kpi_wired_healthy"
 			},
-			"description": "Latest observed healthy client count in the selected window. Gaps remain unreported.",
+			"description": "Matched global source snapshot. Unavailable if the healthy reading is missing or inconsistent.",
 			"options": {
 				"backgroundColor": "#131a23",
 				"majorColor": "#4cbf7f",
@@ -1017,7 +1017,7 @@
 			"dataSources": {
 				"primary": "ds_kpi_wireless_total"
 			},
-			"description": "Total wireless clients currently connected.",
+			"description": "Latest global total per controller. Healthy counts use the same source window.",
 			"options": {
 				"backgroundColor": "#131a23",
 				"majorColor": "#649ef5",
@@ -1083,9 +1083,9 @@
 		},
 		"viz_ov_wireless_healthy": {
 			"dataSources": {
-				"primary": "ds_wireless_trend_24h"
+				"primary": "ds_kpi_wireless_healthy"
 			},
-			"description": "Latest observed healthy client count in the selected window. Gaps remain unreported.",
+			"description": "Matched global source snapshot. Unavailable if the healthy reading is missing or inconsistent.",
 			"options": {
 				"backgroundColor": "#131a23",
 				"majorColor": "#4cbf7f",
@@ -1225,8 +1225,8 @@
 		"ds_kpi_wired_total": {
 			"name": "KPI Wired Clients",
 			"options": {
-				"extend": "ds_wired_total_trend",
-				"query": "| fields _time \"Wired Clients\""
+				"extend": "ds_client_count_snapshots",
+				"query": "| search clientType=\"WIRED\"\n| rename Total as \"Wired Clients\"\n| fields \"Wired Clients\" \"Data Status\""
 			},
 			"type": "ds.chain"
 		},
@@ -1241,8 +1241,8 @@
 		"ds_kpi_wireless_total": {
 			"name": "KPI Wireless Clients",
 			"options": {
-				"extend": "ds_wireless_total_trend",
-				"query": "| fields _time \"Wireless Clients\""
+				"extend": "ds_client_count_snapshots",
+				"query": "| search clientType=\"WIRELESS\"\n| rename Total as \"Wireless Clients\"\n| fields \"Wireless Clients\" \"Data Status\""
 			},
 			"type": "ds.chain"
 		},
@@ -1488,6 +1488,33 @@
 				}
 			},
 			"type": "ds.search"
+		},
+		"ds_client_count_snapshots": {
+			"type": "ds.search",
+			"name": "Latest matched global client-count snapshots",
+			"options": {
+				"query": "`index_catalyst` sourcetype=\"cisco:dnac:clienthealth\" (clientType=\"WIRED\" OR clientType=\"WIRELESS\") (scoreType=\"ALL\" OR scoreType=\"GOOD\")\n| eval Controller=coalesce(cisco_catalyst_host,host,source), Scope=lower(coalesce(siteId,\"global\")), SourceEnd=tonumber(endtime), SourceStart=tonumber(starttime), Reading=tonumber(clientCount)\n| where Scope=\"global\" AND isnotnull(Controller)\n| eval SnapshotEnd=case(SourceEnd>100000000000,SourceEnd/1000,SourceEnd>0,SourceEnd,true(),_time)\n| eval SnapshotStart=case(SourceStart>100000000000,SourceStart/1000,SourceStart>0,SourceStart,true(),SnapshotEnd)\n| stats latest(eval(if(scoreType=\"ALL\",Reading,null()))) as ReportedTotal latest(eval(if(scoreType=\"GOOD\",Reading,null()))) as ReportedHealthy max(_time) as ObservedTime count(eval(scoreType=\"ALL\")) as TotalEvents by Controller clientType SnapshotStart SnapshotEnd\n| where TotalEvents>0\n| eventstats max(SnapshotEnd) as LatestEnd by Controller clientType\n| where SnapshotEnd=LatestEnd\n| eventstats max(SnapshotStart) as LatestStart by Controller clientType\n| where SnapshotStart=LatestStart\n| eval Total=if(ReportedTotal>=0 AND ReportedTotal=floor(ReportedTotal),ReportedTotal,null()), Healthy=if(isnotnull(Total) AND ReportedHealthy>=0 AND ReportedHealthy=floor(ReportedHealthy) AND ReportedHealthy<=Total,ReportedHealthy,null())\n| eval Status=case(isnull(Total),\"Invalid total in latest source snapshot\",isnull(ReportedHealthy),\"Healthy reading missing from latest total snapshot\",isnull(Healthy),\"Healthy reading conflicts with total in latest source snapshot\",true(),\"Matched source snapshot\")\n| stats sum(Total) as Total sum(Healthy) as Healthy count as Controllers count(Total) as TotalReadings count(Healthy) as HealthyReadings values(Status) as Status min(SnapshotEnd) as OldestSnapshot max(SnapshotEnd) as NewestSnapshot by clientType\n| eval Total=if(TotalReadings=Controllers,Total,null()), Healthy=if(TotalReadings=Controllers AND HealthyReadings=Controllers,Healthy,null())\n| rename Status as \"Data Status\"\n| fields clientType Total Healthy Controllers \"Data Status\" OldestSnapshot NewestSnapshot",
+				"queryParameters": {
+					"earliest": "$time_tok.earliest$",
+					"latest": "$time_tok.latest$"
+				}
+			}
+		},
+		"ds_kpi_wired_healthy": {
+			"type": "ds.chain",
+			"name": "Healthy wired clients from matched snapshot",
+			"options": {
+				"extend": "ds_client_count_snapshots",
+				"query": "| search clientType=\"WIRED\"\n| fields Healthy \"Data Status\""
+			}
+		},
+		"ds_kpi_wireless_healthy": {
+			"type": "ds.chain",
+			"name": "Healthy wireless clients from matched snapshot",
+			"options": {
+				"extend": "ds_client_count_snapshots",
+				"query": "| search clientType=\"WIRELESS\"\n| fields Healthy \"Data Status\""
+			}
 		}
 	},
 	"layout": {

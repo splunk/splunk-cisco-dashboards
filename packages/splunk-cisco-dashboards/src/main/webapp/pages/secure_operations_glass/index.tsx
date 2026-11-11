@@ -83,6 +83,7 @@ import {
     getLabelKey,
     getNumericKeys,
     getScalarValue,
+    chartTimeLabels,
     getTelemetryMessage,
     dnsCategoryMetricSearch,
     dlpFindingMetricSearch,
@@ -715,6 +716,10 @@ const SearchChartPanel = ({
     );
     const labelKey = getLabelKey(filteredRows);
     const numericKeys = getNumericKeys(filteredRows).slice(0, 4);
+    const isTimeSeries = labelKey === '_time' || /(?:^|[_\s-])(time|date)(?:$|[_\s-])/i.test(labelKey ?? '');
+    const timeLabels = chartTimeLabels(filteredRows.map(row => row[labelKey ?? '']));
+    const axisLabel = isTimeSeries ? timeLabels.tick : compactLabel;
+    const tooltipLabel = isTimeSeries ? timeLabels.tooltip : undefined;
     const colors = CHART_COLORS;
     const axisColor = 'var(--glass-text)';
     const gridColor = 'var(--glass-border)';
@@ -763,8 +768,6 @@ const SearchChartPanel = ({
         }
 
         if (chartKind === 'bar') {
-            const isTimeSeries =
-                labelKey === '_time' || /(?:^|[_\s-])(time|date)(?:$|[_\s-])/i.test(labelKey);
             const barRows = isTimeSeries
                 ? filteredRows.slice(-12)
                 : filteredRows.slice(0, 12);
@@ -781,14 +784,16 @@ const SearchChartPanel = ({
                             dataKey={labelKey}
                             stroke={axisColor}
                             tick={{ fill: axisColor, fontSize: 10 }}
-                            tickFormatter={compactLabel}
+                            tickFormatter={axisLabel}
+                            minTickGap={28}
+                            interval="preserveStartEnd"
                         />
                         <YAxis
                             stroke={axisColor}
                             tick={{ fill: axisColor, fontSize: 10 }}
                             width={42}
                         />
-                        <Tooltip itemStyle={{color: 'var(--glass-text, #ecf0f5)'}} labelStyle={{color: 'var(--glass-text, #ecf0f5)'}} contentStyle={tooltipStyle} />
+                        <Tooltip itemStyle={{color: 'var(--glass-text, #ecf0f5)'}} labelStyle={{color: 'var(--glass-text, #ecf0f5)'}} contentStyle={tooltipStyle} labelFormatter={tooltipLabel} />
                         {numericKeys.slice(0, 3).map((key, index) => (
                             <Bar
                                 key={key}
@@ -815,14 +820,16 @@ const SearchChartPanel = ({
                             dataKey={labelKey}
                             stroke={axisColor}
                             tick={{ fill: axisColor, fontSize: 10 }}
-                            tickFormatter={compactLabel}
+                            tickFormatter={axisLabel}
+                            minTickGap={28}
+                            interval="preserveStartEnd"
                         />
                         <YAxis
                             stroke={axisColor}
                             tick={{ fill: axisColor, fontSize: 10 }}
                             width={42}
                         />
-                        <Tooltip itemStyle={{color: 'var(--glass-text, #ecf0f5)'}} labelStyle={{color: 'var(--glass-text, #ecf0f5)'}} contentStyle={tooltipStyle} />
+                        <Tooltip itemStyle={{color: 'var(--glass-text, #ecf0f5)'}} labelStyle={{color: 'var(--glass-text, #ecf0f5)'}} contentStyle={tooltipStyle} labelFormatter={tooltipLabel} />
                         {numericKeys.slice(0, 3).map((key, index) => (
                             <Area
                                 key={key}
@@ -851,14 +858,16 @@ const SearchChartPanel = ({
                         dataKey={labelKey}
                         stroke={axisColor}
                         tick={{ fill: axisColor, fontSize: 10 }}
-                        tickFormatter={compactLabel}
+                        tickFormatter={axisLabel}
+                        minTickGap={28}
+                        interval="preserveStartEnd"
                     />
                     <YAxis
                         stroke={axisColor}
                         tick={{ fill: axisColor, fontSize: 10 }}
                         width={42}
                     />
-                    <Tooltip itemStyle={{color: 'var(--glass-text, #ecf0f5)'}} labelStyle={{color: 'var(--glass-text, #ecf0f5)'}} contentStyle={tooltipStyle} />
+                    <Tooltip itemStyle={{color: 'var(--glass-text, #ecf0f5)'}} labelStyle={{color: 'var(--glass-text, #ecf0f5)'}} contentStyle={tooltipStyle} labelFormatter={tooltipLabel} />
                     {numericKeys.slice(0, 3).map((key, index) => (
                         <Line
                             key={key}

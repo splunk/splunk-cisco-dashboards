@@ -185,7 +185,7 @@ test('policy donut renders full names, counts and percentages without hover for 
  const rows=Array.from({length:12},(_,index)=>({'Policy Set':'Policy '+(index+1)+' with its complete descriptive name','Auth Count':1000*(index+1)}));
  let requested;
  const scope={exports:{}};const stub=()=>null;
- new Function('React','useSearchbaseRows','useFilteredRows','getLabelKey','getNumericKeys','chartPieValues','CHART_COLORS','DEFAULT_FILTERS','EmptyState','Panel','SearchActions','ResponsiveContainer','PieChart','Pie','Cell','Tooltip','exports',ts.transpileModule(component+'\nexport {SearchChartPanel};',{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.React}}).outputText)(React,args=>{requested=args;return {rows,loading:false,error:null};},r=>r,api.getLabelKey,api.getNumericKeys,api.chartPieValues,['#649ef5','#4cbf7f'],{},stub,props=>React.createElement('section',{className:props.className},props.children),stub,stub,stub,stub,stub,stub,scope.exports);
+ new Function('React','useSearchbaseRows','useFilteredRows','getLabelKey','getNumericKeys','chartPieValues','chartTimeLabels','compactLabel','CHART_COLORS','DEFAULT_FILTERS','EmptyState','Panel','SearchActions','ResponsiveContainer','PieChart','Pie','Cell','Tooltip','exports',ts.transpileModule(component+'\nexport {SearchChartPanel};',{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.React}}).outputText)(React,args=>{requested=args;return {rows,loading:false,error:null};},r=>r,api.getLabelKey,api.getNumericKeys,api.chartPieValues,api.chartTimeLabels,value=>String(value),['#649ef5','#4cbf7f'],{},stub,props=>React.createElement('section',{className:props.className},props.children),stub,stub,stub,stub,stub,stub,scope.exports);
  const markup=renderToStaticMarkup(React.createElement(scope.exports.SearchChartPanel,{context:{earliest:'-7d@d'},searchId:'policy',title:'Enforcement by Policy Set',chartKind:'pie'}));
  assert.equal(requested.count,201);assert.match(markup,/scd-glass-pie-panel/);assert.equal((markup.match(/<dt>/g)||[]).length,12);
  assert.ok(markup.includes('Policy 12 with its complete descriptive name'));assert.ok(markup.includes((12000).toLocaleString()));assert.match(markup,/%/);assert.match(markup,/Enforcement by Policy Set values/);
@@ -235,5 +235,33 @@ test('active Recharts hover text overrides both missing and explicitly black ser
    assert.doesNotMatch(markup,/color:#000|color:black/);
    assert.match(markup,/2100/);
   }
+ }
+});
+
+test('time chart ticks use short readable dates/times and hover retains complete timezone context',()=>{
+ const day=api.chartTimeLabels(['2026-11-11T12:00:00-05:00','2026-11-11T16:00:00-05:00'],'en-US','UTC');
+ assert.equal(day.tick('2026-11-11T12:00:00-05:00'),'17:00');
+ assert.equal(day.tick('2026-11-11T00:00:00Z'),'00:00');
+ assert.match(day.tooltip('2026-11-11T12:00:00-05:00'),/Nov 11, 2026.*17:00:00.*UTC/);
+ const week=api.chartTimeLabels(['2026-11-04T00:00:00Z','2026-11-11T00:00:00Z'],'en-US','UTC');
+ assert.equal(week.tick('2026-11-04T00:00:00Z'),'Nov 4');
+ assert.equal(week.tick(1793750400),week.tick(1793750400000));
+ assert.equal(week.tick('not a date'),'not a date');
+ assert.equal(week.tick(null),'Unknown');
+ assert.doesNotMatch(week.tick('2026-11-04T00:00:00Z'),/T00|…/);
+ const page=fs.readFileSync(path.join(root,'src/main/webapp/pages/secure_operations_glass/index.tsx'),'utf8');
+ assert.equal((page.match(/tickFormatter=\{axisLabel\}/g)||[]).length,3);
+ assert.equal((page.match(/labelFormatter=\{tooltipLabel\}/g)||[]).length,3);
+});
+
+test('Catalyst summary totals and healthy values share one native snapshot result',()=>{
+ const parent=d.dataSources.ds_client_count_snapshots;
+ assert.equal(parent.type,'ds.search');
+ assert.match(parent.options.query,/by Controller clientType SnapshotStart SnapshotEnd/);
+ assert.match(parent.options.query,/SnapshotEnd=LatestEnd/);
+ assert.match(parent.options.query,/HealthyReadings=Controllers/);
+ for(const kind of ['wired','wireless']){
+  for(const metric of ['total','healthy'])assert.equal(d.dataSources['ds_kpi_'+kind+'_'+metric].options.extend,'ds_client_count_snapshots');
+  assert.equal(d.visualizations['viz_ov_'+kind+'_healthy'].dataSources.primary,'ds_kpi_'+kind+'_healthy');
  }
 });

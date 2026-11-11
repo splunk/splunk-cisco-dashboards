@@ -49,7 +49,9 @@ Browse the current release and recorded historical versions below. The newest re
 - Fixed clipped Connected Devices and Active Users values in Building Intelligence by increasing KPI space and repositioning the daily trends.
 
 - **Catalyst Operations (Preview)** provides Dashboard Studio monitoring through **Overview**, **Executive Summary**, and **Client Summary** tabs plus **About**, with client health, device health and issue investigations.
+- Catalyst wired/wireless total and healthy headlines now use matching controller-wide source snapshots. Older late-arriving observations do not replace newer source windows; missing or conflicting healthy counts remain unavailable.
 - Corrected Catalyst client-health totals, unavailable health readings, healthy-client headlines and executive percentage tiles. Detail filters identify their scope separately from all-site summary panels.
+- Security Operations time-chart labels show compact times or dates, with the complete timestamp and timezone on hover.
 - **Security Operations Overview (Preview)** is available for feedback. Corrected identity investigations, distinct DNS-category and DLP-event totals, and headline measurements. Missing telemetry retains its explanation instead of appearing as zero.
 - Added **DC Networking Operations** under **Secure Infrastructure**. It uses the standard header time selector: **4h**, **24h**, **48h**, **7d**, **30d**, and Advanced selection. New visits default to 24h; explicit time context remains honored.
 - Reduced memory consumption in the Hyperfabric observed-port and administratively-enabled-port history searches by aggregating the latest reading per port and time bucket. No search memory-limit increase is required.
@@ -663,6 +665,8 @@ The dialog loads on demand and requests cancellation when closed. Changing the d
 Catalyst Operations is a Dashboard Studio dashboard with **Overview**, **Executive Summary**, and **Client Summary** tabs plus **About**. Open it from **More > Catalyst Operations > Catalyst Operations (Preview)**. Dashboard Manager provides supported search, investigation and editing actions according to your permissions.
 
 The Site and Client type controls apply to the labeled detail panels; all-site summary panels retain their reported scope. Missing or invalid health readings remain unavailable rather than appearing as measured zero. Use the time selector to choose the investigation window.
+
+Wired and wireless total/healthy headlines use the latest global source window for each controller, matched by source start/end time and client type. The displayed total sums those controller totals. A healthy total is shown only when every included controller has a matching nonnegative healthy reading no greater than its total. An incomplete or conflicting healthy reading stays unavailable; it is not capped or borrowed from an older window. These headlines are snapshots; the separate trend charts retain their historical views.
 
 Catalyst Health remains a separate **Under Dev** dashboard where available; it has not been merged into Catalyst Operations.
 
