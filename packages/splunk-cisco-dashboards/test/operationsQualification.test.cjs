@@ -203,3 +203,37 @@ test('dark operational charts retain contrasting series and active text instead 
  assert.match(css,/scd-glass-pie-panel \.scd-glass-panel-body \{ height: auto/);
  assert.match(css,/scd-glass-pie-values dd \{ color: var\(--glass-text\)/);
 });
+
+test('active Recharts hover text overrides both missing and explicitly black series colors at every tooltip',()=>{
+ const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');const {Tooltip}=require('recharts');
+ const page=fs.readFileSync(path.join(root,'src/main/webapp/pages/secure_operations_glass/index.tsx'),'utf8');
+ const ast=ts.createSourceFile('page.tsx',page,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+ const nodes=[];let wrapperStyle;
+ const literal=node=>new Function('return ('+node.getText(ast)+');')();
+ const visit=node=>{
+  if(ts.isVariableDeclaration(node)&&node.name.getText(ast)==='tooltipStyle')wrapperStyle=literal(node.initializer);
+  if(ts.isJsxSelfClosingElement(node)&&node.tagName.getText(ast)==='Tooltip')nodes.push(node);
+  ts.forEachChild(node,visit);
+ };visit(ast);assert.equal(nodes.length,5);
+ const active={active:true,isAnimationActive:false,label:'Allowed'};
+ const previous=renderToStaticMarkup(React.createElement(Tooltip,{...active,contentStyle:{backgroundColor:'#131a23',color:'#ecf0f5'},payload:[{name:'Allowed',value:2100,dataKey:'value'}]}));
+ assert.match(previous,/<li[^>]*color:#000/,'Reproduce why styling only the tooltip wrapper did not fix item text');
+ for(const node of nodes){
+  const styles={};
+  for(const name of ['contentStyle','itemStyle','labelStyle']){
+   const attribute=node.attributes.properties.find(a=>ts.isJsxAttribute(a)&&a.name.getText(ast)===name);
+   assert.ok(attribute,`${name} is required at tooltip line ${ast.getLineAndCharacterOfPosition(node.getStart()).line+1}`);
+   const expression=attribute.initializer.expression;
+   styles[name]=ts.isIdentifier(expression)?wrapperStyle:literal(expression);
+  }
+  for(const color of [undefined,'#000']){
+   const markup=renderToStaticMarkup(React.createElement(Tooltip,{...active,...styles,payload:[{name:'Allowed',value:2100,dataKey:'value',color}]}));
+   assert.match(markup,/visibility:visible/);
+   assert.match(markup,/<li[^>]*color:var\(--glass-text, #ecf0f5\)/);
+   assert.match(markup,/<p[^>]*color:var\(--glass-text, #ecf0f5\)/);
+   assert.match(markup,/background-color:var\(--glass-panel-subtle, #131a23\)/);
+   assert.doesNotMatch(markup,/color:#000|color:black/);
+   assert.match(markup,/2100/);
+  }
+ }
+});

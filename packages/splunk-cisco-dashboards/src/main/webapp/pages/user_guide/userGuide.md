@@ -39,6 +39,8 @@ Browse the current release and recorded historical versions below. The newest re
 
 ### Dashboards and investigations
 
+- Fixed dark hover-card text in Security Operations charts so category labels and values remain readable on dark backgrounds.
+
 - Improved dark-background chart text in Security Operations Overview. Enforcement by Policy Set now shows full category names, counts and percentages without hover. SD-WAN application experience uses a trend and site health uses a table.
 
 - Cloud Firewall Verdicts now shows counts and percentages, with slice and value selections filtering a matching cloud firewall event-detail table. Select the same verdict again or clear the filter to show all verdicts. Source Health remains independent.

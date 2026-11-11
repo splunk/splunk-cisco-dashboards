@@ -719,10 +719,10 @@ const SearchChartPanel = ({
     const axisColor = 'var(--glass-text)';
     const gridColor = 'var(--glass-border)';
     const tooltipStyle = {
-        background: 'var(--glass-panel-subtle)',
-        border: '1px solid var(--glass-border-strong)',
+        backgroundColor: 'var(--glass-panel-subtle, #131a23)',
+        border: '1px solid var(--glass-border-strong, #66717c)',
         borderRadius: 8,
-        color: 'var(--glass-text)',
+        color: 'var(--glass-text, #ecf0f5)',
         fontSize: 12,
     };
 
@@ -748,7 +748,7 @@ const SearchChartPanel = ({
                                 paddingAngle={2} stroke="var(--glass-panel)" strokeWidth={2}>
                                 {data.map((entry,index) => <Cell key={entry.name} fill={colors[index % colors.length]}/>)}
                             </Pie>
-                            <Tooltip contentStyle={tooltipStyle}
+                            <Tooltip itemStyle={{color: 'var(--glass-text, #ecf0f5)'}} labelStyle={{color: 'var(--glass-text, #ecf0f5)'}} contentStyle={tooltipStyle}
                                 formatter={(value: number) => Number(value).toLocaleString(undefined,{maximumFractionDigits:2})}/>
                         </PieChart>
                     </ResponsiveContainer>
@@ -788,7 +788,7 @@ const SearchChartPanel = ({
                             tick={{ fill: axisColor, fontSize: 10 }}
                             width={42}
                         />
-                        <Tooltip contentStyle={tooltipStyle} />
+                        <Tooltip itemStyle={{color: 'var(--glass-text, #ecf0f5)'}} labelStyle={{color: 'var(--glass-text, #ecf0f5)'}} contentStyle={tooltipStyle} />
                         {numericKeys.slice(0, 3).map((key, index) => (
                             <Bar
                                 key={key}
@@ -822,7 +822,7 @@ const SearchChartPanel = ({
                             tick={{ fill: axisColor, fontSize: 10 }}
                             width={42}
                         />
-                        <Tooltip contentStyle={tooltipStyle} />
+                        <Tooltip itemStyle={{color: 'var(--glass-text, #ecf0f5)'}} labelStyle={{color: 'var(--glass-text, #ecf0f5)'}} contentStyle={tooltipStyle} />
                         {numericKeys.slice(0, 3).map((key, index) => (
                             <Area
                                 key={key}
@@ -858,7 +858,7 @@ const SearchChartPanel = ({
                         tick={{ fill: axisColor, fontSize: 10 }}
                         width={42}
                     />
-                    <Tooltip contentStyle={tooltipStyle} />
+                    <Tooltip itemStyle={{color: 'var(--glass-text, #ecf0f5)'}} labelStyle={{color: 'var(--glass-text, #ecf0f5)'}} contentStyle={tooltipStyle} />
                     {numericKeys.slice(0, 3).map((key, index) => (
                         <Line
                             key={key}
@@ -997,7 +997,7 @@ const CloudFirewallVerdictExplorer = ({context}: {context: PageContext}): JSX.El
                                     aria-label={`Filter ${entry.name}: ${entry.value.toLocaleString()} events, ${entry.percent.toFixed(1)} percent`}
                                     onKeyDown={event => {if (event.key === 'Enter' || event.key === ' ') {event.preventDefault(); select(entry.action);}}}/>)}
                             </Pie>
-                            <Tooltip contentStyle={{background: 'var(--glass-panel-subtle)', border: '1px solid var(--glass-border-strong)', color: 'var(--glass-text)'}}
+                            <Tooltip itemStyle={{color: 'var(--glass-text, #ecf0f5)'}} labelStyle={{color: 'var(--glass-text, #ecf0f5)'}} contentStyle={{backgroundColor: 'var(--glass-panel-subtle, #131a23)', border: '1px solid var(--glass-border-strong, #66717c)', color: 'var(--glass-text, #ecf0f5)'}}
                                 formatter={(value: number) => [Number(value).toLocaleString() + ' events', 'Count']}/>
                         </PieChart></ResponsiveContainer>
                     </div>

@@ -10,6 +10,9 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Fixed black hover text on dark Security Operations charts. Hover labels and
+  values now remain readable, including Cloud Firewall Verdicts.
+
 - Security Operations charts now use brighter axis and tooltip text on dark
   backgrounds. Enforcement by Policy Set shows full category names, values and
   percentages below its donut without requiring hover. SD-WAN application
