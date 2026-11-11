@@ -82,7 +82,7 @@ existing sequence across VERSION changes; source/release metadata, retained
 archives, the selected installed target and known local reservations are safety
 floors. Local state is only `dist/build-reservations/current.json` and can be
 recovered after deletion or corruption. See the
-[maintainer numbering guide](scripts/build-numbering.md) for safe migration from
+[maintainer numbering guide](scripts/build-numbering.md) for automatic migration from
 Actions, outage recovery, and the coordinated `SCD_BUILD_NUMBER` override.
 
 Install Node.js >=20, Python 3, Yarn Classic 1.22.22 (or Corepack), and GitHub CLI;

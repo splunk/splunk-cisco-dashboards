@@ -21,40 +21,37 @@ the shared ref, and never select a fork's sequence. `gh` uses its existing sign-
 Contents write access is sufficient after migration. Normal allocations do not
 query, dispatch or wait for Actions.
 
-## One-time migration from Actions
+## Automatic first-build transition
 
-Older clients spend numbers from workflow run_number even if the job fails.
-They cannot safely coexist with the new Git allocator. Coordinate all developers:
+Run the normal build command on any workstation. No activation command, copied
+reservation file or manually selected number is needed when shared access works.
+A fresh workstation creates `dist/build-reservations/current.json` automatically.
+A missing/corrupt cache uses the existing shared counter and metadata floors.
 
-1. Stop old allocator clients and disable the canonical
-   `reserve-build-number.yml` workflow. Wait for outstanding dispatches to settle;
-   audit their numbers and any coordinated manual allocations.
-2. Preserve workflow history and the 2113 offset. With all known archives and the
-   installed target available, initialize the Git counter explicitly:
+If this project's Git counter has not yet been created, the first normal build:
 
-   ```sh
-   python3 scripts/reserve_package_build.py --initialize-counter \
-     --receipts dist/build-reservations \
-     --app-conf packages/splunk-cisco-dashboards/src/main/resources/splunk/default/app.conf \
-     --release-ledger releases/splunkbase-9257.json --dist dist \
-     --stage-app-conf packages/splunk-cisco-dashboards/stage/default/app.conf \
-     --target-app-conf "$SPLUNK_HOME/etc/apps/splunk-cisco-dashboards/default/app.conf"
-   ```
+1. Reads the existing canonical Actions workflow identity and sequence.
+2. Disables that allocator automatically so older clients cannot keep issuing
+   overlapping numbers. It verifies retirement and samples the accepted dispatch
+   history until its run-number snapshots settle, within the allocation timeout.
+   It does not wait for any Actions runner or reservation job to execute.
+3. Creates the project Git counter above the legacy and available metadata floors
+   using concurrency-safe reference creation. Competing first-time clients retry
+   against the winning counter, then each reserves a distinct next number.
 
-   Set SPLUNK_HOME to the intended instance and unset SCD_BUILD_NUMBER first.
-   Initialization fails if shared access is unavailable; a manual number cannot
-   initialize a shared counter. A successful initialization spends one reservation;
-   a subsequent normal build reserves a higher number. Initialization requires
-   readable legacy history and an explicitly disabled workflow. It refuses active
-   old allocators. It does not enable/disable workflows itself.
-3. Use the new tooling on all machines. Do not re-enable legacy allocation.
+This initial transition needs Actions write access to retire the old allocator;
+afterward normal builds need only Contents write access and do not query Actions.
+A permission/service failure uses the existing coordinated manual fallback rather
+than an activation/setup prompt. Update developer checkouts to use the new tooling;
+do not re-enable the retired old allocator. The legacy sequence and history are
+preserved. The optional `--initialize-counter` helper flag remains compatible but
+is unnecessary for normal builds.
 
-An ordinary build never initializes/recreates an absent remote counter. It offers
-the coordinated manual path instead. If the ref is ever lost, recover its original
-history with maintainer review rather than treating it as a fresh counter. This
-change's local tests simulate service writes; committing the tooling does not
-activate or prove a live service migration. No workflow/service mutation is
-required merely to run the tests.
+Local cache deletion never deletes the shared counter. If a workstation has
+previously observed the Git counter and the server subsequently reports it missing,
+it refuses to reset that history. Recover a lost server ref rather than treating
+it as new. Tests simulate the first-build transition and independent workstations;
+local source validation does not itself change or qualify the live shared service.
 
 ## Local state and recovery
 
@@ -78,9 +75,10 @@ Old numeric `.json`/`.claimed` and `request-<UUID>.json` receipts, including tho
 inside recognized `migration-through-<build>` directories, are consolidated
 only after retaining their highest known floor. Recognized stale atomic temporary
 files are cleaned up under the state-directory lock. Unrelated files and package
-history remain untouched. To consolidate an existing local checkout without
-spending a new number, use the same metadata arguments above with `--migrate-state`
-in place of `--initialize-counter`. Recovered floor-only state is consumed and
+history remain untouched. Normal builds perform this cleanup automatically. For offline maintainer-only
+consolidation without allocating a number, the helper also supports
+`--migrate-state --receipts dist/build-reservations` with the normal metadata
+arguments shown by `--help`. Recovered floor-only state is consumed and
 cannot be claimed for a package.
 
 The directory inode is locked for reservation/claim updates without another
@@ -92,7 +90,8 @@ concurrently. Inspect a stale packaging lock before removing it.
 ## Outages and explicit numbers
 
 If shared allocation cannot be established (CLI/authentication/network/service
-failure, Actions unavailable during initial migration, or missing remote counter),
+failure, Actions unavailable during the initial transition, or loss of a previously
+observed remote counter),
 the interactive packager prompts on `/dev/tty`. The prompt remains visible even
 when build.sh captures stdout/stderr. Enter an explicitly coordinated integer
 above the reported floor; it is marked `backend=manual`, not shared/verified.

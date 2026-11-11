@@ -34,13 +34,15 @@ class SharedBuildTests(unittest.TestCase):
         self.env = patch.dict(os.environ, {}, clear=True)
         self.env.start()
         self.addCleanup(self.env.stop)
+        sleeping = patch.object(r.time, 'sleep')
+        sleeping.start();self.addCleanup(sleeping.stop)
 
     def service(self, initial=2171, workflow_state='disabled_manually', legacy=58):
         lock = threading.Lock()
         parent = 'a' * 40
         message = r.RECORD_PREFIX + json.dumps({'repository': r.REPOSITORY, 'build': initial, 'request_id': 'b' * 32})
         commits = {parent: {'message': message, 'tree': {'sha': 'c' * 40}, 'parents': []}}
-        state = {'head': parent if initial is not None else None, 'writes': 0, 'calls': [], 'commits': commits}
+        state = {'head': parent if initial is not None else None, 'writes': 0, 'calls': [], 'commits': commits, 'workflow_state': workflow_state}
 
         def api(method, endpoint, payload=None, **kwargs):
             with lock:
@@ -52,7 +54,10 @@ class SharedBuildTests(unittest.TestCase):
                         raise r.ApiError(404)
                     return {'object': {'sha': state['head']}}
                 if endpoint == 'actions/workflows/' + r.WORKFLOW:
-                    return {'id': 17, 'state': workflow_state}
+                    return {'id': 17, 'state': state['workflow_state'], 'path': '.github/workflows/' + r.WORKFLOW}
+                if method == 'PUT' and endpoint.endswith('/disable'):
+                    state['workflow_state'] = 'disabled_manually'
+                    return {}
                 if endpoint.startswith('actions/workflows/'):
                     return {'total_count': 1, 'workflow_runs': [{'workflow_id': 17, 'run_number': legacy}]}
                 if endpoint == 'git/ref/heads/main':
@@ -110,7 +115,7 @@ class SharedBuildTests(unittest.TestCase):
             self.assertEqual(self.current(self.root / str(i))['build'], n)
 
     def test_concurrent_initializers_continue_one_legacy_sequence(self):
-        api, state = self.service(initial=None)
+        api, state = self.service(initial=None, workflow_state='active')
         barrier = threading.Barrier(2)
         def racing(method, endpoint, payload=None, **kwargs):
             if endpoint == 'git/commits' and payload['parents'] == ['a' * 40]:
@@ -118,36 +123,86 @@ class SharedBuildTests(unittest.TestCase):
             return api(method, endpoint, payload)
         with patch.object(r.shutil, 'which', return_value='gh'), self.mocks(racing):
             with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
-                numbers = list(pool.map(lambda i: r.reserve_build(0, self.root / str(i), initialize=True), range(2)))
+                numbers = list(pool.map(lambda i: r.reserve_build(0, self.root / str(i)), range(2)))
         self.assertEqual(sorted(numbers), [2172, 2173])
         self.assertEqual(state['writes'], 2)
 
     def test_explicit_initialization_continues_legacy_counter_and_local_floor(self):
         api, state = self.service(initial=None, legacy=100)
-        self.assertEqual(self.reserve(api, initialize=True), 2214)
+        self.assertEqual(self.reserve(api), 2214)
         self.assertEqual(state['writes'], 1)
         self.assertEqual(self.current()['build'], 2214)
 
-    def test_active_legacy_allocator_prevents_overlapping_counter_initialization(self):
+    def test_active_legacy_allocator_is_migrated_automatically(self):
         api, state = self.service(initial=None, workflow_state='active', legacy=100)
-        with self.assertRaisesRegex(r.SharedUnavailable, 'still active') as caught:
-            self.reserve(api, initialize=True)
-        self.assertEqual(caught.exception.floor, 2213)
-        self.assertEqual(state['writes'], 0)
+        self.assertEqual(self.reserve(api), 2214)
+        self.assertEqual(state['workflow_state'], 'disabled_manually')
+        self.assertEqual(state['writes'], 1)
 
-    def test_ordinary_build_never_recreates_absent_shared_counter(self):
+    def test_normal_build_initializes_absent_shared_counter_without_separate_command(self):
         api, state = self.service(initial=None)
-        with self.assertRaisesRegex(r.SharedUnavailable, '--initialize-counter'):
-            self.reserve(api)
-        self.assertEqual(state['writes'], 0)
+        self.assertEqual(self.reserve(api), 2172)
+        self.assertEqual(state['writes'], 1)
 
-    def test_active_workflow_floor_is_retained_before_unattended_fallback_failure(self):
-        api, _ = self.service(initial=None, workflow_state='active', legacy=100)
-        with patch.object(r.shutil, 'which', return_value='gh'), self.mocks(api), patch.dict(os.environ, {'CI': '1'}):
+    def test_permission_failure_retains_legacy_floor_before_unattended_fallback(self):
+        api, state = self.service(initial=None, workflow_state='active', legacy=100)
+        def denied(method, endpoint, payload=None, **kwargs):
+            if method == 'PUT':
+                raise r.ApiError(403)
+            return api(method, endpoint, payload)
+        with patch.object(r.shutil, 'which', return_value='gh'), self.mocks(denied), patch.dict(os.environ, {'CI': '1'}):
             with self.assertRaisesRegex(r.ReservationError, 'greater than 2213'):
                 r.reserve_resilient(0, self.receipts)
         self.assertEqual(self.current()['build'], 2213)
         self.assertTrue(self.current()['claimed'])
+        self.assertEqual(state['writes'], 0)
+
+    def test_workstations_and_deleted_or_corrupt_cache_never_prompt_when_service_works(self):
+        api, state = self.service(initial=None, workflow_state='active')
+        a, b = self.root/'workstation-a', self.root/'workstation-b'
+        with patch.object(r.shutil, 'which', return_value='gh'), self.mocks(api), patch.object(r, 'manual_reservation') as manual:
+            self.assertEqual(r.reserve_resilient(2171, a), 2172)
+            r.claim_build(2172, a)
+            self.assertEqual(r.reserve_resilient(2171, b), 2173)
+            shutil.rmtree(a)
+            self.assertEqual(r.reserve_resilient(2171, a), 2174)
+            (b/'current.json').write_text('{corrupt')
+            self.assertEqual(r.reserve_resilient(2171, b), 2175)
+            manual.assert_not_called()
+        self.assertEqual([p.name for p in a.iterdir()], ['current.json'])
+        self.assertEqual([p.name for p in b.iterdir()], ['current.json'])
+        self.assertEqual(state['writes'], 4)
+        self.assertEqual(sum(method=='PUT' for method, _, _ in state['calls']), 1)
+
+    def test_missing_previously_used_remote_counter_is_not_reset(self):
+        api, state = self.service()
+        self.reserve(api)
+        state['head'] = None
+        with self.assertRaisesRegex(r.SharedUnavailable, 'refusing to reset'):
+            self.reserve(api)
+        self.assertEqual(state['writes'], 1)
+
+    def test_dispatch_accepted_before_retirement_is_included_in_initial_floor(self):
+        api, state = self.service(initial=None, workflow_state='active')
+        reads = 0
+        def delayed(method, endpoint, payload=None, **kwargs):
+            nonlocal reads
+            result = api(method, endpoint, payload)
+            if '/runs?' in endpoint:
+                reads += 1
+                if reads >= 3:
+                    result['total_count'] = 2
+                    result['workflow_runs'].append({'workflow_id': 17, 'run_number': 59})
+            return result
+        self.assertEqual(self.reserve(delayed), 2173)
+        self.assertGreaterEqual(reads, 5)
+        self.assertEqual(state['workflow_state'], 'disabled_manually')
+
+    def test_disable_204_empty_body_is_accepted_without_relaxing_other_api_shapes(self):
+        with patch.object(r.subprocess, 'run', return_value=subprocess.CompletedProcess([], 0, '', '')):
+            self.assertEqual(r.github('PUT', 'actions/workflows/' + r.WORKFLOW + '/disable'), {})
+            with self.assertRaises(r.SharedUnavailable):
+                r.github('GET', 'git/ref/' + r.COUNTER_REF)
 
     def test_deletion_of_file_or_entire_directory_recovers_from_shared_counter(self):
         api, _ = self.service()
@@ -237,7 +292,7 @@ class SharedBuildTests(unittest.TestCase):
             return api(method, endpoint, payload)
         with patch.object(r.shutil, 'which', return_value='gh'), self.mocks(lost), patch.dict(os.environ, {'CI': '1'}):
             with self.assertRaisesRegex(r.ReservationError, 'greater than 2213'):
-                r.reserve_resilient(0, self.receipts, initialize=True)
+                r.reserve_resilient(0, self.receipts)
         self.assertEqual(self.current()['build'], 2213)
 
     def test_races_are_bounded_and_never_force_update(self):

@@ -71,6 +71,9 @@ def github(method, endpoint, payload=None, *, timeout=REQUEST_TIMEOUT):
         if status:
             raise ApiError(int(status.group(1)))
         raise SharedUnavailable("GitHub request failed; check gh authentication and connectivity.")
+    if (method == "PUT" and endpoint == f"actions/workflows/{WORKFLOW}/disable"
+            and not result.stdout.strip()):
+        return {}  # Successful workflow disable returns 204 No Content.
     try:
         data = json.loads(result.stdout) if result.stdout.strip() else None
     except ValueError as error:
@@ -179,6 +182,10 @@ def state_floor(directory, floor):
 
 def save_current(directory, receipt):
     directory.mkdir(parents=True, exist_ok=True)
+    receipt = dict(receipt)
+    prior = _read_json(directory / "current.json") or {}
+    if counter_seen(prior):
+        receipt["shared_counter_seen"] = True
     temporary = None
     try:
         with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=directory,
@@ -210,32 +217,52 @@ def save_current(directory, receipt):
 
 
 def _legacy_floor(remote):
-    """Only used to seed a missing counter after the old allocator is retired."""
+    """Automatically freeze the old allocator and retain its final sequence."""
     workflow = remote("GET", f"actions/workflows/{WORKFLOW}")
-    if type(workflow.get("id")) is not int or workflow["id"] < 1:
+    if (type(workflow.get("id")) is not int or workflow["id"] < 1
+            or workflow.get("path") != f".github/workflows/{WORKFLOW}"):
         raise SharedUnavailable("Cannot establish the historical Actions counter identity.")
-    data = remote("GET", f"actions/workflows/{WORKFLOW}/runs?per_page=100")
-    runs = data.get("workflow_runs")
-    if (not isinstance(runs, list) or type(data.get("total_count")) is not int
-            or data["total_count"] < 0 or len(runs) != min(data["total_count"], 100)):
-        raise SharedUnavailable("Cannot establish the historical Actions build floor.")
-    numbers = []
-    for run in runs:
-        if (not isinstance(run, dict) or type(run.get("run_number")) is not int
-                or run["run_number"] < 1 or run.get("workflow_id") != workflow["id"]):
-            raise SharedUnavailable("Invalid historical Actions counter data.")
-        numbers.append(OFFSET + run["run_number"])
-    floor = max([OFFSET, *numbers])
-    # Old clients allocate directly from run_number, regardless of runner result.
-    # They must stop before a different allocator can safely spend this sequence.
-    if workflow.get("state") not in {"disabled_manually", "disabled_inactivity"}:
-        raise SharedUnavailable(
-            f"Legacy Actions allocator is still active (known floor {floor}). "
-            "Retire it and coordinate client migration before initializing the Git counter.", floor=floor)
-    return floor
+
+    def snapshot():
+        data = remote("GET", f"actions/workflows/{WORKFLOW}/runs?per_page=100")
+        runs = data.get("workflow_runs")
+        if (not isinstance(runs, list) or type(data.get("total_count")) is not int
+                or data["total_count"] < 0 or len(runs) != min(data["total_count"], 100)):
+            raise SharedUnavailable("Cannot establish the historical Actions build floor.")
+        numbers = []
+        for run in runs:
+            if (not isinstance(run, dict) or type(run.get("run_number")) is not int
+                    or run["run_number"] < 1 or run.get("workflow_id") != workflow["id"]):
+                raise SharedUnavailable("Invalid historical Actions counter data.")
+            numbers.append(OFFSET + run["run_number"])
+        return data["total_count"], max([OFFSET, *numbers])
+
+    observed = snapshot()
+    floor = observed[1]
+    try:
+        if workflow.get("state") == "active":
+            print("Automatically migrating the existing shared build counter ...", file=sys.stderr)
+            remote("PUT", f"actions/workflows/{WORKFLOW}/disable")
+            workflow = remote("GET", f"actions/workflows/{WORKFLOW}")
+        if workflow.get("state") not in {"disabled_manually", "disabled_inactivity"}:
+            raise SharedUnavailable("Legacy allocator retirement could not be confirmed.")
+        # Accepted dispatches may appear after disable. Wait for stable number
+        # snapshots, never for a runner or job completion.
+        stable = 0
+        for _ in range(MAX_ATTEMPTS):
+            time.sleep(0.5)
+            latest = snapshot()
+            floor = max(floor, latest[1])
+            stable = stable + 1 if latest == observed else 0
+            if stable >= 2:
+                return floor
+            observed = latest
+        raise SharedUnavailable("Legacy dispatch history has not settled within the migration budget.")
+    except SharedUnavailable as error:
+        raise SharedUnavailable(str(error), floor=max(floor, error.floor)) from error
 
 
-def _reserve_shared(local_floor, directory, initialize=False):
+def _reserve_shared(local_floor, directory):
     repository = preflight()
     request_id = uuid.uuid4().hex
     deadline = time.monotonic() + RESERVATION_TIMEOUT
@@ -253,20 +280,18 @@ def _reserve_shared(local_floor, directory, initialize=False):
         except ApiError as error:
             if error.status != 404:
                 raise
+            prior = _read_json(directory / "current.json") or {}
+            if counter_seen(prior):
+                raise SharedUnavailable("Previously used shared counter is missing; refusing to reset its history.")
             exists = False
             local_floor = max(local_floor, _legacy_floor(remote))
             remember_floor(directory, local_floor)
-            if not initialize:
-                raise SharedUnavailable(
-                    "Shared Git counter is absent; a maintainer must perform the coordinated "
-                    "--initialize-counter migration. It is never recreated by an ordinary build.",
-                    floor=local_floor)
             reference = remote("GET", f"git/ref/heads/{repository['default_branch']}")
         try:
             parent = sha(reference["object"]["sha"])
             current = remote("GET", f"git/commits/{parent}")
             previous = read_record(current)["build"] if exists else OFFSET
-            remember_floor(directory, previous)
+            remember_floor(directory, previous, shared=exists)
             number = max(previous, state_floor(directory, local_floor)) + 1
             record = {"repository": REPOSITORY, "build": number, "request_id": request_id}
             candidate = remote("POST", "git/commits", {
@@ -293,16 +318,16 @@ def _reserve_shared(local_floor, directory, initialize=False):
             raise
         if not isinstance(result.get("object"), dict) or result["object"].get("sha") != commit:
             raise SharedUnavailable("GitHub did not confirm the reservation write; no number was issued.")
-        receipt.update(state="reserved", claimed=False)
+        receipt.update(state="reserved", claimed=False, shared_counter_seen=True)
         save_current(directory, receipt)
         print(f"Reserved shared build {number} on {HOST}/{REPOSITORY}.", file=sys.stderr)
         return number
     raise SharedUnavailable("Shared counter remained busy after eight non-forced attempts.")
 
 
-def reserve_build(floor, directory, initialize=False):
+def reserve_build(floor, directory):
     with state_lock(directory):
-        return _reserve_shared(state_floor(directory, floor), directory, initialize)
+        return _reserve_shared(state_floor(directory, floor), directory)
 
 
 def claim_build(number, directory):
@@ -346,14 +371,14 @@ def manual_reservation(floor, directory, reason, raw=None):
     return number
 
 
-def reserve_resilient(floor, directory, initialize=False):
+def reserve_resilient(floor, directory):
     with state_lock(directory):
         floor = state_floor(directory, floor)
         raw = os.environ.get(OVERRIDE)
         if raw is not None:
             return manual_reservation(floor, directory, f"Explicit {OVERRIDE} override", raw)
         try:
-            return _reserve_shared(floor, directory, initialize)
+            return _reserve_shared(floor, directory)
         except SharedUnavailable as error:
             # Do not catch disk/metadata/packaging errors. Preserve a possibly
             # published reservation as a floor even after an uncertain response.
@@ -369,12 +394,22 @@ def recovered_state(floor):
             "claimed": True, "state": "consumed", "request_id": uuid.uuid4().hex}
 
 
-def remember_floor(directory, floor):
+def counter_seen(receipt):
+    return receipt.get("shared_counter_seen") is True or (
+        receipt.get("backend") == "git-ref-v2" and receipt.get("state") in {"reserved", "claimed"})
+
+
+def remember_floor(directory, floor, shared=False):
     """Retain successful service observations even if the next request fails."""
     highest = state_floor(directory, floor)
     current = _read_json(directory / "current.json")
     if current is None or type(current.get("build")) is not int or current["build"] < highest:
-        save_current(directory, recovered_state(highest))
+        current = recovered_state(highest)
+    elif not shared or counter_seen(current):
+        return
+    if shared:
+        current["shared_counter_seen"] = True
+    save_current(directory, current)
 
 
 def migrate_state(floor, directory):
@@ -475,7 +510,7 @@ def main():
             elif args.initialize_counter:
                 if os.environ.get(OVERRIDE) is not None:
                     raise ReservationError(f"Unset {OVERRIDE} for shared counter initialization; a manual number cannot initialize it.")
-                print(reserve_build(floor, args.receipts, initialize=True))
+                print(reserve_build(floor, args.receipts))
             else:
                 print(reserve_resilient(floor, args.receipts))
     except (ReservationError, OSError) as error:
