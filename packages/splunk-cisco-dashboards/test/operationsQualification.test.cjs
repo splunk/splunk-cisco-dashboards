@@ -41,8 +41,7 @@ test('category and DLP headlines aggregate before the UI result cap',()=>{
  assert.match(api.dnsCategoryMetricSearch('search index=x'),/stats dc\(Category\) as category_count/);
  assert.match(api.dlpFindingMetricSearch('search index=x'),/stats sum\(Events\) as finding_count/);
 });
-const xml=fs.readFileSync(path.join(root,'src/main/resources/splunk/default/data/ui/views/netops_catalyst_operations.xml'),'utf8');
-const d=JSON.parse(xml.match(/<!\[CDATA\[([\s\S]*?)\]\]>/)[1]);
+const d=JSON.parse(fs.readFileSync(path.join(root,'src/main/webapp/pages/catalyst_operations/sourceDefinitions.json'),'utf8')).operations;
 test('Catalyst preserves client type grain, unknown readings, and observed time buckets',()=>{
  const q=d.dataSources.ds_mod_client_distribution_score.options.query;
  assert.match(q,/by clientType scoreType/);assert.doesNotMatch(q,/dedup|eventstats/);

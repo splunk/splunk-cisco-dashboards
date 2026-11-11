@@ -80,8 +80,7 @@
         </collection>
 
         <collection label="Catalyst Operations">
-            <a href="dashboard_manager#/netops_catalyst_health">Catalyst Health (Under Dev)</a>
-            <a href="dashboard_manager#/netops_catalyst_operations">Catalyst Operations (Preview)</a>
+            <a href="netops_catalyst_operations">Catalyst Operations (Preview)</a>
         </collection>
 
         <collection label="Visual Labs">

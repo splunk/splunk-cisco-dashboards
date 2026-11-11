@@ -31,6 +31,7 @@
 !/packages/splunk-cisco-dashboards/test/dashboardTimeInputs.test.cjs
 !/packages/splunk-cisco-dashboards/test/operationsQualification.test.cjs
 !/packages/splunk-cisco-dashboards/test/expandableSearchExample.test.cjs
+!/packages/splunk-cisco-dashboards/test/catalystConsolidation.test.cjs
 /tests/
 
 # Operating-system, editor, and document artifacts.

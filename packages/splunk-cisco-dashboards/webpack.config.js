@@ -196,6 +196,7 @@ const commonConfig = webpackMerge(baseConfig, {
             webappRoot,
             'pages/searchbase_canvas/render.tsx'
         ),
+        catalyst_operations: path.join(webappRoot, 'pages/catalyst_operations/render.tsx'),
         expandable_search_example: path.join(webappRoot, 'pages/expandable_search_example/render.tsx'),
         m365_activity_monitoring: path.join(
             webappRoot,

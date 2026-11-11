@@ -1,0 +1,846 @@
+{
+  "tabs": [
+    {
+      "id": "overview",
+      "label": "Overview",
+      "core": [
+        "operations_viz_ov_wireless_health",
+        "operations_viz_ov_wireless_clients",
+        "operations_viz_ov_wireless_healthy",
+        "operations_viz_ov_wired_health",
+        "operations_viz_ov_wired_clients",
+        "operations_viz_ov_wired_healthy",
+        "operations_viz_ov_wireless_trend",
+        "operations_viz_ov_wired_trend"
+      ],
+      "groups": [
+        {
+          "id": "overview_ssid",
+          "title": "SSID and weekly client trends",
+          "panels": [
+            "operations_viz_ov_ssid_bar",
+            "operations_viz_ov_week_line",
+            "health_viz_ov_ssid_24h",
+            "health_viz_ov_ssid_7d"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "executive",
+      "label": "Executive Summary",
+      "core": [
+        "operations_viz_ex_ap_health",
+        "operations_viz_ex_switch_health",
+        "operations_viz_ex_router_health",
+        "operations_viz_ex_firewall_health",
+        "operations_viz_ex_device_health_distribution",
+        "health_viz_ex_p1_kpi",
+        "health_viz_ex_p2_kpi",
+        "operations_viz_client_health_score"
+      ],
+      "groups": [
+        {
+          "id": "executive_sites",
+          "title": "Site health and rankings",
+          "panels": [
+            "health_viz_ex_cl_site_high",
+            "health_viz_ex_cl_site_low",
+            "health_viz_ex_net_site_high",
+            "health_viz_ex_net_site_low"
+          ]
+        },
+        {
+          "id": "executive_inventory",
+          "title": "Device inventory and detail",
+          "panels": [
+            "operations_viz_ex_device_inventory",
+            "operations_viz_ex_device_total_radial",
+            "health_viz_ex_ap_pct",
+            "health_viz_ex_ap_total",
+            "health_viz_ex_inv_bar",
+            "health_viz_ex_inv_table",
+            "health_viz_ex_net_health_pct"
+          ]
+        },
+        {
+          "id": "executive_issues",
+          "title": "Issue priorities and latest status",
+          "panels": [
+            "health_viz_ex_issue_pie",
+            "health_viz_ex_p3_kpi",
+            "health_viz_ex_p4_kpi",
+            "health_viz_kpi_issue_open",
+            "health_viz_kpi_issue_resolved",
+            "health_viz_kpi_issue_total"
+          ]
+        },
+        {
+          "id": "executive_trends",
+          "title": "Health and issue trends",
+          "panels": [
+            "health_viz_ex_client_trend",
+            "health_viz_ex_net_trend"
+          ]
+        },
+        {
+          "id": "executive_weekly",
+          "title": "Week-over-week comparisons",
+          "panels": [
+            "health_viz_ex_wow_table"
+          ]
+        },
+        {
+          "id": "executive_issue_history",
+          "title": "Issue history",
+          "panels": [
+            "health_viz_ex_issue_trend"
+          ]
+        },
+        {
+          "id": "executive_issue_investigation",
+          "title": "Issue investigations",
+          "panels": [
+            "operations_viz_ex_issues_table",
+            "health_viz_ex_issue_details_table",
+            "health_viz_ex_issue_table"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "client",
+      "label": "Client Summary",
+      "core": [
+        "operations_viz_client_health_score",
+        "operations_viz_client_total",
+        "operations_viz_client_distribution",
+        "operations_viz_client_health_over_time"
+      ],
+      "groups": [
+        {
+          "id": "client_distribution",
+          "title": "Client distribution and location",
+          "panels": [
+            "operations_viz_client_location_distribution",
+            "operations_viz_client_os_distribution",
+            "health_viz_cs_by_device",
+            "health_viz_cs_health_by_loc",
+            "health_viz_cs_health_dist",
+            "health_viz_cs_wired_wireless"
+          ]
+        },
+        {
+          "id": "client_radio",
+          "title": "Wireless bands and protocols",
+          "panels": [
+            "health_viz_cs_by_band",
+            "health_viz_cs_by_proto"
+          ]
+        },
+        {
+          "id": "client_traffic",
+          "title": "Reported traffic and top clients",
+          "panels": [
+            "operations_viz_client_details",
+            "health_viz_cs_traffic_band",
+            "health_viz_cs_traffic_proto",
+            "health_viz_cs_traffic_ssid"
+          ]
+        },
+        {
+          "id": "client_sessions",
+          "title": "Session duration",
+          "panels": [
+            "health_viz_cs_session_band",
+            "health_viz_cs_session_proto",
+            "health_viz_cs_session_ssid"
+          ]
+        },
+        {
+          "id": "client_onboarding",
+          "title": "Onboarding and activity",
+          "panels": [
+            "operations_viz_client_activity_onboarding",
+            "health_viz_cs_onboard"
+          ]
+        }
+      ]
+    }
+  ],
+  "panels": {
+    "operations_viz_ov_wireless_health": {
+      "source": "operations",
+      "sourceId": "ds_kpi_wireless_health",
+      "title": "Wireless Health",
+      "description": "Wireless client health with threshold-colored sparkline.",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('Wireless Health') | lastPoint()",
+      "unit": "%"
+    },
+    "operations_viz_ov_wireless_clients": {
+      "source": "operations",
+      "sourceId": "ds_kpi_wireless_total",
+      "title": "Wireless Clients",
+      "description": "Total wireless clients currently connected.",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('Wireless Clients') | lastPoint()",
+      "unit": ""
+    },
+    "operations_viz_ov_wireless_healthy": {
+      "source": "operations",
+      "sourceId": "ds_wireless_trend_24h",
+      "title": "Healthy Wireless Clients",
+      "description": "Latest observed healthy client count in the selected window. Gaps remain unreported.",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('Healthy') | lastPoint()",
+      "unit": ""
+    },
+    "operations_viz_ov_wired_health": {
+      "source": "operations",
+      "sourceId": "ds_kpi_wired_health",
+      "title": "Wired Health",
+      "description": "Wired client health with threshold-colored sparkline.",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('Wired Health') | lastPoint()",
+      "unit": "%"
+    },
+    "operations_viz_ov_wired_clients": {
+      "source": "operations",
+      "sourceId": "ds_kpi_wired_total",
+      "title": "Wired Clients",
+      "description": "Total wired clients currently connected.",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('Wired Clients') | lastPoint()",
+      "unit": ""
+    },
+    "operations_viz_ov_wired_healthy": {
+      "source": "operations",
+      "sourceId": "ds_wired_trend_24h",
+      "title": "Healthy Wired Clients",
+      "description": "Latest observed healthy client count in the selected window. Gaps remain unreported.",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('Healthy') | lastPoint()",
+      "unit": ""
+    },
+    "operations_viz_ov_wireless_trend": {
+      "source": "operations",
+      "sourceId": "ds_mod_wireless_client_trend_health",
+      "title": "Wireless Client Trend",
+      "description": "Stacked wireless client count with health score and 80/95 threshold overlays.",
+      "type": "splunk.area",
+      "value": "",
+      "unit": ""
+    },
+    "operations_viz_ov_wired_trend": {
+      "source": "operations",
+      "sourceId": "ds_mod_wired_client_trend_health",
+      "title": "Wired Client Trend",
+      "description": "Stacked wired client count with health score and 80/95 threshold overlays.",
+      "type": "splunk.area",
+      "value": "",
+      "unit": ""
+    },
+    "operations_viz_ex_ap_health": {
+      "source": "operations",
+      "sourceId": "ds_mod_device_health_ap",
+      "title": "Access Points",
+      "description": "Reachable and managed share of classified observations. Unknown reachability or manageability is excluded; no classified observations remains blank.",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('health_pct') | lastPoint()",
+      "unit": "%"
+    },
+    "operations_viz_ex_switch_health": {
+      "source": "operations",
+      "sourceId": "ds_mod_device_health_switches",
+      "title": "Switches",
+      "description": "Reachable and managed share of classified observations. Unknown reachability or manageability is excluded; no classified observations remains blank.",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('health_pct') | lastPoint()",
+      "unit": "%"
+    },
+    "operations_viz_ex_router_health": {
+      "source": "operations",
+      "sourceId": "ds_mod_device_health_routers",
+      "title": "Routers",
+      "description": "Reachable and managed share of classified observations. Unknown reachability or manageability is excluded; no classified observations remains blank.",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('health_pct') | lastPoint()",
+      "unit": "%"
+    },
+    "operations_viz_ex_firewall_health": {
+      "source": "operations",
+      "sourceId": "ds_mod_device_health_firewalls",
+      "title": "Firewalls",
+      "description": "Reachable and managed share of classified observations. Unknown reachability or manageability is excluded; no classified observations remains blank.",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('health_pct') | lastPoint()",
+      "unit": "%"
+    },
+    "operations_viz_ex_device_health_distribution": {
+      "source": "operations",
+      "sourceId": "ds_mod_device_health_distribution",
+      "title": "Device Health Distribution",
+      "description": "Fleet-wide healthy, fair, and poor device distribution.",
+      "type": "splunk.bar",
+      "value": "",
+      "unit": ""
+    },
+    "operations_viz_client_health_score": {
+      "source": "operations",
+      "sourceId": "ds_kpi_cs_health",
+      "title": "Active Client Score",
+      "description": "Latest reported all-site client health score; unavailable readings remain blank.",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('Client Health Score') | lastPoint()",
+      "unit": "%"
+    },
+    "operations_viz_client_total": {
+      "source": "operations",
+      "sourceId": "ds_kpi_cs_total",
+      "title": "Total Active Clients",
+      "description": "Latest reported all-site connected client count, not distinct clients across the entire time window.",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('Total Connected Clients') | lastPoint()",
+      "unit": ""
+    },
+    "operations_viz_client_distribution": {
+      "source": "operations",
+      "sourceId": "ds_mod_client_distribution_score",
+      "title": "Client Distribution",
+      "description": "Percentage of clients reporting GOOD health.",
+      "type": "splunk.singlevalueradial",
+      "value": "> primary | seriesByName('healthy_pct') | lastPoint()",
+      "unit": "%"
+    },
+    "operations_viz_client_health_over_time": {
+      "source": "operations",
+      "sourceId": "ds_cs_count_over_time",
+      "title": "Client Health Over Time",
+      "description": "Stacked client health distribution across wired and wireless clients.",
+      "type": "splunk.area",
+      "value": "",
+      "unit": ""
+    },
+    "operations_viz_client_activity_onboarding": {
+      "source": "operations",
+      "sourceId": "ds_mod_client_activity_7d",
+      "title": "Client Activity and Onboarding",
+      "description": "Daily active clients with average onboarding duration as an overlay.",
+      "type": "splunk.bar",
+      "value": "",
+      "unit": ""
+    },
+    "operations_viz_client_details": {
+      "source": "operations",
+      "sourceId": "ds_mod_client_details",
+      "title": "Client details and reported traffic",
+      "description": "Latest reported traffic counter and client attributes; site and client-type filters apply. Select an issue in an issue table for issue details.",
+      "type": "splunk.table",
+      "value": "",
+      "unit": ""
+    },
+    "operations_viz_client_location_distribution": {
+      "source": "operations",
+      "sourceId": "ds_mod_client_location_dist",
+      "title": "Client Distribution by Location",
+      "description": "Top sites by connected client count.",
+      "type": "splunk.bar",
+      "value": "",
+      "unit": ""
+    },
+    "operations_viz_client_os_distribution": {
+      "source": "operations",
+      "sourceId": "ds_mod_client_os_dist",
+      "title": "Client Distribution by OS",
+      "description": "Operating system breakdown for filtered clients.",
+      "type": "splunk.bar",
+      "value": "",
+      "unit": ""
+    },
+    "operations_viz_ex_device_inventory": {
+      "source": "operations",
+      "sourceId": "ds_mod_device_inventory_bar",
+      "title": "Device Inventory",
+      "description": "Reachable versus attention-needed devices by network role.",
+      "type": "splunk.bar",
+      "value": "",
+      "unit": ""
+    },
+    "operations_viz_ex_device_total_radial": {
+      "source": "operations",
+      "sourceId": "ds_mod_device_summary_total",
+      "title": "Device Summary - Total",
+      "description": "Total discovered network devices, with radial color based on overall device health.",
+      "type": "splunk.singlevalueradial",
+      "value": "> primary | seriesByName('total') | lastPoint()",
+      "unit": ""
+    },
+    "operations_viz_ex_issues_table": {
+      "source": "operations",
+      "sourceId": "ds_mod_exec_issues_table",
+      "title": "Issues",
+      "description": "Distinct observed issue identities; status summaries use the latest state reported in the selected window. Trend panels count issue identities observed in each bucket.",
+      "type": "splunk.table",
+      "value": "",
+      "unit": ""
+    },
+    "operations_viz_ov_ssid_bar": {
+      "source": "operations",
+      "sourceId": "ds_cs_by_ssid",
+      "title": "Client Count per SSID",
+      "description": "Wireless client distribution by SSID for the selected time range.",
+      "type": "splunk.bar",
+      "value": "",
+      "unit": ""
+    },
+    "operations_viz_ov_week_line": {
+      "source": "operations",
+      "sourceId": "ds_mod_past_week_client_trends",
+      "title": "Past Week - Client Trends",
+      "description": "Wireless and wired client counts over the last 7 days.",
+      "type": "splunk.line",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_cs_by_band": {
+      "source": "health",
+      "sourceId": "ds_cs_by_band",
+      "title": "Clients by Band Type",
+      "description": "Client distribution across 2.4 GHz, 5 GHz, and 6 GHz bands",
+      "type": "splunk.pie",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_cs_by_device": {
+      "source": "health",
+      "sourceId": "ds_cs_by_device_type",
+      "title": "Clients by Device Type",
+      "description": "Top client device types by unique MAC count",
+      "type": "splunk.pie",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_cs_by_proto": {
+      "source": "health",
+      "sourceId": "ds_cs_by_protocol",
+      "title": "Clients by Wireless Protocol",
+      "description": "Client distribution by 802.11 protocol (ax, ac, n, etc.)",
+      "type": "splunk.bar",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_cs_health_by_loc": {
+      "source": "health",
+      "sourceId": "ds_cs_health_by_loc_table",
+      "title": "Client Health by Location",
+      "description": "Per-site client health breakdown - identify problem locations",
+      "type": "splunk.table",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_cs_health_dist": {
+      "source": "health",
+      "sourceId": "ds_cs_health_dist",
+      "title": "Health Distribution",
+      "description": "Client health distribution - Healthy, Fair, Poor, Idle",
+      "type": "splunk.pie",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_cs_onboard": {
+      "source": "health",
+      "sourceId": "ds_cs_onboarding_table",
+      "title": "Client Onboarding Time (Avg ms)",
+      "description": "Average client association + DHCP + AAA onboarding time",
+      "type": "splunk.table",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_cs_session_band": {
+      "source": "health",
+      "sourceId": "ds_cs_session_by_band",
+      "title": "Session Hours by Band",
+      "description": "Latest reported session duration per observed client, grouped by radio attribute. Repeated polls are not added together; this is not a completed-session ledger.",
+      "type": "splunk.pie",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_cs_session_proto": {
+      "source": "health",
+      "sourceId": "ds_cs_session_by_protocol",
+      "title": "Session Hours by Protocol",
+      "description": "Latest reported session duration per observed client, grouped by radio attribute. Repeated polls are not added together; this is not a completed-session ledger.",
+      "type": "splunk.bar",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_cs_session_ssid": {
+      "source": "health",
+      "sourceId": "ds_cs_session_by_ssid",
+      "title": "Top SSIDs by Session Hours",
+      "description": "Latest reported session duration per observed client, grouped by radio attribute. Repeated polls are not added together; this is not a completed-session ledger.",
+      "type": "splunk.bar",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_cs_traffic_band": {
+      "source": "health",
+      "sourceId": "ds_cs_traffic_by_band",
+      "title": "Reported traffic by band (MiB)",
+      "description": "Latest reported traffic counter per client (per 15-minute bucket for trends), not network throughput. Repeated polls are not summed.",
+      "type": "splunk.pie",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_cs_traffic_proto": {
+      "source": "health",
+      "sourceId": "ds_cs_traffic_by_protocol",
+      "title": "Reported traffic snapshots by protocol (GiB)",
+      "description": "Latest reported traffic counter per client (per 15-minute bucket for trends), not network throughput. Repeated polls are not summed.",
+      "type": "splunk.area",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_cs_traffic_ssid": {
+      "source": "health",
+      "sourceId": "ds_cs_traffic_by_ssid",
+      "title": "Reported traffic snapshots by SSID (GiB)",
+      "description": "Latest reported traffic counter per client (per 15-minute bucket for trends), not network throughput. Repeated polls are not summed.",
+      "type": "splunk.area",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_cs_wired_wireless": {
+      "source": "health",
+      "sourceId": "ds_cs_wireless_vs_wired",
+      "title": "Wireless vs Wired",
+      "description": "Wired vs wireless client ratio",
+      "type": "splunk.pie",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_ex_ap_pct": {
+      "source": "health",
+      "sourceId": "ds_kpi_ex_ap_pct",
+      "title": "AP Reachability",
+      "description": "Percentage of APs reachable by Catalyst Center",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('AP Reachability') | lastPoint()",
+      "unit": "%"
+    },
+    "health_viz_ex_ap_total": {
+      "source": "health",
+      "sourceId": "ds_kpi_ex_ap_total",
+      "title": "Access Points",
+      "description": "Total managed access points across all sites",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('Access Points') | lastPoint()",
+      "unit": ""
+    },
+    "health_viz_ex_cl_site_high": {
+      "source": "health",
+      "sourceId": "ds_exec_client_site_top",
+      "title": "Sites with Highest Client Health",
+      "description": "Ranked by the lowest reported wired or wireless health at each site. Missing client-type readings stay blank; sites without usable scores are excluded.",
+      "type": "splunk.table",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_ex_cl_site_low": {
+      "source": "health",
+      "sourceId": "ds_exec_client_site_bottom",
+      "title": "Sites with Lowest Client Health",
+      "description": "Ranked by the lowest reported wired or wireless health at each site. Missing client-type readings stay blank; sites without usable scores are excluded.",
+      "type": "splunk.table",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_ex_client_trend": {
+      "source": "health",
+      "sourceId": "ds_exec_client_health_trend",
+      "title": "Client Health Trend",
+      "description": "Client health score trending over the selected period",
+      "type": "splunk.area",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_ex_inv_bar": {
+      "source": "health",
+      "sourceId": "ds_exec_device_inv_bar",
+      "title": "Network Device Counts",
+      "description": "Network device count by type - AP, Switch, Router, WLC",
+      "type": "splunk.bar",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_ex_inv_table": {
+      "source": "health",
+      "sourceId": "ds_exec_device_inv_table",
+      "title": "Device Inventory - Detail",
+      "description": "Latest observed device identity, health, platform and software details in the selected window.",
+      "type": "splunk.table",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_ex_issue_details_table": {
+      "source": "health",
+      "sourceId": "ds_exec_issue_details",
+      "title": "Active Issue Details - Why is it unhealthy?",
+      "description": "Distinct observed issue identities; status summaries use the latest state reported in the selected window. Trend panels count issue identities observed in each bucket.",
+      "type": "splunk.table",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_ex_issue_pie": {
+      "source": "health",
+      "sourceId": "ds_exec_issue_dist",
+      "title": "Issues by Priority",
+      "description": "Distinct observed issue identities; status summaries use the latest state reported in the selected window. Trend panels count issue identities observed in each bucket.",
+      "type": "splunk.pie",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_ex_issue_table": {
+      "source": "health",
+      "sourceId": "ds_exec_top_issues_table",
+      "title": "Top Open Issues",
+      "description": "Distinct observed issue identities; status summaries use the latest state reported in the selected window. Trend panels count issue identities observed in each bucket.",
+      "type": "splunk.table",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_ex_issue_trend": {
+      "source": "health",
+      "sourceId": "ds_exec_issue_trend",
+      "title": "Total Issue Trend",
+      "description": "Distinct observed issue identities; status summaries use the latest state reported in the selected window. Trend panels count issue identities observed in each bucket.",
+      "type": "splunk.area",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_ex_net_health_pct": {
+      "source": "health",
+      "sourceId": "ds_kpi_ex_net_health",
+      "title": "Network Health",
+      "description": "Percentage of network devices in Good health",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('Network Health') | lastPoint()",
+      "unit": "%"
+    },
+    "health_viz_ex_net_site_high": {
+      "source": "health",
+      "sourceId": "ds_exec_net_site_top",
+      "title": "Sites with Highest % of Devices in Good Health",
+      "description": "Sites with the highest percentage of healthy devices",
+      "type": "splunk.table",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_ex_net_site_low": {
+      "source": "health",
+      "sourceId": "ds_exec_net_site_bottom",
+      "title": "Sites with Lowest % of Devices in Good Health",
+      "description": "Sites with the lowest percentage of healthy devices",
+      "type": "splunk.table",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_ex_net_trend": {
+      "source": "health",
+      "sourceId": "ds_exec_network_health_trend",
+      "title": "Network Health Trend",
+      "description": "Network health score trending over the selected period",
+      "type": "splunk.area",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_ex_p1_kpi": {
+      "source": "health",
+      "sourceId": "ds_exec_issue_priority_kpi",
+      "title": "P1",
+      "description": "Distinct observed issue identities; status summaries use the latest state reported in the selected window. Trend panels count issue identities observed in each bucket.",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('p1') | lastPoint()",
+      "unit": ""
+    },
+    "health_viz_ex_p2_kpi": {
+      "source": "health",
+      "sourceId": "ds_exec_issue_priority_kpi",
+      "title": "P2",
+      "description": "Distinct observed issue identities; status summaries use the latest state reported in the selected window. Trend panels count issue identities observed in each bucket.",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('p2') | lastPoint()",
+      "unit": ""
+    },
+    "health_viz_ex_p3_kpi": {
+      "source": "health",
+      "sourceId": "ds_exec_issue_priority_kpi",
+      "title": "P3",
+      "description": "Distinct observed issue identities; status summaries use the latest state reported in the selected window. Trend panels count issue identities observed in each bucket.",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('p3') | lastPoint()",
+      "unit": ""
+    },
+    "health_viz_ex_p4_kpi": {
+      "source": "health",
+      "sourceId": "ds_exec_issue_priority_kpi",
+      "title": "P4",
+      "description": "Distinct observed issue identities; status summaries use the latest state reported in the selected window. Trend panels count issue identities observed in each bucket.",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('p4') | lastPoint()",
+      "unit": ""
+    },
+    "health_viz_ex_wow_table": {
+      "source": "health",
+      "sourceId": "ds_exec_wow_summary",
+      "title": "KPI Deltas - This Week vs Last Week",
+      "description": "Fixed current seven days versus prior seven days, using latest observed states within each period. Missing source coverage stays blank. Change % is relative change, not percentage points.",
+      "type": "splunk.table",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_kpi_issue_open": {
+      "source": "health",
+      "sourceId": "ds_kpi_issue_open",
+      "title": "Open Issues",
+      "description": "Distinct observed issue identities; status summaries use the latest state reported in the selected window. Trend panels count issue identities observed in each bucket.",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('Open') | lastPoint()",
+      "unit": ""
+    },
+    "health_viz_kpi_issue_resolved": {
+      "source": "health",
+      "sourceId": "ds_kpi_issue_resolved",
+      "title": "Resolved Issues",
+      "description": "Distinct observed issue identities; status summaries use the latest state reported in the selected window. Trend panels count issue identities observed in each bucket.",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('Resolved') | lastPoint()",
+      "unit": ""
+    },
+    "health_viz_kpi_issue_total": {
+      "source": "health",
+      "sourceId": "ds_kpi_issue_total",
+      "title": "Total Issues",
+      "description": "Distinct observed issue identities; status summaries use the latest state reported in the selected window. Trend panels count issue identities observed in each bucket.",
+      "type": "splunk.singlevalue",
+      "value": "> primary | seriesByName('Total') | lastPoint()",
+      "unit": ""
+    },
+    "health_viz_ov_ssid_24h": {
+      "source": "health",
+      "sourceId": "ds_ssid_trend_24h",
+      "title": "Client Count per SSID",
+      "description": "Per-SSID client count over the last 24 hours",
+      "type": "splunk.line",
+      "value": "",
+      "unit": ""
+    },
+    "health_viz_ov_ssid_7d": {
+      "source": "health",
+      "sourceId": "ds_ssid_trend_7d",
+      "title": "Client Count per SSID - Past Week",
+      "description": "Per-SSID client count over the last 7 days",
+      "type": "splunk.line",
+      "value": "",
+      "unit": ""
+    },
+    "operations_viz_ex_issue_detail_modal": {
+      "source": "operations",
+      "sourceId": "ds_mod_selected_issue_detail",
+      "title": "Issue Detail",
+      "description": "Distinct observed issue identities; status summaries use the latest state reported in the selected window. Trend panels count issue identities observed in each bucket.",
+      "type": "splunk.table",
+      "value": "",
+      "unit": ""
+    }
+  },
+  "coverage": {
+    "operations_viz_client_activity_onboarding": "operations_viz_client_activity_onboarding",
+    "operations_viz_client_details": "operations_viz_client_details",
+    "operations_viz_client_distribution": "operations_viz_client_distribution",
+    "operations_viz_client_health_over_time": "operations_viz_client_health_over_time",
+    "operations_viz_client_health_score": "operations_viz_client_health_score",
+    "operations_viz_client_location_distribution": "operations_viz_client_location_distribution",
+    "operations_viz_client_os_distribution": "operations_viz_client_os_distribution",
+    "operations_viz_client_total": "operations_viz_client_total",
+    "operations_viz_ex_ap_health": "operations_viz_ex_ap_health",
+    "operations_viz_ex_device_health_distribution": "operations_viz_ex_device_health_distribution",
+    "operations_viz_ex_device_inventory": "operations_viz_ex_device_inventory",
+    "operations_viz_ex_device_total_radial": "operations_viz_ex_device_total_radial",
+    "operations_viz_ex_firewall_health": "operations_viz_ex_firewall_health",
+    "operations_viz_ex_issue_detail_modal": "operations_viz_ex_issue_detail_modal",
+    "operations_viz_ex_issues_table": "operations_viz_ex_issues_table",
+    "operations_viz_ex_router_health": "operations_viz_ex_router_health",
+    "operations_viz_ex_switch_health": "operations_viz_ex_switch_health",
+    "operations_viz_ov_ssid_bar": "operations_viz_ov_ssid_bar",
+    "operations_viz_ov_week_line": "operations_viz_ov_week_line",
+    "operations_viz_ov_wired_clients": "operations_viz_ov_wired_clients",
+    "operations_viz_ov_wired_health": "operations_viz_ov_wired_health",
+    "operations_viz_ov_wired_healthy": "operations_viz_ov_wired_healthy",
+    "operations_viz_ov_wired_trend": "operations_viz_ov_wired_trend",
+    "operations_viz_ov_wireless_clients": "operations_viz_ov_wireless_clients",
+    "operations_viz_ov_wireless_health": "operations_viz_ov_wireless_health",
+    "operations_viz_ov_wireless_healthy": "operations_viz_ov_wireless_healthy",
+    "operations_viz_ov_wireless_trend": "operations_viz_ov_wireless_trend",
+    "health_viz_cs_by_band": "health_viz_cs_by_band",
+    "health_viz_cs_by_device": "health_viz_cs_by_device",
+    "health_viz_cs_by_location": "operations_viz_client_location_distribution",
+    "health_viz_cs_by_proto": "health_viz_cs_by_proto",
+    "health_viz_cs_by_ssid": "operations_viz_ov_ssid_bar",
+    "health_viz_cs_count_trend": "operations_viz_client_health_over_time",
+    "health_viz_cs_health_by_loc": "health_viz_cs_health_by_loc",
+    "health_viz_cs_health_dist": "health_viz_cs_health_dist",
+    "health_viz_cs_health_kpi": "operations_viz_client_health_score",
+    "health_viz_cs_onboard": "health_viz_cs_onboard",
+    "health_viz_cs_os": "operations_viz_client_os_distribution",
+    "health_viz_cs_session_band": "health_viz_cs_session_band",
+    "health_viz_cs_session_proto": "health_viz_cs_session_proto",
+    "health_viz_cs_session_ssid": "health_viz_cs_session_ssid",
+    "health_viz_cs_top_clients": "operations_viz_client_details",
+    "health_viz_cs_total_kpi": "operations_viz_client_total",
+    "health_viz_cs_traffic_band": "health_viz_cs_traffic_band",
+    "health_viz_cs_traffic_proto": "health_viz_cs_traffic_proto",
+    "health_viz_cs_traffic_ssid": "health_viz_cs_traffic_ssid",
+    "health_viz_cs_wired_wireless": "health_viz_cs_wired_wireless",
+    "health_viz_ex_ap_pct": "health_viz_ex_ap_pct",
+    "health_viz_ex_ap_total": "health_viz_ex_ap_total",
+    "health_viz_ex_cl_site_high": "health_viz_ex_cl_site_high",
+    "health_viz_ex_cl_site_low": "health_viz_ex_cl_site_low",
+    "health_viz_ex_client_health": "operations_viz_client_health_score",
+    "health_viz_ex_client_trend": "health_viz_ex_client_trend",
+    "health_viz_ex_healthy_devs": "health_viz_ex_net_health_pct",
+    "health_viz_ex_inv_bar": "health_viz_ex_inv_bar",
+    "health_viz_ex_inv_table": "health_viz_ex_inv_table",
+    "health_viz_ex_issue_details_table": "health_viz_ex_issue_details_table",
+    "health_viz_ex_issue_pie": "health_viz_ex_issue_pie",
+    "health_viz_ex_issue_table": "health_viz_ex_issue_table",
+    "health_viz_ex_issue_trend": "health_viz_ex_issue_trend",
+    "health_viz_ex_net_health_pct": "health_viz_ex_net_health_pct",
+    "health_viz_ex_net_site_high": "health_viz_ex_net_site_high",
+    "health_viz_ex_net_site_low": "health_viz_ex_net_site_low",
+    "health_viz_ex_net_trend": "health_viz_ex_net_trend",
+    "health_viz_ex_p1_kpi": "health_viz_ex_p1_kpi",
+    "health_viz_ex_p2_kpi": "health_viz_ex_p2_kpi",
+    "health_viz_ex_p3_kpi": "health_viz_ex_p3_kpi",
+    "health_viz_ex_p4_kpi": "health_viz_ex_p4_kpi",
+    "health_viz_ex_wow_table": "health_viz_ex_wow_table",
+    "health_viz_kpi_issue_open": "health_viz_kpi_issue_open",
+    "health_viz_kpi_issue_resolved": "health_viz_kpi_issue_resolved",
+    "health_viz_kpi_issue_total": "health_viz_kpi_issue_total",
+    "health_viz_ov_bw": "removed:unfinished-bandwidth",
+    "health_viz_ov_bw_public": "removed:unfinished-bandwidth",
+    "health_viz_ov_ssid_24h": "health_viz_ov_ssid_24h",
+    "health_viz_ov_ssid_7d": "health_viz_ov_ssid_7d",
+    "health_viz_ov_wired_24h": "operations_viz_ov_wired_trend",
+    "health_viz_ov_wired_7d": "operations_viz_ov_week_line",
+    "health_viz_ov_wired_health": "operations_viz_ov_wired_health",
+    "health_viz_ov_wired_healthy": "operations_viz_ov_wired_healthy",
+    "health_viz_ov_wired_total": "operations_viz_ov_wired_clients",
+    "health_viz_ov_wireless_24h": "operations_viz_ov_wireless_trend",
+    "health_viz_ov_wireless_7d": "operations_viz_ov_week_line",
+    "health_viz_ov_wireless_health": "operations_viz_ov_wireless_health",
+    "health_viz_ov_wireless_healthy": "operations_viz_ov_wireless_healthy",
+    "health_viz_ov_wireless_total": "operations_viz_ov_wireless_clients"
+  }
+}

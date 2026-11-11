@@ -615,7 +615,7 @@ Secure-networking dashboards default to `-24h@h` through `now`, matching the **L
 | Hybrid Mesh Firewalling | Hybrid Mesh Enforcement; Threat Detection and Enforcement; DLP and Cloud Native Security |
 | Agentic Ops | Operational Intelligence; Secure Networking Assurance; Executive Assurance |
 
-The **More** menu contains IT Health, NetOps Readiness, Security Resilience, Building Intelligence, Cisco Spaces Intelligence, Workplace Single Pane of Glass, Catalyst Health, Asset Inventory, operational views, Dashboard Manager, Search, Setup, and visual lab tools included in the installed profile.
+The **More** menu contains IT Health, NetOps Readiness, Security Resilience, Building Intelligence, Cisco Spaces Intelligence, Workplace Single Pane of Glass, Catalyst Operations (Preview), Asset Inventory, operational views, Dashboard Manager, Search, Setup, and visual lab tools included in the installed profile.
 
 ### Dashboard actions
 
@@ -887,3 +887,14 @@ Ask the identity or integration owner to investigate token-exchange failures, se
 | A field projection changes search behavior | Open the search and disable search optimization for a pipeline affected by optimizer field pruning. |
 | New JavaScript or dashboard definitions do not appear | Refresh Splunk Web. Ask the Splunk administrator whether the deployment process requires a restart after endpoint changes. |
 | A new release has no Update link | Confirm the installed app version, **Check for Updates**, and the release's compatibility with your Splunk platform version. Ask your administrator to check Splunkbase connectivity and the app update-check interval. A release appearing on Splunkbase does not by itself confirm that the instance has discovered it. |
+
+
+### Catalyst Operations (Preview)
+
+Catalyst Operations combines the earlier Catalyst Health and Catalyst Operations views into three tabs: **Overview**, **Executive Summary**, and **Client Summary**. Old Catalyst Health links open this consolidated dashboard.
+
+Headline panels load for the active tab. Expand a detail section to load its charts and tables; closing it or changing tabs requests cancellation of active detail searches. Reopening requests fresh results. Refresh and time-range changes apply to visible panels. Weekly comparisons retain their labeled fixed windows. The optional auto-refresh control refreshes visible panels only.
+
+The Site and Client type controls apply to the filtered client location, OS, traffic/detail, and onboarding panels. Other panels retain their reported all-site scope. Missing observations do not establish a healthy or unhealthy condition. Issue summaries use the latest reported state in the selected window. Traffic and session panels use reported per-client snapshots and are not bandwidth measurements or a completed-session ledger.
+
+Use **Show data**, **Download CSV**, or **Open in Search** to inspect a result. Results are capped at 500 displayed rows; a notice identifies capped results. Select an issue name in an issue table to review its detail. **Close all details** leaves headline panels visible. Layout editing in Dashboard Studio is not supported for this expandable view.

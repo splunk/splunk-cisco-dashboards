@@ -1,3 +1,5 @@
+import './catalyst_operations_legacy_redirect';
+
 /**
  * Keep browser-tab titles consistent across Classic and Studio dashboards.
  * Splunk appends its product version after the dashboard label; remove that
