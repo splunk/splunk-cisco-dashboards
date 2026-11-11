@@ -28,6 +28,7 @@
   },
   "developing": {
     "views": [
+      "studio_expandable_search_example",
       "expandable_search_example",
       "netops_catalyst_health",
       "netops_health_monitoring",

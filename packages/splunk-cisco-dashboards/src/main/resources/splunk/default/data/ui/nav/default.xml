@@ -85,6 +85,7 @@
         </collection>
 
         <collection label="Visual Labs">
+            <a href="studio_expandable_search_example">Studio Expand/Collapse Example (Under Dev)</a>
             <a href="expandable_search_example">Expandable Search Example (Under Dev)</a>
             <a href="secure_networking_pillars">Secure Networking Pillars (Under Dev)</a>
             <a href="searchbase_canvas">Searchbase Canvas (Under Dev)</a>

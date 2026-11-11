@@ -92,3 +92,5 @@ pip-delete-this-directory.txt
 /tmp/
 /site/
 /splunk-user-guide-builder
+
+!packages/splunk-cisco-dashboards/test/studioExpandableSearchExample.test.cjs
