@@ -39,6 +39,8 @@ Browse the current release and recorded historical versions below. The newest re
 
 ### Dashboards and investigations
 
+- Cloud Firewall Verdicts now shows counts and percentages, with slice and value selections filtering a matching cloud firewall event-detail table. Select the same verdict again or clear the filter to show all verdicts. Source Health remains independent.
+
 - Security Operations Overview headline values open pop-up investigations with the selected time range and configured supporting detail. Open in Search actions display one new-window icon.
 - Fixed clipped Connected Devices and Active Users values in Building Intelligence by increasing KPI space and repositioning the daily trends.
 
@@ -643,6 +645,8 @@ If an ID already exists, change the ID or title, or cancel and open the existing
 If the dashboard is saved but app sharing fails, select **Open saved dashboard** to continue with the saved dashboard. If the request cannot be confirmed, check the dashboard library before trying again. Other Dashboard Manager error notifications appear above open dialogs and previews and remain until dismissed.
 
 ### Security Operations Overview (Preview)
+
+**Cloud Firewall Verdicts:** each slice has a count and percentage in the value list. Select a slice or its value to highlight the verdict and filter **Cloud Firewall Event Details**. The value-list controls also support keyboard selection. Select the same verdict again or use **Clear verdict filter** to show all verdicts. The table displays up to 50 matching events, prioritized by action and recency; use **Open in Search** for the complete search result. The verdict applies before event selection limits. The Source Health table below reports ingestion freshness and does not change with verdict selection. Sidebar filters do not narrow this cloud firewall view.
 
 Select a headline value to open its investigation. The dialog offers the headline result and any configured supporting detail. Supporting searches can describe a subset of the headline, so their row counts may differ. The selected time range is retained; sidebar filters do not narrow the all-site headline totals. Identity investigation values retain the applied username or wildcard.
 

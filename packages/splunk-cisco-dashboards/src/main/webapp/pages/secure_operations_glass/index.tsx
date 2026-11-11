@@ -75,6 +75,9 @@ import {
 import { C3_SERIES_PALETTE } from '@/common/theme/c3VisualizationPalette';
 import {
     asNumber,
+    cloudFirewallVerdicts,
+    cloudFirewallDetailSearch,
+    toggleCloudVerdict,
     formatNumber,
     getLabelKey,
     getNumericKeys,
@@ -965,6 +968,61 @@ const SearchTablePanel = ({
     );
 };
 
+const CloudFirewallVerdictExplorer = ({context}: {context: PageContext}): JSX.Element => {
+    const [selected, setSelected] = useState<string | null>(null);
+    const state = useSearchbaseRows({catalogue: context.catalogue,
+        searchId: 'secure_networking_sse_cloud_firewall_verdict_split', earliest: context.earliest,
+        refreshToken: context.refreshToken, count: 201});
+    const verdicts = cloudFirewallVerdicts(state.rows);
+    const select = (action: string): void => setSelected(current => toggleCloudVerdict(current, action));
+    const transform = useMemo(() => (spl: string) => cloudFirewallDetailSearch(spl, selected), [selected]);
+    const label = selected === null ? 'All verdicts' : selected || '(empty action)';
+    return <>
+        <div className="scd-glass-verdict-filter">
+            <p role="status">Cloud firewall event filter: <strong>{label}</strong></p>
+            <Button label="Clear verdict filter" disabled={selected === null} onClick={() => setSelected(null)}/>
+        </div>
+        <div className="scd-glass-grid-two">
+            <Panel title="Cloud Firewall Verdicts" subtitle="Cisco SSE enforcement distribution — select a slice or value to filter event details" linked
+                action={<SearchActions context={context} searchId="secure_networking_sse_cloud_firewall_verdict_split"/>}>
+                {state.loading || state.error || verdicts.length === 0 ? <EmptyState loading={state.loading} error={state.error}/> : state.rows.length > 200 ? <p role="status">Verdict results reached the display limit. Open in Search for the complete distribution; partial percentages are not displayed.</p> : <>
+                    <p>Total cloud firewall events: <strong>{verdicts.reduce((sum, entry) => sum + entry.value, 0).toLocaleString()}</strong></p>
+                    <div className="scd-glass-verdict-chart">
+                        <ResponsiveContainer width="100%" height="100%"><PieChart>
+                            <Pie data={verdicts} dataKey="value" nameKey="name" innerRadius="50%" outerRadius="76%" paddingAngle={2}
+                                isAnimationActive={false} labelLine={false}
+                                label={({percent, value}) => Number(percent) >= 0.06 ? Number(value).toLocaleString() : ''}
+                                onClick={entry => {const action = entry.payload?.action ?? entry.action; if (typeof action === 'string') select(action);}}>
+                                {verdicts.map((entry,index) => <Cell key={entry.action} fill={CHART_COLORS[index % CHART_COLORS.length]}
+                                    fillOpacity={selected === null || selected === entry.action ? 1 : 0.3}
+                                    stroke={selected === entry.action ? 'var(--glass-text)' : undefined} strokeWidth={selected === entry.action ? 3 : 1}
+                                    role="button" tabIndex={0} cursor="pointer" aria-pressed={selected === entry.action}
+                                    aria-label={`Filter ${entry.name}: ${entry.value.toLocaleString()} events, ${entry.percent.toFixed(1)} percent`}
+                                    onKeyDown={event => {if (event.key === 'Enter' || event.key === ' ') {event.preventDefault(); select(entry.action);}}}/>)}
+                            </Pie>
+                            <Tooltip contentStyle={{background: 'var(--glass-panel-subtle)', border: '1px solid var(--glass-border-strong)', color: 'var(--glass-text)'}}
+                                formatter={(value: number) => [Number(value).toLocaleString() + ' events', 'Count']}/>
+                        </PieChart></ResponsiveContainer>
+                    </div>
+                    <div className="scd-glass-verdict-values" aria-label="Cloud firewall verdict values">
+                        {verdicts.map((entry,index) => <button type="button" key={entry.action} aria-pressed={selected === entry.action}
+                            onClick={() => select(entry.action)} title={`Filter event details to ${entry.name}`}>
+                            <span className="scd-glass-verdict-swatch" style={{background: CHART_COLORS[index % CHART_COLORS.length]}} aria-hidden/>
+                            <span>{entry.name}</span><strong>{entry.value.toLocaleString()}</strong><span>{entry.percent.toFixed(1)}%</span>
+                        </button>)}
+                    </div>
+                </>}
+            </Panel>
+            <SearchTablePanel key={JSON.stringify([selected,context.earliest,context.refreshToken])} context={context}
+                searchId="secure_networking_sse_security_event_detail" title="Cloud Firewall Event Details"
+                subtitle={`Verdict: ${label}. Up to 50 matching cloud firewall events, prioritized by action and recency. Open in Search for the complete result. Sidebar filters do not narrow this view.`}
+                maxRows={50} useGlobalFilters={false} transformSearch={transform} className="scd-glass-verdict-details"/>
+        </div>
+        <SearchTablePanel context={context} searchId="secure_networking_source_health_by_pillar"
+            title="Secure Networking Source Health" subtitle="Ingestion freshness across security pillars; independent of verdict selection"/>
+    </>;
+};
+
 const SectionBand = ({
     children,
     icon: Icon,
@@ -1057,21 +1115,7 @@ const OverviewTab = ({ context }: { context: PageContext }): JSX.Element => (
                 chartKind="bar"
             />
         </div>
-        <div className="scd-glass-grid-two">
-            <SearchChartPanel
-                context={context}
-                searchId="secure_networking_sse_cloud_firewall_verdict_split"
-                title="Cloud Firewall Verdicts"
-                subtitle="Cisco SSE enforcement distribution"
-                chartKind="pie"
-            />
-            <SearchTablePanel
-                context={context}
-                searchId="secure_networking_source_health_by_pillar"
-                title="Secure Networking Source Health"
-                subtitle="Ingestion freshness across security pillars"
-            />
-        </div>
+        <CloudFirewallVerdictExplorer context={context}/>
     </div>
 );
 

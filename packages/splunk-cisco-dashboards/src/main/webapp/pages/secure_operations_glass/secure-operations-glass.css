@@ -1962,3 +1962,19 @@
 .scd-glass-metric-detail-table table { border-collapse: collapse; min-width: 100%; font-size: 13px; }
 .scd-glass-metric-detail-table th,
 .scd-glass-metric-detail-table td { border-bottom: 1px solid var(--sui-border-color, #66717c); padding: 8px 12px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+
+
+#scan-root .scd-glass-verdict-chart { height: 260px; min-width: 0; }
+#scan-root .scd-glass-verdict-chart .recharts-sector:focus-visible { outline: 2px solid #00bceb; outline-offset: 3px; }
+#scan-root .scd-glass-verdict-values { display: grid; gap: 5px; }
+#scan-root .scd-glass-verdict-values button {
+    align-items: center; display: grid; grid-template-columns: 12px minmax(0,1fr) auto auto;
+    gap: 10px; padding: 7px 9px; text-align: left; cursor: pointer;
+    background: var(--glass-panel-subtle); color: var(--glass-text);
+    border: 1px solid var(--glass-border); border-radius: 6px;
+}
+#scan-root .scd-glass-verdict-values button[aria-pressed="true"],
+#scan-root .scd-glass-verdict-values button:focus-visible { outline: 2px solid #00bceb; outline-offset: 1px; }
+#scan-root .scd-glass-verdict-swatch { width: 10px; height: 10px; border-radius: 2px; }
+#scan-root .scd-glass-verdict-filter { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+#scan-root .scd-glass-verdict-details .scd-glass-table-wrap { max-height: 430px; }

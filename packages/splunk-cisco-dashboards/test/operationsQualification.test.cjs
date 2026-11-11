@@ -115,3 +115,58 @@ test('Building Intelligence gives descriptive KPIs room without covering daily t
  assert.ok(position('viz_box_kpi').y+position('viz_box_kpi').h<position('viz_box_location').y);
  assert.ok(layout.options.height>=1760);
 });
+
+test('cloud verdict values preserve complete identities, counts and safe percentages',()=>{
+ const values=api.cloudFirewallVerdicts([{action:'Allow',count:'900'},{action:'Block',count:90},{action:'Other long complete verdict name',count:10},{action:'Allow',count:1},{action:'bad',count:-1},{action:'bad',count:'N/A'},{action:'bad',count:0}]);
+ assert.equal(values.length,3);assert.equal(values[0].value,901);assert.equal(values[2].action,'Other long complete verdict name');
+ assert.ok(Math.abs(values.reduce((sum,v)=>sum+v.percent,0)-100)<1e-9);
+ assert.deepEqual(api.cloudFirewallVerdicts([]),[]);
+ assert.equal(api.toggleCloudVerdict(null,'Block'),'Block');assert.equal(api.toggleCloudVerdict('Block','Block'),null);assert.equal(api.toggleCloudVerdict('Block','Allow'),'Allow');
+});
+const cloudBase='search index=fixture (sourcetype="cisco:cloud_security:firewall" OR sourcetype="cisco:cloud_security:dns")\n| eval Action=coalesce(action,verdict,amp_disposition,"Unknown")\n| eval priority=case(match(lower(Action),"block|deny"),0,1=1,2)\n| sort 500 priority - _time\n| table _time sourcetype Action';
+test('cloud verdict filter restricts source and exact action before top500, without wildcard expansion',()=>{
+ const selected=api.cloudFirewallDetailSearch(cloudBase,'Block');
+ assert.ok(selected.indexOf('| search sourcetype="cisco:cloud_security:firewall"')<selected.indexOf('| eval Action='));
+ assert.ok(selected.indexOf('| where Action="Block"')<selected.indexOf('| sort 500'));
+ assert.doesNotMatch(api.cloudFirewallDetailSearch(cloudBase,null),/\| where Action=/);
+ assert.match(api.cloudFirewallDetailSearch(cloudBase,''),/\| where Action=""/);
+ assert.match(api.cloudFirewallDetailSearch(cloudBase,'*'),/\| where Action="\*"/);
+ assert.match(api.cloudFirewallDetailSearch(cloudBase,'a" | eval injected=1 | where "b'),/Action="a\\" \| eval injected=1 \| where \\"b"/);
+ for(const value of ['`dangerous_macro`','$token$','x\ny','x'.repeat(257)])assert.throws(()=>api.cloudFirewallDetailSearch(cloudBase,value));
+ assert.throws(()=>api.cloudFirewallDetailSearch('| makeresults','Block'));
+});
+test('cloud slice and value controls update only matching event detail and clear correctly',()=>{
+ const React=require('react');const page=fs.readFileSync(path.join(root,'src/main/webapp/pages/secure_operations_glass/index.tsx'),'utf8');
+ const component=page.slice(page.indexOf('const CloudFirewallVerdictExplorer ='),page.indexOf('const SectionBand ='));
+ let selected=null;const stub=()=>null;const scope={exports:{}};
+ const names=['React','useState','useMemo','useSearchbaseRows','cloudFirewallVerdicts','cloudFirewallDetailSearch','toggleCloudVerdict','EmptyState','Panel','SearchActions','SearchTablePanel','Button','ResponsiveContainer','PieChart','Pie','Cell','Tooltip','CHART_COLORS','exports'];
+ new Function(...names,ts.transpileModule(component+'\nexport {CloudFirewallVerdictExplorer};',{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.React}}).outputText)(React,()=>[selected,value=>{selected=typeof value==='function'?value(selected):value;}],fn=>fn(),()=>({rows:[{action:'Allow',count:9},{action:'Block',count:1}],loading:false,error:null}),api.cloudFirewallVerdicts,api.cloudFirewallDetailSearch,api.toggleCloudVerdict,stub,'panel','actions','table-panel','button-component','container','pie-chart','pie','cell','tooltip',['blue','red'],scope.exports);
+ const context={catalogue:new Map(),earliest:'-24h@h',refreshToken:0};
+ const elements=node=>Array.isArray(node)?node.flatMap(elements):node&&typeof node==='object'?[node,...elements(node.props?.children)]:[];
+ const render=()=>elements(scope.exports.CloudFirewallVerdictExplorer({context}));
+ let tree=render();tree.find(n=>n.type==='pie').props.onClick({payload:{action:'Block'}});assert.equal(selected,'Block');
+ tree=render();const detail=tree.find(n=>n.type==='table-panel'&&n.props.title==='Cloud Firewall Event Details');
+ assert.match(detail.props.transformSearch(cloudBase),/where Action="Block"/);assert.equal(detail.props.useGlobalFilters,false);assert.equal(detail.props.maxRows,50);
+ assert.equal(tree.find(n=>n.type==='table-panel'&&n.props.title==='Secure Networking Source Health').props.transformSearch,undefined);
+ tree.find(n=>n.type==='cell'&&n.props['aria-pressed']).props.onKeyDown({key:'Enter',preventDefault(){}});assert.equal(selected,null);
+ tree=render();tree.find(n=>n.type==='button'&&n.props.title==='Filter event details to Allow').props.onClick();assert.equal(selected,'Allow');
+ tree=render();tree.find(n=>n.type==='button-component').props.onClick();assert.equal(selected,null);
+ const charts=require('recharts');const {renderToStaticMarkup}=require('react-dom/server');
+ const pie=render().find(n=>n.type==='pie');
+ const cells=elements(pie.props.children).filter(n=>n.type==='cell').map(n=>React.createElement(charts.Cell,{...n.props,key:n.key}));
+ const markup=renderToStaticMarkup(React.createElement(charts.PieChart,{width:480,height:260},React.createElement(charts.Pie,pie.props,cells)));
+ assert.match(markup,/aria-label="Filter Allow: 9 events/);assert.match(markup,/role="button"/);assert.match(markup,/>9<\/tspan>/);assert.match(markup,/>1<\/tspan>/);
+});
+if(process.env.CLOUD_VERDICT_QUERY_EXPORT){
+ const actual=process.env.CLOUD_VERDICT_SOURCE ? fs.readFileSync(process.env.CLOUD_VERDICT_SOURCE,'utf8') : cloudBase;
+ fs.writeFileSync(process.env.CLOUD_VERDICT_QUERY_EXPORT,JSON.stringify(Object.fromEntries([["all",null],["allow","Allow"],["lower","allow"],["block","Block"],["wildcard","*"],["quoted",'a" | eval injected=1 | where "b']].map(([key,value])=>[key,api.cloudFirewallDetailSearch(actual,value)]))));
+}
+
+test('unsupported filter transformations fail closed without dispatching or crashing the page',()=>{
+ let dispatched=0,nextState;const moduleRecord={exports:{}};
+ const react={useState:initial=>[initial,value=>{nextState=value;}],useEffect:effect=>effect(),useMemo:fn=>fn()};
+ new Function('require','module','exports',ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText)(
+  id=>id==='react'?react:{runSearch:()=>{dispatched++;},isAbortError:()=>false},moduleRecord,moduleRecord.exports);
+ moduleRecord.exports.useSearchbaseRows({catalogue:new Map([['detail',{search:'unsupported'}]]),searchId:'detail',earliest:'-4h',refreshToken:0,transformSearch:()=>{throw new Error('unsupported');}});
+ assert.equal(dispatched,0);assert.equal(nextState.loading,false);assert.match(nextState.error,/cannot be applied safely/);assert.deepEqual(nextState.rows,[]);
+});

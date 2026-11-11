@@ -10,6 +10,11 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Cloud Firewall Verdicts now shows event counts and percentages. Select a
+  donut slice or its value to filter matching cloud firewall event details;
+  select it again or clear the filter to restore all verdicts. Source Health
+  remains independent. Verdict filtering occurs before event selection limits.
+
 - Security Operations Overview now opens an investigation dialog from each
   headline value. Review its result and configured supporting investigations
   within the selected time range, with up to 200 displayed rows and access to

@@ -98,9 +98,13 @@ export const useSearchbaseRows = ({
         }
 
         const controller = new AbortController();
-        const spl = transformSearch
-            ? transformSearch(record.search)
-            : record.search;
+        let spl: string;
+        try {
+            spl = transformSearch ? transformSearch(record.search) : record.search;
+        } catch {
+            setState({rows: [], loading: false, error: 'The selected filter cannot be applied safely to this search.'});
+            return undefined;
+        }
 
         setState((current) => ({
             ...current,
@@ -300,3 +304,34 @@ export const summarizeIdentityActivity = (rows: SearchRow[]) => {
         sources: [...sources].join(', '),
         lastSeen: valid.map((r) => String(r['Last Seen'] ?? '')).sort().slice(-1)[0] ?? '' };
 };
+
+
+export type CloudVerdict = {action: string; name: string; value: number; percent: number};
+export function cloudFirewallVerdicts(rows: SearchRow[]): CloudVerdict[] {
+    const counts = new Map<string, number>();
+    for (const row of rows) {
+        const value = asNumber(row.count);
+        if (value === null || !Number.isSafeInteger(value) || value <= 0) continue;
+        const action = String(row.action ?? 'Unknown');
+        counts.set(action, (counts.get(action) ?? 0) + value);
+    }
+    const total = [...counts.values()].reduce((sum, value) => sum + value, 0);
+    return [...counts].sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0])).map(([action,value]) =>
+        ({action, name: action || '(empty action)', value, percent: value / total * 100}));
+}
+export function toggleCloudVerdict(selected: string | null, action: string): string | null {
+    return selected === action ? null : action;
+}
+export function cloudFirewallDetailSearch(spl: string, selected: string | null): string {
+    const marker = /\|\s*eval\s+Action=coalesce\(action,\s*verdict,\s*amp_disposition,\s*"Unknown"\)/;
+    if (!marker.test(spl) || !/\|\s*sort\s+500\s+priority\s+-\s*_time/.test(spl)) {
+        throw new Error('Unsupported cloud firewall detail search');
+    }
+    if (selected !== null && (selected.length > 256 || /[\x00-\x1f\x7f`$]/.test(selected))) {
+        throw new Error('Unsupported verdict');
+    }
+    const literal = selected === null ? '' : selected.replace(/[\\"]/g, '\\$&');
+    const predicate = selected === null ? '' : '\n| where Action="' + literal + '"';
+    // Restrict the source and exact normalized verdict before priority sorting and the row cap.
+    return spl.replace(marker, '| search sourcetype="cisco:cloud_security:firewall"\n| eval Action=coalesce(action,verdict,"Unknown")' + predicate);
+}
