@@ -335,3 +335,17 @@ export function cloudFirewallDetailSearch(spl: string, selected: string | null):
     // Restrict the source and exact normalized verdict before priority sorting and the row cap.
     return spl.replace(marker, '| search sourcetype="cisco:cloud_security:firewall"\n| eval Action=coalesce(action,verdict,"Unknown")' + predicate);
 }
+
+
+export function chartPieValues(rows: SearchRow[], labelKey: string, valueKey: string): Array<{name: string; value: number; percent: number}> {
+    const totals = new Map<string, number>();
+    for (const row of rows) {
+        const value = asNumber(row[valueKey]);
+        if (value === null || value <= 0) continue;
+        const name = String(row[labelKey] ?? 'Unknown');
+        totals.set(name, (totals.get(name) ?? 0) + value);
+    }
+    const total = [...totals.values()].reduce((sum, value) => sum + value, 0);
+    if (!Number.isFinite(total) || total <= 0) return [];
+    return [...totals].map(([name,value]) => ({name,value,percent:value / total * 100}));
+}

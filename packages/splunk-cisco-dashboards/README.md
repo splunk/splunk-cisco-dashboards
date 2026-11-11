@@ -10,6 +10,11 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Security Operations charts now use brighter axis and tooltip text on dark
+  backgrounds. Enforcement by Policy Set shows full category names, values and
+  percentages below its donut without requiring hover. SD-WAN application
+  experience uses a trend chart and site health uses a table to match their data.
+
 - Cloud Firewall Verdicts now shows event counts and percentages. Select a
   donut slice or its value to filter matching cloud firewall event details;
   select it again or clear the filter to restore all verdicts. Source Health

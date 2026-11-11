@@ -170,3 +170,36 @@ test('unsupported filter transformations fail closed without dispatching or cras
  moduleRecord.exports.useSearchbaseRows({catalogue:new Map([['detail',{search:'unsupported'}]]),searchId:'detail',earliest:'-4h',refreshToken:0,transformSearch:()=>{throw new Error('unsupported');}});
  assert.equal(dispatched,0);assert.equal(nextState.loading,false);assert.match(nextState.error,/cannot be applied safely/);assert.deepEqual(nextState.rows,[]);
 });
+
+test('pie values retain every category and full name without converting missing values to zero',()=>{
+ const values=api.chartPieValues([{name:'Full policy name exceeding twenty-two characters',count:900},{name:'Other',count:100},{name:'Other',count:10},{name:'missing'},{name:'negative',count:-3},{name:'zero',count:0}],'name','count');
+ assert.equal(values.length,2);assert.equal(values[0].name,'Full policy name exceeding twenty-two characters');assert.equal(values[1].value,110);
+ assert.ok(Math.abs(values.reduce((sum,row)=>sum+row.percent,0)-100)<1e-9);
+ assert.deepEqual(api.chartPieValues([{name:'Unknown'}],'name','count'),[]);
+ assert.deepEqual(api.chartPieValues([{name:'a',count:1e308},{name:'b',count:1e308}],'name','count'),[]);
+});
+test('policy donut renders full names, counts and percentages without hover for more than eight categories',()=>{
+ const React=require('react');const {renderToStaticMarkup}=require('react-dom/server');
+ const page=fs.readFileSync(path.join(root,'src/main/webapp/pages/secure_operations_glass/index.tsx'),'utf8');
+ const component=page.slice(page.indexOf('const SearchChartPanel ='),page.indexOf('const SearchTablePanel ='));
+ const rows=Array.from({length:12},(_,index)=>({'Policy Set':'Policy '+(index+1)+' with its complete descriptive name','Auth Count':1000*(index+1)}));
+ let requested;
+ const scope={exports:{}};const stub=()=>null;
+ new Function('React','useSearchbaseRows','useFilteredRows','getLabelKey','getNumericKeys','chartPieValues','CHART_COLORS','DEFAULT_FILTERS','EmptyState','Panel','SearchActions','ResponsiveContainer','PieChart','Pie','Cell','Tooltip','exports',ts.transpileModule(component+'\nexport {SearchChartPanel};',{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.React}}).outputText)(React,args=>{requested=args;return {rows,loading:false,error:null};},r=>r,api.getLabelKey,api.getNumericKeys,api.chartPieValues,['#649ef5','#4cbf7f'],{},stub,props=>React.createElement('section',{className:props.className},props.children),stub,stub,stub,stub,stub,stub,scope.exports);
+ const markup=renderToStaticMarkup(React.createElement(scope.exports.SearchChartPanel,{context:{earliest:'-7d@d'},searchId:'policy',title:'Enforcement by Policy Set',chartKind:'pie'}));
+ assert.equal(requested.count,201);assert.match(markup,/scd-glass-pie-panel/);assert.equal((markup.match(/<dt>/g)||[]).length,12);
+ assert.ok(markup.includes('Policy 12 with its complete descriptive name'));assert.ok(markup.includes((12000).toLocaleString()));assert.match(markup,/%/);assert.match(markup,/Enforcement by Policy Set values/);
+ assert.match(page,/title="SD-WAN Application Experience"[\s\S]*?chartKind="line"/);
+ assert.match(page,/<SearchTablePanel\s+context=\{context\}\s+searchId="secure_networking_sdwan_site_health_breakdown"/);
+});
+test('dark operational charts retain contrasting series and active text instead of disabled foregrounds',()=>{
+ const paletteModule={exports:{}};
+ const paletteSource=fs.readFileSync(path.join(root,'src/main/webapp/common/theme/c3VisualizationPalette.ts'),'utf8');
+ new Function('exports',ts.transpileModule(paletteSource,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText)(paletteModule.exports);
+ const luminance=hex=>{const rgb=hex.slice(1).match(/../g).map(v=>parseInt(v,16)/255).map(v=>v<=0.04045?v/12.92:((v+0.055)/1.055)**2.4);return rgb[0]*0.2126+rgb[1]*0.7152+rgb[2]*0.0722;};
+ for(const background of ['#131a23','#1a1c20'])for(const color of paletteModule.exports.C3_SERIES_PALETTE){const a=luminance(color),b=luminance(background);assert.ok((Math.max(a,b)+0.05)/(Math.min(a,b)+0.05)>=3,color+' contrasts with '+background);}
+ const css=fs.readFileSync(path.join(root,'src/main/webapp/pages/secure_operations_glass/secure-operations-glass.css'),'utf8');
+ assert.match(css,/recharts-cartesian-axis-tick-value\s*\{\s*fill: var\(--glass-text\); opacity: 1/);
+ assert.match(css,/scd-glass-pie-panel \.scd-glass-panel-body \{ height: auto/);
+ assert.match(css,/scd-glass-pie-values dd \{ color: var\(--glass-text\)/);
+});

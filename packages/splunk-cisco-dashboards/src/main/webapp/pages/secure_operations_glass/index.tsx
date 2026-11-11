@@ -76,6 +76,7 @@ import { C3_SERIES_PALETTE } from '@/common/theme/c3VisualizationPalette';
 import {
     asNumber,
     cloudFirewallVerdicts,
+    chartPieValues,
     cloudFirewallDetailSearch,
     toggleCloudVerdict,
     formatNumber,
@@ -706,7 +707,7 @@ const SearchChartPanel = ({
         searchId,
         earliest: context.earliest,
         refreshToken: context.refreshToken,
-        count: 200,
+        count: chartKind === 'pie' ? 201 : 200,
     });
     const filteredRows = useFilteredRows(
         state.rows,
@@ -715,7 +716,7 @@ const SearchChartPanel = ({
     const labelKey = getLabelKey(filteredRows);
     const numericKeys = getNumericKeys(filteredRows).slice(0, 4);
     const colors = CHART_COLORS;
-    const axisColor = 'var(--glass-muted)';
+    const axisColor = 'var(--glass-text)';
     const gridColor = 'var(--glass-border)';
     const tooltipStyle = {
         background: 'var(--glass-panel-subtle)',
@@ -726,7 +727,7 @@ const SearchChartPanel = ({
     };
 
     const renderChart = (): React.ReactNode => {
-        if (!labelKey || numericKeys.length === 0) {
+        if (state.loading || state.error || !labelKey || numericKeys.length === 0) {
             return (
                 <EmptyState
                     loading={state.loading}
@@ -736,33 +737,29 @@ const SearchChartPanel = ({
         }
 
         if (chartKind === 'pie') {
-            const valueKey = numericKeys[0];
-            const data = filteredRows.slice(0, 8).map((row) => ({
-                name: compactLabel(row[labelKey]),
-                value: asNumber(row[valueKey]) ?? 0,
-            }));
-            return (
-                <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                        <Pie
-                            data={data}
-                            dataKey="value"
-                            nameKey="name"
-                            innerRadius="52%"
-                            outerRadius="78%"
-                            paddingAngle={2}
-                        >
-                            {data.map((entry, index) => (
-                                <Cell
-                                    key={`${entry.name}-${index}`}
-                                    fill={colors[index % colors.length]}
-                                />
-                            ))}
-                        </Pie>
-                        <Tooltip contentStyle={tooltipStyle} />
-                    </PieChart>
-                </ResponsiveContainer>
-            );
+            if (state.rows.length > 200) return <p role="status">Distribution exceeds the display limit. Open in Search for complete values; partial percentages are not displayed.</p>;
+            const data = chartPieValues(filteredRows, labelKey, numericKeys[0]);
+            if (!data.length) return <EmptyState loading={state.loading} error={state.error} message="No positive measured values in this time range."/>;
+            return <>
+                <div className="scd-glass-pie-plot">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie data={data} dataKey="value" nameKey="name" innerRadius="52%" outerRadius="78%"
+                                paddingAngle={2} stroke="var(--glass-panel)" strokeWidth={2}>
+                                {data.map((entry,index) => <Cell key={entry.name} fill={colors[index % colors.length]}/>)}
+                            </Pie>
+                            <Tooltip contentStyle={tooltipStyle}
+                                formatter={(value: number) => Number(value).toLocaleString(undefined,{maximumFractionDigits:2})}/>
+                        </PieChart>
+                    </ResponsiveContainer>
+                </div>
+                <dl className="scd-glass-pie-values" aria-label={title + ' values'}>
+                    {data.map((entry,index) => <div key={entry.name}>
+                        <dt><span className="scd-glass-pie-swatch" style={{background:colors[index % colors.length]}} aria-hidden/>{entry.name || '(empty category)'}</dt>
+                        <dd><strong>{entry.value.toLocaleString(undefined,{maximumFractionDigits:2})}</strong> <span>({entry.percent.toFixed(1)}%)</span></dd>
+                    </div>)}
+                </dl>
+            </>;
         }
 
         if (chartKind === 'bar') {
@@ -881,7 +878,7 @@ const SearchChartPanel = ({
         <Panel
             title={title}
             subtitle={subtitle}
-            className={`scd-glass-chart-panel ${className}`}
+            className={`scd-glass-chart-panel ${chartKind === 'pie' ? 'scd-glass-pie-panel' : ''} ${className}`}
             linked
             action={
                 <SearchActions
@@ -1918,14 +1915,14 @@ const NetworkTab = ({
                 context={context}
                 searchId="secure_networking_sdwan_apps_health_breakdown"
                 title="SD-WAN Application Experience"
-                chartKind="pie"
+                subtitle="Observed healthy and degraded site trends"
+                chartKind="line"
                 useGlobalFilters={false}
             />
-            <SearchChartPanel
+            <SearchTablePanel
                 context={context}
                 searchId="secure_networking_sdwan_site_health_breakdown"
                 title="SD-WAN Site Health"
-                chartKind="pie"
                 useGlobalFilters={false}
             />
             <SearchTablePanel

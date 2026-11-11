@@ -1978,3 +1978,17 @@
 #scan-root .scd-glass-verdict-swatch { width: 10px; height: 10px; border-radius: 2px; }
 #scan-root .scd-glass-verdict-filter { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 #scan-root .scd-glass-verdict-details .scd-glass-table-wrap { max-height: 430px; }
+
+
+/* Keep chart text readable on the dark operational surface. */
+#scan-root .scd-glass-chart .recharts-cartesian-axis-tick-value { fill: var(--glass-text); opacity: 1; }
+#scan-root .scd-glass-chart-panel .scd-glass-panel-header p { color: var(--glass-muted); }
+#scan-root .scd-glass .recharts-default-tooltip .recharts-tooltip-label { color: var(--glass-text); }
+#scan-root .scd-glass-chart-panel.scd-glass-pie-panel .scd-glass-panel-body { height: auto; min-height: 228px; }
+#scan-root .scd-glass-pie-panel .scd-glass-chart { height: auto; min-height: 0; }
+#scan-root .scd-glass-pie-plot { height: 200px; min-width: 0; }
+#scan-root .scd-glass-pie-values { color: var(--glass-text); display: grid; gap: 8px; margin: 0; padding: 6px 5px 10px; }
+#scan-root .scd-glass-pie-values > div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 3px 12px; border-top: 1px solid var(--glass-border); padding-top: 6px; }
+#scan-root .scd-glass-pie-values dt { min-width: 0; overflow-wrap: anywhere; }
+#scan-root .scd-glass-pie-values dd { color: var(--glass-text); margin: 0; font-variant-numeric: tabular-nums; }
+#scan-root .scd-glass-pie-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 7px; }

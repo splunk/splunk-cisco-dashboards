@@ -39,6 +39,8 @@ Browse the current release and recorded historical versions below. The newest re
 
 ### Dashboards and investigations
 
+- Improved dark-background chart text in Security Operations Overview. Enforcement by Policy Set now shows full category names, counts and percentages without hover. SD-WAN application experience uses a trend and site health uses a table.
+
 - Cloud Firewall Verdicts now shows counts and percentages, with slice and value selections filtering a matching cloud firewall event-detail table. Select the same verdict again or clear the filter to show all verdicts. Source Health remains independent.
 
 - Security Operations Overview headline values open pop-up investigations with the selected time range and configured supporting detail. Open in Search actions display one new-window icon.
@@ -645,6 +647,8 @@ If an ID already exists, change the ID or title, or cancel and open the existing
 If the dashboard is saved but app sharing fails, select **Open saved dashboard** to continue with the saved dashboard. If the request cannot be confirmed, check the dashboard library before trying again. Other Dashboard Manager error notifications appear above open dialogs and previews and remain until dismissed.
 
 ### Security Operations Overview (Preview)
+
+**Enforcement by Policy Set:** the donut is accompanied by a visible list of complete policy-set names, authentication counts and percentages. Values remain readable without hover or selection. **SD-WAN Application Experience** shows healthy/degraded site trends; **SD-WAN Site Health** lists each site's reported device and tunnel states.
 
 **Cloud Firewall Verdicts:** each slice has a count and percentage in the value list. Select a slice or its value to highlight the verdict and filter **Cloud Firewall Event Details**. The value-list controls also support keyboard selection. Select the same verdict again or use **Clear verdict filter** to show all verdicts. The table displays up to 50 matching events, prioritized by action and recency; use **Open in Search** for the complete search result. The verdict applies before event selection limits. The Source Health table below reports ingestion freshness and does not change with verdict selection. Sidebar filters do not narrow this cloud firewall view.
 
