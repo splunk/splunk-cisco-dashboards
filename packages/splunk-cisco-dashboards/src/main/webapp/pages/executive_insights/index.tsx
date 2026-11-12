@@ -5200,6 +5200,14 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
             />
           </div>
           <TimeRangeControl range={timeRange} onChange={setTimeRange} />
+          <Button
+            appearance="subtle"
+            hideLabel
+            icon={<Settings2 aria-hidden="true" />}
+            label="Configure Signal Rail"
+            title="Configure Signal Rail"
+            onClick={openSignalTickerEditor}
+          />
           <Select
             appearance="subtle"
             className="scd-header-refresh-rate"

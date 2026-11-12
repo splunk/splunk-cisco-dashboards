@@ -10,6 +10,9 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Signal Rail settings are always available from the sliders icon before
+  Refresh rate in the workspace toolbar, including when the rail is hidden.
+
 - Security Operations time charts now show compact, readable time or date labels;
   hover displays the complete timestamp and timezone.
 - Catalyst Operations pairs total and healthy wired/wireless client counts from

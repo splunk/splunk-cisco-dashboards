@@ -28,7 +28,7 @@ Use the app to:
 | Create or duplicate an executive workspace | **Home > workspace switcher > Edit workspaces** |
 | Add a KPI tile | Open a workspace section and select **Add search** |
 | Save a layout for every viewer | Select **Publish workspace layout** |
-| Configure the shared KPI strip | Select **Configure Signal Rail** |
+| Configure, hide, or show the shared KPI strip | Select the **Configure Signal Rail** sliders icon in the top toolbar, before **Refresh rate**, then toggle **Rail Enabled/Hidden**. The toolbar icon remains available when the rail is hidden. |
 | Investigate a dashboard card | Select **About this metric**, **Investigate drivers**, or **Open in Search** |
 
 ## What’s New / Release Notes {#release-notes}
@@ -38,6 +38,8 @@ Browse the current release and recorded historical versions below. The newest re
 ::: release Release Notes | November 2026 - Version 1.0.90
 
 ### Dashboards and investigations
+
+- Signal Rail settings remain accessible from the sliders icon before **Refresh rate** in the workspace toolbar, even when the rail is hidden.
 
 - Fixed dark hover-card text in Security Operations charts so category labels and values remain readable on dark backgrounds.
 
