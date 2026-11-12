@@ -473,3 +473,32 @@ test('DC diagram renders reported evidence and distinguishes unavailable states 
         assert.doesNotMatch(unavailable,/<svg/);
     }
 });
+
+test('map query configurations keep reference identity across parent and data rerenders', () => {
+    const React=require('react');
+    const model=load('src/main/webapp/common/lib/dcFabricTopology.ts',{'./dcNetworkingScope':scope});
+    const format=load('src/main/webapp/common/lib/metricValueFormat.ts');
+    const cache=[];let cursor=0;let captured=[];
+    const stableRows=[];
+    const View=load('src/main/webapp/common/components/workspace/DcFabricTopology.tsx',{
+        react:{...React,useState:initial=>[initial,()=>{}],useMemo:(factory,deps)=>{
+            const i=cursor++;const old=cache[i];
+            if(!old || deps.some((value,j)=>!Object.is(value,old.deps[j])))cache[i]={deps,value:factory()};
+            return cache[i].value;
+        }},
+        '@splunk/react-ui/Button':()=>null,
+        '@splunk/react-ui/Select':Object.assign(()=>null,{Option:()=>null}),
+        '@/common/hooks/useMetric':{useTableData:cfg=>{captured.push(cfg);return {source:'live',rows:stableRows,columns:[],totalRowCount:0};}},
+        '@/common/lib/dcFabricTopology':model,
+        '@/common/lib/metricValueFormat':format,
+    }).default;
+    function render(links='links'){
+        cursor=0;captured=[];
+        View({queries:{inventory:'inventory',links,shared:'shared'},range:{earliest:'-4h',latest:'now',label:'4h'},refreshToken:0,onOpenSearch(){}});
+        return captured;
+    }
+    const first=render(),next=render();
+    assert.equal(first.length,3);
+    first.forEach((cfg,i)=>assert.equal(cfg,next[i],'useTableData depends on cfg identity; fresh wrappers repeatedly cancel jobs'));
+    assert.notEqual(render('changed-links')[1],first[1],'A changed library search must still redispatch');
+});

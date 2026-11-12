@@ -28,6 +28,8 @@ const availability = (result: TableDataResult, query?: string) => {
     return '';
 };
 
+const TABLE_OPTIONS = {dispatchContext:'splunk-cisco-dashboards',dispatchPriority:2,rowLimit:1000,suppressMockOnEmpty:true};
+
 export default function DcFabricTopology({ queries, range, refreshToken, table=false, onOpenSearch }: Props) {
     const [tab,setTab] = useState<'links'|'fabrics'|'shared'>('links');
     const [selected,setSelected] = useState('');
@@ -37,14 +39,13 @@ export default function DcFabricTopology({ queries, range, refreshToken, table=f
         catch (error) { setSearchError(error instanceof Error ? error.message : 'Could not open the evidence search.'); }
     };
     const configs = useMemo(() => ({
-        inventory: {id:'dc_workspace_fabric_inventory',spl:queries.inventory},
-        links: {id:'dc_workspace_fabric_links',spl:queries.links},
-        shared: {id:'dc_workspace_inventory_matches',spl:queries.shared},
+        inventory: {...TABLE_OPTIONS,id:'dc_workspace_fabric_inventory',spl:queries.inventory},
+        links: {...TABLE_OPTIONS,id:'dc_workspace_fabric_links',spl:queries.links},
+        shared: {...TABLE_OPTIONS,id:'dc_workspace_inventory_matches',spl:queries.shared},
     }),[queries.inventory,queries.links,queries.shared]);
-    const options = {dispatchContext:'splunk-cisco-dashboards',dispatchPriority:2,rowLimit:1000,suppressMockOnEmpty:true};
-    const inventory = useTableData({...options,...configs.inventory},range,refreshToken);
-    const links = useTableData({...options,...configs.links},range,refreshToken);
-    const shared = useTableData({...options,...configs.shared},range,refreshToken);
+    const inventory = useTableData(configs.inventory,range,refreshToken);
+    const links = useTableData(configs.links,range,refreshToken);
+    const shared = useTableData(configs.shared,range,refreshToken);
     const groups = useMemo(() => dcLinkGroups(links.rows),[links.rows]);
     const group = groups.find(item => item.id===selected) || groups[0];
     const diagram = useMemo(() => dcEndpointDiagram(group?.links || []),[group]);
