@@ -1172,7 +1172,8 @@ assert.match(
   rail,
   /@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?transition: none;/,
 );
-assert.match(rail, /label="Configure Signal Rail"/);
+assert.doesNotMatch(rail, /label="Configure Signal Rail"/);
+assert.match(profile, /label="Configure Signal Rail"/);
 assert.match(
   rail,
   /const StatusPill = styled\(Badge\)[\s\S]*?STATUS_PILL_TOKENS\[\$status\][\s\S]*?background-color: color-mix\([\s\S]*?50%,[\s\S]*?transparent[\s\S]*?color: \$\{variables\.contentColorActive\}/,

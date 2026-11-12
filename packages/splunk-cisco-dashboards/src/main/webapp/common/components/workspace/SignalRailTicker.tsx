@@ -15,7 +15,6 @@ import {
   Palette,
   Pause,
   Play,
-  Settings2,
 } from "@/common/icons/SuiIcon";
 import { cn } from "@/common/lib/utils";
 import {
@@ -59,7 +58,6 @@ interface SignalRailTickerProps {
   fontSize?: SignalTickerFontSize;
   rows?: SignalTickerRows;
   durationSeconds?: number;
-  onOpenEditor?: () => void;
 }
 
 const STORAGE_KEY = "signalRailVariant";
@@ -923,7 +921,6 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
   fontSize = "standard",
   rows = 1,
   durationSeconds = 60,
-  onOpenEditor,
 }) => {
   const [variant, setVariant] = useState<SignalRailVariant>(() =>
     readStoredVariant(),
@@ -1134,15 +1131,6 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
               ))}
             </SignalRailStyleMenu>
           </Dropdown>
-          {onOpenEditor && (
-            <Button
-              appearance="subtle"
-              hideLabel
-              icon={<Settings2 aria-hidden="true" />}
-              label="Configure Signal Rail"
-              onClick={onOpenEditor}
-            />
-          )}
         </SignalRailControls>
       </div>
 

@@ -41,7 +41,7 @@ Browse the current release and recorded historical versions below. The newest re
 
 - DC Networking adds a five-product signal rail and a non-geographic fabric view with reported endpoint/port links and separate inventory evidence. Searches retain the selected time and fabric/controller scope; missing observations remain unknown.
 
-- Signal Rail settings remain accessible from the sliders icon before **Refresh rate** in the workspace toolbar, even when the rail is hidden.
+- Signal Rail settings remain accessible from the sliders icon before **Refresh rate** in the workspace toolbar, even when the rail is hidden. The rail retains Pause and Style controls without a duplicate Configure icon.
 
 - Fixed dark hover-card text in Security Operations charts so category labels and values remain readable on dark backgrounds.
 

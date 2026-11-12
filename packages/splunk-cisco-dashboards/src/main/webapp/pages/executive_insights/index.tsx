@@ -5465,7 +5465,6 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
           pickerContext !== null ||
           activeDetailTable !== null
         }
-        onOpenEditor={openSignalTickerEditor}
       />
 
       {/* Customer-pinned, app-local drill-down. Hidden by default

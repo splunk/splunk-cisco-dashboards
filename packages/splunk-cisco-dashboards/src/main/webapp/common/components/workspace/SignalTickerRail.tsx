@@ -487,7 +487,6 @@ interface SignalTickerRailProps {
     range: TimeRange;
     refreshToken: number;
     paused?: boolean;
-    onOpenEditor: () => void;
 }
 
 export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
@@ -497,7 +496,6 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
     range,
     refreshToken,
     paused = false,
-    onOpenEditor,
 }) => {
     const [visualById, setVisualById] = useState<
         Record<string, SignalTickerTileVisualState>
@@ -590,7 +588,6 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
                 fontSize={fontSize}
                 rows={config.rows}
                 durationSeconds={durationSeconds}
-                onOpenEditor={onOpenEditor}
             />
         </>
     );

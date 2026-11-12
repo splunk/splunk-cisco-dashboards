@@ -14,6 +14,7 @@ networking pillars and workplace scenarios.
 
 - Signal Rail settings are always available from the sliders icon before
   Refresh rate in the workspace toolbar, including when the rail is hidden.
+  The rail retains Pause and Style controls without a duplicate Configure icon.
 
 - Security Operations time charts now show compact, readable time or date labels;
   hover displays the complete timestamp and timezone.
