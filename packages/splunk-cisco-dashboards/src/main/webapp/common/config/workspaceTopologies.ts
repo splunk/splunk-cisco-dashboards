@@ -163,6 +163,12 @@ const EXECUTIVE_GLOBAL_TOPOLOGY: CustomerTopology = {
 };
 
 const WORKSPACE_TOPOLOGIES: Record<string, CustomerTopology> = {
+    dc_networking: {
+        id: 'workspace-dc-fabrics', name: 'DC fabrics and connections',
+        subtitle: 'Lab inventory and reported links · non-geographic view',
+        map: { center: [0, 0], zoom: 1, minZoom: 1, maxZoom: 1, bounds: [[0, 0], [0, 0]] },
+        sites: [], links: [],
+    },
     secure_networking: CUSTOMER_TOPOLOGY,
     zero_trust_access_demo: ZERO_TRUST_EUROPE_TOPOLOGY,
     network_resilience_demo: NETWORK_RESILIENCE_APAC_TOPOLOGY,

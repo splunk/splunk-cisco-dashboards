@@ -236,6 +236,22 @@ add('hf_ports', 'Hyperfabric port inventory and administrative state', None,
 | table Account Fabric node_id Port PortId AdminEnabled ReportedMaxSpeed AgeMinutes Observed""",
     ('reported_links', 'hf_measurements', 'events'))
 
+add('fabric_inventory', 'Observed DC fabrics and device inventory', None,
+    'Which reported fabrics and controller domains contain observed inventory?',
+    base('((sourcetype="cisco:dc:nd:fabrics") OR (sourcetype="cisco:dc:nd:switches") OR (sourcetype IN ("cisco:dc:aci:class","cisco:dc:aci:health") component=fabricNode) OR (sourcetype="cisco:dc:nexus9k" component=nxversion) OR (sourcetype="cisco:dc:mds:inventory" resource_type=mds_switch) OR (sourcetype="cisco:dc:hyperfabric:inventory" resource_type=node))') + """
+| eval FabricId=if(Product="Nexus Hyperfabric",FabricId,"Unreported")
+| eval InventoryId=coalesce('vendor.nodeId',serialNumber,serial,'Row_info.proc_board_id',dn,resource_id,id,DeviceId), DeviceKey=if(sourcetype="cisco:dc:nd:fabrics",null(),if(Device!="Unreported",Device,if(InventoryId!="Unreported",InventoryId,null())))
+| stats dc(DeviceKey) as Devices count as Records max(_time) as LastObserved by Product Account Controller Fabric FabricId
+| eval Devices=if(Devices>0,Devices,null()), AgeMinutes=round((now()-LastObserved)/60,2), Observed=strftime(LastObserved,"%Y-%m-%d %H:%M:%S %Z"), Relationship="Reported inventory grouping; no physical or traffic path implied"
+| sort 1000 Product Account Controller Fabric FabricId
+| table Product Account Controller Fabric FabricId Devices AgeMinutes Observed Relationship""",
+    ('nd_fabrics', 'aci_health', 'nexus_resources', 'san_health', 'hf_nodes', 'coverage'))
+add('fabric_links', 'DC fabric endpoint and port evidence', None,
+    'Which reported links have actual endpoint and port evidence?',
+    SEARCHES['reported_links']['query'].rsplit('\n| table ',1)[0] + """
+| table Product Account Controller Fabric FabricId LinkId Local LocalPort Remote RemotePort EvidenceType TrafficPath AgeMinutes""",
+    ('reported_links', 'inventory_matches', 'events'))
+
 add_charts(SEARCHES, base)
 
 def block_file(name, body):
@@ -305,9 +321,9 @@ hide_default_logo = 0
 is_builtin = 1
 enabled = 1
 sort_order = 30
-map_visible = 0
+map_visible = 1
 map_position = right
-regional_view = table
+regional_view = map
 '''
     for section in sections:
         ids = ['dc_workspace_' + key for key, r in SEARCHES.items() if r['section'] == section]
@@ -319,7 +335,12 @@ regional_view = table
         assert len(ids) == 9, (section, len(ids))
         ids = preferred + [tile for tile in ids if tile not in preferred]
         layout += f'\n[layout.dc_networking.{section}]\ntiles = ' + ','.join(ids) + f'\nvisible_count = {len(ids)}\n'
-    layout += '\n[signal_rail.dc_networking]\nenabled = 0\n'
+    rail = [('nd_critical_history', 'ND critical anomalies', ''), ('aci_critical_history', 'ACI critical faults', ''), ('nexus_cpu_peak_history', 'Nexus busiest CPU', '%'), ('san_wait_history', 'SAN transmit wait', '%'), ('hf_node_enabled_now', 'HF nodes admin enabled', '%')]
+    for key, label, unit in rail:
+        layout += '\n[signal_item.dc_' + key + ']\nsearch_name = DC Networking Workspace - ' + SEARCHES[key]['title'] + '\nlabel = ' + label + '\nvalue_field = Metric\n'
+        if unit:
+            layout += 'threshold_unit = ' + unit + '\n'
+    layout += '\n[signal_rail.dc_networking]\nenabled = 1\nshow_priority_drilldown = 0\nrows = 1\nspeed = 0\ndensity = comfortable\nfont_size = standard\nitems = ' + ','.join('dc_' + key for key, _, _ in rail) + '\n'
     outputs.append(block_file('insights_workspaces.conf', layout))
     definition = dict(title='DC Networking Operations', description='Lab observations · Five products, one investigation. Missing data is unknown.',
                       inputs={}, dataSources={}, visualizations={},

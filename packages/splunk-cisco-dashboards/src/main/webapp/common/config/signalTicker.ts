@@ -421,6 +421,15 @@ export const cloneSignalTickerConfig = (
 export const getDefaultSignalTickerConfig = (
   workspaceId: WorkspaceId,
 ): SignalTickerConfig => {
+  if (workspaceId === 'dc_networking') {
+    return { ...DEFAULT_SIGNAL_TICKER_CONFIG, items: [
+      { id: 'dc_nd_critical_history', searchName: 'DC Networking Workspace - Nexus Dashboard active critical anomalies', label: 'ND critical anomalies', valueField: 'Metric' },
+      { id: 'dc_aci_critical_history', searchName: 'DC Networking Workspace - ACI active critical-fault history', label: 'ACI critical faults', valueField: 'Metric' },
+      { id: 'dc_nexus_cpu_peak_history', searchName: 'DC Networking Workspace - Nexus 9000 busiest CPU', label: 'Nexus busiest CPU', valueField: 'Metric', thresholdUnit: '%' },
+      { id: 'dc_san_wait_history', searchName: 'DC Networking Workspace - SAN highest reported transmit wait', label: 'SAN transmit wait', valueField: 'Metric', thresholdUnit: '%' },
+      { id: 'dc_hf_node_enabled_now', searchName: 'DC Networking Workspace - Hyperfabric nodes administratively enabled', label: 'HF nodes admin enabled', valueField: 'Metric', thresholdUnit: '%' },
+    ] };
+  }
   const itemIds = WORKSPACE_SIGNAL_ITEM_IDS[workspaceId];
   const items = itemIds
     ? itemIds

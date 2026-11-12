@@ -63,8 +63,8 @@ test('packaged workspace has all six sections and every tile/drilldown resolves'
     const dc = config.PACKAGED_WORKSPACE_FALLBACKS.find((w) => w.id === 'dc_networking');
     assert.equal(dc.sections.length, 6);
     assert.equal(dc.sections[0].title, 'What needs my attention?');
-    assert.equal(dc.mapVisible, false);
-    assert.equal(stanzas.size, 75);
+    assert.equal(dc.mapVisible, true);
+    assert.equal(stanzas.size, 77);
     assert.equal(dc.maxTileCount, 9);
     for (const [id, body] of stanzas) {
         assert.match(body, /^search_type = display$/m);
@@ -385,4 +385,91 @@ test('DC time picker receives the same route styling as the standard dashboards'
     const chrome = fs.readFileSync(path.join(root, 'src/main/resources/splunk/appserver/static/dashboard.js'), 'utf8');
     assert.match(chrome, /managedDashboards = new Set\(\[[\s\S]*?"dc_networking_operations"/);
     assert.ok(definition.inputs.input_time_range);
+});
+
+
+test('DC enables a five-product rail and an inventory-only factory topology', () => {
+    const signal = load('src/main/webapp/common/config/signalTicker.ts');
+    const defaults = signal.getDefaultSignalTickerConfig('dc_networking');
+    assert.equal(defaults.enabled, true);
+    assert.equal(defaults.items.length,5);
+    for (const item of defaults.items) {
+        const body=[...stanzas.values()].find(body=>body.includes(`search_name = ${item.searchName}\n`));
+        assert.ok(body,item.searchName);
+        assert.equal(item.valueField,'Metric');
+        assert.equal(item.thresholdWarning,undefined,'Do not invent health thresholds');
+    }
+    const topology = load('src/main/webapp/common/config/workspaceTopologies.ts',{
+        '@/common/components/workspace/CustomerTopologyMap': { CUSTOMER_TOPOLOGY: {id:'other'} },
+    }).getWorkspaceTopology('dc_networking');
+    assert.equal(topology.name,'DC fabrics and connections');
+    assert.deepEqual(topology.sites,[]);
+    assert.deepEqual(topology.links,[]);
+    const page=fs.readFileSync(path.join(root,'src/main/webapp/pages/executive_insights/index.tsx'),'utf8');
+    assert.match(page,/isDcNetworking \? <DcFabricTopology/);
+    assert.match(page,/mapPrimaryBaseCfg = isDcNetworking \? undefined/);
+});
+
+test('DC endpoint graphs isolate domains, require both physical ports, and keep inventory scope safe', () => {
+    const model = load('src/main/webapp/common/lib/dcFabricTopology.ts',{'./dcNetworkingScope':scope});
+    const row={Product:'Nexus Hyperfabric',Account:'lab',Controller:'controller-a',Fabric:'Fabric A',FabricId:'fabric-id',Local:'leaf',Remote:'server',LocalPort:'eth1',RemotePort:'eth2',EvidenceType:'Reported physical connection'};
+    assert.equal(model.dcPhysicalLink(row),true);
+    assert.equal(model.dcPhysicalLink({...row,RemotePort:''}),false);
+    assert.equal(model.dcPhysicalLink({...row,EvidenceType:'Reported topology; not classified as a physical connection'}),false);
+    const groups=model.dcLinkGroups([row,{...row,Controller:'controller-b'},{...row,Product:'Nexus Dashboard'},{...row,FabricId:'other-id'}]);
+    assert.equal(groups.length,4,'Same names do not merge controller/product/fabric domains');
+    const diagram=model.dcEndpointDiagram([row]);
+    assert.equal(diagram.nodes.length,2);
+    assert.equal(diagram.links[0].physical,true);
+    assert.equal(model.dcEndpointDiagram(Array(20).fill(row)).links.length,6,'Keep the graph readable and disclose truncation');
+    const spread=model.dcEndpointDiagram(Array.from({length:6},(_,i)=>({...row,Local:`local-${i}`,Remote:`remote-${i}`})));
+    assert.equal(spread.nodes.length,12);
+    for(const node of spread.nodes){ assert.ok(node.x>=56 && node.x<=584 && node.y>=17 && node.y<=463); }
+
+    const filtered=model.applyDcFabricScope(spl('dc_workspace_fabric_links'),row);
+    assert.match(filtered,/lower\(Controller\)="controller-a"/);
+    assert.match(filtered,/lower\(FabricId\)="fabric-id"/);
+    assert.ok(filtered.indexOf('lower(Controller)')<filtered.indexOf('eventstats'));
+    assert.throws(()=>model.applyDcFabricScope(spl('dc_workspace_fabric_links'),{...row,Controller:'`unsafe`'}));
+});
+
+test('DC diagram renders reported evidence and distinguishes unavailable states without sample data', () => {
+    const React=require('react');
+    const {renderToStaticMarkup}=require('react-dom/server');
+    const model=load('src/main/webapp/common/lib/dcFabricTopology.ts',{'./dcNetworkingScope':scope});
+    const format=load('src/main/webapp/common/lib/metricValueFormat.ts');
+    const Select=({children})=>React.createElement('div',null,children);
+    Select.Option=({label})=>React.createElement('span',null,label);
+    let result={source:'live',rows:[{Product:'Nexus Hyperfabric',Account:'lab',Controller:'controller',Fabric:'Fabric A',FabricId:'a',LinkId:'link-a',Local:'leaf-a',LocalPort:'eth1',Remote:'server-a',RemotePort:'eth2',EvidenceType:'Reported physical connection',AgeMinutes:'1.25'}],columns:[],totalRowCount:1};
+    const ranges=[];
+    const View=load('src/main/webapp/common/components/workspace/DcFabricTopology.tsx',{
+        '@splunk/react-ui/Button':({children,disabled})=>React.createElement('button',{disabled},children),
+        '@splunk/react-ui/Select':Select,
+        '@/common/hooks/useMetric':{useTableData:(_cfg,range)=>{ranges.push(range);return result;}},
+        '@/common/lib/dcFabricTopology':model,
+        '@/common/lib/metricValueFormat':format,
+    }).default;
+    const range={earliest:'-4h',latest:'now',label:'Last 4 hours'};
+    const props={queries:{inventory:'inventory',links:'links',shared:'shared'},range,refreshToken:0,onOpenSearch(){}};
+    const html=renderToStaticMarkup(React.createElement(View,props));
+    assert.match(html,/<svg/);
+    assert.match(html,/leaf-a/);
+    assert.match(html,/server-a/);
+    assert.match(html,/Solid blue/);
+    assert.doesNotMatch(html,/London|New York|Singapore|traffic animation/);
+    assert.ok(ranges.every(r=>r===range));
+    const table=renderToStaticMarkup(React.createElement(View,{...props,table:true}));
+    assert.doesNotMatch(table,/<svg/);
+    assert.match(table,/eth1/);
+    for(const [state,message] of [
+        [{source:'loading',rows:[]},/Loading observations/],
+        [{source:'live',rows:[]},/Relationship and health are unknown/],
+        [{source:'live',rows:[],noDataReason:'capacity_limited'},/Search slots are busy/],
+        [{source:'live',rows:[],noDataReason:'job_failed'},/evidence search failed/],
+    ]){
+        result={...result,...state};
+        const unavailable=renderToStaticMarkup(React.createElement(View,props));
+        assert.match(unavailable,message);
+        assert.doesNotMatch(unavailable,/<svg/);
+    }
 });

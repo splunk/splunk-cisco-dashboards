@@ -545,7 +545,7 @@ export const PACKAGED_WORKSPACE_FALLBACKS: readonly InsightsWorkspace[] = [
   createInsightsWorkspace({
     id: "dc_networking", label: "DC Networking", sourceWorkspace: "dc_networking",
     headerTitle: "DC Networking", headerSubtitle: "What needs my attention? · Lab observations across five products",
-    hideDefaultLogo: false, isBuiltIn: true, sortOrder: 30, mapVisible: false,
+    hideDefaultLogo: false, isBuiltIn: true, sortOrder: 30, mapVisible: true,
   }),
   createInsightsWorkspace({
     id: "secure_networking",

@@ -39,6 +39,8 @@ Browse the current release and recorded historical versions below. The newest re
 
 ### Dashboards and investigations
 
+- DC Networking adds a five-product signal rail and a non-geographic fabric view with reported endpoint/port links and separate inventory evidence. Searches retain the selected time and fabric/controller scope; missing observations remain unknown.
+
 - Signal Rail settings remain accessible from the sliders icon before **Refresh rate** in the workspace toolbar, even when the rail is hidden.
 
 - Fixed dark hover-card text in Security Operations charts so category labels and values remain readable on dark backgrounds.
@@ -691,6 +693,12 @@ Insights Workspaces are reusable, audience-specific views of Searchbase-backed K
 | Executive Briefing | IT health, security, and building intelligence |
 
 ### DC Networking {#workspaces-dc-networking}
+
+The signal rail summarizes Nexus Dashboard critical anomalies, ACI critical faults, Nexus 9000 CPU pressure, SAN transmit wait and Hyperfabric administrative enablement. These are observed measurements; administrative enablement does not establish operational availability. A card without configured health thresholds is labeled **Watching**.
+
+The map region opens a **non-geographic fabric view**. Use **Reported links** to select a fabric/controller domain. Solid blue lines require reported physical endpoint ports; dashed amber lines show other reported topology. Endpoint positions do not imply geography, device tiers, traffic direction or intermediate hops. The compact diagram displays up to six link records; its count states how many loaded records are shown. Use **Table** or **Open this evidence in Search** to inspect more evidence.
+
+Use **Fabrics** for reported inventory grouped by product, account and controller. **Shared inventory** shows exact-serial matches across products, when available; those matches do not establish physical links or traffic paths. Each evidence search loads at most 1,000 rows. Open Search for complete results, using the same selected time and, for a fabric investigation, its exact product/controller/fabric scope. Empty observations, missing library entries, busy search slots and failed searches have separate messages.
 
 Open **DC Networking** from the workspace switcher. Start with **What needs my attention?**, confirm five-product coverage and observation age, then follow **Investigate related evidence** into product details and related observations. The packaged sections cover Nexus Dashboard, ACI, Nexus 9000, MDS / SAN Analytics through NDFC, and Nexus Hyperfabric. This demo labels its existing observations as lab data.
 

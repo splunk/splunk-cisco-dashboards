@@ -40,6 +40,8 @@ import StaticContent from "@splunk/react-ui/StaticContent";
 import WaitSpinner from "@splunk/react-ui/WaitSpinner";
 import { variables } from "@splunk/themes";
 import useSplunkTheme from "@splunk/themes/useSplunkTheme";
+import DcFabricTopology from '@/common/components/workspace/DcFabricTopology';
+import { applyDcFabricScope } from '@/common/lib/dcFabricTopology';
 import {
   Activity,
   RefreshCw,
@@ -4283,7 +4285,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
   // gets the hook to re-read storage (now empty) and fall back to
   // the canonical CUSTOMER_TOPOLOGY factory.
   const [topologyResetKey, setTopologyResetKey] = useState(0);
-  const workspaceTopology = getWorkspaceTopology(insightsWorkspace.id);
+  const workspaceTopology = getWorkspaceTopology(isDcNetworking ? "dc_networking" : insightsWorkspace.id);
 
   // Read the persisted topology so the dashboard header can show the
   // user's edited name / subtitle from the topology editor (instead of
@@ -4920,8 +4922,8 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
     return { ...base, savedSearch: undefined, spl: undefined };
   };
 
-  const mapPrimaryBaseCfg = mapFooterKpiConfig[0];
-  const mapSecondaryBaseCfg = mapFooterKpiConfig[1];
+  const mapPrimaryBaseCfg = isDcNetworking ? undefined : mapFooterKpiConfig[0];
+  const mapSecondaryBaseCfg = isDcNetworking ? undefined : mapFooterKpiConfig[1];
   const effectiveMapPrimaryCfg = useMemo<MapFooterKpiConfig>(
     () =>
       mapPrimaryBaseCfg
@@ -6002,7 +6004,17 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   </div>
                 </div>
 
-                {regionalView === "map" ? (
+                {isDcNetworking ? <DcFabricTopology
+                  queries={{ inventory: searchbaseById?.get('dc_workspace_fabric_inventory')?.search,
+                    links: searchbaseById?.get('dc_workspace_fabric_links')?.search,
+                    shared: searchbaseById?.get('dc_workspace_inventory_matches')?.search }}
+                  range={timeRange} refreshToken={refreshToken} table={regionalView === 'table'}
+                  onOpenSearch={(id, scope) => {
+                    const record = searchbaseById?.get(`dc_workspace_${id}`);
+                    if (!record?.search) { throw new Error('The selected DC search is not available in the library.'); }
+                    window.open(splunkSearchAppUrl(applyDcFabricScope(record.search, scope),timeRange,record.dispatchContext),'_blank','noopener,noreferrer');
+                  }}
+                /> : regionalView === "map" ? (
                   <MapViewport>
                     {/* Build 1190 — render the live map
                                        during export instead of swapping
