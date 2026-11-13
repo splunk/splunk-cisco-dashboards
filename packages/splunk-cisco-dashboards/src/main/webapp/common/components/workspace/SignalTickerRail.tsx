@@ -1209,7 +1209,7 @@ export const SignalTickerEditor: React.FC<SignalTickerEditorProps> = ({
                                     }
                                 />
                                 <p className="mt-2 text-xs leading-snug  sui-color-muted">
-                                    The 1CD glass status cards remain static. This speed applies only to optional legacy ticker styles.
+                                    One Cisco Glass stays static. Speed applies to the other styles; Prism Pulse, Signal Orbit, and Event Horizon move only when the signals do not fit.
                                 </p>
                             </div>
                         </div>
