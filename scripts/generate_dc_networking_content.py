@@ -253,11 +253,22 @@ add('fabric_links', 'DC fabric endpoint and port evidence', None,
     ('reported_links', 'inventory_matches', 'events'))
 
 add('fabric_map', 'DC fabrics for the standard map', None,
-    'Which fabric and controller inventory groups are observed? Health and inter-fabric connectivity are not established by inventory.',
-    SEARCHES['fabric_inventory']['query'].rsplit('\n| table ',1)[0] + """
-| eval itemType="site", siteId="dc-".sha256(Product."|".Account."|".Controller."|".Fabric."|".FabricId), siteName=Product." · ".if(Fabric!="Unreported",Fabric,Controller), role="fabric", shortName=case(Product="Nexus Dashboard","ND",Product="ACI","ACI",Product="Nexus 9000","NX9K",Product="MDS / NDFC","MDS",true(),"HF"), status="unknown", lastUpdated=Observed, telemetrySource=Product." · ".Account." · ".Controller." · ".Relationship
-| table itemType siteId siteName role shortName status lastUpdated telemetrySource""",
-    ('fabric_inventory', 'fabric_links', 'coverage'))
+    'Up to three named fabrics reported by Nexus Dashboard, ranked by active critical anomalies then other active anomalies. Matching requires a reported account, controller and fabric. Inter-fabric links and overall health are unreported.',
+    base('sourcetype IN ("cisco:dc:nd:fabrics","cisco:dc:nd:anomalies")') + """
+| eval Account=trim(Account), Controller=trim(nd_host), Fabric=trim(Fabric)
+| where len(Account)>0 AND NOT lower(Account) IN ("unreported","null","unknown") AND len(Controller)>0 AND NOT lower(Controller) IN ("unreported","null","unknown") AND len(Fabric)>0 AND NOT lower(Fabric) IN ("unreported","null","unknown")
+| eval IsFabric=if(sourcetype="cisco:dc:nd:fabrics",1,0), EntityKey=if(IsFabric=1,"fabric:".Fabric,coalesce(anomalyId,compositeKey))
+| where len(trim(EntityKey))>0""" + latest('Account Controller sourcetype EntityKey') + """
+| eval Active=if(IsFabric=0 AND lower(cleared)="false" AND lower(expired)="false",1,0), Critical=if(Active=1 AND lower(severity)="critical",1,0), InventoryTime=if(IsFabric=1,_time,null()), Connectivity=if(IsFabric=1,coalesce(connectivityStatus,"Unreported"),null())
+| stats max(IsFabric) as HasInventory sum(Active) as ActiveAnomalies sum(Critical) as CriticalAnomalies max(InventoryTime) as InventoryTime max(_time) as LastObserved values(Connectivity) as Connectivity by Account Controller Fabric
+| where HasInventory=1
+| sort 0 - CriticalAnomalies - ActiveAnomalies Fabric Account Controller
+| eventstats count as ObservedFabrics
+| head 3
+| streamstats count as MapRank
+| eval itemType="site", siteId="dc-".sha256(Account."|".Controller."|".Fabric), siteName=Fabric, role="fabric", shortName=tostring(MapRank), status=case(CriticalAnomalies>0,"critical",ActiveAnomalies>0,"warning",true(),"unknown"), alerts=if(ActiveAnomalies>0,ActiveAnomalies,null()), lastUpdated=strftime(LastObserved,"%Y-%m-%d %H:%M:%S %Z"), telemetrySource="Nexus Dashboard lab data · ".Account." · ".Controller." · ".ActiveAnomalies." observed active anomalies (".CriticalAnomalies." critical). Connectivity: ".Connectivity.". Showing up to 3 of ".ObservedFabrics." named fabrics. Overall health and inter-fabric links unreported."
+| table itemType siteId siteName role shortName status alerts lastUpdated telemetrySource Account Controller Fabric ActiveAnomalies CriticalAnomalies ObservedFabrics Connectivity""",
+    ('nd_anomalies', 'nd_fabrics', 'fabric_inventory', 'fabric_links'))
 
 add_charts(SEARCHES, base)
 

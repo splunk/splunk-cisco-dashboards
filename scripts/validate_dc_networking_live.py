@@ -30,6 +30,42 @@ def ephemeral_fixture(query, rows):
     return prefix + query.split('\n', 1)[1]
 
 
+def check_fabric_map_semantics(client):
+    """Exercise map identity/state without writing events or lookups."""
+    stamp = (int(time.time()) // 900 - 1) * 900 + 100
+    inventory = dict(sourcetype='cisco:dc:nd:fabrics', nd_account='map-lab',
+                     nd_host='controller-a', fabricName='fabric-a',
+                     connectivityStatus='Up', event_time=stamp)
+    anomaly = dict(inventory, sourcetype='cisco:dc:nd:anomalies', anomalyId='signal-a',
+                   cleared='false', expired='false', severity='critical')
+    query = SEARCHES['fabric_map']['query']
+    def search(rows):
+        result, messages = client.search(ephemeral_fixture(query, rows))
+        assert not [m for m in messages if m.get('type') in ('ERROR', 'WARN', 'FATAL')], messages
+        return result
+    result = search([inventory, anomaly, anomaly])
+    assert len(result) == 1 and result[0]['alerts'] == '1' and result[0]['status'] == 'critical', result
+    result = search([inventory, anomaly, dict(anomaly, event_time=stamp+1, cleared='true')])
+    assert len(result) == 1 and result[0]['status'] == 'unknown' and 'alerts' not in result[0], result
+    for mismatched in [dict(anomaly, nd_host='controller-b'), dict(anomaly, nd_account='other')]:
+        result = search([inventory, mismatched])
+        assert len(result) == 1 and result[0]['status'] == 'unknown', result
+    assert not search([anomaly]), 'Anomalies alone do not establish a reported fabric'
+    assert not search([dict(inventory, nd_account=''), dict(anomaly, nd_account='')])
+    assert not search([dict(inventory, nd_host=''), dict(anomaly, nd_host='')])
+    rows = []
+    for i in range(4):
+        rows.append(dict(inventory, fabricName='fabric-'+str(i)))
+        rows.extend(dict(anomaly, fabricName='fabric-'+str(i), anomalyId=f'{i}-{j}') for j in range(i))
+    result = search(rows)
+    assert len(result) == 3 and [r['ActiveAnomalies'] for r in result] == ['3','2','1'], result
+    assert all(r['ObservedFabrics'] == '4' and 'lat' not in r and 'lng' not in r for r in result), result
+    result = search([inventory, dict(inventory, fabricName='fabric-b'), anomaly,
+                     dict(anomaly, fabricName='fabric-b', event_time=stamp+1)])
+    states = {r['siteName']: r['status'] for r in result}
+    assert states == {'fabric-a':'unknown', 'fabric-b':'critical'}, result
+
+
 def check_semantics(client):
     stamp = (int(time.time()) // 900 - 1) * 900 + 100
     nd = dict(sourcetype='cisco:dc:nd:anomalies', nd_account='lab', nd_host='controller-a',
@@ -112,8 +148,9 @@ def check_semantics(client):
             assert not result, result
         else:
             assert len(result) == 1 and float(result[0]['Metric']) == expected, result
+    check_fabric_map_semantics(client)
     return dict(status='passed', method='Ephemeral makeresults fixtures; no events indexed',
-                checks=['port history deduplicates polls and preserves account/fabric/node identity', 'latest unknown port state does not resurrect older enablement', 'disabled ports produce zero; unknown-only buckets stay absent', 'critical share includes medium severity and deduplicates polls', 'critical share excludes cleared and unclassified states without fabricating zero', 'unknown administrative state produces no gauge value', 'reported disabled state produces measured zero', 'reported enabled state produces measured 100', 'critical history deduplicates repeated polls', 'latest cleared state excluded', 'controller collisions remain independent',
+                checks=['fabric map caps ranking at three and discloses total eligible inventory', 'fabric map deduplicates repeated anomaly polls and latest cleared state stays unknown', 'fabric map requires complete account/controller identity and matching inventory', 'fabric map does not resurrect a signal in an older fabric', 'port history deduplicates polls and preserves account/fabric/node identity', 'latest unknown port state does not resurrect older enablement', 'disabled ports produce zero; unknown-only buckets stay absent', 'critical share includes medium severity and deduplicates polls', 'critical share excludes cleared and unclassified states without fabricating zero', 'unknown administrative state produces no gauge value', 'reported disabled state produces measured zero', 'reported enabled state produces measured 100', 'critical history deduplicates repeated polls', 'latest cleared state excluded', 'controller collisions remain independent',
                         'acknowledged anomalies retained', 'unknown expiry excluded',
                         'attention queue is populated from explicit active state',
                         'absent rates stay unknown', 'serial matches are case normalized',

@@ -16,7 +16,7 @@ networking pillars and workplace scenarios.
   miniature Orbit halos and a health summary beside the rail controls leave
   more room for dashboard content.
 
-- DC Networking defaults to simple five-product KPI cards with small observed trends and the standard map in Command view. Inspect observed fabric/controller inventory and open its source search. Health and inter-fabric connections remain unknown when inventory does not establish them; geographic locations are not invented.
+- DC Networking defaults to simple five-product KPI cards with small observed trends and the standard map in Command view. The map focuses on up to three named Nexus Dashboard fabrics, ranked by observed active anomalies, with source details and Search access. Complete inventory stays available in the library. Overall health and inter-fabric connections remain unreported.
 
 - Signal Rail settings are always available from the sliders icon before
   Refresh rate in the workspace toolbar, including when the rail is hidden.

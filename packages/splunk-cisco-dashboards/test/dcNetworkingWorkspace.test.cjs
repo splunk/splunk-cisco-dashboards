@@ -402,7 +402,7 @@ test('DC enables a five-product rail and an inventory-only factory topology', ()
     const topology = load('src/main/webapp/common/config/workspaceTopologies.ts',{
         '@/common/components/workspace/CustomerTopologyMap': { CUSTOMER_TOPOLOGY: {id:'other'} },
     }).getWorkspaceTopology('dc_networking');
-    assert.equal(topology.name,'DC fabrics and connections');
+    assert.equal(topology.name,'Fabrics needing attention');
     assert.deepEqual(topology.sites,[]);
     assert.deepEqual(topology.links,[]);
     const page=fs.readFileSync(path.join(root,'src/main/webapp/pages/executive_insights/index.tsx'),'utf8');
@@ -412,10 +412,14 @@ test('DC enables a five-product rail and an inventory-only factory topology', ()
     assert.match(page,/mapPrimaryBaseCfg = isDcNetworking \? undefined/);
 });
 
-test('standard map uses unlocated inventory without invented geography or health', () => {
+test('standard map limits attention to three named fabrics without invented geography or health', () => {
     const query=spl('dc_workspace_fabric_map');
     assert.match(query,/sha256/);
-    assert.match(query,/status="unknown"/);
+    assert.match(query,/\| head 3/);
+    assert.match(query,/where HasInventory=1/);
+    assert.match(query,/CriticalAnomalies>0,"critical"/);
+    assert.match(query,/true\(\),"unknown"/);
+    assert.match(query,/by Account Controller Fabric/);
     assert.doesNotMatch(query,/lat=|lng=|activeDevices=/);
     assert.match(query,/`index_dc`/);
 });
