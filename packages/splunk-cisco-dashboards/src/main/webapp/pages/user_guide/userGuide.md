@@ -39,6 +39,8 @@ Browse the current release and recorded historical versions below. The newest re
 
 ### Dashboards and investigations
 
+- Workspace headers keep consistent spacing between the icon and title, with the subtitle aligned beneath the title.
+
 - Choose **Prism Pulse**, **Signal Orbit**, or **Event Horizon** from the Signal Rail **Style** menu for three new optional presentations of your existing signals. Slim inline readouts, miniature Orbit halos and a summary beside Pause and Style leave more room for dashboard content. Values and health remain tied to the configured searches; missing trend observations remain unavailable.
 
 - DC Networking defaults to simple five-product KPI cards with small observed trends and the standard map in Command view for observed fabric inventory. Missing health and inter-fabric connections remain unknown.

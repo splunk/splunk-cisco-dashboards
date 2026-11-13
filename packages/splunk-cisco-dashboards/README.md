@@ -10,6 +10,8 @@ networking pillars and workplace scenarios.
 
 ### Unreleased
 
+- Workspace headers now keep consistent spacing between the icon and title, with the subtitle aligned beneath the title.
+
 - Added Prism Pulse, Signal Orbit, and Event Horizon to the Signal Rail Style
   menu. These optional looks retain live values and health states, and display
   trends only when timestamped observations are available. Slim inline readouts,

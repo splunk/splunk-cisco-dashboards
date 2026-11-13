@@ -5104,20 +5104,19 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
          * accidentally fire the same reveal.
          */}
         <div
-          className={cn(
-            "flex min-w-0 flex-1 items-center pr-3 group/branding",
-            effectiveLogoSrc ? "gap-3" : "gap-0",
-          )}
+          className="grid min-w-0 flex-1 items-center pr-3 group/branding"
+          style={{ gridTemplateColumns: "max-content minmax(0, 1fr)", columnGap: 12 }}
         >
-          <div className="w-9 h-9 sui-bg-notification-info rounded-lg flex items-center justify-center sui-color-active overflow-hidden p-1 flex-shrink-0">
+          <div className="w-9 h-9 sui-bg-notification-info rounded-lg flex items-center justify-center sui-color-active overflow-hidden p-1 flex-shrink-0"
+            style={{ gridColumn: 1, gridRow: 1 }}>
             {effectiveLogoSrc ? <img src={effectiveLogoSrc} alt={`${insightsWorkspace.label} icon`}
               className="w-full h-full object-contain" onError={() => setLogoSrc("")} /> :
               <WorkspaceDefaultIcon workspace={insightsWorkspace} />}
           </div>
-          <div className="min-w-0">
+          <div className="contents">
             <div
               className="flex min-w-0 items-center"
-              style={{ columnGap: spacingSmall }}
+              style={{ columnGap: spacingSmall, gridColumn: 2, gridRow: 1 }}
             >
               <Heading
                 level={1}
@@ -5171,22 +5170,23 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   )}
                 </Menu>
               </Dropdown>
+              {canManageWorkspaceConfig ? (
+              <button
+                type="button"
+                onClick={() => setBrandingEditorOpen(true)}
+                title="Edit branding (title, subtitle, logo)"
+                aria-label="Edit branding (title, subtitle, logo)"
+                className="flex-shrink-0 p-1 rounded sui-color-default  sui-hover-color-info  sui-hover-bg-overlay opacity-0 group-hover/branding:opacity-100 focus-visible:opacity-100 transition"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+              </button>
+              ) : null}
             </div>
-            <p className="mt-1 truncate text-xs font-medium leading-none  sui-color-default">
+            <p className="mt-1 truncate text-xs font-medium leading-none  sui-color-default"
+              style={{ gridColumn: 2, gridRow: 2 }}>
               {effectiveSubtitle}
             </p>
           </div>
-          {canManageWorkspaceConfig ? (
-          <button
-            type="button"
-            onClick={() => setBrandingEditorOpen(true)}
-            title="Edit branding (title, subtitle, logo)"
-            aria-label="Edit branding (title, subtitle, logo)"
-            className="flex-shrink-0 p-1 rounded sui-color-default  sui-hover-color-info  sui-hover-bg-overlay opacity-0 group-hover/branding:opacity-100 focus-visible:opacity-100 transition"
-          >
-            <Edit3 className="w-3.5 h-3.5" />
-          </button>
-          ) : null}
         </div>
 
         <div
