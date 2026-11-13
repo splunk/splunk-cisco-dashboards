@@ -82,3 +82,16 @@ test('when overflow is measured, scrolling duplicates are inaccessible and no si
     assert.match(html, /tabindex="-1"/);
     assert.equal((html.match(/<article /g) || []).length, 6);
 });
+test('Prism keeps one integrated control set outside scrolling duplicates and reserves red facets for critical signals', () => {
+    const controls = React.createElement('button', null, 'Preview rail controls');
+    const html = renderToStaticMarkup(React.createElement(overflowShowcase, {
+        kpis, variant: 'prism-pulse', fontSize: 'standard', density: 'comfortable', rows: 1,
+        durationSeconds: 60, paused: true, controls,
+    }));
+    assert.equal((html.match(/Preview rail controls/g) || []).length, 1);
+    assert.match(html, /showcase-integrated-controls/);
+    assert.match(html, /prism-critical-facet\.png/);
+    const noCritical = render('prism-pulse', { kpis: kpis.filter(k => k.status !== 'critical'), controls });
+    assert.doesNotMatch(noCritical, /prism-critical-facet\.png/);
+    assert.match(noCritical, /Watching/);
+});

@@ -17,7 +17,7 @@ const Showcase = styled.div`
     width: 100%; min-width: 0; color: #edf5ff;
     background-color: #060d17; border: 1px solid #3d556b; border-radius: 9px;
     background-position: center; background-size: 100% 100%;
-    &[data-showcase="prism-pulse"] { background-size: 100% 200%; }
+    &[data-showcase="prism-pulse"] { display: flex; align-items: stretch; background-size: 100% 200%; background-color: transparent; border: 0; border-radius: 0; }
     .showcase-scroll { overflow-x: auto; scrollbar-width: thin; padding: 6px 8px; }
     .showcase-grid { display: grid; width: 100%; gap: 0; align-items: stretch; }
     .showcase-grid[data-moving="true"] { display: flex; width: max-content; }
@@ -37,9 +37,24 @@ const Showcase = styled.div`
     [data-featured="true"] { box-shadow: inset 3px 0 0 var(--signal-color); }
     .showcase-status { display: inline-flex; flex: 0 0 auto; white-space: nowrap; color: var(--signal-color); border: 1px solid currentColor; border-radius: 12px; padding: 1px 5px; font-size: 10px; line-height: 1.4; font-weight: 750; letter-spacing: .02em; text-transform: uppercase; }
     .showcase-trend { height: 12px; width: 100%; min-width: 0; }
-    &[data-showcase="prism-pulse"] .showcase-scroll { padding-block: 10px; }
-    &[data-showcase="prism-pulse"] article { padding-block: 6px; }
-    &[data-showcase="prism-pulse"] .showcase-trend { height: 18px; margin-top: 4px; }
+    &[data-showcase="prism-pulse"] .showcase-scroll { flex: 1; min-width: 0; padding: 8px 10px; }
+    &[data-showcase="prism-pulse"] article { display: flex; flex-direction: column; min-height: 146px; padding: 8px 12px; }
+    &[data-showcase="prism-pulse"] .showcase-label-row { min-height: 38px; }
+    &[data-showcase="prism-pulse"] .showcase-label { font-size: calc(var(--rail-label-size) + 1px); }
+    &[data-showcase="prism-pulse"] .showcase-readout { flex-direction: column; align-items: flex-start; gap: 4px; }
+    &[data-showcase="prism-pulse"] .showcase-value { font-size: calc(var(--rail-value-size) * 1.22); }
+    &[data-showcase="prism-pulse"] .showcase-value[data-loading="true"] { font-size: 16px; }
+    &[data-showcase="prism-pulse"] .showcase-status { border: 0; border-radius: 0; padding: 0; font-size: 12px; }
+    &[data-showcase="prism-pulse"] .showcase-trend { height: 32px; margin-top: auto; padding-top: 4px; }
+    &[data-showcase="prism-pulse"] [data-featured="true"] { padding-inline: 16px 24px; box-shadow: none; background-size: 100% 100%; background-repeat: no-repeat; }
+    &[data-showcase="prism-pulse"] [data-featured="true"] .showcase-label { font-size: calc(var(--rail-label-size) + 8px); }
+    &[data-showcase="prism-pulse"] [data-featured="true"] .showcase-readout { flex-direction: row; align-items: center; gap: 12px; }
+    &[data-showcase="prism-pulse"] [data-featured="true"] .showcase-value { font-size: calc(var(--rail-value-size) * 2); }
+    &[data-showcase="prism-pulse"] [data-featured="true"] .showcase-value[data-loading="true"] { font-size: 16px; }
+    &[data-showcase="prism-pulse"] [data-featured="true"] .showcase-status { font-size: 14px; }
+    &[data-showcase="prism-pulse"] .showcase-grid[data-moving="true"] > article { width: 180px; }
+    &[data-showcase="prism-pulse"] .showcase-grid[data-moving="true"] > article[data-featured="true"] { width: 330px; }
+    .showcase-integrated-controls { display: flex; flex: 0 0 100px; align-items: center; justify-content: center; padding: 8px 10px 8px 0; }
     .showcase-no-trend { display: flex; align-items: center; height: 100%; font-size: 10px; line-height: 1; white-space: nowrap; color: #b6c5d4; }
     .showcase-orb { display: flex; flex: 0 0 auto; align-items: center; justify-content: center; width: var(--rail-orbit-size); height: var(--rail-orbit-size); background-size: contain; background-position: center; background-repeat: no-repeat; padding: 5px; }
     .showcase-orbit-copy { flex: 1; min-width: 0; }
@@ -93,7 +108,7 @@ const ShowcaseItem = ({ kpi, variant, featured, duplicate }: {
             {kpi.canOpen !== false && kpi.href && <a href={kpi.href} target="_blank" rel="noopener noreferrer" tabIndex={duplicate ? -1 : 0} aria-label={`Open ${kpi.label} in Search`} title={`Open ${kpi.label} in Search`}><ExternalLink style={{ width: 13, height: 13 }} aria-hidden="true" /></a>}
         </div>;
     const status = <span className="showcase-status">{statuses[kpi.status]}</span>;
-    return <article data-status={kpi.status} data-featured={featured} style={{ '--signal-color': colors[kpi.status], '--rail-value-chars': Math.max(1, `${kpi.value}${kpi.unit ?? ''}`.length) } as React.CSSProperties}>
+    return <article data-status={kpi.status} data-featured={featured} style={{ '--signal-color': colors[kpi.status], '--rail-value-chars': Math.max(1, `${kpi.value}${kpi.unit ?? ''}`.length), backgroundImage: featured && kpi.status === 'critical' ? `url("${imageURL('prism-critical-facet')}")` : undefined } as React.CSSProperties}>
         {variant === 'signal-orbit' ? <>
             <div className="showcase-orb" style={{ backgroundImage: `url("${imageURL('signal-orbit')}")` }}>{value}</div>
             <div className="showcase-orbit-copy">{label}{status}{trend}</div>
@@ -101,10 +116,11 @@ const ShowcaseItem = ({ kpi, variant, featured, duplicate }: {
     </article>;
 };
 
-export default function SignalRailShowcase({ kpis, variant, fontSize, density, rows, durationSeconds, paused, onOverflowChange }: {
+export default function SignalRailShowcase({ kpis, variant, fontSize, density, rows, durationSeconds, paused, onOverflowChange, controls }: {
     kpis: SignalRailKpi[]; variant: SignalRailShowcaseVariant; fontSize: string;
     density: string; rows: number; durationSeconds: number; paused: boolean;
     onOverflowChange?: (overflow: boolean) => void;
+    controls?: React.ReactNode;
 }) {
     const scrollArea = useRef<HTMLDivElement>(null);
     const [hasOverflow, setHasOverflow] = useState(false);
@@ -116,8 +132,8 @@ export default function SignalRailShowcase({ kpis, variant, fontSize, density, r
     }, [kpis, variant]);
     const groups = rows === 2 && ordered.length > 3
         ? [ordered.filter((_, i) => i % 2 === 0), ordered.filter((_, i) => i % 2 === 1)] : [ordered];
-    const cardMin = variant === 'signal-orbit' ? 176 : density === 'compact' ? 154 : 160;
-    const requiredWidth = Math.max(...groups.map((g, r) => g.length * cardMin + (variant === 'prism-pulse' && r === 0 ? 200 - cardMin : 0))) + 18;
+    const cardMin = variant === 'signal-orbit' ? 176 : variant === 'prism-pulse' ? 148 : density === 'compact' ? 154 : 160;
+    const requiredWidth = Math.max(...groups.map((g, r) => g.length * cardMin + (variant === 'prism-pulse' && r === 0 ? 330 - cardMin : 0))) + (variant === 'prism-pulse' ? 20 : 18);
     useEffect(() => {
         const node = scrollArea.current;
         if (!node) return;
@@ -136,7 +152,7 @@ export default function SignalRailShowcase({ kpis, variant, fontSize, density, r
     return <Showcase data-showcase={variant} style={{ backgroundImage: background, '--rail-label-size': `${size[0]}px`, '--rail-value-size': `${size[1]}px`, '--rail-orbit-size': `${size[2]}px` } as React.CSSProperties}>
         <div ref={scrollArea} className="showcase-scroll" tabIndex={0} role="region" aria-label="Signal cards; scroll horizontally for more signals">
             {groups.map((group, r) => {
-                const columns = group.map((_, i) => variant === 'prism-pulse' && r === 0 && i === 0 ? 'minmax(200px,1.3fr)' : `minmax(${cardMin}px,1fr)`).join(' ');
+                const columns = group.map((_, i) => variant === 'prism-pulse' && r === 0 && i === 0 ? 'minmax(330px,2fr)' : `minmax(${cardMin}px,1fr)`).join(' ');
                 const pass = (duplicate: boolean) => <div key={String(duplicate)} className="showcase-grid" data-moving={moving} aria-hidden={duplicate || undefined} style={{ gridTemplateColumns: columns }}>
                     {group.map((kpi, i) => <ShowcaseItem key={kpi.id} kpi={kpi} variant={variant} featured={variant === 'prism-pulse' && i === 0 && r === 0} duplicate={duplicate} />)}
                 </div>;
@@ -145,5 +161,6 @@ export default function SignalRailShowcase({ kpis, variant, fontSize, density, r
                 </div>;
             })}
         </div>
+        {controls && variant === 'prism-pulse' && <div className="showcase-integrated-controls">{controls}</div>}
     </Showcase>;
 }

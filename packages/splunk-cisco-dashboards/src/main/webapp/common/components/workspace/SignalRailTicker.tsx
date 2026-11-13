@@ -241,6 +241,8 @@ const SignalRailShell = styled.section`
     position: static; opacity: 1; pointer-events: auto; transform: none;
     flex-direction: row; align-self: center; margin-inline-start: 2px;
   }
+  &[data-variant="prism-pulse"] .scd-signal-rail-controls { flex-wrap: wrap; flex: 0 1 90px; width: 90px; min-width: 0; max-width: 100%; justify-content: center; margin: 0; background: transparent; border: 0; padding: 0; box-shadow: none; }
+  &[data-variant="prism-pulse"] .showcase-inline-summary { width: 100%; text-align: center; margin-bottom: 8px; }
   .showcase-inline-summary { padding: 0 3px; font-size: 11px; font-weight: 650; white-space: nowrap; }
   .scd-signal-rail-marquee-track {
     width: max-content;
@@ -1016,95 +1018,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
     </div>
   );
 
-  if (kpis.length === 0) return null;
-
-  return (
-    <SignalRailShell
-      className={cn(
-        "scd-signal-rail-ticker group/signal-rail relative z-40 flex w-full min-w-0 max-w-full flex-shrink-0 flex-col overflow-visible border-b",
-        showcaseVariant && "scd-signal-rail-showcase",
-        variant === "one-cisco-glass" &&
-          "sui-border-transparent sui-bg-transparent py-3  sui-color-active",
-        variant === "original" &&
-          "sui-border-weak  px-1.5 py-1 sui-border-weak sui-bg-page",
-        variant === "bloomberg" &&
-          "sui-border-default sui-bg-section px-1.5 py-1 sui-color-active",
-        variant === "minimal-enterprise" &&
-          "sui-border-weak  px-1.5 py-2  sui-border-weak sui-bg-page sui-color-active",
-        variant === "telemetry-constellation" &&
-          "scd-signal-rail-constellation sui-border-info px-1.5 py-1.5 sui-color-info",
-        className,
-      )}
-      data-variant={variant}
-      data-font-size={fontSize}
-      aria-label={`Signal Rail with ${kpis.length} KPIs`}
-      onMouseEnter={() => setInteractionPaused(true)}
-      onMouseLeave={() => setInteractionPaused(false)}
-      onFocusCapture={() => setInteractionPaused(true)}
-      onBlurCapture={(event) => {
-        const nextTarget = event.relatedTarget;
-        if (
-          nextTarget instanceof Node &&
-          event.currentTarget.contains(nextTarget)
-        ) {
-          return;
-        }
-        setInteractionPaused(false);
-      }}
-    >
-      <span
-        className="sr-only"
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-      >
-        Signal health summary: {counts.critical} critical
-      </span>
-      <div
-        className={cn(
-          "relative z-[70] flex w-full min-w-0 max-w-full items-center overflow-visible",
-          density === "compact" ? "gap-2" : "gap-3",
-        )}
-      >
-        <div
-          className={cn(
-            "w-full min-w-0 max-w-full flex-1 overflow-hidden select-none",
-            density === "compact" ? "space-y-0.5" : "space-y-1",
-          )}
-        >
-          {showcaseVariant ? <SignalRailShowcase kpis={kpis} variant={showcaseVariant} fontSize={fontSize} density={density} rows={rows} durationSeconds={durationSeconds} paused={effectivePaused} onOverflowChange={setShowcaseCanMove} /> : tickerRows.map((row, rowIndex) => (
-            <div
-              key={`row-${rowIndex}`}
-              className={cn(
-                "w-full min-w-0 max-w-full py-0.5",
-                staticMode ? "overflow-visible" : "overflow-hidden",
-              )}
-            >
-              {staticMode ? (
-                <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3">
-                  {row.map((kpi) => (
-                    <KpiItem
-                      key={kpi.id}
-                      kpi={kpi}
-                      variant={variant}
-                      density={density}
-                      fontSize={fontSize}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div
-                  className="scd-signal-rail-marquee-track flex"
-                  data-paused={effectivePaused}
-                  style={{ animationDuration: `${durationSeconds}s` }}
-                >
-                  {[0, 1].map((pass) => renderPass(row, pass))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
+  const railControls = (
         <SignalRailControls
           className="scd-signal-rail-controls"
           data-signal-rail-controls="true"
@@ -1174,6 +1088,98 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
             </SignalRailStyleMenu>
           </Dropdown>
         </SignalRailControls>
+  );
+
+  if (kpis.length === 0) return null;
+
+  return (
+    <SignalRailShell
+      className={cn(
+        "scd-signal-rail-ticker group/signal-rail relative z-40 flex w-full min-w-0 max-w-full flex-shrink-0 flex-col overflow-visible border-b",
+        showcaseVariant && "scd-signal-rail-showcase",
+        variant === "one-cisco-glass" &&
+          "sui-border-transparent sui-bg-transparent py-3  sui-color-active",
+        variant === "original" &&
+          "sui-border-weak  px-1.5 py-1 sui-border-weak sui-bg-page",
+        variant === "bloomberg" &&
+          "sui-border-default sui-bg-section px-1.5 py-1 sui-color-active",
+        variant === "minimal-enterprise" &&
+          "sui-border-weak  px-1.5 py-2  sui-border-weak sui-bg-page sui-color-active",
+        variant === "telemetry-constellation" &&
+          "scd-signal-rail-constellation sui-border-info px-1.5 py-1.5 sui-color-info",
+        className,
+      )}
+      data-variant={variant}
+      data-font-size={fontSize}
+      aria-label={`Signal Rail with ${kpis.length} KPIs`}
+      onMouseEnter={() => setInteractionPaused(true)}
+      onMouseLeave={() => setInteractionPaused(false)}
+      onFocusCapture={() => setInteractionPaused(true)}
+      onBlurCapture={(event) => {
+        const nextTarget = event.relatedTarget;
+        if (
+          nextTarget instanceof Node &&
+          event.currentTarget.contains(nextTarget)
+        ) {
+          return;
+        }
+        setInteractionPaused(false);
+      }}
+    >
+      <span
+        className="sr-only"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        Signal health summary: {counts.critical} critical
+      </span>
+      <div
+        className={cn(
+          "relative z-[70] flex w-full min-w-0 max-w-full items-center overflow-visible",
+          density === "compact" ? "gap-2" : "gap-3",
+        )}
+      >
+        <div
+          className={cn(
+            "w-full min-w-0 max-w-full flex-1 overflow-hidden select-none",
+            density === "compact" ? "space-y-0.5" : "space-y-1",
+          )}
+        >
+          {showcaseVariant ? <SignalRailShowcase kpis={kpis} variant={showcaseVariant} fontSize={fontSize} density={density} rows={rows} durationSeconds={durationSeconds} paused={effectivePaused} onOverflowChange={setShowcaseCanMove} controls={variant === 'prism-pulse' ? railControls : undefined} /> : tickerRows.map((row, rowIndex) => (
+            <div
+              key={`row-${rowIndex}`}
+              className={cn(
+                "w-full min-w-0 max-w-full py-0.5",
+                staticMode ? "overflow-visible" : "overflow-hidden",
+              )}
+            >
+              {staticMode ? (
+                <div className="grid w-full grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3">
+                  {row.map((kpi) => (
+                    <KpiItem
+                      key={kpi.id}
+                      kpi={kpi}
+                      variant={variant}
+                      density={density}
+                      fontSize={fontSize}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div
+                  className="scd-signal-rail-marquee-track flex"
+                  data-paused={effectivePaused}
+                  style={{ animationDuration: `${durationSeconds}s` }}
+                >
+                  {[0, 1].map((pass) => renderPass(row, pass))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {variant !== 'prism-pulse' && railControls}
       </div>
 
       {variant === "bloomberg" && (
