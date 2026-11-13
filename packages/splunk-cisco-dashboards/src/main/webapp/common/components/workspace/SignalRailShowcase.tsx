@@ -37,6 +37,9 @@ const Showcase = styled.div`
     [data-featured="true"] { box-shadow: inset 3px 0 0 var(--signal-color); }
     .showcase-status { display: inline-flex; flex: 0 0 auto; white-space: nowrap; color: var(--signal-color); border: 1px solid currentColor; border-radius: 12px; padding: 1px 5px; font-size: 10px; line-height: 1.4; font-weight: 750; letter-spacing: .02em; text-transform: uppercase; }
     .showcase-trend { height: 12px; width: 100%; min-width: 0; }
+    &[data-showcase="prism-pulse"] .showcase-scroll { padding-block: 10px; }
+    &[data-showcase="prism-pulse"] article { padding-block: 6px; }
+    &[data-showcase="prism-pulse"] .showcase-trend { height: 18px; margin-top: 4px; }
     .showcase-no-trend { display: flex; align-items: center; height: 100%; font-size: 10px; line-height: 1; white-space: nowrap; color: #b6c5d4; }
     .showcase-orb { display: flex; flex: 0 0 auto; align-items: center; justify-content: center; width: var(--rail-orbit-size); height: var(--rail-orbit-size); background-size: contain; background-position: center; background-repeat: no-repeat; padding: 5px; }
     .showcase-orbit-copy { flex: 1; min-width: 0; }
