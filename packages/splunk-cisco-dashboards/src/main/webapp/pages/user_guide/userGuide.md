@@ -41,7 +41,7 @@ Browse the current release and recorded historical versions below. The newest re
 
 - Choose **Prism Pulse**, **Signal Orbit**, or **Event Horizon** from the Signal Rail **Style** menu for three new optional presentations of your existing signals. Their compact default height leaves more room for dashboard content. Values and health remain tied to the configured searches; missing trend observations remain unavailable.
 
-- DC Networking adds a five-product signal rail and a non-geographic fabric view with reported endpoint/port links and separate inventory evidence. Searches retain the selected time and fabric/controller scope; missing observations remain unknown.
+- DC Networking includes a five-product signal rail and the standard map in Command view for observed fabric inventory. Missing health and inter-fabric connections remain unknown.
 
 - Signal Rail settings remain accessible from the sliders icon before **Refresh rate** in the workspace toolbar, even when the rail is hidden. The rail retains Pause and Style controls without a duplicate Configure icon.
 
@@ -698,9 +698,9 @@ Insights Workspaces are reusable, audience-specific views of Searchbase-backed K
 
 The signal rail summarizes Nexus Dashboard critical anomalies, ACI critical faults, Nexus 9000 CPU pressure, SAN transmit wait and Hyperfabric administrative enablement. These are observed measurements; administrative enablement does not establish operational availability. A card without configured health thresholds is labeled **Watching**.
 
-The map region opens a **non-geographic fabric view**. Use **Reported links** to select a fabric/controller domain. Solid blue lines require reported physical endpoint ports; dashed amber lines show other reported topology. Endpoint positions do not imply geography, device tiers, traffic direction or intermediate hops. The compact diagram displays up to six link records; its count states how many loaded records are shown. Use **Table** or **Open this evidence in Search** to inspect more evidence.
+The map uses the standard **Command** view, with the same navigation, zoom, fit and site details used by other workspaces. Fabric and controller inventory groups appear from the selected time range. Groups without coordinates stay in Command view; geographic positions are not invented. Inventory alone does not establish health or inter-fabric connections, so those remain unknown or unreported.
 
-Use **Fabrics** for reported inventory grouped by product, account and controller. **Shared inventory** shows exact-serial matches across products, when available; those matches do not establish physical links or traffic paths. Each evidence search loads at most 1,000 rows. Open Search for complete results, using the same selected time and, for a fabric investigation, its exact product/controller/fabric scope. Empty observations, missing library entries, busy search slots and failed searches have separate messages.
+Select a fabric to inspect its reported source and open the attached inventory search. The search uses the workspace time range and includes all observed groups for comparison. Use related library searches for endpoint/port evidence and exact-serial inventory matches. Those records answer different questions; they do not establish inter-fabric traffic paths.
 
 Open **DC Networking** from the workspace switcher. Start with **What needs my attention?**, confirm five-product coverage and observation age, then follow **Investigate related evidence** into product details and related observations. The packaged sections cover Nexus Dashboard, ACI, Nexus 9000, MDS / SAN Analytics through NDFC, and Nexus Hyperfabric. This demo labels its existing observations as lab data.
 

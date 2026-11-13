@@ -40,8 +40,6 @@ import StaticContent from "@splunk/react-ui/StaticContent";
 import WaitSpinner from "@splunk/react-ui/WaitSpinner";
 import { variables } from "@splunk/themes";
 import useSplunkTheme from "@splunk/themes/useSplunkTheme";
-import DcFabricTopology from '@/common/components/workspace/DcFabricTopology';
-import { applyDcFabricScope } from '@/common/lib/dcFabricTopology';
 import {
   Activity,
   RefreshCw,
@@ -6003,17 +6001,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                   </div>
                 </div>
 
-                {isDcNetworking ? <DcFabricTopology
-                  queries={{ inventory: searchbaseById?.get('dc_workspace_fabric_inventory')?.search,
-                    links: searchbaseById?.get('dc_workspace_fabric_links')?.search,
-                    shared: searchbaseById?.get('dc_workspace_inventory_matches')?.search }}
-                  range={timeRange} refreshToken={refreshToken} table={regionalView === 'table'}
-                  onOpenSearch={(id, scope) => {
-                    const record = searchbaseById?.get(`dc_workspace_${id}`);
-                    if (!record?.search) { throw new Error('The selected DC search is not available in the library.'); }
-                    window.open(splunkSearchAppUrl(applyDcFabricScope(record.search, scope),timeRange,record.dispatchContext),'_blank','noopener,noreferrer');
-                  }}
-                /> : regionalView === "map" ? (
+                {regionalView === "map" ? (
                   <MapViewport>
                     {/* Build 1190 — render the live map
                                        during export instead of swapping
@@ -6045,6 +6033,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
                     <CustomerTopologyMap
                       key={`${insightsWorkspace.id}-${topologyResetKey}`}
                       topology={workspaceTopology}
+                      commandOnly={isDcNetworking}
                       canManageTopology={canManageSharedTopology}
                       earliestTime={timeRange.earliest}
                       latestTime={timeRange.latest}

@@ -252,6 +252,13 @@ add('fabric_links', 'DC fabric endpoint and port evidence', None,
 | table Product Account Controller Fabric FabricId LinkId Local LocalPort Remote RemotePort EvidenceType TrafficPath AgeMinutes""",
     ('reported_links', 'inventory_matches', 'events'))
 
+add('fabric_map', 'DC fabrics for the standard map', None,
+    'Which fabric and controller inventory groups are observed? Health and inter-fabric connectivity are not established by inventory.',
+    SEARCHES['fabric_inventory']['query'].rsplit('\n| table ',1)[0] + """
+| eval itemType="site", siteId="dc-".sha256(Product."|".Account."|".Controller."|".Fabric."|".FabricId), siteName=Product." · ".if(Fabric!="Unreported",Fabric,Controller), role="fabric", shortName=case(Product="Nexus Dashboard","ND",Product="ACI","ACI",Product="Nexus 9000","NX9K",Product="MDS / NDFC","MDS",true(),"HF"), status="unknown", lastUpdated=Observed, telemetrySource=Product." · ".Account." · ".Controller." · ".Relationship
+| table itemType siteId siteName role shortName status lastUpdated telemetrySource""",
+    ('fabric_inventory', 'fabric_links', 'coverage'))
+
 add_charts(SEARCHES, base)
 
 def block_file(name, body):

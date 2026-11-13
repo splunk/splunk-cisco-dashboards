@@ -64,7 +64,7 @@ test('packaged workspace has all six sections and every tile/drilldown resolves'
     assert.equal(dc.sections.length, 6);
     assert.equal(dc.sections[0].title, 'What needs my attention?');
     assert.equal(dc.mapVisible, true);
-    assert.equal(stanzas.size, 77);
+    assert.equal(stanzas.size, 78);
     assert.equal(dc.maxTileCount, 9);
     for (const [id, body] of stanzas) {
         assert.match(body, /^search_type = display$/m);
@@ -406,99 +406,16 @@ test('DC enables a five-product rail and an inventory-only factory topology', ()
     assert.deepEqual(topology.sites,[]);
     assert.deepEqual(topology.links,[]);
     const page=fs.readFileSync(path.join(root,'src/main/webapp/pages/executive_insights/index.tsx'),'utf8');
-    assert.match(page,/isDcNetworking \? <DcFabricTopology/);
+    assert.doesNotMatch(page,/<DcFabricTopology/);
+    assert.match(page,/commandOnly=\{isDcNetworking\}/);
+    assert.equal(topology.telemetrySearchName,'DC Networking Workspace - DC fabrics for the standard map');
     assert.match(page,/mapPrimaryBaseCfg = isDcNetworking \? undefined/);
 });
 
-test('DC endpoint graphs isolate domains, require both physical ports, and keep inventory scope safe', () => {
-    const model = load('src/main/webapp/common/lib/dcFabricTopology.ts',{'./dcNetworkingScope':scope});
-    const row={Product:'Nexus Hyperfabric',Account:'lab',Controller:'controller-a',Fabric:'Fabric A',FabricId:'fabric-id',Local:'leaf',Remote:'server',LocalPort:'eth1',RemotePort:'eth2',EvidenceType:'Reported physical connection'};
-    assert.equal(model.dcPhysicalLink(row),true);
-    assert.equal(model.dcPhysicalLink({...row,RemotePort:''}),false);
-    assert.equal(model.dcPhysicalLink({...row,EvidenceType:'Reported topology; not classified as a physical connection'}),false);
-    const groups=model.dcLinkGroups([row,{...row,Controller:'controller-b'},{...row,Product:'Nexus Dashboard'},{...row,FabricId:'other-id'}]);
-    assert.equal(groups.length,4,'Same names do not merge controller/product/fabric domains');
-    const diagram=model.dcEndpointDiagram([row]);
-    assert.equal(diagram.nodes.length,2);
-    assert.equal(diagram.links[0].physical,true);
-    assert.equal(model.dcEndpointDiagram(Array(20).fill(row)).links.length,6,'Keep the graph readable and disclose truncation');
-    const spread=model.dcEndpointDiagram(Array.from({length:6},(_,i)=>({...row,Local:`local-${i}`,Remote:`remote-${i}`})));
-    assert.equal(spread.nodes.length,12);
-    for(const node of spread.nodes){ assert.ok(node.x>=56 && node.x<=584 && node.y>=17 && node.y<=463); }
-
-    const filtered=model.applyDcFabricScope(spl('dc_workspace_fabric_links'),row);
-    assert.match(filtered,/lower\(Controller\)="controller-a"/);
-    assert.match(filtered,/lower\(FabricId\)="fabric-id"/);
-    assert.ok(filtered.indexOf('lower(Controller)')<filtered.indexOf('eventstats'));
-    assert.throws(()=>model.applyDcFabricScope(spl('dc_workspace_fabric_links'),{...row,Controller:'`unsafe`'}));
-});
-
-test('DC diagram renders reported evidence and distinguishes unavailable states without sample data', () => {
-    const React=require('react');
-    const {renderToStaticMarkup}=require('react-dom/server');
-    const model=load('src/main/webapp/common/lib/dcFabricTopology.ts',{'./dcNetworkingScope':scope});
-    const format=load('src/main/webapp/common/lib/metricValueFormat.ts');
-    const Select=({children})=>React.createElement('div',null,children);
-    Select.Option=({label})=>React.createElement('span',null,label);
-    let result={source:'live',rows:[{Product:'Nexus Hyperfabric',Account:'lab',Controller:'controller',Fabric:'Fabric A',FabricId:'a',LinkId:'link-a',Local:'leaf-a',LocalPort:'eth1',Remote:'server-a',RemotePort:'eth2',EvidenceType:'Reported physical connection',AgeMinutes:'1.25'}],columns:[],totalRowCount:1};
-    const ranges=[];
-    const View=load('src/main/webapp/common/components/workspace/DcFabricTopology.tsx',{
-        '@splunk/react-ui/Button':({children,disabled})=>React.createElement('button',{disabled},children),
-        '@splunk/react-ui/Select':Select,
-        '@/common/hooks/useMetric':{useTableData:(_cfg,range)=>{ranges.push(range);return result;}},
-        '@/common/lib/dcFabricTopology':model,
-        '@/common/lib/metricValueFormat':format,
-    }).default;
-    const range={earliest:'-4h',latest:'now',label:'Last 4 hours'};
-    const props={queries:{inventory:'inventory',links:'links',shared:'shared'},range,refreshToken:0,onOpenSearch(){}};
-    const html=renderToStaticMarkup(React.createElement(View,props));
-    assert.match(html,/<svg/);
-    assert.match(html,/leaf-a/);
-    assert.match(html,/server-a/);
-    assert.match(html,/Solid blue/);
-    assert.doesNotMatch(html,/London|New York|Singapore|traffic animation/);
-    assert.ok(ranges.every(r=>r===range));
-    const table=renderToStaticMarkup(React.createElement(View,{...props,table:true}));
-    assert.doesNotMatch(table,/<svg/);
-    assert.match(table,/eth1/);
-    for(const [state,message] of [
-        [{source:'loading',rows:[]},/Loading observations/],
-        [{source:'live',rows:[]},/Relationship and health are unknown/],
-        [{source:'live',rows:[],noDataReason:'capacity_limited'},/Search slots are busy/],
-        [{source:'live',rows:[],noDataReason:'job_failed'},/evidence search failed/],
-    ]){
-        result={...result,...state};
-        const unavailable=renderToStaticMarkup(React.createElement(View,props));
-        assert.match(unavailable,message);
-        assert.doesNotMatch(unavailable,/<svg/);
-    }
-});
-
-test('map query configurations keep reference identity across parent and data rerenders', () => {
-    const React=require('react');
-    const model=load('src/main/webapp/common/lib/dcFabricTopology.ts',{'./dcNetworkingScope':scope});
-    const format=load('src/main/webapp/common/lib/metricValueFormat.ts');
-    const cache=[];let cursor=0;let captured=[];
-    const stableRows=[];
-    const View=load('src/main/webapp/common/components/workspace/DcFabricTopology.tsx',{
-        react:{...React,useState:initial=>[initial,()=>{}],useMemo:(factory,deps)=>{
-            const i=cursor++;const old=cache[i];
-            if(!old || deps.some((value,j)=>!Object.is(value,old.deps[j])))cache[i]={deps,value:factory()};
-            return cache[i].value;
-        }},
-        '@splunk/react-ui/Button':()=>null,
-        '@splunk/react-ui/Select':Object.assign(()=>null,{Option:()=>null}),
-        '@/common/hooks/useMetric':{useTableData:cfg=>{captured.push(cfg);return {source:'live',rows:stableRows,columns:[],totalRowCount:0};}},
-        '@/common/lib/dcFabricTopology':model,
-        '@/common/lib/metricValueFormat':format,
-    }).default;
-    function render(links='links'){
-        cursor=0;captured=[];
-        View({queries:{inventory:'inventory',links,shared:'shared'},range:{earliest:'-4h',latest:'now',label:'4h'},refreshToken:0,onOpenSearch(){}});
-        return captured;
-    }
-    const first=render(),next=render();
-    assert.equal(first.length,3);
-    first.forEach((cfg,i)=>assert.equal(cfg,next[i],'useTableData depends on cfg identity; fresh wrappers repeatedly cancel jobs'));
-    assert.notEqual(render('changed-links')[1],first[1],'A changed library search must still redispatch');
+test('standard map uses unlocated inventory without invented geography or health', () => {
+    const query=spl('dc_workspace_fabric_map');
+    assert.match(query,/sha256/);
+    assert.match(query,/status="unknown"/);
+    assert.doesNotMatch(query,/lat=|lng=|activeDevices=/);
+    assert.match(query,/`index_dc`/);
 });

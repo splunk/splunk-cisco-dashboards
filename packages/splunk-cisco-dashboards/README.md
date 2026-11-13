@@ -15,7 +15,7 @@ networking pillars and workplace scenarios.
   trends only when timestamped observations are available. Their compact default
   height leaves more room for dashboard content.
 
-- DC Networking now includes a five-product signal rail and a non-geographic fabric view. Select a fabric/controller to inspect reported endpoint and port connections, switch to observed inventory, or review exact-serial matches across products. Inventory identity, reported physical links and measured traffic paths remain distinct; absent observations stay unknown.
+- DC Networking includes a five-product signal rail and the standard map in Command view. Inspect observed fabric/controller inventory and open its source search. Health and inter-fabric connections remain unknown when inventory does not establish them; geographic locations are not invented.
 
 - Signal Rail settings are always available from the sliders icon before
   Refresh rate in the workspace toolbar, including when the rail is hidden.

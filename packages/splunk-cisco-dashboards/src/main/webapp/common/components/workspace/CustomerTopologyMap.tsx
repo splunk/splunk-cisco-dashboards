@@ -3772,6 +3772,7 @@ const buildShortName = (name: string): string => {
  */
 const parseSiteRowAsDiscovered = (
   row: Record<string, unknown>,
+  allowUnlocated = false,
 ): TopologySite | null => {
   const siteId = normalizeId(
     textFromRow(row, ["siteId", "site_id", "site", "id"]),
@@ -3779,8 +3780,8 @@ const parseSiteRowAsDiscovered = (
   );
   const lat = finiteNumberFromRow(row, ["lat", "latitude"]);
   const lng = finiteNumberFromRow(row, ["lng", "lon", "long", "longitude"]);
-  if (!siteId || lat === undefined || lng === undefined) return null;
-  if (lat === 0 && lng === 0) return null;
+  if (!siteId) return null;
+  if (!allowUnlocated && (lat === undefined || lng === undefined || (lat === 0 && lng === 0))) return null;
 
   const name =
     textFromRow(row, ["siteName", "site_name", "name", "displayName"]) ??
@@ -3799,8 +3800,9 @@ const parseSiteRowAsDiscovered = (
     name,
     shortName,
     role,
-    lat,
-    lng,
+    // Command layout does not use geographic coordinates.
+    lat: lat ?? 0,
+    lng: lng ?? 0,
     status: "unknown",
     metrics: {},
     telemetrySource: "Auto-discovered from topology search",
@@ -5616,9 +5618,9 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
         )}
       >
         {[
-          ["Sites", `${healthySites}/${topology.sites.length}`],
-          ["Paths", `${healthyLinks}/${topology.links.length}`],
-          ["Critical", String(criticalCount)],
+          ["Sites", topology.sites.some(site => site.status !== "unknown") ? `${healthySites}/${topology.sites.length}` : `${topology.sites.length} observed`],
+          ["Paths", topology.links.length ? `${healthyLinks}/${topology.links.length}` : "Unreported"],
+          ["Critical", topology.sites.some(site => site.status !== "unknown") || topology.links.some(link => link.status !== "unknown") ? String(criticalCount) : "Unknown"],
         ].map(([label, value]) => (
           <div
             key={label}
@@ -5658,6 +5660,8 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
 };
 
 interface CustomerTopologyMapProps {
+  /** Use the standard Command surface for inventory without geographic coordinates. */
+  commandOnly?: boolean;
   topology?: CustomerTopology;
   canManageTopology?: boolean;
   earliestTime?: string;
@@ -5671,6 +5675,7 @@ interface CustomerTopologyMapProps {
 
 export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   topology = CUSTOMER_TOPOLOGY,
+  commandOnly = false,
   canManageTopology = false,
   earliestTime = "-24h",
   latestTime = "now",
@@ -5683,7 +5688,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
   const { colorScheme } = useAppThemeControls();
   const isDark = colorScheme === "dark";
   const [selected, setSelected] = useState<SelectedTarget | null>(null);
-  const [surfaceMode, setSurfaceMode] = useState<TopologySurfaceMode>("geo");
+  const [surfaceMode, setSurfaceMode] = useState<TopologySurfaceMode>(commandOnly ? "command" : "geo");
   const [spotlightSite, setSpotlightSite] = useState<TopologySite | null>(null);
   const [paused, setPaused] = useState(false);
   const {
@@ -6036,7 +6041,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             if (site) {
               siteUpdates[site.id] = parseSiteRow(site, row);
             } else if (itemType === "site" && siteId) {
-              const discovered = parseSiteRowAsDiscovered(row);
+              const discovered = parseSiteRowAsDiscovered(row, commandOnly);
               if (discovered) discoveredSites[discovered.id] = discovered;
             }
             continue;
@@ -6182,6 +6187,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
     refreshToken,
     storedTopology.links,
     storedTopology.sites,
+    commandOnly,
     telemetrySearchName,
   ]);
 
@@ -6621,7 +6627,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
       : resolvedSelected?.kind === "link"
         ? resolvedSelected.link.searchName
         : undefined;
-  const selectedSearchName = selectedItemSearchName?.trim() || undefined;
+  const selectedSearchName = selectedItemSearchName?.trim() || (commandOnly ? telemetrySearchName : undefined);
   const selectedRecord =
     selectedSearchName && catalogueByName
       ? (catalogueByName[selectedSearchName] ?? null)
@@ -7276,7 +7282,7 @@ export const CustomerTopologyMap: React.FC<CustomerTopologyMapProps> = ({
             setSurfaceMode(value as TopologySurfaceMode)
           }
         >
-          {TOPOLOGY_SURFACE_OPTIONS.map(([value, label]) => (
+          {TOPOLOGY_SURFACE_OPTIONS.filter(([value]) => !commandOnly || value === "command").map(([value, label]) => (
             <Select.Option
               key={value}
               label={`View: ${label}`}
