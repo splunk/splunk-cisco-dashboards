@@ -7,6 +7,7 @@
  * and telemetry bindings live in one config object.
  */
 
+import { isolatedFabricLayout } from "@/common/lib/topologyCommandLayout";
 import React, {
   useCallback,
   useEffect,
@@ -5038,6 +5039,20 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
   onSelectLink,
 }) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    const svg = svgRef.current;
+    if (!svg || typeof ResizeObserver === "undefined") return undefined;
+    const update = () => {
+      const { width, height } = svg.getBoundingClientRect();
+      setWide(width >= height);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(svg);
+    return () => observer.disconnect();
+  }, []);
+  const fabricLayout = useMemo(() => isolatedFabricLayout(topology.sites, topology.links.length, wide), [topology.sites, topology.links.length, wide]);
   const viewportGroupRef = useRef<SVGGElement | null>(null);
   const viewportRef = useRef<CommandViewport>(COMMAND_FIT_VIEWPORT);
   const pendingViewportRef = useRef<CommandViewport>(COMMAND_FIT_VIEWPORT);
@@ -5274,6 +5289,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
   );
 
   const points = useMemo(() => {
+    if (fabricLayout) return fabricLayout.points;
     const degree = new Map(topology.sites.map((site) => [site.id, 0]));
     for (const link of topology.links) {
       degree.set(link.sourceSiteId, (degree.get(link.sourceSiteId) ?? 0) + 1);
@@ -5300,7 +5316,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
       });
     });
     return next;
-  }, [topology.links, topology.sites]);
+  }, [topology.links, topology.sites, fabricLayout]);
 
   const healthySites = topology.sites.filter(
     (site) => site.status === "stable",
@@ -5329,7 +5345,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
             `}</style>
       <svg
         ref={svgRef}
-        viewBox="0 0 1000 620"
+        viewBox={fabricLayout?.viewBox ?? "0 0 1000 620"}
         preserveAspectRatio="xMidYMid meet"
         className="h-full w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-inset sui-focus-visible-ring"
         role="group"
@@ -5618,7 +5634,7 @@ const TopologyCommandView: React.FC<TopologyCommandViewProps> = ({
         )}
       >
         {[
-          ["Sites", topology.sites.some(site => site.status !== "unknown") ? `${healthySites}/${topology.sites.length}` : `${topology.sites.length} observed`],
+          [fabricLayout ? "Fabrics" : "Sites", fabricLayout ? String(topology.sites.length) : topology.sites.some(site => site.status !== "unknown") ? `${healthySites}/${topology.sites.length}` : `${topology.sites.length} observed`],
           ["Paths", topology.links.length ? `${healthyLinks}/${topology.links.length}` : "Unreported"],
           ["Critical", topology.sites.some(site => site.status !== "unknown") || topology.links.some(link => link.status !== "unknown") ? String(criticalCount) : "Unknown"],
         ].map(([label, value]) => (

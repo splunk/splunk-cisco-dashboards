@@ -441,3 +441,25 @@ test('DC rail styling is private to the workspace and preserves existing global 
     storage.set(key('signalRailVariant.dc_networking'),'invalid');
     assert.equal(api.readStoredVariant('signalRailVariant.dc_networking','original'),'original');
 });
+
+test('small fabric layouts fit readable peers and preserve connected or other product maps', () => {
+    const {isolatedFabricLayout}=load('src/main/webapp/common/lib/topologyCommandLayout.ts');
+    for(let count=1;count<=3;count++){
+        const sites=Array.from({length:count},(_,i)=>({id:String(i),role:'fabric'}));
+        for(const wide of [true,false]){
+            const layout=isolatedFabricLayout(sites,0,wide);
+            const [x,y,width,height]=layout.viewBox.split(' ').map(Number);
+            assert.equal(layout.points.size,count);
+            for(const point of layout.points.values()){
+                assert.ok(point.x-70>=x && point.x+70<=x+width);
+                assert.ok(point.y-37>=y && point.y+84<=y+height);
+            }
+            const values=[...layout.points.values()];
+            assert.equal(new Set(values.map(p=>wide?p.y:p.x)).size,1);
+        }
+        assert.equal(isolatedFabricLayout(sites,1,true),null,'Reported links retain normal connectivity layout');
+    }
+    assert.equal(isolatedFabricLayout([],0,true),null);
+    assert.equal(isolatedFabricLayout(Array.from({length:4},(_,i)=>({id:String(i),role:'fabric'})),0,true),null);
+    assert.equal(isolatedFabricLayout([{id:'office',role:'branch'}],0,true),null);
+});
