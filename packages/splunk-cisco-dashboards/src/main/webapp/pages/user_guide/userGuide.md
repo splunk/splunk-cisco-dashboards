@@ -39,7 +39,7 @@ Browse the current release and recorded historical versions below. The newest re
 
 ### Dashboards and investigations
 
-- Choose **Prism Pulse**, **Signal Orbit**, or **Event Horizon** from the Signal Rail **Style** menu for three new optional presentations of your existing signals. Values and health remain tied to the configured searches; missing trend observations remain unavailable.
+- Choose **Prism Pulse**, **Signal Orbit**, or **Event Horizon** from the Signal Rail **Style** menu for three new optional presentations of your existing signals. Their compact default height leaves more room for dashboard content. Values and health remain tied to the configured searches; missing trend observations remain unavailable.
 
 - DC Networking adds a five-product signal rail and a non-geographic fabric view with reported endpoint/port links and separate inventory evidence. Searches retain the selected time and fabric/controller scope; missing observations remain unknown.
 

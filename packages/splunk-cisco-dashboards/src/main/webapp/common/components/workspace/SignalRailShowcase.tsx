@@ -17,32 +17,32 @@ const Showcase = styled.div`
     background-color: #060d17; border: 1px solid #3d556b; border-radius: 12px;
     background-position: center; background-size: 100% 100%;
     &[data-showcase="prism-pulse"] { background-size: 100% 200%; }
-    .showcase-scroll { overflow-x: auto; scrollbar-width: thin; padding: 18px 12px 8px; }
+    .showcase-scroll { overflow-x: auto; scrollbar-width: thin; padding: 10px 12px 4px; }
     .showcase-grid { display: grid; width: 100%; gap: 0; align-items: stretch; }
     .showcase-grid[data-moving="true"] { display: flex; width: max-content; }
     .showcase-grid[data-moving="true"] > article { width: 220px; flex: 0 0 auto; }
     .showcase-grid[data-moving="true"] > article[data-featured="true"] { width: 300px; }
-    article { min-width: 0; padding: 8px 18px; border-inline-end: 1px solid #334153; }
+    article { min-width: 0; padding: 4px 18px; border-inline-end: 1px solid #334153; }
     article:last-child { border: 0; }
-    .showcase-label-row { display: flex; align-items: start; gap: 8px; min-height: 48px; }
+    .showcase-label-row { display: flex; align-items: start; gap: 8px; min-height: 38px; }
     .showcase-label { flex: 1; font-size: var(--rail-label-size); line-height: 1.35; font-weight: 650; overflow-wrap: anywhere; }
     a { color: #c7deec; flex: 0 0 auto; padding: 3px; border-radius: 3px; }
     a:hover { color: #fff; } a:focus-visible { outline: 2px solid #7bddff; outline-offset: 3px; }
     .showcase-value { display: block; font-size: var(--rail-value-size); font-weight: 750; line-height: 1.15; letter-spacing: -.03em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-    [data-featured="true"] .showcase-value { font-size: calc(var(--rail-value-size) * 1.45); }
+    [data-featured="true"] .showcase-value { font-size: calc(var(--rail-value-size) * 1.25); }
     [data-featured="true"] { box-shadow: inset 3px 0 0 var(--signal-color); }
-    .showcase-status { display: inline-block; color: var(--signal-color); font-size: 12px; line-height: 1.5; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; margin: 6px 0; }
-    .showcase-trend { height: 52px; width: 100%; min-width: 0; }
+    .showcase-status { display: inline-block; color: var(--signal-color); font-size: 12px; line-height: 1.5; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; margin: 3px 0; }
+    .showcase-trend { height: 34px; width: 100%; min-width: 0; }
     .showcase-no-trend { display: flex; align-items: center; height: 100%; font-size: 12px; color: #b6c5d4; }
-    .showcase-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 10px 24px 14px; font-size: 12px; color: #b9cadd; }
+    .showcase-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; padding: 5px 24px 7px; font-size: 12px; color: #b9cadd; }
     .showcase-summary strong { margin-inline-end: auto; letter-spacing: .09em; text-transform: uppercase; }
     .showcase-summary span { white-space: nowrap; }
-    .showcase-orb { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 156px; height: 156px; margin: 0 auto; background-size: contain; background-position: center; background-repeat: no-repeat; padding: 20px; }
+    .showcase-orb { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 120px; height: 120px; margin: 0 auto; background-size: contain; background-position: center; background-repeat: no-repeat; padding: 12px; }
     &[data-showcase="signal-orbit"] .showcase-label-row { text-align: center; }
     &[data-showcase="signal-orbit"] .showcase-value { font-size: calc(var(--rail-value-size) * .88); text-align: center; }
-    &[data-showcase="signal-orbit"] .showcase-trend { height: 30px; }
+    &[data-showcase="signal-orbit"] .showcase-trend { height: 24px; }
     &[data-showcase="signal-orbit"] .showcase-status { display: block; text-align: center; }
-    &[data-showcase="event-horizon"] .showcase-trend { height: 64px; filter: drop-shadow(0 0 4px var(--signal-color)); }
+    &[data-showcase="event-horizon"] .showcase-trend { height: 40px; filter: drop-shadow(0 0 4px var(--signal-color)); }
     &[data-showcase="event-horizon"] .showcase-status { border: 1px solid currentColor; padding: 1px 8px; border-radius: 5px; }
     &[data-showcase="event-horizon"] .showcase-no-trend { filter: none; }
     @media (forced-colors: active) { background-image: none !important; color: CanvasText; .showcase-status { color: CanvasText; } }

@@ -234,7 +234,7 @@ const signalRailMarquee = keyframes`
 `;
 
 const SignalRailShell = styled.section`
-  &.scd-signal-rail-showcase { padding: 10px 0; border: 0; }
+  &.scd-signal-rail-showcase { padding: 6px 0; border: 0; }
   &.scd-signal-rail-showcase .scd-signal-rail-controls {
     position: static; opacity: 1; pointer-events: auto; transform: none;
     flex-direction: column; align-self: center; margin-inline-start: 6px;

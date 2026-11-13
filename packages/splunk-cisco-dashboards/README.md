@@ -12,7 +12,8 @@ networking pillars and workplace scenarios.
 
 - Added Prism Pulse, Signal Orbit, and Event Horizon to the Signal Rail Style
   menu. These optional looks retain live values and health states, and display
-  trends only when timestamped observations are available.
+  trends only when timestamped observations are available. Their compact default
+  height leaves more room for dashboard content.
 
 - DC Networking now includes a five-product signal rail and a non-geographic fabric view. Select a fabric/controller to inspect reported endpoint and port connections, switch to observed inventory, or review exact-serial matches across products. Inventory identity, reported physical links and measured traffic paths remain distinct; absent observations stay unknown.
 
