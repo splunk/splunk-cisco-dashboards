@@ -419,3 +419,21 @@ test('standard map uses unlocated inventory without invented geography or health
     assert.doesNotMatch(query,/lat=|lng=|activeDevices=/);
     assert.match(query,/`index_dc`/);
 });
+
+test('DC rail styling is private to the workspace and preserves existing global choices', () => {
+    const source=fs.readFileSync(path.join(root,'src/main/webapp/common/components/workspace/SignalRailTicker.tsx'),'utf8');
+    const helpers=source.slice(source.indexOf('const isSignalRailVariant ='),source.indexOf('const splitRows ='));
+    const js=ts.transpileModule(helpers,{compilerOptions:{target:ts.ScriptTarget.ES2020}}).outputText;
+    const storage=new Map([['user.signalRailVariant','event-horizon']]);
+    const key=name=>'user.'+name;
+    const api=new Function('window','readUserScopedStorageItem','userScopedStorageKey','STORAGE_KEY','DEFAULT_VARIANT',
+        js+';return {readStoredVariant,writeStoredVariant};')(
+        {localStorage:{setItem:(key,value)=>storage.set(key,value)}},key=>storage.get(key)??null,key,'signalRailVariant','one-cisco-glass');
+    assert.equal(api.readStoredVariant(),'event-horizon');
+    assert.equal(api.readStoredVariant('signalRailVariant.dc_networking','original'),'original');
+    api.writeStoredVariant('minimal-enterprise','signalRailVariant.dc_networking');
+    assert.equal(api.readStoredVariant('signalRailVariant.dc_networking','original'),'minimal-enterprise');
+    assert.equal(api.readStoredVariant(),'event-horizon');
+    storage.set(key('signalRailVariant.dc_networking'),'invalid');
+    assert.equal(api.readStoredVariant('signalRailVariant.dc_networking','original'),'original');
+});

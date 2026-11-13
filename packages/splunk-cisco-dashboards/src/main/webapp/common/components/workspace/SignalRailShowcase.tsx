@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import styled from 'styled-components';
+import { variables } from '@splunk/themes';
 import { createStaticURL } from '@splunk/splunk-utils/url';
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ExternalLink } from '@/common/icons/SuiIcon';
@@ -48,10 +49,16 @@ const Showcase = styled.div`
     @media (forced-colors: active) { background-image: none !important; color: CanvasText; .showcase-status { color: CanvasText; } }
 `;
 
-export function SignalRailTrend({ kpi }: { kpi: SignalRailKpi }) {
+const TrendTooltip = styled.div<{ $themeAware: boolean }>`
+    background: ${({ $themeAware }) => $themeAware ? variables.backgroundColorPopup : '#101c2a'};
+    color: ${({ $themeAware }) => $themeAware ? variables.contentColorDefault : '#edf5ff'};
+    border: 1px solid ${({ $themeAware }) => $themeAware ? variables.borderColor : '#637588'};
+`;
+
+export function SignalRailTrend({ kpi, stroke, themeAware = false }: { kpi: SignalRailKpi; stroke?: string; themeAware?: boolean }) {
     const anchor = useRef<HTMLDivElement>(null);
     const points = kpi.series ?? [];
-    return <div ref={anchor} className="showcase-trend" aria-label={points.length > 1 ? `${kpi.label}: ${points.length} observed trend samples` : `${kpi.label}: trend unavailable`}>
+    return <div ref={anchor} className="showcase-trend" style={themeAware ? { height: '100%' } : undefined} aria-label={points.length > 1 ? `${kpi.label}: ${points.length} observed trend samples` : `${kpi.label}: trend unavailable`}>
         {points.length > 1 ? <ResponsiveContainer width="100%" height="100%">
             <LineChart data={points} margin={{ top: 6, bottom: 4, left: 2, right: 2 }}>
                 <XAxis dataKey="time" type="number" domain={['dataMin', 'dataMax']} hide />
@@ -59,14 +66,14 @@ export function SignalRailTrend({ kpi }: { kpi: SignalRailKpi }) {
                 <Tooltip content={({ active, payload, label }) => {
                     if (!active || !payload?.length || !anchor.current || typeof document === 'undefined') return null;
                     const rect = anchor.current.getBoundingClientRect();
-                    return createPortal(<div role="tooltip" style={{
+                    return createPortal(<TrendTooltip $themeAware={themeAware} role="tooltip" style={{
                         position: 'fixed', zIndex: 100000, pointerEvents: 'none', width: 'min(240px, calc(100vw - 16px))',
                         left: Math.max(8, Math.min(rect.left, window.innerWidth - 256)), top: Math.max(8, rect.top - 84),
-                        background: '#101c2a', border: '1px solid #637588', borderRadius: 5, padding: 8,
-                        color: '#edf5ff', fontSize: 12, lineHeight: 1.4, overflowWrap: 'anywhere',
-                    }}><div>{formatSignalRailTime(Number(label))}</div><div>{kpi.label}: <strong>{String(payload[0].value)}{kpi.unit ?? ''}</strong></div></div>, document.body);
+                        borderRadius: 5, padding: 8,
+                        fontSize: 12, lineHeight: 1.4, overflowWrap: 'anywhere',
+                    }}><div>{formatSignalRailTime(Number(label))}</div><div>{kpi.label}: <strong>{String(payload[0].value)}{kpi.unit ?? ''}</strong></div></TrendTooltip>, document.body);
                 }} />
-                <Line type="linear" dataKey="value" stroke={colors[kpi.status]} strokeWidth={2} dot={false} activeDot={{ r: 3 }} isAnimationActive={false} />
+                <Line type="linear" dataKey="value" stroke={stroke ?? colors[kpi.status]} strokeWidth={2} dot={false} activeDot={{ r: 3 }} isAnimationActive={false} />
             </LineChart>
         </ResponsiveContainer> : <span className="showcase-no-trend">Trend unavailable</span>}
     </div>;

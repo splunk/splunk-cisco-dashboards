@@ -485,6 +485,7 @@ const SignalTickerTile: React.FC<SignalTickerTileProps> = ({
 };
 
 interface SignalTickerRailProps {
+    workspaceId?: string;
     config: SignalTickerConfig;
     catalogueByName: Map<string, SearchbaseRecord> | null;
     metricDefaultsBySearchName?: Map<string, SignalTickerMetricDefaults>;
@@ -494,6 +495,7 @@ interface SignalTickerRailProps {
 }
 
 export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
+    workspaceId,
     config,
     catalogueByName,
     metricDefaultsBySearchName,
@@ -588,6 +590,9 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
                 );
             })}
             <SignalRailTicker
+                key={workspaceId}
+                preferenceScope={workspaceId === 'dc_networking' ? workspaceId : undefined}
+                defaultVariant={workspaceId === 'dc_networking' ? 'original' : undefined}
                 kpis={tickerKpis}
                 density={density}
                 fontSize={fontSize}

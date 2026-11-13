@@ -41,7 +41,7 @@ Browse the current release and recorded historical versions below. The newest re
 
 - Choose **Prism Pulse**, **Signal Orbit**, or **Event Horizon** from the Signal Rail **Style** menu for three new optional presentations of your existing signals. Their compact default height leaves more room for dashboard content. Values and health remain tied to the configured searches; missing trend observations remain unavailable.
 
-- DC Networking includes a five-product signal rail and the standard map in Command view for observed fabric inventory. Missing health and inter-fabric connections remain unknown.
+- DC Networking defaults to simple five-product KPI cards with small observed trends and the standard map in Command view for observed fabric inventory. Missing health and inter-fabric connections remain unknown.
 
 - Signal Rail settings remain accessible from the sliders icon before **Refresh rate** in the workspace toolbar, even when the rail is hidden. The rail retains Pause and Style controls without a duplicate Configure icon.
 
@@ -697,6 +697,8 @@ Insights Workspaces are reusable, audience-specific views of Searchbase-backed K
 ### DC Networking {#workspaces-dc-networking}
 
 The signal rail summarizes Nexus Dashboard critical anomalies, ACI critical faults, Nexus 9000 CPU pressure, SAN transmit wait and Hyperfabric administrative enablement. These are observed measurements; administrative enablement does not establish operational availability. A card without configured health thresholds is labeled **Watching**.
+
+The DC signal rail defaults to **Original** KPI cards with small observed trend lines. Its style selection is saved separately from other workspaces. A signal without sufficient history displays **Trend unavailable**.
 
 The map uses the standard **Command** view, with the same navigation, zoom, fit and site details used by other workspaces. Fabric and controller inventory groups appear from the selected time range. Groups without coordinates stay in Command view; geographic positions are not invented. Inventory alone does not establish health or inter-fabric connections, so those remain unknown or unreported.
 

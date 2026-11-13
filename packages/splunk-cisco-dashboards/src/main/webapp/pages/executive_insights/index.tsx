@@ -5448,6 +5448,7 @@ const InsightsWorkspaceRuntime: React.FC<InsightsWorkspaceRuntimeProps> = ({
       </header>
 
       <SignalTickerRail
+        workspaceId={insightsWorkspace.id}
         config={signalTickerConfig}
         catalogueByName={
           signalTickerPersistenceStatus === "loading"

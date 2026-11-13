@@ -28,7 +28,7 @@ import type {
   SignalTickerRows,
 } from "@/common/hooks/usePersistedSignalTicker";
 import { OneCdGlassCard } from "./OneCdPrimitives";
-import SignalRailShowcase from "./SignalRailShowcase";
+import SignalRailShowcase, { SignalRailTrend } from "./SignalRailShowcase";
 import type { SignalRailPoint } from '@/common/lib/signalRailSeries';
 
 export type SignalRailStatus = MetricStatus;
@@ -58,6 +58,8 @@ export interface SignalRailKpi {
 }
 
 interface SignalRailTickerProps {
+  preferenceScope?: string;
+  defaultVariant?: SignalRailVariant;
   kpis: SignalRailKpi[];
   className?: string;
   density?: SignalTickerDensity;
@@ -82,7 +84,7 @@ const VARIANT_OPTIONS: Array<{
   {
     id: "original",
     label: "Original",
-    description: "Classic KPI cards with semantic status accents",
+    description: "Classic KPI cards with observed trends and semantic status accents",
   },
   {
     id: "bloomberg",
@@ -453,20 +455,20 @@ const isSignalRailVariant = (
   value === "telemetry-constellation" ||
   value === "prism-pulse" || value === "signal-orbit" || value === "event-horizon";
 
-const readStoredVariant = (): SignalRailVariant => {
-  if (typeof window === "undefined") return DEFAULT_VARIANT;
+const readStoredVariant = (storageKey = STORAGE_KEY, fallback: SignalRailVariant = DEFAULT_VARIANT): SignalRailVariant => {
+  if (typeof window === "undefined") return fallback;
   try {
-    const stored = readUserScopedStorageItem(userScopedStorageKey(STORAGE_KEY));
-    return isSignalRailVariant(stored) ? stored : DEFAULT_VARIANT;
+    const stored = readUserScopedStorageItem(userScopedStorageKey(storageKey));
+    return isSignalRailVariant(stored) ? stored : fallback;
   } catch {
-    return DEFAULT_VARIANT;
+    return fallback;
   }
 };
 
-const writeStoredVariant = (variant: SignalRailVariant): void => {
+const writeStoredVariant = (variant: SignalRailVariant, storageKey = STORAGE_KEY): void => {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(userScopedStorageKey(STORAGE_KEY), variant);
+    window.localStorage.setItem(userScopedStorageKey(storageKey), variant);
   } catch {
     // Storage can be disabled; keep the in-session selection.
   }
@@ -554,8 +556,8 @@ const itemSizeClass = (
       : "h-[72px] min-w-[350px] px-6";
   }
   return density === "compact"
-    ? "h-[62px] min-w-[238px] px-3 py-2.5"
-    : "h-[82px] min-w-[265px] px-4 py-3";
+    ? "min-w-0 px-3 py-2.5"
+    : "min-w-0 px-4 py-3";
 };
 
 const fontSizeClass = (
@@ -884,9 +886,9 @@ const KpiItem: React.FC<KpiItemProps> = ({
               "block truncate font-black leading-none tracking-normal  sui-color-active",
               fontSizeClass(
                 fontSize,
-                "sui-color-default",
-                "sui-color-default",
-                "sui-color-default",
+                "text-xl",
+                "text-2xl",
+                "text-3xl",
               ),
             )}
           >
@@ -929,20 +931,26 @@ const KpiItem: React.FC<KpiItemProps> = ({
       >
         {kpi.category}
       </span>
+      <div className="mt-2 h-8 text-xs sui-color-info">
+        <SignalRailTrend kpi={kpi} stroke="currentColor" themeAware />
+      </div>
     </div>
   );
 };
 
 export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
   kpis,
+  preferenceScope,
+  defaultVariant = DEFAULT_VARIANT,
   className,
   density = "comfortable",
   fontSize = "standard",
   rows = 1,
   durationSeconds = 60,
 }) => {
+  const storageKey = preferenceScope ? `${STORAGE_KEY}.${preferenceScope}` : STORAGE_KEY;
   const [variant, setVariant] = useState<SignalRailVariant>(() =>
-    readStoredVariant(),
+    readStoredVariant(storageKey, defaultVariant),
   );
   const [manualPaused, setManualPaused] = useState(false);
   const [interactionPaused, setInteractionPaused] = useState(false);
@@ -951,17 +959,17 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
     const onStorage = (event: StorageEvent) => {
-      if (event.key !== userScopedStorageKey(STORAGE_KEY)) return;
-      setVariant(readStoredVariant());
+      if (event.key !== userScopedStorageKey(storageKey)) return;
+      setVariant(readStoredVariant(storageKey, defaultVariant));
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  }, [storageKey, defaultVariant]);
 
   const selectVariant = useCallback((nextVariant: SignalRailVariant) => {
     setVariant(nextVariant);
-    writeStoredVariant(nextVariant);
-  }, []);
+    writeStoredVariant(nextVariant, storageKey);
+  }, [storageKey]);
 
   const tickerRows = useMemo(() => splitRows(kpis, rows), [kpis, rows]);
   const showcaseVariant = variant === 'prism-pulse' || variant === 'signal-orbit' || variant === 'event-horizon' ? variant : undefined;
