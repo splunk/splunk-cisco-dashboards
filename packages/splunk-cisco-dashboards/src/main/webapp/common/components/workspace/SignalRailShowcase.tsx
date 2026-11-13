@@ -38,13 +38,13 @@ const Showcase = styled.div`
     .showcase-summary strong { margin-inline-end: auto; letter-spacing: .09em; text-transform: uppercase; }
     .showcase-summary span { white-space: nowrap; }
     .showcase-orb { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 156px; height: 156px; margin: 0 auto; background-size: contain; background-position: center; background-repeat: no-repeat; padding: 20px; }
-    [data-showcase="signal-orbit"] .showcase-label-row { text-align: center; }
-    [data-showcase="signal-orbit"] .showcase-value { font-size: calc(var(--rail-value-size) * .88); text-align: center; }
-    [data-showcase="signal-orbit"] .showcase-trend { height: 30px; }
-    [data-showcase="signal-orbit"] .showcase-status { display: block; text-align: center; }
-    [data-showcase="event-horizon"] .showcase-trend { height: 64px; filter: drop-shadow(0 0 4px var(--signal-color)); }
-    [data-showcase="event-horizon"] .showcase-status { border: 1px solid currentColor; padding: 1px 8px; border-radius: 5px; }
-    [data-showcase="event-horizon"] .showcase-no-trend { filter: none; }
+    &[data-showcase="signal-orbit"] .showcase-label-row { text-align: center; }
+    &[data-showcase="signal-orbit"] .showcase-value { font-size: calc(var(--rail-value-size) * .88); text-align: center; }
+    &[data-showcase="signal-orbit"] .showcase-trend { height: 30px; }
+    &[data-showcase="signal-orbit"] .showcase-status { display: block; text-align: center; }
+    &[data-showcase="event-horizon"] .showcase-trend { height: 64px; filter: drop-shadow(0 0 4px var(--signal-color)); }
+    &[data-showcase="event-horizon"] .showcase-status { border: 1px solid currentColor; padding: 1px 8px; border-radius: 5px; }
+    &[data-showcase="event-horizon"] .showcase-no-trend { filter: none; }
     @media (forced-colors: active) { background-image: none !important; color: CanvasText; .showcase-status { color: CanvasText; } }
 `;
 
