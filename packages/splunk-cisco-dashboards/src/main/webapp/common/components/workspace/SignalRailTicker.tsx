@@ -28,6 +28,8 @@ import type {
   SignalTickerRows,
 } from "@/common/hooks/usePersistedSignalTicker";
 import { OneCdGlassCard } from "./OneCdPrimitives";
+import SignalRailShowcase from "./SignalRailShowcase";
+import type { SignalRailPoint } from '@/common/lib/signalRailSeries';
 
 export type SignalRailStatus = MetricStatus;
 export type SignalRailDeltaDirection = "up" | "down" | "flat";
@@ -36,7 +38,10 @@ export type SignalRailVariant =
   | "original"
   | "bloomberg"
   | "minimal-enterprise"
-  | "telemetry-constellation";
+  | "telemetry-constellation"
+  | "prism-pulse"
+  | "signal-orbit"
+  | "event-horizon";
 
 export interface SignalRailKpi {
   id: string;
@@ -49,6 +54,7 @@ export interface SignalRailKpi {
   deltaDir?: SignalRailDeltaDirection;
   href?: string;
   canOpen?: boolean;
+  series?: SignalRailPoint[];
 }
 
 interface SignalRailTickerProps {
@@ -93,6 +99,9 @@ const VARIANT_OPTIONS: Array<{
     label: "Telemetry Constellation",
     description: "1CD glass rail with live signal paths",
   },
+  { id: "prism-pulse", label: "Prism Pulse", description: "Faceted glass with a leading critical signal and observed trends" },
+  { id: "signal-orbit", label: "Signal Orbit", description: "Precision signal halos with live values and observed trends" },
+  { id: "event-horizon", label: "Event Horizon", description: "A luminous trend ribbon with explicit signal health" },
 ];
 
 const SignalRailControls = styled.div`
@@ -204,6 +213,10 @@ const SignalRailStyleSwatch = styled.span<{ $variant: SignalRailVariant }>`
               ${variables.uiColorAccentComplement}
             );
         `;
+      case "prism-pulse":
+      case "signal-orbit":
+      case "event-horizon":
+        return css`border: 1px solid #7bddff; background-color: #101c2a;`;
       default:
         return undefined;
     }
@@ -221,6 +234,11 @@ const signalRailMarquee = keyframes`
 `;
 
 const SignalRailShell = styled.section`
+  &.scd-signal-rail-showcase { padding: 10px 0; border: 0; }
+  &.scd-signal-rail-showcase .scd-signal-rail-controls {
+    position: static; opacity: 1; pointer-events: auto; transform: none;
+    flex-direction: column; align-self: center; margin-inline-start: 6px;
+  }
   .scd-signal-rail-marquee-track {
     width: max-content;
     animation-name: ${signalRailMarquee};
@@ -432,7 +450,8 @@ const isSignalRailVariant = (
   value === "original" ||
   value === "bloomberg" ||
   value === "minimal-enterprise" ||
-  value === "telemetry-constellation";
+  value === "telemetry-constellation" ||
+  value === "prism-pulse" || value === "signal-orbit" || value === "event-horizon";
 
 const readStoredVariant = (): SignalRailVariant => {
   if (typeof window === "undefined") return DEFAULT_VARIANT;
@@ -944,6 +963,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
   }, []);
 
   const tickerRows = useMemo(() => splitRows(kpis, rows), [kpis, rows]);
+  const showcaseVariant = variant === 'prism-pulse' || variant === 'signal-orbit' || variant === 'event-horizon' ? variant : undefined;
   // Aileen's 1CD status overview is a static set of glass cards. Motion
   // belongs to the connector trails in the topology map, not this rail.
   // Retain marquee support only for the optional legacy rail variants.
@@ -987,6 +1007,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
     <SignalRailShell
       className={cn(
         "scd-signal-rail-ticker group/signal-rail relative z-40 flex w-full min-w-0 max-w-full flex-shrink-0 flex-col overflow-visible border-b",
+        showcaseVariant && "scd-signal-rail-showcase",
         variant === "one-cisco-glass" &&
           "sui-border-transparent sui-bg-transparent py-3  sui-color-active",
         variant === "original" &&
@@ -1036,7 +1057,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
             density === "compact" ? "space-y-0.5" : "space-y-1",
           )}
         >
-          {tickerRows.map((row, rowIndex) => (
+          {showcaseVariant ? <SignalRailShowcase kpis={kpis} variant={showcaseVariant} fontSize={fontSize} density={density} rows={rows} durationSeconds={durationSeconds} paused={effectivePaused} /> : tickerRows.map((row, rowIndex) => (
             <div
               key={`row-${rowIndex}`}
               className={cn(

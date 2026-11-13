@@ -39,6 +39,8 @@ Browse the current release and recorded historical versions below. The newest re
 
 ### Dashboards and investigations
 
+- Choose **Prism Pulse**, **Signal Orbit**, or **Event Horizon** from the Signal Rail **Style** menu for three new optional presentations of your existing signals. Values and health remain tied to the configured searches; missing trend observations remain unavailable.
+
 - DC Networking adds a five-product signal rail and a non-geographic fabric view with reported endpoint/port links and separate inventory evidence. Searches retain the selected time and fabric/controller scope; missing observations remain unknown.
 
 - Signal Rail settings remain accessible from the sliders icon before **Refresh rate** in the workspace toolbar, even when the rail is hidden. The rail retains Pause and Style controls without a duplicate Configure icon.
@@ -747,6 +749,10 @@ The picker opens in **Suggested** scope with searches from `splunk-cisco-dashboa
 **SGT assignment coverage:** The Secure Networking workspace includes `secure_networking_sgt_assignment_coverage_trend` in Scalable Network Segmentation, replacing SGACL Enforcement Activity Trend. Select **View coverage by site/device** to open `secure_networking_sgt_assignment_coverage_by_site_device`. Coverage is the percentage of successful ISE authentication events with one usable, non-default SGT. Missing, default, and conflicting tag values remain in the denominator; the selected-window percentage is weighted by event count. Repeated authentications count repeatedly, so this measures reported authentication coverage rather than distinct endpoints or SGACL enforcement. An empty window reports no observations, with no coverage percentage. The detail retains missing or ambiguous site/device context and returns at most 1,000 groups; `TotalGroups` and `DetailRowsTruncated` indicate additional groups. Existing shared or personal layout overrides retain their saved tiles; a workspace manager can replace the old tile and publish the layout to adopt this change.
 
 ### Configure the Signal Rail
+
+Use **Style** on the rail to choose a personal presentation. **Prism Pulse** uses faceted glass and places the first critical signal in a wider leading position; other signals keep their relative order. **Signal Orbit** uses neutral ornamental halos, not percentage gauges. **Event Horizon** uses a luminous trend ribbon. These styles retain all configured signals and support the existing rows, text size, density, speed, Pause, and Search controls. Scroll horizontally when the signals do not fit the available width. The default style is unchanged.
+
+The new styles draw trends only from real timestamped search observations, using up to the latest 60 samples. A headline-only search shows **Trend unavailable**; no synthetic trend is drawn. The halos and background lighting are decoration, not measurements or network links. Health labels use the existing search thresholds; **Watching** continues to indicate an unclassified or unavailable health state. These three styles use a dark presentation surface in either app appearance.
 
 Signal Rail membership and order are shared workspace configuration. Speed, density, and KPI text size are per-user preferences. Signal Rail searches are prioritized during initial loading. The Agentic Security Operations Center workspace also avoids dispatching searches from collapsed sections and supports a personal one-to-four concurrent-search setting.
 

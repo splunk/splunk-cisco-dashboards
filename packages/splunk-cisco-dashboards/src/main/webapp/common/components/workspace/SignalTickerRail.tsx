@@ -18,6 +18,7 @@ import {
     X,
 } from '@/common/icons/SuiIcon';
 import { cn } from '@/common/lib/utils';
+import { observedSignalSeries, sameSignalSeries, type SignalRailPoint } from '@/common/lib/signalRailSeries';
 import { useModalFocusTrap } from '@/common/hooks/useModalFocusTrap';
 import { useAppThemeControls } from '@/common/theme/AppThemeProvider';
 import { formatMetricNumber } from '@/common/lib/metricValueFormat';
@@ -206,6 +207,7 @@ interface SignalTickerTileVisualState {
     canOpen: boolean;
     delta?: string;
     deltaDir?: SignalRailDeltaDirection;
+    series?: SignalRailPoint[];
 }
 
 const makePendingVisual = (
@@ -233,7 +235,8 @@ const sameVisualState = (
     a?.status === b.status &&
     a?.canOpen === b.canOpen &&
     a?.delta === b.delta &&
-    a?.deltaDir === b.deltaDir;
+    a?.deltaDir === b.deltaDir &&
+    sameSignalSeries(a?.series, b.series);
 
 interface SignalTickerTileChromeProps {
     visual: SignalTickerTileVisualState;
@@ -455,8 +458,9 @@ const SignalTickerTile: React.FC<SignalTickerTileProps> = ({
             canOpen: Boolean(record?.search),
             delta,
             deltaDir,
+            series: observedSignalSeries(result.source, result.sparkData, result.sparkTimestamps),
         }),
-        [delta, deltaDir, label, record?.search, status, subtitle, valueText]
+        [delta, deltaDir, label, record?.search, status, subtitle, valueText, result.source, result.sparkData, result.sparkTimestamps]
     );
 
     useEffect(() => {
@@ -543,6 +547,7 @@ export const SignalTickerRail: React.FC<SignalTickerRailProps> = ({
                     category: visual.subtitle,
                     delta: visual.delta,
                     deltaDir: visual.deltaDir,
+                    series: visual.series,
                     href: record?.search
                         ? splunkSearchAppUrl(record.search, range, record.dispatchContext)
                         : undefined,
