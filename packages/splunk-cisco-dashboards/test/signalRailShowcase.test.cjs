@@ -34,12 +34,15 @@ test('live epoch milliseconds keep their actual date and timezone in hover label
     assert.match(series.formatSignalRailTime(time, 'en-US', 'UTC'), /Nov 12, 2026.*06:30.*UTC/);
     assert.deepEqual(series.observedSignalSeries('live', [1, 2], [time, 1e50]), []);
 });
-const showcase = load('src/main/webapp/common/components/workspace/SignalRailShowcase.tsx', id => {
+const showcaseRequire = id => {
     if (id === '@splunk/splunk-utils/url') return {createStaticURL: p => '/static/' + p};
     if (id === '@/common/lib/signalRailSeries') return series;
     if (id === '@/common/icons/SuiIcon') return {ExternalLink: p => React.createElement('span', p)};
     return require(id);
-}).default;
+};
+const showcase = load('src/main/webapp/common/components/workspace/SignalRailShowcase.tsx', showcaseRequire).default;
+const overflowShowcase = load('src/main/webapp/common/components/workspace/SignalRailShowcase.tsx', id => id === 'react'
+    ? {...React, useState: () => [true, () => {}]} : showcaseRequire(id)).default;
 const kpis = [
     {id: 'a', label: 'A long unchanged healthy label', value: 0, status: 'healthy', category: 'Network', href: '/search?a', canOpen: true},
     {id: 'b', label: 'Critical signal', value: 57, status: 'critical', category: 'Network'},
@@ -66,8 +69,14 @@ test('Prism features first critical signal; Orbit preserves order and does not e
     assert.doesNotMatch(orbit, /role="progressbar"|aria-valuenow|<svg/);
     assert.deepEqual(kpis.map(k => k.id), ['a', 'b', 'c']);
 });
-test('scrolling duplicates are inaccessible and row preferences never omit signals', () => {
-    const html = render('event-horizon', {durationSeconds: 60, paused: true, rows: 2});
+test('movement waits for an overflow measurement rather than repeating a set that fits', () => {
+    assert.equal((render('event-horizon', {durationSeconds: 60}).match(/<article /g) || []).length, 3);
+});
+test('when overflow is measured, scrolling duplicates are inaccessible and no signals are omitted', () => {
+    const html = renderToStaticMarkup(React.createElement(overflowShowcase, {
+        kpis, variant: 'event-horizon', fontSize: 'standard', density: 'comfortable', rows: 2,
+        durationSeconds: 60, paused: true,
+    }));
     assert.match(html, /data-paused="true"/);
     assert.match(html, /aria-hidden="true"/);
     assert.match(html, /tabindex="-1"/);

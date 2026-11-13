@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import { createStaticURL } from '@splunk/splunk-utils/url';
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -15,7 +16,7 @@ const Showcase = styled.div`
     width: 100%; min-width: 0; color: #edf5ff;
     background-color: #060d17; border: 1px solid #3d556b; border-radius: 12px;
     background-position: center; background-size: 100% 100%;
-    &[data-showcase="prism-pulse"] { background-size: 100% 158%; }
+    &[data-showcase="prism-pulse"] { background-size: 100% 200%; }
     .showcase-scroll { overflow-x: auto; scrollbar-width: thin; padding: 18px 12px 8px; }
     .showcase-grid { display: grid; width: 100%; gap: 0; align-items: stretch; }
     .showcase-grid[data-moving="true"] { display: flex; width: max-content; }
@@ -48,15 +49,23 @@ const Showcase = styled.div`
 `;
 
 export function SignalRailTrend({ kpi }: { kpi: SignalRailKpi }) {
+    const anchor = useRef<HTMLDivElement>(null);
     const points = kpi.series ?? [];
-    return <div className="showcase-trend" aria-label={points.length > 1 ? `${kpi.label}: ${points.length} observed trend samples` : `${kpi.label}: trend unavailable`}>
+    return <div ref={anchor} className="showcase-trend" aria-label={points.length > 1 ? `${kpi.label}: ${points.length} observed trend samples` : `${kpi.label}: trend unavailable`}>
         {points.length > 1 ? <ResponsiveContainer width="100%" height="100%">
             <LineChart data={points} margin={{ top: 6, bottom: 4, left: 2, right: 2 }}>
                 <XAxis dataKey="time" type="number" domain={['dataMin', 'dataMax']} hide />
                 <YAxis domain={['auto', 'auto']} hide />
-                <Tooltip labelFormatter={v => formatSignalRailTime(Number(v))} formatter={v => [String(v), kpi.label]}
-                    contentStyle={{ background: '#101c2a', border: '1px solid #637588', color: '#edf5ff', fontSize: 12 }}
-                    itemStyle={{ color: '#edf5ff' }} labelStyle={{ color: '#edf5ff' }} />
+                <Tooltip content={({ active, payload, label }) => {
+                    if (!active || !payload?.length || !anchor.current || typeof document === 'undefined') return null;
+                    const rect = anchor.current.getBoundingClientRect();
+                    return createPortal(<div role="tooltip" style={{
+                        position: 'fixed', zIndex: 100000, pointerEvents: 'none', width: 'min(240px, calc(100vw - 16px))',
+                        left: Math.max(8, Math.min(rect.left, window.innerWidth - 256)), top: Math.max(8, rect.top - 84),
+                        background: '#101c2a', border: '1px solid #637588', borderRadius: 5, padding: 8,
+                        color: '#edf5ff', fontSize: 12, lineHeight: 1.4, overflowWrap: 'anywhere',
+                    }}><div>{formatSignalRailTime(Number(label))}</div><div>{kpi.label}: <strong>{String(payload[0].value)}{kpi.unit ?? ''}</strong></div></div>, document.body);
+                }} />
                 <Line type="linear" dataKey="value" stroke={colors[kpi.status]} strokeWidth={2} dot={false} activeDot={{ r: 3 }} isAnimationActive={false} />
             </LineChart>
         </ResponsiveContainer> : <span className="showcase-no-trend">Trend unavailable</span>}
@@ -79,10 +88,13 @@ const ShowcaseItem = ({ kpi, variant, featured, duplicate }: {
     </article>;
 };
 
-export default function SignalRailShowcase({ kpis, variant, fontSize, density, rows, durationSeconds, paused }: {
+export default function SignalRailShowcase({ kpis, variant, fontSize, density, rows, durationSeconds, paused, onOverflowChange }: {
     kpis: SignalRailKpi[]; variant: SignalRailShowcaseVariant; fontSize: string;
     density: string; rows: number; durationSeconds: number; paused: boolean;
+    onOverflowChange?: (overflow: boolean) => void;
 }) {
+    const scrollArea = useRef<HTMLDivElement>(null);
+    const [hasOverflow, setHasOverflow] = useState(false);
     const ordered = useMemo(() => {
         if (variant !== 'prism-pulse') return kpis;
         const i = kpis.findIndex(k => k.status === 'critical');
@@ -93,13 +105,27 @@ export default function SignalRailShowcase({ kpis, variant, fontSize, density, r
         ? [ordered.filter((_, i) => i % 2 === 0), ordered.filter((_, i) => i % 2 === 1)] : [ordered];
     const counts = { healthy: 0, warning: 0, critical: 0, unknown: 0 };
     kpis.forEach(k => counts[k.status]++);
-    const moving = durationSeconds > 0;
+    const cardMin = variant === 'signal-orbit' ? 205 : density === 'compact' ? 170 : 185;
+    const requiredWidth = Math.max(...groups.map((g, r) => g.length * cardMin + (variant === 'prism-pulse' && r === 0 ? 260 - cardMin : 0))) + 26;
+    useEffect(() => {
+        const node = scrollArea.current;
+        if (!node) return;
+        const measure = () => {
+            const overflow = requiredWidth > node.clientWidth;
+            setHasOverflow(overflow); onOverflowChange?.(overflow);
+        };
+        measure();
+        const observer = new ResizeObserver(measure);
+        observer.observe(node);
+        return () => observer.disconnect();
+    }, [requiredWidth, onOverflowChange]);
+    const moving = durationSeconds > 0 && hasOverflow;
     const size = fontSize === 'large' ? [16, 44] : fontSize === 'small' ? [13, 32] : [14, 38];
     const background = variant === 'signal-orbit' ? undefined : `url("${imageURL(variant)}")`;
     return <Showcase data-showcase={variant} style={{ backgroundImage: background, '--rail-label-size': `${size[0]}px`, '--rail-value-size': `${size[1]}px` } as React.CSSProperties}>
-        <div className="showcase-scroll" tabIndex={0} role="region" aria-label="Signal cards; scroll horizontally for more signals">
+        <div ref={scrollArea} className="showcase-scroll" tabIndex={0} role="region" aria-label="Signal cards; scroll horizontally for more signals">
             {groups.map((group, r) => {
-                const columns = group.map((_, i) => variant === 'prism-pulse' && r === 0 && i === 0 ? 'minmax(260px,1.6fr)' : `minmax(${density === 'compact' ? 170 : 185}px,1fr)`).join(' ');
+                const columns = group.map((_, i) => variant === 'prism-pulse' && r === 0 && i === 0 ? 'minmax(260px,1.6fr)' : `minmax(${cardMin}px,1fr)`).join(' ');
                 const pass = (duplicate: boolean) => <div key={String(duplicate)} className="showcase-grid" data-moving={moving} aria-hidden={duplicate || undefined} style={{ gridTemplateColumns: columns }}>
                     {group.map((kpi, i) => <ShowcaseItem key={kpi.id} kpi={kpi} variant={variant} featured={variant === 'prism-pulse' && i === 0 && r === 0} duplicate={duplicate} />)}
                 </div>;

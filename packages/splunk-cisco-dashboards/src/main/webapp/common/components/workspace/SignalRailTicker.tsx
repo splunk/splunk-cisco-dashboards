@@ -946,6 +946,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
   );
   const [manualPaused, setManualPaused] = useState(false);
   const [interactionPaused, setInteractionPaused] = useState(false);
+  const [showcaseCanMove, setShowcaseCanMove] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
@@ -967,7 +968,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
   // Aileen's 1CD status overview is a static set of glass cards. Motion
   // belongs to the connector trails in the topology map, not this rail.
   // Retain marquee support only for the optional legacy rail variants.
-  const staticMode = variant === "one-cisco-glass" || durationSeconds <= 0;
+  const staticMode = variant === "one-cisco-glass" || durationSeconds <= 0 || (Boolean(showcaseVariant) && !showcaseCanMove);
   const effectivePaused =
     manualPaused || interactionPaused || durationSeconds <= 0;
   const activeOption = VARIANT_OPTIONS.find((option) => option.id === variant);
@@ -1057,7 +1058,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
             density === "compact" ? "space-y-0.5" : "space-y-1",
           )}
         >
-          {showcaseVariant ? <SignalRailShowcase kpis={kpis} variant={showcaseVariant} fontSize={fontSize} density={density} rows={rows} durationSeconds={durationSeconds} paused={effectivePaused} /> : tickerRows.map((row, rowIndex) => (
+          {showcaseVariant ? <SignalRailShowcase kpis={kpis} variant={showcaseVariant} fontSize={fontSize} density={density} rows={rows} durationSeconds={durationSeconds} paused={effectivePaused} onOverflowChange={setShowcaseCanMove} /> : tickerRows.map((row, rowIndex) => (
             <div
               key={`row-${rowIndex}`}
               className={cn(
@@ -1109,7 +1110,9 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
                 )
               }
               label={
-                staticMode
+                showcaseVariant && durationSeconds > 0 && !showcaseCanMove
+                  ? "All signals fit; rail motion is unnecessary"
+                  : staticMode
                   ? "Signal rail is static; configure speed to enable motion"
                   : manualPaused
                     ? "Resume signal rail"
