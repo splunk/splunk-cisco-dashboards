@@ -241,7 +241,7 @@ const SignalRailShell = styled.section`
     position: static; opacity: 1; pointer-events: auto; transform: none;
     flex-direction: row; align-self: center; margin-inline-start: 2px;
   }
-  &[data-variant="prism-pulse"] .scd-signal-rail-controls { flex-wrap: wrap; flex: 0 1 90px; width: 90px; min-width: 0; max-width: 100%; justify-content: center; margin: 0; background: transparent; border: 0; padding: 0; box-shadow: none; }
+  &[data-variant="prism-pulse"] .scd-signal-rail-controls { flex-wrap: wrap; flex: 0 1 96px; width: 96px; gap: 4px; min-width: 0; max-width: 100%; justify-content: center; margin: 0; background: transparent; border: 0; padding: 0; box-shadow: none; }
   &[data-variant="prism-pulse"] .showcase-inline-summary { width: 100%; text-align: center; margin-bottom: 8px; }
   .showcase-inline-summary { padding: 0 3px; font-size: 11px; font-weight: 650; white-space: nowrap; }
   .scd-signal-rail-marquee-track {

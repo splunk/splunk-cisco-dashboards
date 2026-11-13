@@ -54,7 +54,7 @@ const Showcase = styled.div`
     &[data-showcase="prism-pulse"] [data-featured="true"] .showcase-status { font-size: 14px; }
     &[data-showcase="prism-pulse"] .showcase-grid[data-moving="true"] > article { width: 180px; }
     &[data-showcase="prism-pulse"] .showcase-grid[data-moving="true"] > article[data-featured="true"] { width: 330px; }
-    .showcase-integrated-controls { display: flex; flex: 0 0 100px; align-items: center; justify-content: center; padding: 8px 10px 8px 0; }
+    .showcase-integrated-controls { display: flex; flex: 0 0 112px; align-items: center; justify-content: center; padding: 8px; }
     .showcase-no-trend { display: flex; align-items: center; height: 100%; font-size: 10px; line-height: 1; white-space: nowrap; color: #b6c5d4; }
     .showcase-orb { display: flex; flex: 0 0 auto; align-items: center; justify-content: center; width: var(--rail-orbit-size); height: var(--rail-orbit-size); background-size: contain; background-position: center; background-repeat: no-repeat; padding: 5px; }
     .showcase-orbit-copy { flex: 1; min-width: 0; }
