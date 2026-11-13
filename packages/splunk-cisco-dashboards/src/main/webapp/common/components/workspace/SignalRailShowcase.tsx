@@ -40,9 +40,9 @@ const Showcase = styled.div`
     .showcase-no-trend { display: flex; align-items: center; height: 100%; font-size: 10px; line-height: 1; white-space: nowrap; color: #b6c5d4; }
     .showcase-orb { display: flex; flex: 0 0 auto; align-items: center; justify-content: center; width: var(--rail-orbit-size); height: var(--rail-orbit-size); background-size: contain; background-position: center; background-repeat: no-repeat; padding: 5px; }
     .showcase-orbit-copy { flex: 1; min-width: 0; }
-    &[data-showcase="signal-orbit"] article { display: flex; align-items: center; gap: 6px; }
+    &[data-showcase="signal-orbit"] article { display: flex; align-items: center; gap: 4px; padding-inline: 6px; }
     &[data-showcase="signal-orbit"] .showcase-label-row { min-height: 0; }
-    &[data-showcase="signal-orbit"] .showcase-value { font-size: min(calc(var(--rail-value-size) * .8), calc((var(--rail-orbit-size) - 10px) / var(--rail-value-chars) * 1.65)); text-align: center; }
+    &[data-showcase="signal-orbit"] .showcase-value { font-size: min(calc(var(--rail-value-size) * .8), calc((var(--rail-orbit-size) - 10px) / var(--rail-value-chars) * 1.3)); white-space: nowrap; text-align: center; }
     &[data-showcase="signal-orbit"] .showcase-value[data-loading="true"] { font-size: 11px; }
     &[data-showcase="signal-orbit"] .showcase-status { margin: 2px 0; }
     &[data-showcase="event-horizon"] .showcase-trend { filter: drop-shadow(0 0 2px var(--signal-color)); }
