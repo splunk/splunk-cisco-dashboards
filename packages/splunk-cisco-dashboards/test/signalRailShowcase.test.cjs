@@ -58,7 +58,7 @@ test('all three styles retain real values, long labels, unknowns and existing Se
         for (const kpi of kpis) assert.ok(html.includes(kpi.label));
         assert.match(html, />0<\/span>/); assert.match(html, /Watching/);
         assert.match(html, /rel="noopener noreferrer"/);
-        assert.equal((html.match(/Trend unavailable<\/span>/g) || []).length, 3);
+        assert.equal((html.match(/No trend<\/span>/g) || []).length, 3);
         assert.doesNotMatch(html, /Configure Signal Rail/);
     }
 });

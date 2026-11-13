@@ -236,11 +236,12 @@ const signalRailMarquee = keyframes`
 `;
 
 const SignalRailShell = styled.section`
-  &.scd-signal-rail-showcase { padding: 6px 0; border: 0; }
+  &.scd-signal-rail-showcase { padding: 4px 0; border: 0; }
   &.scd-signal-rail-showcase .scd-signal-rail-controls {
     position: static; opacity: 1; pointer-events: auto; transform: none;
-    flex-direction: column; align-self: center; margin-inline-start: 6px;
+    flex-direction: row; align-self: center; margin-inline-start: 2px;
   }
+  .showcase-inline-summary { padding: 0 3px; font-size: 11px; font-weight: 650; white-space: nowrap; }
   .scd-signal-rail-marquee-track {
     width: max-content;
     animation-name: ${signalRailMarquee};
@@ -402,6 +403,10 @@ const STATUS_PILL_TOKENS = {
   critical: variables.severityColorAlert,
   unknown: variables.severityColorUnknown,
 };
+
+const ShowcaseSummary = styled.span<{ $status: SignalRailStatus }>`
+  color: ${({ $status }) => STATUS_PILL_TOKENS[$status]};
+`;
 
 const StatusPill = styled(Badge)<{ $status: SignalRailStatus }>`
   min-height: 24px;
@@ -990,6 +995,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
     for (const kpi of kpis) map[kpi.status] += 1;
     return map;
   }, [kpis]);
+  const priorityStatus: SignalRailStatus = counts.critical > 0 ? 'critical' : counts.warning > 0 ? 'warning' : counts.unknown > 0 ? 'unknown' : 'healthy';
 
   const renderPass = (row: SignalRailKpi[], pass: number) => (
     <div
@@ -1103,6 +1109,10 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
           className="scd-signal-rail-controls"
           data-signal-rail-controls="true"
         >
+          {showcaseVariant && <ShowcaseSummary className="showcase-inline-summary" $status={priorityStatus}
+            title={`${kpis.length} signals: ${counts.healthy} healthy, ${counts.warning} warning, ${counts.critical} critical, ${counts.unknown} watching`}>
+            {counts[priorityStatus]} {priorityStatus === 'unknown' ? 'watching' : priorityStatus}
+          </ShowcaseSummary>}
           {variant !== "one-cisco-glass" && (
             <Button
               appearance="subtle"

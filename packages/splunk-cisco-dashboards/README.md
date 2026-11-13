@@ -12,8 +12,9 @@ networking pillars and workplace scenarios.
 
 - Added Prism Pulse, Signal Orbit, and Event Horizon to the Signal Rail Style
   menu. These optional looks retain live values and health states, and display
-  trends only when timestamped observations are available. Their compact default
-  height leaves more room for dashboard content.
+  trends only when timestamped observations are available. Slim inline readouts,
+  miniature Orbit halos and a health summary beside the rail controls leave
+  more room for dashboard content.
 
 - DC Networking defaults to simple five-product KPI cards with small observed trends and the standard map in Command view. Inspect observed fabric/controller inventory and open its source search. Health and inter-fabric connections remain unknown when inventory does not establish them; geographic locations are not invented.
 

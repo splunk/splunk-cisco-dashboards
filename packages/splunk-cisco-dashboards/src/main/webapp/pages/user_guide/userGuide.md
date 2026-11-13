@@ -39,7 +39,7 @@ Browse the current release and recorded historical versions below. The newest re
 
 ### Dashboards and investigations
 
-- Choose **Prism Pulse**, **Signal Orbit**, or **Event Horizon** from the Signal Rail **Style** menu for three new optional presentations of your existing signals. Their compact default height leaves more room for dashboard content. Values and health remain tied to the configured searches; missing trend observations remain unavailable.
+- Choose **Prism Pulse**, **Signal Orbit**, or **Event Horizon** from the Signal Rail **Style** menu for three new optional presentations of your existing signals. Slim inline readouts, miniature Orbit halos and a summary beside Pause and Style leave more room for dashboard content. Values and health remain tied to the configured searches; missing trend observations remain unavailable.
 
 - DC Networking defaults to simple five-product KPI cards with small observed trends and the standard map in Command view for observed fabric inventory. Missing health and inter-fabric connections remain unknown.
 
@@ -754,7 +754,7 @@ The picker opens in **Suggested** scope with searches from `splunk-cisco-dashboa
 
 Use **Style** on the rail to choose a personal presentation. **Prism Pulse** uses faceted glass and places the first critical signal in a wider leading position; other signals keep their relative order. **Signal Orbit** uses neutral ornamental halos, not percentage gauges. **Event Horizon** uses a luminous trend ribbon. These styles retain all configured signals and support the existing rows, text size, density, speed, Pause, and Search controls. When all signals fit, they appear once and motion is unnecessary. Otherwise, a positive speed enables movement; use Pause or scroll horizontally to inspect the remaining signals. The default style is unchanged.
 
-The new styles draw trends only from real timestamped search observations, using up to the latest 60 samples. A headline-only search shows **Trend unavailable**; no synthetic trend is drawn. The halos and background lighting are decoration, not measurements or network links. Health labels use the existing search thresholds; **Watching** continues to indicate an unclassified or unavailable health state. These three styles use a dark presentation surface in either app appearance.
+The new styles draw trends only from real timestamped search observations, using up to the latest 60 samples. A headline-only search shows **No trend**; no synthetic trend is drawn. The halos and background lighting are decoration, not measurements or network links. Health labels use the existing search thresholds; **Watching** continues to indicate an unclassified or unavailable health state. The inline summary prioritizes critical signals, then warnings, then watching; hover over it for all health counts. These three styles use a dark presentation surface in either app appearance. Two-row and larger-text preferences can increase the rail height.
 
 Signal Rail membership and order are shared workspace configuration. Speed, density, and KPI text size are per-user preferences. Signal Rail searches are prioritized during initial loading. The Agentic Security Operations Center workspace also avoids dispatching searches from collapsed sections and supports a personal one-to-four concurrent-search setting.
 
