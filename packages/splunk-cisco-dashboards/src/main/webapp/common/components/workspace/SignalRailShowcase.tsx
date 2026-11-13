@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import styled from 'styled-components';
 import { variables } from '@splunk/themes';
 import { createStaticURL } from '@splunk/splunk-utils/url';
-import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Dot, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ExternalLink } from '@/common/icons/SuiIcon';
 import type { SignalRailKpi } from './SignalRailTicker';
 import { formatSignalRailTime } from '@/common/lib/signalRailSeries';
@@ -17,7 +17,7 @@ const Showcase = styled.div`
     width: 100%; min-width: 0; color: #edf5ff;
     background-color: #060d17; border: 1px solid #3d556b; border-radius: 9px;
     background-position: center; background-size: 100% 100%;
-    &[data-showcase="prism-pulse"] { display: flex; align-items: stretch; background-size: 100% 200%; background-color: transparent; border: 0; border-radius: 0; }
+    &[data-showcase="prism-pulse"] { display: flex; align-items: stretch; container-type: inline-size; background-size: 100% 200%; background-color: transparent; border: 0; border-radius: 0; }
     .showcase-scroll { overflow-x: auto; scrollbar-width: thin; padding: 6px 8px; }
     .showcase-grid { display: grid; width: 100%; gap: 0; align-items: stretch; }
     .showcase-grid[data-moving="true"] { display: flex; width: max-content; }
@@ -37,24 +37,29 @@ const Showcase = styled.div`
     [data-featured="true"] { box-shadow: inset 3px 0 0 var(--signal-color); }
     .showcase-status { display: inline-flex; flex: 0 0 auto; white-space: nowrap; color: var(--signal-color); border: 1px solid currentColor; border-radius: 12px; padding: 1px 5px; font-size: 10px; line-height: 1.4; font-weight: 750; letter-spacing: .02em; text-transform: uppercase; }
     .showcase-trend { height: 12px; width: 100%; min-width: 0; }
-    &[data-showcase="prism-pulse"] .showcase-scroll { flex: 1; min-width: 0; padding: 8px 10px; }
-    &[data-showcase="prism-pulse"] article { display: flex; flex-direction: column; min-height: 146px; padding: 8px 12px; }
-    &[data-showcase="prism-pulse"] .showcase-label-row { min-height: 38px; }
-    &[data-showcase="prism-pulse"] .showcase-label { font-size: calc(var(--rail-label-size) + 1px); }
-    &[data-showcase="prism-pulse"] .showcase-readout { flex-direction: column; align-items: flex-start; gap: 4px; }
-    &[data-showcase="prism-pulse"] .showcase-value { font-size: calc(var(--rail-value-size) * 1.22); }
+    &[data-showcase="prism-pulse"] .showcase-scroll { flex: 1; min-width: 0; padding: 4px 0 6px; }
+    &[data-showcase="prism-pulse"] article { position: relative; display: flex; flex-direction: column; min-height: 80px; padding: 4px; padding-inline: 1.49cqw .68cqw; }
+    &[data-showcase="prism-pulse"] .showcase-label-row { min-height: clamp(28px, calc(30px + (100cqw - 1254px) * .018), 38px); }
+    &[data-showcase="prism-pulse"] .showcase-label { font-size: clamp(12px, calc(var(--rail-label-size) + .5px + (100cqw - 1254px) * .006), 17px); line-height: 1.1; text-transform: capitalize; text-wrap: balance; }
+    &[data-showcase="prism-pulse"] .showcase-readout { flex-direction: row; align-items: center; gap: 6px; }
+    &[data-showcase="prism-pulse"] .showcase-value { font-size: clamp(24px, calc(var(--rail-value-size) + (100cqw - 1254px) * .02), 40px); }
     &[data-showcase="prism-pulse"] .showcase-value[data-loading="true"] { font-size: 16px; }
-    &[data-showcase="prism-pulse"] .showcase-status { border: 0; border-radius: 0; padding: 0; font-size: 12px; }
-    &[data-showcase="prism-pulse"] .showcase-trend { height: 32px; margin-top: auto; padding-top: 4px; }
-    &[data-showcase="prism-pulse"] [data-featured="true"] { padding-inline: 16px 24px; box-shadow: none; background-size: 100% 100%; background-repeat: no-repeat; }
-    &[data-showcase="prism-pulse"] [data-featured="true"] .showcase-label { font-size: calc(var(--rail-label-size) + 8px); }
-    &[data-showcase="prism-pulse"] [data-featured="true"] .showcase-readout { flex-direction: row; align-items: center; gap: 12px; }
-    &[data-showcase="prism-pulse"] [data-featured="true"] .showcase-value { font-size: calc(var(--rail-value-size) * 2); }
+    &[data-showcase="prism-pulse"] .showcase-status { color: #f3f8ff; border: 1px solid var(--signal-color); border-radius: 12px; padding: 1px 6px; font-size: 10px; background: #16382c; }
+    &[data-showcase="prism-pulse"] [data-status="warning"] .showcase-status { background: #493611; }
+    &[data-showcase="prism-pulse"] [data-status="critical"] .showcase-status { background: #4d1c2d; }
+    &[data-showcase="prism-pulse"] [data-status="unknown"] .showcase-status { background: #273343; }
+    &[data-showcase="prism-pulse"] .showcase-trend { height: clamp(12px, calc(14px + (100cqw - 1254px) * .013), 20px); margin-top: auto; }
+    &[data-showcase="prism-pulse"] [data-featured="true"] { position: relative; isolation: isolate; padding-inline: 2.65cqw 1.63cqw; box-shadow: none; }
+    &[data-showcase="prism-pulse"] [data-featured="true"][data-status="critical"]::before { content: ""; position: absolute; inset: -4px 0 -6px 0; z-index: -1; background-image: var(--featured-image); background-size: 100% 100%; background-repeat: no-repeat; pointer-events: none; }
+    &[data-showcase="prism-pulse"] [data-featured="true"] .showcase-label-row { align-items: center; }
+    &[data-showcase="prism-pulse"] article a { position: absolute; top: 4px; right: 4px; opacity: 0; }
+    &[data-showcase="prism-pulse"] article:hover a, &[data-showcase="prism-pulse"] article:focus-within a { opacity: 1; }
+    &[data-showcase="prism-pulse"] [data-featured="true"] .showcase-label { font-size: clamp(13px, calc(var(--rail-label-size) + 2px + (100cqw - 1254px) * .012), 19px); }
+    &[data-showcase="prism-pulse"] [data-featured="true"] .showcase-value { font-size: clamp(28px, calc(var(--rail-value-size) * 1.2 + (100cqw - 1254px) * .03), 46px); }
     &[data-showcase="prism-pulse"] [data-featured="true"] .showcase-value[data-loading="true"] { font-size: 16px; }
-    &[data-showcase="prism-pulse"] [data-featured="true"] .showcase-status { font-size: 14px; }
     &[data-showcase="prism-pulse"] .showcase-grid[data-moving="true"] > article { width: 180px; }
-    &[data-showcase="prism-pulse"] .showcase-grid[data-moving="true"] > article[data-featured="true"] { width: 330px; }
-    .showcase-integrated-controls { display: flex; flex: 0 0 112px; align-items: center; justify-content: center; padding: 8px; }
+    &[data-showcase="prism-pulse"] .showcase-grid[data-moving="true"] > article[data-featured="true"] { width: 254px; }
+    .showcase-integrated-controls { display: flex; flex: 0 0 13%; min-width: 160px; align-items: center; justify-content: center; padding: 8px; }
     .showcase-no-trend { display: flex; align-items: center; height: 100%; font-size: 10px; line-height: 1; white-space: nowrap; color: #b6c5d4; }
     .showcase-orb { display: flex; flex: 0 0 auto; align-items: center; justify-content: center; width: var(--rail-orbit-size); height: var(--rail-orbit-size); background-size: contain; background-position: center; background-repeat: no-repeat; padding: 5px; }
     .showcase-orbit-copy { flex: 1; min-width: 0; }
@@ -65,7 +70,7 @@ const Showcase = styled.div`
     &[data-showcase="signal-orbit"] .showcase-status { margin: 2px 0; }
     &[data-showcase="event-horizon"] .showcase-trend { filter: drop-shadow(0 0 2px var(--signal-color)); }
     &[data-showcase="event-horizon"] .showcase-no-trend { filter: none; }
-    @media (forced-colors: active) { background-image: none !important; color: CanvasText; .showcase-status { color: CanvasText; } }
+    @media (forced-colors: active) { background-image: none !important; article::before { background-image: none !important; } color: CanvasText; .showcase-status { color: CanvasText; } }
 `;
 
 const TrendTooltip = styled.div<{ $themeAware: boolean }>`
@@ -74,7 +79,7 @@ const TrendTooltip = styled.div<{ $themeAware: boolean }>`
     border: 1px solid ${({ $themeAware }) => $themeAware ? variables.borderColor : '#637588'};
 `;
 
-export function SignalRailTrend({ kpi, stroke, themeAware = false, compact = false }: { kpi: SignalRailKpi; stroke?: string; themeAware?: boolean; compact?: boolean }) {
+export function SignalRailTrend({ kpi, stroke, themeAware = false, compact = false, emphasizeLatest = false }: { kpi: SignalRailKpi; stroke?: string; themeAware?: boolean; compact?: boolean; emphasizeLatest?: boolean }) {
     const anchor = useRef<HTMLDivElement>(null);
     const points = kpi.series ?? [];
     return <div ref={anchor} className="showcase-trend" style={themeAware ? { height: '100%' } : undefined} aria-label={points.length > 1 ? `${kpi.label}: ${points.length} observed trend samples` : `${kpi.label}: trend unavailable`}>
@@ -92,7 +97,7 @@ export function SignalRailTrend({ kpi, stroke, themeAware = false, compact = fal
                         fontSize: 12, lineHeight: 1.4, overflowWrap: 'anywhere',
                     }}><div>{formatSignalRailTime(Number(label))}</div><div>{kpi.label}: <strong>{String(payload[0].value)}{kpi.unit ?? ''}</strong></div></TrendTooltip>, document.body);
                 }} />
-                <Line type="linear" dataKey="value" stroke={stroke ?? colors[kpi.status]} strokeWidth={2} dot={false} activeDot={{ r: 3 }} isAnimationActive={false} />
+                <Line type="linear" dataKey="value" stroke={stroke ?? colors[kpi.status]} strokeWidth={2} dot={emphasizeLatest ? (props) => props.index === points.length - 1 ? <Dot {...props} r={3} fill={stroke ?? colors[kpi.status]} style={{ filter: `drop-shadow(0 0 3px ${stroke ?? colors[kpi.status]})` }} /> : <></> : false} activeDot={{ r: 3 }} isAnimationActive={false} />
             </LineChart>
         </ResponsiveContainer> : <span className="showcase-no-trend">{compact ? 'No trend' : 'Trend unavailable'}</span>}
     </div>;
@@ -102,13 +107,13 @@ const ShowcaseItem = ({ kpi, variant, featured, duplicate }: {
     kpi: SignalRailKpi; variant: SignalRailShowcaseVariant; featured: boolean; duplicate: boolean;
 }) => {
     const value = <span className="showcase-value" data-loading={kpi.value === 'Loading'}>{kpi.value}{kpi.unit ?? ''}</span>;
-    const trend = <SignalRailTrend kpi={kpi} compact />;
+    const trend = <SignalRailTrend kpi={kpi} compact stroke={variant === 'prism-pulse' && kpi.status === 'healthy' ? '#7de21b' : undefined} emphasizeLatest={variant === 'prism-pulse' && featured && kpi.status === 'critical'} />;
     const label = <div className="showcase-label-row">
             <span className="showcase-label">{kpi.label}</span>
             {kpi.canOpen !== false && kpi.href && <a href={kpi.href} target="_blank" rel="noopener noreferrer" tabIndex={duplicate ? -1 : 0} aria-label={`Open ${kpi.label} in Search`} title={`Open ${kpi.label} in Search`}><ExternalLink style={{ width: 13, height: 13 }} aria-hidden="true" /></a>}
         </div>;
     const status = <span className="showcase-status">{statuses[kpi.status]}</span>;
-    return <article data-status={kpi.status} data-featured={featured} style={{ '--signal-color': colors[kpi.status], '--rail-value-chars': Math.max(1, `${kpi.value}${kpi.unit ?? ''}`.length), backgroundImage: featured && kpi.status === 'critical' ? `url("${imageURL('prism-critical-facet')}")` : undefined } as React.CSSProperties}>
+    return <article data-status={kpi.status} data-featured={featured} style={{ '--signal-color': colors[kpi.status], '--rail-value-chars': Math.max(1, `${kpi.value}${kpi.unit ?? ''}`.length), '--featured-image': featured && kpi.status === 'critical' ? `url("${imageURL('prism-critical-facet')}")` : undefined } as React.CSSProperties}>
         {variant === 'signal-orbit' ? <>
             <div className="showcase-orb" style={{ backgroundImage: `url("${imageURL('signal-orbit')}")` }}>{value}</div>
             <div className="showcase-orbit-copy">{label}{status}{trend}</div>
@@ -133,7 +138,9 @@ export default function SignalRailShowcase({ kpis, variant, fontSize, density, r
     const groups = rows === 2 && ordered.length > 3
         ? [ordered.filter((_, i) => i % 2 === 0), ordered.filter((_, i) => i % 2 === 1)] : [ordered];
     const cardMin = variant === 'signal-orbit' ? 176 : variant === 'prism-pulse' ? 148 : density === 'compact' ? 154 : 160;
-    const requiredWidth = Math.max(...groups.map((g, r) => g.length * cardMin + (variant === 'prism-pulse' && r === 0 ? 330 - cardMin : 0))) + (variant === 'prism-pulse' ? 20 : 18);
+    const requiredWidth = Math.max(...groups.map((g, r) => variant === 'prism-pulse' && r === 0 && g.length === 6
+        ? 254 + 4 * 148 + 136
+        : g.length * cardMin + (variant === 'prism-pulse' && r === 0 ? 254 - cardMin : 0))) + (variant === 'prism-pulse' ? 0 : 18);
     useEffect(() => {
         const node = scrollArea.current;
         if (!node) return;
@@ -152,7 +159,11 @@ export default function SignalRailShowcase({ kpis, variant, fontSize, density, r
     return <Showcase data-showcase={variant} style={{ backgroundImage: background, '--rail-label-size': `${size[0]}px`, '--rail-value-size': `${size[1]}px`, '--rail-orbit-size': `${size[2]}px` } as React.CSSProperties}>
         <div ref={scrollArea} className="showcase-scroll" tabIndex={0} role="region" aria-label="Signal cards; scroll horizontally for more signals">
             {groups.map((group, r) => {
-                const columns = group.map((_, i) => variant === 'prism-pulse' && r === 0 && i === 0 ? 'minmax(330px,2fr)' : `minmax(${cardMin}px,1fr)`).join(' ');
+                // Preserve the selected slim concept's six-column proportions; other counts use the general layout.
+                const referenceRow = variant === 'prism-pulse' && r === 0 && group.length === 6;
+                const columns = group.map((_, i) => referenceRow
+                    ? `minmax(${i === 0 ? 254 : i === 5 ? 136 : 148}px,${[304, 209, 189, 207, 207, 167][i]}fr)`
+                    : variant === 'prism-pulse' && r === 0 && i === 0 ? 'minmax(254px,1.6fr)' : `minmax(${cardMin}px,1fr)`).join(' ');
                 const pass = (duplicate: boolean) => <div key={String(duplicate)} className="showcase-grid" data-moving={moving} aria-hidden={duplicate || undefined} style={{ gridTemplateColumns: columns }}>
                     {group.map((kpi, i) => <ShowcaseItem key={kpi.id} kpi={kpi} variant={variant} featured={variant === 'prism-pulse' && i === 0 && r === 0} duplicate={duplicate} />)}
                 </div>;

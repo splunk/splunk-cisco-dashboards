@@ -6,6 +6,7 @@ import React, {
 } from "react";
 import Badge from "@splunk/react-ui/Badge";
 import Button from "@splunk/react-ui/Button";
+import CircleTiny from "@splunk/react-icons/CircleTiny";
 import Dropdown from "@splunk/react-ui/Dropdown";
 import Menu from "@splunk/react-ui/Menu";
 import { variables } from "@splunk/themes";
@@ -241,8 +242,10 @@ const SignalRailShell = styled.section`
     position: static; opacity: 1; pointer-events: auto; transform: none;
     flex-direction: row; align-self: center; margin-inline-start: 2px;
   }
-  &[data-variant="prism-pulse"] .scd-signal-rail-controls { flex-wrap: wrap; flex: 0 1 96px; width: 96px; gap: 4px; min-width: 0; max-width: 100%; justify-content: center; margin: 0; background: transparent; border: 0; padding: 0; box-shadow: none; }
-  &[data-variant="prism-pulse"] .showcase-inline-summary { width: 100%; text-align: center; margin-bottom: 8px; }
+  &[data-variant="prism-pulse"] .scd-signal-rail-controls { flex-wrap: nowrap; flex: 0 1 auto; width: auto; gap: 4px; min-width: 0; max-width: 100%; justify-content: center; margin: 0; background: transparent; border: 0; padding: 0; box-shadow: none; }
+  &[data-variant="prism-pulse"] .showcase-inline-summary { display: inline-flex; align-items: center; gap: 2px; width: auto; text-align: center; margin: 0 2px 0 0; }
+  &[data-variant="prism-pulse"] .scd-signal-rail-controls button { border: 1px solid #58707b; border-radius: 4px; min-height: 28px; height: 28px; padding: 2px 5px; background-color: #14242e; }
+  &[data-variant="prism-pulse"] .scd-signal-rail-controls button:hover { background-color: #263b47; }
   .showcase-inline-summary { padding: 0 3px; font-size: 11px; font-weight: 650; white-space: nowrap; }
   .scd-signal-rail-marquee-track {
     width: max-content;
@@ -1025,7 +1028,7 @@ export const SignalRailTicker: React.FC<SignalRailTickerProps> = ({
         >
           {showcaseVariant && <ShowcaseSummary className="showcase-inline-summary" $status={priorityStatus}
             title={`${kpis.length} signals: ${counts.healthy} healthy, ${counts.warning} warning, ${counts.critical} critical, ${counts.unknown} watching`}>
-            {counts[priorityStatus]} {priorityStatus === 'unknown' ? 'watching' : priorityStatus}
+            {variant === 'prism-pulse' && <CircleTiny variant="filled" style={{ width: 12, height: 12 }} aria-hidden="true" />}{counts[priorityStatus]} {priorityStatus === 'unknown' ? 'watching' : priorityStatus}
           </ShowcaseSummary>}
           {variant !== "one-cisco-glass" && (
             <Button
